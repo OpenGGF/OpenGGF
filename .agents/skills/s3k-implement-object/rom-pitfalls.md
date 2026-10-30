@@ -2674,6 +2674,16 @@ the mismatch target.
 
 **Originating commit.** `<pending: CNZ persistent interact-word milestone>`.
 
+**Non-solid ride owners also participate.** DEZ's invisible gravity tube uses
+`RideObject_SetRide` without `SolidObjectProvider`; it still needs the same live
+code-word provider. `Obj_DEZGravityTube (sonic3k.asm:95215-95238)` installs
+`loc_48EEC` or `loc_4906A`, both word4. Fresh original-input callbacks at row14502
+execute `sub_13EFC`'s previous-launcher-word3/current-tube-word4 mismatch while
+the tube is live and offscreen, timer120. Missing provider data is unknown in the
+shared compare, so it cannot trigger that native branch. Keep the correction on
+the object, not in shared CPU or visibility logic; see the 2026-10-30 DEZ live
+interact-word entry in `docs/status/trace-frontier-log.md`.
+
 ---
 
 ## P42 -- Direct mapping flips are not gameplay facing writes

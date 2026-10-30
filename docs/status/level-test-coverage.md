@@ -2328,3 +2328,14 @@ companion/launcher frontiers. The bounded observer matches P2 through14501 and
 main through14520; P2's14502 marker difference remains open. Existing compare
 gates, full-act/Act2 admission, configuration breadth and pixel/audio obligations
 are unchanged. No integration or broad smoke is claimed by this leaf.
+
+
+DEZ tube live interact word (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#gravity-tube-live-interact-word--2026-10-30)
+adds six independent native320 component cases for both tube bodies, executing
+CPU latch establishment, changed/same-word and visible/offscreen branches, slot
+retirement and destructive recreation/replay before/after mount. A new cold
+original-input gate compares13+10 fields through14520 without changing earlier
+prefix bounds. The [native owner record](trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502)
+keeps observed outcomes and inherited route, configuration, presentation and
+Act2 gaps explicit. No whole-act/campaign or broad-smoke qualification is claimed.

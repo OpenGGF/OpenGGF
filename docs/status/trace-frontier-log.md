@@ -121270,3 +121270,289 @@ have completed; no owned running/waiting job remains. No foreign file, worktree
 or job is cleaned up. The provisioned checkout/local branch are retained for the
 lead's review; integration, push, PR and worktree/branch removal are outside this
 leaf's explicit delivery scope.
+
+
+## 2026-10-30 — DEZ gravity-tube live interact word at P2 row 14502
+
+Research leaf `t3-70e70c20`, local branch `dez-cold-frontier`. The provisioned
+clean checkout started at `0dcee1fe0a3b5fb026b21a164a6ed61b15dd6b32` and was
+fast-forwarded locally to exact requested candidate
+`4d9da2ee4728491ec1ad5a79d832afd066165910`. No fetch/pull, lead-checkout change,
+child, additional worktree, integration, push, PR or broad smoke belongs to this
+leaf. Shared flight parent `ebc32452b71b457283ab5ca329afacca84f9b43c` remains
+subject to the lead's pending broad qualification; neither that pending run nor
+this bounded observation certifies a whole act or campaign.
+
+### Frozen inputs and observation boundary
+
+ROM_DIR is the absolute original ROM root supplied in the leaf brief; original
+files there are read directly, without ROM copies, renames or links. Independent
+CRC32/SHA-1 verification matches S1 REV01 `AFE05EEE` /
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, S2 REV01 `7B905383` /
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, and S3&K `63522553` /
+`cfbf98c36c776677290a872547ac47c53d2761d6`. Original complete-run BK2 SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+All539492 movie rows have empty P2 input, independently checked from Input Log;
+the native probe also rejects any active P2 row before advancing. Original P1,
+Power and Reset inputs and movie sync settings are applied from power-on.
+
+V5 segment `ssz` identifies DEZ by zone11, act1, original input offset468982.
+Physics, auxiliary, metadata and hardware-timing SHA-256 hashes are unchanged:
+
+```text
+a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4
+beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059
+f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1
+8939526c9b89e0133258a61b996194aea829d8cd3940d97355ea1a63d24bae19
+```
+
+Skdisasm pin `8b2cf3c4178f2382f844da67798de4befc50c5e0` and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427` are unchanged. Hooks are installed;
+the measurement hazards, headless, native-reference, disassembly and object
+guidance are consulted. Actual Java25/Lua5.4/PowerShell preflight passes:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 4d9da2ee4728491ec1ad5a79d832afd066165910 --preflight
+```
+
+The temporary `TestDez14502Observation` uses a fresh native320 Sonic+Tails DEZ1
+load, original BK2 input only, and14521 rows0–14520. It asserts every input,
+one gameplay/driver/cursor advance per row, survival and bounded stepping.
+Native values are comparison-only. On unchanged4d9da2ee, P1's15 movement,
+camera and clock fields have0 differences across217815 observations; P2's ten
+movement/routine fields match0–14501 /145020 observations, then differ112 times
+through14520. The first six differences at14502 are X,Y,X speed,ground speed,
+X fraction and air. This reproduces the prior leaf on the same bound.
+
+Fresh native `Dez14502.cs` independently replays483503 inputs from power-on,
+without RAM writes or state loads, ending after the same14521 completed rows.
+All217815 main fields and145210 P2 fields match the unchanged fixture, zero
+differences. Normalized uppercase four-digit hex values, trailing comma and LF,
+have SHA-256 `54b35496026c7e4495d9590181bbc543168bb81601ba685568181e68f1c0714e`
+(main) and `bd2c26603a5b254a564efdfc8c6ab8135c4f926ee5cc89a89a2ec2bc1aedfdb2`
+(P2). Native observations cover all521 callback rows14000–14520, with3575
+execute callbacks. Callback counts are521 each at `$13840/$1384A/$1388C`,
+503 at `$13EFC`,502 each at `$13F2E/$13872`,292 at `$13F28`,210 at `$13F18`,
+and exactly one each at `$13F24/$13ECA/$13EFA`. Exit0 and
+`COMPLETED inputs=483503` are inspected.
+
+Row14502 consumes zero-based original movie input483484 and ends at emulator
+frame483485. Its CSV frame is `$38A6`; Level_frame_counter is `$38A7`, native
+V-int count `$59E6`, lag counter0. Row14501 consumes483483 and completes483484.
+Engine phase logs distinguish pre/post physics and objects; their latest CPU
+message before physics belongs to the previous completed dispatch, not the
+upcoming row. The engine driver's local row and CPU diagnostics are not native
+V-int clocks. No comparison row supplies runtime state or timing authority.
+
+### Executed cause and rejected alternatives
+
+Native and engine visibility bits agree on all14521 rows. Their respawn timer
+agrees through14501: visibility clears at the end of14381, the CPU ticks1 at
+14382, and reaches120 (`$0078`) at14501. P2 is not on an object at that CPU
+entry, so a now-empty previous launcher slot5 / SST `$B172` does not trigger
+an interact comparison. The retained CPU word remains `$0003`.
+
+At14501 native movement ends at `$2C7B.7B00,$07D0.5D00`, X/ground speed `$FA24`,
+Status `$01`. The later object pass mounts the narrow tube `$2C00,$07C0`,
+subtype `$10`: interact changes to `$B250` / slot8, Status becomes `$09`, and
+CPU latch stays3. Engine observes the same handoff to SKL `$5A`, layout348,
+slot8, on-object true, with the same movement fields. The old wide tube from
+the14106 investigation is separately live in engine slot12, layout341;
+identifying a tube by its old slot would name the wrong owner here.
+
+At14502 native `$13EFC` reads render `$05` (offscreen), Status `$09`, current
+SST `$B250` code `$00048EEC`, retained word3 and timer120. `$13F24` executes
+with D0=3, followed by `$13ECA`. At `$13EFA` the marker has X/Y `$7F00/$0000`,
+Status `$02`, control `$81`, CPU routine2 and timer0, preserving both velocity
+words, inertia, fractions and the prior CPU word3. The actual instruction bytes
+at `$13EFC` start `4A 28 00 04 6B 26 08 28 00 03 00 2A`; `$13F24` is
+`60 00 FF A4`, the branch to `$13ECA`. The original ROM and pinned disassembly
+agree: `sub_13EFC (sonic3k.asm:26856-26883)` compares live SST word0 before
+refresh; `sub_13ECA (sonic3k.asm:26839-26850)` owns the marker writes.
+
+This rejects a300-frame timeout (120), a freed current tube (live code4),
+visibility drift (none), changed original input (none) and a missing shared CPU
+branch. Engine `currentS3kInteractWord` already resolves the live slot and invokes
+`RomObjectCodePointerProvider`; an occupied object without that interface is
+unknown, not an empty slot. `S3kDezGravityTubeObjectInstance` lacks that interface,
+so row14502 falls through into follow steering, nudge-1 and ordinary acceleration:
+`$2C74.9300,$07D0.5D00`, speed/inertia `$FA18`, on-object and grounded.
+
+Earlier CPU-latch diagnostic disagreement starts at311, with staircase code
+`$00047E8C` native versus engine word0;5921 latch observations before14502 differ.
+That inherited provider gap is recorded, not repaired here. The actual retained
+word is independently matched at3 on both sides before14502, so this earlier
+diagnostic debt does not explain the current3-versus4 compare failure. Fresh
+callbacks establish the deciding live read rather than inferring it from that
+history or from the marker's shape.
+
+
+### Local correction, old-red/new-green and bounded scope
+
+Only the tube's existing type declaration and a constant provider method change
+runtime behavior. `Obj_DEZGravityTube (sonic3k.asm:95215-95238)` installs
+`loc_48EEC` or `loc_4906A`, both high word4. There is no new persistent field,
+allocation, shared-runtime modification, fixture edit, comparator change, timing
+input, hardware simulation, tolerance or game/frame/route predicate.
+
+Frozen `TestS3kDezGravityTubeInteractWord` against unchanged runtime completes
+6T/6F/0E/0S, exit1,08:46:19UTC. Both subtype cases of
+`offscreenChangedWordDespawnsAndRepeatsAfterTubeRecreation(int)` fail on marker X
+expected32512 versus4608/4624. Both cases of
+`visibleTubeRefreshesWordAndOffscreenSameWordSurvives(int)` and
+`retiredTubeSlotReadsZeroAndDespawns(int)` fail on expected latch4 versus0.
+This is the final-source old-red: the six test bodies are byte-identical on the
+candidate, not a pre-compilation draft. The original observer and two maintained
+prefix methods separately complete3T/0F/0E/0S,08:36:11UTC; the observer reports
+the112-field P2 frontier, rather than asserting parity through it.
+
+After the local provider addition, the final focused invocation completes
+95T/0F/0E/0S, exit0,08:49:23UTC. Fresh XML confirms six new component cases,
+eight existing animation-word cases,14 tube cases, three production-loop tube
+routes, three cold-prefix methods,60 anchor cases and one temporary observer.
+Both classes named `TestSonic3kLevelLoading` run (36+7); the other anchors run
+8 AIZ1 skip,6 bootstrap and3 decoding cases. These are94 maintained checks plus
+one diagnostic observer, not95 independent parity claims.
+
+Both changed-word cases restore/recreate the managed tube from before mount and
+from its mounted capture. They replay CPU marker entry and object-owned rider
+release, comparing every registered snapshot entry. The CPU latch is established
+by an executed visible real launcher contact, never hydrated from a trace.
+Onscreen refresh, offscreen same-word survival, live-slot mismatch and retired
+slot detection are covered for both horizontal and vertical tube bodies. Marker
+entry retains X/Y speed, ground speed, both fractions and the prior CPU word;
+mount does not publish a CPU latch early. No new allocation path needs an
+allocation-pressure campaign. The native route is the horizontal narrow body;
+vertical component coverage is distinct from vertical-route qualification.
+
+The candidate observer, on the exact same14521 rows/25 fields as baseline,
+reports0 P1 differences across217815 fields and0 P2 differences across145210
+fields. All112 old P2 differences disappear without worsening P1. The new
+`coldActOneOffscreenTubeDespawnMatchesNative` maintains an independent14521-row
+13+10-field comparison, while older methods retain their existing bounds.
+No row beyond14520 is graded. This is not strict full replay, whole-act/campaign,
+Act2 admission18670, full-route rewind, viewport/donor/team breadth or native
+pixel/audio qualification. EGL is explicitly selected; state tests alone do not
+certify rendered pixels. Shared-flight upstream broad qualification remains
+pending with the lead, and this local result does not replace it.
+
+All Java runs use this exact shape, expanding ROM_DIR to the original absolute
+root supplied in the brief and SELECTION to the literal selector below. The
+initial observer and old-red invocations supply only the S3K property; final
+qualification supplies all three original ROM properties.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+Initial selection:
+`TestDez14502Observation,TestS3kDezColdRoutes#coldActOneTailsSuppressionReleaseMatchesNative+coldActOnePostTurbineApproachPreservesNativePrefix`.
+Old-red selection: `TestS3kDezGravityTubeInteractWord`. Final selection:
+
+```text
+TestS3kDezGravityTubeInteractWord,TestS3kDezGravityTubeAnimation,TestS3kDezGravityTubeHeadless,TestS3kDezGravityTubeRouteHeadless,TestDez14502Observation,TestS3kDezColdRoutes#coldActOneTailsSuppressionReleaseMatchesNative+coldActOnePostTurbineApproachPreservesNativePrefix+coldActOneOffscreenTubeDespawnMatchesNative,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Native sources and useful observations are preserved under external owned task
+root `dez14502-20261030-t3-70e70c20`. `build_native.py` takes the worktree build
+and shared activity leases for the task-local pinned harness and Roslyn builds;
+its child descriptors retain those leases. Expanded build commands are:
+
+```bash
+BIZHAWK_HOME="$ROM_DIR/docs/BizHawk-2.11-linux-x64" tools/tracechaser/bizhawk-headless/build.sh
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:$TASK_ROOT/Dez14502.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$ROM_DIR/docs/BizHawk-2.11-linux-x64/dll/BizHawk.Emulation.Cores.dll" \
+  "$TASK_ROOT/Dez14502.cs"
+```
+
+`run_native.py` releases activity before admission, then takes
+`maven_queue.maven_slot(Path.cwd(),kind='dez14502-native-readonly',estimate=390)`.
+It unsets DISPLAY/WAYLAND_DISPLAY, sets MONO_PATH to this task's harness output
+and original BizHawk dll directory, and LD_LIBRARY_PATH to the latter. The child
+retains the admission leases. Its literal command form is:
+
+```bash
+timeout --signal=TERM --kill-after=10s 650s mono "$TASK_ROOT/Dez14502.exe" \
+  "$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+An initial native launch fails before gameplay because the executable directory
+lacks BizHawk's `dll` path. A task-local link to the original non-ROM BizHawk dll
+directory repairs that prerequisite; the identical executable is then rerun.
+The failed launch's0.4-second queue hold and exit1 are not native evidence, even
+though scheduler telemetry calls the completed wrapper hold `completed`.
+An initial build-wrapper descriptor-tuple error also occurs before compilation
+or test admission and is corrected; build/research wall time remains unmeasured.
+The inherited xbuild .NET4.8 toolset warning, FAST-to-NONE fallback, blocked
+presentation-shadow SFX and decoding warning are observed output, not skips.
+
+### Fingerprints, queue cost and local disposition
+
+Source/POM SHA-256 means POM then sorted files under src, hashing relative
+path,NUL,bytes,NUL. Only the temporary observer is removed after completed
+qualification; maintained runtime/tests remain byte-identical to the tested
+candidate. No unchanged checks are repeated ceremonially.
+
+| Source/artifact | SHA-256 |
+| --- | --- |
+| Maintained4d9da2ee source/POM | `24429c10b4ca1a1715986c8473cb41ddb1ab39b9d03afe7986d75b0de33ba20e` |
+| Baseline with observer | `98c8ed7057e2fd3d1b5993469060c2c54e96673cf3f965b0a55d0df0f9d5a060` |
+| Frozen old-red source/POM | `f3bec2d01b33bec23b8943e8c6a1eafbd689d70029d15c7cf1594b6552ea4af1` |
+| Tested candidate with observer | `442ccb7609cb7469d16b63630611398eb5a38f74cc0a4ebef33aa82b194ab803` |
+| Maintained candidate after observer removal | `e62578372beab08c103071a2111fd7ffe7f9f9cba0ea77d597cc9ae79c5a366c` |
+| Tube runtime | `d2092ce4e0d730079b030e6351a5262012b663525ac1d90331eeec13f35116fc` |
+| New interact-word component tests | `944869933a6dbd6e9b7b59c1e5ea33b98d238434c637a4c04ea85c2640ffae01` |
+| Maintained cold-prefix class | `4549c51cb739bffdb05094d7406817b65c81a6b82c302e8a4c0378310ad3a121` |
+| Temporary engine observer source | `a62cde8991f172acd74aeaa088e1ef5f09930659afd09672f7c46a9e92b9d1d2` |
+| Native probe source | `f30fd573ceee1c8c4cc28d4fa1a48efbf026fe88ac0c5c74f188b0206d3a1ad7` |
+| Native probe executable | `5217253eeca4f80a7bd8d789a7edf7cab935949c4a9629e0c3087678decd185f` |
+| Task-local pinned harness executable | `dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3` |
+| Original gpgx.wbx.zst | `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12` |
+| Raw native observation | `4e2fdf0bdc262714834a4318655755df375602d1dc6324d60126e8e64ac0ea13` |
+| Preserved native.txt.gz | `0dbb149c2c0dc861aa85396ea58fb4d88df2d25e47a4a8e8775943c9985a6ebc` |
+
+| Owned invocation | Queue seconds | Execution/hold seconds | Outcome |
+| --- | ---: | ---: | --- |
+| Baseline observer + two prefixes | 32.3 | 102.8 | 3T/0F/0E/0S |
+| Native launch before prerequisite repair | 264.1 | 0.4 | exit1 before gameplay |
+| Fresh original-input native probe | 27.4 | 373.6 | exit0,483503 inputs |
+| Frozen old-red component selection | 358.9 | 33.1 | 6T/6F/0E/0S |
+| Final candidate focused selection | 0.0 | 119.1 | 95T/0F/0E/0S |
+
+Hold includes setup/build and execution; it is not pure test time. Final Maven
+wall is1m58s; observer5.999s, new component class0.208s and three cold methods
+10.88s. Preflight/build preparation, research/editing and total delivery wall
+are unmeasured. Waiting and independent work overlap; these intervals must not
+be summed into elapsed delivery time. No user-response wait occurs.
+
+New citations are checked against the pinned disassembly and actual ROM bytes.
+The tube audit has15 ok versus14 baseline,30 unanchored valid versus29 baseline,
+and exactly the same four stale/eight near references. The skill catalogue has
+one extra verified citation with its baseline25 stale references unchanged. All
+three new log citations verify. The inherited debts are not called a clean
+whole-file audit. New relative links/anchors, Markdown whitespace, AGENTS/CLAUDE
+mirrors and the edited skill mirror are checked; commit policy hooks are obeyed.
+
+Consumed task Maven logs and inspected Surefire XML are deleted after readback;
+the temporary engine observer source/class is removed from the worktree, with
+its source preserved externally. The native observation is losslessly compressed
+and checked before removing the redundant raw file. Useful probe sources,
+executables, wrappers and compressed native observations remain under the external
+owned task root. No category directory, pass cache, receipt, extra log archive or
+foreign artifact is created/removed. Ordinary ignored compiler outputs remain
+disposable. All five owned queued invocations have completed, including the
+explicitly failed first native launch; no owned running/waiting job remains.
+The clean local task branch/worktree is retained for the lead. No integration,
+push, PR, broad smoke or deletion of this provisioned worktree is authorized.

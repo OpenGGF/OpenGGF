@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
@@ -49,7 +50,7 @@ import java.util.List;
  * mount still uses {@code Player_TouchFloor}'s gravity-signed radius adjustment.
  */
 public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
@@ -99,6 +100,14 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
 
     public S3kDezGravityTubeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "DEZGravityTube");
+    }
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_DEZGravityTube installs loc_48EEC or loc_4906A
+        // (sonic3k.asm:95215-95238). Both expose word $0004 to the existing
+        // sub_13EFC live-slot compare/refresh (sonic3k.asm:26856-26883).
+        return 0x0004;
     }
 
     /** {@code move.b subtype(a0),d0 / bpl.s loc_48EC8} (:95216-95217). */

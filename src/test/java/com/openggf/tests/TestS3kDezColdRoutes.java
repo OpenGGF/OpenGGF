@@ -367,6 +367,14 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(14106, true);
     }
 
+    /** Original input through the offscreen launcher-to-tube code-word handoff. */
+    @Test
+    void coldActOneOffscreenTubeDespawnMatchesNative() throws Exception {
+        // Fresh callbacks execute sub_13EFC's word3-to-word4 mismatch at14502.
+        // This bounded 13+10-field comparison makes no whole-act parity claim.
+        assertColdActOnePrefixMatchesNative(14521, true);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         assertColdActOnePrefixMatchesNative(comparedRows, false);
     }

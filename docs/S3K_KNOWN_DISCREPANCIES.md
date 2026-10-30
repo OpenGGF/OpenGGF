@@ -9,6 +9,14 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ tube interact word (2026-10-30):** fresh original-input callbacks
+[identify the row14502 owner](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502):
+S3K's existing CPU compare needs the tube's live routine high word4, which its
+object implementation did not expose. This local correction adds that provider;
+shared CPU, visibility, movement, collision and timing remain unchanged. No
+accepted ROM deviation or whole-act/campaign result is introduced. The prior
+marker frontier below is superseded only within the linked bounded evidence.
+
 **DEZ tube animation word (2026-10-30):** the
 [local correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-animation-word-behind-tails-row-14106)
 restores anim0/prev_anim1 at the tube's native word writes. It introduces no

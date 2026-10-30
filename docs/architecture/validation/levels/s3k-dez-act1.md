@@ -998,3 +998,34 @@ gates retain their exact bounds. Native power-on callbacks independently verify
 These are bounded field comparisons and component rewind checks, not strict
 whole-act replay, full-route rewind, donor/viewport breadth or pixel/audio
 certification. Those inherited obligations remain open for both acts.
+
+
+## Gravity-tube live interact word — 2026-10-30
+
+The [original-input callbacks and matched engine observation](../../../status/trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502)
+identify the missing tube `RomObjectCodePointerProvider` at P2 row14502. The
+previous launcher CPU word3 is compared with the newly ridden tube's live word4
+while offscreen. The timer is120, the current tube slot is live, and visibility
+matches; the existing shared CPU branch already models the native marker entry.
+Both tube bodies install code pointers in bank4, so the correction is one local
+provider with no new persistent state or allocation path.
+
+`TestS3kDezGravityTubeInteractWord` has six independent native320 Sonic+CPU Tails
+component cases across horizontal/vertical bodies: changed-word despawn from an
+executed launcher latch, visible word refresh followed by offscreen same-word
+survival, and retired-slot zero-word detection. The changed-word cases recreate
+the actual managed tube twice, restoring before mount and while mounted, then
+compare every registered snapshot entry after CPU marker entry and rider release.
+Declared component contacts establish the latch by executing CPU control; no
+trace physics, auxiliary or bootstrap state is hydrated. Native velocities,
+fractions, prior latch and compare-before-refresh ordering remain asserted.
+
+The new independent `TestS3kDezColdRoutes#coldActOneOffscreenTubeDespawnMatchesNative`
+compares14521 original-input rows0–14520,13 main/camera/clock fields and ten P2
+fields. The older prefix methods keep their bounds. The temporary observer adds
+main angle/routine and separate CPU/visibility/slot diagnostics. The linked record
+owns actual run outcomes and limits. Native callback/trajectory evidence now
+reaches14520; nothing beyond that endpoint is graded here. Whole-act/Act2 admission,
+full-route rewind, alternate viewports/donors/rosters, and native pixels/audio
+remain inherited gaps. Shared flight upstream qualification is still lead-owned
+and pending; this leaf schedules no broad smoke.

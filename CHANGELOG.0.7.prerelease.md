@@ -897,6 +897,8 @@ Unreleased. The earlier development themes remain in
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
   body-size adjustment. Their animation word preserves the pending push clear,
   keeping Tails' wall approach and later floor-launcher contact aligned with the ROM.
+  Their live routine word also preserves the original offscreen launcher-to-tube
+  despawn decision.
   The turbine room prepares terrain probes from each
   controlled player's current motion, preserving native ceiling separation.
   Direct floor contacts also reset vertical speed, inertia and tumble state before

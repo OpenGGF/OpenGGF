@@ -1681,3 +1681,10 @@ slot recreation/replacement and forward replay. Existing
 separately covers an actual inverted Act 2 pad's carry and 80-frame rewind replay.
 No original-input Act 2 trajectory, expanded donor/roster/viewport product,
 whole-act native or pixel/audio claim follows from this local change.
+
+
+The [2026-10-30 tube interact-word correction](s3k-dez-act1.md#gravity-tube-live-interact-word--2026-10-30)
+adds the existing CPU contract's routine-word provider to both tube bodies. Its
+native320 component lifecycle/rewind checks and original-input observation are
+DEZ1 evidence; this leaf does not remeasure an Act2 route or close Act2 breadth,
+entry/respawn or native-parity obligations.
