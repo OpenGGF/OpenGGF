@@ -1464,7 +1464,10 @@ its original drawing priority.
 - **Live frame timing preparation:** Engine now separates its live advance phase
   from scene presentation, retaining fade-before-update ordering, modal input
   acknowledgment and one outer audio packet. Frame-step and modal decisions
-  survive input acknowledgment through capture. This extraction preserves the
+  survive input acknowledgment through capture. Ending background scroll and its
+  level clock advance with admitted ending updates rather than scene drawing,
+  including updates without pictures and repeated pictures of a held state.
+  This extraction preserves the
   current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
 
 - **Stock parity measurement foundation:** A versioned, explicitly partial

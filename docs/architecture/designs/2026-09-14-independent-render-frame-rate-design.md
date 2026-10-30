@@ -1496,3 +1496,172 @@ branch, ROM link or unrelated change is removed. Queue waits are per request
 and overlap; they are not summed delivery elapsed time. Overall task wall time
 was not separately measured. Combined smoke and any main-workspace integration
 remain with the lead; no push, PR or release was performed.
+
+## Ending background update ownership — 2026-10-30
+
+Source base: combined local candidate
+`2481c30ec3133a64420ff4089566cf482d13fd6e`, with destination baseline
+`develop` at `270fda5f4566cc404ea6f3ea2b692bc266fd2c98`. This leaf uses only
+the T3-provisioned checkout; the lead owns the candidate's active combined smoke.
+
+`LevelRenderer.renderEndingBackground()` previously incremented the rewind-visible
+level frame counter and dispatched `ParallaxManager.updateForEnding()` from
+`Engine.drawEndingCutscene()`. The S2 DEZ handler reads that clock for its star
+rows and can also consume shake state. Another picture advanced this logical
+state; omitting pictures omitted its progression. Merely memoizing a render or
+renaming the draw method would not give updates ownership of that behavior.
+
+The bounded separation moves that existing progression to `GameLoopEndingSession`,
+after ending initialization or an admitted ending update has selected the scene.
+The existing semantic provider query `needsLevelBackground()` and final
+`ENDING_CUTSCENE` mode gate select it; no game, zone, frame or fixture key is
+introduced. `LevelEndingUpdateAccess` crosses the internal package boundary without
+extending the published Mod API. It requires loaded level geometry, not an active
+GL renderer. Drawing still owns viewport sampling, tilemap invalidation/rebuild,
+backdrop override and deferred GL submission, but reads the already advanced
+scroll output. The normal one-update/one-picture ordering and star sample are
+retained. A paused picture no longer advances the level clock or native handler.
+
+The ROM supports update ownership: `EndingSequence` increments
+`Level_frame_counter` before `RunObjects` and `BuildSprites`
+(docs/s2disasm/s2.asm:13134-13150); the cutscene object's scroll dispatch is
+`loc_A34C` (s2.asm:13482-13490). This slice preserves the engine's
+existing background-active gate, post-provider sampling and clock domain. It
+does not repair the wider ending's initial/reset clock or every ROM phase's
+scroll-dispatch schedule.
+
+`TestEndingBackgroundDrawBoundary` enters the actual S2 ending through its native
+initializer with the original REV01 ROM, then reaches the first background by
+running real `Engine.advanceFrame()` calls without drawing. Its witnesses cover
+repeated `Engine.draw()` calls with a poisoned framebuffer and pixel comparison,
+admitted updates without pictures, outer audio packet counts, focus pause and
+one acknowledged frame-step, and restore/forward replay of the production level
+and parallax adapters under different picture counts. Ending mode intentionally
+rejects user-toggle pause; this change retains that policy. The restore witness
+stays inside CHARACTER_APPEAR's constant BG-Y hold and certifies those two owners,
+not the entire ending provider or an input movie.
+
+### Remaining cross-owner dependencies
+
+- **Fades:** Engine advances detached UI fades before routing display input;
+  gameplay uses `GameLoopPlcLifecycle` and provider-owned palette/PLC phases.
+  Callbacks can change modes or replace owners. Those gates, reverse suppression,
+  restored-frame holds and their clock semantics still need coordinated fixed-tick
+  admission. `UiRenderPipeline.renderFadePass()` already reads fade state.
+- **Audio:** `OuterFramePresentation` produces one packet per Engine outer advance;
+  headless capture calls its own outer presentation boundary. No picture-count
+  independent service/sample-duration policy is established here. The existing
+  modal/pause/step silence and reverse-history policies remain intact.
+- **Capture/recording:** Live capture still emits after FINAL, followed by the
+  screenshot and window-only recording plate. Its timestamps/repeats/drops must
+  be designed together with audio. Recorded input rows, deliberate fast-forward
+  pumps and authoritative rewind capture retain their current update boundaries.
+- **Drawing/resources:** S2/S3K level-select background animators still update
+  from draw. Display shader frame/history, shader-picker/menu presentation counters,
+  provider/mod callbacks and lazy title-card art installation remain distinct
+  owners to audit. Render-thread tasks, deferred commands and scene suppression
+  cannot be reordered merely because this one background is repeat-safe.
+- **Suspension:** `afterScene()` consumes thumbnail readiness after scene flush
+  and SCENE effects; `betweenFrames()` parks/resumes only after that presentation
+  opportunity. Ticks without a scene cannot satisfy it; the frozen request and
+  its exact framebuffer boundary remain necessary.
+- **Restore:** Live rewind deliberately excludes `ENDING_CUTSCENE`, and the S2
+  ending provider has no complete rewind snapshot. The existing level/parallax
+  adapters are reused; no new persistent state or snapshot schema is added.
+  Full ending restore, history invalidation, session/region/pause rebasing and
+  replay/capture cadence remain prerequisites for scheduler integration.
+
+FixedSimulationScheduler remains disconnected. No FPS/configuration, input
+ownership, hardware emulation, trace hydration, API version or signature baseline
+changes are included. Focused validation is recorded below; independent live
+timing, full ending rewind and broad engine qualification are not claimed.
+
+### Focused separation evidence
+
+The first fixture attempt stopped too early: its 1,200-tick bound was shorter
+than the four native photo cycles (`$180 + $80` ticks per cycle plus transition
+passes). All four cases failed in setup, with no errors/skips, after 341s queue
+wait and approximately 85s Maven execution including the clean compilation.
+That attempt is not evidence for the production defect. The corrected bound is
+2,200; it then advances 16 further updates to reveal nonuniform sky/character
+pixels while remaining inside the native `$40`-tick CHARACTER_APPEAR hold.
+
+The corrected red request ran against unchanged candidate production subtree
+`0b7b46c3b43611b3d99bed745ada5dccac107a4b` and the final new test
+(SHA-256 `3a4219d940a0ae8e0ebc2cabe30e9b92feefffdcef8bdb23adecaec6eaa78368`).
+It executed **4 cases, 4 assertion failures, 0 errors, 0 skips**, after 393s
+queue wait and 33.945s Maven execution. Exact observations: two pictures changed
+the level clock from 0 to 2; three focus-paused pictures changed it from 0 to 3;
+an admitted update without a picture left it at 0 instead of 1; two pictures
+changed a restored clock from 0 to 2. All cases reached the actual native ending
+background before failing.
+
+The changed production subtree is
+`18b116f28e9c09d7900d125d50e9795e9e7c2bed`; test subtree
+`887c59d19a54fc7caa2e0cd2cb76e75baccae577` includes the unchanged corrected
+regression cases. `OPENGGF_S2_ROM` names the discovered absolute original
+`Sonic The Hedgehog 2 (W) (REV01) [!].gen` source,
+CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+The red XML verifies Java `25.0.5.0.2`, that absolute ROM path and explicit EGL.
+No desktop display/audio device is used.
+
+The green focused selection uses the same command shape, with the selectors
+listed here (the red command selects only `TestEndingBackgroundDrawBoundary`):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  '-Dtest=TestEndingBackgroundDrawBoundary,TestEngineFrameAdvance,TestGameLoopEndingSession,TestEngineLiveCapturePresentation,TestEngineSuspensionRendering,TestGameLoopAudioPresentationModes,TestGameLoopRewindBoundaryPolicy,TestLevelManagerRewindSnapshot,TestParallaxRewindSnapshot,TestSonic2NativeEndingEntry,TestSwScrlDez,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestRawGlfwTestSetupGuard,TestTraceReplayInvariantGuard' test
+```
+
+The change-based planner selects all 4,332 smoke classes because the engine and
+its test infrastructure are shared. This leaf deliberately does not submit that
+run: the user assigns combined smoke to the lead and authorizes only focused
+validation here. This request checks the changed owner, adjacent production
+boundaries and structural/API guards; it does not replace delivery-wide timing,
+ROM/trace or public-release qualification.
+
+The focused request completed **269 cases across 15 classes, 0 failures, 0
+errors, 0 skips**, after 342s queue wait and approximately 98s Maven execution
+including recompilation. All 15 XML inventories were inspected: the new boundary
+4, Engine advance 16, live capture presentation 27, suspension pixels 1, audio
+presentation modes 31, ending session 36, rewind boundary policy 7, DEZ native
+scroll 2, level snapshot 16, parallax snapshot 14, Mod API signatures 12,
+architectural source guards 87, trace authority guards 10, raw GLFW guards 5,
+and native S2 ending ingress 1. The new boundary XML confirms Java `25.0.5.0.2`,
+the original ROM path and `surfaceless-egl`; its four cases all executed.
+The source/test subtrees above are unchanged throughout the green request. A
+subsequent source-comment-only correction disambiguates the calling label for
+the citation checker; executable code and tests are unchanged. This is focused
+validation, not a smoke-suite or
+trace/campaign pass.
+
+Whitespace, AGENTS/CLAUDE mirror and disassembly-citation checks pass; the large
+existing design contains one unverifiable citation but no checker findings,
+and the corrected production accessor has no citation findings. No category run or
+diagnostic archive was created. The owned Maven requests have exited; an initial
+unneeded queued version probe was cancelled, and the actual test JVM identity
+was verified from XML instead. Surefire reports remain in this checkout's
+ordinary `target/surefire-reports` for lead inspection. No test job is retained.
+The T3 checkout and local `feature/ai-draw-presentation-boundary` branch are kept
+for lead integration; the original provisioned branch and unrelated work are
+preserved. No push, PR, release or other checkout/target was touched. Queue waits
+are per request; overall delivery wall time was not separately measured.
+
+The final source-comment correction gives production subtree
+`8b217bbc4cb31e083b4ca1e7cec9521994e5683d`; test subtree remains
+`887c59d19a54fc7caa2e0cd2cb76e75baccae577`. Its affected source guard was checked
+again with
+`env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestArchitecturalSourceGuard' test`:
+**87 cases, 0 failures/errors/skips**, after 149s queue wait and approximately
+87s Maven execution including full recompilation. The XML confirms Java
+`25.0.5.0.2`. These are repeated identities from the 269-case selection, not 87
+additional unique cases. SHA-256 hashes of the three changed production class
+files match the earlier behavioral build exactly after this recompilation.
+The strict citation checker and both prepared-message/content policy checks pass.
+The exact message was passed through `git interpret-trailers --parse`; its final
+`OpenAI Codex GPT-6.1 Sol` coauthor was verified. The seven documentation policy
+trailers precede that final coauthor block. No source/test edits followed these
+checks; only this evidence paragraph was added.
