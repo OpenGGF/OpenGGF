@@ -264,6 +264,10 @@ class TestServerBrowserView {
         view.draw(canvas);
 
         assertTrue(canvas.shows("NO SHARED TIMES"), canvas.joined());
+        input.tapKey(view::update, SceneKeys.F1);
+        String details = openggf.timeattack.ui.FullTextReaderProbe.readAll(input, view::update, view::draw,
+                view::detailsVisibleLines, view::detailsFirstLine);
+        assertTrue(details.contains("No shared times"), details);
     }
 
     @Test

@@ -173,6 +173,16 @@ Input comes as named buttons and keys, never raw numbers:
 - By Genesis convention **A or C (or Start) confirms and B goes back**; scenes follow it, so
   `input().menuAccept()` is A, C or Start and `input().menuBack()` is B. `input()` also has
   both players' raw state.
+- Name those buttons as the player presses them with `ctx.buttonLabel(button, controller)`
+  (`ButtonPrompts.Button.A`, `B`, `C`, `START`): `false` gives player 1's bound key ("Space" for
+  A by default, remaps followed), `true` the physical button on player 1's assigned pad in that
+  pad's family. Genesis A is the west button ("X" on Xbox, "Square" on PlayStation, "West"
+  otherwise) and B the south one ("A", "Cross", "South"), so a fixed "A" cap points an Xbox player
+  at the button that goes back. Your scene decides which device to name, for example from the
+  last press in `physicalInput()`; an empty result (unbound, no pad, or a headless or test context
+  without live input) means name the Genesis button. The label never changes what a press does.
+  If you also read Enter or Escape yourself, compare a binding with `ButtonPrompts.keyName(key)`
+  so a key the player bound to the opposite button does one thing; Time Attack and Act Practice do.
 
 Slay the Robotnik's `ui/Controls` turns all of this into the few verbs its screens use.
 
@@ -185,6 +195,13 @@ printable or editing keys (display filters, recording chords) then read those ke
 up, and the claim lapses on its own one tick after you stop renewing it. Escape,
 function keys, modifiers and gamepads stay with the host; your own `keyDown`,
 `keyPressed` and `physicalInput()` still see the claimed keys.
+
+For a scene with focused text fields, override `capturesTextInput()` to return
+true while a field is active. The host establishes that scene's capture before
+global shortcuts or keyboard mappings run, including on the first typed frame;
+you do not need a separate `captureKeyboardText()` call for that declaration.
+Playback shortcuts are held back too. Return false when the field closes so
+ordinary shortcuts resume after the final input claim expires.
 
 For five-button instruments or other device-specific controls, use
 `ctx.physicalInput()`: an immutable snapshot of keys, standard GLFW gamepads and

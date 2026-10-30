@@ -1,7 +1,9 @@
 package openggf.timeattack.ui;
 
+import com.openggf.control.ButtonPrompts;
 import com.openggf.control.PhysicalInputEvent;
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.PixelCanvas;
@@ -61,15 +63,24 @@ public final class MenuPage {
     public static final String ARROWS_LR = "LEFT/RIGHT";
     public static final String ARROWS_UD = "UP/DOWN";
 
-    /** One footer hint: a key cap and what it does here. */
-    public record Hint(String key, String label) {
+    /**
+     * One footer hint: a key cap and what it does here. A shortcut repeats an action the page also
+     * offers as a row (J for Join by code), so a narrow footer leaves it out before the others.
+     */
+    public record Hint(String key, String label, boolean shortcut) {
         public Hint {
-            if (key == null || key.isEmpty()) throw new IllegalArgumentException("key");
+            // An empty key (a key the player left unbound) is a hint footers leave out.
+            key = key == null ? "" : key;
             label = label == null ? "" : label;
         }
+
+        public Hint(String key, String label) { this(key, label, false); }
     }
 
     public static Hint hint(String key, String label) { return new Hint(key, label); }
+
+    /** A hint for a key that repeats one of the page's rows; see {@link Hint}. */
+    public static Hint shortcut(String key, String label) { return new Hint(key, label, true); }
 
     /**
      * Which device names the keys: true once the last button or key press this view saw came from a
@@ -87,11 +98,45 @@ public final class MenuPage {
         return result;
     }
 
-    /** The confirm key: A on a controller (A, C and Start all confirm), else Enter. */
-    public static String confirm(boolean pad) { return pad ? "A" : "ENTER"; }
+    /**
+     * The keys a page names this tick, for the device pressed last ({@link #controller}). On a
+     * keyboard confirm is Enter and back is Escape, the keys the views read beside the Genesis
+     * buttons, unless the player bound Enter to B or Escape to a confirming button: then the bound
+     * keys say what they do ({@link ViewInput#of}). On a controller each label is the physical
+     * button that produces Genesis A, B and Start on the player's pad family, from the host's live
+     * bindings ({@link ViewInput#buttonLabel}); without live input the Genesis names stand in.
+     * {@code select} names the row confirm when Enter belongs to Play (the keyboard's bound A or C,
+     * empty when neither is bound). An empty key is left out of a footer.
+     */
+    public record Keys(boolean pad, String confirm, String back, String start, String select) {
+        /** Before any input: the keyboard's own keys. */
+        public static Keys keyboard() { return new Keys(false, "ENTER", "ESC", "ENTER", ""); }
 
-    /** The back key: B on a controller, else Esc. */
-    public static String back(boolean pad) { return pad ? "B" : "ESC"; }
+        /** The details key: F1 on a keyboard, R3 (the right stick press) on any controller. */
+        public String details() { return pad ? "R3" : "F1"; }
+
+        public static Keys of(ViewInput input, Keys previous) {
+            boolean pad = controller(input, previous == null ? false : previous.pad());
+            ButtonPrompts.Button a = ButtonPrompts.Button.A;
+            ButtonPrompts.Button c = ButtonPrompts.Button.C;
+            if (pad) {
+                String confirm = label(input, a, true, "A");
+                return new Keys(true, confirm, label(input, ButtonPrompts.Button.B, true, "B"),
+                        label(input, ButtonPrompts.Button.START, true, "START"), confirm);
+            }
+            String select = label(input, a, false, label(input, c, false, ""));
+            boolean enterBack = input.enterGoesBack(SceneKeys.ENTER);
+            String confirm = enterBack ? (select.isEmpty() ? label(input, ButtonPrompts.Button.START, false, "")
+                    : select) : "ENTER";
+            String back = input.escapeConfirms() ? label(input, ButtonPrompts.Button.B, false, "") : "ESC";
+            String start = enterBack ? label(input, ButtonPrompts.Button.START, false, "") : "ENTER";
+            return new Keys(false, confirm, back, start, select);
+        }
+
+        private static String label(ViewInput input, ButtonPrompts.Button button, boolean controller, String fallback) {
+            return input.buttonLabel(button, controller).orElse(fallback);
+        }
+    }
 
     // ------------------------------------------------------------------ page
 
@@ -184,8 +229,10 @@ public final class MenuPage {
     public static final int BUTTON_H = 16;
 
     /**
-     * A framed button with a centred bold label: the focus band when selected, otherwise a quiet
-     * panel; a primary button keeps a gold edge so the launch action shows before focus reaches it.
+     * A framed button with a centred label: the focus band when selected, otherwise a quiet panel.
+     * A primary (launch) button draws its label in the bold menu face and keeps a gold edge, so the
+     * action shows before focus reaches it; a secondary button (Back, Cancel) uses the light row face
+     * in sentence case, as its rows do.
      */
     public static void button(SceneCanvas canvas, int x, int y, int w, String label, boolean focused,
                               boolean primary) {
@@ -194,8 +241,13 @@ public final class MenuPage {
             canvas.fill(x, y, w, BUTTON_H, BUTTON);
             outline(canvas, x, y, w, BUTTON_H, primary ? 0xFFB59A3F : EDGE);
         }
-        String shown = TextLayout.ellipsis(label, w - 8, canvas::textWidth);
-        canvas.text(shown, x + (w - canvas.textWidth(shown)) / 2, y + 3, focused || primary ? GOLD : TEXT);
+        if (primary) {
+            String shown = TextLayout.ellipsis(label, w - 8, canvas::textWidth);
+            canvas.text(shown, x + (w - canvas.textWidth(shown)) / 2, y + 3, GOLD);
+        } else {
+            String text = sentence(label);
+            NameFont.draw(canvas, text, x + (w - NameFont.width(text)) / 2, y + 2, focused ? TEXT : MUTED);
+        }
     }
 
     /** A two-way switch at {@code right}: compact capitals, the chosen side lit. Returns its left x. */
@@ -327,6 +379,7 @@ public final class MenuPage {
     public static int hintsWidth(List<Hint> hints) {
         int width = 0;
         for (Hint hint : hints) {
+            if (hint.key().isEmpty()) continue;
             if (width > 0) width += 10;
             width += capWidth(hint.key()) + (hint.label().isEmpty() ? 0 : 4 + labelWidth(hint.label()));
         }
@@ -339,6 +392,7 @@ public final class MenuPage {
     public static void hints(PixelCanvas canvas, int x, int y, List<Hint> hints, int labelColour) {
         int cursor = x;
         for (Hint hint : hints) {
+            if (hint.key().isEmpty()) continue;
             cursor += cap(canvas, cursor, y, hint.key());
             if (!hint.label().isEmpty()) {
                 CompactFont.draw(canvas, hint.label().toUpperCase(Locale.ROOT), cursor + 4, y + 2, 1, labelColour);
@@ -350,16 +404,16 @@ public final class MenuPage {
 
     /**
      * The footer band: an optional status on the left in {@code statusColour} and the hints at the
-     * right. Hints that would meet the status are dropped from the left, so the rightmost (most
-     * important, usually Back) stay; the status then takes the remaining width.
+     * right. When the hints would meet the status, {@link #fitHints} leaves out the arrow hints
+     * first (the rows' own triangles and the focus band already show them); the status then takes
+     * the remaining width.
      */
     public static void footer(PixelCanvas canvas, String status, int statusColour, List<Hint> hints) {
         int width = canvas.width();
         canvas.fill(0, FOOTER_Y, width, 224 - FOOTER_Y, INK);
         canvas.fill(0, FOOTER_Y, width, 1, 0xFF1C2960);
         int statusRoom = status == null || status.isEmpty() ? 0 : Math.min(NameFont.width(status) + 12, width / 2);
-        List<Hint> shown = hints;
-        while (!shown.isEmpty() && hintsWidth(shown) > width - 2 * MARGIN - statusRoom) shown = shown.subList(1, shown.size());
+        List<Hint> shown = fitHints(hints, width - 2 * MARGIN - statusRoom);
         int hintsX = width - MARGIN - hintsWidth(shown);
         hints(canvas, hintsX, FOOTER_Y + 4, shown, TEXT);
         if (statusRoom > 0) {
@@ -367,13 +421,36 @@ public final class MenuPage {
         }
     }
 
-    /** Adds the full-text action beside Back, where narrow footers keep it visible. */
-    public static void footerWithDetails(PixelCanvas canvas, boolean pad, String status, int statusColour,
+    /**
+     * The hints that fit in {@code room}, in their order. Up/Down goes first, then shortcuts that
+     * repeat a row, then Left/Right (the focus band, the rows and their triangles already offer
+     * them); the action, Details and Back hints stay. Only a footer too narrow even for those loses
+     * hints from the left.
+     */
+    public static List<Hint> fitHints(List<Hint> hints, int room) {
+        List<Hint> shown = new ArrayList<>(hints);
+        shown.removeIf(hint -> hint.key().isEmpty());
+        List<java.util.function.Predicate<Hint>> optional = List.of(hint -> hint.key().equals(ARROWS_UD),
+                Hint::shortcut, hint -> hint.key().equals(ARROWS_LR));
+        for (var drop : optional) {
+            if (hintsWidth(shown) <= room) return shown;
+            shown.removeIf(drop);
+        }
+        while (!shown.isEmpty() && hintsWidth(shown) > room) shown.remove(0);
+        return shown;
+    }
+
+    /** Adds the details action beside Back, where narrow footers keep it visible. */
+    public static void footerWithDetails(PixelCanvas canvas, Keys keys, String status, int statusColour,
                                          List<Hint> hints) {
+        footer(canvas, status, statusColour, withDetails(keys, hints));
+    }
+
+    /** {@code hints} with the details action before the last (Back) hint. */
+    public static List<Hint> withDetails(Keys keys, List<Hint> hints) {
         List<Hint> complete = new ArrayList<>(hints);
-        int index = Math.max(0, complete.size() - 1);
-        complete.add(index, hint(pad ? "R3" : "F1", "Read"));
-        footer(canvas, status, statusColour, complete);
+        complete.add(Math.max(0, complete.size() - 1), hint(keys.details(), "Details"));
+        return complete;
     }
 
     /** Width of a key cap. */

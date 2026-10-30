@@ -35,9 +35,25 @@ public final class ButtonPrompts {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(button, "button");
         if (player != 0 && player != 1) throw new IllegalArgumentException("Player must be 0 or 1");
-        Optional<String> key = keyLabel(input.currentBindings(), player, button);
+        Optional<String> key = keyLabel(input, player, button);
+        Optional<String> pad = padLabel(input, player, button);
+        if (pad.isPresent() && input.playerUsesControllerPresentation(player)) return pad;
+        return key.isPresent() ? key : pad;
+    }
+
+    /** The player's bound key for {@code button}, whatever device they used last; empty when unbound. */
+    static Optional<String> keyLabel(InputHandler input, int player, Button button) {
+        return keyLabel(input.currentBindings(), player, button);
+    }
+
+    /**
+     * The physical button producing {@code button} on the player's assigned pad, named in that pad's
+     * family, whatever device they used last; empty without an assigned pad (or, for REWIND, when the
+     * player's pad is not the primary pad).
+     */
+    static Optional<String> padLabel(InputHandler input, int player, Button button) {
         ControllerPromptStyle style = input.playerControllerStyle(player);
-        Optional<String> pad = style == null || button == Button.REWIND && !input.playerPadIsPrimary(player)
+        return style == null || button == Button.REWIND && !input.playerPadIsPrimary(player)
                 ? Optional.empty() : Optional.of(style.button(switch (button) {
                     case A -> GamepadInputManager.ACTION_A_BUTTON;
                     case B -> GamepadInputManager.ACTION_B_BUTTON;
@@ -45,8 +61,6 @@ public final class ButtonPrompts {
                     case START -> GamepadInputManager.START_BUTTON;
                     case REWIND -> GamepadInputManager.REWIND_BUTTON;
                 }));
-        if (pad.isPresent() && input.playerUsesControllerPresentation(player)) return pad;
-        return key.isPresent() ? key : pad;
     }
 
     /** Readable GLFW key name ("Right Shift", "Keypad Enter", "F5"); empty for an unbound key. */

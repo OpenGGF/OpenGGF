@@ -41,6 +41,31 @@ class TestTracePlaybackFeedback {
     }
 
     @Test
+    void mouseCanCancelLoadingBeforeItsAutomaticLaunch() {
+        var feedback = new TracePlaybackFeedback(entry(), mock(PixelFont.class));
+        feedback.render();
+        feedback.update(new InputHandler(), new com.openggf.game.MasterTitlePointer(305, 215, false, true, false, 0));
+        assertEquals(TracePlaybackFeedback.Result.BACK, feedback.consumeResult());
+        feedback.update(new InputHandler());
+        assertEquals(TracePlaybackFeedback.Result.NONE, feedback.consumeResult());
+    }
+
+    @Test
+    void mousePagesTheCompleteFailureThenReturnsToTheList() {
+        TraceLaunchStatus.record(entry(), "A detailed failure row\n".repeat(40) + "ERROR_TAIL");
+        PixelFont font = mock(PixelFont.class);
+        var feedback = new TracePlaybackFeedback(entry(), font);
+        feedback.render();
+        clearInvocations(font);
+        feedback.update(new InputHandler(), new com.openggf.game.MasterTitlePointer(100, 100, false, false, false, -1000));
+        feedback.render();
+        assertTrue(text(font).contains("ERROR_TAIL"), text(font));
+        feedback.update(new InputHandler(), new com.openggf.game.MasterTitlePointer(305, 215, false, true, false, 0));
+        assertEquals(TracePlaybackFeedback.Result.BACK, feedback.consumeResult());
+        assertTrue(TraceLaunchStatus.current().isEmpty());
+    }
+
+    @Test
     void cancellingLoadingNeverIssuesLaunch() {
         var feedback = new TracePlaybackFeedback(entry(), mock(PixelFont.class));
         feedback.render();

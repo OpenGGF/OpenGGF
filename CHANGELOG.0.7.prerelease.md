@@ -647,15 +647,40 @@ Unreleased. The earlier development themes remain in
   your own row's character stays readable, and room chat reads Full chat in every view.
   The newest chat message wraps onto a second line instead of being cut, with senders
   kept to a third of the row; Room details scrolls through every player and message,
-  each whole, opening at the newest message. The Stageplay
+  each whole, opening at the newest message. Every Time Attack page's Details key (F1, or
+  R3 on a controller) opens a read-only page under that page's own title, with its facts in
+  the same label column and the values worded as the page shows them; sentences wrap at
+  spaces and addresses after a separator, so no word is split. In a room it opens Room
+  details, which now begins with the room's name, next track, phase, rules and any notice.
+  Playback Browser and its recording options, target-frame keypad and trace feedback
+  pages now support mouse selection, actions and wheel scrolling; right-click goes back
+  one level, and the side gutters of a centred native page activate nothing.
+  Text fields in mod scenes reserve typing keys before global shortcuts and keyboard
+  mappings run, so entering a name cannot open playback or toggle debug panels; the
+  field still receives its text and editing keys, and shortcuts resume after it closes.
+  Narrow footers leave out arrow hints and shortcuts that repeat a row before an action,
+  Details or Back, and secondary buttons such as Back use the row face. Controller key caps
+  name the button that actually does the job on that pad (X and A on Xbox, Square and Cross
+  on PlayStation, West and South otherwise, for confirm and back) instead of the Genesis
+  letters, which on an Xbox pad named the back button as confirm; once ready over the
+  lobby level a keyboard names its bound select key, a pad is no longer offered the
+  keyboard's vote digits, and a key bound to the opposite button (Enter to B, say) does that
+  one thing. Sonic 1 profiles say when the ROM colours cannot be read on the page instead
+  of showing unexplained grey swatches. Creator scenes can name player 1's bound key or pad
+  button the same way with `SceneContext.buttonLabel`. The Stageplay
   editor names its mode or take in a top-bar chip at every window size, beside at most
   five key caps (or pad buttons) for the focused pane that repeat no button's key, and shows shortcuts as
   caps on its buttons and Commands rows. Long scene names keep the unsaved-change
   marker visible. Mutator Lab's list and options pages name their shared timing once in
   the band (rows keep only exceptions such as pending edits or a Restart-or-death mutator),
   the switch row reads Enabled, and while play is held the list shows no opaque Hold key
-  (Resume is the way back). The Act
-  Practice example's key hints no longer run off the screen.
+  (Resume is the way back). The Act Practice example's menu now follows the same design
+  language: a navy page with the game on a focused card showing its best time and page
+  dots, key caps that name the keyboard or the controller's own buttons, whichever was
+  pressed last (Genesis A, C and Start confirm, as in every scene), results whose icon and colour say whether the
+  act was completed (and set a new best), failed to load or left the best unsaved, and a
+  no-games page that says what to do next. Its in-run timer reads m:ss.cc, as Time Attack
+  does, instead of drawing a question mark for the double quote the compact face lacks.
 
 - **Second Strike hard-mode prototype:** Native brittle supports, earned zero-ring
   bonus invitations, finite badnik/boss patterns and original-ring retention keep
@@ -830,6 +855,7 @@ Unreleased. The earlier development themes remain in
   and the original idle intervals across repeated pulses. Sliding fan platforms
   occupy their original object slots and allocate fans during initialization,
   preserving latch reads between other fans and retrying when slots become free.
+  Their allocated fan links are explicitly covered by stable-identity rewind capture.
   Spinning columns stop inertia at native zero-velocity left-side contacts. Hydrocity's hand
   launcher checks its top surface on every pass, as in the original, so a rising
   hand catches a player rolling over it.

@@ -53,6 +53,21 @@ public interface SceneContext {
     default PhysicalInput physicalInput() { return PhysicalInput.neutral(); }
 
     /**
+     * What to call one of player 1's logical buttons on the device a scene's prompt names, from the
+     * live bindings ({@link com.openggf.control.ButtonPrompts}): with {@code controller} false, the
+     * keyboard key bound to it ("Space" for A by default, remaps followed); with {@code controller}
+     * true, the physical button that produces it on player 1's assigned pad, named in that pad's
+     * family ("X" on Xbox, "Square" on PlayStation, "West" otherwise, for A). The scene decides which
+     * device to name (for instance from {@link #physicalInput()}); the label never changes input.
+     * Empty when the button is unbound on that device, no pad is assigned, or the context has no
+     * live input (headless and test contexts): name the Genesis button ("A") instead.
+     */
+    default java.util.Optional<String> buttonLabel(com.openggf.control.ButtonPrompts.Button button,
+                                                   boolean controller) {
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Claims the keyboard's text and editing keys through the next tick, so host shortcuts bound
      * to letters (display filters, recording chords) do not fire while the player types. Call it
      * every tick the scene wants typing; the claim lapses on its own. Escape, function keys and
