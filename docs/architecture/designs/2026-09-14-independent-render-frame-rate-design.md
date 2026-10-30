@@ -1665,3 +1665,113 @@ The exact message was passed through `git interpret-trailers --parse`; its final
 `OpenAI Codex GPT-6.1 Sol` coauthor was verified. The seven documentation policy
 trailers precede that final coauthor block. No source/test edits followed these
 checks; only this evidence paragraph was added.
+
+### S2 ending boundary preservation follow-up — 2026-10-30
+
+Coverage source is `4fbdc2716b8e4e0a3b30146504e55d84ee7ae444`; its parent
+`2481c30ec3133a64420ff4089566cf482d13fd6e` remains the lead's combined-smoke
+input. This isolated follow-up changes tests and evidence only. No scheduler,
+Engine, provider, public API or audio behavior is changed.
+
+The independent expectations are semantic translations of the shipped ROM:
+`EndingSequence` seeds BG Y to `$C8` (s2.asm:13090-13103), `SwScrl_DEZ`
+increments star words before packing negative BG scroll with zero FG scroll
+(s2.asm:17485-17533), and its row table/strip search makes world Y 200 the
+start of star row 10, followed by row 11 at 208. The first sampled values are
+therefore `-$6` and `-$3`; moving Y to 201 shortens the first visible strip to
+seven lines. `loc_A34C` supplies the falling camera delta
+(s2.asm:13482-13490). `loc_A3BE` raises the credits trigger
+(s2.asm:13525-13528), then `EndgameCredits` fades to black and loads text/music
+(s2.asm:13157-13205). These are original-ROM arithmetic and semantic boundaries,
+not an emulator capture, whole-ending timing oracle or proof that the engine's
+existing photo/scroll phase durations exactly match every native dispatch.
+
+`TestEndingBackgroundDrawBoundary` now stops setup on the exact first sky
+activation, before any picture. It asserts the first scroll sample and white
+palette, repeats the picture without spending state/audio, checks changing BG Y
+and native row packing through omitted pictures, focus pause and one acknowledged
+frame-step, and follows normal provider updates through scroll retirement,
+outgoing fade, credits mode, the single `$BD` music request and visible text on
+black. The terminal provider decision must suppress that update's background
+pass; outgoing-fade and credits pictures cannot revive it. Existing constant-Y
+level/parallax adapter replay remains a deliberately partial owner check.
+`ENDING_CUTSCENE` remains non-rewindable; none of this generalizes to S3K's
+level-owned, rewindable endings.
+
+`TestSonic2EndingCaptureUpdateBoundary` separately checks the canonical
+`GameplayCaptureSession.step(null)` owner through first activation, first moving
+Y and credits without drawing. Declared ingress requests the real credits
+transition; no provider state, clock, scroll or comparison data is hydrated.
+The capture renderer currently has no separate S2 ending-mode dispatch and falls
+through to ordinary level drawing. This inherited limitation is outside the
+update-ownership candidate: capture stepping is certified here, while ending
+pixels are asserted through the real Engine draw owner. S3K transition and
+capture-entry sentinels remain separate checks of their own native owners.
+
+Validation uses unchanged production `src/main` tree
+`8b217bbc4cb31e083b4ca1e7cec9521994e5683d` and final test tree
+`f9394aaa062a2d6e32fcc0ef571371172fb76f3e`. S2 ROM CRC32/SHA-1 are
+`7B905383` / `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K are
+`63522553` / `CFBF98C36C776677290A872547AC47C53D2761D6`. The command uses the
+existing absolute paths resolved from the repository-root entries named
+`Sonic The Hedgehog 2 (W) (REV01) [!].gen` and
+`Sonic and Knuckles & Sonic 3 (W) [!].gen` respectively; the variables below
+stand for those paths, not copied assets.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  '-Dtest=TestEndingBackgroundDrawBoundary,TestSonic2EndingCaptureUpdateBoundary,TestGameLoopEndingSession,TestEngineFrameAdvance,TestGameLoopAudioPresentationModes,TestGameLoopRewindBoundaryPolicy,TestSonic2NativeEndingEntry,TestSwScrlDez,TestS3kEndingTransitionPresentation,TestGameplayCaptureS3kEndingEntry,TestRawGlfwTestSetupGuard,TestTraceReplayInvariantGuard' test
+```
+
+The first request executed 123 cases in 12 classes: 122 passed, one new music
+assertion failed, no errors/skips. Shared admission recorded 11.8s waiting and
+101.9s holding/executing, including clean compilation. The observer saw `$87`
+then `$BD` during the outgoing fade. A one-method diagnostic request used the
+same environment/S2 ROM and
+`-Dtest=TestEndingBackgroundDrawBoundary#lastSkyUpdateRetiresScrollBeforeCreditsAndPicturesCannotRepeatTheMusicRequest`
+(without the unused S3K ROM property): one failure, no errors/skips, 142.2s
+waiting and 35.6s execution including test compilation. Its captured stack
+proved `$87` came from `Sonic2LevelInitProfile.serviceLevelLoadVBlank()` through
+`LevelManager.publishPreparedLevelMusic()`, not drawing or the ending provider.
+This fixture enters the ending before completing DEZ level startup; its pending
+music becomes serviceable during the ending fade. The rejected assertion that
+the whole request list must contain only `$BD` was therefore too broad. The
+corrected assertion preserves the existing startup owner, counts exactly one
+credits request, requires it last, and compares the entire list across the
+credits hold and repeated pictures. Temporary stack printing was removed.
+
+The leased `python3 tools/testing/maven_queue.py -v` probe also confirmed
+Java `25.0.5.0.2` (353.5s queued, 0.2s execution); its wait overlapped the first
+focused request and must not be added to that request's elapsed time. The first
+request's XML confirmed that Java version, explicit EGL and both absolute ROM
+properties; all 12 class inventories were inspected. This is focused Linux/EGL
+coverage for the normal Sonic/320 S2 ending, plus separate S3K entry sentinels.
+It does not certify capture's S2 ending pixels, PCM parity, other S2 characters
+or widths, whole S3K endings, emulator parity or a broad smoke suite.
+
+The first corrected recheck reached the later credits-pixel assertion and failed
+because the fixture poisoned the framebuffer then called only `Engine.draw()`.
+`Engine.displayFrame()` owns the clear-color pass separately; draw alone leaves
+magenta behind the text. That request executed one case, one failure, no
+errors/skips, after 705.1s queue wait and 37.8s execution including compilation.
+The fixture now invokes the production provider's `setClearColor()` and clears
+before the real credits draw, independently verifies that the clear replaced
+poison with black, then requires visible text and exact repeated pixels. Sky
+pictures retain their poisoned-buffer control. No production rendering change
+was justified or made. The final recheck uses the same one-method command.
+
+Final recheck: **1 case passed, 0 failures/errors/skips**, with
+26.3s shared queue wait and 37.9s execution including test
+compilation (Maven reported 37.208s). Its XML again confirms Java
+`25.0.5.0.2`, original absolute S2 ROM and `surfaceless-egl`. Together with the
+122 unchanged cases that passed in the initial 12-class request, this covers
+all 123 selected identities; it is not a claim of a single all-green combined
+run. Only the failed method and its new credits-clear helper changed afterward.
+No broad run was submitted; lead-owned combined smoke remains a separate gate.
+Whitespace and pinned disassembly citation checks exit successfully; citations
+retain the checker's bounded near/unverifiable classifications rather than
+claiming instruction-level or emulator verification. Consumed local diagnostics
+are removed before handoff; no raw captures, logs or pass cache are preserved.
