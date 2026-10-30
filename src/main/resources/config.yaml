@@ -18,6 +18,7 @@ display:
   deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
   hudAnchor: "DEFAULT"   # Widescreen HUD position: centered native frame or screen left edge
   hudTimeHundredths: false   # TIME in hundredths (0:00.00), as Sonic CD shows it; the original games show whole seconds
+  spriteScanlineLimit: true   # Native per-row sprite count/pixel budgets; turn off to reduce sprite dropouts
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
   fps: 60   # Frames per second to render (changes game speed)

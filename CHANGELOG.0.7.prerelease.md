@@ -961,6 +961,9 @@ Unreleased. The earlier development themes remain in
   enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, enabled by default.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.

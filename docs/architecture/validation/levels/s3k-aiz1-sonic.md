@@ -1,5 +1,26 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+## Foreground plant visibility (2026-10-29)
+
+The [sprite-culling record](../../plans/2026-10-29-sprite-scanline-rendering.md)
+tracks the reported idle-pose dropout near (6176, 1116). The baseline positioned
+Sonic+Tails capture reproduces it. `TestAizForegroundPlantRendering` covers
+whole-object rejection after parallax, partially visible plants, native320 and
+wide528 viewports, both variant heights and the exclusive bottom edge. The
+pre-fix source fails the two rejection cases while partial visibility passes.
+All three cases pass after correction. The before/after positioned captures
+retain a byte-identical state CSV and restore the missing body/shoe pixels.
+The linked record gives commands, scope and remaining validation.
+
+The shared display preference is checked by `TestSpriteSatLimits` (H32, H40,
+wide presentation, count/pixel budgets, overflow carry and retained masks/table
+capacity), `TestGraphicsManagerSpriteSatReplay` (live preference consumption)
+and `TestEngineSettingsScreen` (saved menu choice and 320/400 layout). This is
+bounded presentation maintenance. It adds no simulation or captured state;
+existing plant recreation retains its spawn-derived projection. Full-route,
+native-emulator pixel comparison, donor/team products and fresh whole-world
+rewind qualification remain inherited obligations.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

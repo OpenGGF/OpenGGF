@@ -91,6 +91,7 @@ public final class MenuDesignCaptureTool {
         List<Integer> advanced = List.of(up, right, right, enter, down, enter);
         List<Scene> hubScenes = new ArrayList<>(List.of(
                 new Scene("m01-settings-details", none, concat(settings, f1), 20),
+                new Scene("m01b-settings-sprite-limit", none, concat(settings, repeat(down, 4)), 20),
                 new Scene("m02-settings-files", none, concat(settings, up, right, right, right, right, down), 20),
                 new Scene("m03-settings-files-edit", none,
                         concat(settings, up, right, right, right, right, down, enter), 30),
