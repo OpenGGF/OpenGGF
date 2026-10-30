@@ -156,6 +156,15 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
         // a new-contact Y lift; an earlier solid cannot consume its ride.
         return true;
     }
+    @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectFull_1P (sonic3k.asm:41061-41081) clears this player's
+        // status bit on air/range exit, before sub_47A96's next conveyor carry.
+        // An in-bounds object-controlled seat returns without clearing it at
+        // loc_1E1CA / loc_1E1F4 (sonic3k.asm:41707-41742).
+        int halfWidth=getSolidParams().halfWidth();
+        int relativeX=(player.getCentreX()-currentX+halfWidth)&0xFFFF;
+        return player.getAir()||relativeX>=halfWidth*2;
+    }
     @Override public boolean allowsObjectControlledSolidContacts(){return true;}
     @Override public boolean checksOutOfRangeAfterRoutine(){return true;}
     @Override public boolean usesCustomOutOfRangeCheck(){return true;}

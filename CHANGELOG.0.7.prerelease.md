@@ -5,12 +5,21 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg staircases:** Moving sections preserve their own standing bits.
+  A jumping rider releases at the ridden section's collision checkpoint,
+  preserving the native jump height.
+
 - **Death Egg moving pads:** Exact surface contact leaves an airborne player in
   flight until the native overlap window is reached, preserving the original
   cold route's landing timing. Walking or jumping off clears that player's
   standing latch, allowing the lift's return pause to resume after P1 leaves.
   Conveyor pads retain each rider's standing bit as they move, preserving the
   native jump height and clearing support at the pad's own contact checkpoint.
+  Walking off a conveyor pad also retires that player's carry bit, preventing
+  another conveyor push after support has ended.
+
+- **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
+  a falling player airborne until the native landing window is reached.
 
 - **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
   edges stable across logical rereads and acknowledge keyboard/text lifetime once.
@@ -66,6 +75,9 @@ Unreleased. The earlier development themes remain in
   rows wrap and focused overflow pages without ellipses. Built-in menus, editor
   sheets and bundled Time Attack pages expose complete long text through paging
   or an advertised read-only reader, including paths, errors and retained chat.
+  Added and changed menu-overhaul wording now has current drafts in every full
+  catalogue. Playback facts and import guidance use complete ICU messages;
+  special-stage playback labels come from metadata rather than translated text.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped

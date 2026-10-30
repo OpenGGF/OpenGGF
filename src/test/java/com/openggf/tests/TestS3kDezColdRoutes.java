@@ -319,6 +319,21 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(3280);
     }
 
+    @Test
+    void coldActOneFloorLauncherLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(5520);
+    }
+
+    @Test
+    void coldActOneStaircaseJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(6810);
+    }
+
+    @Test
+    void coldActOneConveyorWalkOffPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(8770);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
