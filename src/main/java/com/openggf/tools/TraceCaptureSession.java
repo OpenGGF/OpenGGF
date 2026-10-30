@@ -120,6 +120,10 @@ public final class TraceCaptureSession {
             GameServices.audio().endCaptureMode();
             throw failedToOpen;
         }
+        LiveTraceComparator comparator = driver.comparator();
+        if (comparator != null) {
+            comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
+        }
         TraceGhostHook.set(ghostHook);
         started = true;
     }
@@ -178,6 +182,9 @@ public final class TraceCaptureSession {
                 return recorder.stop();
             } finally {
                 TraceGhostHook.clear(ghostHook);
+                LiveTraceComparator comparator = driver.comparator();
+                if (comparator != null) comparator.setVisualRowObserver(null);
+                ghostRenderer.reset();
             }
         } finally {
             GameServices.audio().endCaptureMode();
@@ -199,8 +206,6 @@ public final class TraceCaptureSession {
         List<com.openggf.sprites.playable.AbstractPlayableSprite> sidekicks =
                 sprites != null ? sprites.getRegisteredSidekicks() : List.of();
         ghostRenderer.renderForLayer(
-                comparator.metadata(),
-                comparator.currentVisualFrame(),
                 GameServices.camera().getFocusedSprite(),
                 sidekicks,
                 bucket,

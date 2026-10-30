@@ -40,7 +40,10 @@ Unreleased. The earlier development themes remain in
   window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
   session changes retain their semantic owners. Repeated pictures acknowledge no
   input and produce no audio. Native menu/background and MGZ blink clocks advance
-  with updates. Optional interpolation and VRR qualification remain future work.
+  with updates. Trace ghosts advance their private animation on admitted replay
+  rows, including pictures omitted during fast-forward; repeated pictures and
+  layer/visibility filtering preserve the pose, and seeks rebuild its history.
+  Optional interpolation and VRR qualification remain future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM
   across producer packets and video drains, preserving sample order and unused
