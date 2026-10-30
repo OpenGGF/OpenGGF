@@ -37,7 +37,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * {@link MasterTitleCaptureTool} already covers, for design review.
  *
  * <p>Purpose: one PNG per scene for the Mod manager, recordings, trace picker, details,
- * text/path editors, advanced settings, the sidekick team editor, startup disclaimer, native-mod notice and content
+ * text/path editors, advanced settings, the sidekick and extra-team editors, startup disclaimer, native-mod notice and content
  * import, plus a text field mixing narrow and wide letters with its caret and keypad, and the
  * integer and decimal number keypads, driven by
  * scripted {@link InputHandler} key events (never desktop input).
@@ -92,6 +92,10 @@ public final class MenuDesignCaptureTool {
         Consumer<Context> sidekicks = c -> c.config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails,knuckles,tails");
         int sidekickRow = com.openggf.game.EngineSettingsScreen
                 .rowOrder(com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED).indexOf(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        Consumer<Context> extraTeams = c -> c.config.setConfigValue(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS,
+                "sonic,knuckles;knuckles,tails,tails");
+        int teamsRow = com.openggf.game.EngineSettingsScreen
+                .rowOrder(com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED).indexOf(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS);
         List<Scene> hubScenes = new ArrayList<>(List.of(
                 new Scene("m01-settings-details", none, concat(settings, f1), 20),
                 new Scene("m01b-settings-sprite-limit", none, concat(settings, repeat(down, 4)), 20),
@@ -113,6 +117,12 @@ public final class MenuDesignCaptureTool {
                         concat(advanced, repeat(down, sidekickRow), enter, down, enter), 20),
                 new Scene("m07c-advanced-sidekicks-empty", c -> c.config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, ""),
                         concat(advanced, repeat(down, sidekickRow), enter), 20),
+                new Scene("m07d-advanced-extra-teams", extraTeams, concat(advanced, repeat(down, teamsRow), enter), 20),
+                new Scene("m07e-advanced-extra-team-actions", extraTeams,
+                        concat(advanced, repeat(down, teamsRow), enter, down, enter), 20),
+                new Scene("m07f-advanced-extra-team-edit", extraTeams,
+                        concat(advanced, repeat(down, teamsRow), enter, down, enter, enter), 20),
+                new Scene("m07g-advanced-extra-teams-empty", none, concat(advanced, repeat(down, teamsRow), enter), 20),
                 new Scene("m08-recordings", recordings, List.of(down, down, right, right, enter), 20),
                 new Scene("m09-recordings-row", recordings, List.of(down, down, right, right, enter, down), 20),
                 new Scene("m10-trace-picker", traces, List.of(), 120),

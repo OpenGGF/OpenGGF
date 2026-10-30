@@ -426,9 +426,10 @@ class TestEngineSettingsScreen {
 
     @Test
     void sidekicksAreEditedAsAnOrderedTeamRatherThanCommaText() {
-        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
-        f.config.setConfigValue(MAIN_CHARACTER_CODE, "sonic");
-        f.config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails");
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED, config -> {
+            config.setConfigValue(MAIN_CHARACTER_CODE, "sonic");
+            config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails");
+        });
         f.focus(SIDEKICK_CHARACTER_CODE);
         f.press(GLFW_KEY_ENTER);
         List<String> page = f.texts();
@@ -458,9 +459,45 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void extraSaveScreenTeamsAreAddedEditedAndOrderedAsTeams() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
+                config -> config.setConfigValue(DATA_SELECT_EXTRA_PLAYER_COMBOS, "sonic,knuckles"));
+        f.focus(DATA_SELECT_EXTRA_PLAYER_COMBOS);
+        assertTrue(f.texts().contains("Sonic + Knuckles"), () -> "the Settings row reads as names: " + f.texts());
+        f.press(GLFW_KEY_ENTER);
+        List<String> page = f.texts();
+        assertTrue(page.contains("Extra character teams") && page.contains("Sonic + Knuckles"), page.toString());
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Add team.
+        page = f.texts();
+        assertTrue(page.contains("New team") && page.contains("Player") && page.contains("Follows Sonic"), page.toString());
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_RIGHT); // Player: Sonic -> Tails.
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_RIGHT); // Sidekick: Tails -> Knuckles.
+        assertTrue(f.texts().contains("Follows Tails"));
+        f.press(GLFW_KEY_DOWN, 2); // Add sidekick, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Tails + Knuckles"), "Done returns to the list with the new team");
+        f.press(GLFW_KEY_ENTER); // Actions for team 2.
+        assertEquals(List.of("Edit team", "Move earlier", "Remove"),
+                f.texts().stream().filter(List.of("Edit team", "Move earlier", "Move later", "Remove")::contains).toList());
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Move earlier.
+        f.assertTextBounds(320);
+        f.press(GLFW_KEY_DOWN, 4); // Team 2, Add team, Restore default, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("sonic,knuckles", f.config.getString(DATA_SELECT_EXTRA_PLAYER_COMBOS), "Done fills the draft only");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER); // Save.
+        assertEquals("tails,knuckles;sonic,knuckles", f.config.getString(DATA_SELECT_EXTRA_PLAYER_COMBOS));
+    }
+
+    @Test
     void backingOutOfTheSidekickPageKeepsTheDraft() {
-        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
-        f.config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails");
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
+                config -> config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails"));
         f.focus(SIDEKICK_CHARACTER_CODE);
         f.press(GLFW_KEY_ENTER);
         f.press(GLFW_KEY_ENTER); // Actions for sidekick 1.
@@ -685,7 +722,11 @@ class TestEngineSettingsScreen {
 
         Fixture() { this(EngineSettingsScreen.Scope.MAIN); }
 
-        Fixture(EngineSettingsScreen.Scope scope) {
+        Fixture(EngineSettingsScreen.Scope scope) { this(scope, config -> { }); }
+
+        /** {@code setup} writes saved preferences before the screen takes its draft. */
+        Fixture(EngineSettingsScreen.Scope scope, java.util.function.Consumer<SonicConfigurationService> setup) {
+            setup.accept(config);
             screen = new EngineSettingsScreen(config, font, scope);
             config.setConfigValue(CONTROLLER_ENABLED, true);
             config.setConfigValue(CONTROLLER_PLAYER1, "auto");

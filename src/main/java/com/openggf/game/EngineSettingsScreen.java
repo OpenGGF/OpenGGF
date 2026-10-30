@@ -122,6 +122,7 @@ public final class EngineSettingsScreen {
     private boolean keepDisplay;
     private LanguagePickerScreen languagePicker;
     private SidekickTeamEditor sidekickEditor;
+    private ExtraTeamsEditor teamsEditor;
 
     public void cancelDisplayTrial() {
         com.openggf.configuration.DisplaySettingsTrial.forConfig(config).cancel();
@@ -143,6 +144,10 @@ public final class EngineSettingsScreen {
         }
         if (sidekickEditor != null) {
             if (sidekickEditor.update(input, localPointer)) sidekickEditor = null;
+            return;
+        }
+        if (teamsEditor != null) {
+            if (teamsEditor.update(input, localPointer)) teamsEditor = null;
             return;
         }
         if (displayPrompt) { updateDisplayPrompt(input); return; }
@@ -242,9 +247,14 @@ public final class EngineSettingsScreen {
         }
         if (selected() == SonicConfiguration.SIDEKICK_CHARACTER_CODE) {
             Object stock = config.getDefaultValue(selected());
-            sidekickEditor = new SidekickTeamEditor(draft.text(SonicConfiguration.MAIN_CHARACTER_CODE),
+            sidekickEditor = SidekickTeamEditor.directLaunch(draft.text(SonicConfiguration.MAIN_CHARACTER_CODE),
                     draft.text(selected()), stock == null ? "" : stock.toString(),
                     team -> draft.set(SonicConfiguration.SIDEKICK_CHARACTER_CODE, team));
+            return;
+        }
+        if (selected() == SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS) {
+            teamsEditor = new ExtraTeamsEditor(draft.text(selected()),
+                    teams -> draft.set(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS, teams));
             return;
         }
         ConfigType type = ConfigCatalog.meta(selected()).type();
@@ -881,6 +891,7 @@ public final class EngineSettingsScreen {
         int width = frame.width();
         if (languagePicker != null) { languagePicker.render(font, width); return; }
         if (sidekickEditor != null) { sidekickEditor.render(font, width); return; }
+        if (teamsEditor != null) { teamsEditor.render(font, width); return; }
         if (details != null) { details.render(font, width); return; }
         refreshPresentation();
         keepRowVisible();

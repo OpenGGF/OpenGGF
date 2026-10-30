@@ -124,6 +124,7 @@ final class EngineSettingLabels {
         // Free-text values that are really names: show them as names, never as stored codes.
         if (key == SonicConfiguration.MAIN_CHARACTER_CODE || key == SonicConfiguration.SIDEKICK_CHARACTER_CODE)
             return capitalisedWords(raw);
+        if (key == SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS) return ExtraTeamsEditor.summary(raw);
         if (key == SonicConfiguration.DISPLAY_SHADER_SELECTION && raw.equalsIgnoreCase("off")) return UiMessages.text("settings.value.off");
         if (key == SonicConfiguration.ROMS_DIRECTORY && raw.equals(".")) return UiMessages.text("settings.value.openggf_folder");
         // Codec and file-type codes are initialisms; presets and counts read as words and units.

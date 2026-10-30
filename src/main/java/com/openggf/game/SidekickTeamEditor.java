@@ -12,12 +12,16 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * Settings page for the direct-launch sidekick line, stored as the comma-separated
- * {@code characters.sidekick} value. Each sidekick is a row in follow order: the first
- * follows the player, each later one follows the sidekick before it
- * ({@code GameplayTeamBootstrap}). Left/Right change a row's character; confirm opens
- * Move earlier / Move later / Remove. Done hands the joined value to the caller's draft;
- * Back leaves the draft untouched.
+ * Settings page for one ordered team, stored as comma-separated character codes. Each
+ * sidekick is a row in follow order: the first follows the player, each later one follows
+ * the sidekick before it ({@code GameplayTeamBootstrap}). Left/Right change a row's
+ * character; confirm opens Move earlier / Move later / Remove. Done hands the joined value
+ * to the caller; Back leaves it untouched.
+ *
+ * <p>The direct-launch line ({@code characters.sidekick}) holds sidekicks only, behind the
+ * separately configured player. A save-screen team (one entry of
+ * {@code characters.dataSelectExtraCombos}, edited from {@link ExtraTeamsEditor}) leads with
+ * its player, which is then the first, editable row.
  */
 final class SidekickTeamEditor {
     /** Built-in playable codes; an unlisted stored code (a mod character) is kept until changed. */
@@ -26,14 +30,17 @@ final class SidekickTeamEditor {
     static final int MAX_SIDEKICKS = 16;
     private static final int TOP = 33;
 
-    enum Kind { SLOT, ADD, DEFAULT, DONE }
+    enum Kind { MAIN, SLOT, ADD, DEFAULT, DONE }
     record Row(Kind kind, int slot) { }
     enum Action { MOVE_EARLIER, MOVE_LATER, REMOVE }
 
-    private final String leader;
+    private final String title;
+    private final boolean mainEditable;
+    /** Null when the page has no stock value to restore. */
     private final List<String> defaults;
     private final Consumer<String> done;
     private final List<String> team;
+    private String main;
     private int selected;
     private int scroll;
     private int ticks;
@@ -43,11 +50,28 @@ final class SidekickTeamEditor {
     private int actionChoice;
     private InputHandler lastInput;
 
-    SidekickTeamEditor(String leaderCode, String current, String defaultValue, Consumer<String> done) {
-        this.leader = name(leaderCode == null || leaderCode.isBlank() ? "sonic" : leaderCode.trim());
-        this.team = new ArrayList<>(parse(current));
-        this.defaults = parse(defaultValue);
+    private SidekickTeamEditor(String title, String main, boolean mainEditable, List<String> sidekicks,
+                               List<String> defaults, Consumer<String> done) {
+        this.title = title;
+        this.main = main;
+        this.mainEditable = mainEditable;
+        this.team = new ArrayList<>(sidekicks);
+        this.defaults = defaults;
         this.done = Objects.requireNonNull(done, "done");
+    }
+
+    /** The direct-launch sidekick line behind the configured player; Done yields sidekicks only. */
+    static SidekickTeamEditor directLaunch(String leaderCode, String current, String defaultValue, Consumer<String> done) {
+        List<String> leader = parse(leaderCode);
+        return new SidekickTeamEditor(UiMessages.text("settings.sidekicks.title"),
+                leader.isEmpty() ? "sonic" : leader.getFirst(), false, parse(current), parse(defaultValue), done);
+    }
+
+    /** One save-screen team; Done yields the player followed by its sidekicks. */
+    static SidekickTeamEditor saveScreenTeam(String title, String current, Consumer<String> done) {
+        List<String> codes = parse(current);
+        return new SidekickTeamEditor(title, codes.isEmpty() ? "sonic" : codes.getFirst(), true,
+                codes.isEmpty() ? List.of() : codes.subList(1, codes.size()), null, done);
     }
 
     static List<String> parse(String value) {
@@ -66,16 +90,23 @@ final class SidekickTeamEditor {
     }
 
     List<String> team() { return List.copyOf(team); }
-    String value() { return String.join(",", team); }
+    String main() { return main; }
+    String value() {
+        if (!mainEditable) return String.join(",", team);
+        List<String> all = new ArrayList<>(team);
+        all.addFirst(main);
+        return String.join(",", all);
+    }
     boolean closed() { return closed; }
     boolean actionsOpen() { return actionSlot >= 0; }
     Row selectedRow() { return rows().get(selected); }
 
     List<Row> rows() {
         List<Row> rows = new ArrayList<>();
+        if (mainEditable) rows.add(new Row(Kind.MAIN, -1));
         for (int i = 0; i < team.size(); i++) rows.add(new Row(Kind.SLOT, i));
         if (team.size() < MAX_SIDEKICKS) rows.add(new Row(Kind.ADD, -1));
-        rows.add(new Row(Kind.DEFAULT, -1));
+        if (defaults != null) rows.add(new Row(Kind.DEFAULT, -1));
         rows.add(new Row(Kind.DONE, -1));
         return rows;
     }
@@ -105,17 +136,17 @@ final class SidekickTeamEditor {
         if (MenuInput.down(input)) selected = (selected + 1) % rows.size();
         if (before != selected) MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE);
         Row row = rows.get(selected);
-        if (row.kind() == Kind.SLOT && (MenuInput.left(input) || MenuInput.right(input))) {
+        if (editable(row) && (MenuInput.left(input) || MenuInput.right(input))) {
             cycle(row.slot(), MenuInput.left(input) ? -1 : 1);
         }
         boolean clicked = false;
         int pitch = rowPitch();
         for (int i = 0; i < visibleRows() && scroll + i < rows.size(); i++) {
-            int y = listTop() + i * pitch;
+            int y = rowY(i);
             if (!pointer.leftPressed() || !pointer.over(9, y, width - 18, pitch)) continue;
             int index = scroll + i;
             Row target = rows.get(index);
-            if (target.kind() == Kind.SLOT && index == selected && pointer.x() < arrowRight(target.slot())) {
+            if (editable(target) && index == selected && pointer.x() < arrowRight(target.slot())) {
                 // The focused row's arrows are click targets; the rest of the row opens its actions.
                 cycle(target.slot(), pointer.x() < 32 ? -1 : 1);
             } else {
@@ -143,7 +174,7 @@ final class SidekickTeamEditor {
         boolean clicked = false;
         int pitch = rowPitch();
         for (int i = 0; i < actions.size(); i++) {
-            if (pointer.leftPressed() && pointer.over(9, listTop() + i * pitch, width - 18, pitch)) {
+            if (pointer.leftPressed() && pointer.over(9, firstRowTop() + i * pitch, width - 18, pitch)) {
                 actionChoice = i;
                 clicked = true;
             }
@@ -153,10 +184,11 @@ final class SidekickTeamEditor {
 
     void activate(Row row) {
         switch (row.kind()) {
+            case MAIN -> cycle(-1, 1);
             case SLOT -> { actionSlot = row.slot(); actionChoice = 0; }
             case ADD -> {
                 team.add(team.isEmpty() ? "tails" : team.getLast());
-                selected = team.size() - 1;
+                selected = team.size() - 1 + (mainEditable ? 1 : 0);
             }
             case DEFAULT -> {
                 team.clear();
@@ -175,31 +207,39 @@ final class SidekickTeamEditor {
     void perform(Action action) {
         int slot = actionSlot;
         switch (action) {
-            case MOVE_EARLIER -> { java.util.Collections.swap(team, slot, slot - 1); selected = slot - 1; }
-            case MOVE_LATER -> { java.util.Collections.swap(team, slot, slot + 1); selected = slot + 1; }
-            case REMOVE -> { team.remove(slot); selected = Math.min(slot, rows().size() - 1); }
+            case MOVE_EARLIER -> { java.util.Collections.swap(team, slot, slot - 1); slot--; }
+            case MOVE_LATER -> { java.util.Collections.swap(team, slot, slot + 1); slot++; }
+            case REMOVE -> team.remove(slot);
         }
+        selected = slot + (mainEditable ? 1 : 0);
         actionSlot = -1;
         MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
         keepVisible();
     }
 
+    /** Steps sidekick {@code slot}, or the player when {@code slot} is -1, through the built-in characters. */
     void cycle(int slot, int direction) {
-        int index = CHARACTERS.indexOf(team.get(slot));
+        String code = slot < 0 ? main : team.get(slot);
+        int index = CHARACTERS.indexOf(code);
         // An unlisted code steps onto the first or last built-in character.
         int next = index < 0 ? (direction > 0 ? 0 : CHARACTERS.size() - 1)
                 : Math.floorMod(index + direction, CHARACTERS.size());
-        team.set(slot, CHARACTERS.get(next));
+        if (slot < 0) main = CHARACTERS.get(next);
+        else team.set(slot, CHARACTERS.get(next));
         MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE);
     }
 
+    private static boolean editable(Row row) { return row.kind() == Kind.SLOT || row.kind() == Kind.MAIN; }
+
     private String follows(int slot) {
-        return slot == 0 ? leader : name(team.get(slot - 1));
+        return slot == 0 ? name(main) : name(team.get(slot - 1));
     }
+
+    private String code(Row row) { return row.kind() == Kind.MAIN ? main : team.get(row.slot()); }
 
     private String rowText(Row row) {
         return switch (row.kind()) {
-            case SLOT -> name(team.get(row.slot()));
+            case MAIN, SLOT -> name(code(row));
             case ADD -> UiMessages.text("settings.sidekicks.add");
             case DEFAULT -> UiMessages.text("settings.screen.restore_default");
             case DONE -> UiMessages.text("settings.sidekicks.done");
@@ -208,12 +248,13 @@ final class SidekickTeamEditor {
 
     private String help(Row row) {
         return switch (row.kind()) {
+            case MAIN -> UiMessages.text("settings.teams.main_help");
             case SLOT -> UiMessages.text("settings.sidekicks.slot_help",
                     Map.of("number", row.slot() + 1, "leader", follows(row.slot())));
             case ADD -> UiMessages.text("settings.sidekicks.add_help",
                     Map.of("max", MAX_SIDEKICKS));
             case DEFAULT -> UiMessages.text("settings.sidekicks.default_help", Map.of("team", teamText(defaults)));
-            case DONE -> UiMessages.text("settings.sidekicks.done_help");
+            case DONE -> UiMessages.text(mainEditable ? "settings.teams.keep_help" : "settings.sidekicks.done_help");
         };
     }
 
@@ -238,29 +279,31 @@ final class SidekickTeamEditor {
         try {
             MenuChrome.background(font, width);
             if (actionSlot >= 0) { renderActions(font); return; }
-            MenuChrome.header(font, width, UiMessages.text("settings.sidekicks.title"),
-                    UiMessages.text("settings.sidekicks.tag_caps"));
-            MenuChrome.compact(font, page(UiMessages.text("settings.sidekicks.player", Map.of("name", leader)), width - 24),
-                    12, TOP + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
+            MenuChrome.header(font, width, page(title, width - 90), tag());
+            String caption = mainEditable ? UiMessages.text("settings.teams.team_caption")
+                    : UiMessages.text("settings.sidekicks.player", Map.of("name", name(main)));
+            MenuChrome.compact(font, page(caption, width - 24), 12, TOP + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
             List<Row> rows = rows();
             int pitch = rowPitch();
             int textDy = (pitch - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above();
             if (team.isEmpty()) {
                 // An empty line is a choice, not a fault: an information row above the way to add one.
-                int y = listTop() - pitch;
+                int y = firstRowTop() + (emptyAfter() + 1) * pitch;
                 MenuChrome.icon(font, MenuChrome.Icon.INFO, 16, y + (pitch - MenuChrome.ICON_SIZE) / 2, MenuChrome.CYAN);
                 MenuChrome.compact(font, page(UiMessages.text("settings.sidekicks.empty"), width - 44), 28, y + textDy, MenuChrome.TEXT);
             }
             for (int i = 0; i < visibleRows() && scroll + i < rows.size(); i++) {
                 int index = scroll + i;
                 Row row = rows.get(index);
-                int y = listTop() + i * pitch;
+                int y = rowY(i);
                 boolean focused = index == selected;
                 if (focused) MenuChrome.focus(font, 9, y, width - 18, pitch - 1, ticks);
                 float[] ink = focused ? MenuChrome.GOLD : MenuChrome.TEXT;
-                if (row.kind() == Kind.SLOT) {
-                    MenuChrome.compact(font, Integer.toString(row.slot() + 1), 16, y + textDy, MenuChrome.DIM);
-                    String note = UiMessages.text("settings.sidekicks.follows", Map.of("name", follows(row.slot())));
+                if (editable(row)) {
+                    if (row.kind() == Kind.SLOT)
+                        MenuChrome.compact(font, Integer.toString(row.slot() + 1), 16, y + textDy, MenuChrome.DIM);
+                    String note = row.kind() == Kind.MAIN ? UiMessages.text("settings.teams.main_note")
+                            : UiMessages.text("settings.sidekicks.follows", Map.of("name", follows(row.slot())));
                     int noteWidth = Math.min(MenuChrome.compactWidth(note), (width - 60) / 2);
                     MenuChrome.compact(font, page(note, noteWidth), width - 16 - noteWidth, y + textDy,
                             focused ? MenuChrome.MUTED : MenuChrome.DIM);
@@ -277,12 +320,14 @@ final class SidekickTeamEditor {
                 }
             }
             if (rows.size() > visibleRows()) {
-                MenuChrome.scrollbar(font, width - 8, listTop(), visibleRows() * pitch, scroll, visibleRows(), rows.size());
+                MenuChrome.scrollbar(font, width - 8, firstRowTop(), visibleRows() * pitch, scroll, visibleRows(), rows.size());
             }
             MenuChrome.descriptionBox(font, 9, boxTop(), width - 18, boxHeight(),
                     List.of(help(rows.get(selected))), List.of(MenuChrome.MUTED), ticks);
             List<MenuChrome.Hint> hints = new ArrayList<>();
-            if (rows.get(selected).kind() == Kind.SLOT) {
+            if (rows.get(selected).kind() == Kind.MAIN) {
+                hints.add(MenuChrome.leftRight(lastInput, UiMessages.text("settings.sidekicks.character_caps")));
+            } else if (rows.get(selected).kind() == Kind.SLOT) {
                 hints.add(MenuChrome.leftRight(lastInput, UiMessages.text("settings.sidekicks.character_caps")));
                 hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.sidekicks.actions_caps")));
             } else {
@@ -297,8 +342,7 @@ final class SidekickTeamEditor {
 
     private void renderActions(PixelFont font) {
         MenuChrome.header(font, width, page(UiMessages.text("settings.sidekicks.slot_title",
-                Map.of("number", actionSlot + 1, "name", name(team.get(actionSlot)))), width - 90),
-                UiMessages.text("settings.sidekicks.tag_caps"));
+                Map.of("number", actionSlot + 1, "name", name(team.get(actionSlot)))), width - 90), tag());
         MenuChrome.compact(font, page(UiMessages.text("settings.sidekicks.slot_help",
                 Map.of("number", actionSlot + 1, "leader", follows(actionSlot))), width - 24),
                 12, TOP + MenuChrome.compactMetrics().above(), MenuChrome.MUTED);
@@ -306,7 +350,7 @@ final class SidekickTeamEditor {
         int pitch = rowPitch();
         int textDy = (pitch - MenuChrome.compactLineHeight()) / 2 + MenuChrome.compactMetrics().above();
         for (int i = 0; i < actions.size(); i++) {
-            int y = listTop() + i * pitch;
+            int y = firstRowTop() + i * pitch;
             boolean focused = i == actionChoice;
             if (focused) MenuChrome.focus(font, 9, y, width - 18, pitch - 1, ticks);
             boolean remove = actions.get(i) == Action.REMOVE;
@@ -320,20 +364,31 @@ final class SidekickTeamEditor {
                 MenuChrome.controller(lastInput), ticks);
     }
 
+    private String tag() {
+        return UiMessages.text(mainEditable ? "settings.teams.tag_caps" : "settings.sidekicks.tag_caps");
+    }
+
     private String page(String text, int pixels) {
         return MenuStyle.pageText(text, Math.max(1, pixels), MenuStyle.COMPACT, ticks);
     }
 
     private int arrowRight(int slot) {
-        return 42 + MenuChrome.compactWidth(name(team.get(slot)));
+        return 42 + MenuChrome.compactWidth(name(slot < 0 ? main : team.get(slot)));
     }
 
-    private int rowPitch() { return Math.max(14, MenuChrome.compactLineHeight() + 6); }
-    /** An empty line gives its first row to the information row. */
-    private int listTop() { return TOP + MenuChrome.compactLineHeight() + 5 + (team.isEmpty() && actionSlot < 0 ? rowPitch() : 0); }
-    private int boxHeight() { return 2 * Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight()) + 6; }
-    private int boxTop() { return MenuChrome.FOOTER_Y - 4 - boxHeight(); }
-    private int visibleRows() { return Math.max(1, (boxTop() - 4 - listTop()) / rowPitch()); }
+    static int rowPitch() { return Math.max(14, MenuChrome.compactLineHeight() + 6); }
+    static int captionTop() { return TOP; }
+    static int firstRowTop() { return TOP + MenuChrome.compactLineHeight() + 5; }
+    /** The row index the empty-line information row follows: the player row, or none (-1). */
+    private int emptyAfter() { return mainEditable ? 0 : -1; }
+    private boolean emptyGap() { return team.isEmpty() && actionSlot < 0; }
+    /** Top of visible row {@code i}; an empty line gives a row's space to the information row. */
+    private int rowY(int i) {
+        return firstRowTop() + i * rowPitch() + (emptyGap() && scroll + i > emptyAfter() ? rowPitch() : 0);
+    }
+    static int boxHeight() { return 2 * Math.max(MenuChrome.DESCRIPTION_PITCH, MenuChrome.compactLineHeight()) + 6; }
+    static int boxTop() { return MenuChrome.FOOTER_Y - 4 - boxHeight(); }
+    private int visibleRows() { return Math.max(1, (boxTop() - 4 - firstRowTop()) / rowPitch() - (emptyGap() ? 1 : 0)); }
 
     private void keepVisible() {
         int count = rows().size();
