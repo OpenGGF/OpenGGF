@@ -91,6 +91,49 @@ class TestGameLoopZeroStepInputPass {
         }
     }
 
+    @Test
+    void keyboardResumeCannotRetainAReleasedTapFromThePausedInterval() {
+        SessionManager.clear();
+        var config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.PAUSE_KEY, GLFW_KEY_F9);
+        var input = new InputHandler(InputBindingFactory.supplier(config));
+        int action = config.getInt(SonicConfiguration.P1_A);
+        input.handleKeyEvent(action, GLFW_PRESS);
+        input.handleKeyEvent(action, GLFW_RELEASE);
+        input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+        var pacing = new GameplayMutatorPacing(() -> GameplayMutatorPolicy.STOCK);
+        var paused = new java.util.concurrent.atomic.AtomicBoolean(true);
+        GameLoopZeroStepPresentation.run(GameMode.LEVEL, input, config, mock(PlaybackDebugManager.class), true,
+                new EscapeToMasterTitleController(() -> false, () -> {}), overlay -> false, () -> false,
+                paused::set, () -> {}, () -> true, pacing);
+        assertFalse(paused.get());
+        assertEquals(0, pacing.pendingPlayer1().actionPressedMask(),
+                "zero-step resume cannot retain a tap collected during pause");
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertEquals(0, input.logical().player1().actionPressedMask());
+            input.update();
+        }
+    }
+
+    @Test
+    void keyboardResumeKeepsPreviouslyAdmittedPacingCarryUnderItsExistingOwner() {
+        SessionManager.clear();
+        var config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.PAUSE_KEY, GLFW_KEY_F9);
+        var input = new InputHandler(InputBindingFactory.supplier(config));
+        input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+        var pacing = new GameplayMutatorPacing(() -> GameplayMutatorPolicy.STOCK);
+        pacing.retain(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(0, 0, 0, InputActionMasks.ACTION_A, false, false),
+                com.openggf.control.PlayerInputState.neutral()));
+        GameLoopZeroStepPresentation.run(GameMode.LEVEL, input, config, mock(PlaybackDebugManager.class), true,
+                new EscapeToMasterTitleController(() -> false, () -> {}), overlay -> false, () -> false,
+                paused -> assertFalse(paused), () -> {}, () -> true, pacing);
+        assertEquals(InputActionMasks.ACTION_A, pacing.pendingPlayer1().actionPressedMask(),
+                "already-admitted carry is distinct from pending physical transitions");
+    }
+
     @ParameterizedTest @ValueSource(booleans = {false, true})
     void zeroStepHostRereadRetainsPadAndKeyboardTapOnlyInTheExistingPacingOwner(boolean engineHandoff) {
         SessionManager.clear();

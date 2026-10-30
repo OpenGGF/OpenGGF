@@ -1124,3 +1124,205 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 The ROM variables denote verified absolute original files read in place, not
 copies or generated links. Queue intervals overlap and must not be added as
 elapsed delivery time. Overall task wall time was not separately measured.
+
+
+## Ordered-input pause/menu regression correction — 2026-10-30
+
+Implementation checkout: T3-provisioned `t3-a4629043`, local
+`feature/ai-ordered-input-p2`, based on the exact reviewed candidate
+`a968037eb3bc5d0b609d09205375c2df8865c383` from `t3-deef1c2b`.
+Fetched develop was `a3b021ec4f7bdf4ec6a860468fc730d770cc75b5`.
+A trial integration conflicted only in `CHANGELOG.md` and
+`CHANGELOG.0.7.prerelease.md` and was aborted under the clean-integration
+constraint. The candidate ancestry is retained; develop integration remains
+with the delivery lead. No push, PR, release, manual worktree or child agent
+belongs to this implementation task.
+
+Three owner boundaries require correction. A keyboard user-pause transition
+must retire paused input before the resume tick maps it, including when no
+paused service occurs between Jump press/release and the Pause callback.
+Checking only the post-pass pause state misses this transition. Native menus
+must read gameplay-bound keyboard controls from the same admitted sample as
+logical controls: OR-ing a current raw Down with a delayed logical Down
+consumes one physical edge twice. Conversely, fixed menu Enter/arrows under a
+logical override retain their independent physical channel even when those
+keys have gameplay bindings; the replay-owned gameplay sample cannot replace
+that channel. Text menus retain their existing physical reads throughout.
+
+General raw/physical key reads remain host observations. Expanding admission
+to every `isKeyPressed` caller would conflate native menu controls with host
+shortcuts, so that approach is rejected. Native compatibility reads instead
+belong to the engine-internal input bridge, outside the creator API. Ordered
+prefix acknowledgment, abort rollback, claims/composition, retained mutator
+carry, replay publication, reset, recording and rewind keep their existing
+owners. No fixture predicate, comparison tolerance, trace hydration or public
+API pin is changed.
+
+
+The first old-red request executed 22 cases with 5 assertion failures, no
+errors and no skips (queue 361s, Maven 1m30s). Its staged tree was
+`941f30636fdfae436bf4a5a99b5087cb68c9eca3`: unchanged production subtree
+`99184606f35bf48c632cb55a6f89ebbae3c32b20`, test subtree
+`59be5654d8079c7ac9c89b37117e86e1b7548985`. Both original-ROM S2 and S3K
+resume ticks exposed released Jump as held/pressed action A; real S3K
+Data Select observed team indices `[3, 2]` instead of `[0, 3]` across two
+scoped passes. The initially-held release/repress and opposing-direction
+control passed. Both Enter parameter cases failed, but the nominally unbound
+case still inherited Enter/Start; the control was corrected to unbind Start
+before subsequent evidence. These two first-run Enter failures therefore do
+not establish a bound/unbound contrast.
+
+
+The second old-red request selected only the corrected Enter parameters and
+`TestGameLoopZeroStepInputPass#keyboardResumeCannotRetainAReleasedTapFromThePausedInterval`.
+It executed 3 cases with 3 assertion failures, no errors/skips (queue 520s,
+Maven 35.281s), against unchanged production and test subtree
+`9b73a566f174b1a333c373291430e7f66b4d0224` (staged tree
+`cfa8221d9740813a137ca847150aca084c45fde8`). Zero-step resume retained action
+A (`1` instead of `0`). The Enter control still inherited the checkout's
+`input.player2.start: ENTER`; clearing only P1 Start did not make it unbound.
+The final parameter fixture resets standalone configuration to defaults and
+explicitly unbinds both Starts, asserting the resolved bindings and raw
+physical Enter edge before testing menu acceptance. No production fallback is
+introduced to compensate for local configuration.
+
+
+Reproduction commands (from this checkout; ordinary focused lane, no broad
+suite). All ROM files were hashed in place: S1 REV01 CRC32 AFE05EEE/SHA-1
+69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B; S2 REV01 CRC32 7B905383/SHA-1
+8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9; locked-on S3K CRC32 63522553/SHA-1
+CFBF98C36C776677290A872547AC47C53D2761D6. No ROM was copied or linked for these
+requests. The commands below resolve existing ROM resources to the same original
+absolute files; machine-local home-path literals are excluded by repository
+resource policy. Exact literal invocation paths remain in the task handoff.
+
+```bash
+# Resolve existing repository ROM resources to their original absolute files.
+OPENGGF_S1_ROM="$(realpath 'Sonic The Hedgehog (W) (REV01) [!].gen')"
+OPENGGF_S2_ROM="$(realpath 'Sonic The Hedgehog 2 (W) (REV01) [!].gen')"
+OPENGGF_S3K_ROM="$(realpath 'Sonic and Knuckles & Sonic 3 (W) [!].gen')"
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -v
+# First old-red request:
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \
+  '-Dtest=TestOrderedPhysicalGameplayInput,TestS3kDataSelectManager#queuedActionThenHeldDownChangesTeamOnlyOnceAcrossTwoConsumingPasses,TestOrderedGameplayRomAdmission' test
+# Second old-red request (no ROM/GL needed):
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \\
+  python3 tools/testing/maven_queue.py -Dmse=off \\
+  '-Dtest=TestOrderedPhysicalGameplayInput#fixedEnterRemainsPhysicalDuringNeutralReplayWhetherGameplayBoundOrUnbound,TestGameLoopZeroStepInputPass#keyboardResumeCannotRetainAReleasedTapFromThePausedInterval' test
+# Final old-red bound/unbound control (same no-ROM environment):
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \\
+  python3 tools/testing/maven_queue.py -Dmse=off \\
+  '-Dtest=TestOrderedPhysicalGameplayInput#fixedEnterRemainsPhysicalDuringNeutralReplayWhetherGameplayBoundOrUnbound' test
+
+OPENGGF_INPUT_TESTS='TestOrderedPhysicalGameplayInput,TestS3kDataSelectManager,TestOrderedGameplayRomAdmission,TestMenuInput,TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestEngineFrameAdvance,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestRecordedInputOwnership,TestRecordedInputHostPause,TestGameLoopPauseInputOwnership,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestSonic3kTitleScreenIntroSkipAudio'
+env -u DISPLAY -u WAYLAND_DISPLAY \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \\
+  python3 tools/testing/maven_queue.py -Dmse=off \\
+  -Dopenggf.headless.gl=surfaceless-egl \\
+  "-Dsonic1.rom.path=$OPENGGF_S1_ROM" \\
+  "-Dsonic2.rom.path=$OPENGGF_S2_ROM" \\
+  "-Ds3k.rom.path=$OPENGGF_S3K_ROM" \\
+  "-Dtest=$OPENGGF_INPUT_TESTS" test
+```
+
+
+The final old-red Enter request used staged tree
+`15bef1079b825b0cc16ada4157d3a71d2604f493`, unchanged production subtree
+`99184606f35bf48c632cb55a6f89ebbae3c32b20`, and test subtree
+`53c0c7ef1e643d2dcb51dfe6add01520324b140f`. It executed 2 parameter cases:
+unbound Enter passed, Enter bound to C failed at physical menu acceptance;
+both had passed the resolved-binding and raw-edge assertions. There were no
+errors or skips. Queue wait was 916s; Maven execution was 33.994s.
+
+The correction adds only an engine-internal native-menu compatibility read;
+creator signatures and pins are unchanged. Scoped native title/level-select/
+data-select bindings share gameplay admission, including held-repeat timing;
+unscoped direct controllers retain their existing raw compatibility behavior.
+Fixed menus fall back to physical Enter/arrows while an override owns gameplay.
+Canonical pause transitions retire and remap pending input before continuing;
+zero-step transitions retire the physical journal before preview. General host reads,
+scene collection, text controls and ordered-prefix commit/rollback are unchanged.
+
+The first corrected-candidate request's staged source/test tree was
+`d5cb28044a6fb26f86d81c3519bed433693515dd`: production subtree
+`1e6590b9ddfc6ec30e0d39a64453fe7da8845681`, test subtree
+`4739494e30bafd9c42322280055ee2987f693bf7`. Additional controls distinguish
+host physical edges, consuming native presses/holds, and independent text
+navigation across a real host handoff; native replay/claim suppression and
+same-pass fixed Enter release remain explicit. Documentation changes after
+this staging do not change these tested source/test subtrees.
+
+
+The 31-selector corrected-candidate request waited 410s and executed for
+1m43s: **360 cases, 1 assertion failure, 0 errors, 0 skips**. All functional
+cases passed, including both original-ROM admission cases, all 13 real
+Data Select manager cases, all 21 ordered-input cases, all 11 API signature
+cases, and the S3K anchors: AIZ skip 8, both loading classes 36 + 7,
+bootstrap resolver 6, decoding 3. The only failure was
+`TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets`:
+`GameLoop.stepInternalBody` grew to 266 lines against its unchanged 262-line
+budget. The pause transition is extracted into a private helper; the guard
+budget/predicate remains untouched.
+
+A final carry-preservation review rejected clearing already-admitted pacing
+carry merely because zero-step host pause changes. Only physical transitions
+are retired before preview; the pacing owner's original clear/retain policy
+remains. This delta and its new preservation control overlapped the first
+request's compilation. Bytecode inspection showed the old three
+`clearPendingInput` call sites and absence of the new carry test, so that
+request is **not** evidence for the final carry delta. Its unaffected functional
+coverage is retained; fresh focused validation covers both changed pause
+components and the dispatcher extraction. No source/test edits occur during
+that correction request.
+
+Final correction staging: tree `205fe49c03448983e687bc7cbf80e003846e82a6`,
+production subtree `ac5c070cb4705518da8c58c621a936923b4a441c`, test subtree
+`4015becb81c0e020b69cdcc513ef645de5cf9af0`. Repeat the ROM/EGL command above
+with only this affected selection:
+
+```bash
+OPENGGF_INPUT_TESTS='TestGameLoopZeroStepInputPass,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestEngineFrameAdvance,TestOrderedGameplayRomAdmission,TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets'
+```
+
+The Java 25.0.5.0.2 version probe passed after 378s queue wait (execution
+not separately measured). An earlier version-only request with an unpinned
+Java environment was canceled while waiting; it executed no tests. Queue
+waits are per request and can overlap; they are not summed delivery elapsed
+time. No combined smoke, release suite, trace campaign or publication is
+claimed by this implementation task.
+
+
+Fresh correction result: **40 cases, 1 structural assertion failure, 0 errors,
+0 skips**, queue 316s, Maven 1m32s. All 39 functional cases passed on final
+production subtree `ac5c070cb4705518da8c58c621a936923b4a441c`: zero-step 6
+(including already-admitted carry preservation), mutator pacing 11, pause
+ownership 4, real Engine advance 16, original-ROM S2/S3K admission 2.
+The remaining guard failure was not growth: its exact-count predicate also
+rejects a stale upper pin after extraction (`259 != 262`). Its pin was tightened
+from 262 to 259 as the existing ratchet requires; the equality predicate and
+all fixture admission/comparison rules are unchanged.
+
+Final guard-only command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets' test
+```
+
+It passed **1 case, 0 failures, 0 errors, 0 skips**, queue 22s, Maven 33.635s.
+Final staged source/test tree `3b0a9d4268266090d18776d2aa93ead10c7facfc`
+contains production subtree `ac5c070cb4705518da8c58c621a936923b4a441c` and test
+subtree `ddb5e6c2ae6b2962a0863710c3c3e30d8f166cc9`. The only test delta after
+the 40-case request is that stricter dispatcher pin. Earlier unaffected
+native/menu/ownership/API/S3K-anchor coverage is retained; neither the
+31-selector request nor the complete 40-case selection was repeated as a
+ceremony. This is combined focused evidence, not a fresh all-selection pass,
+a broad smoke pass or a release/full-suite qualification. No functional or
+structural failure remains unresolved within this task's checks. Latest
+develop integration and combined smoke remain with the lead under the
+clean-only integration constraint above.

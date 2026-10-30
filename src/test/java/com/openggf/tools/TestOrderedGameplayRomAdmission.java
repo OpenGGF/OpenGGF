@@ -69,19 +69,36 @@ class TestOrderedGameplayRomAdmission {
             assertTrue(session.player().getYSpeed() > jumpSpeed);
             session.renderFrame();
 
+            config.setConfigValue(SonicConfiguration.PAUSE_KEY, GLFW_KEY_F9);
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+            session.loop().step();
+            assertTrue(session.loop().isUserPaused(), "actual pause-key callback must enter pause");
+            assertEquals(frame + 2, GameServices.sprites().getFrameCounter());
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
+            session.loop().step(); // Retire the pause key before the paused tap interval.
+            input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
+            input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
+            session.loop().step(); // No paused service between the tap and resume callback.
+            assertFalse(session.loop().isUserPaused());
+            assertEquals(frame + 3, GameServices.sprites().getFrameCounter());
+            assertEquals(PlayerInputState.neutral(), input.logical().player1(),
+                    "keyboard resume must retire taps collected while paused before admitting its tick");
+            input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
+
             config.setConfigValue(SonicConfiguration.FRAME_STEP_KEY, GLFW_KEY_F8);
             session.loop().toggleUserPause();
             input.handleKeyEvent(GLFW_KEY_F8, GLFW_PRESS);
             session.loop().step();
-            assertEquals(frame + 3, GameServices.sprites().getFrameCounter(), "paused frame-step admits exactly one tick");
+            assertEquals(frame + 4, GameServices.sprites().getFrameCounter(), "paused frame-step admits exactly one tick");
             input.handleKeyEvent(GLFW_KEY_F8, GLFW_RELEASE);
             input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
             input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
             session.loop().step();
-            assertEquals(frame + 3, GameServices.sprites().getFrameCounter(), "ordinary paused service admits no tick");
+            assertEquals(frame + 4, GameServices.sprites().getFrameCounter(), "ordinary paused service admits no tick");
             session.loop().toggleUserPause();
             session.loop().step();
-            assertEquals(frame + 4, GameServices.sprites().getFrameCounter());
+            assertEquals(frame + 5, GameServices.sprites().getFrameCounter());
             assertEquals(PlayerInputState.neutral(), input.logical().player1(), "paused taps cannot attack after resume");
         }
     }

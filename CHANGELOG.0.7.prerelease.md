@@ -16,7 +16,9 @@ Unreleased. The earlier development themes remain in
   Ordered gameplay admission now preserves observed keyboard/controller taps released
   before the consuming tick, including repeated taps and simultaneous controls.
   Zero-step service previews the same pending prefix; modal/text claims, fixed menu
-  keys and recorded overrides retain their input authority. This does not connect
+  keys and recorded overrides retain their input authority. Native menu bindings
+  consume each admitted edge once; keyboard resume retires paused taps, and fixed
+  menu/text controls keep physical authority during replay. This does not connect
   independent live scheduling or change audio/capture cadence.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases

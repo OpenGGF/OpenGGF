@@ -463,7 +463,12 @@ public class InputHandler {
 	 * {@code menuUp()}/{@code menuDown()}/{@code menuLeft()}/{@code menuRight()}.
 	 */
 	public boolean isDirectionHeld(int keyCode, int directionMask) {
-		return isKeyDown(keyCode) || (logical().player1().heldMask() & directionMask) != 0;
+        // Native hold-repeat timers must not start ahead of their logical prefix.
+        var sample = admittedPhysicalSample();
+        boolean keyboardHeld = sample != null && gameplayKey(keyCode)
+                ? logicalOverride == null && sample.down(keyCode) && !hiddenByTextCapture(keyCode)
+                : isKeyDown(keyCode);
+        return keyboardHeld || (logical().player1().heldMask() & directionMask) != 0;
 	}
 
 	/**
@@ -506,17 +511,29 @@ public class InputHandler {
 		return logicalOverride == null && gamepadEdgesVisible() && gamepadInputManager.isBackButtonPressed();
 	}
 
+    // Native menus combine legacy configured keys with logical controls. In a
+    // consuming pass both must use the admitted prefix, never the newer raw key.
+    // Keep general shortcuts and physical/text reads on their existing channel.
+    boolean nativeMenuKeyPressed(int key) {
+        var sample = admittedPhysicalSample();
+        if (sample != null && gameplayKey(key)) {
+            return logicalOverride == null && sample.pressed(key) && !hiddenByTextCapture(key);
+        }
+        return isKeyPressed(key);
+    }
+
     // Fixed-key menus are a distinct owner from gameplay bindings. A queued
     // Enter -> C tap must still confirm, not become Back after physical release.
+    // Replay owns gameplay admission, while fixed UI keys keep physical authority.
     boolean menuKeyDown(int key) {
         var sample = admittedPhysicalSample();
-        return sample != null && gameplayKey(key) ? sample.down(key) && !hiddenByTextCapture(key)
+        return logicalOverride == null && sample != null && gameplayKey(key) ? sample.down(key) && !hiddenByTextCapture(key)
                 : key >= 0 && key < MAX_KEYS && keys[key] && !textInput.hidesKey(key);
     }
 
     boolean menuKeyPressed(int key) {
         var sample = admittedPhysicalSample();
-        return sample != null && gameplayKey(key) ? sample.pressed(key) && !hiddenByTextCapture(key)
+        return logicalOverride == null && sample != null && gameplayKey(key) ? sample.pressed(key) && !hiddenByTextCapture(key)
                 : isRawKeyPressed(key);
     }
 

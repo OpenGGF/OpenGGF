@@ -74,6 +74,10 @@ public final class InputHandlerInternalAccess {
     public static void discardOrderedGameplayInput(InputHandler handler) {
         if (handler != null) handler.discardOrderedGameplayInput();
     }
+    /** Native menu compatibility binding, sharing the consuming logical sample. */
+    public static boolean nativeMenuKeyPressed(InputHandler handler, int key) {
+        return handler.nativeMenuKeyPressed(key);
+    }
     public static TextInputSession textInput(InputHandler handler) { return handler.textInput; }
     public static TextInputSession.Lease captureKeyboardText(InputHandler handler, Object owner) {
         return handler.captureKeyboardText(owner);

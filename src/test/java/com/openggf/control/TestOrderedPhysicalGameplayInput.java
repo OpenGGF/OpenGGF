@@ -179,6 +179,113 @@ class TestOrderedPhysicalGameplayInput {
         }
         assertEquals(PlayerInputState.neutral(), sample());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void fixedEnterRemainsPhysicalDuringNeutralReplayWhetherGameplayBoundOrUnbound(boolean bound) {
+        config.resetToDefaults(); // Standalone config otherwise inherits the local P2 Start = Enter.
+        config.setConfigValue(SonicConfiguration.START, -1);
+        config.setConfigValue(SonicConfiguration.P2_START, -1);
+        config.setConfigValue(SonicConfiguration.P1_C, bound ? GLFW_KEY_ENTER : -1);
+        sample();
+        assertEquals(bound ? GLFW_KEY_ENTER : -1, input.currentBindings().p1C());
+        assertEquals(-1, input.currentBindings().p1Start());
+        assertEquals(-1, input.currentBindings().p2Start());
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        key(GLFW_KEY_ENTER, true);
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertEquals(PlayerInputState.neutral(), input.logical().player1());
+            assertTrue(input.isPhysicalKeyPressed(GLFW_KEY_ENTER));
+            assertTrue(MenuInput.accept(input), "fixed Enter must retain physical authority under replay");
+            assertTrue(MenuInput.textAccept(input), "text controls remain independently physical");
+            key(GLFW_KEY_ENTER, false);
+            input.refreshLogicalSnapshot();
+            assertFalse(MenuInput.accept(input), "a same-pass physical release withdraws confirmation");
+            assertFalse(MenuInput.textAccept(input));
+            input.update();
+        }
+        input.clearLogicalOverride();
+        assertEquals(PlayerInputState.neutral(), sample(), "replay-owned physical input must not leak");
+    }
+
+    @Test void initiallyHeldReleaseRepressAndOpposingDirectionsKeepTheirOrderedSamples() {
+        int left = config.getInt(SonicConfiguration.LEFT);
+        int right = config.getInt(SonicConfiguration.RIGHT);
+        key(left, true);
+        assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT, sample().pressedMask());
+        key(left, false); key(left, true); key(right, true);
+        assertEquals(0, sample().heldMask(), "initially held release cannot collapse into its repress");
+        var both = sample();
+        assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT
+                | com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT, both.heldMask());
+        assertEquals(both.heldMask(), both.pressedMask());
+        assertEquals(0, sample().pressedMask());
+    }
+
+    @Test void nativeMenuReadsShareAdmissionWhileHostAndTextReadsStayPhysical() {
+        int left = config.getInt(SonicConfiguration.LEFT);
+        int down = config.getInt(SonicConfiguration.DOWN);
+        key(left, true); key(left, false); key(down, true);
+        try (var host = InputHandlerInternalAccess.openHostInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertTrue(input.isKeyPressed(down), "host shortcuts still observe the physical edge");
+            host.handoff(() -> {
+                try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+                    input.refreshLogicalSnapshot();
+                    assertTrue(input.isPhysicalKeyPressed(down));
+                    assertTrue(MenuInput.textDown(input), "text UI has an independent physical owner");
+                    assertFalse(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down));
+                    assertFalse(input.isDirectionHeld(down,
+                            com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN));
+                    assertTrue(InputHandlerInternalAccess.nativeMenuKeyPressed(input, left));
+                    input.refreshLogicalSnapshot();
+                    assertFalse(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down),
+                            "rereading cannot pull a later edge into this prefix");
+                    input.update();
+                }
+            });
+        }
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertTrue(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down));
+            assertTrue(input.isDirectionHeld(down,
+                    com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN));
+            assertFalse(input.isPhysicalKeyPressed(down), "the host edge was already acknowledged");
+            input.update();
+        }
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertFalse(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down), "held is not another edge");
+            input.update();
+        }
+    }
+
+    @Test void nativeMenuReplayAndTextClaimsCannotReintroduceLiveBoundKeyEdges() {
+        int down = config.getInt(SonicConfiguration.DOWN);
+        key(down, true);
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertFalse(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down));
+            assertFalse(input.isDirectionHeld(down,
+                    com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN));
+            assertTrue(MenuInput.textDown(input));
+            input.clearLogicalOverride();
+            input.refreshLogicalSnapshot();
+            assertFalse(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down));
+            input.update();
+        }
+        key(down, false); key(down, true);
+        input.captureKeyboardText();
+        try (var pass = InputHandlerInternalAccess.openInputPass(input)) {
+            input.refreshLogicalSnapshot();
+            assertFalse(InputHandlerInternalAccess.nativeMenuKeyPressed(input, down));
+            assertFalse(input.isDirectionHeld(down,
+                    com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN));
+            input.update();
+        }
+    }
+
     private static final class Pads implements GamepadStateSource {
         boolean b;
         boolean connected = true;

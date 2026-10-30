@@ -1113,6 +1113,16 @@ public class GameLoop {
         }
     }
 
+    private void applyInputPassUserPause(boolean nextUserPaused) {
+        if (nextUserPaused == userPaused) return;
+        // The resume tick is already inside its input pass. Retire the paused
+        // interval and remap before any gameplay consumer can see that prefix.
+        com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
+        inputHandler.refreshLogicalSnapshot();
+        userPaused = nextUserPaused;
+        updateAudioPauseState();
+    }
+
     private void stepInternal() {
         nativeMenus.beginFrame();
         if (consumeSuspendedOrResetFrame()) return;
@@ -1281,10 +1291,7 @@ public class GameLoop {
         boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
                 configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
-        if (nextUserPaused != userPaused) {
-            userPaused = nextUserPaused;
-            updateAudioPauseState();
-        }
+        applyInputPassUserPause(nextUserPaused);
 
         boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
                 && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());

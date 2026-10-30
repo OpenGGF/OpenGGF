@@ -49,7 +49,10 @@ final class GameLoopZeroStepPresentation {
             }
             boolean nextPaused = GameLoopPauseInput.nextUserPaused(mode, input, config, paused,
                     overlayOwnsPause, false, playback, takeover);
-            if (nextPaused != paused) publishPause.accept(nextPaused);
+            if (nextPaused != paused) {
+                com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(input);
+                publishPause.accept(nextPaused);
+            }
             if (!overlayOwnsPause && !nextPaused && eligible.getAsBoolean()) pacing.retain(com.openggf.control.InputHandlerInternalAccess.previewGameplayInput(input));
             else {
                 pacing.clearPendingInput();
