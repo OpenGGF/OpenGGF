@@ -35,7 +35,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
-- [Time Attack design captures](../../src/test/java/com/openggf/tools/TimeAttackDesignCaptureTool.java): source-file launcher for real bundled-menu, lobby and crowded Room details pictures in an owned loopback namespace; inputs and class-loader separation are documented in the tool. Set `SHORTCUT_CAPTURE_ONLY=1` for Tab-details checks (2026-10-28/29 menu hill climb).
+- [Time Attack design captures](../../src/test/java/com/openggf/tools/TimeAttackDesignCaptureTool.java): source-file launcher for real bundled-menu, lobby and crowded Room details pictures in an owned loopback namespace; inputs and class-loader separation are documented in the tool. Set `SHORTCUT_CAPTURE_ONLY=1` for Tab-details checks (2026-10-28/29 menu hill climb); the `tb*` states add F1/R3 details pages, long values and scripted-pad hints (2026-10-29).
+- [Act Practice design captures](../../src/test/java/com/openggf/tools/ActPracticeDesignCaptureTool.java): source-file launcher for the example's real menu (choice, controller hints, induced result states, in-run timer) loaded as the development mod; `PRACTICE_PRE_ESC=1` with an empty owned ROM directory pictures the no-games page (2026-10-29).
 
 - [Transport HUD design captures](../../src/main/java/com/openggf/tools/TransportHudDesignCaptureTool.java): display-free 3x pictures over a supplied S1/S2/S3K ROM at 320/400 widths, including concurrent rewind/recording, playback verification warnings and long counters (2026-10-27 menu design review round 4).
 

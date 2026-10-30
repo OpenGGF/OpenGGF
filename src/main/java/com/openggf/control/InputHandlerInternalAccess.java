@@ -111,6 +111,18 @@ public final class InputHandlerInternalAccess {
     public static void suppressGamepad(InputHandler handler, boolean suppressed) {
         if (handler != null) handler.setGamepadSuppressed(suppressed);
     }
+    /**
+     * A player's prompt label for one device: the bound key ({@code controller} false) or the physical
+     * button on their assigned pad ({@code controller} true). Scenes name the device they track.
+     */
+    public static java.util.Optional<String> buttonLabel(InputHandler handler, int player,
+                                                          ButtonPrompts.Button button, boolean controller) {
+        if (handler == null) return java.util.Optional.empty();
+        if (player != 0 && player != 1) throw new IllegalArgumentException("Player must be 0 or 1");
+        java.util.Objects.requireNonNull(button, "button");
+        return controller ? ButtonPrompts.padLabel(handler, player, button)
+                : ButtonPrompts.keyLabel(handler, player, button);
+    }
     public static void discardRetainedGameplayInput(InputHandler handler) {
         if (handler != null) handler.discardRetainedGameplayInput();
     }

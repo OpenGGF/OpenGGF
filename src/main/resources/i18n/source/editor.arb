@@ -7125,5 +7125,45 @@
   "editor.menu.editor_project_workspace.unavailable_source": "Unavailable source",
   "@editor.menu.editor_project_workspace.unavailable_source": {
     "description": "Editor menu presentation: Unavailable source"
+  },
+  "editor.menu.main.save": "Save",
+  "@editor.menu.main.save": {
+    "description": "Editor menu presentation: Save"
+  },
+  "editor.menu.main.group.level": "Level",
+  "@editor.menu.main.group.level": {
+    "description": "Editor menu presentation: Level"
+  },
+  "editor.menu.main.group.more": "More",
+  "@editor.menu.main.group.more": {
+    "description": "Editor menu presentation: More"
+  },
+  "editor.menu.main.projects": "Projects and files",
+  "@editor.menu.main.projects": {
+    "description": "Editor menu presentation: Projects and files"
+  },
+  "editor.menu.main.all_commands": "All commands and shortcuts",
+  "@editor.menu.main.all_commands": {
+    "description": "Editor menu presentation: All commands and shortcuts"
+  },
+  "editor.menu.main.all_commands_title": "ALL COMMANDS",
+  "@editor.menu.main.all_commands_title": {
+    "description": "Editor menu presentation: ALL COMMANDS"
+  },
+  "editor.menu.main.exit": "Exit to title",
+  "@editor.menu.main.exit": {
+    "description": "Editor menu presentation: Exit to title"
+  },
+  "editor.menu.exit.keep_editing": "Keep editing",
+  "@editor.menu.exit.keep_editing": {
+    "description": "Editor menu presentation: Keep editing"
+  },
+  "editor.menu.exit.save_and_exit": "Save and exit to title",
+  "@editor.menu.exit.save_and_exit": {
+    "description": "Editor menu presentation: Save and exit to title"
+  },
+  "editor.menu.exit.exit_without_saving": "Exit without saving",
+  "@editor.menu.exit.exit_without_saving": {
+    "description": "Editor menu presentation: Exit without saving"
   }
 }

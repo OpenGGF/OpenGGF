@@ -442,23 +442,33 @@ public final class MenuChrome {
         footer(font, width, status, hints, controller, 0);
     }
 
-    public static void footer(PixelFont font, int width, String status, List<Hint> hints, boolean controller, int ticks) {
-        fill(font, 0, FOOTER_Y, width, FOOTER_H, INK);
-        fill(font, 0, FOOTER_Y, width, 1, new float[] {.11f, .16f, .37f});
+    /** One visible footer control: its source index survives fitted or paged labels. Engine-internal. */
+    public record FooterTarget(int index, Hint hint, int x, int y, int width, int height) {
+        public boolean contains(MasterTitlePointer pointer) {
+            return pointer != null && pointer.over(x, y, width, height);
+        }
+    }
+
+    /** The same measured layout drives the drawn footer and its mouse targets. */
+    public record FooterLayout(int statusWidth, int statusTop, int statusHeight, int hintY,
+                               List<FooterTarget> targets) {
+        public FooterLayout { targets = List.copyOf(targets); }
+    }
+
+    public static FooterLayout footerLayout(int width, String status, List<Hint> hints, int ticks) {
         int left = 6;
+        int statusWidth = 0;
+        int statusTop = compactLineHeight() > 10 ? FOOTER_Y : FOOTER_Y + 4;
+        int statusHeight = Math.max(11, compactLineHeight() + 2);
         if (status != null && !status.isEmpty()) {
-            int room = hints.isEmpty() ? width - 20 : Math.max(24, (width - 20) / 3);
-            String visible = MenuStyle.pageText(status, room, MenuStyle.COMPACT, ticks);
-            int sw = Math.min(compactWidth(status), room) + 8;
-            int top = compactLineHeight() > 10 ? FOOTER_Y : FOOTER_Y + 4;
-            int height = Math.max(11, compactLineHeight() + 2);
-            fill(font, 6, top, sw, height, new float[] {.23f, .16f, 0f});
-            outline(font, 6, top, sw, height, new float[] {.48f, .35f, .06f}, 1f, 1);
-            compact(font, visible, 10, top + 2 + compactMetrics().above(), GOLD);
-            left = 6 + sw + 10;
+            int statusRoom = hints.isEmpty() ? width - 20 : Math.max(24, (width - 20) / 3);
+            statusWidth = Math.min(compactWidth(status), statusRoom) + 8;
+            left = 6 + statusWidth + 10;
         }
         int room = width - 8 - left;
         List<Hint> shown = hints;
+        List<Integer> indices = new java.util.ArrayList<>();
+        for (int i = 0; i < hints.size(); i++) indices.add(i);
         if (!hints.isEmpty() && hintsWidth(hints) > room) {
             if (hints.size() == 1) shown = List.of(fittedHint(hints.getFirst(), room, ticks));
             else {
@@ -468,10 +478,35 @@ public final class MenuChrome {
                 int ownTicks = Math.floorDiv(ticks, 120 * (hints.size() - 1)) * 90;
                 shown = List.of(new Hint(first.key(), MenuStyle.pageText(first.label(), labelRoom, MenuStyle.COMPACT, ownTicks)),
                         new Hint(last.key(), MenuStyle.pageText(last.label(), labelRoom, MenuStyle.COMPACT, ticks)));
+                indices = List.of(other, hints.size() - 1);
             }
         }
         int hintY = compactLineHeight() > 10 ? FOOTER_Y - 1 + compactMetrics().above() : FOOTER_Y + 4;
-        hints(font, Math.max(left, width - 8 - hintsWidth(shown)), hintY, shown, controller, TEXT);
+        int x = Math.max(left, width - 8 - hintsWidth(shown));
+        int hitY = Math.max(FOOTER_Y, Math.min(hintY, hintY + 2 - compactMetrics().above()));
+        List<FooterTarget> targets = new java.util.ArrayList<>();
+        for (int i = 0; i < shown.size(); i++) {
+            Hint hint = shown.get(i);
+            int hintWidth = keyCapWidth(hint.key()) + (hint.label().isEmpty() ? 0 : 4 + compactWidth(hint.label()));
+            targets.add(new FooterTarget(indices.get(i), hint, x, hitY, hintWidth, SCREEN_H - hitY));
+            x += hintWidth + 12;
+        }
+        return new FooterLayout(statusWidth, statusTop, statusHeight, hintY, targets);
+    }
+
+    public static void footer(PixelFont font, int width, String status, List<Hint> hints, boolean controller, int ticks) {
+        fill(font, 0, FOOTER_Y, width, FOOTER_H, INK);
+        fill(font, 0, FOOTER_Y, width, 1, new float[] {.11f, .16f, .37f});
+        FooterLayout layout = footerLayout(width, status, hints, ticks);
+        if (status != null && !status.isEmpty()) {
+            int room = hints.isEmpty() ? width - 20 : Math.max(24, (width - 20) / 3);
+            String visible = MenuStyle.pageText(status, room, MenuStyle.COMPACT, ticks);
+            fill(font, 6, layout.statusTop(), layout.statusWidth(), layout.statusHeight(), new float[] {.23f, .16f, 0f});
+            outline(font, 6, layout.statusTop(), layout.statusWidth(), layout.statusHeight(), new float[] {.48f, .35f, .06f}, 1f, 1);
+            compact(font, visible, 10, layout.statusTop() + 2 + compactMetrics().above(), GOLD);
+        }
+        for (FooterTarget target : layout.targets())
+            hints(font, target.x(), layout.hintY(), List.of(target.hint()), controller, TEXT);
     }
 
     private static Hint fittedHint(Hint hint, int width, int ticks) {

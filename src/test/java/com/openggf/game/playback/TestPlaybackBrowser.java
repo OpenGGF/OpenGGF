@@ -248,6 +248,103 @@ class TestPlaybackBrowser {
         assertEquals(0,calls.get());
     }
 
+    @Test
+    void mouseUsesTheScrolledRowsAndStationaryPointerDoesNotUndoKeyboardFocus() {
+        var calls = new AtomicInteger();
+        List<PlaybackEntry> entries = new ArrayList<>();
+        for (int i = 0; i < 10; i++) entries.add(trace("s1", "trace-" + i));
+        var text = new ArrayList<String>();
+        var browser = browser(entries, "s1", false, font(text), calls);
+        mouse(browser, 80, 100, false, false, false, -5);
+        assertSame(entries.get(5), browser.selectedEntry());
+        mouse(browser, 80, 70, true, false, false, 0);
+        assertSame(entries.get(3), browser.selectedEntry(), "the top drawn row after scrolling is row three");
+        browser.render();
+        mouse(browser, 81, 70, true, false, false, 0);
+        assertSame(entries.get(3), browser.selectedEntry(), "hovering must not scroll the row out from under the pointer");
+        press(browser, GLFW_KEY_DOWN);
+        mouse(browser, 80, 70, false, false, false, 0);
+        assertSame(entries.get(4), browser.selectedEntry(), "a still pointer does not steal keyboard focus");
+        mouse(browser, 80, 70, false, true, false, 0);
+        assertSame(entries.get(2), browser.selectedEntry(), "the click uses the newly drawn viewport");
+        browser.render();
+        assertTrue(text.contains("LOADING TRACE"), text.toString());
+        mouse(browser, 80, 70, false, false, true, 0);
+        assertEquals(0, calls.get(), "mouse Back cancels before the loading card can launch");
+        assertSame(entries.get(2), browser.selectedEntry());
+        assertEquals(PlaybackBrowser.Result.NONE, browser.consumeResult());
+        mouse(browser, 80, 70, false, false, true, 0);
+        assertEquals(PlaybackBrowser.Result.BACK, browser.consumeResult());
+    }
+
+    @Test
+    void mouseChangesFiltersButCannotUnlockTheTraceOnlyScopeOrUsePageGutters() {
+        var s1 = recording("s1");
+        var s2 = trace("s2", "trace");
+        var browser = browser(List.of(s1, s2), "s1", false, null, new AtomicInteger());
+        mouse(browser, 250, 40, true, true, false, 0);
+        assertSame(s2, browser.selectedEntry());
+        mouse(browser, 250, 54, true, true, false, 0);
+        assertNull(browser.selectedEntry(), "Show recordings has no entry for Sonic 2");
+        mouse(browser, 250, 54, false, true, false, 0);
+        assertSame(s2, browser.selectedEntry());
+        var locked = browser(List.of(s1, s2), "", true, null, new AtomicInteger());
+        mouse(locked, 250, 54, true, true, false, 0);
+        mouse(locked, 250, 54, false, false, false, -2);
+        assertSame(s2, locked.selectedEntry(), "the locked filter stays traces");
+        mouse(locked, -20, 80, true, true, true, -8);
+        assertEquals(PlaybackBrowser.Result.NONE, locked.consumeResult(), "centred-page gutters own no controls");
+    }
+
+    @Test
+    void mouseWheelReadsCompleteDetailsAndFooterBackReturnsOneLevel() {
+        var entry = new TraceEntry(Path.of("traces/short-name"), "s1", 0, 0, 100, 0, 0,
+                new SelectedTeam("sonic", List.of()), Path.of("_movies/" + "long-folder/".repeat(40) + "MOVIE_TAIL.bk2"),
+                TraceFixtures.metadata("s1", 0, 0));
+        var text = new ArrayList<String>();
+        var calls = new AtomicInteger();
+        var browser = browser(List.of(new PlaybackEntry.Trace(entry)), "", false, font(text), calls);
+        press(browser, GLFW_KEY_F1);
+        mouse(browser, 80, 100, false, false, false, -1000);
+        browser.render();
+        assertTrue(text.stream().anyMatch(line -> line.contains("MOVIE_TAIL.bk2")), text.toString());
+        mouse(browser, 305, 215, false, true, false, 0); // the rendered Back hint ends at x312
+        assertEquals(PlaybackBrowser.Result.NONE, browser.consumeResult(), "Back closes details, not the browser");
+        assertEquals(0, calls.get());
+        browser.render();
+        mouse(browser, 305, 215, false, true, false, 0);
+        assertEquals(PlaybackBrowser.Result.BACK, browser.consumeResult());
+    }
+
+    @Test
+    void anEmptyLibraryHasClickableDetailsAndBackWithoutAdvertisingAnOpenAction() {
+        record Draw(String text, int x, int y) { }
+        var draws = new ArrayList<Draw>();
+        PixelFont font = new PixelFont() {
+            @Override public void beginMegaBatch() { }
+            @Override public void endMegaBatch() { }
+            @Override public void drawText(String text, int x, int y, float scale, float r, float g, float b, float a) {
+                draws.add(new Draw(text, x, y));
+            }
+        };
+        var calls = new AtomicInteger();
+        var browser = new PlaybackBrowser(new PlaybackLibrary(List.of(), List.of("A source could not be read")), "",
+                PlaybackBrowser.Filter.ALL, false, font, launcher(calls));
+        browser.render();
+        assertFalse(draws.stream().anyMatch(d -> d.y() >= 205 && d.text().equalsIgnoreCase("Open")));
+        Draw details = draws.stream().filter(d -> d.y() >= 205 && d.text().equalsIgnoreCase("Details")).findFirst().orElseThrow();
+        mouse(browser, details.x() + 1, details.y() + 1, false, true, false, 0);
+        mouse(browser, 40, 100, false, false, true, 0);
+        assertEquals(PlaybackBrowser.Result.NONE, browser.consumeResult(), "Details was opened before Back");
+        mouse(browser, 40, 100, false, false, true, 0);
+        assertEquals(PlaybackBrowser.Result.BACK, browser.consumeResult());
+        assertEquals(0, calls.get());
+    }
+
+    private static void mouse(PlaybackBrowser browser, int x, int y, boolean moved, boolean click, boolean back, int wheel) {
+        browser.update(new InputHandler(), new com.openggf.game.MasterTitlePointer(x, y, moved, click, back, wheel));
+    }
+
     private static PlaybackBrowser browser(List<PlaybackEntry> entries, String game, boolean traceOnly,
                                            PixelFont font, AtomicInteger calls) {
         return new PlaybackBrowser(new PlaybackLibrary(entries, List.of()), game,

@@ -13013,6 +13013,7 @@ METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneL
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneNetwork network()
 METHOD com.openggf.mods.scene.SceneContext public  java.lang.String typedText()
+METHOD com.openggf.mods.scene.SceneContext public  java.util.Optional<java.lang.String> buttonLabel(com.openggf.control.ButtonPrompts$Button,boolean)
 METHOD com.openggf.mods.scene.SceneContext public  long focusLossGeneration()
 METHOD com.openggf.mods.scene.SceneContext public  void captureKeyboardText()
 METHOD com.openggf.mods.scene.SceneContext public  void startAct(com.openggf.mods.scene.ActLaunch)

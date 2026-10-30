@@ -298,6 +298,7 @@ class TestEditorHudControls {
     void theMenuLeavesOutCommandsForPanesTheHudDoesNotDraw() {
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
+        hud.openCommandSheet();
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Undo")));
         assertFalse(hud.menuItems.stream().anyMatch(item -> item.label().startsWith("Pan ")), "panning is a held control");
         assertTrue(hud.menuItems.stream().noneMatch(item -> item.label().equals("Next editor pane")
@@ -311,8 +312,10 @@ class TestEditorHudControls {
         palette.setWorkspaceCommands(List.of(new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", () -> { })));
         palette.setHostCommands(List.of(new com.openggf.editor.EditorCommandPalette.HostCommand("Editor projects", () -> { }),
                 new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", () -> { })));
+        palette.setExitAction(() -> { });
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
+        hud.openCommandSheet();
         var rows = hud.menuItems.stream().filter(item -> !item.header()).toList();
         var labels = rows.stream().map(EditorHud.MenuItem::label).toList();
         assertEquals(labels.size(), labels.stream().distinct().count(), "each command once: " + labels);
@@ -329,7 +332,7 @@ class TestEditorHudControls {
         assertTrue(grouped.get("Editor").contains("Stageplay workspace"), "a workspace switch sits with the editor's pages");
         assertEquals(List.of("Playtest from cursor", "Playtest from level start"), grouped.get("Playtest"),
                 "two playtests, each named by where the player starts, and no unexplained Fresh start");
-        assertEquals(List.of("Save project", "Export level", "Editor projects", "Import content"), grouped.get("Project"));
+        assertEquals(List.of("Save project", "Export level", "Editor projects", "Import content", "Exit to title"), grouped.get("Project"));
         assertEquals("F4", rows.stream().filter(item -> item.label().equals("Stageplay workspace")).findFirst().orElseThrow().detail());
         assertEquals("Shift+Tab", rows.stream().filter(item -> item.label().equals("Playtest from cursor")).findFirst().orElseThrow().detail());
         assertEquals("F5", rows.stream().filter(item -> item.label().equals("Playtest from level start")).findFirst().orElseThrow().detail());
@@ -494,14 +497,18 @@ class TestEditorHudControls {
 
     @Test
     void menuRowsFitTheirLabelsAndShortcutCapsShareOneColumn() {
+        EditorCommandPalette.forController(controller).setExitAction(() -> { });
         press(BUTTON_START);
         assertEquals(EditorHud.Modal.MENU, hud.modal);
+        var frontPage = hud.menuItems;
+        hud.openCommandSheet();
         // The narrowest HUD has 640 units (EditorHudLayout.uiScale); every row must read whole there.
+        for (var page : List.of(frontPage, hud.menuItems))
         for (float layoutWidth : new float[] {640, 800, 1280}) {
-            var geometry = EditorHudPainter.menuGeometry(hud.menuItems, layoutWidth);
+            var geometry = EditorHudPainter.menuGeometry(page, layoutWidth);
             assertTrue(geometry.width() <= layoutWidth - 40, "menu stays inside the window at " + layoutWidth);
             assertTrue(geometry.width() >= EditorHudPainter.MENU_MIN_WIDTH);
-            for (EditorHud.MenuItem item : hud.menuItems) {
+            for (EditorHud.MenuItem item : page) {
                 if (item.header()) continue;
                 // Rows are drawn in their own case, so the measured string is the drawn string.
                 assertEquals(item.label(), EditorHudCanvas.fit(item.label(), geometry.labelRoom(), EditorHudCanvas.Size.SMALL),
@@ -540,7 +547,7 @@ class TestEditorHudControls {
                 new EditorCommandPalette.HostCommand("Ouvrir", firstAction),
                 new EditorCommandPalette.HostCommand("Ouvrir", secondAction)));
 
-        hud.openMenu();
+        hud.openCommandSheet();
         var commands = hud.menuItems.stream().filter(item -> item.action() == firstAction
                 || item.action() == secondAction).toList();
         assertEquals(2, commands.size(), "Translated labels cannot merge distinct commands");
@@ -556,7 +563,7 @@ class TestEditorHudControls {
         EditorCommandPalette.forController(controller).setHostCommands(List.of(
                 new EditorCommandPalette.HostCommand("Filter importieren", importAction)));
 
-        hud.openMenu();
+        hud.openCommandSheet();
         var command = hud.menuItems.stream().filter(item -> item.action() == importAction)
                 .findFirst().orElseThrow(() -> new AssertionError("Wording cannot hide a host command"));
         command.action().run();
@@ -581,10 +588,50 @@ class TestEditorHudControls {
         hud.wheelItems().getLast().action().run();
         assertEquals(1, playtests.get(), "The wheel selects semantic Playtest, regardless of either label");
         assertEquals(0, unrelated.get());
-        hud.openMenu();
+        hud.openCommandSheet();
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.action() == playtestAction));
         assertTrue(hud.menuItems.stream().anyMatch(item -> item.action() == unrelatedAction));
         assertTrue(hud.menuItems.stream().noneMatch(item -> item.action() == filterAction));
+    }
+
+    @Test
+    void theFrontPageLeadsWithEverydayCommandsAndEndsWithTheWayOut() {
+        var exits = new AtomicInteger();
+        var palette = EditorCommandPalette.forController(controller);
+        palette.setHostActions(() -> { }, () -> { });
+        palette.setWorkspaceCommands(List.of(new EditorCommandPalette.HostCommand("Stageplay workspace", "F4", () -> { })));
+        palette.setExitAction(exits::incrementAndGet);
+        press(BUTTON_START);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        assertFalse(hud.menuSheet);
+        var labels = hud.menuItems.stream().map(EditorHud.MenuItem::label).toList();
+        assertEquals(List.of("Resume", "Save", "Playtest from cursor", "Playtest from level start",
+                "Level", "Library", "Object properties", "Level settings", "Level palette (Genesis colors)", "Stageplay workspace",
+                "More", "All commands and shortcuts", "Exit to title"), labels);
+        assertEquals(0, hud.menuIndex, "Resume is focused, so a stray confirm changes nothing");
+        assertTrue(hud.menuItems.size() <= 16, "the front page fits without scrolling");
+        hud.menuIndex = hud.menuItems.size() - 1;
+        press(BUTTON_A);
+        assertEquals(1, exits.get(), "Exit to title reaches the host's exit, which owns the unsaved prompt");
+        assertEquals(EditorHud.Modal.NONE, hud.modal);
+    }
+
+    @Test
+    void backFromTheCommandSheetReturnsToTheFrontPage() {
+        press(BUTTON_START);
+        int sheetRow = hud.menuItems.stream().map(EditorHud.MenuItem::label).toList().indexOf("All commands and shortcuts");
+        hud.menuIndex = sheetRow;
+        press(BUTTON_A);
+        assertEquals(EditorHud.Modal.MENU, hud.modal);
+        assertTrue(hud.menuSheet);
+        assertTrue(hud.menuItems.stream().anyMatch(item -> item.label().equals("Undo")));
+        assertTrue(hud.prompts().stream().anyMatch(prompt -> prompt.label().equals("Back")), "the prompt bar says what B does here");
+        press(BUTTON_B);
+        assertEquals(EditorHud.Modal.MENU, hud.modal, "Back steps out one page");
+        assertTrue(hud.prompts().stream().anyMatch(prompt -> prompt.label().equals("Close")));
+        assertFalse(hud.menuSheet);
+        press(BUTTON_B);
+        assertEquals(EditorHud.Modal.NONE, hud.modal);
     }
 
     @Test

@@ -5,6 +5,13 @@ description: Render an existing OpenGGF trace replay to synchronized lossless MK
 
 # Trace capture
 
+For ROM image comparisons, enable `DISPLAY_SPRITE_SCANLINE_LIMIT`
+(`display.spriteScanlineLimit: true`): normal play defaults to false.
+`TraceCaptureTool` enables it for its capture scope and restores the caller's
+preference on completion or failure. For other engine screenshot/probe paths,
+set it explicitly in the isolated capture configuration and restore it afterward.
+Physics/aux comparisons do not require this presentation setting.
+
 Use [headless-rendering](../headless-rendering/SKILL.md) for GL backend selection,
 display isolation, prerequisites and rendering lifecycle checks.
 

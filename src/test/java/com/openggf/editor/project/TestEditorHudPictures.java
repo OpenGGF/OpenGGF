@@ -63,7 +63,7 @@ class TestEditorHudPictures {
     private static final int WINDOW_WIDTH = Integer.getInteger("openggf.editor.hudWidth", 1600);
     private static final int WINDOW_HEIGHT = Integer.getInteger("openggf.editor.hudHeight", 900);
     private static final int BUTTON_A = 0, BUTTON_B = 1, BUTTON_Y = 3, BUTTON_LB = 4, BUTTON_RB = 5,
-            BUTTON_BACK = 6, BUTTON_START = 7, DPAD_RIGHT = 12, DPAD_DOWN = 13;
+            BUTTON_BACK = 6, BUTTON_START = 7, DPAD_UP = 11, DPAD_RIGHT = 12, DPAD_DOWN = 13;
     private static final int AXIS_RIGHT_TRIGGER = 5;
 
     private final boolean[] buttons = new boolean[15];
@@ -220,19 +220,29 @@ class TestEditorHudPictures {
                         controller.toggleActiveLayer();
                     }
 
+                    // The front page, then its last row (Exit to title) and the command sheet one row above it.
                     shot.press(BUTTON_START);
                     shot.picture("menu");
+                    shot.press(BUTTON_RB);
+                    shot.press(BUTTON_RB);
+                    shot.picture("menu-exit");
+                    shot.press(DPAD_UP);
+                    shot.press(BUTTON_A);
+                    shot.picture("menu-sheet");
                     // Bumpers page by eight rows: the clipped, scrolled list and its last command.
                     shot.press(BUTTON_RB);
                     shot.press(BUTTON_RB);
                     shot.picture("menu-scrolled");
                     for (int i = 0; i < 12; i++) shot.press(BUTTON_RB);
                     shot.picture("menu-end");
+                    // Back returns to the front page; Back again closes it.
+                    shot.press(BUTTON_B);
                     shot.press(BUTTON_B);
 
-                    // The palette sheet from its menu row (Resume, Object properties, Level settings, Level palette).
+                    // The palette sheet from its front-page row (Resume, Save, two playtests, the Level
+                    // caption skipped, Library, Object properties, Level settings, Level palette).
                     shot.press(BUTTON_START);
-                    for (int i = 0; i < 3; i++) shot.press(DPAD_DOWN);
+                    for (int i = 0; i < 7; i++) shot.press(DPAD_DOWN);
                     shot.press(BUTTON_A);
                     shot.press(DPAD_DOWN);
                     shot.picture("palette");
@@ -307,10 +317,15 @@ class TestEditorHudPictures {
                     shot.tick();
                     pads.handleKeyEvent(GLFW_KEY_LEFT, GLFW_RELEASE);
                     shot.picture("world-keyboard");
-                    // The keyboard command sheet: F1 opens it with the keys the editor binds; Page Down
-                    // pages by eight rows to the middle and the end.
+                    // The keyboard front page, then its command sheet with the keys the editor binds;
+                    // Page Down pages by eight rows to the middle and the end.
                     shot.key(GLFW_KEY_F1);
                     shot.picture("menu-keyboard");
+                    shot.key(GLFW_KEY_PAGE_DOWN);
+                    shot.key(GLFW_KEY_PAGE_DOWN);
+                    shot.key(GLFW_KEY_UP);
+                    shot.key(GLFW_KEY_ENTER);
+                    shot.picture("menu-keyboard-sheet");
                     shot.key(GLFW_KEY_PAGE_DOWN);
                     shot.key(GLFW_KEY_PAGE_DOWN);
                     shot.picture("menu-keyboard-scrolled");

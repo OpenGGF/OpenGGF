@@ -162,6 +162,42 @@ class TestEditorToggleIntegration {
     }
 
     @Test
+    void exitToTitleAsksAboutUnsavedNativeEditsAndLeavesOnlyWhenChosen() throws Exception {
+        requireS2Rom();
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        var authored = engine.getLevelEditorController().currentLevel();
+        engine.getLevelEditorController().placeBlock(0, 2, 2, 1);
+        var exit = com.openggf.editor.EditorCommandPalette.forController(engine.getLevelEditorController()).exitAction();
+        assertNotNull(exit, "the editor menu offers a way out");
+        var workspace = engine.getEditorProjectWorkspace();
+
+        exit.run();
+        assertTrue(workspace.menu().isOpen(), "unsaved native edits are asked about before leaving");
+        assertEquals(List.of("Keep editing", "Save and exit to title", "Exit without saving"),
+                workspace.menu().actionEntries().stream().map(com.openggf.editor.project.EditorProjectMenu.Action::label).toList());
+        press(engine, inputFor(engine), GLFW_KEY_ESCAPE);
+        assertFalse(workspace.menu().isOpen());
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
+        assertEquals(1, authored.getMap().getValue(0, 2, 2) & 0xFF, "Keep editing changes nothing");
+
+        // Leaving rebuilds the master title, which uploads its art: it needs a real GL context.
+        try (var gl = com.openggf.tools.PresentationOffscreenTestContext.openConfigured(
+                320, 224, com.openggf.tools.PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            exit.run();
+            workspace.menu().runAction(2);
+            assertEquals(GameMode.MASTER_TITLE_SCREEN, engine.getCurrentGameMode());
+            assertNull(SessionManager.getCurrentEditorMode());
+            assertNull(engine.getEditorProjectWorkspace().document());
+            // Release the title's GL resources before the context closes.
+            ((com.openggf.game.MasterTitleScreen) field(engine, "masterTitleScreen")).cleanup();
+        }
+    }
+
+    @Test
     void resumePlaytestUsesIndependentAuthoredSnapshotAndFreshCounters() throws Exception {
         requireS2Rom();
         enableEditor();

@@ -263,9 +263,28 @@ class TestTextEntry {
         input.tapKey(field::update, SceneKeys.F1);
         String read = FullTextReaderProbe.readAll(input, field::update, field::draw, field::detailsVisibleLines, field::detailsFirstLine);
         assertFalse(read.contains("TOP_SECRET"));
-        assertTrue(read.contains("******** (hidden)"));
+        assertTrue(read.contains("TextHidden"), read); // the value is named hidden, never shown
         input.tapEscape(field::update);
         assertEquals("TOP_SECRET_PASSWORD", field.text());
     }
 
+
+    @Test
+    void aRefusalSitsUnderItsFieldAndAnEmptyFieldSaysSo() {
+        for (int width : new int[] {320, 400}) {
+            TextEntry field = TextEntry.name("CHOOSE YOUR NAME", "").withPrompt("Other racers see it. Any script works.");
+            FakeViewInput input = new FakeViewInput();
+            RecordingSceneCanvas empty = new RecordingSceneCanvas(width);
+            field.draw(empty);
+            assertTrue(empty.shows("Nothing entered yet"), "an empty field says it is empty at " + width);
+            input.tapKey(field::update, SceneKeys.ENTER);
+            assertEquals("Type at least one visible character", field.error());
+            RecordingSceneCanvas refused = new RecordingSceneCanvas(width);
+            field.draw(refused);
+            refused.assertFillsOnScreen();
+            int top = refused.nameTopAnywhere("Type at least one visible character");
+            // The double-size name box ends near row 85; the refusal follows it, not the footer.
+            assertTrue(top > 85 && top < 110, "the refusal sits under the field at " + width + ", not at row " + top);
+        }
+    }
 }

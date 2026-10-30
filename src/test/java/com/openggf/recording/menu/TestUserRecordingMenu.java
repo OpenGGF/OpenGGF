@@ -151,6 +151,56 @@ class TestUserRecordingMenu {
         assertFalse(menu.consumeCloseRequested(), "Back returns to options before closing the library");
     }
 
+    @Test
+    void mouseEditsOptionsAndTheTargetKeypadBeforeLaunchingExactlyOnce() {
+        AtomicReference<UserRecordingPlaybackOptions> played = new AtomicReference<>();
+        AtomicInteger launches = new AtomicInteger();
+        var menu = new UserRecordingMenu("s2", entry(120, RecordingVersionWarning.NONE), font(new ArrayList<>()),
+                (recording, options) -> { played.set(options); launches.incrementAndGet(); });
+        mouse(menu, 30, 72, true, true, false, 0); // Pause on desync
+        mouse(menu, 30, 88, true, true, false, 0); // Fast forward
+        assertTrue(menu.state().options().pauseOnDesync());
+        assertTrue(menu.state().options().fastForward());
+        mouse(menu, 30, 56, true, false, false, 0); // Hover exposes the target's step arrows.
+        menu.render();
+        mouse(menu, 270, 56, false, true, false, 0);
+        assertEquals(59, menu.state().options().targetFrame(), "the drawn left arrow uses the existing 60-frame step");
+        mouse(menu, 300, 56, false, true, false, 0);
+        assertEquals(119, menu.state().options().targetFrame(), "the drawn right arrow increments");
+        mouse(menu, 30, 56, true, true, false, 0); // Target frame -> integer keypad
+        menu.render();
+        mouse(menu, 135, 155, true, true, false, 0); // Clear
+        mouse(menu, 195, 90, true, true, false, 0); // 4
+        mouse(menu, 75, 90, true, true, false, 0); // 2
+        mouse(menu, 270, 155, true, true, false, 0); // Set
+        assertEquals(42, menu.state().options().targetFrame());
+        assertNull(played.get(), "editing cannot launch playback");
+        mouse(menu, 30, 112, true, true, false, 0); // Play
+        mouse(menu, 30, 112, false, false, false, 0); // a held mouse has no second press edge
+        assertEquals(1, launches.get());
+        assertEquals(42, played.get().targetFrame());
+        assertTrue(played.get().pauseOnDesync());
+        assertTrue(played.get().fastForward());
+    }
+
+    @Test
+    void mouseDetailsScrollAndBackReturnThroughOptionsBeforeClosing() {
+        var draws = new ArrayList<String>();
+        var menu = new UserRecordingMenu("s2", entry(120, RecordingVersionWarning.NONE), font(draws), (e, o) -> fail());
+        mouse(menu, 30, 137, true, true, false, 0); // Details and warnings
+        mouse(menu, 80, 100, false, false, false, -1000);
+        menu.render();
+        assertFalse(draws.isEmpty(), "the complete details viewport is drawn after the wheel");
+        mouse(menu, 80, 100, false, false, true, 0);
+        assertFalse(menu.consumeCloseRequested(), "Back returns to the options");
+        mouse(menu, 80, 100, false, false, true, 0);
+        assertTrue(menu.consumeCloseRequested());
+    }
+
+    private static void mouse(UserRecordingMenu menu, int x, int y, boolean moved, boolean click, boolean back, int wheel) {
+        menu.update(new InputHandler(), new com.openggf.game.MasterTitlePointer(x, y, moved, click, back, wheel));
+    }
+
     private static PixelFont font(List<String> text) {
         return new PixelFont() {
             @Override public void beginMegaBatch() { }
