@@ -1,5 +1,6 @@
 package com.openggf.level;
 
+import com.openggf.game.internal.LevelStartCameraPosition;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -52,7 +53,8 @@ final class FreshLevelTransitionBoundaryController {
             }
         }
         AbstractPlayableSprite destinationPlayer = mainPlayable(level);
-        if (destinationPlayer != null) {
+        if (destinationPlayer != null
+                && !(level.getZoneFeatureProvider() instanceof LevelStartCameraPosition)) {
             level.camera.setFocusedSprite(destinationPlayer);
             level.camera.updatePosition(true);
         }
