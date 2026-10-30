@@ -9,6 +9,11 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ floor-launcher landing correction (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)
+repairs the object's zero-distance top-contact selection using its native
+helper semantics. It adds no accepted deviation or whole-act/campaign claim.
+
 **DEZ conveyor ownership correction (2026-10-30):** the bounded
 [original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
 repairs moving-pad standing-bit identity and its native airborne return. It adds
@@ -2022,3 +2027,9 @@ an immutable internal host service, independent of donor capabilities and power
 profiles. The public three-component record, ModApiVersion and signature pin
 retain their pre-task contracts. The earlier Knuckles chain frontier above is
 historical evidence, not a newly repeated closure or a complete-chain claim.
+DEZ staircase airborne release (2026-10-30): moving parent/child sections now
+retain each native participant's standing latch and consume an airborne rider
+only at that section's own `SolidObjectFull` checkpoint. The native return
+clears support without a position lift. See the [frontier evidence](status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797)
+for matched old/new checks and the bounded original-input continuation; expanded
+viewport/donor/roster, whole-act and campaign qualification remain separate.

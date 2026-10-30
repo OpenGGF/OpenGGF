@@ -686,3 +686,49 @@ shared collision, player, input, timing, loading, audio or rewind edit.
 | ALLOCATION / REWIND: live occupant identity | Same parameter cases | Removal/recreation restores both riders and bits with the captured physical slot; a 45-dispatch continuation repeats exactly; a replacement occupant in the retired slot starts without either bit. No allocator or rewind implementation change. |
 | ROUTE / ORACLE: native jump boundary | `TestS3kDezColdRoutes#coldActOneConveyorJumpPreservesNativeBoundary` | Fresh native320 Sonic+Tails, donor off, 3280 original movie inputs, 13 strict main/camera/clock fields and exact input admission. No trace-state seeding, tolerance or input change. Whole-act and expanded donor/roster/viewport native parity remain open. |
 | EXISTING BREADTH: conveyor variants, lift lifetime, S3K anchors | `TestS3kDezConveyorPadHeadless`, `TestS3kDezLiftPadHeadless` and the four mandatory S3K anchor classes | Existing 320/800, inverted, per-player/direction, allocation-exhaustion, arm retirement and graph recreation checks remain separate from native matching. Exact completed results and limitations are in the frontier record. |
+
+## Floor-launcher exact landing boundary — 2026-10-30
+
+The [original-input continuation](../../../status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)
+starts at pushed develop `270fda5f4566cc404ea6f3ea2b692bc266fd2c98`.
+At row 5516 the ordinary physics step still matches native; the floor launcher's
+new-contact checkpoint accepts a zero-distance boundary which its actual
+`SolidObjectTop` call rejects. Qualification and the subsequent bounded frontier
+are recorded in the linked entry; this is not an act-completion certificate.
+
+| Affected obligation | Focused check | Scope and inherited gap |
+| --- | --- | --- |
+| OBJECT / CONTACT: floor-launcher new landing | `TestS3kFloorLauncherLanding#exactBoundaryRejectsEachParticipantBeforeLandingAndAfterRecreation` | Real P1/P2, both launcher directions, upright and reverse-gravity representatives. Exact boundary preserves airborne rolling motion and fractions; one pixel inside still lands. Declared component setup is separate from the original-input route. |
+| SLOT / REWIND: rejected and held contact | Same parameter cases | Destructive removal/recreation preserves the exact physical slot and rejected state; restored supported contact repeats 24 object dispatches through launch and early return. A replacement occupant inherits neither participant's standing bit. This is bounded manager replay, not free-flight physics or a new complete-world route claim. |
+| ROUTE / ORACLE: original floor-launcher approach | `TestS3kDezColdRoutes#coldActOneFloorLauncherLandingPreservesNativeBoundary` | Fresh native320 Sonic+Tails, donor off, 5520 unchanged movie inputs and 13 main/camera/clock fields. No position, clock, object or physics-row hydration. |
+| EXISTING SEMANTICS: shared FBZ/DEZ object | `TestFbzPlayerTransportObjects` and required S3K anchors | Existing acceleration, return, rider ordering, lifetime and facing checks remain separate. Expanded donors, viewports, solo characters/rosters, whole-act, pixels/audio and campaign parity remain open. |
+
+
+## Staircase moving standing-bit ownership — 2026-10-30
+
+SKL `$4F` uses the live section's standing bits across its Y update, and its own
+`SolidObjectFull_1P` call consumes an airborne rider without a new-contact lift.
+The correction uses existing provider contracts; shared collision and rewind
+owners remain unchanged. Native slot-19 execute callbacks on the original movie
+prove the branch at row 6797. The complete native control independently matches
+12000 contiguous rows / 180000 fields; it is observation, not engine hydration.
+
+`TestS3kDezStaircaseAirborneRelease` exercises real P1/P2 × parent/child ×
+normal/reverse gravity. It asserts support/latch survival through an unrelated
+earlier solid and the moving section's own checkpoint, exact jump position,
+velocity and fractions, held/released family recreation at restored physical
+slots, replay and a replacement occupant with clear latches. All eight cases
+fail on the unchanged runtime after correcting the reverse-gravity component
+setup. `TestS3kDezStaircaseHeadless` supplies independent forward-allocation
+failure, section ordering, native rounding, parent/child graph restoration and
+placed normal/inverted carry/replay checks at 320/800.
+
+`TestS3kDezColdRoutes#coldActOneStaircaseJumpPreservesNativeBoundary` retains the
+unchanged 13-field comparator and asserts the first 6810 original-input rows
+from the fresh native320 Sonic+Tails inlet. The temporary 15-field continuation
+uses the same original input and stops at the first mismatch, death, act change,
+12000 rows or 60 seconds of stepping. Completed results, tested source hashes,
+queue/execution attribution and the remaining frontier belong to the
+[frontier entry](../../../status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797).
+These component/route checks do not extend donor, roster or width coverage,
+certify an entire act/campaign, or establish pixel/audio parity.

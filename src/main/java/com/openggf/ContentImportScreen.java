@@ -380,24 +380,19 @@ public final class ContentImportScreen implements AutoCloseable {
 
     String fullDetails() {
         if (error != null) return error;
-        if (pending != null) return UiMessages.text("menu.contentimportscreen.inspecting_content") + "\n\n"
-                + UiMessages.text("menu.contentimportscreen.from") + lastPath;
-        if (installing != null) return UiMessages.text("menu.contentimportscreen.installing_the_confirmed_mod_package_disabled")
-                + UiMessages.text("menu.contentimportscreen.wait_for_installation_to_finish_before_choosing_another")
-                + "The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: " + lastPath;
-        if (candidate != null) return candidate.displayName() + "\nType: " + candidate.kind()
-                + "\nSource: " + candidate.source() + "\nAction: " + actionLabel()
-                + (candidate.facts().isEmpty() ? "" : "\nIdentity: " + candidate.facts())
-                + (selectedGame == null ? "" : "\nGame: " + gameLabel(selectedGame))
+        if (pending != null) return UiMessages.text("import.details.checking_source", java.util.Map.of("path", lastPath));
+        if (installing != null) return UiMessages.text("import.details.installing_source", java.util.Map.of("path", lastPath));
+        if (candidate != null) return UiMessages.text("import.details.candidate", java.util.Map.of(
+                "name", candidate.displayName(), "type", switch (candidate.kind()) {
+                    case PROJECT -> UiMessages.text("import.ui.editor_project_caps");
+                    case LEVEL -> UiMessages.text("import.ui.level_export_caps");
+                    case MOD -> UiMessages.text("import.ui.mod_mutator_package_caps");
+                }, "source", candidate.source().toString(), "action", actionLabel()))
+                + (candidate.facts().isEmpty() ? "" : "\n" + UiMessages.text("import.details.identity", java.util.Map.of("identity", candidate.facts())))
+                + (selectedGame == null ? "" : "\n" + UiMessages.text("import.details.game", java.util.Map.of("game", gameLabel(selectedGame))))
                 + "\n\n" + candidate.detail() + "\n" + candidate.findings().stream()
                 .map(finding -> finding.message()).reduce("", (a, b) -> a + "\n" + b);
-        return UiMessages.text("menu.contentimportscreen.drop_one_file_or_folder_anywhere_on_the_import_screen_o")
-                + "The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\n"
-                + "Editable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\n"
-                + "Mods and mutators: mod JARs, or a ZIP containing one JAR\n\n"
-                + UiMessages.text("menu.contentimportscreen.review_the_name_type_and_action_before_confirming_proje")
-                + "Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. "
-                + UiMessages.text("menu.contentimportscreen.inspection_does_not_run_creator_code_canceling_keeps_th");
+        return UiMessages.text("import.details.guide");
     }
 
     private void centered(PixelFont font, String text, int y, float[] color) {

@@ -1654,3 +1654,17 @@ records the native decision, component checks, actual recreation/forward check
 and original-movie opening coverage. These component contracts also govern Act 2
 placements; no Act 2 cold/incoming route, width/donor/team product or native
 trajectory qualification is inferred for this change.
+
+
+## Staircase airborne-standing ownership — 2026-10-30
+
+The shared DEZ staircase owner retains each moving section's standing bits until
+that section's own full-solid checkpoint. Its native airborne-standing branch
+clears support without the new-contact lift under either gravity direction.
+The [Act 1 evidence and test binding](s3k-dez-act1.md#staircase-moving-standing-bit-ownership--2026-10-30)
+records P1/P2 parent/child component coverage, held/released recreation and
+slot isolation. The existing
+`TestS3kDezStaircaseHeadless#invertedActTwoLandingActivatesTheFlippedPlacedStaircase`
+checks the actual inverted Act 2 placement's activation, carry and 180-frame
+restore/forward replay. This adds no original-input Act 2 route, donor/roster/
+viewport breadth or whole-act certification; those inherited gaps remain open.

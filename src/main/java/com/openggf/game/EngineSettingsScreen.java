@@ -1243,7 +1243,7 @@ public final class EngineSettingsScreen {
         MenuChrome.fill(font, 12, 66, w - 24, resetPromptY(1, w) + resetPromptHeight() + 10 - 66, MenuChrome.NAVY, .97f);
         MenuChrome.outline(font, 12, 66, w - 24, resetPromptY(1, w) + resetPromptHeight() + 10 - 66, MenuChrome.GOLD, 1f, 1);
         String title = controlsTab() ? UiMessages.text("settings.screen.reset_all_bindings_caps") : UiMessages.text("settings.reset_category", java.util.Map.of("category", categoryLabel(tabs[category])));
-        title = MenuChrome.fitLabel(title, w - 40);
+        title = pageLabel(title, w - 40);
         MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 76, MenuChrome.GOLD);
         if (controlsTab()) centred(UiMessages.text("settings.screen.includes_controller_setup_and_deadzone"), w, 94, MenuChrome.TEXT);
         centred(UiMessages.text("settings.screen.changes_stay_in_the_draft_until_saved"), w, controlsTab() ? 106 : 100, MenuChrome.MUTED);
@@ -1251,14 +1251,14 @@ public final class EngineSettingsScreen {
             int x = resetPromptX(i, w), y = resetPromptY(i, w), buttonWidth = resetPromptWidth(i, w);
             if (resetChoice == i) MenuChrome.focus(font, x, y, buttonWidth, resetPromptHeight(), ticks);
             else MenuChrome.panel(font, x, y, buttonWidth, resetPromptHeight());
-            String label = MenuChrome.fitCompact(resetPromptLabel(i), buttonWidth - 14);
+            String label = pageCompact(resetPromptLabel(i), buttonWidth - 14);
             MenuChrome.compact(font, label, x + (buttonWidth - MenuChrome.compactWidth(label)) / 2, y + 2 + MenuChrome.compactMetrics().above(),
                     i == 0 ? MenuChrome.AMBER : resetChoice == i ? MenuChrome.WHITE : MenuChrome.TEXT);
         }
     }
 
     private void centred(String text, int w, int y, float[] color) {
-        String shown = MenuChrome.fitCompact(text, w - 40);
+        String shown = pageCompact(text, w - 40);
         MenuChrome.compact(font, shown, (w - MenuChrome.compactWidth(shown)) / 2, y, color);
     }
 
@@ -1283,7 +1283,7 @@ public final class EngineSettingsScreen {
         MenuChrome.fill(font, bx, 45, bw, 153, MenuChrome.NAVY, .98f);
         MenuChrome.outline(font, bx, 45, bw, 153, MenuChrome.GOLD, 1f, 1);
         String title = UiMessages.text("settings.screen.save_settings_caps");
-        title = MenuChrome.fitLabel(title, bw - 20);
+        title = pageLabel(title, bw - 20);
         MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 55, MenuChrome.GOLD);
         List<String> summaries = changeSummaryLines();
         for (int i = 0; i < summaryCapacity() && promptScroll + i < summaries.size(); i++)
