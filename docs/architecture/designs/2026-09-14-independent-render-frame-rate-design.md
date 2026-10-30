@@ -1,7 +1,7 @@
 # Independent rendering rate and fixed simulation timing
 
 Date: 2026-09-14
-Status: proposed for 0.7; scheduler proof and live phase extraction, no independent live scheduling.
+Status: proposed for 0.7; scheduler proof, live phase extraction and ordered input admission, no independent live scheduling.
 Source inspection: `develop` at `71603cbb66f0ccbf78eb96cf52da25c6997cfd57`.
 Roadmap: [0.7 supporting workstream](../../project/v0.7-roadmap.md#supporting-workstream--independent-rendering-rate).
 
@@ -944,3 +944,183 @@ Lua 5.4, surfaceless EGL, the verified original S2 REV01 and locked-on S3K ROMs,
 and the same `$S2_ROM_PATH` and `$S3K_ROM_PATH` command shape recorded above.
 The queue wait was not retained. This focused result does not establish live
 independent scheduling or replace shared-owner smoke.
+
+## Ordered physical gameplay admission — 2026-10-29
+
+This increment reuses candidate `6ba6dd081389ff818e9dbc79504fc9484cfa0b48`
+and reconciles pushed develop `445feabf82ad9cd3607991702a23625fbb886f49`
+without conflicts in local merge `1b39152c3368363a6b86132bd5f612001de5820b`.
+Only the T3-provisioned `t3-deef1c2b` checkout is changed, on
+`feature/ai-ordered-physical-input`. The extraction worktree and its separate
+combined smoke remain untouched. This replaces the preceding scoped-pass
+released-tap limitation; unscoped creator reads retain their existing contract.
+
+### Admission and authority
+
+Accepted, mapped keyboard callbacks and observed semantic controller changes
+feed a bounded window-thread transition queue independent of the scene journal.
+The consuming scoped pass selects the longest ordered prefix in which each
+physical control changes at most once. Different controls can change together;
+a control's press and release occupy successive consuming passes. Thus a fully
+released short tap becomes one held/pressed sample followed by its release,
+and two taps remain press/release/press/release. This defines admission order,
+not original hardware timestamps or what happened during an unobserved poll.
+Controller edges use the existing assignments, action mapping and deadzone.
+Keyboard and controller controls keep separate identities before player merge.
+A controller-assignment-table change rebaselines the controller channel while
+retaining independent keyboard transitions.
+
+Engine's host pass still reads current physical state for shortcuts. Its existing
+handoff supplies one cached controller observation to the first GameLoop pass;
+that consumer selects the gameplay prefix. Rereads reuse it. Only the existing
+`update()` acknowledgment commits it; closing an unacknowledged pass leaves it
+pending. Deliberate multiple-pass pumps consume successive prefixes and retain
+their existing tick, recording and outer audio boundaries. Scene capture drains
+only its own physical journal, with its original sequence and timestamps.
+
+Zero-step host service keeps its physical pause/control sample. If eligible,
+it previews the same first gameplay prefix into the existing mutator pacing
+retention owner, without committing that prefix. Repeated zero-step service
+cannot pull a later physical press ahead of an earlier queued release. The
+first real consuming pass commits it; the existing retained-input bridge still
+owns its semantic publication and rewind snapshot. Start already consumed by
+the zero-step host is claimed before retention so it cannot pause twice.
+No new world snapshot component or replay input source is introduced.
+
+Text claims and composition remove only their keyboard transitions, including
+a claim acquired between host observation and handoff. Pad suppression claims
+only controller transitions. Physical text-menu pad samples remain distinct
+from ordinary gameplay/menu samples. Fixed menu Enter/arrows retain their UI
+meaning when a queued key is rebound to a different gameplay action/direction;
+physical text controls do not borrow a gameplay admission sample. Recorded publication immediately retires
+pending live gameplay transitions and retained input, and continues to own the
+logical snapshot; release or aborted-pass rollback cannot resurrect live edges.
+Previously admitted mutator carry retains its existing authority.
+
+Whole-frame display modals, focus clear/pause/resume, mode/runtime/level changes,
+native/user pause and live rewind/release service rebaseline pending host input.
+They do not restore the host queue from world history. Reset/power playback
+continues through its original owner. The queue is capped at 4,096 transitions;
+on overflow the incomplete interval is rebaselined until acknowledgment rather
+than inventing attacks from a partial history. Binding changes also rebaseline.
+
+### Remaining live scheduling boundary
+
+`FixedSimulationScheduler` remains disconnected. The existing FPS meaning,
+region cadence, presentation draws, audio/capture duration and owners, trace
+input authority and public API version/signature pins are unchanged. A zero-step
+mutator host pass is not a qualified render-only Engine iteration. The next
+shared boundary must assign explicit service cadences to fades and stateful
+draws, `OuterFramePresentation`, live capture timestamps/packets and deliberate
+recording/trace pumps, then connect window scheduling with pause/session/restore
+anchor resets. Independent PAL/NTSC timing, interpolation and VRR are not claimed.
+
+### Focused validation
+
+Broad smoke and combined system qualification remain owned by the lead.
+The final focused requests use Java 25, Lua 5.4 and the original S2 REV01 and
+locked-on S3K files, verified in place against the repository CRC32/SHA-1 pins.
+The menu/build source/test tree is `6b6edc9961d4619ab1be73ed32111eacfb92d50e`
+over merge `1b39152c3368363a6b86132bd5f612001de5820b`. Final owner review
+restricted native level-pause retirement to `LEVEL`, producing expanded-run
+source/test tree `60cd7a4d9120ad29f2e51f352000df54926284e9`. A retained level
+pause bit is not a special-stage/menu input claim. Documentation is completed
+after execution.
+
+The first ten callback/poll/pass cases passed with no failures, errors or skips
+before subsequent identity, rebinding and menu hardening (queue 658s, Maven
+34.870s). This was the first implementation check, not a baseline-red run.
+The expanded request then failed main compilation because the menu correction
+referenced two helpers that the whitespace-sensitive edit had not inserted:
+queue 661s, Maven 1m06s, no tests executed. The helpers were added after inspecting
+the exact compiler diagnostics. A build-only check then caught the new fixture's
+incorrect `P1_LEFT`/`P1_RIGHT` enum names (Maven 1m34s); using the actual
+`LEFT`/`RIGHT` settings repaired it. The subsequent Java 25 `test-compile` passed
+in 37.368s. Those failed compilations supply no assertion or parity evidence.
+The earlier build-only initial-source compile passed in 1m39s.
+
+The separate changed-menu check completed at 23:32:12 UTC on 2026-10-29:
+`TestMenuInput` (15 cases) and `TestMenuRepeat` (5 cases), **20 passed, zero
+failures, errors or skips**. Queue wait was 716s and Maven execution 35.206s.
+Both XML case inventories were inspected and consumed diagnostics removed.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestMenuInput,TestMenuRepeat' test -B
+```
+
+The expanded request completed at 23:44:07 UTC: **367 tests in 36 classes,
+365 passed, two failures, zero errors or skips**. Queue wait was 924s and Maven
+execution 1m51s. The new sixteen ordered-input cases, sixteen real Engine cases,
+both S2/S3K jump/release/frame-step witnesses, six native pacing/rewind cases,
+recorded native pause, reset/power playback, four API pins and required S3K
+bootstrap/loading checks all ran. The ROM witness XML confirms JVM
+`25.0.5.0.2` and `surfaceless-egl`.
+
+The two failures were identified, not attributed to upstream: the old scoped
+scene/text characterization still asserted that released taps produce neutral
+logical input; it now checks an independent gameplay press followed by release,
+while scene events and committed text retain their owners. The dispatcher ratchet
+reported `stepInternalBody` at 263 lines against its unchanged 262-line budget.
+Its extra pause-clear call was redundant with the new pass-finally retirement;
+removing that call keeps pause retirement and the existing ratchet. No guard
+budget was raised. The final correction source/test tree is `cadc00545fad4815b49ea11bb9689c24313137ef`.
+All 36 XML summaries, case failures and zero skips were inspected, then consumed
+diagnostics removed. These red-run results are not a green full selection.
+
+The affected correction request completed at 00:02:42 UTC on 2026-10-30:
+**155 tests in ten classes passed, zero failures, errors or skips**. Queue wait
+was 943s and Maven execution 1m42s. Both earlier failing identities passed,
+including all 87 architectural source guards without increasing their budgets.
+The sixteen Engine, twenty-one scoped-pass, four zero-step, pause, rewind and
+both native S2/S3K jump/release/frame-step witnesses passed. The ten XML case
+inventories were inspected against the exact correction source/test tree before
+removing consumed diagnostics. Main/test sources did not change after admission;
+only this evidence prose was completed afterward.
+
+This resolves both expanded-run failures with affected checks, rather than
+repeating unchanged bootstrap/loading/input coverage. The 367-case expanded
+selection is not represented as one green run; the completed corrected evidence
+combines its unchanged passing checks, this 155-case repair check and the separate
+20-case menu check. No selected skip, unresolved assertion or unattributed failure
+remains. This is bounded focused evidence, not broad smoke, release full suite,
+trace campaign or independent live-scheduler qualification.
+
+Tool preflight passed with the explicit Java/Lua environment using
+`python3 tools/testing/run_categories.py --base 445feabf82ad9cd3607991702a23625fbb886f49 --preflight`;
+it ran no engine tests. Diff whitespace, local design links, AGENTS/CLAUDE mirror
+and commit-policy checks passed. The exact prepared message's final Sol co-author
+was verified through `git interpret-trailers --parse`. No live task test job
+remains. Consumed Surefire diagnostics and task scratch are removed. The local
+feature branch and provisioned checkout remain for the lead; no PR, push,
+release, integration or other-worktree cleanup is performed.
+
+The exact expanded selector and environment were:
+
+```bash
+EXPANDED_INPUT_TESTS='TestEngineFrameAdvance,TestOwnedInputPass,TestGameLoopZeroStepInputPass,TestGameLoopNativeMenus,TestInputAdmissionBoundaries,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestKeyboardTextCapture,TestTextInputSession,TestScenePhysicalInput,TestRetainedGameplayInput,TestGameLoopMutatorPacing,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestPlaybackInputBridgeOwnership,TestLiveRewindLogicalInput,TestLiveRewindInputSourceStartHeld,TestGameLoopRewindBoundaryPolicy,TestRecordedInputNativePause,TestModApiPinPolicy,TestArchitecturalSourceGuard,TestTasS3kSessionReset#consecutiveResetPowerStartRowsHaveOneCursorOwnerAndFreshControllerEdges,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestOrderedPhysicalGameplayInput,TestOrderedGameplayRomAdmission,TestInputHandler,TestKeyboardInputMapper,TestGamepadInputManager,TestRecordedInputOwnership,TestNativeStagePacingRewind,TestRewindReleaseRetryCoordinator'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  "-Dtest=$EXPANDED_INPUT_TESTS" test -B
+```
+
+The correction check repeats affected consumers and both native gameplay
+witnesses, without repeating unchanged decoder/loading/input suites:
+
+```bash
+CORRECTION_INPUT_TESTS='TestOwnedInputPass,TestArchitecturalSourceGuard,TestEngineFrameAdvance,TestGameLoopZeroStepInputPass,TestGameLoopPauseInputOwnership,TestRecordedInputHostPause,TestOrderedGameplayRomAdmission,TestRecordedInputNativePause,TestNativeStagePacingRewind,TestGameLoopRewindBoundaryPolicy'
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  "-Dtest=$CORRECTION_INPUT_TESTS" test -B
+```
+
+The ROM variables denote verified absolute original files read in place, not
+copies or generated links. Queue intervals overlap and must not be added as
+elapsed delivery time. Overall task wall time was not separately measured.

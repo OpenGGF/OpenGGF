@@ -220,8 +220,17 @@ class TestOwnedInputPass {
             var events = f.input.capturePhysicalInput().events();
             assertEquals(List.of(true, true, false, false), events.stream().map(PhysicalInputEvent::pressed).toList());
             assertTrue(f.input.capturePhysicalInput().events().isEmpty());
-            // This prerequisite does not invent gameplay admission for a scene's ordered transitions.
-            assertEquals(PlayerInputState.neutral(), f.input.logical().player1());
+            int both = InputActionMasks.ACTION_A | InputActionMasks.ACTION_B;
+            assertEquals(both, f.input.logical().player1().actionHeldMask(),
+                    "scene capture does not consume the independently admitted gameplay press");
+            assertEquals(both, f.input.logical().player1().actionPressedMask());
+            f.input.update();
+        }
+        try (var pass = InputHandlerInternalAccess.openInputPass(f.input)) {
+            f.input.refreshLogicalSnapshot();
+            assertEquals(PlayerInputState.neutral(), f.input.logical().player1(),
+                    "the ordered release follows the press without replaying scene events");
+            assertTrue(f.input.capturePhysicalInput().events().isEmpty());
             f.input.update();
         }
     }

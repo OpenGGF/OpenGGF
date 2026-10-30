@@ -405,12 +405,16 @@ public class GameLoop {
     }
 
     public void resetModuleScopedProviders() {
+        com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
         nativeMenus.close();
         continueScreen.reset();
         titleCardLifecycle.clearProviderCache();
     }
 
     public void setInputHandler(InputHandler inputHandler) {
+        if (this.inputHandler != inputHandler) {
+            com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(this.inputHandler);
+        }
         this.inputHandler = inputHandler;
     }
 
@@ -608,6 +612,7 @@ public class GameLoop {
     GameMode changeGameModeForBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
         if (oldMode != nextMode) {
+            com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
             if (oldMode == GameMode.SPECIAL_STAGE) {
                 specialStageLifecycle.clearEntryPresentation();
             }
@@ -619,6 +624,7 @@ public class GameLoop {
 
     GameMode changeGameModeWithoutRewindBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
+        if (oldMode != nextMode) com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
         if (oldMode == GameMode.SPECIAL_STAGE && oldMode != nextMode) {
             specialStageLifecycle.clearEntryPresentation();
         }
@@ -674,6 +680,7 @@ public class GameLoop {
      */
     public synchronized void pause() {
         if (!paused) {
+            com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
             hostedRuns.suspendInput();
             editorMode.finishPendingEdits(currentGameMode);
             paused = true;
@@ -687,6 +694,7 @@ public class GameLoop {
      */
     public synchronized void resume() {
         if (paused) {
+            com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
             paused = false;
             updateAudioPauseState();
         }
@@ -698,6 +706,7 @@ public class GameLoop {
      */
     public synchronized void toggleUserPause() {
         if (!userPaused) hostedRuns.suspendInput();
+        com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
         userPaused = !userPaused;
         updateAudioPauseState();
     }
@@ -1082,8 +1091,25 @@ public class GameLoop {
 
     private void stepOwnedInputPass() {
         requireInputHandler();
+        boolean restoring = liveRewindManager.isRewindingOrReleasing();
+        if (restoring) com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
+        var context = resolveGameplayModeContext();
+        var level = levelManager == null ? null : levelManager.getCurrentLevel();
+        var mode = currentGameMode;
         try (var pass = com.openggf.control.InputHandlerInternalAccess.openInputPass(inputHandler)) {
-            stepInternal();
+            try {
+                stepInternal();
+            } finally {
+                // These are host observation boundaries, never new rewind snapshot owners.
+                var current = resolveGameplayModeContext();
+                if (isPaused() || restoring || liveRewindManager.isRewindingOrReleasing()
+                        || mode != currentGameMode || context != current
+                        || level != (levelManager == null ? null : levelManager.getCurrentLevel())
+                        || currentGameMode == GameMode.LEVEL && current != null
+                        && current.getGameStateManager() != null && current.getGameStateManager().isGamePaused()) {
+                    com.openggf.control.InputHandlerInternalAccess.discardOrderedGameplayInput(inputHandler);
+                }
+            }
         }
     }
 

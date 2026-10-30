@@ -17,7 +17,8 @@ declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibili
 S1 Marble flame retirement and visual trace handoff ownership, Carnival Night
 cylinder rider ownership, Lava Reef crusher timer dispatch, the original S3K
 final emerald-reveal countdown, and the scoped host input-pass prerequisite for
-independent rendering, plus live frame phase separation that preserves current FPS behavior.
+independent rendering, ordered physical gameplay short-tap admission, and live frame
+phase separation that preserves current FPS behavior.
 
 ## Release files
 

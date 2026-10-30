@@ -18,13 +18,17 @@ public final class InputHandlerInternalAccess {
         LogicalInputSnapshot physicalGamepad;
         GamepadInputManager.LogicalHistory priorGamepad;
         RetainedGameplayInput carry;
+        OrderedGameplayInput.Sample admission;
         final boolean hostControls;
+        final boolean observationOnly;
+        boolean previewGameplay;
         boolean acknowledged;
         private boolean closed;
 
-        InputPass(InputHandler input, boolean hostControls) {
+        InputPass(InputHandler input, boolean hostControls, boolean observationOnly) {
             this.input = input;
             this.hostControls = hostControls;
+            this.observationOnly = observationOnly;
         }
 
         /**
@@ -57,6 +61,18 @@ public final class InputHandlerInternalAccess {
     /** Samples host controls without taking the pending gameplay-input bridge. */
     public static InputPass openHostInputPass(InputHandler handler) {
         return handler.openInputPass(true);
+    }
+    /** Zero-step host service acknowledges its own controls, leaving physical gameplay order pending. */
+    public static InputPass openObservationInputPass(InputHandler handler) {
+        return handler.openInputPass(false, true);
+    }
+    /** Retain the same ordered prefix without draining it on a zero-step presentation. */
+    public static LogicalInputSnapshot previewGameplayInput(InputHandler handler) {
+        return handler.previewGameplayInput();
+    }
+    /** Host discontinuity/whole-frame claim. Never changes replay or rewind state. */
+    public static void discardOrderedGameplayInput(InputHandler handler) {
+        if (handler != null) handler.discardOrderedGameplayInput();
     }
     public static TextInputSession textInput(InputHandler handler) { return handler.textInput; }
     public static TextInputSession.Lease captureKeyboardText(InputHandler handler, Object owner) {

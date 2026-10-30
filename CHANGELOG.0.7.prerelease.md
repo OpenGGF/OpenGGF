@@ -13,8 +13,11 @@ Unreleased. The earlier development themes remain in
   capture decisions use the same fresh sample as GameLoop. Deferred passes restore
   their unacknowledged controller baseline; text claims, recorded native Start and
   the existing slow-motion carry retain their owners.
-  This does not connect fixed simulation scheduling or add gameplay short-tap
-  admission across render-only observations.
+  Ordered gameplay admission now preserves observed keyboard/controller taps released
+  before the consuming tick, including repeated taps and simultaneous controls.
+  Zero-step service previews the same pending prefix; modal/text claims, fixed menu
+  keys and recorded overrides retain their input authority. This does not connect
+  independent live scheduling or change audio/capture cadence.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
