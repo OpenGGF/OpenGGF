@@ -165,6 +165,35 @@ class TestInitialObjectDispatchSuccessorOwnership {
         assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
     }
 
+    @Test
+    void restoredSuccessorCanCompleteAnOrdinaryUpdateBeforeOldDispatchAborts() throws Exception {
+        Fixture fixture = new Fixture();
+        CompletedSuccessor completed = fixture.completeSuccessor();
+        AtomicBoolean updated = new AtomicBoolean();
+        completed.outer.action = () -> {
+            fixture.context.getRewindRegistry().restore(completed.snapshot);
+            Probe standing = fixture.requireRestoredSuccessor(completed);
+            fixture.objects.update(0, fixture.context.getSpriteManager().getMainPlayable(), List.of(), 1);
+            assertEquals(2, fixture.requireProbe(1).updates);
+            assertEquals(2, standing.updates);
+            assertTrue(fixture.solids.previousStanding(standing,
+                    fixture.context.getSpriteManager().getMainPlayable()).standing());
+            fixture.context.getRewindRegistry().capture();
+            updated.set(true);
+            completed.outer.retired = true;
+            completed.outer.staleTail = () -> standing.marker = -1;
+        };
+
+        assertThrows(ObjectCallbackAbortException.class, fixture::runInitialDispatch);
+
+        assertTrue(updated.get());
+        assertEquals(0, completed.outer.staleTailCalls);
+        assertEquals(2, fixture.requireProbe(1).updates);
+        assertEquals(2, fixture.requireProbe(2).updates);
+        assertEquals(0x52, fixture.requireProbe(2).marker);
+        assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
+    }
+
     private enum SuccessorOperation {
         QUERY {
             @Override void perform(Fixture fixture) {
