@@ -19,7 +19,8 @@ cylinder rider ownership, Lava Reef crusher timer dispatch, the original S3K
 final emerald-reveal countdown, Death Egg lift and staircase rider-release
 boundaries, and the scoped host input-pass prerequisite for independent rendering,
 ordered physical gameplay and native-menu short-tap admission, and live PAL50/NTSC60 simulation/audio scheduling independent of the window
-rendering limit, with region-cadence viewport recording and row-owned trace-ghost animation.
+rendering limit, with region-cadence viewport recording and row-owned trace-ghost animation
+whose seeks preserve observed historical context.
 
 ## Release files
 

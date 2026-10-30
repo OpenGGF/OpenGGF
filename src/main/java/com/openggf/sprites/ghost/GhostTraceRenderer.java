@@ -6,6 +6,7 @@ import com.openggf.game.GroundMode;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -19,6 +20,7 @@ import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceReplayBootstrap;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -38,47 +40,123 @@ public final class GhostTraceRenderer {
     private TraceData visualTrace;
     private TraceFrame visualFrame;
     private int consumedRows;
+    // Presentation checkpoints only: captured from our unregistered copies, never
+    // the live team. At most one entry per trace row and two native character slots.
+    // Keeping the owner's snapshot (without follower history) also retains private
+    // controller state rather than guessing which animation fields matter next.
+    private List<VisualCheckpoint> visualHistory = new ArrayList<>();
+    private int validHistoryRows;
+    private boolean visualStateAvailable;
+    private boolean missingHistoryReported;
     private LevelManager artLevel;
     private long artLoadGeneration;
 
     /**
-     * Receives admitted comparator rows, never window pictures. The copies here
-     * are diagnostic visuals only and are never registered as gameplay sprites.
-     * A seek reconstructs their private script history from the same prefix;
-     * no gameplay rewind state is read or written.
+     * Receives admitted comparator rows, never window pictures. A forward row runs
+     * Animate once against the production context at that boundary. Seeks restore
+     * the private presentation snapshot taken there, without calling Animate under
+     * the destination's (possibly different) water/gravity context.
+     *
+     * <p>Each seek restores at most two owner snapshots: O(1) in prefix length,
+     * including held backward stepping. Storage is O(observed trace rows), bounded
+     * by this trace's row count; session/fixture/load replacement retires it. A
+     * resumed forward branch overwrites history and invalidates its old future in
+     * O(1). Unknown history is hidden, never rebuilt with invented context.
      */
     public void synchronizeVisualRows(TraceData trace, int rows, boolean discontinuity) {
         LevelManager level = GameServices.levelOrNull();
         long generation = level != null ? level.getCompletedProductionLoadGeneration() : -1;
         boolean reloaded = artLevel != level || artLoadGeneration != generation;
-        if (reloaded) {
+        int end = Math.max(0, Math.min(rows, trace.frameCount()));
+        if (reloaded || visualTrace != trace) {
             slots.clear();
+            clearVisualHistory();
             artLevel = level;
             artLoadGeneration = generation;
-        }
-        if (discontinuity || reloaded || visualTrace != trace || rows < consumedRows) {
+        } else if (end == 0 && (discontinuity || consumedRows > 0)) {
+            // A fresh observer at cursor zero starts a new presentation lifetime.
             slots.replaceAll((key, slot) -> createSlot(slot.code(), slot.art(), slot.renderer()));
-            consumedRows = 0;
-            visualFrame = null;
+            clearVisualHistory();
         }
         visualTrace = trace;
-        int end = Math.max(0, Math.min(rows, trace.frameCount()));
-        while (consumedRows < end) {
-            TraceFrame row = trace.getFrame(consumedRows);
-            TraceFrame previous = consumedRows > 0 ? trace.getFrame(consumedRows - 1) : null;
-            TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, row);
-            boolean animate = phase == TraceExecutionPhase.FULL_LEVEL_FRAME
-                    || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
-                    || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
-            List<String> recorded = trace.metadata().recordedCharacters();
-            prepareCharacter("main", recorded.isEmpty() ? "sonic" : recorded.getFirst(),
-                    row.primaryCharacterState(), row, row.input(), animate);
-            prepareCharacter("sidekick0", recorded.size() > 1 ? recorded.get(1) : "tails",
-                    row.sidekick(), row, 0,
-                    animate && phase != TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
-            visualFrame = row;
-            consumedRows++;
+        if (end == 0) return;
+
+        if (discontinuity || end < consumedRows) {
+            if (restoreVisualRow(end)) return;
+            // Row zero has no prior private script to reconstruct. It can be
+            // initialized at the actual initial boundary, including bind-at-one.
+            if (end != 1) {
+                missingVisualHistory(end);
+                return;
+            }
+            slots.replaceAll((key, slot) -> createSlot(slot.code(), slot.art(), slot.renderer()));
+            clearVisualHistory();
         }
+        if (end == consumedRows) return;
+        if (end != consumedRows + 1 || (consumedRows > 0 && !visualStateAvailable)) {
+            missingVisualHistory(end);
+            return;
+        }
+        TraceFrame row = trace.getFrame(end - 1);
+        TraceFrame previous = end > 1 ? trace.getFrame(end - 2) : null;
+        TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, row);
+        boolean animate = phase == TraceExecutionPhase.FULL_LEVEL_FRAME
+                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
+                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
+        List<String> recorded = trace.metadata().recordedCharacters();
+        prepareCharacter("main", recorded.isEmpty() ? "sonic" : recorded.getFirst(),
+                row.primaryCharacterState(), row, row.input(), animate);
+        prepareCharacter("sidekick0", recorded.size() > 1 ? recorded.get(1) : "tails",
+                row.sidekick(), row, 0,
+                animate && phase != TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
+        var checkpoint = new VisualCheckpoint(slots.entrySet().stream()
+                .map(entry -> new SlotCheckpoint(entry.getKey(), entry.getValue(),
+                        entry.getValue().sprite().captureRewindState(false)))
+                .toList());
+        if (end <= visualHistory.size()) visualHistory.set(end - 1, checkpoint);
+        else visualHistory.add(checkpoint);
+        validHistoryRows = end;
+        consumedRows = end;
+        visualFrame = row;
+        visualStateAvailable = true;
+    }
+
+    private boolean restoreVisualRow(int end) {
+        if (end > validHistoryRows) return false;
+        slots.clear();
+        for (SlotCheckpoint checkpoint : visualHistory.get(end - 1).slots()) {
+            checkpoint.slot().sprite().restoreRewindState(checkpoint.state());
+            slots.put(checkpoint.key(), checkpoint.slot());
+        }
+        consumedRows = end;
+        visualFrame = visualTrace.getFrame(end - 1);
+        visualStateAvailable = true;
+        return true;
+    }
+
+    private void missingVisualHistory(int end) {
+        consumedRows = end;
+        visualFrame = null;
+        visualStateAvailable = false;
+        if (!missingHistoryReported) {
+            LOGGER.warning("Trace ghost hidden: historical presentation context was not observed. "
+                    + "Replay from the start to establish visual history.");
+            missingHistoryReported = true;
+        }
+    }
+
+    private void clearVisualHistory() {
+        visualHistory = new ArrayList<>();
+        validHistoryRows = 0;
+        consumedRows = 0;
+        visualFrame = null;
+        visualStateAvailable = false;
+        missingHistoryReported = false;
+    }
+
+    /** Whether the current row has an observed private presentation checkpoint. */
+    public boolean isVisualStateAvailable() {
+        return visualStateAvailable;
     }
 
     private void prepareCharacter(String slotId, String code, TraceCharacterState state,
@@ -106,8 +184,7 @@ public final class GhostTraceRenderer {
     public void reset() {
         slots.clear();
         visualTrace = null;
-        visualFrame = null;
-        consumedRows = 0;
+        clearVisualHistory();
         artLevel = null;
     }
 
@@ -177,9 +254,9 @@ public final class GhostTraceRenderer {
         graphics.flushPatternBatch();
         boolean previousHighPriority = graphics.getCurrentSpriteHighPriority();
         graphics.setCurrentSpriteHighPriority(realSprite.isHighPriority());
-        graphics.beginGhostRenderEffect(alpha);
-        graphics.beginPatternBatch();
         try {
+            graphics.beginGhostRenderEffect(alpha);
+            graphics.beginPatternBatch();
             slot.renderer().drawFrame(
                     slot.sprite().getMappingFrame(),
                     state.x(),
@@ -187,9 +264,15 @@ public final class GhostTraceRenderer {
                     slot.sprite().getRenderHFlip(),
                     slot.sprite().getRenderVFlip());
         } finally {
-            graphics.flushPatternBatch();
-            graphics.endGhostRenderEffect();
-            graphics.setCurrentSpriteHighPriority(previousHighPriority);
+            try {
+                graphics.flushPatternBatch();
+            } finally {
+                try {
+                    graphics.endGhostRenderEffect();
+                } finally {
+                    graphics.setCurrentSpriteHighPriority(previousHighPriority);
+                }
+            }
         }
     }
 
@@ -272,6 +355,10 @@ public final class GhostTraceRenderer {
         }
         return characterCode.trim().toLowerCase(Locale.ROOT);
     }
+
+    private record VisualCheckpoint(List<SlotCheckpoint> slots) { }
+
+    private record SlotCheckpoint(String key, GhostSlot slot, PerObjectRewindSnapshot state) { }
 
     private record GhostSlot(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer,
                              String code, SpriteArtSet art) {

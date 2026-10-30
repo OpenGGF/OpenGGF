@@ -119088,3 +119088,115 @@ the consumed trace prefix; long-run seek latency is not benchmarked. This needs
 no new gameplay rewind owner or trace-input authority. Consumed task-owned raw
 logs and trace JSON are removed after inspection; the local committed branch and
 checkout remain for lead integration, with no foreign work cleanup.
+
+### Historical-context and backward-step correction (2026-10-30)
+
+Follow-up leaf on `bugfix/ai-ghost-historical-context`, based on composed
+`0dcee1fe0a3b5fb026b21a164a6ed61b15dd6b32` (including candidate
+`6a57badb8879bee1a6290ffdbd4dc84740839200`). The earlier prefix-rebuild
+limitation above is superseded. Replaying an old Roll-to-Walk transition with
+the current S1 water-tunnel flag changes its result. The production LZ owner
+witness enters and leaves its actual tunnel region, then seeks while the flag
+is active: old code reconstructs seek cursor 10 (trace row 9) as Roll/animation 2/
+mapping 48 instead of the observed Walk/animation 0/mapping 32. A second old-red witness proves that
+observer binding failure after recorder opening leaks one audio capture lease.
+Both cases executed and failed on unchanged base owners, with zero skips. An
+initial draft of the LZ witness selected Marble by progression index and failed
+its setup assertion; it is not the causal regression evidence.
+
+Admitted rows now retain `captureRewindState(false)` from at most two private,
+unregistered ghost sprites. Seeks restore those same production owners and
+never call Animate under a later world context. They restore a constant number
+of fields regardless of prefix length. Storage grows with observed trace rows,
+bounded by the loaded trace; follower histories are omitted. New forward work
+uses the current production context, overwrites the branch and invalidates its
+old future in constant time. Fixture, character, session and load-generation
+boundaries retire the appropriate history/art ownership. Unknown history is
+hidden with a warning until replay establishes it; it is not reconstructed from
+invented context or copied into gameplay. The guide documents that limitation.
+The comparator, tolerance and timing-input contract remain unchanged.
+
+Capture start now retires its bound comparator, private ghosts, opened recorder
+and audio lease even if observer setup fails, preserving the setup exception and
+suppressing cleanup failures. A failed recorder open leaves unrelated observers
+alone. Ghost draw cleanup restores effect and priority after batch setup/flush
+failures. The new ROM-free drawing controls exercise both failures.
+
+Focused final-source validation uses Java 25 and surfaceless EGL, with `DISPLAY`
+and `WAYLAND_DISPLAY` unset. All three original root ROM files were supplied by
+absolute path and matched the CRC32/SHA-1 identities in AGENTS. Here
+`ORIGINAL_ROOT` denotes the user's original checkout, not this leaf's root; no
+ROM links or copies were created. Shared command arguments were:
+
+```bash
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+"-Dsonic1.rom.path=${ORIGINAL_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=${ORIGINAL_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+"-Ds3k.rom.path=${ORIGINAL_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+The old-red selection was
+`TestTraceGhostHistoricalContext,TraceCaptureSessionTest#observerBindingFailureClosesTheOpenedRecorderAndReleasesAllOwnership`.
+The final focused command was `python3 tools/testing/maven_queue.py` with the
+shared arguments above and:
+
+```bash
+'-Dtest=TestTraceGhostHistoricalContext,TestTraceGhostPresentationCadence,TestTraceGhostProductionOwners,TestTraceGhostFailureCleanup,LiveTraceComparatorTest,TestLiveTraceComparatorObserver,TraceCaptureSessionTest,TestTraceCaptureUnifiedAudio,TestDynamicArtGhostIsolation,TestGhostLayerFilter,TestGhostArtBankAllocator,TestTraceSessionLauncherFailureCleanup,TestTraceSessionLauncherProductionFailureCleanup,TestTraceSessionLauncherRewindPresentation,TestTraceSessionLauncherAdvanceOnlyRewind,TestTraceSessionLauncherActivePayloadLifecycle' test
+```
+
+Result: 93 tests, zero failures/errors/skips. The new cases cover observed tunnel
+context, both-direction/exact/start seeks, resumed branches, late binding and
+missing-prefix visibility, fixture/character replacement, two-owner held
+backward stepping and exception cleanup. Existing cadence/pixel, main/sidekick,
+hidden/layer/opacity, launcher, capture, rewind and lifecycle coverage remains.
+Synthetic displaced comparison rows intentionally produce diagnostic mismatches;
+the passing visual tests do not certify those rows as canonical parity.
+
+The final local held-step witness restored 20,000 rows/two owners in 30.783 ms,
+p95 2.320 us, maximum 244.383 us. A 2,000-row warm-up/short-prefix witness took 10.199 ms.
+The timed interval includes comparator seek publication and private restore,
+excluding actual gameplay rewind, drawing, boot and readback. The five-second
+regression deadline and same-owner/pose assertions reject prefix rebuilding.
+Forward admission allocated 8620.7 bytes/row in this combined run (including its
+comparator/test overhead); this is allocation, not retained checkpoint heap.
+An earlier 20-case run measured lower allocation and is not a heap bound or the
+final-source qualification. These are local diagnostics, not an isolated or
+cross-platform performance certification. The algorithmic bounds are constant
+work per seek and linear presentation storage, with no persisted parity state.
+
+Queue telemetry for the matched old-red run was 9.7 s wait/97.9 s hold; the final
+focused run was 328.2 s wait/99.0 s hold, total 427.2 s. Hold includes compilation and
+Maven test execution. The qualified Java 25/Lua 5.4/PowerShell preflight passed;
+no tests execute in that command. The change-based dry plan selected 4345 smoke
+classes because these owners are shared/unclassified. The leaf's explicit
+focused-only instruction replaces that disproportionate selection; no broad
+smoke or release-full result is claimed. No gameplay frontier moved.
+
+Canonical replay command (same environment/EGL and S1/S2 original ROM arguments):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay' <S1/S2 original ROM arguments above> test
+```
+
+Result: 2 tests, zero failures/errors/skips. Both completed JSON reports reached
+verification `all` and the comparison gate: S1 GHZ1 compared all 3905 planned
+rows; S2 EHZ1 compared all 5852. Physics, animation and bootstrap each had zero
+errors and warnings. This preserves the canonical bounded checks; it does not
+prove native pixel parity or complete S1/S2/S3K route coverage.
+
+Separate fresh-JVM targeted guards:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard,TestRawGlfwTestSetupGuard' test
+```
+
+Result: 40 tests, zero failures/errors/skips (10 trace invariants, 25 hardware
+input-authority checks, 5 GLFW setup checks). Final checks total 135 cases with
+zero skips, on unchanged production/test sources; later edits are prose only.
+Replay queue telemetry: 99.8 s wait/37.3 s hold, total 137.1 s. Guards: 28.3 s wait/
+40.6 s hold, total 68.9 s. The guard request overlapped replay waiting/execution;
+these intervals must not be summed as delivery wall. Total task wall is
+unmeasured. Consumed task-owned logs and trace JSON are deleted after inspection;
+there is no persisted pass cache, parity ledger or validation receipt. The leaf
+checkout/local task branch remain for lead integration, with no pushes,
+extra worktrees, children or changes to the lead's separate ROM-guard work.

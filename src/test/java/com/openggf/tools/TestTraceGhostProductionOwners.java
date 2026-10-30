@@ -51,7 +51,7 @@ class TestTraceGhostProductionOwners {
                 assertEquals(expected, pose(ghost(renderer, "main:sonic")));
                 comparator.seekForRewind(4);
                 var prefix = new GhostTraceRenderer();
-                prefix.synchronizeVisualRows(trace, 4, true);
+                admit(prefix, trace, 4);
                 assertEquals(pose(ghost(prefix, "main:sonic")), pose(ghost(renderer, "main:sonic")));
                 comparator.setVisualRowObserver(null);
             } finally {
@@ -83,7 +83,7 @@ class TestTraceGhostProductionOwners {
                 int initial = driver.comparator().cursor();
                 for (int i = initial; i < initial + 4; i++) driver.comparator().afterFrameAdvanced(input(i), false);
                 var reference = new GhostTraceRenderer();
-                reference.synchronizeVisualRows(trace, driver.comparator().cursor(), true);
+                admit(reference, trace, driver.comparator().cursor());
                 assertEquals(pose(ghost(reference, "main:sonic")), pose(ghost(renderer, "main:sonic")));
                 int cursor = driver.comparator().cursor();
                 assertTrue(capture.stepAndCapture(), "use the actual loop, layered renderer, GL readback and recorder");

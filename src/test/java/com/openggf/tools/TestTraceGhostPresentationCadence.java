@@ -86,7 +86,7 @@ class TestTraceGhostPresentationCadence {
                     "omitting all pictures still advances the actual animation script");
             a.seekForRewind(9);
             var prefix = new GhostTraceRenderer();
-            prefix.synchronizeVisualRows(trace, 9, true);
+            admit(prefix, trace, 9);
             assertEquals(pose(ghost(prefix, "main:sonic")), pose(ghost(omitted, "main:sonic")));
             for (int row = 9; row < 24; row++) a.afterFrameAdvanced(input(row), false);
             assertEquals(pose(ghost(pictured, "main:sonic")), pose(ghost(omitted, "main:sonic")),
@@ -159,17 +159,20 @@ class TestTraceGhostPresentationCadence {
             var renderer = new GhostTraceRenderer();
             var trace = TraceFixtures.trace(TraceFixtures.metadata("s2", 0, 0),
                     java.util.stream.IntStream.range(0, 12).mapToObj(i -> row(i, session.player())).toList());
-            renderer.synchronizeVisualRows(trace, 12, true);
+            admit(renderer, trace, 12);
             var old = ghost(renderer, "main:sonic");
             var expected = pose(old);
             renderer.reset();
             assertEquals(0, slotCount(renderer));
-            renderer.synchronizeVisualRows(trace, 12, true);
+            admit(renderer, trace, 12);
             assertNotSame(old, ghost(renderer, "main:sonic"));
             assertEquals(expected, pose(ghost(renderer, "main:sonic")));
             old = ghost(renderer, "main:sonic");
             GameServices.level().loadZoneAndAct(0, 0);
             renderer.synchronizeVisualRows(trace, 12, false);
+            assertFalse(renderer.isVisualStateAvailable(), "reload cannot invent the old load's context");
+            assertEquals(0, slotCount(renderer));
+            admit(renderer, trace, 12);
             assertNotSame(old, ghost(renderer, "main:sonic"), "reload retires old art and script ownership");
             assertEquals(expected, pose(ghost(renderer, "main:sonic")));
         }
@@ -205,6 +208,11 @@ class TestTraceGhostPresentationCadence {
             assertEquals(main, pose(ghost(renderer, "main:sonic")), "seek reconstructs the entire same-label prefix");
             assertEquals(firstTail, pose(ghost(renderer, "sidekick0:tails")));
         }
+    }
+
+    static void admit(GhostTraceRenderer renderer, TraceData trace, int count) {
+        renderer.synchronizeVisualRows(trace, 0, true);
+        for (int rows = 1; rows <= count; rows++) renderer.synchronizeVisualRows(trace, rows, false);
     }
 
     static LiveTraceComparator comparator(TraceData trace, GhostTraceRenderer renderer) {

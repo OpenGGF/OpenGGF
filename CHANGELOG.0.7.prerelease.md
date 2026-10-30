@@ -42,7 +42,9 @@ Unreleased. The earlier development themes remain in
   input and produce no audio. Native menu/background and MGZ blink clocks advance
   with updates. Trace ghosts advance their private animation on admitted replay
   rows, including pictures omitted during fast-forward; repeated pictures and
-  layer/visibility filtering preserve the pose, and seeks rebuild its history.
+  layer/visibility filtering preserve the pose. Seeks restore observed private
+  checkpoints in constant time, preserving historical tunnel context; unobserved
+  history stays hidden until replay establishes it.
   Optional interpolation and VRR qualification remain future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM

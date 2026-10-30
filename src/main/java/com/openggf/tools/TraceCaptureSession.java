@@ -77,6 +77,7 @@ public final class TraceCaptureSession {
 
     private long frameIndex;
     private boolean started;
+    private LiveTraceComparator ghostComparator;
 
     public TraceCaptureSession(GameLoop loop, TraceReplayDriver driver,
                                VideoFrameGrabber grabber, AudioFrameTap audioTap,
@@ -111,21 +112,49 @@ public final class TraceCaptureSession {
                     + " do not match grabber " + this.width + "x" + this.height);
         }
         GameServices.audio().beginCaptureMode(sampleRate, fps);
+        boolean recorderOpened = false;
         try {
             recorder.start(width, height, fps, sampleRate);
-        } catch (Throwable failedToOpen) {
-            // The recorder never opened, so finish() will never run: release
-            // the lease here or it is leaked onto the producer, which then
-            // rejects every later beginCaptureMode in this process.
-            GameServices.audio().endCaptureMode();
-            throw failedToOpen;
+            recorderOpened = true;
+            LiveTraceComparator comparator = driver.comparator();
+            if (comparator != null) {
+                ghostComparator = comparator;
+                comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
+            }
+            TraceGhostHook.set(ghostHook);
+            started = true;
+        } catch (Throwable failedToStart) {
+            // Binding publishes the current row synchronously and can fail after
+            // the recorder opened. Every acquired owner must retire on that path,
+            // while preserving the original setup failure if cleanup also fails.
+            suppressCleanupFailure(failedToStart, this::releaseGhosts);
+            if (recorderOpened) suppressCleanupFailure(failedToStart, recorder::stop);
+            suppressCleanupFailure(failedToStart, () -> GameServices.audio().endCaptureMode());
+            throw failedToStart;
         }
-        LiveTraceComparator comparator = driver.comparator();
-        if (comparator != null) {
-            comparator.setVisualRowObserver(ghostRenderer::synchronizeVisualRows);
+    }
+
+    private void releaseGhosts() {
+        started = false;
+        TraceGhostHook.clear(ghostHook);
+        try {
+            LiveTraceComparator comparator = ghostComparator;
+            ghostComparator = null;
+            if (comparator != null) comparator.setVisualRowObserver(null);
+        } finally {
+            ghostRenderer.reset();
         }
-        TraceGhostHook.set(ghostHook);
-        started = true;
+    }
+
+    @FunctionalInterface
+    private interface Cleanup { void run() throws Throwable; }
+
+    private static void suppressCleanupFailure(Throwable primary, Cleanup cleanup) {
+        try {
+            cleanup.run();
+        } catch (Throwable failure) {
+            if (failure != primary) primary.addSuppressed(failure);
+        }
     }
 
     static void disableExternalContentForDeterminism() {
@@ -181,10 +210,7 @@ public final class TraceCaptureSession {
             try {
                 return recorder.stop();
             } finally {
-                TraceGhostHook.clear(ghostHook);
-                LiveTraceComparator comparator = driver.comparator();
-                if (comparator != null) comparator.setVisualRowObserver(null);
-                ghostRenderer.reset();
+                releaseGhosts();
             }
         } finally {
             GameServices.audio().endCaptureMode();
