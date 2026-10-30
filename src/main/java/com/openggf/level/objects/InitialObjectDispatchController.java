@@ -170,19 +170,20 @@ final class InitialObjectDispatchController {
     }
 
     void freezeCollisionReadView() {
-        requireActive();
+        Reservation original = active != null ? active.original : null;
+        requireCurrent(original);
         objects.initialCollisionResponseList().freezePreviousReadView();
         objects.snapshotTouchResponseState(true);
-        requireActive();
+        requireCurrent(original);
     }
 
     void resetCollisionBuild() {
-        requireActive();
+        if (active != null) active.original.requireCurrent();
         objects.initialCollisionResponseList().resetCurrentBuild();
     }
 
     void markDynamicCollisionBuildComplete() {
-        requireActive();
+        if (active != null) active.original.requireCurrent();
         objects.initialCollisionResponseList().markDynamicBuildComplete();
     }
 

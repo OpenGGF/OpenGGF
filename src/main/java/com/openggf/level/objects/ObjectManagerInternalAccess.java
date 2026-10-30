@@ -23,7 +23,10 @@ public final class ObjectManagerInternalAccess {
     }
 
     public static void retireInitialDispatch(ObjectManager manager) {
-        if (manager != null) manager.initialDispatch().retireState();
+        if (manager != null) {
+            var controller = manager.initialDispatch();
+            if (controller != null) controller.retireState();
+        }
     }
 
     public static final class InitialDispatch {

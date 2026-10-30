@@ -194,6 +194,58 @@ class TestInitialObjectDispatchSuccessorOwnership {
         assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
     }
 
+    @ParameterizedTest
+    @EnumSource(CollisionBuildOperation.class)
+    void collisionBuilderRetainsItsUnscopedOperation(CollisionBuildOperation operation) throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.completeSuccessor();
+
+        assertDoesNotThrow(() -> operation.perform(fixture.objects));
+
+        assertEquals(operation.stage, fixture.objects.rewindSnapshottable().capture()
+                .collisionResponseState().collisionBuildStage());
+        assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
+    }
+
+    @ParameterizedTest
+    @EnumSource(CollisionBuildOperation.class)
+    void collisionBuilderRejectsASupersededOpenScopeBeforeMutation(CollisionBuildOperation operation) throws Exception {
+        Fixture fixture = new Fixture();
+        Probe standing = fixture.create(1);
+        fixture.publishStanding(standing);
+        SolidExecutionSnapshot completed = fixture.solids.capture();
+        assertEquals(1, completed.previousStanding().size());
+        try (var scope = fixture.objects.beginInitialProcessSprites(0, fixture.player, List.of())) {
+            fixture.objects.freezeInitialCollisionResponseReadView();
+            var collision = fixture.objects.rewindSnapshottable().capture().collisionResponseState();
+            fixture.solids.restore(completed);
+
+            assertThrows(ObjectCallbackAbortException.class, () -> operation.perform(fixture.objects));
+
+            assertEquals(collision, fixture.objects.rewindSnapshottable().capture().collisionResponseState());
+        }
+        assertEquals(completed, fixture.solids.capture());
+        assertFalse(fixture.objects.hasActiveInitialProcessSpritesDispatch());
+    }
+
+    private enum CollisionBuildOperation {
+        FREEZE(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.CollisionBuildStage.PREVIOUS_READ_FROZEN) {
+            @Override void perform(ObjectManager objects) { objects.freezeInitialCollisionResponseReadView(); }
+        },
+        RESET(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILD_RESET) {
+            @Override void perform(ObjectManager objects) { objects.resetInitialCollisionResponseBuild(); }
+        },
+        MARK(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.CollisionBuildStage.DYNAMIC_BUILD_COMPLETE) {
+            @Override void perform(ObjectManager objects) { objects.markInitialDynamicCollisionBuildComplete(); }
+        };
+
+        final com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.CollisionBuildStage stage;
+        CollisionBuildOperation(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.CollisionBuildStage stage) {
+            this.stage = stage;
+        }
+        abstract void perform(ObjectManager objects);
+    }
+
     private enum SuccessorOperation {
         QUERY {
             @Override void perform(Fixture fixture) {

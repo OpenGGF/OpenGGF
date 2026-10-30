@@ -9301,3 +9301,52 @@ selection. The local results above are affected-domain and guard qualification,
 not a full-suite or campaign parity claim. Main's existing dirty submodules and
 untracked files were preserved. The fully merged PR #240 worktree and local task
 branch were removed; this follow-up worktree remains while its PR is open.
+
+
+### PR #242 hosted-smoke compatibility correction, 2026-10-30
+
+Hosted `test` job `124327525442` in run `41132728981`, at PR head
+`613d2f12dcbda0f1993398c8ab59184470246ac7`, reported 32,924 cases,
+zero assertion failures, three errors and 6,580 skips. Hosted policy and guards
+passed. The three errors reproduced exactly in a queued 47-case local run of
+`TestCinematicScrollPublication,TestLevelSeamlessTransitionExecutor,TestNativeCompetitionFixedSstAccess`.
+No baseline waiver or job retry was used.
+
+Two errors came from cleanup retiring a mocked ObjectManager whose dispatch
+controller is absent. The retirement bridge now checks for that optional state,
+as the existing unscoped solid helper already does. Real managers still retire
+their original incarnation before teardown callbacks.
+
+The third error came from the ordinary canonical collision-builder reset after
+a completed initial scope. The existing test fills both physical address lists,
+deletes their occupants, and then reclaims only current-builder capacity while
+preserving all 63 previous addresses. Absence of an initial scope was a valid
+operation before this PR. Freeze, reset and mark now validate the original scope
+when present. Freeze retains its locally captured reservation across snapshot
+callbacks; it does not adopt a replacement scope after the callback returns.
+Capture completion still requires an active scope.
+
+Six new cases distinguish unscoped builder operations from an open scope that a
+real solid-only restore supersedes. Before the correction, all three unscoped
+operations failed and all three stale-scope rejection controls passed. The checks
+retain the stale scope directly rather than using `currentReservation()`, which
+intentionally filters stale scopes to null for valid successor operations.
+
+After the correction, the 13-class CI and callback selection passed 105 cases,
+with no failures, errors or skips. Its command was the queued wrapper with
+`-Dmse=off` and this selector:
+
+```text
+TestCinematicScrollPublication,TestLevelSeamlessTransitionExecutor,TestNativeCompetitionFixedSstAccess,TestInitialObjectDispatchSuccessorOwnership,TestInitialProcessSpritesEntryLifetime,TestInitialDispatchCreatorCancellation,TestInitialSolidCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialCollisionCallbackLifetime,TestObjectManagerInitialS3kSetupPass,TestInitialProcessSpritesCoordinator,TestInitialProcessSpritesArmingEpoch,TestInitialProcessSpritesPartialRewind
+```
+
+A disjoint six-class selection passed 62 cases with explicit verified S2 and S3K
+ROM paths. It selected `TestInitialDispatchNestedFreshLoad,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+There were no failures, errors or skips. Both selections ran on the corrected
+working tree atop `613d2f12d`. All 45 new cases executed across these runs.
+
+
+A fresh JVM repeated the four owning guards using the same `-Pguards` command
+recorded above. All 134 cases passed with no failures, errors or skips. API pins,
+architecture allowances and facade limits remain unchanged. These are bounded
+local results; a fresh hosted smoke result is required after publishing the fix.
