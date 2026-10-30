@@ -353,18 +353,18 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(13733);
     }
 
-    /** Original cold input past the turbine, stopping before the next launcher disagreement. */
+    /** Original cold input through the tube and subsequent launcher boundary. */
     @Test
     void coldActOnePostTurbineApproachPreservesNativePrefix() throws Exception {
-        // Rows 0-14315 match. Row14316 remains a separate, unresolved frontier;
-        // extending this bound requires native causal evidence, not a relaxed comparison.
-        assertColdActOnePrefixMatchesNative(14316);
+        // The tube's native animation word prevents the former row14316 launcher
+        // disagreement. The observed main-player comparison matches through14520.
+        assertColdActOnePrefixMatchesNative(14521);
     }
 
-    /** P2 matches through the corrected suppression/release; its next mismatch is row 14106. */
+    /** P2 matches through the original suppression and tube-animation boundary. */
     @Test
     void coldActOneTailsSuppressionReleaseMatchesNative() throws Exception {
-        assertColdActOnePrefixMatchesNative(14106, true);
+        assertColdActOnePrefixMatchesNative(14502, true);
     }
 
     /** Original input through the offscreen launcher-to-tube code-word handoff. */

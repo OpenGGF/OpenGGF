@@ -121271,6 +121271,18 @@ or job is cleaned up. The provisioned checkout/local branch are retained for the
 lead's review; integration, push, PR and worktree/branch removal are outside this
 leaf's explicit delivery scope.
 
+### Durable original-input boundary follow-up
+
+The lead extended the two existing cold-route assertions to retain the
+observed tube correction as a permanent regression. The main-player comparison
+now covers rows 0–14520 (13 fields per row); the companion comparison covers
+rows 0–14501 (10 companion fields plus the same main fields). Row14502 remains
+outside the companion assertion and is still unattributed. This does not claim
+animation, pixel, complete-act or campaign parity.
+
+With Java25, Lua5.4, surfaceless EGL and the original locked-on ROM, the queued
+selection `TestS3kDezColdRoutes#coldActOnePostTurbineApproachPreservesNativePrefix+coldActOneTailsSuppressionReleaseMatchesNative,TestS3kDezGravityTubeAnimation,TestS3kDezGravityTubeHeadless` completed **24T/0F/0E/0S**; queue wait was 0s and Maven execution was 42.663s. The ROM and fixtures are unchanged. This follow-up changes only the two assertion bounds and their comments; production bytes remain those recorded above.
+
 
 ## 2026-10-30 — DEZ gravity-tube live interact word at P2 row 14502
 
