@@ -15,6 +15,8 @@ Unreleased. The earlier development themes remain in
   standing latch, allowing the lift's return pause to resume after P1 leaves.
   Conveyor pads retain each rider's standing bit as they move, preserving the
   native jump height and clearing support at the pad's own contact checkpoint.
+  Walking off a conveyor pad also retires that player's carry bit, preventing
+  another conveyor push after support has ended.
 
 - **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
   a falling player airborne until the native landing window is reached.

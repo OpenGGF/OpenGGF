@@ -732,3 +732,25 @@ queue/execution attribution and the remaining frontier belong to the
 [frontier entry](../../../status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797).
 These component/route checks do not extend donor, roster or width coverage,
 certify an entire act/campaign, or establish pixel/audio parity.
+
+
+## Conveyor walk-off standing-bit retirement — 2026-10-30
+
+The [original-input causal investigation](../../../status/trace-frontier-log.md#2026-10-30--dez-conveyor-walk-off-standing-bit-retirement-at-original-row-8759)
+identifies slot 11's own full-solid left walk-off at row 8758 as the missing
+per-player standing-bit clear. That bit gates the next body’s conveyor carry;
+P2 remains attached while P1 leaves. The correction selects the existing
+continued-ride-exit contract only on this DEZ object, including its narrow/wide
+collision widths and both gravity directions. An in-bounds object-controlled
+rider retains its standing bit as the native seat helper returns early.
+
+`TestS3kDezConveyorPadWalkOff` uses real P1/P2 contacts, both conveyor directions
+and gravity modes, the final supported carry and absence of subsequent carry,
+other-participant support, controlled in-bounds latch retention, exact physical
+slot recreation/replacement and 24-dispatch forward replay. The independent
+`TestS3kDezColdRoutes#coldActOneConveyorWalkOffPreservesNativeBoundary` compares
+8770 original-input rows from the fresh ROM inlet, without gameplay hydration.
+Completed commands, old-red/new-green results and the bounded continuation belong
+to the linked frontier entry. This does not certify whole-act native matching,
+Act 2 cold reachability, donor/expanded-roster/viewport breadth, pixels or audio;
+those inherited matrix obligations remain open.
