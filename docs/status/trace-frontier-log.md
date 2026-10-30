@@ -117204,3 +117204,243 @@ object into immediate latch clearing on continued-ride exit. Native `loc_1E2E0`
 pause control uses mocked standing bits; it does not establish actual release
 or attribute the later row-3268 difference or death to this gap. A real
 contact-and-release regression and ROM-owned correction remain follow-up work.
+
+## 2026-10-30 — DEZ lift continued-ride standing latch
+
+Implementation leaf in T3-provisioned `t3-60c1d47c`, local branch
+`bugfix/ai-dez-lift-walkoff-latch`, based exactly on pushed develop
+`a3b021ec4f7bdf4ec6a860468fc730d770cc75b5` (includes the landing correction).
+No new worktree, child, integration, push, PR or release is requested.
+The inherited review note above remains historical evidence, not an attribution
+of row 3268 or the 4843-input death.
+
+### Native dispatch and correction boundary
+
+Independent inspection of pinned skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0` and the verified original ROM finds:
+
+- `loc_47440 (sonic3k.asm:93182-93189)` saves old X, runs `sub_4748E`, then
+  calls `SolidObjectTop`. The motion/pause read precedes the contact tail.
+- `sub_4757A (sonic3k.asm:93306-93324)` tests only P1's standing bit for both
+  the nonzero pause hold and initial movement admission; P2 support cannot
+  start the pad or hold that pause.
+- `SolidObjectTop (sonic3k.asm:41824-41832)` dispatches P1 then P2, selecting
+  the corresponding bit. `SolidObjectTop_1P (sonic3k.asm:41839-41850)` sends an
+  airborne rider or X outside `[-$18,$18)` to `loc_1E2E0`.
+- `loc_1E2E0 (sonic3k.asm:41852-41857)` clears player OnObj, sets Air and clears
+  that participant's object standing bit before returning without carry.
+  Thus the exit dispatch still sees pause 30; the following body sees no P1
+  standing and decrements it to 29. The existing local
+  `clearsStandingBitOnContinuedRideExit` contract models this without a shared edit.
+
+`OPENGGF_ROOT` denotes the existing main checkout; all launched ROM paths were
+resolved absolute paths there. Original S3&K path is `$OPENGGF_ROOT/s3k.gen`, CRC32
+`63522553`, SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`.
+The original S1/S2 absolute root paths were also verified against the required
+REV01 CRC32/SHA-1 pairs. No ROM file/link or submodule was changed by this task.
+ROM bytes at `$047440..$04745B` are
+`3f28001061000048323c0018363c0009381f4eb90001e2a630280044`;
+the motion test at `$04757A` starts
+`4a680034671208280003002a66000086536800346000007e`;
+the release tail at `$01E2E0..$01E2F3` is
+`08a90003002a08e90001002a0da8002a78004e75`.
+These corroborate the actual locked-on routine, rather than a duplicate S3-half
+source. No emulator state was seeded to establish this source/byte evidence.
+
+### Focused regression and observation protocol
+
+`TestS3kDezLiftPadHeadless#continuedRideExitReleasesOnlyItsPlayerBitAndNextUpdatePauseThroughRecreation`
+uses real registered Sonic/Tails, the real ObjectManager execution loop and
+its ordinary body/solid checkpoint. It establishes P2 contact alone, adds P1,
+advances to the real pause, preserves support on both inside edges, then tests
+left/right walk-off and airborne release independently. It checks per-player
+bits, riding support, Air/OnObj, exit-pass pause versus next-update decrement,
+P2-only support through return, and P2's eventual exit. A released-world restore
+must preserve the cleared P1 bit. Destructive pad/arm retirement/removal then
+requires actual graph recreation, held P1/P2 contact relinking and the same
+120-update return trajectory. Existing allocation, cull/unload, pause and
+320/800 placed-lift recreation checks remain separate negative/lifecycle controls.
+There is no new state or shared collision, slot, pause, unload or rewind edit.
+
+The temporary `TestDezWalkoffColdObservation#observe` uses the unchanged fresh
+native320 Sonic+Tails inlet and original movie offset 468982, up to 5000 inputs
+or first player death. Each return checks the committed input, one cursor
+advance and an actual gameplay body. Expected physics rows are comparison-only.
+It records first differences in 15 player/camera/level fields, a per-return
+state digest, lift latch/ride transitions, and conveyor-pad before/after state
+around the later jump. The shell's success is an observer result, never a route
+parity assertion. No movie, comparator, bootstrap, timing input or tolerance changes.
+
+Original movie SHA-256:
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+`ssz/physics.csv.gz` SHA-256:
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`.
+Metadata identifies this `ssz` directory as DEZ; its name is not zone authority.
+
+All Java test commands use:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  OPENGGF_ROM_DIR="$OPENGGF_ROOT" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_ROOT/s3k.gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+Each selection has one owned request and observer; shared-admission waiting is
+kept separate from Maven execution. No duplicate run is launched for slow admission.
+An earlier environment-free queued version probe was cancelled before execution;
+it supplies no Java-version or test evidence.
+
+### Baseline results and test correction
+
+- Initial selection of the new parameterized regression: **3T/3F/0E/0S**, exit 1,
+  queue **852s**, Maven **1m40s**, completed 00:17:49 UTC. Both walk-off cases
+  fail the intended immediate-bit-clear assertion (expected false, actual true),
+  after real contact and loss of riding support. The airborne control instead
+  reaches a test-only stale-reference assertion: expected pause 30 after restore,
+  but the pre-restore pad still has 29. Restore replaces that owner. The test now
+  reacquires by captured slot after every restore, verifies both physical removals,
+  and checks the restored arm's slot too. This is a test correction, not a rewind
+  implementation change. No old behavior was repaired to satisfy a mistaken oracle.
+- Unchanged-production `SELECTION=TestDezWalkoffColdObservation#observe`:
+  **1T/0F/0E/0S**, exit 0, queue **933s**, Maven **38.293s**, completed
+  00:19:25 UTC; actual observer body 3.604s. It consumes **4843** original inputs
+  and real gameplay bodies, maximum X `$1598`, then dies. First main Y remains
+  row **3268**, expected `$08E9`, actual `$08E8`. First other differences:
+  camera Y 3275, X 3432, camera X 3438, Air 3606, X/Y/G velocities and X fraction
+  3607, Y fraction 3608, rolling 3697, routine 3699, angle 3967, rings 3974.
+  Level counter has no difference in this window. Its 15-field per-return state
+  digest is `3ef4918dec4006ad026f21d0d43966701fc0bc10e4aec1ad88916004d0c18dbe`.
+
+XML confirms Java **25.0.5.0.2**, explicit surfaceless EGL and the verified
+absolute S3&K path for both completed requests. Neither has skipped cases or
+fork errors. Initial regression SHA-256 is
+`1de3f82cd504dc7c1b10a8ec2820c3de4df41522818c09198dd915228fedc5dd`;
+its full `src` plus `pom.xml` fingerprint (sorted path/NUL/bytes/NUL SHA-256)
+is `46a3f5c9e8339db25367c8b0680de4648a587c428e3054fe9f9322c36b0eba72`.
+The observer source is unchanged across baseline/candidate:
+`041a320858dc61b79dd53914e09cff98ac6135cb0ea76435e298c7f07a7ea8bc`.
+Baseline production lift SHA-256 is
+`e78faa8602b5d52f04f82287e978d47173fc11ba1a60087695ac18b3ac80914b`.
+Only unselected regression-source reference/removal assertions were being repaired
+during the baseline observer's test compilation; production, selected observer,
+fixture and runtime setup remained unchanged. Its scoped comparison evidence
+therefore uses those exact owner/observer hashes rather than claiming one stable
+whole-source fingerprint for that request.
+
+Corrected old-behavior regression, same selector/environment: **3T/3F/0E/0S**,
+exit 1, queue **415s**, Maven **36.143s**, completed 00:25:53 UTC.
+Both P1 edge exits fail the immediate-bit-clear assertion. The airborne control
+now passes the released-world restore and complete return before failing P2's
+own final walk-off bit clear. All three are genuine per-player release failures,
+with the stale-reference oracle removed. The final regression source SHA-256 is
+`c080318b9049836b43ab65044df0ce53ca9dfa1ce16d468d22cdcdab09a27d2c`;
+its corrected baseline `src` plus `pom.xml` fingerprint is
+`244970955fd8458d5f851e11f08e70880c47a966d891ca723b8facb97b49e523`.
+The return component deliberately parks departed P1 outside the pad's swept X
+range after verifying release: it omits free-flight physics and must not invent
+an accidental second landing. The independent original-input observer drives
+ordinary complete frame bodies instead.
+
+### Candidate qualification
+
+The sole production change is the lift's local provider override, SHA-256
+`23237ddd8d5876181090111d77c0c5ca1e681e4882d96791a6302c483ca642fc`.
+The complete focused selection is:
+
+```text
+TestDezWalkoffColdObservation#observe,TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+coldActOneLiftLandingPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The committed aux payload independently witnesses the actual native walk-off,
+without a new seeded emulator experiment. Its SHA-256 is
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`.
+At row 2795 native lift slot 18 (`$00047440`) is at `$0E95,$08C8` with status
+`$08`. At row 2796 Sonic is `$0EAD,$08AC`, exactly the excluded right edge
+`pad X + $18`; the lift status is now `$00` and Sonic status `$02`.
+The sticky interaction remains slot 18, correctly distinct from live support.
+The unchanged engine observation sees the same pad/player geometry at row 2796,
+but its slot-17 lift still has standing=true and riding=false; its bit clears
+one row later. This is a real original-route manifestation of the local latch
+gap, separate from the later player-Y frontier. The inherited native/engine
+slot-index difference is recorded, not repaired or claimed accurate here.
+
+The final focused request completes **82T/0F/0E/0S**, exit 0, at
+**00:37:04 UTC**: queue **521s**, Maven **1m45s**. It contains 81 asserting cases
+and one bounded observation shell. All eight suite identities and individual
+case dispositions were inspected, including both packages' loading classes,
+the two exact cold methods (no seeded diagnostic), and all three new release
+parameters. Java **25.0.5.0.2**, surfaceless EGL and the verified original
+absolute ROM path are present in every XML report; there are no dumps.
+All 19 lift cases pass, including the existing allocation exhaustion, owned-arm
+unload, mocked pause/debug controls and real 320/800 placed-graph recreation.
+All 60 mandatory S3K anchor cases and both cold prefix regressions pass.
+
+The frozen tested `src` plus `pom.xml` fingerprint is
+`dafde75312d9a129bf3be1d2eb79ce68c7bac8aea3e99c1255f3d1266d6c8b50`.
+Lift, permanent regression and observer hashes remain the exact candidate hashes
+above through the completed run. A citation-parser ambiguity in the first draft
+comment was corrected before admission, without changing code; the final lift
+has five resolved citations and zero stale findings (baseline had three resolved).
+
+### Relationship to the remaining cold frontier
+
+At row 2796 the candidate lift now reports standing=false/riding=false at the
+same native edge and positions. The local native mismatch is closed. Nevertheless,
+the entire candidate observer summary and its 15-field per-return state digest
+are **byte-for-byte identical to baseline**: first main Y **3268**, expected
+`$08E9`, actual `$08E8`; maximum X `$1598`; death after **4843** consumed inputs.
+The fix produces no endpoint advance and does not explain that later difference
+or death. No whole-segment strict trace, act completion, pixel/audio, broad smoke
+or full-suite pass is claimed.
+
+The next owner is a conveyor pad, not a lift. At native rows 3267/3268/3269,
+aux slot 16 runs `loc_47A14`, subtype `$B0`, X `$1540`, with Y
+`$0908/$0907/$0906`; its status changes `$08` to `$00` at the jump. Sonic's
+interaction pointer stays at slot 16 while his status becomes `$06`.
+The engine's slot-16 conveyor matches those pad positions. Before row 3268 it
+has player `$150D,$08E4`, standing/ride=true, radius 19; afterward it has player
+`$150B,$08E8`, standing/ride=false, radius 14. Native end Y is `$08E9`.
+These end samples bound the question but do not identify the instruction/engine
+operation that introduces the extra pixel. Next: matched read-only samples at
+the player jump/radius write and the conveyor's `loc_47A58` →
+`SolidObjectFull_1P` / `loc_1DC98` boundary. Do not infer a carry, height or stale-bit
+fix solely from the one-pixel endpoint. No independent later DEZ-local causal
+mechanism was proven here, so no conveyor or shared-owner change was made.
+
+Known output is compiler/Unsafe deprecation noise, the inherited FAST-to-NONE
+load-profile fallback and the decoding test's deliberate out-of-range warning.
+No test error or skip is hidden by that output. The initial test-only stale-reference
+failure above was corrected; all genuine old-behavior failures now pass.
+Queue and Maven times are recorded separately per request; waits overlap and must
+not be added as elapsed delivery time. Overall task wall time is unmeasured.
+The change-based dry plan selects 3767 smoke classes including the temporary
+observer; broad validation is not launched under the explicit leaf scope.
+
+Final maintained-source fingerprint after deleting only the temporary observer:
+`d3545cf86787ed9cd92c7c4104a81df6f696ebb8568aaa6c46b4bc3e7e45ccab`.
+Production and permanent regression hashes are unchanged from the completed run;
+removing the uncommitted observation shell changes no maintained executable input.
+The stateless leaf selector is qualified by real manager/P1/P2 edge cases,
+held/released and destructive graph restores, existing 320/800 allocation/lifetime
+coverage, the original-input prefixes/observation and all S3K anchors. Shared
+owners remain untouched; this is focused evidence, not a substituted smoke claim.
+
+Cleanup removes the temporary observer source and bytecode, consumed owned Maven
+XML/text reports, raw task logs and dry-plan/citation output. No diagnostic archive,
+receipt, emulator process or external generated artifact is retained. No owned
+queue request or test job remains live. The T3-provisioned checkout and unmerged
+local bugfix branch are retained for lead handoff; no worktree or child was created.
+Original ROMs, submodules and other worktrees remain untouched. The frontier's
+pre-task prefix, AGENTS/CLAUDE mirror and new local links pass inspection;
+`git diff --check` passes. All added frontier citations classify without a new
+issue; inherited historic/stale findings remain unchanged. No integration,
+push, PR or release is performed.
+
+The first local commit attempt was rejected by the resource-policy hook for
+machine-local home paths in this evidence text. They were normalized to
+`$OPENGGF_ROOT` notation; tested code, fixture paths actually passed at runtime
+and results are unchanged.

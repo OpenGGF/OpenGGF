@@ -126,6 +126,12 @@ public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
     @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x18,9,9);}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.topSolid(false);}
     @Override public boolean isTopSolidOnly(){return true;}
+    @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player){
+        // loc_47440 (sonic3k.asm:93182-93189) runs motion before the solid tail.
+        // loc_1E2E0 (sonic3k.asm:41852-41857) clears only the exiting player's
+        // bit, so the next body can release P1's pause even while P2 still rides.
+        return true;
+    }
     @Override public boolean rejectsZeroDistanceTopSolidLanding(){
         // loc_47440 (sonic3k.asm:93182-93189) calls SolidObjectTop.
         // loc_1E45A's unsigned cmpi.w #-$10 / blo (sonic3k.asm:42044-42055)

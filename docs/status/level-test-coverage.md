@@ -2191,3 +2191,11 @@ adds the original-movie zero-overlap decision, independent bounded contact cases
 and the existing allocation/graph-recreation obligations. Complete-act, expanded
 character/team/donor/viewport and campaign certification gaps remain open;
 qualification results and limits belong to its linked frontier entry.
+
+
+DEZ1 lift continued-ride follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-continued-ride-release--2026-10-30)
+adds real P1/P2 landing and walk-off dispatch, held/released latch restoration,
+and destructive pad/arm recreation with forward replay. Original-input cold
+observation remains bounded; whole-act, native-cause, donor, wider viewport and
+expanded roster obligations are not inferred from this local contract.

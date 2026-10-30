@@ -139,6 +139,105 @@ class TestS3kDezLiftPadHeadless {
         if(!accepted){assertEquals(beforeY,player.getCentreY());assertEquals(rolling,player.getRolling());}
     }
 
+    /** Real player/contact owners, in native body-then-SolidObjectTop dispatch order. */
+    @ParameterizedTest @ValueSource(ints={-25,24,0})
+    void continuedRideExitReleasesOnlyItsPlayerBitAndNextUpdatePauseThroughRecreation(int exitX){
+        var c=SonicConfigurationService.getInstance();
+        c.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
+        c.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"tails");
+        var f=boot(320,0x560,0x400);
+        f.camera().setX((short)0x500);
+        var manager=GameServices.level().getObjectManager();
+        var p1=f.sprite();var p2=GameServices.sprites().getRegisteredSidekicks().getFirst();
+        var pad=create(0x600,0x500,7,0);
+        dispatch(f);
+        landOn(pad,p2);dispatch(f);
+        assertTrue(manager.hasObjectStandingBit(p2,pad));
+        assertFalse(manager.hasObjectStandingBit(p1,pad));
+        dispatch(f);assertFalse(pad.movingForTest(),"P2's real contact cannot start the lift");
+        landOn(pad,p1);dispatch(f);
+        assertTrue(manager.isRidingObject(p1,pad));assertFalse(pad.movingForTest(),"landing follows the body");
+        dispatch(f);assertTrue(pad.movingForTest());assertEquals(8,pad.angleForTest());
+        for(int i=1;i<90;i++)dispatch(f);
+        assertEquals(30,pad.pauseForTest());
+        // Both inclusive left and last included right edge retain P1 support and pause.
+        for(int inside:new int[]{-24,23}){
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(p1,pad.getX()+inside);
+            dispatch(f);assertEquals(30,pad.pauseForTest());
+            assertTrue(manager.isRidingObject(p1,pad));assertTrue(manager.hasObjectStandingBit(p1,pad));
+        }
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved=registry.capture();int slot=pad.getSlotIndex();
+        var expected=exitAndReturn(f,pad,exitX);
+        pad=liftInSlot(slot);var oldArm=pad.armForTest();int armSlot=oldArm.getSlotIndex();
+        // Destructively remove both physical owners: restore must recreate/relink, not reuse.
+        pad.onUnload();manager.removeDynamicObject(pad);manager.removeDynamicObject(oldArm);
+        assertTrue(pad.isDestroyed());assertTrue(oldArm.isDestroyed());
+        assertFalse(manager.getActiveObjects().contains(pad));assertFalse(manager.getActiveObjects().contains(oldArm));
+        registry.restore(saved);
+        var restored=liftInSlot(slot);
+        assertNotSame(pad,restored);assertNotSame(oldArm,restored.armForTest());
+        assertEquals(slot,restored.getSlotIndex());assertEquals(armSlot,restored.armForTest().getSlotIndex());
+        assertTrue(manager.isRidingObject(p1,restored));assertTrue(manager.isRidingObject(p2,restored));
+        assertTrue(manager.hasObjectStandingBit(p1,restored));assertTrue(manager.hasObjectStandingBit(p2,restored));
+        assertEquals(expected,exitAndReturn(f,restored,exitX));
+    }
+
+    private List<String> exitAndReturn(HeadlessTestFixture f,S3kDezLiftPadObjectInstance pad,int exitX){
+        var manager=GameServices.level().getObjectManager();var p1=f.sprite();
+        var p2=GameServices.sprites().getRegisteredSidekicks().getFirst();
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(p1,pad.getX()+exitX);
+        if(exitX==0)p1.setAir(true); // same native release branch, independent airborne control
+        dispatch(f);
+        assertEquals(30,pad.pauseForTest(),"body reads the standing bit before this exit's solid tail");
+        assertFalse(manager.isRidingObject(p1,pad));assertFalse(p1.isOnObject());assertTrue(p1.getAir());
+        assertFalse(manager.hasObjectStandingBit(p1,pad),"loc_1E2E0 clears the exiting player's bit now");
+        assertTrue(manager.isRidingObject(p2,pad));assertTrue(manager.hasObjectStandingBit(p2,pad));
+        assertTrue(p2.isOnObject());assertFalse(p2.getAir());
+        // This component dispatch omits free-flight physics. Keep the departed P1
+        // outside the swept pad so return motion cannot establish a second landing.
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(p1,pad.getX()+0x200);
+        var released=TestEnvironment.activeGameplayMode().getRewindRegistry().capture();
+        dispatch(f);assertEquals(29,pad.pauseForTest(),"P2 standing must not hold P1's pause");
+        int slot=pad.getSlotIndex();
+        TestEnvironment.activeGameplayMode().getRewindRegistry().restore(released);
+        pad=liftInSlot(slot);
+        assertEquals(30,pad.pauseForTest());assertFalse(manager.hasObjectStandingBit(p1,pad));
+        assertTrue(manager.hasObjectStandingBit(p2,pad));
+        var rows=new ArrayList<String>();
+        for(int i=0;i<120;i++){
+            dispatch(f);
+            rows.add(pad.getX()+","+pad.getY()+","+pad.angleForTest()+","+pad.angularVelocityForTest()
+                    +","+pad.pauseForTest()+","+manager.hasObjectStandingBit(p1,pad)
+                    +","+manager.hasObjectStandingBit(p2,pad)+","+p2.getCentreX()+","+p2.getCentreY());
+            assertFalse(manager.hasObjectStandingBit(p1,pad));
+            if(i<30)assertEquals(29-i,pad.pauseForTest());
+        }
+        assertEquals(0,pad.angleForTest());assertEquals(0,pad.angularVelocityForTest());assertFalse(pad.movingForTest());
+        // P2 walk-off is independent too; it must clear its bit without setting P1's bit.
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(p2,pad.getX()+24);
+        dispatch(f);assertFalse(manager.isRidingObject(p2,pad));assertFalse(manager.hasObjectStandingBit(p2,pad));
+        assertFalse(manager.hasObjectStandingBit(p1,pad));
+        return rows;
+    }
+
+    private S3kDezLiftPadObjectInstance liftInSlot(int slot){
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o->o instanceof S3kDezLiftPadObjectInstance lift && lift.getSlotIndex()==slot)
+                .map(o->(S3kDezLiftPadObjectInstance)o).findFirst().orElseThrow();
+    }
+
+    private void landOn(S3kDezLiftPadObjectInstance pad,com.openggf.sprites.playable.AbstractPlayableSprite player){
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,pad.getX());
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player,pad.getY()-9-player.getYRadius()-3);
+        player.setAir(true);player.setOnObject(false);player.setYSpeed((short)0x30);
+    }
+
+    private void dispatch(HeadlessTestFixture f){
+        GameServices.level().getObjectManager().update(f.camera().getX(),f.sprite(),
+                GameServices.sprites().getRegisteredSidekicks(),0,false,true,true);
+    }
+
     private record Control(AtomicInteger standing,TestPlayableSprite primary,List<Integer> sounds) { }
     private Control control(S3kDezLiftPadObjectInstance pad){
         var primary=new TestPlayableSprite();var secondary=new TestPlayableSprite();var standing=new AtomicInteger();var sounds=new ArrayList<Integer>();
