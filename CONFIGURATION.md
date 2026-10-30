@@ -1015,7 +1015,7 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `Shift+Tab` | Switch between the editor document and its playtest |
 | `F5` | Start a fresh current-project playtest at the authored start; does not save |
 | `F1` / controller Menu | Open the editor menu, including project commands |
-| Arrows / gamepad menu directions | Move the cursor or selection in an open library |
+| Arrows / gamepad menu directions | Step whole blocks (8 pixels for objects/rings), or move selection in an open library |
 | `Tab` / north controller button | Open the library for the current brush kind |
 | `Page Up` / `Page Down` | Move through pages in an open library |
 | `Enter` / South in a library | Select the highlighted brush |
@@ -1042,7 +1042,7 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / cut / preview paste of region |
 | `Enter` / `Escape` with paste preview | Commit / cancel paste |
 | Middle drag / `Ctrl+arrows` | Pan canvas independently of cursor |
-| Mouse wheel / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Integer zoom 1×–8× / reset |
+| Mouse wheel / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom 0.25×–8× / reset to 1× |
 
 Bindings live in `EditorInputHandler` and are independent of gameplay Key
 Bindings. Library sheets, project forms, and the editor menu own their input
@@ -1073,7 +1073,7 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 | View (hold) | Tools wheel; steer and release, or use the D-pad and South |
 | Menu | Save, playtest, export, project commands and every editor command |
 | L3 / R3 | Toggle FG/BG layer / collision overlay |
-| Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 1×–8× |
+| Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 0.25×–8× |
 | Object properties: up/down / left/right | Choose named field / change value |
 | Level palette: LB/RB, up/down, left/right | Choose color, RGB channel, native value |
 

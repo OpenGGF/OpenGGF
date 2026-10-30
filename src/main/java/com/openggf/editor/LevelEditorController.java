@@ -1117,6 +1117,18 @@ public final class LevelEditorController {
         cameraNavigationRequested = true;
     }
 
+    /** Discrete terrain/spawn navigation shared by keyboard arrows and the D-pad. */
+    public void stepWorldCursor(int dx, int dy) {
+        if (isSpawnEditing() || level == null) {
+            setWorldCursor(new EditorCursorState(worldCursor.x() + dx * 8, worldCursor.y() + dy * 8));
+        } else {
+            int size = level.getBlockPixelSize();
+            setWorldCursor(new EditorCursorState(
+                    (Math.floorDiv(worldCursor.x(), size) + dx) * size + size / 2,
+                    (Math.floorDiv(worldCursor.y(), size) + dy) * size + size / 2));
+        }
+    }
+
     public void moveActiveSelection(int dx, int dy) {
         int gridSide = activeGridSide();
         if (depth == EditorHierarchyDepth.WORLD) {

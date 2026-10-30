@@ -1049,6 +1049,7 @@ public final class LevelRenderer {
             throw new IllegalStateException("Cinematic tile requires its outer view");
         var camera = lm.camera;
         var savedCamera = camera.capture();
+        var cameraOwner = camera.getFocusedSprite();
         var savedScroll = currentScrollPresentation;
         try {
             camera.setX((short) (cinematicFullScroll.registers().cameraX() + left));
@@ -1063,7 +1064,7 @@ public final class LevelRenderer {
             throw failure;
         } finally {
             cinematicScroll = null;
-            camera.restore(savedCamera, camera.getFocusedSprite());
+            com.openggf.camera.CameraPresentationState.restore(camera, savedCamera, cameraOwner);
             currentScrollPresentation = savedScroll;
         }
     }
