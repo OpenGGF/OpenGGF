@@ -25,8 +25,8 @@ class TestSettingTiming {
 
     @Test
     void readersDecideWhenEachSettingTakesEffect() {
-        // Read once at start-up: Engine's frame pacing, display initialisation, GameLoop's presence.
-        for (SonicConfiguration key : List.of(SonicConfiguration.FPS, SonicConfiguration.DISPLAY_SHADER_SELECTION,
+        // Read once at start-up: display initialisation and GameLoop's presence.
+        for (SonicConfiguration key : List.of(SonicConfiguration.DISPLAY_SHADER_SELECTION,
                 SonicConfiguration.DISPLAY_COLOR_PROFILE, SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED,
                 SonicConfiguration.LIVE_REWIND_VHS_EFFECT, SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP,
                 SonicConfiguration.AUDIO_ENABLED)) {
@@ -40,7 +40,7 @@ class TestSettingTiming {
             assertEquals(NEXT_GAME, SettingTiming.of(key), key.name());
         }
         // Read when used.
-        for (SonicConfiguration key : List.of(SonicConfiguration.UP, SonicConfiguration.CONTROLLER_DEADZONE,
+        for (SonicConfiguration key : List.of(SonicConfiguration.FPS, SonicConfiguration.UP, SonicConfiguration.CONTROLLER_DEADZONE,
                 SonicConfiguration.PAUSE_KEY, SonicConfiguration.SONIC_2_ROM, SonicConfiguration.CAPTURE_CODEC)) {
             assertEquals(NOW, SettingTiming.of(key), key.name());
         }
@@ -63,15 +63,17 @@ class TestSettingTiming {
     void restartIsPendingOnlyForSavedChangesThatDifferFromStartUp() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
         PendingRestart.captureAtStart(config);
-        int fps = config.getInt(SonicConfiguration.FPS);
+        int width = config.getInt(SonicConfiguration.SCREEN_WIDTH);
 
         save(config, SonicConfiguration.CONTROLLER_DEADZONE, "0.3");
         assertTrue(PendingRestart.current(config).isEmpty(), "an immediate setting needs no restart");
 
-        save(config, SonicConfiguration.FPS, Integer.toString(fps + 15));
-        assertEquals(List.of(SonicConfiguration.FPS), PendingRestart.current(config));
+        save(config, SonicConfiguration.FPS, "75");
+        assertTrue(PendingRestart.current(config).isEmpty(), "display FPS applies without restart");
+        save(config, SonicConfiguration.SCREEN_WIDTH, Integer.toString(width + 1));
+        assertEquals(List.of(SonicConfiguration.SCREEN_WIDTH), PendingRestart.current(config));
 
-        save(config, SonicConfiguration.FPS, Integer.toString(fps));
+        save(config, SonicConfiguration.SCREEN_WIDTH, Integer.toString(width));
         assertTrue(PendingRestart.current(config).isEmpty(), "saving the start-up value back needs no restart");
     }
 
@@ -79,16 +81,16 @@ class TestSettingTiming {
     void rowBadgesCompareDraftsToTheRunningValueEvenAfterSaving() throws Exception {
         var config = SonicConfigurationService.createStandalone(directory);
         PendingRestart.captureAtStart(config);
-        var key = SonicConfiguration.FPS;
-        int fps = config.getInt(key);
-        assertFalse(PendingRestart.awaiting(key, fps, false));
-        assertTrue(PendingRestart.awaiting(key, fps + 15, true));
-        assertFalse(PendingRestart.awaiting(key, fps, true));
-        save(config, key, Integer.toString(fps + 15));
-        assertTrue(PendingRestart.awaiting(key, fps + 15, false), "saved still awaits restart");
-        assertFalse(PendingRestart.awaiting(key, fps, true), "draft reverting to running value clears badge");
-        save(config, key, Integer.toString(fps));
-        assertFalse(PendingRestart.awaiting(key, fps, false));
+        var key = SonicConfiguration.SCREEN_WIDTH;
+        int width = config.getInt(key);
+        assertFalse(PendingRestart.awaiting(key, width, false));
+        assertTrue(PendingRestart.awaiting(key, width + 1, true));
+        assertFalse(PendingRestart.awaiting(key, width, true));
+        save(config, key, Integer.toString(width + 1));
+        assertTrue(PendingRestart.awaiting(key, width + 1, false), "saved still awaits restart");
+        assertFalse(PendingRestart.awaiting(key, width, true), "draft reverting to running value clears badge");
+        save(config, key, Integer.toString(width));
+        assertFalse(PendingRestart.awaiting(key, width, false));
         assertFalse(PendingRestart.awaiting(SonicConfiguration.DISPLAY_ASPECT, "16:9", true));
     }
 
