@@ -40,6 +40,8 @@ public class TestGraphicsManagerSpriteSatReplay {
         var config = com.openggf.game.GameServices.configuration();
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         boolean original = config.getBoolean(key);
+        assertFalse(original, "normal gameplay starts without scanline limits");
+        assertEquals(21, overfullRowSize());
         try {
             for (boolean enabled : new boolean[]{true, false, true}) {
                 config.setConfigValue(key, enabled);
@@ -54,16 +56,16 @@ public class TestGraphicsManagerSpriteSatReplay {
     void configuringAnotherEngineRebindsTheLivePreference(@org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) {
         EngineContext original = EngineServices.current();
         var alternate = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
-        alternate.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, false);
+        alternate.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
         var replacement = new EngineContext(alternate, graphicsManager, original.audio(), original.roms(),
                 original.profiler(), original.debugOverlay(), original.playbackDebug(), original.romDetection(),
                 original.crossGameFeatures(), original.moduleResolutionService());
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         try {
             EngineServices.configure(replacement);
-            assertEquals(21, overfullRowSize());
-            EngineServices.configure(original);
             assertEquals(20, overfullRowSize());
+            EngineServices.configure(original);
+            assertEquals(21, overfullRowSize(), "restoring the original engine restores the default-off preference");
         } finally {
             EngineServices.configure(original);
         }
@@ -178,6 +180,8 @@ public class TestGraphicsManagerSpriteSatReplay {
 
     @Test
     public void nativeBudgetAppliesWithoutRequestingSpriteMask() {
+        com.openggf.game.GameServices.configuration().setConfigValue(
+                com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.beginSpriteSatCollection();
         for (int index = 0; index < 21; index++) {
@@ -326,6 +330,8 @@ public class TestGraphicsManagerSpriteSatReplay {
 
     @Test
     void engineAlignedH32EntryKeepsInnerCapacityInside350Presentation() throws Exception {
+        com.openggf.game.GameServices.configuration().setConfigValue(
+                com.openggf.configuration.SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.setProjectionWidth(350);
         SpriteSatInternalAccess.beginCollection(graphicsManager, SpriteSatMaskPostProcessor.Raster.h32(47, 7, 100));

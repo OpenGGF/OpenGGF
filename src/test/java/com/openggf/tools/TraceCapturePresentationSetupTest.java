@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(SingletonResetExtension.class)
@@ -71,6 +72,8 @@ class TraceCapturePresentationSetupTest {
                     TraceCapturePresentationSetup.open(configuration, TraceCaptureDimensions.resolve(400, 1),
                             TraceCapturePresentationSetup.snapshot(configuration), audio, 30));
             assertEquals(320, configuration.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            assertFalse(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT),
+                    "a failed capture must restore the normal-play preference");
             assertEquals(60, audio.presentationFrameRate());
         }
         audio.resetState();
@@ -136,6 +139,19 @@ class TraceCapturePresentationSetupTest {
         assertEquals("ULTRA_21_9",
                 configuration.getString(SonicConfiguration.DISPLAY_ASPECT));
         assertTrue(configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void nativeScanlineLimitsAreScopedToTraceCapture(boolean callerEnabled) {
+        configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, callerEnabled);
+        var caller = TraceCapturePresentationSetup.snapshot(configuration);
+        try (var ignored = TraceCapturePresentationSetup.open(configuration,
+                TraceCaptureDimensions.resolve(320, 1), caller)) {
+            assertTrue(configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
+        }
+        assertEquals(callerEnabled,
+                configuration.getBoolean(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
     }
 
     private static int privateInt(Object target, String fieldName) throws Exception {

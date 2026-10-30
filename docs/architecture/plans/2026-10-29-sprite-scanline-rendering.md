@@ -26,7 +26,13 @@ viewport and vertical-wrap mask before submitting mappings. All pieces of a
 partially visible plant remain admitted, matching the ROM's object-level test.
 No gameplay, clock, art or rewind state is added.
 
-`display.spriteScanlineLimit`, default true, is saved under Settings > Display >
+Follow-up preference: normal play now defaults the scanline limit to false.
+Trace captures temporarily enable it for ROM image comparisons and restore
+the caller setting after completion or failure. Other visual comparison probes
+must explicitly enable it in their isolated configuration. The verification
+below records the original culling fix with native limits enabled.
+
+`display.spriteScanlineLimit` is saved under Settings > Display >
 Picture as **Sprite scanline limit**. False removes the per-line count and
 pixel-width budgets, including overflow carry. Explicit masks and total
 sprite-table capacity remain active. Existing configuration enum ordinals are
@@ -128,3 +134,29 @@ culling regression 1m24s after 656s queue; corrected focus 2m05s after 486s queu
 final guards 4m05s after 607s queue; matched normal baseline 37.539s after 536s
 queue; final binding capture 17.216s after 643s queue. Compilation/preflight and
 other intervals are not included in those individual measurements.
+
+## Default-off follow-up validation
+
+Based on `789390d66` (current develop after the upstream DEZ regressions).
+Normal-play configuration/default persistence, live production graphics, native
+budget/mask evaluation, real EGL pixels, i18n and scoped trace presentation ran
+126 checks: no failures, errors or skips (Maven 1m37s). A strengthened engine
+context switch and the actual `TraceCaptureToolArgsTest` then ran 26 checks:
+no failures, errors or skips (Maven 31.263s). Fourteen graphics checks overlap
+the first run; this is 138 distinct cases, not 152 distinct tests.
+
+Both runs used JDK 25, Lua 5.4, unset DISPLAY/WAYLAND_DISPLAY,
+`-Dopenggf.headless.gl=surfaceless-egl`, `-Dmse=off` and the queued Maven wrapper
+with normal heaps. The first selector included the nonexistent
+`TestTraceCaptureTool`; its 126-case count covers the eleven actual classes,
+not that unmatched name. The second run explicitly selected
+`TestGraphicsManagerSpriteSatReplay,TraceCaptureToolArgsTest`. Fresh Surefire
+XML confirms those completed selections, including zero skips.
+
+Explicit Lua 5.4 preflight passed; the first ambient-Lua preflight was rejected
+before any tests. The inspected broad plan selects 4,351 smoke classes plus
+guards. Direct default/UI/persistence, rendering and capture lifecycle checks
+replace that disproportionate run for this bounded preference change. No
+algorithm, physics, art or API signature changes; no broad/full-suite or new
+ROM-comparison pass is claimed. All three updated agent skills match their
+Claude mirrors; whitespace checks pass.

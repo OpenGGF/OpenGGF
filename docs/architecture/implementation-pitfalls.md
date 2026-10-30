@@ -937,6 +937,10 @@ discarding them in the shared evaluator would break partially visible objects.
 AIZ's unculled plants exhausted line width and erased Sonic's lower body even
 though the ROM culled those plants. Keep any user option to relax line limits
 separate from producer correctness; masks and table capacity are separate rules.
+Normal play defaults `display.spriteScanlineLimit` to false. TraceCaptureTool scopes
+it to true for native image comparisons and restores it even on failure. Other
+ROM image probes must enable it explicitly and restore their caller preference;
+physics/aux trace comparisons do not depend on this presentation setting.
 
 **Follower priority inheritance must be field-specific.** Hyper stars illustrate
 this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
