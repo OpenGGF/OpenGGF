@@ -530,7 +530,11 @@ public class MasterTitleScreen {
 
         if (playbackBrowser != null) {
             PlaybackBrowser browser = playbackBrowser;
-            browser.update(inputHandler);
+            // Playback and all its children draw in the same centred native page.
+            int margin = Math.max(0, (viewportWidth - SCREEN_W) / 2);
+            MasterTitlePointer local = pointer == null ? null : new MasterTitlePointer(
+                    pointer.x() - margin, pointer.y(), pointer.moved(), pointer.click(), pointer.backClick(), pointer.wheel());
+            browser.update(inputHandler, local);
             playbackSelection.remember(browser);
             switch (browser.consumeResult()) {
                 case BACK -> {

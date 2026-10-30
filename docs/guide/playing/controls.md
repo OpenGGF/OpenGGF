@@ -118,6 +118,12 @@ trace. The footer shows the equivalent controller buttons. Each row shows its
 kind, game, and approximate length. **ERROR** and **SETUP** mark entries that
 cannot launch. F1 shows the selected entry's details.
 
+Point at a row to highlight it and click to open it. The mouse wheel scrolls the
+list; over **Game** or **Show**, it changes that filter. The footer actions are
+clickable, and right-click goes back one page. Recording options, their target-frame
+keypad and the trace loading/error pages also accept the mouse. Use the wheel to
+read long details or change error pages.
+
 Recording options retain the target frame, pause-on-desync, fast-forward, build
 warnings, and details. Bare BK2 files in recording folders or at the configured
 playback movie path appear with **Needs setup**. They cannot launch without a

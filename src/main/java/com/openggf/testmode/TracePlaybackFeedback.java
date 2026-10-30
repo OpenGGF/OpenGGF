@@ -3,6 +3,7 @@ package com.openggf.testmode;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
+import com.openggf.game.MasterTitlePointer;
 import com.openggf.game.MenuFeedback;
 import com.openggf.game.MenuFieldLines;
 import com.openggf.game.MenuStyle;
@@ -35,27 +36,39 @@ public final class TracePlaybackFeedback {
     private boolean stopped;
     private boolean failureAnnounced;
     private int failurePage;
+    private List<MenuChrome.FooterTarget> footerTargets = List.of();
+    private boolean footerHasPages;
 
     public TracePlaybackFeedback(TraceEntry selected, PixelFont font) {
         this.selected = selected;
         this.font = font;
     }
 
-    public void update(InputHandler input) {
+    public void update(InputHandler input) { update(input, null); }
+
+    public void update(InputHandler input, MasterTitlePointer pointer) {
         this.input = input;
         if (stopped) return;
+        if (hasHeldFailure() && !failureAnnounced) { MenuFeedback.emit(ERROR); failureAnnounced = true; }
+        if (pointer != null && (input.hasLogicalOverride() || !pointer.over(0, 0, W, 224))) pointer = null;
+        if (pointer != null && pointer.backClick()) { acknowledge(true); return; }
+        if (pointer != null && pointer.click()) {
+            for (MenuChrome.FooterTarget target : footerTargets) {
+                if (!target.contains(pointer)) continue;
+                if (hasHeldFailure() && footerHasPages && target.index() == 0) {
+                    int direction = pointer.x() < target.x() + MenuChrome.keyCapWidth(target.hint().key()) / 2 ? -1 : 1;
+                    page(direction);
+                } else acknowledge(!hasHeldFailure());
+                return;
+            }
+        }
+        if (pointer != null && pointer.wheel() != 0 && hasHeldFailure()) { page(-pointer.wheel()); return; }
         if (hasHeldFailure()) {
-            if (!failureAnnounced) { MenuFeedback.emit(ERROR); failureAnnounced = true; }
             int before = failurePage;
             if (MenuInput.left(input)) failurePage = Math.max(0, failurePage - 1);
             if (MenuInput.right(input)) failurePage = Math.min(pageCount() - 1, failurePage + 1);
             if (before != failurePage) MenuFeedback.emit(NAVIGATE);
-            if (MenuInput.accept(input) || MenuInput.back(input)) {
-                TraceLaunchStatus.clear();
-                TraceRunFailureStatus.clear();
-                MenuFeedback.emit(MenuInput.back(input) ? CANCEL : CONFIRM);
-                finish();
-            }
+            if (MenuInput.accept(input) || MenuInput.back(input)) acknowledge(MenuInput.back(input));
             return;
         }
         if (MenuInput.back(input)) {
@@ -65,6 +78,26 @@ public final class TracePlaybackFeedback {
             launchIssued = true;
             pendingResult = Result.LAUNCH;
         }
+    }
+
+    private void page(int direction) {
+        int before = failurePage;
+        failurePage = Math.clamp(failurePage + direction, 0, pageCount() - 1);
+        if (before != failurePage) MenuFeedback.emit(NAVIGATE);
+    }
+
+    private void acknowledge(boolean cancel) {
+        if (hasHeldFailure()) {
+            TraceLaunchStatus.clear();
+            TraceRunFailureStatus.clear();
+        }
+        MenuFeedback.emit(cancel ? CANCEL : CONFIRM);
+        finish();
+    }
+
+    private void footer(List<MenuChrome.Hint> hints) {
+        footerTargets = MenuChrome.footerLayout(W, null, hints, 0).targets();
+        MenuChrome.footer(font, W, null, hints, controller());
     }
 
     public void render() {
@@ -104,7 +137,8 @@ public final class TracePlaybackFeedback {
         MenuChrome.compact(font, "Replay starts by itself", 29, 130, MenuChrome.DIM);
         MenuChrome.icon(font, MenuChrome.Icon.INFO, 12, 156, MenuChrome.CYAN);
         MenuChrome.compact(font, "During the replay, Tab opens its details.", 23, 156, MenuChrome.MUTED);
-        MenuChrome.footer(font, W, null, List.of(MenuChrome.hint(backHint(), "CANCEL")), controller());
+        footerHasPages = false;
+        footer(List.of(MenuChrome.hint(backHint(), "CANCEL")));
     }
 
     private static String identity(TraceEntry entry) {
@@ -152,7 +186,8 @@ public final class TracePlaybackFeedback {
         if (pages > 1) hints.add(MenuChrome.leftRight(input, "PAGE"));
         // Either key clears the failure and returns to the Playback list with the same row selected.
         hints.add(MenuChrome.hint(confirmHint(), "BACK TO LIST"));
-        MenuChrome.footer(font, W, null, hints, controller());
+        footerHasPages = pages > 1;
+        footer(hints);
     }
 
     private static List<MenuFieldLines.Field> failureFields() {

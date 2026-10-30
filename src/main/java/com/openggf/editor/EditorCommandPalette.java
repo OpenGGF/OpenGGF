@@ -11,6 +11,7 @@ public final class EditorCommandPalette {
     private static final EditorInputHandler.Action[] ACTIONS = EditorInputHandler.Action.values();
     private Runnable playtest;
     private Runnable freshStart;
+    private Runnable exit;
     private List<ExtraCommand> extraCommands = List.of();
     private List<WorkflowCommand> hostCommands = List.of();
     private List<HostCommand> workspaceCommands = List.of();
@@ -59,6 +60,13 @@ public final class EditorCommandPalette {
         this.freshStart = freshStart;
         rebuildExtraCommands();
     }
+
+    /**
+     * The host's way out of the editor (it asks about unsaved work first). The built-in menu lists it
+     * on its front page and at the end of Project; null when the host offers none.
+     */
+    public void setExitAction(Runnable exit) { this.exit = exit; }
+    public Runnable exitAction() { return exit; }
 
     public static EditorCommandPalette forController(LevelEditorController controller) {
         return controller.commandPalette();

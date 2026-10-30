@@ -327,8 +327,8 @@ class TestTimeAttackQuickChat {
                 QuickChatPhrase selected = sector < 0 ? null : QuickChatPhrase.values()[sector];
                 RecordingSceneCanvas expectedRace = new RecordingSceneCanvas(width);
                 RecordingSceneCanvas expectedLobby = new RecordingSceneCanvas(width);
-                new QuickChatRadialMenu().draw(expectedRace, selected, zone, false);
-                new QuickChatRadialMenu().draw(expectedLobby, selected, zone, true);
+                new QuickChatRadialMenu().draw(expectedRace, selected, zone, false, "");
+                new QuickChatRadialMenu().draw(expectedLobby, selected, zone, true, "B/ESC");
                 assertDrawingEquals(expectedRace, race);
                 assertDrawingEquals(expectedLobby, lobby);
                 assertFalse(race.fills.isEmpty());

@@ -65,7 +65,16 @@ frames or icons. Evidence and scoring history:
   `openggf.timeattack.ui.MenuPage`): bold canvas text for titles and the launch
   button, `NameFont` for rows and sentences, `CompactFont` capitals for key caps and
   tags, all measured with the face that draws them. Do not change `NameFont` or the
-  creator contract to make a page fit.
+  creator contract to make a page fit. Their read-only details page (F1, R3 on a pad) carries
+  the title of the page it reads and a DETAILS chip, lists facts in a label column worded as
+  the page draws them (never enum names, raw ids or key instructions), and wraps at spaces
+  without losing a character; a room's details key opens Room details, not a second reader.
+  Narrow footers leave out arrow hints and shortcuts that repeat a row before the action,
+  Details and Back (`MenuPage.fitHints`). Examples follow the scene convention (A, C or Start
+  confirm; B goes back) and name the device pressed last, as Act Practice's `PracticePage` does.
+  Pad caps come from `SceneContext.buttonLabel(button, true)` (Genesis A is the west button, X on
+  Xbox), never fixed Genesis letters; a raw Enter or Escape the player bound to the opposite button
+  follows the binding, so one press never both confirms and goes back.
 - The level editor HUD (`EditorHudTheme`, window-resolution UI units) follows the
   same roles: `EditorHudCanvas` draws and measures text in the case it is given, so
   chips, captions, page titles and prompt labels pass capitals while menu rows,
@@ -73,8 +82,10 @@ frames or icons. Evidence and scoring history:
   (`EditorHudPainter.keycap`) beside labels or in a prompt bar, never letters inside a
   label. Stageplay names its mode in a top-bar chip beside the exit button, as the
   editor's top bar does, and its prompt bar (the shared `promptBar`) keeps the whole width
-  for keys. The editor menu is a captioned command sheet built from the authored
-  `EditorCommandPalette` descriptors (label, group, the shortcut `EditorInputHandler` really
+  for keys. The editor menu opens on a short front page (Resume, Save, the playtests, the
+  level pages, projects and the host's Exit to title, which owns the unsaved-work prompt);
+  its All commands row opens a captioned command sheet, whose Back returns to the front
+  page, built from the authored `EditorCommandPalette` descriptors (label, group, the shortcut `EditorInputHandler` really
   binds, and the editor state in which a shared key reaches it): each command once, held
   controls such as panning left out, and every shown shortcut dispatched through the real
   input path in a test. Host commands keep their group: workspace switches under Editor,

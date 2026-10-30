@@ -10,17 +10,19 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
     private final SonicConfigurationService configuration;
     private final Object previousAspect;
     private final Object previousTestMode;
+    private final Object previousScanlineLimit;
     private boolean closed;
     private com.openggf.audio.AudioManagerInternalAccess.OfflineServiceCadence audioCadence;
 
-    record CallerState(Object aspect, Object testMode) {
+    record CallerState(Object aspect, Object testMode, Object scanlineLimit) {
     }
 
     private TraceCapturePresentationSetup(SonicConfigurationService configuration,
-            Object previousAspect, Object previousTestMode) {
+            Object previousAspect, Object previousTestMode, Object previousScanlineLimit) {
         this.configuration = configuration;
         this.previousAspect = previousAspect;
         this.previousTestMode = previousTestMode;
+        this.previousScanlineLimit = previousScanlineLimit;
     }
 
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
@@ -32,7 +34,8 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         Objects.requireNonNull(configuration, "configuration");
         return new CallerState(
                 configuration.getConfigValue(SonicConfiguration.DISPLAY_ASPECT),
-                configuration.getConfigValue(SonicConfiguration.TEST_MODE_ENABLED));
+                configuration.getConfigValue(SonicConfiguration.TEST_MODE_ENABLED),
+                configuration.getConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT));
     }
 
     static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
@@ -42,7 +45,10 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         Objects.requireNonNull(callerState, "callerState");
         Object previousAspect = callerState.aspect();
         Object previousTestMode = callerState.testMode();
+        Object previousScanlineLimit = callerState.scanlineLimit();
         try {
+            // ROM image comparisons need native dropout even when normal play disables it.
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
             if (configuration.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
                 configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             }
@@ -54,9 +60,9 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
                 throw new IllegalStateException("capture presentation resolved width "
                         + resolvedWidth + " instead of " + dimensions.logicalWidth());
             }
-            return new TraceCapturePresentationSetup(configuration, previousAspect, previousTestMode);
+            return new TraceCapturePresentationSetup(configuration, previousAspect, previousTestMode, previousScanlineLimit);
         } catch (Throwable failure) {
-            try { restore(configuration, previousAspect, previousTestMode); }
+            try { restore(configuration, previousAspect, previousTestMode, previousScanlineLimit); }
             catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
             throw rethrow(failure);
         }
@@ -83,7 +89,7 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         Throwable failure = null;
         try { if (audioCadence != null) audioCadence.close(); }
         catch (Throwable cleanup) { failure = cleanup; }
-        try { restore(configuration, previousAspect, previousTestMode); }
+        try { restore(configuration, previousAspect, previousTestMode, previousScanlineLimit); }
         catch (Throwable cleanup) {
             if (failure == null) failure = cleanup; else failure.addSuppressed(cleanup);
         }
@@ -92,7 +98,10 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
     }
 
     private static void restore(SonicConfigurationService configuration,
-            Object previousAspect, Object previousTestMode) {
+            Object previousAspect, Object previousTestMode, Object previousScanlineLimit) {
+        if (previousScanlineLimit != null) {
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, previousScanlineLimit);
+        }
         if (previousTestMode != null) {
             configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, previousTestMode);
         }

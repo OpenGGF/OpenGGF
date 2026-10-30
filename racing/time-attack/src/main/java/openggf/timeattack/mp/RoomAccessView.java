@@ -46,7 +46,7 @@ public final class RoomAccessView {
     /** Created or cancelled: later presses must not create a second room. */
     private boolean finished;
     private String notice = "";
-    private boolean pad;
+    private MenuPage.Keys keys = MenuPage.Keys.keyboard();
 
     public RoomAccessView(Actions actions, Consumer<MenuCue> cues) {
         this.actions = Objects.requireNonNull(actions, "actions");
@@ -54,7 +54,7 @@ public final class RoomAccessView {
     }
 
     public void update(ViewInput input) {
-        pad = MenuPage.controller(input, pad);
+        keys = MenuPage.Keys.of(input, keys);
         if (finished) return;
         if (editing) {
             switch (password.update(input)) {
@@ -231,12 +231,12 @@ public final class RoomAccessView {
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
             case ACCESS, INVITES -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
-            case PASSWORD -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Set password"));
-            case CREATE -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Create"));
-            case BACK -> hints.add(MenuPage.hint(MenuPage.confirm(pad), "Back"));
+            case PASSWORD -> hints.add(MenuPage.hint(keys.confirm(), "Set password"));
+            case CREATE -> hints.add(MenuPage.hint(keys.confirm(), "Create"));
+            case BACK -> hints.add(MenuPage.hint(keys.confirm(), "Back"));
         }
-        hints.add(MenuPage.hint(MenuPage.back(pad), "Back"));
-        MenuPage.footerWithDetails(canvas, pad, "", MenuPage.TEXT, hints);
+        hints.add(MenuPage.hint(keys.back(), "Back"));
+        MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
     }
 
     private static final int OPTION_H = 2 * NameFont.LINE_HEIGHT + 4;
@@ -249,14 +249,17 @@ public final class RoomAccessView {
         NameFont.draw(canvas, NameFont.fit(detail, canvas.width() - 2 * MenuPage.MARGIN - 12), MenuPage.MARGIN + 6,
                 y + NameFont.LINE_HEIGHT, detailColour);
     }
-    private List<String> detailsText() {
-        return List.of("CREATE ROOM", "Choose who can join before the room opens",
-                privateRoom ? "PRIVATE: Hidden from the room browser" : "PUBLIC: Listed in the room browser",
-                privateRoom ? "PASSWORD: " + Objects.requireNonNullElse(passwordProblem(), "Ready - A to change")
-                        : "PASSWORD: Not needed for a public room",
-                "MEMBERS CAN INVITE: " + (membersCanInvite ? "Everyone in the room can share its code"
-                        : "Only you can share the room's code"),
-                notice, "CREATE ROOM / BACK", "Arrows choose/change. A OK. B back.");
+    /** The page's complete text: each choice and what it means; the password never appears. */
+    private FullTextReader.Text detailsText() {
+        String problem = privateRoom ? passwordProblem() : null;
+        return FullTextReader.Text.of("CREATE ROOM", "Choose who can join before the room opens")
+                .field("Who can join", privateRoom ? "Private. Hidden from the room browser; needs a password"
+                        : "Public. Listed in the room browser")
+                .field("Password", !privateRoom ? "Not needed for a public room"
+                        : problem == null ? "Set. Choose to change it" : problem)
+                .field("Members can invite", membersCanInvite ? "On. Everyone in the room can share its code"
+                        : "Off. Only you can share the room's code")
+                .field("Status", notice);
     }
 
     List<String> detailsVisibleLines() { return reader.visibleLines(); }

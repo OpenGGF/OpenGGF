@@ -1182,8 +1182,16 @@ public class GameLoop {
                 TraceSessionLauncher.active());
     }
 
+    private void updatePlaybackShortcutInput(boolean sceneCapturesText) {
+        com.openggf.game.TitleInputOwnership.routePlayback(currentGameMode,
+                sceneCapturesText || inputHandler.isKeyboardTextCaptured(),
+                () -> playbackDebugManager.handleInput(inputHandler));
+        playbackDebugManager.setObservedMode(currentGameMode);
+    }
+
     private void stepInternalBody() {
         requireInputHandler();
+        boolean sceneCapturesText = modSceneHost.prepareTextInput(inputHandler);
         // VInt_Done bumps V_int_run_count on every V-int (sonic3k.asm:558-559); the
         // carrier counts the iterations no level object clock is bound to service.
         com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).serviceRepresentedVBlank();
@@ -1195,9 +1203,7 @@ public class GameLoop {
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
         }
-        com.openggf.game.TitleInputOwnership.routePlayback(currentGameMode,
-                () -> playbackDebugManager.handleInput(inputHandler));
-        playbackDebugManager.setObservedMode(currentGameMode);
+        updatePlaybackShortcutInput(sceneCapturesText);
 
         if (RewindReleaseRetryCoordinator.consumePendingFrame(liveRewindManager, inputHandler)) return;
         boolean rewindBlocked = isRewindBlocked();
@@ -2284,7 +2290,8 @@ public class GameLoop {
     }
 
     private boolean debugShortcutsEnabled() {
-        return configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+        return configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)
+                && !inputHandler.isKeyboardTextCaptured();
     }
 
     static BonusStageType resolveBonusStageDebugShortcut(InputHandler inputHandler) {

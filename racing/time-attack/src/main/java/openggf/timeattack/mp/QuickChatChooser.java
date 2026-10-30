@@ -131,7 +131,8 @@ public final class QuickChatChooser {
 
     /** Measured name-font rows preserve catalogue punctuation and leave gameplay visible. */
     public HudTextLayout.Panel layout(int width, int height, String zoneName, String closeLabel) {
-        return layoutWithHelp(width, height, zoneName, "QUICK CHAT", "1-8 SEND  " + closeLabel + " CLOSE");
+        return layoutWithHelp(width, height, zoneName, "QUICK CHAT",
+                closeLabel.isEmpty() ? "1-8 SEND" : "1-8 SEND  " + closeLabel + " CLOSE");
     }
 
     HudTextLayout.Panel raceLayout(int width, int height, String zoneName, String keyboardToggle) {
@@ -156,7 +157,7 @@ public final class QuickChatChooser {
     /** The focused row swaps the cyan edge for gold beside its key number, clear of the wording. */
     public void draw(PixelCanvas canvas, String zoneName, String closeLabel) {
         if (isRadial()) {
-            radialMenu.draw(canvas, selected < 0 ? null : QuickChatPhrase.values()[selected], zoneName, true);
+            radialMenu.draw(canvas, selected < 0 ? null : QuickChatPhrase.values()[selected], zoneName, true, closeLabel);
             return;
         }
         draw(canvas, layout(canvas.width(), canvas.height(), zoneName, closeLabel));
@@ -164,7 +165,7 @@ public final class QuickChatChooser {
 
     public void drawRace(PixelCanvas canvas, String zoneName, String keyboardToggle) {
         if (isRadial()) {
-            radialMenu.draw(canvas, selected < 0 ? null : QuickChatPhrase.values()[selected], zoneName, false);
+            radialMenu.draw(canvas, selected < 0 ? null : QuickChatPhrase.values()[selected], zoneName, false, "");
             return;
         }
         draw(canvas, raceLayout(canvas.width(), canvas.height(), zoneName, keyboardToggle));

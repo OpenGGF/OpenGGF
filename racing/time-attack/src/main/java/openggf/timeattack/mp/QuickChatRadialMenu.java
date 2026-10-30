@@ -36,8 +36,12 @@ public final class QuickChatRadialMenu {
 
     public QuickChatRadialMenu() { }
 
-    /** {@code selected} is null while the stick is centred: nothing is highlighted or implied. */
-    public void draw(PixelCanvas canvas, QuickChatPhrase selected, String zoneName, boolean lobby) {
+    /**
+     * {@code selected} is null while the stick is centred: nothing is highlighted or implied.
+     * {@code closeLabel} names the lobby's back button on this pad (empty in a race, where only the
+     * stick press closes).
+     */
+    public void draw(PixelCanvas canvas, QuickChatPhrase selected, String zoneName, boolean lobby, String closeLabel) {
         int chosen = selected == null ? -1 : selected.ordinal();
         int panelHeight = 4 + HudTextLayout.NAME_LINE_HEIGHT + HudTextLayout.LINE_HEIGHT;
         int top = Math.max(2, (canvas.height() - 2 * (OUTER + POP) - 4 - panelHeight) / 2);
@@ -71,7 +75,10 @@ public final class QuickChatRadialMenu {
                 ? HudTextLayout.Line.named("", "Aim the right stick", HudTextLayout.MUTED, "", HudTextLayout.MUTED)
                 : HudTextLayout.Line.named("", EnglishQuickChat.text(selected, zoneName),
                         HudTextLayout.WHITE, "", HudTextLayout.GOLD);
-        String hint = lobby ? "RS AIM  RT SEND  B / RS CLICK CLOSE" : "RS AIM  RT SEND  RS CLICK CLOSE";
+        // Stick and trigger in words every pad family shares; in the lobby the pad's back button also closes.
+        String hint = lobby && !closeLabel.isEmpty()
+                ? "R STICK AIM  R TRIGGER SEND  " + closeLabel.toUpperCase(java.util.Locale.ROOT) + " / R3 CLOSE"
+                : "R STICK AIM  R TRIGGER SEND  R3 CLOSE";
         HudTextLayout.Panel panel = HudTextLayout.panelAt(0, cy + OUTER + POP + 4, canvas.width() - 8,
                 List.of(preview, new HudTextLayout.Line(hint, HudTextLayout.MUTED)),
                 chosen < 0 ? HudTextLayout.ACCENT : HudTextLayout.GOLD);

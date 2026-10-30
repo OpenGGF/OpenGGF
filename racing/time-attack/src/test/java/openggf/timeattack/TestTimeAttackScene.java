@@ -664,7 +664,7 @@ class TestTimeAttackScene {
                 frame -> { if (frame.down()) press(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); },
                 canvas -> scene.draw(null, canvas), scene::detailsVisibleLines, scene::detailsFirstLine);
         assertTrue(read.contains(openggf.timeattack.ui.FullTextReader.readable(diagnostic)), read);
-        assertTrue(read.contains("TRACK:"));
+        assertTrue(read.contains("GameSonic 2") && read.contains("Track") && !read.contains("TRACK:"), read); // labels and values as the menu shows them
         press(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertTrue(launched.isEmpty());
         assertTrue(exits.isEmpty());

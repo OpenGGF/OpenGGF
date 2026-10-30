@@ -216,6 +216,37 @@ class TestMasterTitlePlaybackBrowser {
         screen.cleanup();
     }
 
+    @Test
+    void playbackMouseUsesTheCentredPageAndForwardsEachWheelNotchOnce() throws Exception {
+        for (int width : new int[] {320, 400}) {
+            var screen = screen(SonicConfigurationService.createStandalone(directory), library());
+            screen.setViewportWidth(width);
+            screen.setPointerMapperForTest((x, y) -> new int[] {x.intValue(), y.intValue(), 1});
+            assertTrue(screen.tryOpenUserRecordingMenuForSelectedGame());
+            finishLoad(screen);
+            var input = new InputHandler();
+            int left = (width - 320) / 2;
+            input.handleMouseMove(left + 20, 85); // second native list row
+            screen.update(input); input.update();
+            assertEquals(directory.resolve("trace"), screen.playbackBrowserForTest().selectedEntry().path());
+            com.openggf.control.MouseWheel.of(input).scroll(1);
+            screen.update(input); input.update();
+            assertEquals(PlaybackEntry.Kind.RECORDING, screen.playbackBrowserForTest().selectedEntry().kind(),
+                    "the title must forward the notch it already consumed");
+            assertEquals(0, com.openggf.control.MouseWheel.of(input).takeNotches(), "a notch has one owner");
+            if (left > 0) {
+                input.handleMouseMove(10, 100); input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
+                screen.update(input); input.update();
+                assertNotNull(screen.playbackBrowserForTest(), "the wide-page gutter has no Back target");
+                input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE); screen.update(input); input.update();
+            }
+            input.handleMouseMove(left + 20, 100); input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
+            screen.update(input); input.update();
+            assertNull(screen.playbackBrowserForTest(), "right click inside the native page goes Back");
+            screen.cleanup();
+        }
+    }
+
     private MasterTitleScreen screen(SonicConfigurationService config, PlaybackLibrary library) throws Exception {
         var screen = new MasterTitleScreen(config);
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
