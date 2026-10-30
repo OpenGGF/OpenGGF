@@ -28,6 +28,8 @@ Unreleased. The earlier development themes remain in
   keyboard resume remaps retired paused taps before both ordinary and controlled
   gameplay, and fixed menu/text controls keep physical authority during replay. This
   does not connect independent live scheduling or change audio/capture cadence.
+- **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
+  a falling player airborne until the native landing window is reached.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
@@ -66,6 +68,9 @@ Unreleased. The earlier development themes remain in
   rows wrap and focused overflow pages without ellipses. Built-in menus, editor
   sheets and bundled Time Attack pages expose complete long text through paging
   or an advertised read-only reader, including paths, errors and retained chat.
+  Added and changed menu-overhaul wording now has current drafts in every full
+  catalogue. Playback facts and import guidance use complete ICU messages;
+  special-stage playback labels come from metadata rather than translated text.
 
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
@@ -1464,7 +1469,10 @@ its original drawing priority.
 - **Live frame timing preparation:** Engine now separates its live advance phase
   from scene presentation, retaining fade-before-update ordering, modal input
   acknowledgment and one outer audio packet. Frame-step and modal decisions
-  survive input acknowledgment through capture. This extraction preserves the
+  survive input acknowledgment through capture. Ending background scroll and its
+  level clock advance with admitted ending updates rather than scene drawing,
+  including updates without pictures and repeated pictures of a held state.
+  This extraction preserves the
   current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
 
 - **Stock parity measurement foundation:** A versioned, explicitly partial

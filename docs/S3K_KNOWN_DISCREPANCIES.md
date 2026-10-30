@@ -9,6 +9,11 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ floor-launcher landing correction (2026-10-30):** the bounded
+[original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)
+repairs the object's zero-distance top-contact selection using its native
+helper semantics. It adds no accepted deviation or whole-act/campaign claim.
+
 **DEZ conveyor ownership correction (2026-10-30):** the bounded
 [original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
 repairs moving-pad standing-bit identity and its native airborne return. It adds

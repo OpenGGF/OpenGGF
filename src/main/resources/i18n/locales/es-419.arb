@@ -356,5 +356,213 @@
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
+  },
+  "editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml": "Agregar mosaicos desde un PNG y un YAML de hoja",
+  "@editor.menu.editor_project_workspace.add_tiles_from_a_png_and_sheet_yaml": {
+    "x-openggf": {
+      "sourceHash": "5c76ad9afc0ad10fcfc30bab1caa62258bdb99d5d7fe3a387e7111d34408db9c",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.mod_manager": "Administrador de mods",
+  "@hub.ui.mod_manager": {
+    "x-openggf": {
+      "sourceHash": "850b020c338ea446e5a0d2272612066f4d435a7cfe3c51b0fab78c1dd858494a",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.or_set_its_path_in_settings_files": "O define su ruta en Configuración > Archivos",
+  "@hub.ui.or_set_its_path_in_settings_files": {
+    "x-openggf": {
+      "sourceHash": "7b4ec3ceae720d2ff44626c41379f10901b9cdaeda24e57b1cd0870d0258a2a3",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "hub.ui.playback_browser_advanced_settings_and_tools": "Explorador de reproducción, configuración avanzada y herramientas",
+  "@hub.ui.playback_browser_advanced_settings_and_tools": {
+    "x-openggf": {
+      "sourceHash": "fdab170e130ac267d2901c2639fb49bcad1ce904579ab25ee36b3a742fbab014",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.contentimportscreen.enter": "Enter",
+  "@menu.contentimportscreen.enter": {
+    "x-openggf": {
+      "sourceHash": "769623e491d62af338a1652820e91522f402f3a9fe33852098c4bf8b02ebc316",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings": "Elige la carpeta de repeticiones de trazas en la configuración avanzada.",
+  "@menu.playbackbrowser.choose_the_trace_replay_folder_in_advanced_settings": {
+    "x-openggf": {
+      "sourceHash": "bde7c2fbf4f5d3897dd9580d41f45ba5a647b18cd02105da43ef8c1d2940bdb7",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in": "Pon archivos .bk2 en la carpeta de grabaciones o elige uno en la configuración avanzada.",
+  "@menu.playbackbrowser.put_bk2_files_in_the_recordings_folder_or_choose_one_in": {
+    "x-openggf": {
+      "sourceHash": "449e9d30a9b79afd24160cb39e836ae791858104b5100868005662cea6af34b4",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in": "Graba mientras juegas o elige una carpeta de repeticiones de trazas en la configuración avanzada.",
+  "@menu.playbackbrowser.record_while_playing_or_choose_a_trace_replay_folder_in": {
+    "x-openggf": {
+      "sourceHash": "cff5fb02e97f5ea1e4e7e48976a96623cd0bbc8691169a99280c081bdb27b5e6",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key": "Graba mientras juegas para agregar una aquí. Define la tecla de grabación en la configuración avanzada.",
+  "@menu.playbackbrowser.record_while_playing_to_add_one_here_set_the_record_key": {
+    "x-openggf": {
+      "sourceHash": "f2e209fdaae297d3eae66a75884b121dc5fe4198f32a9eb434e0382b6cb26296",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "menu.text.press_key_caps": "PRESIONA UNA TECLA",
+  "@menu.text.press_key_caps": {
+    "x-openggf": {
+      "sourceHash": "9a094c26518ce50fefb149d089ef3437639b14eae6d018723282b92de9e31e5d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.group.settings_file": "ARCHIVO DE CONFIGURACIÓN",
+  "@settings.group.settings_file": {
+    "x-openggf": {
+      "sourceHash": "27191df376a59eacbebd238e658a4221eb06977b88870fbab687163e7cccedba",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_codec.label": "Códec de video",
+  "@settings.key.capture_codec.label": {
+    "x-openggf": {
+      "sourceHash": "404e373761e6b8b08e92401f13ca68fee8d98f4f696fed5069ae6e8e2e6aa8ea",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_fps.help": "Tasa de fotogramas de los videos grabados.",
+  "@settings.key.capture_fps.help": {
+    "x-openggf": {
+      "sourceHash": "358799a6c286483c4b220b99068b3f8314b78330ec3ac1e87fbf809afa44519b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_fps.label": "Tasa de fotogramas de video",
+  "@settings.key.capture_fps.label": {
+    "x-openggf": {
+      "sourceHash": "be99d6e218051540eea6bd29acfa28bf32da7d4392bc1f0a879413dc58f7f2f6",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_output_dir.help": "Carpeta de los videos grabados.",
+  "@settings.key.capture_output_dir.help": {
+    "x-openggf": {
+      "sourceHash": "c89365927afa8a75230146f01e39c7a9a61f656debb1a93c2b2cebb695892626",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_scale.help": "Escalado de píxeles enteros aplicado a los videos grabados.",
+  "@settings.key.capture_scale.help": {
+    "x-openggf": {
+      "sourceHash": "4da56dbb61b383a09de7dfcdf3c5bbe18a7934485f1abb2021dcd330b273fc5b",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_scale.label": "Escala de video",
+  "@settings.key.capture_scale.label": {
+    "x-openggf": {
+      "sourceHash": "91c2efbc44663babb6671bf3c2b007f1c75db418e2efb4fcccc2df2e5c773a22",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_toggle_key.help": "Inicia o detiene la grabación en video de la partida.",
+  "@settings.key.capture_toggle_key.help": {
+    "x-openggf": {
+      "sourceHash": "2b06d233c929c08a6daee983ae033cf1ed46fc2b0b5870a3ada3ef6751a270d2",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.capture_toggle_key.label": "Atajo de grabación de video",
+  "@settings.key.capture_toggle_key.label": {
+    "x-openggf": {
+      "sourceHash": "005baad05b4910982aebce33929f7a3882ab958d30ae1282291b59ac8ef14c66",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.config_preserve_explicit_defaults.help": "Al convertir un archivo de configuración antiguo, conservar los ajustes escritos con su valor predeterminado.",
+  "@settings.key.config_preserve_explicit_defaults.help": {
+    "x-openggf": {
+      "sourceHash": "6eb45428be6e961471b00e44a74aed9e32f939f5b26678f4720747fe24e3613e",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.live_rewind_determinism_audit.help": "Vuelve a simular cada segmento de rebobinado y registra la primera diferencia. Duplica el costo por fotograma.",
+  "@settings.key.live_rewind_determinism_audit.help": {
+    "x-openggf": {
+      "sourceHash": "207b3e8e6aa4f3b9ead51b05959214ec615fa9b4fcae2cebe1d2805cf94c9a8e",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.live_rewind_key.help": "Mantener para rebobinar durante la partida; el botón de hombro izquierdo del control también rebobina.",
+  "@settings.key.live_rewind_key.help": {
+    "x-openggf": {
+      "sourceHash": "f2ba99a088cdeacdfcb3010ae3cc36943617d27040a8029fa183297ccfdd6b54",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.live_rewind_vhs_tear_bands.help": "Agrega las bandas de desgarro móviles al efecto VHS.",
+  "@settings.key.live_rewind_vhs_tear_bands.help": {
+    "x-openggf": {
+      "sourceHash": "1e9f6095fde253f79ad0200899d2c9783d8346324f6935c4fd6ab8c758b39c7d",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.sidekick_character_code.help": "El compañero controlado por la computadora en un inicio directo; déjalo vacío para ninguno.",
+  "@settings.key.sidekick_character_code.help": {
+    "x-openggf": {
+      "sourceHash": "c7d275b93ce5c67f5db9f1cd0492785d31dc0c92db6e27cfa7c49cef006ac602",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.key.start.help": "Start del jugador 1, la pausa del propio juego. Start del control usa la pausa del motor.",
+  "@settings.key.start.help": {
+    "x-openggf": {
+      "sourceHash": "0791504d4195441770b12bdf5cd51f63fdba6ac744eb2883beb9c371057db140",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.screen.audio_mux_arguments_summary": "Los argumentos del multiplexor de sonido; déjalos vacíos para guardar el video sin sonido.",
+  "@settings.screen.audio_mux_arguments_summary": {
+    "x-openggf": {
+      "sourceHash": "c64b38ad7da558df3bb0fcb6a02d39ac264b3f1186f00842cfa52ce7b7e36364",
+      "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
   }
 }

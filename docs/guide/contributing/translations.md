@@ -110,6 +110,15 @@ and translation hashes; it must represent a review you actually performed. Editi
 reviewed text invalidates approval. Machine origin is preserved. Critical legal
 wording uses canonical English until the exact translation has been reviewed.
 Current machine drafts remain usable with visible quality status in the picker.
+Translate critical warnings as drafts too, leaving `reviewed: false`: the runtime
+keeps current English until exact human review. Copying English into a warning
+does not complete its translation. The canonical `legal.body` is retained in
+English pending human legal review.
+
+If a caller joins your translated prefix onto an English sentence or parses a
+translated word as data, report the caller. Keep numbers and source identity in
+semantic fields, then format a complete ICU message with named arguments. Do not
+preserve an English sentinel in a translated label to make parsing work.
 
 ## Fonts and initial coverage
 
