@@ -139,6 +139,18 @@ class TestSpriteManagerDebugEmeraldGrant {
     }
 
     @Test
+    void protectedSessionSuppressesPhysicalEmeraldGrant() {
+        EngineServices.current().configuration().setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW.GLFW_KEY_E, GLFW.GLFW_PRESS);
+        GameServices.sprites().setLiveDebugInputSuppressed(true);
+
+        GameServices.sprites().update(input);
+
+        assertEquals(0, GameServices.gameState().getEmeraldCount());
+    }
+
+    @Test
     void shiftedEmeraldKeyGrantsOnlySuperEmeralds() {
         EngineServices.current().configuration().setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
         InputHandler input = new InputHandler();

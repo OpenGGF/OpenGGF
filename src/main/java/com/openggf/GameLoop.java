@@ -1261,7 +1261,7 @@ public class GameLoop {
         }
 
         if (editorMode.consumeEditorFrame(currentGameMode, inputHandler, this::isPaused,
-                () -> runPolicy().editorEntry(), () -> configService.getBoolean(SonicConfiguration.EDITOR_ENABLED))) {
+                () -> runPolicy().editorEntry() && !protectedInputSession(), () -> configService.getBoolean(SonicConfiguration.EDITOR_ENABLED))) {
             return;
         }
 
@@ -1343,9 +1343,7 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        GameLoopDebugShortcuts.updateInput(hostedRuns,
-                debugOverlayManager, () -> inputHandler,
-                debugShortcutsEnabled, configService);
+        updateDebugShortcutInput(debugShortcutsEnabled);
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
             if (currentGameMode == GameMode.SPECIAL_STAGE) {
@@ -1354,7 +1352,7 @@ public class GameLoop {
             handleSpecialStageDebugKey();
         }
 
-        BonusStageType debugBonusType = debugShortcutsEnabled
+        BonusStageType debugBonusType = debugShortcutsEnabled && !protectedInputSession()
                 ? resolveBonusStageDebugShortcut(inputHandler)
                 : BonusStageType.NONE;
         if (debugBonusType != BonusStageType.NONE) {
@@ -1722,7 +1720,7 @@ public class GameLoop {
             return true;
         }
 
-        boolean freezeForArtViewer = debugShortcutsEnabled()
+        boolean freezeForArtViewer = debugShortcutsEnabled() && !protectedInputSession()
                 && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
         // Freeze level updates during special/bonus stage entry transitions, an
         // ending transition, or a pending zone/act fade (ObjB2 transition parity).
@@ -2270,8 +2268,25 @@ public class GameLoop {
         }
     }
 
+    private void updateDebugShortcutInput(boolean enabled) {
+        boolean protectedSession = protectedInputSession();
+        if (spriteManager != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.suppressLiveDebugInput(
+                    spriteManager, protectedSession);
+        }
+        GameLoopDebugShortcuts.updateInput(hostedRuns, debugOverlayManager, () -> inputHandler,
+                enabled, !protectedSession, configService);
+    }
+
     private boolean isUnmodifiedDebugKeyPressed(int keyCode) {
-        return debugShortcutsEnabled() && inputHandler.isKeyPressedWithoutModifiers(keyCode);
+        return debugShortcutsEnabled() && !protectedInputSession()
+                && inputHandler.isKeyPressedWithoutModifiers(keyCode);
+    }
+
+    private boolean protectedInputSession() {
+        return TraceSessionLauncher.active() != null
+                || playbackDebugManager.hasActiveOrScheduledSession()
+                || userRecordingSessionLauncher.hasActiveRecordingSession();
     }
 
     private boolean debugShortcutsEnabled() {
