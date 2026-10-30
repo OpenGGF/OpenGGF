@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+DEZ turbine terrain preparation (2026-10-30): the [Act1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#turbine-terrain-preparation-after-the-12000-row-prefix--2026-10-30)
+adds P1/P2 ceiling contacts at320/800, controls and controller recreation/forward
+replay. The original-input13-field prefix reaches12630 rows; the bounded15-field
+observer reaches its next mismatch at13251. The gravity-puzzle landing width,
+Act2 boundary and wider route/configuration/lifecycle products remain open.
+
 AIZ foreground plant visibility (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#foreground-plant-visibility-2026-10-29) adds projected whole-object culling, partial visibility and variant/viewport edges, with a reproduced baseline Sonic+Tails sprite dropout. The three culling cases and 192 feature/API cases pass with no skips; the corrected positioned capture restores the sprite with unchanged recorded state. Final focused/guard runs retain only the matched pre-existing HCZ fan-reference coverage failure described in the linked record. The optional shared scanline budget is a presentation preference; native pixel parity, broader routes/donors/teams and fresh whole-world rewind coverage remain open.
 
 DEZ Spikebonker creation (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29) adds native-source creation, first companion contact and actual recreation/forward checks. The cold witness uses 200 original Sonic+Tails inputs at native320 with no donor; wider route/configuration obligations and Act 2 incoming qualification remain open. The [shared Act 2 note](../architecture/validation/levels/s3k-dez-act2.md#shared-spikebonker-creation-maintenance--2026-10-29) records that inherited scope.
