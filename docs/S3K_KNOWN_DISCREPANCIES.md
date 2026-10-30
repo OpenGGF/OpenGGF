@@ -9,6 +9,11 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ conveyor ownership correction (2026-10-30):** the bounded
+[original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
+repairs moving-pad standing-bit identity and its native airborne return. It adds
+no accepted ROM deviation; whole-act and campaign parity remain unqualified.
+
 **Fresh-entry focus correction (2026-10-28):** the bounded
 [salvage increment](architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
 restores `Get_LevelSizeStart`'s `$B0` focus-word addition for its selected entries,
