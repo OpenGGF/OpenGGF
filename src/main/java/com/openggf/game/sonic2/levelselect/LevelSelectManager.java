@@ -20,6 +20,8 @@ import java.util.logging.Logger;
 import static org.lwjgl.opengl.GL11.glClearColor;
 import com.openggf.game.GameServices;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 2 Level Select screen.
  *
@@ -222,13 +224,13 @@ public class LevelSelectManager implements LevelSelectProvider {
         }
 
         // Handle start/jump to select
-        if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
+        if (nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept()) {
             handleSelect();
         }
 
         // A button adds 16 to sound test value (like original game)
         // We'll use the 'A' key for this
-        if (input.isKeyPressed(configuration().getInt(SonicConfiguration.TEST))) {
+        if (nativeMenuKeyPressed(input, configuration().getInt(SonicConfiguration.TEST))) {
             if (selectedIndex == LevelSelectConstants.MENU_ENTRY_COUNT - 1) { // Sound test
                 soundTestValue = (soundTestValue + 16) & 0x7F;
             }

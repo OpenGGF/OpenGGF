@@ -2977,6 +2977,24 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		glColorMask(true, true, true, true);
 
+		FrameAdvance frame = advanceFrame();
+		renderAdvancedFrame(frame, performanceOverlayEnabled);
+
+		profiler.endFrame();
+		overlayStateReady = false;
+	}
+
+	/**
+	 * Advances the existing live outer frame without drawing it. This remains one
+	 * host input pass and one audio presentation, including zero/multiple native
+	 * iterations owned by gameplay pacing, trace playback or recording.
+	 *
+	 * <p>Called once by displayFrame(), after its GL preparation and inside the mod
+	 * abort boundary. It is not yet a fixed simulation tick: input acknowledgment,
+	 * audio duration and the delegated draw owners still require coordinated changes
+	 * before zero or multiple calls per picture are safe.
+	 */
+	FrameAdvance advanceFrame() {
 		// Update fade via unified UI render pipeline — process fade state first so
 		// that callbacks (e.g. credits transition flags) are available to step()
 		// in the same frame, preventing 1-frame gaps where the overlay would drop.
@@ -2989,23 +3007,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		profiler.beginSection("update");
 		contentImportWindow.update();
 		processDisplayShaderPackRescan();
-		handleLiveCaptureShortcut();
-		liveCaptureFailureReporter.observe(liveCaptureController);
-		boolean frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
-				&& inputHandler != null
-				&& inputHandler.isKeyPressed(
-						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
-		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
-				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
-				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
-				this::updateDisplayShaderInput,
-				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
-				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
-		if (!displayShaderPickerHandledInput) {
-			update();
-		} else if (inputHandler != null) {
-			// Modal picker frames skip GameLoop.step(), so advance key edges here.
-			inputHandler.update();
+		boolean frameStepPresentation;
+		boolean displayShaderPickerHandledInput;
+		try (var hostInput = com.openggf.control.InputHandlerInternalAccess.openHostInputPass(inputHandler)) {
+			inputHandler.refreshLogicalSnapshot();
+			handleLiveCaptureShortcut();
+			liveCaptureFailureReporter.observe(liveCaptureController);
+			frameStepPresentation = gameLoop != null && gameLoop.isUserPaused()
+					&& inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
+			displayShaderPickerHandledInput = routeDisplayInput();
+			if (displayShaderPickerHandledInput) inputHandler.update();
+			else hostInput.handoff(this::update);
 		}
 		if (gameLoop != null) {
 			presentOuterAudioFrame(gameLoop,
@@ -3013,6 +3025,25 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 		profiler.endSection("update");
 
+		return new FrameAdvance(uiPipeline, displayShaderPickerHandledInput, frameStepPresentation);
+	}
+
+	private boolean routeDisplayInput() {
+		return com.openggf.game.TitleInputOwnership.routeDisplay(
+				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
+				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
+				this::updateDisplayShaderInput,
+				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
+				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
+	}
+
+	/** Decisions sampled before input acknowledgment, retained through live capture. */
+	record FrameAdvance(com.openggf.graphics.pipeline.UiRenderPipeline uiPipeline,
+			boolean displayInputConsumed, boolean frameStepRequested) { }
+
+	/** Presents the advanced frame; delegated draw paths are not yet repeat-safe. */
+	private void renderAdvancedFrame(FrameAdvance frame, boolean performanceOverlayEnabled) {
+		var uiPipeline = frame.uiPipeline();
 		boolean userRecordingSceneSuppressed = gameLoop != null
 				&& gameLoop.shouldSuppressUserRecordingSceneRendering();
 		boolean performanceOverlayVisible = shouldRenderPerformanceOverlay(
@@ -3156,16 +3187,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// F12 screenshot capture (after all rendering is complete) is the middle
 		// callback: capture pixels first, then screenshot, then window-only REC.
 		LiveCapturePresentationState presentationState = resolveLiveCapturePresentationState(
-				displayShaderPickerHandledInput, userPaused, frameStepPresentation,
+				frame.displayInputConsumed(), userPaused, frame.frameStepRequested(),
 				gameLoop != null && gameLoop.liveRewindEffectIntensity() > 0.0f);
 		presentLiveCaptureFrame(getCurrentGameMode(), presentationState,
 				() -> liveCapturePresentation.present(currentCaptureViewport(),
 						this::captureScreenshotIfRequested,
 						this::renderLiveCaptureIndicatorIfActive));
 		liveCaptureFailureReporter.observe(liveCaptureController);
-
-		profiler.endFrame();
-		overlayStateReady = false;
 	}
 
 	private void finishScenePass(boolean sceneSuppressed) {
