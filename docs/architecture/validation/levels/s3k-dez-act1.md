@@ -1074,3 +1074,28 @@ record owns actual commands, outcomes and the separate 15+10-field diagnostic.
 Inherited slot differences remain unqualified; Act2 load18670, whole-act/campaign,
 full-route rewind, alternate configuration breadth and pixels/audio remain open.
 Shared-algorithm broad smoke and integration remain lead-owned.
+
+## Original-input camera/lag frontier — 2026-10-30
+
+The [bounded continuation record](../../../status/trace-frontier-log.md#2026-10-30--dez-original-input-camera-and-lag-frontier-at-row-16448)
+continues exact candidate `f45d22af34669d6cf16b29338ba5c65f8b03b543`.
+`TestS3kDezColdRoutes#coldActOnePreLagCameraFrontierMatchesNative` retains
+rows0–16447, comparing13 main/camera/level-clock fields and ten companion fields
+from the fresh native320 Sonic+CPU Tails load with original BK2 inputs. The older
+bounds remain independent. The temporary observer compares15+10 fields and
+continues20 diagnostic rows after the first mismatch; its success status means
+observation completed, not that its mismatching tail passed parity.
+
+The first mismatch at16448 is camera X; both players' sampled motion still
+matches. At16449 native gameplay is held while V-int advances and the cold
+engine driver runs another gameplay iteration. This is a shared timing/sampling
+frontier, so no DEZ-local or shared runtime correction is made. The linked
+record owns the fresh native callbacks, exact row/field extents, commands,
+outcomes and clocks. No fixture expectation drives gameplay or scheduling.
+
+This leaf's parent candidate `f45d22af3` (based on `789390d66`) remains pending
+lead-owned broad qualification/integration. This leaf runs only the bounded prefix and four S3K
+anchors. Act2 load18670, whole-act/campaign parity, complete SST allocation,
+full-route rewind, other viewports/donors/characters/teams and native
+animation/pixels/audio remain unqualified. The inherited238 earlier attracted-ring
+slot differences are not reclassified or repaired by this continuation.

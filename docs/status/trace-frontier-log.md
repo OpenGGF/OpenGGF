@@ -122144,3 +122144,247 @@ The change-based selection is inspected with
 It selects all smoke categories because this is a shared owner. No broad smoke,
 release full suite, integration, push or PR is run by this leaf. Lead-owned broad
 smoke and integration remain pending; local focused evidence does not replace them.
+
+## 2026-10-30 — DEZ original-input camera and lag frontier at row 16448
+
+Implementation leaf `t3-a27d9b49`, branch `continue-dez-replay`, reconciles its
+initially clean provisioned tip `0dcee1fe0` to exact requested candidate
+`f45d22af34669d6cf16b29338ba5c65f8b03b543`, whose parent is
+`789390d66486758125bc9db94b4c0061c4324f5c`. No extra worktree, child, lead-owned
+checkout, integration, push or PR belongs to this leaf. The parent candidate's
+shared RingManager correction remains pending lead-owned broad smoke and
+integration. This continuation neither repeats nor substitutes for that work.
+
+### Verified identities and cold measurement
+
+Read the original absolute ROM files from the task-supplied `ROM_DIR`, the
+original project directory, without copying, renaming or making ROM links.
+Independent CRC32/SHA-1 agree with S1 REV01 `AFE05EEE` /
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, S2 REV01 `7B905383` /
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, and locked S3&K `63522553` /
+`cfbf98c36c776677290a872547ac47c53d2761d6`.
+
+| Original input or fixture | SHA-256 |
+| --- | --- |
+| `s3k-sonic-tails-complete-emeralds.bk2` | `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0` |
+| BK2 `Input Log.txt` | `f2afebee9af2b389d27d3433a7106cf6718769f34c5e8bde78e93bc22d34e832` |
+| BK2 `SyncSettings.json` | `e6d06a610d482a3269791558540bd1c01b85090c4bf947e1bd95d70a9ecdd313` |
+| `ssz/physics.csv.gz` | `a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4` |
+| `ssz/aux_state.jsonl.gz` | `beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059` |
+| `ssz/metadata.json` | `f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1` |
+| `ssz/hardware_timing.jsonl` | `8939526c9b89e0133258a61b996194aea829d8cd3940d97355ea1a63d24bae19` |
+
+The input log is12408466 bytes,539492 input rows. Parsing the original LogKey
+and every P2 field gives only `........`, zero active P2 inputs. Native execution
+independently rejects `P2Active`, clears controller state, then applies the
+original P1/Power/Reset fields and original sync settings on every advance.
+The CPU companion's logical input is distinct from absent movie P2 input.
+Metadata identifies `ssz` as zone11/DEZ, act1, movie offset468982. No fixture,
+metadata, input or expectation changes are made.
+
+Pinned skdisasm is `8b2cf3c4178f2382f844da67798de4befc50c5e0`, S1 disassembly
+`28872a46e2d4c94c5c4818cbd3c04e6eb17edb67`, S2 disassembly
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`, and TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427`. Native uses the existing original
+BizHawk2.11/GPGX installation, from power-on, with no state load or RAM write.
+
+The temporary Java observer runs the existing fresh-level-start native320
+Sonic+CPU Tails inlet and original BK2. Each completed row separately asserts
+original input, `GAMEPLAY_FRAME` admission, one driver-count increment and one
+movie-cursor increment. Fixture physics/aux/bootstrap and timing remain
+comparison-only; this cold observer installs no fixture timing/lag schedule.
+It emits completed post-step states, not an upcoming-row callback labelled as
+completed. Main15 columns are9,10,11,12,13,18,19,4,2,3,5,15,16,14,20;
+P2 ten columns are26,27,28,29,30,35,36,32,33,37. Values are parsed as hex using
+the existing field order. No gameplay hydration, tolerances, fitted constants,
+fixture/frame/zone predicates or engine hardware simulation is introduced.
+
+### First disagreement and stop boundary
+
+The engine completes16469 rows0–16468, including20 diagnostic rows after the
+first mismatch. Main15+P2 ten match through16447:411200 scalar comparisons.
+P2's ten fields independently match through16448:164490 comparisons. Row16448
+first differs only in main camera X, fixture `$354E` versus engine `$3554`;
+P1 X/Y `$35F4,$02EF`, its speeds/fractions, rings131, gameplay clock `$4041`,
+and all ten companion fields still agree. At16449 P1 X first differs
+`$35F4` versus `$35FB`, P2 X `$35C0` versus `$35C6`, with both fractions and
+later motion following the extra gameplay iteration. The native fixture's
+Level clock holds `$4041`, V-int increases `$6180` to `$6181`, and lag becomes1;
+the cold engine advances gameplay to `$4042`. Across the observed tail there
+are140 main-field and94 P2-field scalar differences. These are diagnostic
+mismatches, not passing parity just because the observer's JUnit case exits0.
+
+| Completed row | Original zero-based movie input | Completed emulator frame | CSV frame | Level clock | V-int low word | Lag | Native camera X |
+| --- | ---: | ---: | --- | --- | --- | ---: | --- |
+| 16447 | 485429 | 485430 | `$403F` | `$4040` | `$617F` | 0 | `$354E` |
+| 16448 | 485430 | 485431 | `$4040` | `$4041` | `$6180` | 0 | `$354E` |
+| 16449 | 485431 | 485432 | `$4041` | `$4041` | `$6181` | 1 | `$3554` |
+| 16450 | 485432 | 485433 | `$4042` | `$4042` | `$6182` | 0 | `$355B` |
+
+Fresh native replay completes485451 original inputs and16469 DEZ rows. All
+247035 main and164690 companion fields match the fixture exactly,411725 total;
+normalized main/P2 SHA-256 are
+`1d4b43c1a6dd28e244517fe556397968263f8e956c023191a9a757b5795d5436` /
+`9ac1a801c7bbfb9b0b8a4b0b449f8ebc78b8b717e7ffbea7c2573e31f74c64aa`.
+
+Callbacks registered only for the decisive window16440–16468 show one P1
+`$10C7E` and one P2 `$138E4` dispatch at16448, but no `Process_Sprites` return
+`$6540`, camera entry `$6548` or camera return `$654E` on that completed row.
+The row16449 V-int entry `$584` sees `V_int_routine=0`, Level `$4041`, V-int
+`$6180` and saved return PC `$0001ABE8`. That PC is `Animate_Sprite`, whose
+original bytes begin `70 00 10 28 00 20 B0 28 00 21 67 0C`. The native CPU has
+not completed the object pass. `VInt_0_Main` at `$608` increments lag0 to1;
+`VInt_Done` at `$5DC` increments V-int. Row16449 then returns from the same
+object pass at `$6540`, enters camera at `$6548` with X `$354E`, and returns
+at `$654E` with X `$3554`. Neither player gate nor a new `$653A` object-pass
+entry executes on16449. Both resume on16450 with gameplay clock `$4042`.
+This reproduces the decisive trajectory and phase ordering rather than
+inferring lag solely from CSV counters.
+
+Owning source: `LevelLoop (sonic3k.asm:7916-7932)` places `Process_Sprites`
+before `DeformBgLayer`; `Process_Sprites (sonic3k.asm:36005-36039)` owns the
+serial slot dispatch; `Animate_Sprite (sonic3k.asm:36197-36204)` names the
+interrupted routine; `VInt_0_Main (sonic3k.asm:591-604)` owns lag counting;
+`VInt_Done (sonic3k.asm:558-561)` owns V-int counting. Original ROM bytes at
+`$653A` are `4E B9 00 01 AA DA`, at `$6548` are `4E B9 00 01 BF B0`, and
+at `$654E` are `4E B9 00 04 E4 08`, independently confirming the call/return
+boundaries. The callback's V-int is sampled before the increment at `$5DC`;
+the clock table above is after the completed emulator frame.
+
+`RecordingFrameDriver.stepFrameFromRecording` drives the full admitted engine
+iteration; its explicit lag-skipping entrypoint is separate. The observed
+camera/physical-frame split and held-gameplay row implicate shared timing and
+sampling, outside this DEZ-local leaf. Stop here with no runtime correction,
+no speculative DEZ camera offset, delayed movement, CPU change, ring change,
+allocation change, loading change, hardware emulation or new timing input.
+A separately owned replay/sampling decision is needed before continuing past
+this frontier. The observations do not establish what that decision should be.
+
+`coldActOnePreLagCameraFrontierMatchesNative` preserves rows0–16447 with the
+existing13-main+ten-P2 permanent contract,378304 scalar comparisons, retaining
+all older bounds. The external observer additionally compares main angle and
+routine. No new persistent state or allocation is added, so no new local
+allocation/rewind implementation is claimed. The prior106 matching attracted-ring
+lifecycles and238 earlier slot differences remain inherited evidence, not a new
+whole-SST qualification. Act2 load18670 is not reached; whole-act/campaign,
+full-route rewind, other viewports/donors/characters/teams, animation/pixels/audio
+and parent broad qualification remain open. Surfaceless EGL selects the graphics
+backend but these state checks are not pixel acceptance.
+
+### Exact commands, costs and retained observations
+
+`TASK_ROOT` denotes the external task directory
+`dez-continue-20261030-t3-a27d9b49` under the supplied scratch root. `ROM_DIR`
+is the original project directory supplied in the task. External scripts retain
+literal absolute ROM/input/output paths; repository prose uses these aliases to
+obey the machine-local-path hook. All Java commands use Java25, Lua5.4,
+unset DISPLAY/WAYLAND_DISPLAY, no-device audio and surfaceless EGL:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base f45d22af34669d6cf16b29338ba5c65f8b03b543 --preflight
+
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+
+python3 "$TASK_ROOT/build_native.py"
+python3 "$TASK_ROOT/run_native.py"
+python3 "$TASK_ROOT/compare_native.py"
+python3 "$TASK_ROOT/compare_engine.py" "$TASK_ROOT/engine.csv"
+```
+
+Preflight passes without running tests. The Java selector is initially
+`TestDezContinueObservation`, then the final permanent selector is
+`TestS3kDezColdRoutes#coldActOnePreLagCameraFrontierMatchesNative,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The final invocation is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=TestS3kDezColdRoutes#coldActOnePreLagCameraFrontierMatchesNative,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" \
+  test -B
+```
+
+No broad suite is launched.
+
+The first shell redirection fails before Maven because fresh `target/` is absent;
+creating that task-owned output directory resolves it. The first native launch
+acquires admission but fails before any replay because the external executable
+has no `dll/gpgx.wbx` path. An owned scratch `dll` symlink to the existing
+BizHawk installation resolves it; no ROM link or changed engine input is involved.
+The failed startup provides no native parity evidence.
+
+Native builds hold this worktree's build lock and shared activity lease, invoke
+the pinned harness build with the existing `BIZHAWK_HOME`, then Mono Roslyn
+`csc.exe` against that harness and original BizHawk core assembly. Native replay
+releases build activity, acquires the normal Maven queue lease with kind
+`dez-continue-native-readonly`, estimate390s, unsets desktop display variables,
+and runs `timeout --signal=TERM --kill-after=10s 650s mono DezContinue.exe`
+with the original absolute S3&K ROM and committed original BK2. Every advance
+asserts the actual `CompletedFrame` equals consumed input count.
+
+| Invocation | Queue seconds | Execution/hold seconds | Outcome |
+| --- | ---: | ---: | --- |
+| Temporary engine observer | 0.0 | 97.2 | 1T/0F/0E/0S; diagnostic tail has234 scalar mismatches |
+| Native startup missing `dll` | 71.768 | 0.379 | exit1 before replay; no parity verdict |
+| Repaired native power-on replay | 0.022 | 382.389 | exit0;485451 inputs;411725 fixture fields match |
+| Permanent prefix + four S3K anchors | 9.4 | 43.8 | 61T/0F/0E/0S, exit0 |
+
+Maven hold includes compilation; the temporary observer's JUnit execution is
+6.445s, and the final Maven invocation reports43.010s. The final cold prefix
+case executes in5.257s. Anchor inventory is8 AIZ1,36+7 level-loading,
+6 bootstrap and3 decoding cases, all60 executed without skips. Successful
+Surefire XML/invocation directories are automatically removed by the wrapper;
+fresh bounded class summaries above are inspected before deleting the owned
+redirected Maven logs. The native totals including admission are72.147s for
+failed startup and382.411s for successful replay. Native build/tool inspection
+and whole-delivery elapsed time are unmeasured; process intervals are not added
+into an elapsed-time claim. No baseline/development/integration broad suite,
+release-only full suite or exhaustive audit is run.
+
+The observer ran exact candidate production with one temporary source; its
+SHA-256 over `pom.xml` then sorted files under `src/`, each hashed as
+`path + NUL + file bytes + NUL`, is
+`918101f3c71c61e45c1ec40339ebe976f8ccce72db14d9b1c3336fcdaf850f51`.
+After removing that observer and adding only the permanent bounded prefix,
+the final61-case source fingerprint is
+`73800552add84efa7883683ad982d7d4fce281bdede3cad24b3ca193b6964050`.
+Production remains byte-identical to `f45d22af3` throughout this leaf.
+
+| Retained external source/observation | SHA-256 of original bytes |
+| --- | --- |
+| `TestDezContinueObservation.java` | `f8acad997ed4e05dfb7cf1d2a084cf051adbdaddb60c6ad99d7f2c9e273d36f0` |
+| `DezContinue.cs` | `d8bd7b2cfa5f24ccbef3a7a5e8356de0327662692603408578a0cc04ec7ae5ff` |
+| `DezContinue.exe` | `bf334fc3e5c044040f0ded7d80a4764ab19bde98bdf20daf23eca5a8ecc4dcb5` |
+| `engine.csv` | `4e8d18e04fc0bf0891336322dd633f9a48bc3553d4d14f91c6da7fa879610841` |
+| `engine-phases.csv` | `051b455a3a88971c354fcc3af6f889abc1a925b443a1afed833e442ad82ac35a` |
+| `native.txt` | `7328f70550d47150c6ff07d9a2352f39a1be77f1a6aaef1473bfd69b263c1b10` |
+| `build_native.py` | `17bd3408d3fb0164c34e7ab82daf95107ed01705ad34014b46e2dcd6d8c4a78a` |
+| `run_native.py` | `895846bb229d290b8d5351fb88c6cb20353ba10722388a0c4a3b5a4df60e1d5d` |
+| `compare_native.py` | `37a5168c7d7c7dfb9661387171c7b0b8bb744573bfeed76927c0246a1d2bb9e6` |
+| `compare_engine.py` | `1ddd0e2ce3388ccbe6d4ab7cdcb7e2b04a2485cebd1c713008d7acb1930eb915` |
+
+Useful native/engine observations and read-only probe/comparator sources remain
+under TASK_ROOT. Large observation text may be gzip-compressed losslessly;
+the table pins decompressed bytes. No temporary observer source or class is left
+in the checkout. The first citation-display helper raises `AttributeError` for
+its nonexistent display-only `Citation.raw` attribute; rerunning with the actual
+Citation fields gives5/5 new named citations `ok` against the pinned disassembly.
+This bounded citation check does not rescan or certify historic citation debt.
+New relative links, unchanged frontier-log historic prefix, `git diff --check`,
+source/fixture immutability and branch policy are checked before commit.
+No owned native/build/Maven job remains queued or running. No other worker's
+output, processes, branch or worktree is cleaned up. The clean local provisioned
+branch remains for the lead, with no push, PR or integration. The shared parent
+candidate remains pending broad qualification; Act2 and the campaign are not
+qualified.

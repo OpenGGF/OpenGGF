@@ -390,6 +390,15 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(16237, true);
     }
 
+    /** Original input up to the first camera/physical-frame sampling disagreement. */
+    @Test
+    void coldActOnePreLagCameraFrontierMatchesNative() throws Exception {
+        // Both players match through row16447. Row16448 first differs in camera X;
+        // row16449 holds native gameplay while V-int continues. Shared timing and
+        // partial-pass observation are outside this DEZ-local continuation.
+        assertColdActOnePrefixMatchesNative(16448, true);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         assertColdActOnePrefixMatchesNative(comparedRows, false);
     }
