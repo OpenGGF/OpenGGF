@@ -8,6 +8,18 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## DEZ original-input ring frontier at the second staircase — 2026-10-30
+
+The [fresh continuation](trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)
+on exact develop `9f38d1990` supersedes the14502 stopping point below: the tube's
+live-word correction is present and both players match through16215. At16216
+main rings are128 engine versus126 native fixture, rising to133 versus126 in
+the diagnostic tail. The other14 sampled main/camera/clock fields and all ten
+P2 fields match through16236. Shared ring collection/allocation is the stopping
+boundary; no shared runtime or fixture gate is changed. The new bounded prefix
+assertion keeps rows0–16215. Act2 row18670 and whole-act/campaign qualification
+remain open; the linked evidence records native callbacks and attribution limits.
+
 ## DEZ post-turbine companion/launcher frontier — 2026-10-30
 
 The [shared flight-dispatch correction](trace-frontier-log.md#2026-10-30--tails-suppressed-control-flight-dispatch)

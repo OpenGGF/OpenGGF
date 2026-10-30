@@ -375,6 +375,14 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(14521, true);
     }
 
+    /** Original input through the second staircase, before the shared ring frontier. */
+    @Test
+    void coldActOneSecondStaircaseApproachMatchesNative() throws Exception {
+        // At 9f38d1990 both players match through row16215. Ring count first
+        // differs at16216; no expectation beyond that shared-owner boundary.
+        assertColdActOnePrefixMatchesNative(16216, true);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         assertColdActOnePrefixMatchesNative(comparedRows, false);
     }

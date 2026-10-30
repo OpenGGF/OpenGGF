@@ -2339,3 +2339,11 @@ original-input gate compares13+10 fields through14520 without changing earlier
 prefix bounds. The [native owner record](trace-frontier-log.md#2026-10-30--dez-gravity-tube-live-interact-word-at-p2-row-14502)
 keeps observed outcomes and inherited route, configuration, presentation and
 Act2 gaps explicit. No whole-act/campaign or broad-smoke qualification is claimed.
+
+DEZ original-input second staircase (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#original-input-second-staircase-and-ring-frontier--2026-10-30)
+retains a fresh native320 Sonic+CPU Tails13+10-field prefix through16215. At16216
+the main ring count first differs; the diagnostic15+10-field observation otherwise
+matches through16236. The shared ring owner is handed back without runtime or
+fixture-gate changes. Act2 row18670, whole-route rewind, configuration breadth and
+presentation/whole-act/campaign obligations remain open.

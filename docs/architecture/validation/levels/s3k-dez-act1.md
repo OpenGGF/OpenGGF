@@ -1029,3 +1029,23 @@ reaches14520; nothing beyond that endpoint is graded here. Whole-act/Act2 admiss
 full-route rewind, alternate viewports/donors/rosters, and native pixels/audio
 remain inherited gaps. Shared flight upstream qualification is still lead-owned
 and pending; this leaf schedules no broad smoke.
+
+## Original-input second staircase and ring frontier — 2026-10-30
+
+The [bounded continuation record](../../../status/trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)
+starts at exact develop `9f38d199096500402087493599f42c1da0bb6a66`.
+`TestS3kDezColdRoutes#coldActOneSecondStaircaseApproachMatchesNative` retains
+rows0–16215, comparing13 main/camera/level-clock fields and ten companion fields
+from a fresh native320 Sonic+CPU Tails load with original BK2 input only.
+Earlier assertion bounds remain intact. The temporary observer separately grades
+main angle/routine, yielding15+10 fields. At16216 only the main ring count first
+differs; all other sampled main fields and all ten P2 fields still match through
+the diagnostic tail16236. This is a shared ring/collision/allocation investigation,
+not a DEZ runtime correction. The linked record owns native corroboration,
+commands, outcomes and exact limits.
+
+Actual Act2 load18670 is not reached. Full-route rewind, animation/pixel/audio
+parity, other viewports/donors/characters/teams and whole-act/campaign qualification
+remain open. No new allocation path, persistent state, fixture gate or timing
+input is introduced; existing component rewind coverage is not renewed by this
+controller-prefix assertion. No broad suite or integration belongs to this leaf.
