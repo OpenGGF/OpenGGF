@@ -29,7 +29,7 @@ class TestEngineSettingsScreen {
         var key = ConfigCatalog.byPath("display.spriteScanlineLimit");
         assertNotNull(key, "sprite scanline limit must be a persisted setting");
         Fixture f = new Fixture();
-        assertTrue(f.config.getBoolean(key), "native limits are the default");
+        assertFalse(f.config.getBoolean(key), "normal play defaults to unrestricted scanlines");
         f.tab(DISPLAY);
         int row = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY).indexOf(key);
         assertTrue(row >= 0);
@@ -37,14 +37,14 @@ class TestEngineSettingsScreen {
         assertTrue(f.texts().contains("Sprite scanline limit"));
         assertEquals("PICTURE", EngineSettingLabels.group(key));
         f.press(GLFW_KEY_RIGHT);
-        assertTrue(f.config.getBoolean(key), "the draft must not change the live preference");
+        assertFalse(f.config.getBoolean(key), "the draft must not change the live preference");
         f.assertTextBounds(320);
         f.assertTextBounds(400);
         f.press(GLFW_KEY_ESCAPE);
         f.press(GLFW_KEY_ENTER);
         assertTrue(f.screen.consumeApplied());
-        assertFalse(f.config.getBoolean(key));
-        assertFalse(SonicConfigurationService.createStandalone(directory).getBoolean(key));
+        assertTrue(f.config.getBoolean(key));
+        assertTrue(SonicConfigurationService.createStandalone(directory).getBoolean(key));
         assertEquals(com.openggf.configuration.SettingTiming.NOW,
                 com.openggf.configuration.SettingTiming.of(key));
     }

@@ -1029,12 +1029,14 @@ Unreleased. The earlier development themes remain in
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance
   pose, because the bridge sets its own native status bit 7. Gameplay sprite tables
-  enforce native scanline piece and pixel budgets, including partial sprites,
+  can enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
   Angel Island foreground plants are culled after parallax, so offscreen plants
   no longer consume that capacity and hide parts of Sonic. Display settings offer
-  a saved Sprite scanline limit toggle, enabled by default.
+  a saved Sprite scanline limit toggle, disabled by default for normal play.
+  Trace captures temporarily enable native limits for image comparison and restore
+  the caller preference afterward, including failed captures.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
