@@ -1297,13 +1297,7 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        if (spriteManager != null) {
-            com.openggf.sprites.managers.SpriteManagerInternalAccess.suppressLiveDebugInput(
-                    spriteManager, protectedInputSession());
-        }
-        GameLoopDebugShortcuts.updateInput(hostedRuns,
-                debugOverlayManager, () -> inputHandler,
-                debugShortcutsEnabled, !protectedInputSession(), configService);
+        updateDebugShortcutInput(debugShortcutsEnabled);
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
             if (currentGameMode == GameMode.SPECIAL_STAGE) {
@@ -2226,6 +2220,16 @@ public class GameLoop {
                 || isUnmodifiedDebugKeyPressed(GLFW_KEY_SPACE))) {
             severSpecialStageRewindForLiveOnlyShortcut();
         }
+    }
+
+    private void updateDebugShortcutInput(boolean enabled) {
+        boolean protectedSession = protectedInputSession();
+        if (spriteManager != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.suppressLiveDebugInput(
+                    spriteManager, protectedSession);
+        }
+        GameLoopDebugShortcuts.updateInput(hostedRuns, debugOverlayManager, () -> inputHandler,
+                enabled, !protectedSession, configService);
     }
 
     private boolean isUnmodifiedDebugKeyPressed(int keyCode) {

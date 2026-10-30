@@ -711,7 +711,7 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "runInputNeutralTitleCardPlayerPrelude", 19),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 52),
             // 2026-10-27: native code mods remove the obsolete boot-notice dispatch.
-            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 262),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 260),
             new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 111),
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "updateSpecialStageInput", 9),
             new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
