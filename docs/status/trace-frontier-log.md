@@ -119302,3 +119302,21 @@ recorded inspection. Foreign jobs, references, existing scratch probes and other
 checkouts remain untouched. The provisioned checkout and local unmerged task
 branch remain for the lead; no worktree/branch removal, integration, push, PR or
 publication is performed.
+
+### DEZ puzzle walk-off review correction — 2026-10-30
+
+The instance-owned standing latch introduced above also needs the native
+`SolidObjectFull2_1P` range-exit clear at `loc_1DCF0` (sonic3k.asm:41110–41129).
+Before this correction, P1 and P2 component witnesses both failed because a
+grounded departure left their own standing bit set. The provider now clears it
+on air or an out-of-range exit, while retaining the in-bounds object-controlled
+bit at the native return. The test covers both horizontal edges, subsequent
+re-entry and the other participant's latch. Sustained object-control and
+simultaneous overlapping-support ownership remain separate limitations.
+
+On `624f65c759c1550703d331b05bcf491e6cde53af` plus this change, the original
+S3&K ROM, Java 25 and surfaceless EGL were used with the queued selector
+`TestS3kDezGravityPuzzleLanding,TestS3kDezGravityRoomTerrain,TestS3kDezColdRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The final run passed 101 tests with zero failures, errors or skips; the original
+two walk-off cases both failed at the intended latch assertion. This does not
+extend the separately recorded row 13726 continuation or qualify Act 2.

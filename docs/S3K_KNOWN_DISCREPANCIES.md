@@ -19,8 +19,8 @@ probe-activation concern remain subject to the linked evidence limits.
 **DEZ turbine terrain preparation (2026-10-30):** the bounded
 [original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
 restores the room's current-motion probe preparation before its existing terrain
-call. This adds no accepted deviation. The next observed gravity-puzzle landing
-width frontier at row 13251 and the incoming Act2 boundary remain open.
+call. This adds no accepted deviation. The later gravity-puzzle correction above
+supersedes the row 13251 frontier; the incoming Act2 boundary remains open.
 
 **DEZ floor-launcher landing correction (2026-10-30):** the bounded
 [original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)

@@ -149,6 +149,16 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectFull2_1P / loc_1DCF0 (sonic3k.asm:41110-41129) clears
+        // this player's latch on an air or range exit. In-bounds signed object
+        // control returns from loc_1E1CA without clearing the standing bit.
+        int halfWidth = SOLID_PARAMS.halfWidth();
+        int relativeX = (player.getCentreX() - getX() + halfWidth) & 0xFFFF;
+        return player.getAir() || relativeX >= halfWidth * 2;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         playerOnePushedThisUpdate = false;
         // loc_49986 :96147-96156. The sine of the *current* angle is used and the angle is

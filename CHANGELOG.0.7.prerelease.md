@@ -8,7 +8,8 @@ Unreleased. The earlier development themes remain in
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an
-  airborne seat, preventing a second landing in that same call.
+  airborne seat, preventing a second landing in that same call. Grounded
+  walk-off clears the departing player's latch before a later re-entry.
 
 - **Death Egg staircases:** Moving sections preserve their own standing bits.
   A jumping rider releases at the ridden section's collision checkpoint,

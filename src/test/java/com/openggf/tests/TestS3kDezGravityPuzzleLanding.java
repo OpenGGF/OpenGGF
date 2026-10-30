@@ -100,6 +100,46 @@ class TestS3kDezGravityPuzzleLanding {
     }
 
     @ParameterizedTest
+    @CsvSource({"0,-36", "0,35", "1,-36", "1,35"})
+    void groundedWalkOffClearsOnlyTheRidersLatchAndAllowsReentry(int participant, int exitX) {
+        var fixture = fixture(320);
+        var manager = GameServices.level().getObjectManager();
+        var puzzle = place();
+        dispatch(fixture, 0);
+        var player = players(fixture).get(participant);
+        var other = players(fixture).get(1 - participant);
+        prepare(player, puzzle, 0);
+        dispatch(fixture, 1);
+        assertSeat(player, puzzle);
+        NativePositionOps.writeXPosResetSubpixel(player, puzzle.getX() + exitX);
+        dispatch(fixture, 2);
+        assertFalse(manager.isRidingObject(player, puzzle));
+        assertFalse(manager.hasObjectStandingBit(player, puzzle),
+                "native range exit clears this participant's standing bit immediately");
+        assertFalse(manager.hasObjectStandingBit(other, puzzle));
+        prepare(player, puzzle, 0);
+        dispatch(fixture, 3);
+        assertSeat(player, puzzle);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0", "1"})
+    void inBoundsObjectControlDoesNotImmediatelyClearTheStandingLatch(int participant) {
+        var fixture = fixture(320);
+        var manager = GameServices.level().getObjectManager();
+        var puzzle = place();
+        dispatch(fixture, 0);
+        var player = players(fixture).get(participant);
+        prepare(player, puzzle, 0);
+        dispatch(fixture, 1);
+        assertSeat(player, puzzle);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        dispatch(fixture, 2);
+        assertTrue(manager.hasObjectStandingBit(player, puzzle),
+                "in-bounds signed-control exit does not immediately clear the native bit");
+    }
+
+    @ParameterizedTest
     @CsvSource({"0", "1"})
     void bobbingAirborneSeatReturnsAtItsOwnCheckpoint(int participant) {
         var fixture = fixture(320);

@@ -829,3 +829,9 @@ The puzzle prefix is green; Act2 row18670 remains unreached. The room's empty
 landing callback is the next owner, distinct from the grounded-seat activation
 concern. Detailed commands, identities, timings and coverage limits are in the
 linked frontier record.
+
+The subsequent walk-off review correction clears each departing participant's
+standing bit at the native range exit. `TestS3kDezGravityPuzzleLanding` covers
+both edges and P1/P2 re-entry, plus in-bounds object-controlled latch retention.
+Its 101-case focused DEZ/anchor selection passed with zero skips; broader
+overlapping-support, sustained object-control and whole-route coverage remain open.
