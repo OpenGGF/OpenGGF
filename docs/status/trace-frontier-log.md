@@ -120397,3 +120397,332 @@ presentation bridges while preserving the gameplay hydration prohibition.
 Consumed task-owned Surefire XML/text output was inspected and removed; no
 diagnostic archive or validation receipt is retained. The local commit/checkout remain for lead
 integration, with no children, extra checkouts, pushes or release action.
+
+
+## 2026-10-30 — DEZ cold continuation to the shared Tails control frontier
+
+Implementation leaf in the user-provisioned `t3-3ccb08e4`, branch
+`s3k-dez-cold-route`. Its clean initial0dcee1fe0 is an ancestor of requested
+integrated develop4415f23d981112e73f13f76e8f0efbc9ca2b2b4b; this checkout is
+fast-forwarded to that exact SHA with `git merge --ff-only` before observation.
+There are no conflicts, branch switches, children, additional worktrees, lead
+checkout edits, fixture edits, broad runs, pushes or PRs. Production runtime
+remains byte-identical to that base. The only durable Java change adds a strict
+original-input prefix test, leaving every existing assertion intact.
+
+### Measurement identity and bounded extension
+
+Here `ROM_DIR` denotes the original ROM checkout specified in the leaf brief,
+expanded to its absolute path at execution. The original ROM is
+`$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen`:
+4194304 bytes, CRC32 `63522553`, SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+No ROM is copied, renamed or linked. The unchanged original complete-run BK2
+SHA-256 is `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Its segment `ssz` is zone11/DEZ1, V5, original input offset468982. Physics,
+aux, metadata and hardware-timing SHA-256 remain respectively:
+
+```text
+a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4
+beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059
+f65f8cc61ada810871a48ce3c8ec9d72f13decc56ae53516907fa4d5713b1ad1
+8939526c9b89e0133258a61b996194aea829d8cd3940d97355ea1a63d24bae19
+```
+
+Pinned clean skdisasm8b2cf3c4178f2382f844da67798de4befc50c5e0 and
+TraceChaser703bd92d32634ce5ebac60625b48c60ef5500427 are unchanged.
+The native harness is built only in this checkout:
+
+```bash
+BIZHAWK_HOME=$ROM_DIR/docs/BizHawk-2.11-linux-x64 tools/tracechaser/bizhawk-headless/build.sh
+```
+
+Its executable SHA-256 is
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+The build completes with the inherited xbuild .NET4.8 toolset warning, not an
+emulation failure. Official BizHawk2.11 is the original checkout's runtime.
+External task sources/selected observations live in the owned scratch directory
+`dez-continuation-20261030-t3-3ccb08e4`, denoted `TASK_ROOT` below. Variables in
+these command records were expanded to absolute paths at execution; no paths
+inside another worktree were substituted for the original ROM/runtime.
+
+Hooks are installed and the measurement-hazard table is read. Actual preflight:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 4415f23d981112e73f13f76e8f0efbc9ca2b2b4b --preflight
+```
+
+It passes Java25/Lua5.4/PowerShell prerequisites with zero tests executed.
+All Java test selections use this exact launch shape, with `SELECTION` expanded
+as listed below:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+The temporary `TestDezContinuationObservation` uses the fresh native320
+Sonic+Tails lifecycle and original BK2 from offset468982. It asserts original
+input, GAMEPLAY_FRAME admission, exactly one driver/cursor advance, survival
+and a60-second stepping bound. Its15 main comparison fields are X,Y,X/Y/ground
+speed,X/Y fraction,rings,cameraX/Y,level counter,air,roll,angle,routine.
+All native expectations are comparison-only. The initial source SHA-256 is
+`665cb903e16e95ca0fae76d558304d52a9361123426b9c62f7d236889919223e`;
+its entire `src/` plus POM fingerprint is
+`5f70c06889fb6bf695d62eabd7a346a80316abb6766001bedd10681931a51d4b`
+(path,NUL,bytes,NUL; POM followed by sorted source paths).
+
+On unchanged production4415f23d9, the initial observer executes1T/1F/0E/0S.
+It matches **14316 rows /214740 fields**, indices0–14315, original inputs
+468982–483297, then fails at **row14316 / input483298**, neutral input, alive
+in Act1. Exactly two of15 fields differ:
+
+| Field | Native | Engine |
+| --- | --- | --- |
+| Player Y | `$07EC` | `$07E9` |
+| Camera Y | `$078C` | `$0789` |
+
+Other fields at that row match: X `$2DB6`, X/ground speed `$FDAC`, Y speed0,
+fractions `$142C/$6FE8`, rings `$74`, cameraX `$2D26`, level counter `$37ED`,
+air/roll/angle0 and routine2. This is the first main disagreement observed;
+it is not a full replay/animation/pixel verdict.
+
+### Native callback corroboration and causal predecessor
+
+`DezCausal.cs` replays original input from power-on, without RAM writes, save
+loads or substituted input, rejecting any active P2 movie input. After each
+completed Advance it samples the same15 fields. Execute callbacks are installed
+only for original inputs483288–483302 (rows14306–14320), at
+`$3B97A,$3B9AC,$3B9D8,$3BA1E,$1E42E,$1E44C,$1E45A,$1E48A,$1E4A0,$1E4D4`.
+These callbacks read CPU registers/native RAM solely as external ROM evidence;
+no hardware execution model is added to the engine. The callback's input index
+and previous completed native frame are retained separately.
+
+Compile/invocation uses the same form for both native source probes below,
+with `PROBE=DezCausal` or `DezP2Control` and the corresponding source file:
+
+```bash
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:target/dez-native/$PROBE.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$ROM_DIR/docs/BizHawk-2.11-linux-x64/dll/BizHawk.Emulation.Cores.dll" \
+  "$TASK_ROOT/$PROBE.cs"
+# Under maven_queue.maven_slot(Path.cwd(), kind='native:dez14316-causal', estimate=390):
+timeout --signal=TERM --kill-after=10s 650s mono \
+  "$PWD/target/dez-native/$PROBE.exe" \
+  "$ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+DISPLAY/WAYLAND_DISPLAY are absent. MONO_PATH names this checkout's headless
+bin/Release plus the original runtime dll directory; LD_LIBRARY_PATH names
+that dll directory. An owned executable-directory `dll` link resolves core
+libraries. The queued Python launcher keeps its lease until the child exits.
+The native launcher witness exits0, completes483303 inputs, and independently
+matches **14321 contiguous rows /214815 fields**, indices0–14320, zero
+differences against the original fixture. Normalized trajectory SHA-256
+(four-digit uppercase hex, trailing comma, LF) is
+`24b3ce0f5ded51b01faa3f9c7c77339d47cee3a5420ed9ca1d93f54dabbf16ca`.
+
+Native launcher slot5 stays at `$2DA0,$0800` with velocity/timers/status0
+through the main frontier. At14316 `loc_1E42E (sonic3k.asm:42022-42032)`
+rejects both players with biased X `$26 >= $20`; no new standing bit or launch
+is admitted. `sub_3B9D8 (sonic3k.asm:79487-79529)` starts a launch only from
+its pre-existing standing bit; `loc_3B9AC (sonic3k.asm:79467-79477)` calls it
+for P1/P2 before SolidObjectTop. Native new top contact occurs later, so the
+engine's early launcher movement is not a missing native turbine impulse.
+
+The engine phase observer has source SHA-256
+`8cd9ce6d406128bc1ec7e6ee0558b6f471db6e77c7d46f56bba46df224819f1d`.
+It reproduces exactly the same main failure (1T/1F/0E/0S), while comparing ten
+P2 fields without mutating them. **All ten fields match on every row0–13016**
+(13017 rows /130170 fields). The first P2 mismatch is13017: native Y/ground
+speed `$0038`, engine `$0008`; Y fraction `$DD00/$E500`. Position `$25,$1F`,
+X speed0, X fraction `$CD00`, air1, roll0 and routine2 still match.
+It never regains all ten-field equality before the main frontier.
+
+At14312 engine P2 enters the object pass at `$2DAF,$07F0`; the launcher's
+new top contact sets its standing bit and Y `$07ED`. Native P2 at that row is
+`$2DBE,$07F0`, outside the stationary launcher's half-width `$10`. At14313
+engine's standing callback anchors P2 and starts its timer. At14314/14315/14316
+launcher X advances to `$2DA1/$2DA3/$2DA7`; at14316 it now reaches P1 and snaps
+him three pixels upward. The causal chain therefore begins in companion state
+before this launcher, rather than in DEZ-only top geometry or the allocator.
+
+
+### Shared Tails control proof and explicit stopping point
+
+A second native power-on probe, `DezP2Control.cs`, observes original inputs
+481990–482002 (rows13008–13020), with execute callbacks at
+`$1384A,$13858,$13872,$1388C,$147B8,$147DE,$1488C,$496C8,$49730`.
+It also reads completed P1/P2 trajectories throughout the reached DEZ prefix.
+The launch uses the preceding native command form with `PROBE=DezP2Control`
+and queue kind `native:dez13017-p2-control`. Actual exit0 and
+`COMPLETED inputs=482003` are inspected. It matches all **13021 rows /15 P1
+fields** (195315 fields), trajectory SHA-256
+`da30d5d3ece936fe9c03f3a78e93b9ef06485f137cb67d7bb0e24b7cecbb5089`,
+and **13021 rows /10 P2 fields** (130210 fields), SHA-256
+`480ad03dc25e36cf2f220c63758e6a6b6220f347e2dd256b66d9874b2a462a7e`.
+There are zero differences against the unchanged fixture in either comparison.
+P2 fields are X,Y,X/Y/ground speed,X/Y fraction,air,roll,routine.
+
+The temporary engine probe's final P2 variant
+SHA-256 `c7fbb64bc1b8d76ea1bacb5ecbd9a857b95d9677a31d13aaed6353bca2fc38d9`
+adds exact P2 assertions and read-only phase prints around13008–13017.
+It executes1T/1F/0E/0S, matching13017 preceding P2 rows and failing exactly
+at13017, expected vertical speed56 versus8. All main comparisons executed
+through that point remain exact. The observations identify the hidden-state
+predecessor within row13016, although the ten-field P2 output still matches:
+
+| Boundary | Native P2 | Engine P2 |
+| --- | --- | --- |
+|13015 control/movement suppression|double_jump_flag0, object_control `$81`|doubleJumpFlag0, movement suppressed |
+|13016 after CPU/control, before dynamic objects|X/Y0, preserved velocity `$3BF0/0`, flag0, control `$81`|Same sampled position/velocity, flag1, movement suppressed |
+|13016 engine room release / next native control entry13017|flag0/control0 observed at next entry|flag1/control released after13016 objects |
+|13017 normal player movement|`Tails_Stand_Freespace`, ordinary gravity `$38`|Retained flight branch, gravity `$08` |
+
+`loc_1384A (sonic3k.asm:26250-26269)` tests object_control bit0 and writes
+zero to double_jump_flag before returning to the nonmovement tail. Native
+callbacks reach `$1384A` and `$13858` with control `$81` and flag0 on13016.
+At13017 they reach `$13872`, then `Tails_Stand_Freespace` at `$147B8` with
+flag0. `Tails_Stand_Freespace (sonic3k.asm:27593-27604)` selects the ordinary
+MoveSprite_TestGravity path; `$147DE` observes vertical speed `$38` before
+terrain collision. The native byte sequence at `$1384A` is independently read
+from the original ROM as `08 28 00 00 00 2E 67 20 11 7C 00 00 00 2F`:
+bit0 test, short branch, explicit zero write to offset `$2F`.
+
+The current shared `PlayableSpriteMovement` movement-suppressed return clears
+doubleJumpFlag only for SecondaryAbility.GLIDE, while its Tails flight selector
+uses SecondaryAbility.FLY and nonzero doubleJumpFlag. The engine phase probe
+observes0 before13016 physics and1 afterwards while suppression is still active;
+room release later exposes that retained flag. `Tails_Move_FlySwim`'s
+`loc_1488C (sonic3k.asm:27670-27676)` supplies the distinct `$08` flight gravity.
+This explains the exact first P2 velocity/fraction disagreement and its later
+launcher consequence without fitting steering, timing, collision or allocation.
+The earlier writer/history of every CPU internal byte is not qualified by this
+bounded probe; the reached dispatch obligation itself is explicit and observed.
+
+**Stop with no shared fix:** the owning clear is Tails_Control, not the DEZ
+room, puzzle, bumper or launcher. Applying it in a DEZ object's capture/release
+would relocate a player dispatch contract and conceal the shared gap. Shared
+movement/CPU/animation, collision, allocation and timing owners remain unchanged.
+No local state reseeding, fixture edit, tolerance/gate relaxation, hardware
+simulation, or zone/frame/route-keyed behavior is introduced. Further runtime
+work needs a separately scoped shared Tails dispatch correction, appropriate
+cross-game/character controls and strict rewind, followed by this same cold
+original-input route. That is a next step, not a fix attempted in this leaf.
+
+### Focused maintained qualification and fingerprints
+
+The maintained new method
+`TestS3kDezColdRoutes#coldActOnePostTurbineApproachPreservesNativePrefix`
+compares **14316 original-input rows /186108 fields** (13 per row), indices
+0–14315. It retains exact input and main/camera/clock expectations and stops
+before14316; the existing13733-row floor/bumper method remains unchanged.
+Final maintained test file SHA-256 is
+`561df21ca327d3c88752c677ce4dc24593a8c9f6d2d271cd5da9cadf72d64919`.
+Final `src/` plus POM fingerprint, using the earlier path/NUL/bytes/NUL method
+and excluding the removed temporary observer, is
+`a8fdc6e507beb4582db7a1f168290f6c6fcdcd2e04535c5dbc7231ef5434a3d9`.
+`git diff --exit-code 4415f23d9 -- src/main pom.xml src/test/resources` passes.
+Only documentation edits follow this final source verification.
+
+Final SELECTION for the Java launch shape above:
+
+```text
+TestDezGravityPuzzleAllocation,TestS3kDezGravityPuzzleLanding,TestS3kDezGravityRoomTerrain,TestS3kFloorLauncherLanding,TestS3kDezColdRoutes#coldActOnePostTurbineApproachPreservesNativePrefix,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Result: **106T/0F/0E/0S**, exit0/BUILD SUCCESS, completed07:18:53UTC.
+Ten fresh XML class identities are inspected: bootstrap6, decoding3, game
+level-loading36, tests level-loading7 and AIZ8 comprise all four required
+anchor selectors/60 cases. Puzzle allocation3 covers initialization,
+after-parent reservation, ordinary unload and destructive restore before/after
+initialization. Puzzle landing22, room terrain14 and launcher6 cover real P1/P2,
+contact boundaries, forced recreation and exact forward replay. The new cold
+prefix supplies the remaining1 case. The previous temporary observer's XML
+remains beside them with its earlier timestamp and expected1F; it is explicitly
+excluded from this completed invocation's106-case count, then removed with
+consumed task diagnostics. No stale XML is promoted to a final result.
+
+This is focused bounded verification, not broad smoke or release full-suite.
+The source change is one additional assertion-only cold-prefix method, with
+unchanged runtime/fixtures/build/selection policy; these affected owner checks
+and mandatory anchors are proportionate. There are no skips or test errors.
+Inherited FAST-to-NONE load fallback, presentation-shadow SFX warnings in the
+long observers and the decoding test's deliberate warning are recorded output,
+not hidden failures. No second pass is submitted on unchanged final source.
+
+Retained native source SHA-256:
+
+| File | SHA-256 |
+| --- | --- |
+|`DezCausal.cs`|`8592017ef03f89e08983e3ded7a4f35f1f7040464cc8ef025f1c4f278acb0370`|
+|`DezP2Control.cs`|`ac63f250dc33f7a234e7b04038e44f7c1d5305004e16b1c64fa3f3040309a2b3`|
+|`launcher-native-observations.txt.gz`|`c264fa32468596a4d633b0294587290433bdf5fe0b8b897a96b31fd2df9a6fdf`|
+|`p2-control-native-observations.txt.gz`|`ae88fe49825357d77eebfcf49be7d6af78d8e3e12b1bece94fe3c923e384686d`|
+
+The latter two files retain only the useful bounded native callback/state
+windows in TASK_ROOT, per the user's preservation request; the full native
+logs are consumed and removed. The three temporary Java observer variants
+are retained source-only there with the hashes above. Native executable hashes
+before removal are `2b39e4bc93db6ff16a30613bbdbc9bc9e0e8b3b49bcde80d0b4088f436f88711`
+(DezCausal) and `31e8a8b6655fd6ca62280aa77fbb499624c097a75da02d9b7dac35db4a02e177`
+(DezP2Control). They are diagnostic programs, not fixture producers.
+
+### Timing, cleanup and route limits
+
+| Owned invocation | Queue seconds | Execution/hold seconds | Outcome |
+| --- | ---: | ---: | --- |
+|Initial engine continuation|0.0|94.1|1T/1F/0E/0S, first main14316 |
+|Native launcher callbacks|0.016|373.024|exit0,14321 rows/15 fields match |
+|Engine launcher/P2 phases|288.2|39.0|1T/1F/0E/0S, same main frontier |
+|Native P2 control callbacks|0.018|370.988|exit0,13021 rows/25 fields match |
+|Exact engine P2 assertion|354.7|38.2|1T/1F/0E/0S, first sampled P2 mismatch13017 |
+|Final focused qualification|0.0|43.2|106T/0F/0E/0S |
+
+Native intervals are measured around queue acquisition and subprocess execution;
+Java queue/hold values are existing queue telemetry. Maven reports respectively
+1:33,38.261s,37.460s and42.481s for its four invocations; hold includes setup,
+compilation and test execution. Long-observer method times are5.305s,5.419s
+and5.073s respectively (not the entire Maven process). Native builds,
+preflight, editing/research and total delivery wall are unmeasured; no
+user-response wait occurs. Overlapping queue/execution intervals are not
+summed into delivery wall. All owned jobs complete before commit/handoff.
+
+Temporary Java probe source/classes, consumed Maven/native/build logs and
+Surefire output, native executables/runtime link and generated launch/compare
+scripts are removed after inspection. Ordinary ignored build outputs remain.
+No pass cache, receipt, unrelated-file cleanup or foreign-job cancellation is
+performed. The local committed branch and provisioned checkout remain for the
+lead; no integration, push, PR or checkout removal is attempted here.
+
+The main matched frontier ends at14315 and its next mismatch is14316. P2's
+sampled ten-field matched frontier ends at13016, with the latent dispatch-state
+predecessor observed during13016. Actual Act2 load18670 remains unreached.
+No act/campaign completion, full P2 parity, alternate roster/donor/viewport,
+allocation-exhaustion, native pixel/audio or complete lifecycle qualification
+is claimed. Existing [Act1 matrix](../architecture/validation/levels/s3k-dez-act1.md#post-turbine-original-input-frontier--2026-10-30)
+and [coverage backlog](level-test-coverage.md) retain those obligations.
+
+
+Self-review: `git diff --check`, AGENTS/CLAUDE equality, five used skill mirrors,
+all added relative links/anchors and the historical frontier prefix check pass.
+`python3 tools/disasm/disasm_citations.py check --json docs/status/trace-frontier-log.md`
+returns1 for inherited whole-file citation debt (including218 stale and2
+out-of-range references); the appended section introduces none. Directly
+classifying the six added citations against the pinned submodule reports all
+six `ok`. An initial helper incorrectly expected `ok` entries in the checker's
+error-only JSON findings and failed its own inventory assertion; using the
+checker's classifier API resolves that diagnostic mistake. It is not an engine,
+native-capture or JUnit failure. Existing unrelated citations are preserved.
+
+The first local commit attempt is rejected by the content hook for machine-local
+user-home paths in this evidence prose. Replacing them with the repository
+standard ROM_DIR/TASK_ROOT variables repairs that policy violation; executable
+source and completed validation are unchanged. No hook is bypassed.

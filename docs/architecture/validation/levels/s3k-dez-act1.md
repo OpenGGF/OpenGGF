@@ -914,3 +914,28 @@ allocation exhaustion and dynamic-authoring lifetimes, rendering priority,
 native pixels/audio and whole-act/campaign parity remain open. The first new
 occupancy gap in the reached causal interval is identified; earlier transient
 inlet differences are not asserted fixed.
+
+
+## Post-turbine original-input frontier — 2026-10-30
+
+The [cold continuation evidence](../../../status/trace-frontier-log.md#2026-10-30--dez-cold-continuation-to-the-shared-tails-control-frontier)
+extends the fresh320 Sonic+Tails original-input comparison on develop4415f23d9.
+`TestS3kDezColdRoutes#coldActOnePostTurbineApproachPreservesNativePrefix`
+strictly compares14316 rows /186108 main/camera/clock fields (13 per row),
+indices0–14315, without gameplay seeding. The read-only diagnostic additionally
+compares main angle/routine, then finds the first main mismatch at14316: Y and
+cameraY are three pixels high. The native power-on replay independently matches
+14321 rows /15 fields through14320 against the unchanged fixture.
+
+The engine's companion lands on the shared FBZ/DEZ launcher before the native
+companion, starting its motion early. Companion observation first diverges at
+13017, after matching ten fields on every row0–13016. The linked investigation
+owns the earlier control/flight-state evidence and the explicit shared-owner
+stopping point. No runtime fix, new allocation contract or comparison tolerance
+is introduced here. Existing short puzzle allocation/lifetime and P1/P2
+landing/room/launcher destructive-recreation checks remain separate from this
+route observation; their completed requalification is recorded in that evidence.
+
+Actual Act2 admission at18670 remains unreached. Full companion trajectory,
+other rosters/donors/viewports, allocation exhaustion, rendering priority,
+native pixels/audio and whole-act/campaign parity remain unqualified.

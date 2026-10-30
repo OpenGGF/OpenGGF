@@ -8,6 +8,19 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## DEZ post-turbine companion/launcher frontier — 2026-10-30
+
+The [develop4415f23d9 cold continuation](trace-frontier-log.md#2026-10-30--dez-cold-continuation-to-the-shared-tails-control-frontier)
+matches all15 sampled main/camera fields through row14315. At14316 the engine's
+main Y/cameraY are three pixels high: its companion has already activated the
+shared FBZ/DEZ floor launcher, while the native launcher remains stationary.
+The companion's ten-field original-input comparison first differs at13017,
+with native vertical/ground speed `$0038` versus engine `$0008` after object
+control releases. The linked callback/disassembly record investigates the shared
+Tails control/flight-gravity owner. No runtime correction or accepted deviation
+is introduced. The maintained13-field prefix ends at14315; actual Act2 load
+row18670 and whole-act/campaign matching remain unqualified.
+
 ## DEZ original-input bumper slot order — 2026-10-30
 
 On pushed develop `45bdfed16`, the cold Sonic+Tails original-movie inlet matches

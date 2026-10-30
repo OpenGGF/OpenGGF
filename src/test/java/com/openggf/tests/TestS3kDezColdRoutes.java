@@ -353,6 +353,14 @@ class TestS3kDezColdRoutes {
         assertColdActOnePrefixMatchesNative(13733);
     }
 
+    /** Original cold input past the turbine, stopping before the next launcher disagreement. */
+    @Test
+    void coldActOnePostTurbineApproachPreservesNativePrefix() throws Exception {
+        // Rows 0-14315 match. Row14316 remains a separate, unresolved frontier;
+        // extending this bound requires native causal evidence, not a relaxed comparison.
+        assertColdActOnePrefixMatchesNative(14316);
+    }
+
     private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");

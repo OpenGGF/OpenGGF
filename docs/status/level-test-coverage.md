@@ -2298,3 +2298,12 @@ unload and destructive rewind/replay obligations. Original-input floor/bumper
 comparison extends to13733 rows. The linked frontier retains exact completed
 checks and provenance; broader companion/configuration/whole-act qualification
 and resource-exhaustion/pixel/audio limits remain open.
+
+
+DEZ post-turbine continuation (2026-10-30): the
+[Act1 binding](../architecture/validation/levels/s3k-dez-act1.md#post-turbine-original-input-frontier--2026-10-30)
+adds a strict14316-row original-input prefix and records the earlier companion
+control/flight-state frontier behind the next launcher disagreement. This is
+bounded observation with unchanged runtime owners. Shared-owner work, full P2,
+Act1/Act2 completion and the inherited configuration/lifecycle/pixel/audio
+obligations remain open; the linked frontier owns exact completed checks.
