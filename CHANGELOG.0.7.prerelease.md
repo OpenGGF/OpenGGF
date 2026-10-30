@@ -12,6 +12,9 @@ Unreleased. The earlier development themes remain in
   Conveyor pads retain each rider's standing bit as they move, preserving the
   native jump height and clearing support at the pad's own contact checkpoint.
 
+- **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
+  a falling player airborne until the native landing window is reached.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 
