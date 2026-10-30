@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+AIZ foreground plant visibility (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#foreground-plant-visibility-2026-10-29) adds projected whole-object culling, partial visibility and variant/viewport edges, with a reproduced baseline Sonic+Tails sprite dropout. The three culling cases and 192 feature/API cases pass with no skips; the corrected positioned capture restores the sprite with unchanged recorded state. Final focused/guard runs retain only the matched pre-existing HCZ fan-reference coverage failure described in the linked record. The optional shared scanline budget is a presentation preference; native pixel parity, broader routes/donors/teams and fresh whole-world rewind coverage remain open.
+
 DEZ Spikebonker creation (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29) adds native-source creation, first companion contact and actual recreation/forward checks. The cold witness uses 200 original Sonic+Tails inputs at native320 with no donor; wider route/configuration obligations and Act 2 incoming qualification remain open. The [shared Act 2 note](../architecture/validation/levels/s3k-dez-act2.md#shared-spikebonker-creation-maintenance--2026-10-29) records that inherited scope.
 
 S3K initial-focus arithmetic (2026-10-28): four added component checks cover
@@ -2191,3 +2193,19 @@ adds the original-movie zero-overlap decision, independent bounded contact cases
 and the existing allocation/graph-recreation obligations. Complete-act, expanded
 character/team/donor/viewport and campaign certification gaps remain open;
 qualification results and limits belong to its linked frontier entry.
+
+
+DEZ1 lift continued-ride follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-continued-ride-release--2026-10-30)
+adds real P1/P2 landing and walk-off dispatch, held/released latch restoration,
+and destructive pad/arm recreation with forward replay. Original-input cold
+observation remains bounded; whole-act, native-cause, donor, wider viewport and
+expanded roster obligations are not inferred from this local contract.
+
+
+DEZ1 conveyor ownership follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#conveyor-moving-standing-bit-ownership--2026-10-30)
+adds native jump/solid checkpoints, real P1/P2 moving-latch ownership,
+replacement-slot isolation and destructive recreation with forward replay.
+The strict original-input prefix ends at 3280; expanded configuration, whole-act,
+pixel/audio and campaign qualification remain separate obligations.

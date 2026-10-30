@@ -5,9 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
-- **Death Egg lift pads:** Exact surface contact leaves an airborne player in
+- **Death Egg moving pads:** Exact surface contact leaves an airborne player in
   flight until the native overlap window is reached, preserving the original
-  cold route's landing timing.
+  cold route's landing timing. Walking or jumping off clears that player's
+  standing latch, allowing the lift's return pause to resume after P1 leaves.
+  Conveyor pads retain each rider's standing bit as they move, preserving the
+  native jump height and clearing support at the pad's own contact checkpoint.
 
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
@@ -964,6 +967,9 @@ Unreleased. The earlier development themes remain in
   enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, enabled by default.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
