@@ -87,9 +87,12 @@ final class AdminEndpoint implements AutoCloseable {
             long now = System.currentTimeMillis();
             long expiry = durationHours <= 0 ? Long.MAX_VALUE
                     : Math.addExact(now, Math.multiplyExact(durationHours, 3_600_000L));
+            // Refuse the action before it can affect the player when its durable
+            // operator evidence cannot be written. Once this succeeds, a later
+            // broker failure still leaves an attributable audit record to inspect.
+            appendAudit("sanction:" + type, reason, now);
             runBroker(() -> master.sanction(new IdentityStore.SanctionRecord(
                     fingerprint, type, reason, actor(), now, expiry)));
-            appendAudit("sanction:" + type, reason, now);
             respond(exchange, 200, "ok");
         } catch (IllegalArgumentException | ArithmeticException e) {
             respond(exchange, 400, e.getMessage());

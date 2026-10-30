@@ -210,6 +210,10 @@ public final class RoomHost {
                         System.Logger.Level.WARNING, "lobby presence violation slot=" + slot + ": " + detail));
         this.round = new HostRoundEngine(wallClockMillis, this::broadcast);
         round.setVerifiedRoom(config.verified());
+        // A room without an independent replay verifier may retain claims for
+        // trust accrual and operator spot checks, but must not present them to
+        // peers as competitive standings.
+        round.setPublishUnverifiedStandings(false);
         round.setPendingExpiryListener((slot, attemptId) -> {
             if (this.hooks.verificationHooks() != null) {
                 this.hooks.verificationHooks().onPendingExpired(
@@ -1317,7 +1321,7 @@ public final class RoomHost {
                 // sender's own finished frame bit also reports it), not standings.
                 hub.onAttemptFinished(member.slot, finish.attemptId());
                 member.finishedThisRound = round.hasBestForParticipant(member.participantId);
-                if (outcome != null && outcome.outsideBroadcastCap()) {
+                if (outcome != null && config.verified() && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(
                             outcome.rank(), finish.timeFrames()));
                 }
