@@ -23,6 +23,7 @@ import com.openggf.audio.rewind.AudioCommandTimeline;
 public final class AudioPresentationProducer {
     private static final int CHANNELS = 2;
     private static final int MAX_CAPTURE_HANDLES = 32;
+    private static final int MAX_CAPTURE_PENDING_SECONDS = 2;
     private static final int MAX_RECORDED_REPLAYS = 4;
     private static final int MAX_REPLAY_SECONDS = 120;
 
@@ -1640,8 +1641,10 @@ public final class AudioPresentationProducer {
         private final int captureMaxStereoFrames;
         private final AudioFrameClock captureClock;
         private final short[] pending;
+        private final int pendingCapacityFrames;
+        private int pendingReadFrame;
         private int pendingStereoFrames;
-        private boolean fresh;
+        private boolean overflowed;
         private boolean closed;
 
         private CaptureHandle(
@@ -1658,19 +1661,35 @@ public final class AudioPresentationProducer {
                     0,
                     producerClockSnapshot.frameRate() == captureFrameRate
                             ? producerClockSnapshot.remainder() : 0));
-            pending = new short[
-                    Math.max(maxStereoFrames, captureMaxStereoFrames)
-                            * CHANNELS];
+            pendingCapacityFrames = Math.multiplyExact(sampleRate, MAX_CAPTURE_PENDING_SECONDS);
+            pending = new short[Math.multiplyExact(pendingCapacityFrames, CHANNELS)];
         }
 
         @Override
         public void onPresentationFrame(AudioPresentationFrameView frame) {
-            if (closed) {
+            if (closed || overflowed) {
                 return;
             }
-            frame.copyTo(pending, 0);
-            pendingStereoFrames = frame.stereoFrames();
-            fresh = true;
+            int frames = frame.stereoFrames();
+            if (frames > pendingCapacityFrames - pendingStereoFrames) {
+                // A tap must not backpressure production or silently lose recorded
+                // samples. Fail only this tap; the recorder's next drain uses its
+                // existing phase-preserving silence fallback. No allocation or
+                // exception occurs inside the producer's publication boundary.
+                overflowed = true;
+                return;
+            }
+            int writeFrame = (pendingReadFrame + pendingStereoFrames) % pendingCapacityFrames;
+            if (frames <= pendingCapacityFrames - writeFrame) {
+                frame.copyTo(pending, writeFrame);
+            } else {
+                for (int index = 0; index < frames; index++) {
+                    pending[writeFrame * CHANNELS] = frame.sampleAt(index, 0);
+                    pending[writeFrame * CHANNELS + 1] = frame.sampleAt(index, 1);
+                    if (++writeFrame == pendingCapacityFrames) writeFrame = 0;
+                }
+            }
+            pendingStereoFrames += frames;
         }
 
         @Override
@@ -1690,10 +1709,14 @@ public final class AudioPresentationProducer {
 
         @Override
         public int drainPresentationFrame(short[] target) {
+            assertOwnerThread();
             Objects.requireNonNull(target, "target");
             if (closed) {
                 throw new IllegalStateException(
                         "audio presentation capture is closed");
+            }
+            if (overflowed) {
+                throw new IllegalStateException("audio capture exceeded its bounded PCM backlog");
             }
             int requiredCapacity =
                     Math.multiplyExact(captureMaxStereoFrames, CHANNELS);
@@ -1702,20 +1725,19 @@ public final class AudioPresentationProducer {
                         "target is too small for the maximum presentation packet");
             }
             int requestedFrames = captureClock.samplesForNextFrame();
-            int copiedFrames = fresh
-                    ? Math.min(requestedFrames, pendingStereoFrames)
-                    : 0;
+            int copiedFrames = Math.min(requestedFrames, pendingStereoFrames);
             if (copiedFrames > 0) {
-                System.arraycopy(
-                        pending, 0, target, 0, copiedFrames * CHANNELS);
+                int first = Math.min(copiedFrames, pendingCapacityFrames - pendingReadFrame);
+                System.arraycopy(pending, pendingReadFrame * CHANNELS, target, 0, first * CHANNELS);
+                System.arraycopy(pending, 0, target, first * CHANNELS, (copiedFrames - first) * CHANNELS);
+                pendingReadFrame = (pendingReadFrame + copiedFrames) % pendingCapacityFrames;
+                pendingStereoFrames -= copiedFrames;
             }
             Arrays.fill(
                     target,
                     copiedFrames * CHANNELS,
                     requestedFrames * CHANNELS,
                     (short) 0);
-            fresh = false;
-            pendingStereoFrames = 0;
             return requestedFrames;
         }
 
@@ -1736,7 +1758,6 @@ public final class AudioPresentationProducer {
             }
             assertOwnerThread();
             closed = true;
-            fresh = false;
             pendingStereoFrames = 0;
             detach(this);
         }

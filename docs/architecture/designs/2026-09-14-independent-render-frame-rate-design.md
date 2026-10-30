@@ -1496,3 +1496,155 @@ branch, ROM link or unrelated change is removed. Queue waits are per request
 and overlap; they are not summed delivery elapsed time. Overall task wall time
 was not separately measured. Combined smoke and any main-workspace integration
 remain with the lead; no push, PR or release was performed.
+
+
+## Bounded audio capture repacketization — 2026-10-30
+
+Source: reviewed combined candidate `2481c30ec3133a64420ff4089566cf482d13fd6e`.
+This leaf uses its provisioned checkout and leaves the delivery lead's combined
+smoke run alone. The optional `develop` commit
+`9f61f050972d3dd05e061dd4bac72441895aba0e` diverges from that candidate; it
+was not reconciled in this leaf. No scheduler or configuration cutover is selected.
+
+### Inspected production owners
+
+- `Engine.advanceFrame()` owns one existing host/input pass and then
+  `presentOuterAudioFrame()`, including modal and paused frames. That callback
+  selects the post-update mode via `GameLoop` / `OuterFramePresentation`, calls
+  `AudioManager.presentFrame()` once and `AudioManager.update()` once. Device
+  servicing and command-timeline retirement still share the latter call; a
+  render-only iteration must not call it to pump the device independently.
+- `AudioPresentationProducer` owns the final PCM clock, forward service, voice
+  cursors, history and reverse cursor. `AudioFrameClock` retains rational
+  sample remainder: 50 or 60 packets at the corresponding rate span exactly
+  one output second. `SmpsHardwareFrameBudget` also gives NTSC synthesis its
+  existing exact native frame budget; PAL retains its existing synthesis rate
+  and documented chip-clock limitation. Changing output packet duration alone
+  would change driver services and chip time. Neither is changed here.
+- SILENT remains the existing pause/frame-step/modal policy, including the
+  session-owned SEGA transport exception; REVERSE reads history without forward
+  sequencing. `GameLoop` owns focus/user pause and actual frame-step admission.
+  Mutator and trace/movie pumps can run zero or multiple native iterations
+  inside one outer advance and still emit one outer audio packet. Their
+  existing speed/source-phase policy must not be replaced by scheduler counts.
+- `Engine.renderAdvancedFrame()` invokes `LiveCapturePresentationCoordinator`
+  after FINAL, then screenshot and the window indicator. The controller drains
+  one capture-clock packet, pairs deferred pixels with that packet, and submits
+  consecutive video indexes. It does not yet accept output timestamps or choose
+  skipped/repeated pictures. `UserRecordingRuntimeControls.beforeLevelFrame()` /
+  `afterLevelFrame()` retain authoritative movie admission; offline gameplay and
+  trace captures retain their explicit tick/output-rate contract.
+
+### Selected bounded separation
+
+The capture tap previously retained only the latest producer packet. Two
+advances before one drain overwrote the earlier PCM; a drain smaller than a
+producer packet discarded its tail. Replace that single slot with an owner-thread
+sample FIFO, allocated at attachment and bounded to two seconds per tap. Append
+only final published PCM; drain only the capture clock's requested duration,
+retaining the remainder across packet boundaries. Normal aligned one-produce /
+one-drain PCM and late-attachment fractional phase remain identical. The queue
+has no gameplay, service, history or device authority and requires no rendering.
+At 48 kHz it allocates 384,000 PCM bytes per attached tap; the existing 32-tap
+admission bound remains. Overflow and empty/partial drains allocate no buffers.
+
+Empty/partial drains retain the existing explicit silence policy and never
+synthesize or repeat samples. FIFO exhaustion permanently fails that tap before
+its next drain consumes clock phase. Publishing continues to speakers, history
+and other taps without throwing, allocating, blocking or discarding their data.
+`LiveCaptureController` then uses its existing phase-preserving silence fallback.
+This bound is a capture resource limit, not a scheduler debt or overload policy.
+
+### Remaining dependencies and limits
+
+This is repacketization of available final PCM, not independent live scheduling.
+The integration owner must choose output timestamps, picture selection and audio
+availability/startup latency together: draining ahead of production still inserts
+silence, and the FIFO cannot recover time already drained. Paused frames still
+require explicit SILENT production at the selected output-time owner; zero
+simulation work does not by itself define audio duration. Device polling must be
+separated from command-timeline retirement before servicing it on render-only
+passes. Source/backend/session rebuilds retain their current capture-clock carry
+and pending-PCM reset; queued PCM transfer across those discontinuities is not
+provided or qualified here. The offline mismatched-rate rejection stays intact
+until its one-tick/one-output-frame callers are coordinated. Capture stop still
+finalizes only pictures already requested, rather than inventing pictures to
+flush a pending audio tail. These are blockers for live cutover, alongside the
+existing input, fade/draw, rewind/debt and mod-abort owners.
+
+The change does not add CPU/bus timing, hydrate fixtures, change public Mod API
+pins or versions, alter ROMs/submodules, or claim PAL chip-clock parity.
+
+
+### Focused pre-fix evidence
+
+Ten desired-contract cases ran against the unmodified production candidate,
+with only the initial new tests added:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestAudioPresentationProducer#captureRepacketsASecondOfUndrainedProductionWithoutLoss+captureOverflowFailsOnlyTheTapBeforeConsumingItsClock+queuedCaptureKeepsForwardSilenceAndReversePacketsInAudibleOrder' \
+  test -B
+```
+
+All ten failed, with zero errors or skips. The eight 1001 Hz duration/order
+cases returned sample 980 (50 Hz producer) or 984 (60 Hz producer) instead of
+sample 0: only the newest packet survived. The forward/silent/reverse case
+returned reversed sample 1 instead of forward sample 0. The backlog case
+expected a tap failure and observed none. Queue wait was 250 seconds; Maven
+execution including clean compilation was 1m35s. These are deliberate pre-fix
+regressions, not unrelated baseline suite failures. No broad run was launched.
+
+
+### Focused implementation validation
+
+The first implementation run used Java 25 with no ambient DISPLAY or Wayland
+session, the original S1 World REV01 ROM (CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`), `--normal -Dmse=off`, and:
+
+```text
+-Dtest=TestAudioPresentationProducer,TestAudioPresentationProducerRewind,AudioManagerLiveCaptureTest,AudioManagerCaptureModeTest,TestLiveCaptureSurvivesBackendSwap,TestAcceleratedSmpsPlayback,LiveCaptureControllerTest,TestOpenAlPcmSink,TestEngineFrameAdvance,TestGameLoopAudioPresentationModes,TestUserRecordingControls,TestAudioPresentationArchitectureGuard,TestAudioPresentationAllocationBudget#warmedForwardMixAllocatesNoPerFrameVoiceOrPacketArrays+stalledDeviceAndCaptureContinueWithoutProducerBlocking
+```
+
+Result: 292 tests, three failures, zero errors/skips. Queue wait was 393 seconds;
+Maven execution including recompilation was 1m45s. All 14 ROM-backed cases,
+producer/rewind cases, the real recorder overflow fallback, Engine frame-step /
+pause / nine-pass pump boundaries, speaker checks and architecture guards passed.
+The allocation test now drains both taps during warmup and measurement so it
+measures active FIFO copies, rather than taps already disabled by overflow.
+
+The three failures were `AudioManagerCaptureModeTest.offlinePacketContainsSmpsWavAndRawPcmTogether`
+and `TestLiveCaptureSurvivesBackendSwap.aBackendSwapAloneKeepsTheRecordingAudible` /
+`aRecordingStartedOnTheMasterTitleScreenHearsGameplayAudio`. Each fixture
+published a SILENT command-admission packet while capture was attached and
+skipped its drain before expecting newer audible PCM. The queue retained that
+real earlier silence instead of overwriting it. Correct the fixture to capture
+and assert its explicit SILENT packet, then keep the existing next-packet
+nonzero and speaker-equality assertions. No production change was needed.
+Only those two changed classes require another run; unrelated successful checks
+are reused on unchanged production code.
+
+
+The corrected fixtures completed with:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=AudioManagerCaptureModeTest,TestLiveCaptureSurvivesBackendSwap' test -B
+```
+
+Result: 28 tests passed, zero failures/errors/skips; queue wait 134 seconds,
+Maven execution 33.582 seconds. Together with the 264 unaffected passing cases
+from the previous invocation, the final source has 292 unique focused cases
+verified across two runs. The initial three fixture failures are resolved;
+there is no remaining attributed failure in this selection. Expected injected
+capture/sample-rate-failure warnings and mocked FAST-without-manifest warnings
+were exercised; they are not skipped cases. No real speaker, GL window, video
+encoder or complete route/trace qualification is claimed.
+
+The change-based dry plan selected 1,474 smoke classes plus guards. Per the
+leaf's scope, combined smoke remains with the delivery lead and was not run
+here. No full suite, push, PR, release, subagent or additional worktree was
+created. Whitespace, architecture links and the agent-doc mirror were checked.
+Production code was unchanged after the 292-case invocation; the final 28-case
+rerun changed only the two fixture consumers described above.

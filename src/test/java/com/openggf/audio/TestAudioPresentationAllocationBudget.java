@@ -37,6 +37,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -127,8 +128,10 @@ class TestAudioPresentationAllocationBudget {
         });
         Fixture fixture = fixture(sink);
         fixture.producer.setHistoryArmed(true);
-        fixture.producer.attachCapture(FRAME_RATE);
-        fixture.producer.attachCapture(FRAME_RATE);
+        LiveCaptureAudioHandle firstTap = fixture.producer.attachCapture(FRAME_RATE);
+        LiveCaptureAudioHandle secondTap = fixture.producer.attachCapture(FRAME_RATE);
+        short[] firstPcm = new short[firstTap.maxStereoFramesPerPacket() * 2];
+        short[] secondPcm = new short[secondTap.maxStereoFramesPerPacket() * 2];
         fixture.admitMixedVoices();
         assertEquals(5, fixture.registry.orderedVoiceCount(),
                 "the measured mix must traverse several live voices");
@@ -138,13 +141,13 @@ class TestAudioPresentationAllocationBudget {
         // measured method itself before anything is counted.
         for (int chunk = 0; chunk < (WARM_FRAMES - PROBE_WARM_FRAMES) / 100;
                 chunk++) {
-            presentForwardFrames(fixture.producer, frame, 100);
+            presentAndDrainFrames(fixture.producer, frame, 100, firstTap, secondTap, firstPcm, secondPcm);
             frame += 100;
         }
         AudioBenchmarkMemoryProbe probe = AudioBenchmarkMemoryProbe.create();
         long warmFrame = frame;
-        probe.measureTimedRun(() -> presentForwardFrames(
-                fixture.producer, warmFrame, PROBE_WARM_FRAMES));
+        probe.measureTimedRun(() -> presentAndDrainFrames(
+                fixture.producer, warmFrame, PROBE_WARM_FRAMES, firstTap, secondTap, firstPcm, secondPcm));
         frame += PROBE_WARM_FRAMES;
         assertEquals(WARM_FRAMES, frame, "the warm phase presents 10,000 frames");
         // The only non-final storage reference on the presentation path: a
@@ -156,9 +159,13 @@ class TestAudioPresentationAllocationBudget {
         Structure before = fixture.structure();
         long measuredFrame = frame;
         AudioBenchmarkMemoryProbe.RunResult result = probe.measureTimedRun(
-                () -> presentForwardFrames(
-                        fixture.producer, measuredFrame, MEASURED_FRAMES));
+                () -> presentAndDrainFrames(
+                        fixture.producer, measuredFrame, MEASURED_FRAMES, firstTap, secondTap, firstPcm, secondPcm));
         Structure after = fixture.structure();
+
+        assertEquals((long) (WARM_FRAMES + MEASURED_FRAMES) * PACKET_FRAMES, firstTap.totalStereoFrames());
+        assertEquals(firstTap.totalStereoFrames(), secondTap.totalStereoFrames(),
+                "allocation measurement must exercise live taps, not overflowed taps that stopped copying");
 
         // Structural evidence always runs, even without a byte counter.
         assertNoStructuralGrowth(before, after);
@@ -371,16 +378,17 @@ class TestAudioPresentationAllocationBudget {
             assertTrue(sink.queuedStereoFrames() <= SAMPLE_RATE * 2,
                     "the speaker FIFO stays inside its two-second bound");
             assertSame(tapPending, tapPending(fixture.producer, 0),
-                    "a never-drained tap keeps its one preallocated packet");
+                    "a never-drained tap keeps its preallocated bounded sample FIFO");
 
-            // The stalled tap is still usable and holds only the freshest
-            // producer packet, not a growing backlog.
+            // Exhaustion fails only the tap, before its next clocked drain.
+            // The recorder can replace it with phase-correct silence; production
+            // has continued without growing storage or silently dropping PCM.
             short[] drained =
                     new short[stalledTap.maxStereoFramesPerPacket() * 2];
-            assertEquals(PACKET_FRAMES,
-                    stalledTap.drainPresentationFrame(drained));
-            assertNotEquals(0, nonZeroCount(drained),
-                    "the tap still receives audible final PCM after the stall");
+            var phase = stalledTap.clockSnapshot();
+            assertThrows(IllegalStateException.class,
+                    () -> stalledTap.drainPresentationFrame(drained));
+            assertEquals(phase, stalledTap.clockSnapshot());
             stalledTap.close();
             fixture.producer.close();
         });
@@ -491,6 +499,16 @@ class TestAudioPresentationAllocationBudget {
      * The one measured shape. Warm-up and measurement both call this method so
      * the loop is compiled at method entry before it is ever counted.
      */
+    private static void presentAndDrainFrames(AudioPresentationProducer producer, long startFrame, int count,
+                                              LiveCaptureAudioHandle first, LiveCaptureAudioHandle second,
+                                              short[] firstPcm, short[] secondPcm) {
+        for (int frame = 0; frame < count; frame++) {
+            producer.present(startFrame + frame, PresentationMode.FORWARD);
+            first.drainPresentationFrame(firstPcm);
+            second.drainPresentationFrame(secondPcm);
+        }
+    }
+
     private static void presentForwardFrames(
             AudioPresentationProducer producer, long startFrame, int frames) {
         for (int index = 0; index < frames; index++) {

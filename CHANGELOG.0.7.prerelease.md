@@ -29,6 +29,12 @@ Unreleased. The earlier development themes remain in
   gameplay, and fixed menu/text controls keep physical authority during replay. This
   does not connect independent live scheduling or change audio/capture cadence.
 
+- **Recording audio buffering:** Capture retains a bounded stream of final PCM
+  across producer packets and video drains, preserving sample order and unused
+  packet tails. A stalled capture that exceeds its bound falls back to correctly
+  clocked silence while speaker playback continues. Independent live simulation
+  and video scheduling remain unimplemented.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 

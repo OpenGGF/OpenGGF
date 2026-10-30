@@ -25,6 +25,24 @@ import static org.mockito.Mockito.*;
 class TestAcceleratedSmpsPlayback {
 
     @ParameterizedTest
+    @CsvSource({"NTSC,60", "PAL,50"})
+    void twoAudioAdvancesPerCaptureDrainPreserveASecondOfRealRomPcmAndMusic(String region, int tickHz) {
+        try (var normal = new Playback(region); var batched = new Playback(region, tickHz / 2)) {
+            short[] expected = normal.render(tickHz);
+            short[] actual = new short[48_000 * 2];
+            for (int picture = 0; picture < tickHz / 2; picture++) {
+                batched.audio.presentFrame(PresentationMode.FORWARD);
+                batched.audio.presentFrame(PresentationMode.FORWARD);
+                short[] packet = batched.drain();
+                System.arraycopy(packet, 0, actual, picture * packet.length, packet.length);
+            }
+            assertArrayEquals(expected, actual, "no-render synthesis and capture repacketization must retain every sample");
+            assertEquals(normal.music(), batched.music());
+            assertEquals(48_000, batched.capture.totalStereoFrames());
+        }
+    }
+
+    @ParameterizedTest
     @CsvSource({"NTSC,1.5", "NTSC,2.0", "NTSC,3.375", "NTSC,32.0",
             "PAL,1.5", "PAL,2.0", "PAL,3.375", "PAL,32.0"})
     void acceleratedSongMatchesNormalSourceTimeAndDecimatedPcm(String region, double rate) {
@@ -148,6 +166,9 @@ class TestAcceleratedSmpsPlayback {
         final LiveCaptureAudioHandle capture;
         final int samplesPerPacket;
         Playback(String region) {
+            this(region, region.equals("PAL") ? 50 : 60);
+        }
+        Playback(String region, int captureHz) {
             int fps = region.equals("PAL") ? 50 : 60;
             samplesPerPacket = 48_000 / fps;
             assertTrue(rom.open(RomTestUtils.ensureSonic1RomAvailable().getAbsolutePath()));
@@ -159,7 +180,7 @@ class TestAcceleratedSmpsPlayback {
                     new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
             audio.setRom(rom);
             audio.playMusic(Sonic1Music.GHZ.id);
-            capture = AudioManagerTestDiagnostics.attachPresentationCapture(audio, fps);
+            capture = AudioManagerTestDiagnostics.attachPresentationCapture(audio, captureHz);
         }
         short[] render(int frames) {
             short[] result = new short[frames * samplesPerPacket * 2];
@@ -171,7 +192,7 @@ class TestAcceleratedSmpsPlayback {
         }
         short[] drain() {
             short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
-            assertEquals(samplesPerPacket, capture.drainPresentationFrame(packet));
+            assertEquals(48_000 / capture.frameRate(), capture.drainPresentationFrame(packet));
             return packet;
         }
         Object music() {
