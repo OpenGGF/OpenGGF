@@ -27,13 +27,40 @@ class TestRecordingBlobStore {
         assertEquals(5, store.totalBytes());
         store.put(HASH, new byte[]{6});
         assertEquals(3, store.totalBytes());
-        assertTrue(store.putIfWithinLimit(HASH, new byte[100], 3), "content-address reuse only refreshes retention");
+        assertTrue(store.putIfWithinLimit(HASH, new byte[]{6}, 3),
+                "an identical content-addressed upload only refreshes retention");
         assertEquals(3, store.totalBytes());
 
         long cutoff = System.currentTimeMillis() - 1_000;
         Files.setLastModifiedTime(dir.resolve(OTHER_HASH), FileTime.fromMillis(cutoff - 1));
         assertEquals(1, store.deleteOlderThan(cutoff));
         assertEquals(1, store.totalBytes());
+    }
+
+    @Test
+    void validatedUploadRepairsCorruptExistingBlob(@TempDir Path dir) throws Exception {
+        byte[] corrupt = {9, 9};
+        byte[] validatedUpload = {1, 2};
+        Files.write(dir.resolve(HASH), corrupt);
+        RecordingBlobStore store = new RecordingBlobStore(dir);
+
+        assertTrue(store.putIfWithinLimit(HASH, validatedUpload, corrupt.length));
+
+        assertArrayEquals(validatedUpload, store.get(HASH).orElseThrow());
+        assertEquals(validatedUpload.length, store.totalBytes());
+    }
+
+    @Test
+    void repairReconcilesExternallyChangedBlobSize(@TempDir Path dir) throws Exception {
+        byte[] validatedUpload = {1, 2};
+        Files.write(dir.resolve(HASH), validatedUpload);
+        RecordingBlobStore store = new RecordingBlobStore(dir);
+        Files.write(dir.resolve(HASH), new byte[]{9, 9, 9, 9});
+
+        assertTrue(store.putIfWithinLimit(HASH, validatedUpload, validatedUpload.length));
+
+        assertArrayEquals(validatedUpload, store.get(HASH).orElseThrow());
+        assertEquals(validatedUpload.length, store.totalBytes());
     }
 
     @Test

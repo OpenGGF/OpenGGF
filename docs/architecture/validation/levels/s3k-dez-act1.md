@@ -786,3 +786,84 @@ The native reference itself is independently matched through18700 rows.
 Donor/character/team breadth, other routes, restart/death/load replay and native
 pixels/audio remain inherited gaps. Final focused selection:90 tests,0 failures,
 0 errors,0 skips;60 are the required S3K anchors and one is the temporary observer.
+
+
+## Gravity puzzle native top landing width — 2026-10-30
+
+The [bounded original-input investigation](../../../status/trace-frontier-log.md#2026-10-30--dez-gravity-puzzle-native-top-landing-width-at-row-13251)
+composes local turbine candidate `a8637c9d9` and pushed develop `70879a451` in
+an isolated provisioned checkout. Actual native callbacks prove that the puzzle
+reaches its new-landing helper at original row13251, accepts X offset `-$1E`
+using width_pixels `$20`, and establishes support before the turbine moves P1.
+The provider now declares that width and the native per-occupant standing-bit
+identity, own-checkpoint airborne release and no-contact return. Shared solid
+math and turbine behavior are unchanged. Native comparison rows remain read-only evidence.
+
+`TestS3kDezGravityPuzzleLanding` checks P1/P2 at inclusive `-$20`, excluded
+`-$21`/`+$20`, included `+$1F` and centre controls through real object-manager
+contacts. Four positive-control cases cover P1/P2 at320/800, exact word-only Y
+correction, velocity reset/copy, untouched other participant, same-slot forced
+recreation, exact24-dispatch replay and replacement without stale support.
+Two additional P1/P2 checks force a moving-metadata update and an earlier solid
+slot before the puzzle consumes its airborne standing bit.
+No persistent state, slot allocation or child lifetime changes are introduced;
+the existing folded panel-child representation and allocation-exhaustion products
+are not newly qualified. These are owner-level positioned checks, separate from
+the production-loop original-input witness.
+
+`TestS3kDezColdRoutes#coldActOneGravityPuzzleLandingPreservesNativeBoundary`
+compares the unchanged13 fields and exact original inputs from the fresh inlet
+through13260 rows. The linked log records old-red/new-green results, mandatory
+anchors, the separate15-field observation and its stopping boundary. Existing
+puzzle/panel/room tests retain their scope. Whole-act/campaign certification,
+other donor/character/team products, restart/death/load rewind, native pixels and
+audio remain inherited gaps. A solid seat immediately before the room can still
+select grounded sensor activation; this adjacent concern is recorded separately
+rather than changing shared physics or enabling probes by a route/frame key.
+
+
+Completed focused validation:120 tests,0 failures,0 errors,0 skips (60 mandatory
+S3K anchors; one temporary observer). The unchanged15-field continuation matches
+rows0–13726, then stops at13727 with a room-floor landing velocity difference.
+The puzzle prefix is green; Act2 row18670 remains unreached. The room's empty
+landing callback is the next owner, distinct from the grounded-seat activation
+concern. Detailed commands, identities, timings and coverage limits are in the
+linked frontier record.
+
+The subsequent walk-off review correction clears each departing participant's
+standing bit at the native range exit. `TestS3kDezGravityPuzzleLanding` covers
+both edges and P1/P2 re-entry, plus in-bounds object-controlled latch retention.
+Its 101-case focused DEZ/anchor selection passed with zero skips; broader
+overlapping-support, sustained object-control and whole-route coverage remain open.
+
+
+## Turbine direct floor landing — 2026-10-30
+
+The [bounded native/engine witness](../../../status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
+starts from explicit candidate624 and composes the lead-reviewed puzzle walk-off
+correctione87. It distinguishes correct geometric resolution from the turbine's
+missing direct-floor velocity/reset callback. Native original-input callbacks
+reach the same floor pair +1/-4 at angle `$F8`, then clear Y speed, copy X speed
+into inertia and call TouchFloor before restoring airborne status. Positive clear
+ceiling distances differ without changing the taken branch; shared collision is
+unchanged. The separate grounded-seat sensor-activation concern remains open.
+
+Four short `TestS3kDezGravityRoomTerrain` cases cover Sonic P1/Tails P2 at320/800
+against actual DEZ1 floor tiles, fraction preservation, native velocity/reset
+writes, room control/air retention, untouched other participant, forced same-slot
+controller recreation, exact24-dispatch forward replay, corridor release and
+clean same-slot replacement. Positioned component inlets are separate from the
+fresh original-input cold witness. Existing clear-space/ceiling controls and
+room/puzzle consumers retain their own coverage. The new cold method compares
+the unchanged13 fields and exact original input through the repaired contact.
+
+No new persistent field, allocation, child lifetime, load or rewind schema is
+introduced. This does not certify full companion state, downward-motion floor
+landings, wider donor/character/team products, restart/death/load rewind, Act2
+loading, native pixels/audio or whole-act/campaign parity. The linked record owns
+completed command results and the next observed stopping boundary.
+
+The follow-up hurt-contact check covers both P1 and P2 at the direct floor:
+the separate HurtStop owner retains hurt routine, room control and invulnerability
+through the next room dispatch. The focused DEZ/anchor selection passed 108 cases
+with no skips. This does not establish the untested ability or route products above.

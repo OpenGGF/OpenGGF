@@ -33,7 +33,7 @@ class TestRoomHost {
         room.onDisconnected(old);
         var replacement = admit(new FakeHubConnection(),"New",dir.resolve("new"));
         assertNotEquals(joined.playerSlot(),replacement.playerSlot());
-        assertEquals("Old",room.round().standings().getFirst().displayName());
+        assertEquals("Old", room.round().results().getFirst().displayName());
     }
 
     private static final String FP = "0.6:cafe1234";
@@ -46,9 +46,13 @@ class TestRoomHost {
     @BeforeEach
     void setUp() throws Exception {
         hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
-        room = new RoomHost(
-                new RoomHostConfig("LAN", "s3k", 0, 0, "OPEN", null, 8, FP),
-                hostIdentity, () -> now, TrackValidationProfileSource.none());
+        room = createRoom(false);
+    }
+
+    private RoomHost createRoom(boolean verified) {
+        return new RoomHost(new RoomHostConfig("LAN", "s3k", 0, 0, "OPEN", null,
+                8, FP, List.of(), verified), hostIdentity, () -> now,
+                TrackValidationProfileSource.none());
     }
 
     private ControlMessage.JoinAccepted admit(FakeHubConnection connection, String name,
@@ -379,7 +383,7 @@ class TestRoomHost {
                         "ab".repeat(32), HexFormat.of().formatHex(
                         publisher.streamHashSha256()), null)));
         assertEquals(HostRoundEngine.Phase.RUNNING, room.round().phase());
-        assertEquals(1, room.round().standings().size());
+        assertEquals(1, room.round().results().size());
     }
 
     @Test
@@ -461,6 +465,7 @@ class TestRoomHost {
 
     @Test
     void standingsPageRequestsAreUnicastAndRateLimited() throws Exception {
+        room = createRoom(true);
         FakeHubConnection player = new FakeHubConnection();
         String token = admit(player, "A", dir.resolve("a")).sessionToken();
         room.requestStartRound(new ControlMessage.RoundConfig(

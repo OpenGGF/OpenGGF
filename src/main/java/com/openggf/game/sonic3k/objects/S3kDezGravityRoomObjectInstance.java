@@ -12,6 +12,8 @@ import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -238,11 +240,64 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
             // routine. Prepare probes from its new velocity before the native terrain
             // dispatch; a previous grounded/quadrant activation cannot suppress it.
             player.updateSensors(originalX, originalY);
-            collisionSystem.resolveAirCollision(player, landed -> { });
+            // SonicKnux_DoLevelCollision dispatches horizontal-motion quadrants to
+            // the direct floor tails, loc_12084 (sonic3k.asm:24259-24264) and
+            // loc_12158 (sonic3k.asm:24352-24357). The terrain owner supplies
+            // separation/angle; this caller must supply their velocity/TouchFloor tail.
+            int quadrant = TrigLookupTable.calcMovementQuadrant(player.getXSpeed(), player.getYSpeed());
+            collisionSystem.resolveAirCollision(player, landed -> {
+                if (quadrant == 0x40 || quadrant == 0xC0) {
+                    landOnDirectFloor(landed);
+                }
+            });
         }
         // bset #Status_InAir,status(a1) (:95783): a landing inside the corridor is undone on
         // the same frame it happens, which is what keeps the blow going over floor terrain.
         player.setAir(true);
+    }
+
+    /**
+     * Direct floor tail used by this room's horizontal-motion terrain dispatch.
+     * loc_12158 (sonic3k.asm:24352-24357) writes velocity before calling
+     * Player_TouchFloor_Check_Spindash (sonic3k.asm:24364-24430).
+     * The downward-motion landing callback remains outside this bounded correction.
+     */
+    private void landOnDirectFloor(AbstractPlayableSprite player) {
+        player.setYSpeed((short) 0);
+        player.setGSpeed(player.getXSpeed());
+        int savedDoubleJumpFlag = player.getDoubleJumpFlag();
+        if (!player.getSpindash()) {
+            int centreX = player.getCentreX();
+            int centreY = player.getCentreY();
+            int radiusDelta = player.getRolling()
+                    ? (byte) (player.getYRadius() - player.getStandYRadius()) : 0;
+            if (services().gameState().isReverseGravityActive()) radiusDelta = -radiusDelta;
+            if (((player.getAngle() + 0x40) & 0x80) != 0) radiusDelta = -radiusDelta;
+            player.setRolling(false);
+            player.restoreDefaultRadii();
+            NativePositionOps.writeXPosPreserveSubpixel(player, centreX);
+            NativePositionOps.writeYPosPreserveSubpixel(player, centreY + radiusDelta);
+            player.setLookingUp(false);
+            player.setCrouching(false);
+            player.setAnimationId(Sonic3kAnimationIds.WALK);
+        }
+        // Tails' loc_1565E (sonic3k.asm:29198-29210) shares Player_TouchFloor's
+        // tumble reset even under object_control.
+        // No FixBugs branch occurs here; retain the shipped FixBugs=0 behavior.
+        // The room calls TouchFloor directly; only the separate HurtStop
+        // player dispatch may finish hurt recovery and release object control.
+        if (player.isHurt()) player.setAirAfterObjectHurtLanding();
+        else player.setAir(false);
+        player.setPushing(false);
+        player.setRollingJump(false);
+        player.setJumping(false);
+        player.setFlipAngle(0);
+        player.setFlipType(0);
+        player.setFlipTurned(false);
+        player.setFlipsRemaining(0);
+        player.setLookDelayCounter((short) 0);
+        services().gameState().resetItemBonus();
+        player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
     }
 
     /**

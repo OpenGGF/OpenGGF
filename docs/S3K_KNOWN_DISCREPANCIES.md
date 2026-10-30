@@ -9,11 +9,24 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ turbine direct floor landing (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-turbine-direct-floor-landing-at-row-13727)
+restores the room's direct-floor velocity and TouchFloor tail, while retaining
+its immediate airborne reassertion and the separate hurt-recovery owner. It adds no accepted ROM deviation. The
+linked record retains separate sensor, downward-motion, route and lifecycle limits.
+
+**DEZ gravity-puzzle landing width (2026-10-30):** the bounded
+[original-input correction](status/trace-frontier-log.md#2026-10-30--dez-gravity-puzzle-native-top-landing-width-at-row-13251)
+restores the shaft's native `$20` top-landing width, independently of its `$23`
+full-solid collision argument. It adds no accepted ROM deviation. Broader
+route/configuration/lifecycle parity and the separate solid-seat-before-room
+probe-activation concern remain subject to the linked evidence limits.
+
 **DEZ turbine terrain preparation (2026-10-30):** the bounded
 [original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-turbine-owned-terrain-preparation-after-the-12000-row-prefix)
 restores the room's current-motion probe preparation before its existing terrain
-call. This adds no accepted deviation. The next observed gravity-puzzle landing
-width frontier at row 13251 and the incoming Act2 boundary remain open.
+call. This adds no accepted deviation. The later gravity-puzzle correction above
+supersedes the row 13251 frontier; the incoming Act2 boundary remains open.
 
 **DEZ floor-launcher landing correction (2026-10-30):** the bounded
 [original-input continuation](status/trace-frontier-log.md#2026-10-30--dez-original-input-continuation-and-floor-launcher-landing-boundary)

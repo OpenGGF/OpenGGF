@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg gravity puzzle:** New top landings use the native shaft width,
+  allowing edge contacts to establish support before the turbine moves the player.
+  Bobbing retains each occupant's rider state until its own solid call consumes an
+  airborne seat, preventing a second landing in that same call. Grounded
+  walk-off clears the departing player's latch before a later re-entry.
+
 - **Death Egg staircases:** Moving sections preserve their own standing bits.
   A jumping rider releases at the ridden section's collision checkpoint,
   preserving the native jump height.
@@ -887,6 +893,8 @@ Unreleased. The earlier development themes remain in
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
   body-size adjustment; its turbine room prepares terrain probes from each
   controlled player's current motion, preserving native ceiling separation.
+  Direct floor contacts also reset vertical speed, inertia and tumble state before
+  the room resumes airborne control without prematurely ending hurt recovery.
   Chainspike's floor probe uses its native collision radius.
   Spikebonker's mace initializes before its first orbit step, preserving the native
   companion contact timing in Death Egg's opening.

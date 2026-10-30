@@ -84,7 +84,7 @@ public final class GhostLoadTestTool {
             room.tick();
 
             long caught = bots.stream().filter(BotClient::adversaryCaught).count();
-            long healthyFinished = room.round().standings().size();
+            long healthyFinished = bots.stream().filter(BotClient::finishedObserved).count();
             long maxPacket = bots.stream().mapToLong(BotClient::maxEmittedPacketBytes)
                     .max().orElse(0);
             Arrays.sort(tickNanos);

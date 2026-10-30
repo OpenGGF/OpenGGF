@@ -911,7 +911,7 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 | `verifiedUploadDeadlineSeconds` | `15` | Verified-room upload deadline. |
 | `recordingRetentionDays` | `3` | Recording blob retention before scheduled deletion. |
 | `verdictGraceMillis` | `10000` | Extra verified-room result hold after the upload window. |
-| `spotCheckTopTimes` | `1` | Top casual standings entries selected for spot-checking. |
+| `spotCheckTopTimes` | `1` | Top unverified finish claims selected for spot-checking; claims are not published as shared standings. |
 | `cheatBanDays` | `0` | Failed-verification ban duration; `0` is permanent. |
 | `verifierStaleSeconds` | `120` | Worker heartbeat/registration age after which it is unavailable; minimum 120 seconds leaves the 30-second worker heartbeat time to recover from one timed-out request. |
 | `verifierLeaseSeconds` | `300` | Job lease duration before requeue. |

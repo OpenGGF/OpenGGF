@@ -165,9 +165,9 @@ class TestRoomHostAdversarial {
             harness.advance(HostRoundEngine.COUNTDOWN_MILLIS);
         }
         harness.finish(witness, 1);
-        assertTrue(harness.room.round().standings().stream()
-                .anyMatch(row -> row.slot() == witness.join.playerSlot()
-                        && row.displayName().equals("Witness") && row.bestTimeFrames() == 1), context);
+        assertTrue(harness.room.round().results().stream()
+                .anyMatch(result -> result.slot() == witness.join.playerSlot()
+                        && result.displayName().equals("Witness") && result.timeFrames() == 1), context);
         harness.room.close("test complete");
         harness.flushDisconnect(witness);
         assertEquals(0, harness.room.playerCount(), context);
