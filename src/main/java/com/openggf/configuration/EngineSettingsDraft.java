@@ -49,6 +49,11 @@ public final class EngineSettingsDraft {
         return CATEGORY_KEYS.get(category);
     }
 
+    /** The page order of {@code category}'s rows, which does not depend on any configuration. */
+    public static List<SonicConfiguration> pageKeys(Category category) {
+        return CATEGORY_KEYS.get(category);
+    }
+
     private static int controlGroupOrder(SonicConfiguration key) {
         String section = ConfigCatalog.meta(key).section();
         if (section.equals("input.player1")) return 0;

@@ -109,6 +109,16 @@ Unreleased. The earlier development themes remain in
   catalogue. Playback facts and import guidance use complete ICU messages;
   special-stage playback labels come from metadata rather than translated text.
 
+- **Team editors in Settings:** Settings > Advanced edits the direct-launch
+  sidekick line and the save screen's extra character teams as ordered teams
+  instead of comma- and semicolon-separated text. Each sidekick row shows the
+  character it follows; Left/Right changes the character, and its actions move or
+  remove it. Sidekicks can be added up to 16 per team. Extra teams can be added,
+  edited (player and sidekicks), reordered or removed, and read as names on the
+  Settings row. Empty lists explain what remains; unlisted stored codes are kept
+  until changed. Every full catalogue has current machine drafts of the new
+  wording, revised after independent Opus 5.5 and GPT-6.1 Sol reviews.
+
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
   behavior. Revision choices belong to the loaded image, including logical

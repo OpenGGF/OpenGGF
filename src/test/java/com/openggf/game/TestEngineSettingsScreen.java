@@ -425,6 +425,122 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void sidekicksAreEditedAsAnOrderedTeamRatherThanCommaText() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED, config -> {
+            config.setConfigValue(MAIN_CHARACTER_CODE, "sonic");
+            config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails");
+        });
+        f.focus(SIDEKICK_CHARACTER_CODE);
+        f.press(GLFW_KEY_ENTER);
+        List<String> page = f.texts();
+        assertTrue(page.contains("Direct-launch sidekicks"), page.toString());
+        assertTrue(page.contains("Player: Sonic"));
+        assertTrue(page.contains("Tails") && page.contains("Follows Sonic"));
+        assertFalse(page.contains("tails"), "the page never shows the stored comma value");
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Add sidekick: copies the last one and focuses it.
+        f.press(GLFW_KEY_RIGHT); // Tails -> Knuckles
+        page = f.texts();
+        assertTrue(page.contains("Knuckles") && page.contains("Follows Tails"), page.toString());
+        f.press(GLFW_KEY_ENTER); // Actions for sidekick 2.
+        assertTrue(f.texts().contains("Move earlier"));
+        assertFalse(f.texts().contains("Move later"), "the last sidekick cannot move later");
+        f.press(GLFW_KEY_ENTER); // Move earlier.
+        assertTrue(f.texts().contains("Follows Knuckles"), "Tails now follows Knuckles");
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_DOWN, 4); // Focus is on Knuckles: Tails, Add sidekick, Restore default, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("tails", f.config.getString(SIDEKICK_CHARACTER_CODE), "Done fills the draft only");
+        assertTrue(f.texts().contains("Knuckles, Tails"), "the row reads as names");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER); // Save.
+        assertEquals("knuckles,tails", f.config.getString(SIDEKICK_CHARACTER_CODE));
+    }
+
+    @Test
+    void extraSaveScreenTeamsAreAddedEditedAndOrderedAsTeams() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
+                config -> config.setConfigValue(DATA_SELECT_EXTRA_PLAYER_COMBOS, "sonic,knuckles"));
+        f.focus(DATA_SELECT_EXTRA_PLAYER_COMBOS);
+        assertTrue(f.texts().contains("Sonic + Knuckles"), () -> "the Settings row reads as names: " + f.texts());
+        f.press(GLFW_KEY_ENTER);
+        List<String> page = f.texts();
+        assertTrue(page.contains("Extra character teams") && page.contains("Sonic + Knuckles"), page.toString());
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Add team.
+        page = f.texts();
+        assertTrue(page.contains("New team") && page.contains("Player") && page.contains("Follows Sonic"), page.toString());
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_RIGHT); // Player: Sonic -> Tails.
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_RIGHT); // Sidekick: Tails -> Knuckles.
+        assertTrue(f.texts().contains("Follows Tails"));
+        f.press(GLFW_KEY_DOWN, 2); // Add sidekick, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Tails + Knuckles"), "Done returns to the list with the new team");
+        f.press(GLFW_KEY_ENTER); // Actions for team 2.
+        assertEquals(List.of("Edit team", "Move earlier", "Remove"),
+                f.texts().stream().filter(List.of("Edit team", "Move earlier", "Move later", "Remove")::contains).toList());
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER); // Move earlier.
+        f.assertTextBounds(320);
+        f.press(GLFW_KEY_DOWN, 4); // Team 2, Add team, Restore default, Done.
+        f.press(GLFW_KEY_ENTER);
+        assertEquals("sonic,knuckles", f.config.getString(DATA_SELECT_EXTRA_PLAYER_COMBOS), "Done fills the draft only");
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER); // Save.
+        assertEquals("tails,knuckles;sonic,knuckles", f.config.getString(DATA_SELECT_EXTRA_PLAYER_COMBOS));
+    }
+
+    @Test
+    void teamEditorsStayOnScreenInEveryLanguage() {
+        try {
+            for (var language : com.openggf.i18n.UiMessages.languages()) {
+                com.openggf.i18n.UiMessages.selectLanguage(language.tag());
+                Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED, config -> {
+                    config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails,knuckles");
+                    config.setConfigValue(DATA_SELECT_EXTRA_PLAYER_COMBOS, "sonic,knuckles;knuckles,tails,tails");
+                });
+                f.focus(SIDEKICK_CHARACTER_CODE);
+                f.press(GLFW_KEY_ENTER);
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Sidekick actions.
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ESCAPE, 2);
+                f.focus(DATA_SELECT_EXTRA_PLAYER_COMBOS);
+                f.press(GLFW_KEY_ENTER);
+                String addTeam = com.openggf.i18n.UiMessages.text("settings.teams.add");
+                assertTrue(f.texts().contains(addTeam), language.tag() + " draws " + addTeam);
+                if (!language.tag().startsWith("en")) assertNotEquals("Add team", addTeam, language.tag());
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Team actions.
+                f.assertTextBounds(320);
+                f.press(GLFW_KEY_ENTER); // Edit team.
+                f.assertTextBounds(320);
+                assertEquals(DATA_SELECT_EXTRA_PLAYER_COMBOS, f.screen.selectedForTest(), language.tag());
+            }
+        } finally {
+            com.openggf.i18n.UiMessages.selectLanguage("en");
+        }
+    }
+
+    @Test
+    void backingOutOfTheSidekickPageKeepsTheDraft() {
+        Fixture f = new Fixture(EngineSettingsScreen.Scope.ADVANCED,
+                config -> config.setConfigValue(SIDEKICK_CHARACTER_CODE, "tails"));
+        f.focus(SIDEKICK_CHARACTER_CODE);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ENTER); // Actions for sidekick 1.
+        f.press(GLFW_KEY_ENTER); // Remove (its only action).
+        assertTrue(f.texts().contains("No sidekicks: the player plays alone"));
+        f.press(GLFW_KEY_ESCAPE);
+        assertEquals(SIDEKICK_CHARACTER_CODE, f.screen.selectedForTest());
+        assertFalse(f.texts().contains("SAVE CHANGES"), "Back discards the page's edits");
+    }
+
+    @Test
     void settingsAreRegroupedByWhatPlayersLookFor() {
         assertEquals(EngineSettingsDraft.Category.GAMEPLAY, EngineSettingsDraft.category(DEBUG_VIEW_ENABLED));
         assertEquals(EngineSettingsDraft.Category.GAMEPLAY, EngineSettingsDraft.category(LIVE_REWIND_ENABLED));
@@ -638,7 +754,11 @@ class TestEngineSettingsScreen {
 
         Fixture() { this(EngineSettingsScreen.Scope.MAIN); }
 
-        Fixture(EngineSettingsScreen.Scope scope) {
+        Fixture(EngineSettingsScreen.Scope scope) { this(scope, config -> { }); }
+
+        /** {@code setup} writes saved preferences before the screen takes its draft. */
+        Fixture(EngineSettingsScreen.Scope scope, java.util.function.Consumer<SonicConfigurationService> setup) {
+            setup.accept(config);
             screen = new EngineSettingsScreen(config, font, scope);
             config.setConfigValue(CONTROLLER_ENABLED, true);
             config.setConfigValue(CONTROLLER_PLAYER1, "auto");

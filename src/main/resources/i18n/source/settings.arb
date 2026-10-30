@@ -496,11 +496,11 @@
   "@settings.key.main_character_code.help": {
     "description": "Settings help for stable configuration key MAIN_CHARACTER_CODE. Technical YAML documentation remains separate."
   },
-  "settings.key.sidekick_character_code.label": "Direct-launch sidekick",
+  "settings.key.sidekick_character_code.label": "Direct-launch sidekicks",
   "@settings.key.sidekick_character_code.label": {
     "description": "Settings label for stable configuration key SIDEKICK_CHARACTER_CODE (characters.sidekick)."
   },
-  "settings.key.sidekick_character_code.help": "The computer-controlled partner in a direct launch; leave empty for none.",
+  "settings.key.sidekick_character_code.help": "The computer-controlled partners in a direct launch, in follow order; none plays alone.",
   "@settings.key.sidekick_character_code.help": {
     "description": "Settings help for stable configuration key SIDEKICK_CHARACTER_CODE. Technical YAML documentation remains separate."
   },
@@ -508,7 +508,7 @@
   "@settings.key.data_select_extra_player_combos.label": {
     "description": "Settings label for stable configuration key DATA_SELECT_EXTRA_PLAYER_COMBOS (characters.dataSelectExtraCombos)."
   },
-  "settings.key.data_select_extra_player_combos.help": "Extra teams offered on the save screen, separated by semicolons.",
+  "settings.key.data_select_extra_player_combos.help": "Extra teams the save screen offers after its own: a player and any sidekicks.",
   "@settings.key.data_select_extra_player_combos.help": {
     "description": "Settings help for stable configuration key DATA_SELECT_EXTRA_PLAYER_COMBOS. Technical YAML documentation remains separate."
   },
@@ -2169,5 +2169,195 @@
   "settings.screen.audio_mux_arguments_summary": "The sound mux's arguments; leave empty to save the video without sound.",
   "@settings.screen.audio_mux_arguments_summary": {
     "description": "Merged host menu wording. Preserve complete messages and named arguments."
+  },
+  "settings.sidekicks.title": "Direct-launch sidekicks",
+  "@settings.sidekicks.title": {
+    "description": "Sidekick team editor in Settings: page title."
+  },
+  "settings.sidekicks.tag_caps": "TEAM",
+  "@settings.sidekicks.tag_caps": {
+    "description": "Sidekick team editor in Settings: header tag; capitals."
+  },
+  "settings.sidekicks.player": "Player: {name}",
+  "@settings.sidekicks.player": {
+    "description": "Sidekick team editor in Settings: the direct-launch main character the line follows.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.sidekicks.follows": "Follows {name}",
+  "@settings.sidekicks.follows": {
+    "description": "Sidekick team editor in Settings: quiet note on a sidekick row naming the character it follows.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.sidekicks.add": "Add sidekick",
+  "@settings.sidekicks.add": {
+    "description": "Sidekick team editor in Settings: row that appends a sidekick to the end of the line."
+  },
+  "settings.sidekicks.done": "Done",
+  "@settings.sidekicks.done": {
+    "description": "Sidekick team editor in Settings: row that keeps the edited team in the unsaved Settings draft."
+  },
+  "settings.sidekicks.empty": "No sidekicks: the player plays alone",
+  "@settings.sidekicks.empty": {
+    "description": "Sidekick team editor in Settings: shown beside Add sidekick when the line is empty."
+  },
+  "settings.sidekicks.slot_help": "Sidekick {number} follows {leader}.",
+  "@settings.sidekicks.slot_help": {
+    "description": "Sidekick team editor in Settings: help for a sidekick row.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "leader": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.sidekicks.add_help": "Adds a sidekick to the end of the line, up to {max}.",
+  "@settings.sidekicks.add_help": {
+    "description": "Sidekick team editor in Settings: help for Add sidekick.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "settings.sidekicks.default_help": "Restores the stock line: {team}.",
+  "@settings.sidekicks.default_help": {
+    "description": "Sidekick team editor in Settings: help for Restore default; team is a list of names or None.",
+    "placeholders": {
+      "team": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.sidekicks.done_help": "Keeps this line. Save changes on the Settings page to store it.",
+  "@settings.sidekicks.done_help": {
+    "description": "Sidekick team editor in Settings: help for Done."
+  },
+  "settings.sidekicks.slot_title": "Sidekick {number}: {name}",
+  "@settings.sidekicks.slot_title": {
+    "description": "Sidekick team editor in Settings: header of the actions page for one sidekick.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.sidekicks.move_earlier": "Move earlier",
+  "@settings.sidekicks.move_earlier": {
+    "description": "Sidekick team editor in Settings: action: swap with the sidekick before it."
+  },
+  "settings.sidekicks.move_later": "Move later",
+  "@settings.sidekicks.move_later": {
+    "description": "Sidekick team editor in Settings: action: swap with the sidekick after it."
+  },
+  "settings.sidekicks.remove": "Remove",
+  "@settings.sidekicks.remove": {
+    "description": "Sidekick team editor in Settings: action: take this sidekick out of the line."
+  },
+  "settings.sidekicks.character_caps": "CHARACTER",
+  "@settings.sidekicks.character_caps": {
+    "description": "Sidekick team editor in Settings: footer hint for changing a row's character; capitals."
+  },
+  "settings.sidekicks.actions_caps": "ACTIONS",
+  "@settings.sidekicks.actions_caps": {
+    "description": "Sidekick team editor in Settings: footer hint for opening a row's actions; capitals."
+  },
+  "settings.teams.title": "Extra character teams",
+  "@settings.teams.title": {
+    "description": "Extra save-screen teams editor in Settings: page title."
+  },
+  "settings.teams.tag_caps": "SAVE SCREEN",
+  "@settings.teams.tag_caps": {
+    "description": "Extra save-screen teams editor in Settings: header tag; capitals."
+  },
+  "settings.teams.caption": "Offered on the save screen after the built-in teams",
+  "@settings.teams.caption": {
+    "description": "Extra save-screen teams editor in Settings: quiet line under the title."
+  },
+  "settings.teams.empty": "No extra teams: the save screen offers its built-in teams",
+  "@settings.teams.empty": {
+    "description": "Extra save-screen teams editor in Settings: information row when the list is empty."
+  },
+  "settings.teams.alone": "{name} alone",
+  "@settings.teams.alone": {
+    "description": "Extra save-screen teams editor in Settings: a team with a player and no sidekicks.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.teams.add": "Add team",
+  "@settings.teams.add": {
+    "description": "Extra save-screen teams editor in Settings: row that adds a team and opens it."
+  },
+  "settings.teams.team_help": "Team {number}: {team}.",
+  "@settings.teams.team_help": {
+    "description": "Extra save-screen teams editor in Settings: help for a team row; team is the player and sidekicks joined by +.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "team": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.teams.add_help": "Adds a team and opens it to choose the player and sidekicks.",
+  "@settings.teams.add_help": {
+    "description": "Extra save-screen teams editor in Settings: help for Add team."
+  },
+  "settings.teams.default_help": "Removes every extra team; the built-in teams remain.",
+  "@settings.teams.default_help": {
+    "description": "Extra save-screen teams editor in Settings: help for Restore default on the team list."
+  },
+  "settings.teams.done_help": "Keeps these teams. Save changes on the Settings page to store them.",
+  "@settings.teams.done_help": {
+    "description": "Extra save-screen teams editor in Settings: help for Done on the team list."
+  },
+  "settings.teams.edit": "Edit team",
+  "@settings.teams.edit": {
+    "description": "Extra save-screen teams editor in Settings: action: open the team to change its player and sidekicks."
+  },
+  "settings.teams.team_title": "Team {number}",
+  "@settings.teams.team_title": {
+    "description": "Extra save-screen teams editor in Settings: title of one team's actions and editing pages.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "settings.teams.new_title": "New team",
+  "@settings.teams.new_title": {
+    "description": "Extra save-screen teams editor in Settings: title of the page for a team being added."
+  },
+  "settings.teams.team_caption": "Plays as the first character; sidekicks follow in order",
+  "@settings.teams.team_caption": {
+    "description": "Extra save-screen teams editor in Settings: quiet line under one team's title."
+  },
+  "settings.teams.main_note": "Player",
+  "@settings.teams.main_note": {
+    "description": "Extra save-screen teams editor in Settings: quiet note on the row choosing the team's player character."
+  },
+  "settings.teams.main_help": "The character this team plays as.",
+  "@settings.teams.main_help": {
+    "description": "Extra save-screen teams editor in Settings: help for the team's player row."
+  },
+  "settings.teams.keep_help": "Keeps this team in the list of extra teams.",
+  "@settings.teams.keep_help": {
+    "description": "Extra save-screen teams editor in Settings: help for Done on one team's page."
   }
 }

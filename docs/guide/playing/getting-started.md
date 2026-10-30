@@ -173,7 +173,7 @@ defaults. A few settings you might want to change immediately:
 | `startup.masterTitleScreen` | Show game picker on launch | `true` |
 | `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
 | `audio.enabled` | Enable or disable sound | `true` |
-| `characters.sidekick` | CPU sidekick for direct launches; hub launches use each game’s Game Setup | `"tails"` |
+| `characters.sidekick` | CPU sidekicks for direct launches, comma-separated in follow order (edit as a list in Settings > Advanced); hub launches use each game’s Game Setup | `"tails"` |
 | `debug.flags.editor` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
 
 Key bindings can be written as names like `"SPACE"` and `"F9"` instead of raw numeric key codes.

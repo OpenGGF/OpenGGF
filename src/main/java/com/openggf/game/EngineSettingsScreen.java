@@ -121,6 +121,8 @@ public final class EngineSettingsScreen {
     private boolean displayPrompt;
     private boolean keepDisplay;
     private LanguagePickerScreen languagePicker;
+    private SidekickTeamEditor sidekickEditor;
+    private ExtraTeamsEditor teamsEditor;
 
     public void cancelDisplayTrial() {
         com.openggf.configuration.DisplaySettingsTrial.forConfig(config).cancel();
@@ -138,6 +140,14 @@ public final class EngineSettingsScreen {
         MenuInput.Pointer localPointer = frame.local(pointer);
         if (languagePicker != null) {
             if (languagePicker.update(input, localPointer)) languagePicker = null;
+            return;
+        }
+        if (sidekickEditor != null) {
+            if (sidekickEditor.update(input, localPointer)) sidekickEditor = null;
+            return;
+        }
+        if (teamsEditor != null) {
+            if (teamsEditor.update(input, localPointer)) teamsEditor = null;
             return;
         }
         if (displayPrompt) { updateDisplayPrompt(input); return; }
@@ -233,6 +243,18 @@ public final class EngineSettingsScreen {
         if (selected() == SonicConfiguration.UI_LANGUAGE) {
             languagePicker = new LanguagePickerScreen(draft.text(selected()),
                     tag -> draft.set(SonicConfiguration.UI_LANGUAGE, tag));
+            return;
+        }
+        if (selected() == SonicConfiguration.SIDEKICK_CHARACTER_CODE) {
+            Object stock = config.getDefaultValue(selected());
+            sidekickEditor = SidekickTeamEditor.directLaunch(draft.text(SonicConfiguration.MAIN_CHARACTER_CODE),
+                    draft.text(selected()), stock == null ? "" : stock.toString(),
+                    team -> draft.set(SonicConfiguration.SIDEKICK_CHARACTER_CODE, team));
+            return;
+        }
+        if (selected() == SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS) {
+            teamsEditor = new ExtraTeamsEditor(draft.text(selected()),
+                    teams -> draft.set(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS, teams));
             return;
         }
         ConfigType type = ConfigCatalog.meta(selected()).type();
@@ -520,7 +542,16 @@ public final class EngineSettingsScreen {
         List<SonicConfiguration> keys = draft.keys(tabs[Math.min(category, tabs.length - 1)]);
         if (tabs[category] == EngineSettingsDraft.Category.INPUT)
             return keys.stream().filter(key -> controlGroup(key) == controlGroup).toList();
-        // Captioned tabs keep each group together, in caption order; within a group, catalog order.
+        return rowOrder(keys);
+    }
+
+    /** The rows of a captioned (non-Controls) tab in the order the page draws them. */
+    public static List<SonicConfiguration> rowOrder(EngineSettingsDraft.Category category) {
+        return rowOrder(EngineSettingsDraft.pageKeys(category));
+    }
+
+    // Captioned tabs keep each group together, in caption order; within a group, catalog order.
+    private static List<SonicConfiguration> rowOrder(List<SonicConfiguration> keys) {
         return keys.stream().sorted(java.util.Comparator.comparingInt(key -> {
             String group = EngineSettingLabels.group(key);
             return group == null ? -1 : EngineSettingLabels.GROUPS.indexOf(group);
@@ -859,6 +890,8 @@ public final class EngineSettingsScreen {
     private void renderContent() {
         int width = frame.width();
         if (languagePicker != null) { languagePicker.render(font, width); return; }
+        if (sidekickEditor != null) { sidekickEditor.render(font, width); return; }
+        if (teamsEditor != null) { teamsEditor.render(font, width); return; }
         if (details != null) { details.render(font, width); return; }
         refreshPresentation();
         keepRowVisible();

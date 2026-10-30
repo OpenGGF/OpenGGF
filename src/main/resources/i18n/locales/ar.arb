@@ -15517,18 +15517,18 @@
       "reviewed": false
     }
   },
-  "settings.key.sidekick_character_code.label": "مرافق التشغيل المباشر",
+  "settings.key.sidekick_character_code.label": "مرافقو التشغيل المباشر",
   "@settings.key.sidekick_character_code.label": {
     "x-openggf": {
-      "sourceHash": "05f4e7237730ca4375a27c7f24bf2104d5d7f5f458c2435371efe657bab14f2e",
+      "sourceHash": "e7d142dedf0da3e58f3188157c30f48bc0ff1a2829a02c34eb5011fb99c6a85b",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
   },
-  "settings.key.sidekick_character_code.help": "الشريك الذي يتحكم فيه الحاسوب في التشغيل المباشر؛ اتركه فارغًا لعدم وجود شريك.",
+  "settings.key.sidekick_character_code.help": "المرافقون الذين يتحكم فيهم الحاسوب في التشغيل المباشر، حسب ترتيب سيرهم خلف بعضهم؛ دون مرافقين تلعب الشخصية وحدها.",
   "@settings.key.sidekick_character_code.help": {
     "x-openggf": {
-      "sourceHash": "c7d275b93ce5c67f5db9f1cd0492785d31dc0c92db6e27cfa7c49cef006ac602",
+      "sourceHash": "45832f67924de62d93339b895d8a1f6c658da5df5723d1a4df0e3f053b8f91ba",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -15541,10 +15541,10 @@
       "reviewed": false
     }
   },
-  "settings.key.data_select_extra_player_combos.help": "فرق إضافية تُعرض في شاشة الحفظ، مفصولة بفاصلة منقوطة.",
+  "settings.key.data_select_extra_player_combos.help": "فرق إضافية تعرضها شاشة الحفظ بعد فرقها: شخصية ومرافقون إن وُجدوا.",
   "@settings.key.data_select_extra_player_combos.help": {
     "x-openggf": {
-      "sourceHash": "4e90380ad1c82db64c070e230794f0dd4374c9e8d517f25366bb69f377aad1b1",
+      "sourceHash": "2ba4dee514b192bdd9f1375440cb6241b475cdd84289a26a9cdc76fbaccac5f7",
       "origin": "claude-haiku-5-5",
       "reviewed": false
     }
@@ -23170,6 +23170,278 @@
     "x-openggf": {
       "sourceHash": "c693a84714c06e3b6e8b1235ebb8ac9a906a9541757ca6e9e4097373265779bf",
       "origin": "claude-haiku-5-5",
+      "reviewed": false
+    }
+  },
+  "settings.sidekicks.title": "مرافقو التشغيل المباشر",
+  "settings.sidekicks.tag_caps": "الفريق",
+  "settings.sidekicks.player": "الشخصية الرئيسية: {name}",
+  "settings.sidekicks.follows": "يتبع {name}",
+  "settings.sidekicks.add": "إضافة مرافق",
+  "settings.sidekicks.done": "تم",
+  "settings.sidekicks.empty": "لا يوجد مرافقون: الشخصية تلعب وحدها",
+  "settings.sidekicks.slot_help": "المرافق {number} يتبع {leader}.",
+  "settings.sidekicks.add_help": "يضيف مرافقًا إلى نهاية الترتيب، حتى {max}.",
+  "settings.sidekicks.default_help": "يستعيد الترتيب الافتراضي: {team}.",
+  "settings.sidekicks.done_help": "يُبقي هذا الترتيب. احفظ التغييرات في صفحة الإعدادات لتخزينه.",
+  "settings.sidekicks.slot_title": "المرافق {number}: {name}",
+  "settings.sidekicks.move_earlier": "تقديم في الترتيب",
+  "settings.sidekicks.move_later": "تأخير في الترتيب",
+  "settings.sidekicks.remove": "إزالة",
+  "settings.sidekicks.character_caps": "الشخصية",
+  "settings.sidekicks.actions_caps": "الإجراءات",
+  "settings.teams.title": "فرق شخصيات إضافية",
+  "settings.teams.tag_caps": "شاشة الحفظ",
+  "settings.teams.caption": "تُعرض في شاشة الحفظ بعد الفرق المدمجة",
+  "settings.teams.empty": "لا توجد فرق إضافية: تعرض شاشة الحفظ فرقها المدمجة",
+  "settings.teams.alone": "{name} وحده",
+  "settings.teams.add": "إضافة فريق",
+  "settings.teams.team_help": "الفريق {number}: {team}.",
+  "settings.teams.add_help": "يضيف فريقًا ويفتحه لاختيار الشخصية والمرافقين.",
+  "settings.teams.default_help": "يزيل كل الفرق الإضافية؛ تبقى الفرق المدمجة.",
+  "settings.teams.done_help": "يُبقي هذه الفرق. احفظ التغييرات في صفحة الإعدادات لتخزينها.",
+  "settings.teams.edit": "تحرير الفريق",
+  "settings.teams.team_title": "الفريق {number}",
+  "settings.teams.new_title": "فريق جديد",
+  "settings.teams.team_caption": "يلعب بالشخصية الأولى؛ يتبعها المرافقون بالترتيب",
+  "settings.teams.main_note": "الشخصية الرئيسية",
+  "settings.teams.main_help": "الشخصية التي يلعب بها هذا الفريق.",
+  "settings.teams.keep_help": "يُبقي هذا الفريق في قائمة الفرق الإضافية.",
+  "@settings.sidekicks.title": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "e61dfa38bc1210c92442c4fc93659bb6d77f292ba48f1f671340ebf3f3b36750",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.tag_caps": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "b6176f80f7b4ad158c70d87395751a9c751928a9dc0705e37ce2ce4c15de3e87",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.player": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "bf01b4aaa69eb759ddd26bb6f8c3c168b3263a4e02144cbb1b530b252290c5f3",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.follows": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "999a2c80e8aa44e2370d560a4d62917caaf4259bfbbbce40565961a29d0fc1a0",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.add": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "89cb35899a8a92db29528f817fac7ae6b3ae85dd0bed058b44cdde40a1d9a6c8",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.done": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "c25a097c7608eae8f3b5b55ebc6d1abe2689b5367f770efc051551666fd9c802",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.empty": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "14274a8ff0786589ef50f8075195fda6e740810f60066140a127545226caa7a7",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.slot_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "1123f786b93791f5d4a6752532139abf957f4acdb78b052d47d502ba3062257b",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.add_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "e5323906314132125a89a5fd39cef690ebc39f181a706dcd18d540f73e1419a9",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.default_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "ef091ef6838b8e6a459b9507ed3204067a683f81736923e2489708858ec279eb",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.done_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "6dac6b17201a3ba3ac96d896920db8ec138f6760198bd1052832135a444469d4",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.slot_title": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "55b4628c03c0a790f6514e38c77330c756b17caa689c4058dc0fa4569fa27102",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.move_earlier": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "27b05d17b6c821d18efb59956e805c0a86065f92d82281a77ed3912a7ef10f35",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.move_later": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "93c0b5eecdb424b8c5f7c2cdfe1dd5414e226fd96aff6d6eab3ed769138ad206",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.remove": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "1e24a5354f6e2e8c8a506559d138071fbd198d728020e41464d20f8e5994b48f",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.character_caps": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "46a30e350881de5f97e9ca4e6095ffd11e0b25e8075d4ce770e9dbacb8a97847",
+      "reviewed": false
+    }
+  },
+  "@settings.sidekicks.actions_caps": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "667e66fa82a546f2cf36bf967c277ad161a874346522ae296fe40ffb4210bdf4",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.title": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "350e8c05475b236ededf01fd70ca1629a96239967b45a001c2e2c6ce055bed56",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.tag_caps": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "4efc70224793c66279248c4d42d2a5c11feb9566a73d27528d992756c895abc2",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.caption": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "c73a97eaab407e5e3a6422a743469153c92b72bf0f460a370ab956578fc7711d",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.empty": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "ab5594c11d1e5693834a561af4562f4b9cc2331f6b9060a1bb6d21873c523c06",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.alone": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "3afe91870c3ec66f1d508d3d7a8b67eb0cf8c30d98b1b3933bc49095cfed9628",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.add": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "7cdb3b84e02b4d7f5b23006a60b639190880ef20edba7269070b8e8c580d94f8",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.team_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "15f3cb17f0a9a39ce161f2eb196140b04091870d74723c9a12e981f2ef7237a8",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.add_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "7d1686760f2e5434793c4813527b045e66fe60ed57d752767c082b3bf743b400",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.default_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "8fce9da22aee94c2c74a1d691dd99e8fd9064dcc4781da7c9b232ead199f5286",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.done_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "e2a8132f8182de0e61432eb1ab5126c859ddce5a24c3972d80df5779de2652e6",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.edit": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "cb9dc5a1cd6fdef686fc49fb5fc7140c2f51b33e0aa0d0e28dfc5812be3a9453",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.team_title": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "c64df297b6a66309caf0c2f1577e384d928eaf3b13eb545779dc71289e5d5f03",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.new_title": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "fa3cc7af19e89e279ae4887dfc5252f2d56b427866321a40859c725351cc559d",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.team_caption": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "b357090cb2ff2358e4ffa225610bac1c0816eaae76c6ba03df5fd8f959c78b21",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.main_note": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "6a513f4c395b06377e8389a41b19a25b773f6abd41ffa772d476cabceaab886c",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.main_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "68ec570db89f3a7355d0114d8fe9690ddfd8ddc035650d3aee0cfe6f05099f6f",
+      "reviewed": false
+    }
+  },
+  "@settings.teams.keep_help": {
+    "x-openggf": {
+      "origin": "claude-haiku-5-5",
+      "sourceHash": "61e59188141b054fbbb017d64baa7dac887c62b806ecc34d385520e1ea44ba0b",
       "reviewed": false
     }
   }
