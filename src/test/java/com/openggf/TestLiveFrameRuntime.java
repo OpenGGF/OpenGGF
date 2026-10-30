@@ -219,6 +219,31 @@ class TestLiveFrameRuntime {
         assertEquals(0, runtime.statistics().pendingTicks());
     }
 
+    @Test void transitionWorkIsExcludedFromTheNewBoundaryWallAnchor() {
+        var owner = mock(LiveFrameRuntime.Owner.class);
+        var boundary = new java.util.concurrent.atomic.AtomicReference<>("old");
+        when(owner.simulationHz()).thenReturn(60);
+        when(owner.presentationHz()).thenReturn(30);
+        when(owner.focused()).thenReturn(true);
+        when(owner.boundary()).thenAnswer(invocation -> boundary.get());
+        when(owner.draw(anyBoolean())).thenReturn(true);
+        when(owner.tick()).thenAnswer(invocation -> { boundary.set("new"); return true; });
+        var runtime = new LiveFrameRuntime(owner);
+        runtime.iterate(0);
+
+        var transition = runtime.iterate(100_000_000L);
+        assertEquals(1, transition.services());
+        assertEquals(0, runtime.statistics().pendingTicks());
+        long completed = 1_100_000_000L; // one second spent in the transitioning service
+        long anchor = transition.wallAnchor(100_000_000L, completed);
+        assertEquals(completed, anchor);
+        var next = runtime.iterate(completed + 16_666_667L - anchor);
+        assertEquals(1, next.services());
+        assertEquals(0, runtime.statistics().pendingTicks());
+        assertEquals(200L, next.wallAnchor(200L, 300L),
+                "ordinary work and swap time remain part of the following interval");
+    }
+
     @Test void focusLossAndRegainInOnePollStillInvalidateOldWallDebt() throws Exception {
         var runtime = open(60, 144);
         runtime.iterate(0);

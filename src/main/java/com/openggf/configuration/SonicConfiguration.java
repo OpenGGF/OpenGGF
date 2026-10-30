@@ -40,7 +40,7 @@ public enum SonicConfiguration {
 	 */
 	SCALE,
 	/**
-	 * Frames per second to render. Will make the game faster/slower!
+	 * Window presentation limit. Simulation follows the selected region rate.
 	 */
 	FPS,
 	/**

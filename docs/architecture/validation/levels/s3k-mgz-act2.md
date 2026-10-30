@@ -137,6 +137,9 @@ The live independent-render scheduler moves `MgzDrillingRobotnikInstance`'s
 existing `renderTick` progression from rendering to the admitted boss update.
 `TestMgzDrillingRobotnikInstance#repeatedBossPicturesDoNotSpendTheBlinkClockAndOmittedPicturesDoNotFreezeIt`
 checks omitted/repeated pictures and the existing object capture/restore path.
+`TestMgzEndBossKnuxAdmission#activeKnucklesBossBlinkAdvancesOnUpdatesRatherThanPictures`
+also covers the Knuckles override and destructive graph restore; 141 focused
+boss/anchor checks passed without skips on the composed integration candidate.
 This is an ownership correction for the existing five-tick blink, not a new
 ROM timing oracle or a complete MGZ route qualification. The scheduler's bounded
 native route evidence uses AIZ/EHZ; MGZ scene pixels, encounter breadth and the

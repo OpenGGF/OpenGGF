@@ -55,7 +55,7 @@ final class LiveFrameRuntime {
             scheduler.reset();
             suspended = true;
             pendingTicks = 0;
-            return new Iteration(0, false, 33_000_000L);
+            return new Iteration(0, false, 33_000_000L, false);
         }
         Object currentBoundary = owner.boundary();
         if (suspended || elapsedNanos < 0 || boundary != null && !boundary.equals(currentBoundary)) {
@@ -77,6 +77,7 @@ final class LiveFrameRuntime {
         int completed = 0;
         boolean drawn = false;
         boolean forcedPicture = false;
+        boolean reanchor = false;
         for (int i = 0; i < allowances; i++) {
             if (!owner.tick()) return aborted(completed);
             services++;
@@ -97,6 +98,7 @@ final class LiveFrameRuntime {
                 scheduler.reset();
                 boundary = after;
                 changed = true;
+                reanchor = true;
                 break;
             }
         }
@@ -113,7 +115,7 @@ final class LiveFrameRuntime {
         pendingTicks = changed || paused ? 0 : batch.pendingTicks();
         long next = changed ? Math.min(ceilingPeriod(simulationHz), ceilingPeriod(presentationHz))
                 : batch.nanosUntilNextIteration();
-        return new Iteration(completed, present && drawn, next);
+        return new Iteration(completed, present && drawn, next, reanchor);
     }
 
     private boolean configure() {
@@ -130,7 +132,7 @@ final class LiveFrameRuntime {
         boundary = null;
         suspended = true;
         pendingTicks = 0;
-        return new Iteration(completed, false, ceilingPeriod(simulationHz));
+        return new Iteration(completed, false, ceilingPeriod(simulationHz), true);
     }
 
     Statistics statistics() {
@@ -141,7 +143,9 @@ final class LiveFrameRuntime {
     private static long ceilingPeriod(int hz) { return (SECOND + hz - 1) / hz; }
     private static long saturatedAdd(long a, long b) { return a > Long.MAX_VALUE - b ? Long.MAX_VALUE : a + b; }
 
-    record Iteration(int services, boolean presented, long nanosUntilNextIteration) { }
+    record Iteration(int services, boolean presented, long nanosUntilNextIteration, boolean reanchor) {
+        long wallAnchor(long observed, long completed) { return reanchor ? completed : observed; }
+    }
     record Statistics(int simulationHz, int presentationHz, long services, long pictures, long swaps,
                       long pendingTicks, long discardedWallNanos) { }
 }

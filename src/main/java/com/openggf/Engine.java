@@ -2874,13 +2874,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 			long observed = System.nanoTime();
 			var iteration = liveFrames.iterate(observed - previousTime);
-			previousTime = observed;
+			previousTime = iteration.wallAnchor(observed, System.nanoTime());
 			if (paused) {
 				try { Thread.sleep(33); }
 				catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
 			} else {
 				// Work, capture backpressure and swap time count against this absolute deadline.
-				waitForFrameDeadline(observed + iteration.nanosUntilNextIteration());
+				waitForFrameDeadline(previousTime + iteration.nanosUntilNextIteration());
 			}
 		}
 		if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");

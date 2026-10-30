@@ -225,7 +225,11 @@ public final class EngineSettingsDraft {
             case CONTROLLER_DEADZONE -> {
                 if (n < 0 || n >= 1) throw new IllegalArgumentException("Deadzone: 0 to below 1");
             }
-            case FPS, SCREEN_WIDTH, SCREEN_HEIGHT, SCALE, CAPTURE_SCALE, CAPTURE_FPS,
+            case FPS -> {
+                if (n <= 0 || n > SonicConfigurationService.MAX_PRESENTATION_FPS)
+                    throw new IllegalArgumentException("FPS: 1 to 1000000000");
+            }
+            case SCREEN_WIDTH, SCREEN_HEIGHT, SCALE, CAPTURE_SCALE, CAPTURE_FPS,
                     CAPTURE_QUEUE_BUDGET_MB, REWIND_HISTORY_SECONDS, REWIND_AUDIO_HISTORY_SECONDS,
                     REWIND_AUDIO_HISTORY_SIZE_MB, LIVE_REWIND_TAPE_COAST_MIN_STEPS,
                     LIVE_REWIND_TAPE_COAST_MAX_STEPS -> {

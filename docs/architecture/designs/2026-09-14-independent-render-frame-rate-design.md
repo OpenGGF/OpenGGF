@@ -2350,3 +2350,32 @@ integration. Owned Maven sessions have exited; consumed reports are removed
 before handoff, with no pass cache, receipt or external log archive. No other
 checkout/target, user-dirty reference, movement file, submodule pin, public API
 baseline/version, PR, push or release is changed by this implementation commit.
+
+### Integration review corrections — 2026-10-30
+
+The composed candidate resets the host wall-clock anchor after an admitted
+service changes its boundary or forces an immediate picture. Time spent in the
+old service is therefore excluded from the new scheduler phase; ordinary work
+and swap time still count toward the next observation. A deterministic caller
+witness uses a one-second transition and verifies that the next NTSC interval
+admits one service rather than spending old-session debt. Device and window
+pacing remain separately unqualified.
+
+The window FPS setting is bounded to the scheduler's 1–1,000,000,000 range:
+loaded values are clamped and the settings draft rejects an out-of-range edit.
+Simulation and presentation rate assertions are separate. This is an input
+bound, not a claim that a display can reach the upper limit.
+
+The MGZ boss family's existing blink counter now advances on the shared
+admitted update used by both the base and Knuckles variants. A Knuckles test
+reproduced the previous frozen counter (one assertion failure) and checks
+repeated pictures, update progression and graph restore after correction.
+The established blink is not a native pixel or encounter timing certificate.
+
+On integration parent `5e116a02d` plus these corrections, Java 25 queued
+`-Pguards -Dtest=TestLiveFrameRuntime,FrameRateResolverTest,TestEngineSettingsDraft,TestFixedSimulationScheduler,TestArchitecturalSourceGuard`
+passed 153 tests with zero failures, errors or skips. A separate queued
+`-Dtest=TestMgzDrillingRobotnikInstance,TestMgzEndBossKnuxAdmission,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed 141 tests with zero failures, errors or skips, using the original S3&K
+ROM and surfaceless EGL. These are focused checks, not combined smoke, a
+complete route, device-audio or package qualification.

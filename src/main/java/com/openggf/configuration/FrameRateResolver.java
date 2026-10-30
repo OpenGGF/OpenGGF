@@ -15,6 +15,7 @@ public final class FrameRateResolver {
 
     /** Window presentation limit; neither ROM admission nor audio consumes this rate. */
     public static int presentation(SonicConfigurationService config) {
-        return Math.max(1, config.getInt(SonicConfiguration.FPS));
+        return Math.clamp(config.getInt(SonicConfiguration.FPS), 1,
+                SonicConfigurationService.MAX_PRESENTATION_FPS);
     }
 }
