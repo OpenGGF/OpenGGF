@@ -30,14 +30,20 @@ Unreleased. The earlier development themes remain in
   keys and recorded overrides retain their input authority. Native menu bindings
   consume each admitted edge once; controlled native rows preserve later queued taps,
   keyboard resume remaps retired paused taps before both ordinary and controlled
-  gameplay, and fixed menu/text controls keep physical authority during replay. This
-  does not connect independent live scheduling or change audio/capture cadence.
+  gameplay, and fixed menu/text controls keep physical authority during replay.
+  Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
+  window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
+  session changes retain their semantic owners. Repeated pictures acknowledge no
+  input and produce no audio. Native menu/background and MGZ blink clocks advance
+  with updates. Optional interpolation and VRR qualification remain future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM
   across producer packets and video drains, preserving sample order and unused
   packet tails. A stalled capture that exceeds its bound falls back to correctly
-  clocked silence while speaker playback continues. Independent live simulation
-  and video scheduling remain unimplemented.
+  clocked silence while speaker playback continues. Live recording emits a current
+  final-viewport picture with matching region-duration PCM for each admitted
+  service, independently of window swaps. Recording requires these extra draws;
+  overload slows recorded time with simulation time rather than inventing pictures.
 - **Flying Battery and Death Egg floor launchers:** Exact surface contact keeps
   a falling player airborne until the native landing window is reached.
 

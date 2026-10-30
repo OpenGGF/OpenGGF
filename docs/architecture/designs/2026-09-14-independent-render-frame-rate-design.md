@@ -2101,3 +2101,252 @@ No additional worktree, child agent, push, PR or release was created. Optional
 candidate checkouts and their jobs remain untouched. The only task changes are
 this design section and the production-boundary test; all are accounted for in
 the local commit, with integration and broader qualification left to the lead.
+
+
+## Live region scheduling candidate — 2026-10-30
+
+The implementation checkout is the T3-provisioned `t3-2f8fb98d`, local
+`feature/ai-live-region-scheduler`, starting at `bca1c3ae2`. Local merges
+`d7ad9b0fc`, `a7dbe19c5`, `746decec7` and `7a0ed7a84` compose the exact reviewed
+input/pose `2481c30ec3133a64420ff4089566cf482d13fd6e`, ending draw
+`3daac674614a7ff2b16b3eefb13a31aa8ad9d109`, audio FIFO
+`3822fcf0adcffa9392b5873ff9cfcc457d8a16f5` and capture proof
+`905ac655c8bc7972268732013a569fc022349203`. Changelog/design append conflicts
+retain both records and upstream develop changes. No other checkout or target
+is changed; the lead owns its already running combined smoke. Movement files
+remain untouched for the independent spindash worker.
+
+### Selected live owner policy
+
+`Engine.loop()` polls host events/pads before `LiveFrameRuntime`, which uses the
+rational `FixedSimulationScheduler`. A region opportunity calls the real
+`Engine.advanceFrame()` once, independently of drawing and swapping. This is
+an outer semantic service, not a native frame number: GameLoop still owns
+zero/multiple mutator steps, trace/recording pumps, native loop/lag admission,
+recording rows and rewind snapshots. No ROM timing-port rule changes.
+
+Host UI, input arbitration and detached UI fades use the same region service
+cadence (50/60 Hz), including host-only paused/modal/zero-step passes. Polling
+between services observes without acknowledging. The reviewed host handoff,
+ordered physical journal, text/modal claims, native Start, replay publication,
+slow-motion carry and consuming `update()` retain their owners. A zero-service
+picture neither refreshes nor acknowledges input, expires a text lease, moves a
+movie cursor, advances a fade nor produces audio. Existing complete-tap prefixes
+reach successive consuming passes in order. No second restored input queue exists.
+
+Four services maximum per batch return control to event polling, retaining
+short debt up to 250 ms. Longer wall stalls discard excess wall time, never
+invent skipped native tick identities. Sustained overload slows admitted time.
+These are host responsiveness limits, not physics constants. A single expensive
+semantic operation or blocking encoder can still delay polling; no preemption or
+sustained real-time throughput is claimed. Focus/minimize suppresses service and
+rebases on resume. User/configuration pause permits at most one host service per
+batch and drops whole paused debt. A changed session/mode/level, pause boundary,
+region/display rate, restore or mod abort terminates/rebases admission before
+another tick can spend old debt. Registry post-restore notification invalidates
+scheduling and pending physical input without becoming snapshot state; reverse
+selection retains its existing service cadence instead of restarting its clock
+for every internally restored picture. A paused frame step requests an immediate
+discrete picture and uses the existing one-step/silent-audio policy.
+
+Audio synthesis/history/capture publication occurs once per region opportunity.
+The existing `OuterFramePresentation` mode owner still selects forward, reverse
+or silence after GameLoop, so deliberate multi-step pumps still produce one
+packet. `FrameRateResolver` separates region service from the window limit;
+standalone audio also uses the region rate. Device-only service is available
+between ticks and in event-poll sleep slices, without retiring command frames,
+producing samples or advancing history. Existing exact NTSC chip-frame budget
+and the documented PAL chip-clock limitation remain unchanged.
+
+Live viewport recording chooses region-rate CFR output at recording start.
+Each completed service requires a current post-FINAL picture and drains exactly
+its matching PCM interval, even when no window swap is due. Window-only repeated
+pictures skip the capture drain. Deferred readback retains its existing picture/
+PCM pairing and stop flush; screenshots precede the window-only REC plate.
+This policy deliberately requires per-service draws while recording: a 30 FPS
+window can still record 60 actual selected service pictures. It avoids inventing
+historical pictures or draining future PCM, and is narrower than arbitrary
+wall-clock capture FPS. During overload recorded time follows admitted region
+service time; focus suspension records no interval. Rewind changes picture
+identity while output ordinal/time remains forward. A region-rate change stops
+the current recording before mixing incompatible output clocks. Offline trace
+and gameplay capture keep their explicit replay drivers and output contracts.
+
+Drawing retains window-thread GL publication and deferred resources. Pending
+render-thread tasks also run at service boundaries, not only at picture time.
+S2/S3K menu background clocks move to updates; repeatable GPU publication reads
+the selected frame. MGZ's existing blink counter moves from appendRenderCommands
+to its admitted boss update, preserving hidden waits and captured state. Host
+menu page clocks move to input updates. Display shader/VHS counters remain
+explicit cosmetic picture clocks; native positions, collision, palette/PLC,
+recording and rewind do not read them. The ending update extraction remains
+unchanged. Suspension still requires its requested scene/SCENE-effects thumbnail
+before completing parking; its request forces that picture before another batch.
+
+### Verification scope
+
+Focused verification is in progress. Results, exact commands, source fingerprints,
+queue/execution attribution and remaining failures are completed here before
+local commit. The first desired rate check on composed base `7a0ed7a84` executed
+four cases with four assertion failures, no errors/skips: NTSC resolved to the
+30/144 display values, and PAL forced both window limits to 50. Queue wait was
+104 s; Maven execution including clean compilation was 1m33s. A later focused
+request compiled production but failed test compilation on a missing explicit
+LegalDisclaimerScreen superclass constructor; no tests executed (243 s queue,
+1m32s Maven). The fixture supplies that existing constructor now.
+
+These checks do not replace lead-owned shared-owner smoke, required trace/route
+qualification or platform pacing evidence. No desktop automation, device audio,
+new API version/signature baseline, release, PR or push belongs to this task.
+
+
+The first completed live-runtime selection on build-input fingerprint
+`f80a9329e3d27f195cdcb2c5a7c5cd31cbb914c2be20bce430c96816aa1bd1a4`
+passed **115 cases in seven classes, zero failures/errors/skips** (482 s queued,
+Maven 1m41s). XML confirms Java `25.0.5.0.2`, explicit surfaceless EGL and all
+15 new original-ROM cases. Native routes compare every selected player/counter
+state after a complete registered restore: ten S2 region/FPS pairs plus two S3K
+pairs with jitter. Actual native pause/step, audible no-device ROM synthesis and
+real BK2 serialization also run. The live Engine caller matrix and capture checks
+cover zero/multiple services and immediate/deferred pictures with exact PCM order
+and monotonic output indexes. This is focused Linux/EGL evidence, not a desktop
+swap/VSync measurement or a complete route/trace campaign.
+
+Review then identified two additional discontinuities. Both focus edges now
+increment a host-only epoch, so loss/regain within one event poll cannot spend
+that inactive interval as forward debt. Trace capture's requested offline FPS
+previously reused `display.fps`. A scoped offline audio cadence now belongs to
+`TraceCapturePresentationSetup`/`CaptureBootScope` before boot and retires before
+boot ownership transfers, including error/verify paths. It keeps that driver's
+existing NTSC requested retiming and PAL50 policy without changing the live
+window cap. Capture leases must close before clock replacement; no active live
+recording can be silently replaced by this scope. Standalone audio without an
+explicit offline driver remains region-clocked. Device polling remains clockless.
+
+Five changed English settings messages invalidate their old translation hashes.
+The catalog's existing fallback therefore shows accurate English for those five
+messages until translated, rather than displaying the obsolete game-speed help.
+Quick catalog validation passes; translation fluency is not claimed.
+
+
+The adjacent selection executed **511 cases in 30 classes: 15 assertion
+failures, one fixture error, zero skips**, after 38 s queue wait and 2m08s Maven
+execution. All focused live-clock, offline-cadence, focus, audio architecture,
+Mod API, required S3K loading/bootstrap and catalog cases passed. The failing
+identities were seven suspension tests that deliberately trapped the former
+GL/profiler point before input, two obsolete settings-text assertions, the new
+MGZ capture fixture without its required child identity table, one pre-existing
+trace-audio fixture that failed to drain its explicitly published SILENT packet,
+and five structural assertions pinning the old combined caller/signature.
+The consumed compiled main/test trees were SHA-256
+`b7bf6b133b982839ce9844fae5dd66b5191da983905ac6ba367b331bb7463e35`
+and `2b60425462ffc769f7ef3d457ec2daf00d1611d1f87d89c7502fe8d396bedcd0`
+respectively (sorted relative `.class` paths, NUL, then class bytes); a separate
+source fingerprint for that request was not captured before correction.
+
+The suspension fixtures now trap the actual pre-input service boundary. The
+MGZ test supplies the existing identity context for its child graph; no codec
+or captured field is relaxed. The trace fixture drains and asserts both taps'
+earlier silence before asking for the next audible packet, retaining exact
+speaker/capture equality. Settings assertions use the selected rendering label
+and immediate-save timing sentence. Structural guards follow the new
+scheduler/draw/swap caller and exact three-argument render signature; the
+suspension query is pinned to reading the owner's existing request, while root
+mirrors, facades, eager binding and other forbidden decisions stay rejected.
+Screenshot/audio helpers shrink `advanceFrame` from its previous 33-line pin to
+32; `displayFrame` shrinks 37 to 5 and its 32-line pure picture successor is
+separately pinned. The 153-line post-FINAL renderer budget is unchanged.
+
+Further review found a real suspension scheduling edge: consuming a thumbnail
+into the back buffer must not allow a second reserved service to park the world
+before a swap. A required discrete scene picture now terminates/rebases the
+batch and is swapped before the next service. A production-owner test drives
+the actual suspension request and after-scene capture through that boundary.
+Trace ROM resolution also precedes capture lifetime acquisition, so a locator
+failure cannot leak the newly scoped cadence. These are bounded corrections;
+only affected checks are repeated.
+
+
+### Final focused results and handoff
+
+Correction build-input SHA-256
+`ab6b561d82fa908bac47b8926f6c4bf788617734efefc2a97c505a6e14f799cc`
+ran **228 cases: 227 passed, one new fixture assertion failed, no errors/skips**
+(3 s queue wait; Maven 1m46s). All sixteen previous failing identities passed,
+including the complete 87-case structural guard and MGZ's identity-aware restore.
+The new forced-picture test placed its request before the iteration, correctly
+triggering external-boundary rebasing and a picture with zero services. Its
+setup now requests the picture during the first admitted update, which tests
+the actual same-batch suspension hazard. No production change followed this run.
+
+The final build-input fingerprint is
+`77d246e9db076855d3d3b1d3bb6a04a16c32941f92a20d16ad702009af0470a2`.
+Only test setup and two additional real native rewind cases changed after the
+correction run. The last request passed **26 cases, zero failures/errors/skips**
+(58 s queue wait; Maven 37.224 s). Its 24 live caller cases include the corrected
+forced-picture boundary, long stalls, sustained overload with fresh taps between
+batches and failed-service batch termination. Both new original-S2/EGL cases
+install genuine live history, hold the real rewind key at PAL50/30 FPS and
+NTSC60/144 FPS, require decreasing native cursor state, execute exactly 50/60
+steady reverse services per elapsed second, prohibit forward audio production,
+drain exactly one second of PCM and verify release cannot spend old reverse debt.
+
+The combined focused inventory is **619 distinct executed identities with no
+remaining failure, error or skip**. This combines unchanged passing identities
+from the 115- and 511-case requests, affected correction checks, seven additional
+ending checks and the final caller/rewind request; it is not one new all-selection
+run or a smoke/full-suite pass. All consumed XML summaries were inspected by
+identity, assertion and skip. The final request confirms Java `25.0.5.0.2` and
+`surfaceless-egl`. Original S1/S2/S3K ROMs were hashed in place against the
+repository's CRC32/SHA-1 pins and supplied as absolute paths; none was copied or
+linked for testing. Expected injected failure warnings, FAST-without-manifest
+fallbacks and existing JOML/deprecation warnings are not skips or parity waivers.
+Queue waits overlap other work and are not summed into delivery elapsed time;
+overall task wall time was not separately measured.
+
+All requests use `env -u DISPLAY -u WAYLAND_DISPLAY`,
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk`, `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, ordinary `--normal` queue admission and
+`test -B`. Lua-dependent checks use `LUA_BIN=/usr/bin/lua5.4`. The absolute ROM
+properties are `-Dsonic1.rom.path`, `-Dsonic2.rom.path` and `-Ds3k.rom.path`,
+resolved from the existing original REV01/locked-on root resources. No desktop
+window/input automation or device audio is used. Reproduction selectors are:
+
+```text
+# Initial runtime request (S2 and S3K properties):
+TestLiveFrameRuntime,TestRegionRateDecisions,TestFixedSimulationScheduler,TestEngineFrameAdvance,TestGameLoopAudioPresentationModes,TestLiveCaptureSurvivesBackendSwap,TestScheduledNativeGameplay
+# Adjacent owner/guard request (all three ROM properties):
+TestLiveFrameRuntime,TraceCapturePresentationSetupTest,TestTraceCaptureUnifiedAudio,TraceCaptureSessionTest,TraceCaptureRuntimeAdmissionTest,TestEngineLiveCapturePresentation,TestEngineSceneFocusPresentation,TestEngineSuspensionRendering,TestGameLoopSuspensionOwnership,TestEngineModCallbackAbortBoundary,TestMgzDrillingRobotnikInstance,TestMenuBackgroundAnimator,TestEngineSettingsScreen,TestMenuDetailsScreen,TestPlaybackBrowser,TestPlaybackBrowserPresentation,TestUserRecordingMenu,TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalSourceGuard,TestAudioPresentationArchitectureGuard,TestTraceReplayInvariantGuard,TestRawGlfwTestSetupGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestBundledUiCatalogs,TestMessageCatalogs
+# Affected correction request (S2 and S3K properties):
+TestLiveFrameRuntime,TestScheduledNativeGameplay#actualPausedFrameStepAdmitsOneNativeFrameForcesAPictureAndRetiresReleasedTaps,TestGameLoopSuspensionOwnership,TestEngineSuspensionRendering,TestEngineSettingsScreen,TestMgzDrillingRobotnikInstance#repeatedBossPicturesDoNotSpendTheBlinkClockAndOmittedPicturesDoNotFreezeIt,TestTraceCaptureUnifiedAudio,TraceCapturePresentationSetupTest,TraceCaptureRuntimeAdmissionTest,TestArchitecturalSourceGuard,TestEndingBackgroundDrawBoundary
+# Final caller/rewind request (S2 property):
+TestLiveFrameRuntime,TestScheduledNativeGameplay#realHeldRewindKeepsRegionServiceCadenceWithoutForwardRowsAndRebasesOnRelease
+```
+
+Pass each selector as the exact `-Dtest=` argument to
+`python3 tools/testing/maven_queue.py` with those flags. The required S3K loading
+selector executes both same-named classes. The change-based dry plan against
+pre-task `bca1c3ae2a230d727f7fe801cb7600b6db93b143` selects **4,340 smoke classes
+plus guards**; none is submitted here because the user assigns combined smoke to
+the lead. Explicit Java 25/Lua 5.4 category preflight passes without tests. An
+unqualified preflight first stopped on the host's older default Lua; it executed
+no tests. Catalog quick checks, diff whitespace, local links and the agent-document
+mirror pass. The existing policy hooks and prepared-message trailers are checked
+before the local commit.
+
+No known unsafe owner prevents this bounded live runtime candidate from being
+reviewed. Qualification still excludes an exhaustive provider/creator draw audit,
+complete PAL hardware parity, arbitrary live capture FPS, complete native routes/
+trace campaigns and desktop VSync/VRR/platform throughput. Host UI/shortcut
+sampling retains its existing physical policy at region service cadence; the
+ordered guarantee belongs to eligible mapped gameplay transitions, not unobserved
+hardware events. Capture deliberately costs per-service drawing while active.
+Interpolation and VRR are not implemented. The 4-service/250 ms limits are
+bounded host policy; the focused tests establish admission and return-to-poll
+behavior, not a universal real-time performance guarantee.
+
+The provisioned checkout and local feature branch are retained for lead
+integration. Owned Maven sessions have exited; consumed reports are removed
+before handoff, with no pass cache, receipt or external log archive. No other
+checkout/target, user-dirty reference, movement file, submodule pin, public API
+baseline/version, PR, push or release is changed by this implementation commit.

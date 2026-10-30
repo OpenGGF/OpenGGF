@@ -11,6 +11,7 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
     private final Object previousAspect;
     private final Object previousTestMode;
     private boolean closed;
+    private com.openggf.audio.AudioManagerInternalAccess.OfflineServiceCadence audioCadence;
 
     record CallerState(Object aspect, Object testMode) {
     }
@@ -61,10 +62,32 @@ final class TraceCapturePresentationSetup implements AutoCloseable {
         }
     }
 
+    /** Preserve the offline driver's requested retiming without changing the live window limit. */
+    static TraceCapturePresentationSetup open(SonicConfigurationService configuration,
+            TraceCaptureDimensions dimensions, CallerState callerState,
+            com.openggf.audio.AudioManager audio, int requestedFps) {
+        var setup = open(configuration, dimensions, callerState);
+        try {
+            int hz = com.openggf.configuration.FrameRateResolver.simulation(configuration) == 50 ? 50 : requestedFps;
+            setup.audioCadence = com.openggf.audio.AudioManagerInternalAccess.offlineServiceCadence(audio, hz);
+            return setup;
+        } catch (Throwable failure) {
+            try { setup.close(); } catch (Throwable cleanup) { failure.addSuppressed(cleanup); }
+            throw rethrow(failure);
+        }
+    }
+
     @Override
     public void close() {
         if (closed) return;
-        restore(configuration, previousAspect, previousTestMode);
+        Throwable failure = null;
+        try { if (audioCadence != null) audioCadence.close(); }
+        catch (Throwable cleanup) { failure = cleanup; }
+        try { restore(configuration, previousAspect, previousTestMode); }
+        catch (Throwable cleanup) {
+            if (failure == null) failure = cleanup; else failure.addSuppressed(cleanup);
+        }
+        if (failure != null) throw rethrow(failure);
         closed = true;
     }
 

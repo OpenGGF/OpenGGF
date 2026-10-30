@@ -26,7 +26,7 @@ final class EngineSettingLabels {
     /** Group captions on the Display and Advanced tabs, in drawing order. */
     static final java.util.List<String> GROUPS = java.util.List.of(
             "WINDOW", "PICTURE", "WIDESCREEN", "HUD",
-            "SHADERS", "SPEED AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
+            "SHADERS", "RENDERING AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
             "PLAYBACK AND RECORDING", "TRACE REPLAY", "DEBUG", "SETTINGS FILE");
 
     /**
@@ -48,8 +48,8 @@ final class EngineSettingLabels {
         }
         if (category != com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED) return null;
         String section = meta.section();
-        if (section.equals("display")) return key == SonicConfiguration.FPS ? "SPEED AND LOADING" : "SHADERS";
-        if (section.equals("gameplay")) return "SPEED AND LOADING";
+        if (section.equals("display")) return key == SonicConfiguration.FPS ? "RENDERING AND LOADING" : "SHADERS";
+        if (section.equals("gameplay")) return "RENDERING AND LOADING";
         if (section.equals("characters") || section.equals("crossGame")) return "DIRECT LAUNCH";
         if (section.equals("rewind")) return "REWIND";
         if (section.equals("mods")) return "MODS";
@@ -62,6 +62,7 @@ final class EngineSettingLabels {
     }
 
     static String groupCaption(String group) {
+        if ("RENDERING AND LOADING".equals(group)) return UiMessages.text("settings.group.speed_and_loading");
         return UiMessages.text("settings.group." + group.toLowerCase(Locale.ROOT).replace(' ', '_'));
     }
 

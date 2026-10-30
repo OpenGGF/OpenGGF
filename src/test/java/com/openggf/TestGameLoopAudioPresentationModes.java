@@ -177,7 +177,7 @@ class TestGameLoopAudioPresentationModes {
                 SonicConfiguration.FPS, 1);
         audio.setBackend(new SixHertzBackend());
         LiveCaptureAudioHandle capture =
-                AudioManagerTestDiagnostics.attachPresentationCapture(audio, 1);
+                AudioManagerTestDiagnostics.attachPresentationCapture(audio, 60);
 
         loop.step();
         Engine.presentOuterAudioFrame(loop, false, false);
@@ -279,7 +279,7 @@ class TestGameLoopAudioPresentationModes {
     private static final class SixHertzBackend extends NullAudioBackend {
         @Override
         public int outputSampleRate() {
-            return 6;
+            return 360;
         }
     }
 

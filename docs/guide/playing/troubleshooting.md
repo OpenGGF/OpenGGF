@@ -46,15 +46,15 @@ cannot handle. Set it to `false` (the default).
 
 ## Game runs too fast or too slow
 
-**FPS setting.** The engine targets 60 FPS for NTSC (the default). If you have set `display.fps`
-to a different value, the game will run faster or slower. Reset to `60`.
+**FPS setting.** `display.fps` limits window rendering. Lower or higher settings
+leave gameplay and audio at the region cadence; VSync may limit actual window FPS.
 
 **Region setting.** PAL mode (`audio.region: "PAL"`) runs at 50 Hz, which makes the game
-at a lower update rate than the default NTSC setting. PAL fixes the rate at 50
+at a lower update rate than the default NTSC setting. Simulation and audio stay at 50 Hz
 even if `display.fps` is different. Region support is not a claim of complete
 PAL hardware parity.
 
-**System performance.** If the engine cannot maintain 60 FPS, the game will appear to run
+**System performance.** If simulation alone cannot sustain the region rate, the game will run
 slowly. Check that your GPU driver supports OpenGL 4.1 and that no other application is
 consuming GPU resources.
 

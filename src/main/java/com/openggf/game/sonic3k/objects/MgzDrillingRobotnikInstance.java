@@ -355,7 +355,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private boolean hit;
     private boolean endBossMode;
     private boolean floorImpactTriggered;
-    /** Per-render counter that drives head blink / i-frame flash. */
+    /** Admitted boss-update counter for the existing head blink / i-frame presentation. */
     private int renderTick;
     private int swingHalfCyclesRemaining;
     private boolean swingDirectionDown;
@@ -512,72 +512,76 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
-        prepareSharedBossPresentation();
+        try {
+            prepareSharedBossPresentation();
 
-        if (!endBossMode && miniInitialExecutionPending) {
-            // The ROM placement slot first executes Obj_MGZ2DrillingRobotnik,
-            // which installs Obj_Wait and its callback but does not decrement
-            // the freshly written $2E timer on that same pass.
-            miniInitialExecutionPending = false;
-            updateCustomFlash();
-            return;
-        }
-
-        // ROM: Obj_MGZ2DrillingRobotnik init queues art + PLC #$6D + palette and
-        // sits in Obj_Wait for 120 frames before becoming DrillingRobotnikStart.
-        if (state.routine == ROUTINE_INIT) {
-            if (!endBossMode) {
-                // Obj_Wait invokes its callback only after the signed word
-                // underflows: values $77 through $0000 all return normally.
-                waitTimer--;
-                if (waitTimer < 0) {
-                    playBossMusicOnce();
-                    state.routine = ROUTINE_MINI_SETUP;
-                }
+            if (!endBossMode && miniInitialExecutionPending) {
+                // The ROM placement slot first executes Obj_MGZ2DrillingRobotnik,
+                // which installs Obj_Wait and its callback but does not decrement
+                // the freshly written $2E timer on that same pass.
+                miniInitialExecutionPending = false;
                 updateCustomFlash();
                 return;
             }
-            if (waitTimer > 0) {
-                waitTimer--;
-                if (waitTimer == 0) {
-                    playBossMusicOnce();
-                    state.routine = ROUTINE_END_DESCEND;
-                    yVel = 0x80;
-                    waitTimer = 0xBF;
+
+            // ROM: Obj_MGZ2DrillingRobotnik init queues art + PLC #$6D + palette and
+            // sits in Obj_Wait for 120 frames before becoming DrillingRobotnikStart.
+            if (state.routine == ROUTINE_INIT) {
+                if (!endBossMode) {
+                    // Obj_Wait invokes its callback only after the signed word
+                    // underflows: values $77 through $0000 all return normally.
+                    waitTimer--;
+                    if (waitTimer < 0) {
+                        playBossMusicOnce();
+                        state.routine = ROUTINE_MINI_SETUP;
+                    }
+                    updateCustomFlash();
+                    return;
                 }
+                if (waitTimer > 0) {
+                    waitTimer--;
+                    if (waitTimer == 0) {
+                        playBossMusicOnce();
+                        state.routine = ROUTINE_END_DESCEND;
+                        yVel = 0x80;
+                        waitTimer = 0xBF;
+                    }
+                    updateCustomFlash();
+                    return;
+                }
+            }
+
+            if (!endBossMode && state.routine == ROUTINE_MINI_SETUP) {
+                // The underflow callback (Obj_MGZ2DrillingRobotnikGo) only installs
+                // Obj_MGZ2DrillingRobotnikStart. Its loc_6BFCA setup runs in the
+                // following ExecuteObjects pass and leaves routine 2 for the next.
+                state.routine = ROUTINE_START_DROP;
                 updateCustomFlash();
                 return;
             }
-        }
 
-        if (!endBossMode && state.routine == ROUTINE_MINI_SETUP) {
-            // The underflow callback (Obj_MGZ2DrillingRobotnikGo) only installs
-            // Obj_MGZ2DrillingRobotnikStart. Its loc_6BFCA setup runs in the
-            // following ExecuteObjects pass and leaves routine 2 for the next.
-            state.routine = ROUTINE_START_DROP;
-            updateCustomFlash();
-            return;
-        }
-
-        if (endBossMode) {
-            updateEndBossRoutine(playerEntity);
-        } else {
-            switch (state.routine) {
-                case ROUTINE_START_DROP -> updateStartDrop();
-                case ROUTINE_DRILL_DROP -> updateDrillDrop();
-                case ROUTINE_HANG -> updateHang();
-                case ROUTINE_CEILING_ESCAPE -> updateCeilingEscape();
-                case ROUTINE_ESCAPE_WAIT -> updateEscapeWait();
-                default -> {
+            if (endBossMode) {
+                updateEndBossRoutine(playerEntity);
+            } else {
+                switch (state.routine) {
+                    case ROUTINE_START_DROP -> updateStartDrop();
+                    case ROUTINE_DRILL_DROP -> updateDrillDrop();
+                    case ROUTINE_HANG -> updateHang();
+                    case ROUTINE_CEILING_ESCAPE -> updateCeilingEscape();
+                    case ROUTINE_ESCAPE_WAIT -> updateEscapeWait();
+                    default -> {
+                    }
                 }
             }
+
+            publishPendingMiniHit();
+            updateCustomFlash();
+
+            state.xFixed = state.x << 16;
+            state.yFixed = state.y << 16;
+        } finally {
+            if (!isHidden()) renderTick++;
         }
-
-        publishPendingMiniHit();
-        updateCustomFlash();
-
-        state.xFixed = state.x << 16;
-        state.yFixed = state.y << 16;
     }
 
     /** Shared art/palette and child-SST setup used by both native MGZ end-boss variants. */
@@ -1584,9 +1588,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isHidden()) {
             return;
-        }
-        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
-            renderTick++;
         }
 
         PatternSpriteRenderer drillRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);

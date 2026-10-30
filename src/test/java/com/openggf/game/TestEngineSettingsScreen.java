@@ -386,7 +386,7 @@ class TestEngineSettingsScreen {
     }
 
     @Test
-    void onlyChangedRestartSettingsSayItOnTheRowAndInTheHelp() {
+    void windowRenderLimitAppliesImmediatelyAndGameStartSettingsKeepTheirHelp() {
         Fixture f = new Fixture(); // Display: aspect ratio first, frame rate further down
         List<String> aspect = f.descriptionLines();
         assertTrue(aspect.stream().noneMatch(line -> line.startsWith("Needs a restart")),
@@ -397,12 +397,10 @@ class TestEngineSettingsScreen {
         f.focus(FPS);
         assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
         f.press(GLFW_KEY_RIGHT);
-        assertTrue(f.texts().contains("RESTART"));
-        assertTrue(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
-        f.press(GLFW_KEY_LEFT);
-        assertFalse(f.texts().contains("RESTART"), "returning to the running value clears the badge");
-        assertTrue(EngineSettingsScreen.effect(FPS).contains("close and reopen OpenGGF"));
-        assertEquals(com.openggf.configuration.SettingTiming.RESTART, com.openggf.configuration.SettingTiming.of(FPS));
+        assertFalse(f.texts().contains("RESTART"), "the live window cap does not need a restart");
+        assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
+        assertTrue(EngineSettingsScreen.effect(FPS).contains("as soon as you save"));
+        assertEquals(com.openggf.configuration.SettingTiming.NOW, com.openggf.configuration.SettingTiming.of(FPS));
     }
 
     @Test
@@ -423,7 +421,7 @@ class TestEngineSettingsScreen {
         List<String> texts = f.texts();
         assertTrue(texts.contains("ADVANCED SETTINGS"));
         assertFalse(texts.contains("DISPLAY"), "no tab strip for a single page");
-        assertTrue(texts.stream().anyMatch(text -> text.startsWith("Game speed")), "technical display controls live here");
+        assertTrue(texts.stream().anyMatch(text -> text.startsWith("Rendering limit")), "technical display controls live here");
     }
 
     @Test
@@ -516,7 +514,7 @@ class TestEngineSettingsScreen {
                 new Case(EngineSettingsScreen.Scope.MAIN, EngineSettingsDraft.Category.DISPLAY,
                         List.of("WINDOW", "PICTURE", "WIDESCREEN", "HUD")),
                 new Case(EngineSettingsScreen.Scope.ADVANCED, EngineSettingsDraft.Category.ADVANCED,
-                        List.of("SHADERS", "SPEED AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
+                        List.of("SHADERS", "RENDERING AND LOADING", "DIRECT LAUNCH", "REWIND", "MODS", "DISCORD",
                                 "PLAYBACK AND RECORDING", "TRACE REPLAY", "DEBUG", "SETTINGS FILE")))) {
             for (int width : new int[] {320, 400}) {
                 Fixture f = new Fixture(c.scope());

@@ -98,6 +98,7 @@ public final class PlaybackBrowser {
 
     public void update(InputHandler input) {
         this.input = Objects.requireNonNull(input, "input");
+        ticks++;
         switch (page) {
             case Page.Library ignored -> updateLibrary();
             case Page.Recording selected -> {
@@ -246,7 +247,6 @@ public final class PlaybackBrowser {
     }
 
     private void renderOwnPage(Runnable draw) {
-        ticks++;
         font.beginMegaBatch();
         try { draw.run(); }
         finally { font.endMegaBatch(); }
