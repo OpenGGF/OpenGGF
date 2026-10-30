@@ -61,7 +61,10 @@ than touching gameplay directly. Outbound connections use bounded serial writers
 The current bundled Create Room flow requests **unverified rooms with at most
 8 players**. The server/protocol also supports verified RELAY rooms and up to
 256 RELAY players. Those capabilities are broader than the current creation UI;
-DIRECT is capped at 8. Remote poses remain cosmetic in every mode.
+DIRECT is capped at 8. Remote poses remain cosmetic in every mode. Because an
+unverified room has no independent gameplay authority, it retains finish claims
+only for trust accrual and bounded operator spot checks; it does not publish
+those claims as shared standings, pages, ranks or round-end results.
 
 ## Three nested lifetimes
 
@@ -298,7 +301,8 @@ sequenceDiagram
     alt Natural act completion
         Mod->>Mod: Retain input body, publish valid improved local ghost
         Mod->>Room: AttemptFinish(time, first/finish frames, input/ghost hashes)
-        Room-->>Mod: Accepted improvement: standings / rank, recording request if required
+        Room-->>Mod: Verified room: pending standings / rank and recording request
+        Room->>Room: Unverified room: retain claim only for trust / optional spot check
         Mod->>Engine: After tally, restart if race window is still open
     else Death or manual retry
         Mod->>Room: AttemptReset, abandon current pose stream
@@ -309,7 +313,9 @@ sequenceDiagram
 Attempt time is `finishFrame - firstInputFrame`. Spawn idle, reload fade and the
 post-death countdown do not add timed input frames. The host accepts an eligible
 finish only for the matching active attempt with its streamed finish evidence;
-standings keep improvements rather than every completed run.
+verified standings keep improvements rather than every completed run. Unverified
+claims never become peer-visible competitive standings because every field in an
+unverified finish remains controlled by its sender.
 
 Input recording and live pose streaming are separate products. Inputs can be
 uploaded for replay. Poses are cosmetic presentation data with a stream hash;
@@ -322,8 +328,10 @@ presentation policy. See [communication](../../../racing/README.md#communication
 
 Verified RELAY rooms request verification for accepted improvements. Unverified
 master RELAY rooms can select top-time spot checks when a matching verifier is
-available (default top one, rate-limited per identity). Plain manual LAN has no
-operator replay verifier.
+available (default top claim, rate-limited per identity), but those claims are not
+published as standings. Plain manual LAN has no operator replay verifier and no
+shared competitive standings; peers still receive live cosmetic ghosts and
+coarse attempt status.
 
 ### Verification exchange
 
@@ -382,7 +390,8 @@ Rejecting a candidate restores another pending candidate or an earlier verified
 best; without either, its row disappears. Superseded claims retain their own
 pending candidates and job routes. Old/foreign/voided lease verdicts are refused
 rather than changing a newer claim. A spot-check verdict is persisted and can
-sanction, but does not relabel or rewrite unverified room standings.
+sanction, but does not create or rewrite player-visible standings for the
+unverified room.
 
 ### Timing boundaries and defaults
 

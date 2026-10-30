@@ -17,6 +17,7 @@ import java.util.HexFormat;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Room-level attempt transitions as other members see them in the coarse roster. */
 class TestRoomHostGhostLifecycle {
@@ -58,6 +59,44 @@ class TestRoomHostGhostLifecycle {
         assertEquals(GhostPackets.ROSTER_STATUS_RUNNING, statusAfterRoster(watcher, slot));
         room.onText(runner, ControlCodec.encode(token, new ControlMessage.AttemptReset(2)));
         assertEquals(GhostPackets.ROSTER_STATUS_IDLE, statusAfterRoster(watcher, slot));
+    }
+
+    @Test
+    void unverifiedRoomDoesNotPublishClientClaimedStandings() throws Exception {
+        FakeHubConnection runner = new FakeHubConnection();
+        FakeHubConnection watcher = new FakeHubConnection();
+        ControlMessage.JoinAccepted runnerJoin = admit(runner, "A", dir.resolve("a"));
+        admit(watcher, "B", dir.resolve("b"));
+        room.requestStartRound(new ControlMessage.RoundConfig("s3k", 0, 0, 300, "OPEN", null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
+
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> room.onBinary(runner, packet));
+        streamAttempt(runner, runnerJoin.sessionToken(), publisher, 1);
+        room.onText(runner, ControlCodec.encode(runnerJoin.sessionToken(),
+                new ControlMessage.AttemptFinish(1, 1, 0, 1,
+                        "ab".repeat(32),
+                        HexFormat.of().formatHex(publisher.streamHashSha256()), null)));
+
+        assertTrue(watcher.text.stream()
+                .map(text -> ControlCodec.decode(text).message())
+                .filter(ControlMessage.StandingsDelta.class::isInstance)
+                .map(ControlMessage.StandingsDelta.class::cast)
+                .allMatch(delta -> delta.rows().isEmpty()),
+                "unverified client claims must not become peer-visible rankings");
+        assertTrue(room.round().standings().isEmpty());
+        assertEquals(1, room.round().results().size(),
+                "the operator may retain the claim for a bounded spot check");
+
+        now += 300_001;
+        room.tick();
+        assertTrue(watcher.text.stream()
+                .map(text -> ControlCodec.decode(text).message())
+                .filter(ControlMessage.RoundEnd.class::isInstance)
+                .map(ControlMessage.RoundEnd.class::cast)
+                .allMatch(end -> end.finalStandings().isEmpty()),
+                "unverified claims must not become final competitive results");
     }
 
     private void streamAttempt(FakeHubConnection runner, String token,
