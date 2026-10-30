@@ -2209,3 +2209,11 @@ adds native jump/solid checkpoints, real P1/P2 moving-latch ownership,
 replacement-slot isolation and destructive recreation with forward replay.
 The strict original-input prefix ends at 3280; expanded configuration, whole-act,
 pixel/audio and campaign qualification remain separate obligations.
+
+DEZ1 floor-launcher landing follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#floor-launcher-exact-landing-boundary--2026-10-30)
+adds the original-input zero-distance decision and real P1/P2 contact controls,
+rejected/held destructive recreation, bounded launch/return replay and
+replacement-slot isolation. The asserted original-input prefix is 5520 rows;
+whole-act, expanded configuration, pixel/audio and campaign obligations remain
+open. The linked frontier records completed checks and their precise limits.
