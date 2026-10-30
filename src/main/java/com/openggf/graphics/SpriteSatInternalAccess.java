@@ -18,6 +18,12 @@ public final class SpriteSatInternalAccess {
         graphics.beginSpriteSatCollection(raster);
     }
 
+    /** Engine bootstrap supplies the live display preference; unbound renderers retain native limits. */
+    public static void bindLineLimitSource(GraphicsManager graphics, java.util.function.BooleanSupplier source) {
+        engineCaller();
+        graphics.bindSpriteScanlineLimitSource(source);
+    }
+
     public static void beginLogicalCollection(GraphicsManager graphics, SpriteSatMaskPostProcessor.LogicalViewport viewport) {
         engineCaller();
         graphics.beginLogicalSpriteSatCollection(viewport);
