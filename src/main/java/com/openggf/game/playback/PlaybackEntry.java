@@ -1,12 +1,14 @@
 package com.openggf.game.playback;
 
 import com.openggf.game.recording.UserRecordingEntry;
+import com.openggf.i18n.UiMessages;
 import com.openggf.trace.catalog.TraceEntry;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 
 public sealed interface PlaybackEntry {
     Path path();
@@ -19,7 +21,7 @@ public sealed interface PlaybackEntry {
     List<PlaybackFacts.Fact> details();
 
     private static PlaybackFacts.Fact status(Availability availability) {
-        return new PlaybackFacts.Fact("Status", availability.reason(), switch (availability.status()) {
+        return new PlaybackFacts.Fact(UiMessages.text("menu.playback.status_label"), availability.reason(), switch (availability.status()) {
             case READY -> PlaybackFacts.Tone.READY;
             case NEEDS_SETUP -> PlaybackFacts.Tone.WARNING;
             case INVALID -> PlaybackFacts.Tone.ERROR;
@@ -40,18 +42,19 @@ public sealed interface PlaybackEntry {
     }
 
     sealed interface Extent {
+        int count();
         String label();
 
         record MovieRows(int count) implements Extent {
-            @Override public String label() { return count + " BK2 rows"; }
+            @Override public String label() { return UiMessages.text("menu.playback.extent.movie_rows", Map.of("count", count, "value", Integer.toString(count))); }
         }
 
         record TraceFrames(int count) implements Extent {
-            @Override public String label() { return count + " trace frames"; }
+            @Override public String label() { return UiMessages.text("menu.playback.extent.trace_frames", Map.of("count", count, "value", Integer.toString(count))); }
         }
 
         record RunTraceFrames(int count) implements Extent {
-            @Override public String label() { return count + " run trace frames"; }
+            @Override public String label() { return UiMessages.text("menu.playback.extent.run_frames", Map.of("count", count, "value", Integer.toString(count))); }
         }
     }
 
@@ -71,17 +74,17 @@ public sealed interface PlaybackEntry {
                 return new Availability(Availability.Status.INVALID, recording.loadError());
             }
             if (recording.manifest() == null || recording.manifest().launchContext() == null) {
-                return new Availability(Availability.Status.INVALID, "Recording launch metadata is missing");
+                return new Availability(Availability.Status.INVALID, UiMessages.text("menu.playback.recording_metadata_missing"));
             }
             if (recording.frameCount() <= 0) {
-                return new Availability(Availability.Status.INVALID, "Recording has no input rows");
+                return new Availability(Availability.Status.INVALID, UiMessages.text("menu.playback.recording_rows_missing"));
             }
-            return new Availability(Availability.Status.READY, "Replay from its recorded act start");
+            return new Availability(Availability.Status.READY, UiMessages.text("menu.playback.recording_ready"));
         }
 
         @Override public List<PlaybackFacts.Fact> details() {
             List<PlaybackFacts.Fact> facts = new ArrayList<>();
-            facts.add(new PlaybackFacts.Fact("Type", "Engine recording"));
+            facts.add(new PlaybackFacts.Fact(UiMessages.text("menu.playback.type_label"), UiMessages.text("menu.playback.type.recording")));
             facts.add(status(availability()));
             facts.addAll(PlaybackFacts.recording(recording));
             return List.copyOf(facts);
@@ -104,28 +107,25 @@ public sealed interface PlaybackEntry {
 
         @Override public Availability availability() {
             if (trace.metadata() == null || trace.bk2Path() == null || trace.frameCount() <= 0) {
-                return new Availability(Availability.Status.INVALID, "Trace launch metadata or input movie is missing");
+                return new Availability(Availability.Status.INVALID, UiMessages.text("menu.playback.trace_metadata_missing"));
             }
-            return new Availability(Availability.Status.READY, "Replay with ROM comparison");
+            return new Availability(Availability.Status.READY, UiMessages.text("menu.playback.trace_ready"));
         }
 
         @Override public List<PlaybackFacts.Fact> details() {
             List<PlaybackFacts.Fact> facts = new ArrayList<>();
-            facts.add(new PlaybackFacts.Fact("Type", trace.isRun() ? "ROM comparison run" : "ROM comparison trace"));
+            facts.add(new PlaybackFacts.Fact(UiMessages.text("menu.playback.type_label"),
+                    UiMessages.text(trace.isRun() ? "menu.playback.type.run" : "menu.playback.type.trace")));
             facts.add(status(availability()));
-            facts.add(new PlaybackFacts.Fact("Length", PlaybackFacts.length(trace.frameCount(),
-                    trace.isRun() ? "run trace frames" : "trace frames")));
-            String label = trace.displayLabel();
-            int special = label.indexOf("SPECIAL STAGE ");
-            String start = trace.isRun() ? "Run of " + trace.runManifest().segments().size() + " segments"
-                    : special >= 0 ? "Special stage " + label.substring(special + 14)
-                    : PlaybackFacts.zoneAct(trace.zone(), trace.act());
-            facts.add(new PlaybackFacts.Fact("Start", PlaybackFacts.gameName(trace.gameId()) + ", " + start));
+            facts.add(new PlaybackFacts.Fact(UiMessages.text("editor.stageplay_menu_presentation.length_11kyxom"), PlaybackFacts.length(extent())));
+            facts.add(new PlaybackFacts.Fact(UiMessages.text("editor.stageplay_hud.start_1br2gy"),
+                    PlaybackFacts.gameStart(trace.gameId(), PlaybackFacts.traceStart(trace))));
             if (trace.team() != null)
-                facts.add(new PlaybackFacts.Fact("Team", PlaybackFacts.team(trace.team().mainCharacter(), trace.team().sidekicks())));
-            facts.add(new PlaybackFacts.Fact("Input", "BK2 start row " + trace.bk2StartOffset()));
+                facts.add(new PlaybackFacts.Fact(UiMessages.text("launch.item.team"), PlaybackFacts.team(trace.team().mainCharacter(), trace.team().sidekicks())));
+            facts.add(new PlaybackFacts.Fact(UiMessages.text("menu.playback.input_label"),
+                    UiMessages.text("menu.playback.bk2_start_row", Map.of("row", Integer.toString(trace.bk2StartOffset())))));
             if (trace.bk2Path() != null) facts.add(new PlaybackFacts.Fact("BK2", trace.bk2Path().toString()));
-            facts.add(new PlaybackFacts.Fact("Folder", path().toString()));
+            facts.add(new PlaybackFacts.Fact(UiMessages.text("menu.playback.folder_label"), path().toString()));
             return List.copyOf(facts);
         }
     }
@@ -142,14 +142,14 @@ public sealed interface PlaybackEntry {
                 return new Availability(Availability.Status.INVALID, loadError);
             }
             return new Availability(Availability.Status.NEEDS_SETUP,
-                    "Needs launch setup: this BK2 does not declare its starting state");
+                    UiMessages.text("menu.playback.movie_needs_setup"));
         }
 
         @Override public List<PlaybackFacts.Fact> details() {
-            return List.of(new PlaybackFacts.Fact("Type", "Bare BK2 movie"), status(availability()),
-                    new PlaybackFacts.Fact("Length", PlaybackFacts.length(rowCount, "BK2 rows")),
-                    new PlaybackFacts.Fact("Start", "Not declared. A filename or the current game cannot supply it."),
-                    new PlaybackFacts.Fact("File", path.toString()));
+            return List.of(new PlaybackFacts.Fact(UiMessages.text("menu.playback.type_label"), UiMessages.text("menu.playback.type.movie")), status(availability()),
+                    new PlaybackFacts.Fact(UiMessages.text("editor.stageplay_menu_presentation.length_11kyxom"), PlaybackFacts.length(extent())),
+                    new PlaybackFacts.Fact(UiMessages.text("editor.stageplay_hud.start_1br2gy"), UiMessages.text("menu.playback.movie_start_unknown")),
+                    new PlaybackFacts.Fact(UiMessages.text("editor.stageplay_menu_presentation.file_1axlo"), path.toString()));
         }
     }
 }

@@ -8,6 +8,7 @@ import com.openggf.graphics.MenuPixelFont;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.graphics.TexturedQuadRenderer;
+import com.openggf.i18n.UiMessages;
 import com.openggf.testmode.TraceLaunchStatus;
 import com.openggf.testmode.TraceRunFailureStatus;
 import com.openggf.tools.PresentationOffscreenTestContext;
@@ -32,6 +33,44 @@ import static org.mockito.Mockito.mock;
 /** Declared library summaries exercise real menu pixels, without booting gameplay or audio. */
 @Isolated
 class TestPlaybackBrowserPresentation {
+    @Test
+    void translatedSpecialStageAndEmptyLibraryUseCompleteMessages() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Select surfaceless EGL for browser pixel QA");
+        String previousLanguage = UiMessages.locale().toLanguageTag();
+        var metadata = new com.fasterxml.jackson.databind.ObjectMapper().readValue("""
+                {"game":"s2","trace_profile":"s2_special_stage","special_stage_index":2}
+                """, TraceMetadata.class);
+        var special = new PlaybackEntry.Trace(new TraceEntry(Path.of("traces/s2/special-stage"), "s2", 98, 97,
+                1200, 40, 0, new SelectedTeam("sonic", List.of()), Path.of("traces/_movies/special.bk2"), metadata));
+        try {
+            for (int width : new int[] {320, 400}) {
+                try (var context = PresentationOffscreenTestContext.openConfigured(width, 224,
+                        PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+                    var renderer = new TexturedQuadRenderer();
+                    var font = new MenuPixelFont();
+                    try {
+                        renderer.init(); font.init("pixel-font.png", renderer);
+                        glViewport(0, 0, width, 224); glDisable(GL_DEPTH_TEST);
+                        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                        for (String language : List.of("en", "fr", "ja", "ar")) {
+                            UiMessages.selectLanguage(language);
+                            var selected = browser(new PlaybackLibrary(List.of(special), List.of()), font);
+                            var summary = draw(selected, width, renderer, font);
+                            assertTrue(changedPixels(summary, 40, 200) > 300, language);
+                            save(summary, width, language + "-special-stage");
+                            press(selected, GLFW_KEY_F1);
+                            save(draw(selected, width, renderer, font), width, language + "-special-details");
+                            var empty = new PlaybackBrowser(new PlaybackLibrary(List.of(), List.of()), "",
+                                    PlaybackBrowser.Filter.RECORDINGS, false, font, launcher());
+                            save(draw(empty, width, renderer, font), width, language + "-empty-recordings");
+                            assertEquals(GL_NO_ERROR, glGetError(), language);
+                        }
+                    } finally { font.cleanup(); renderer.cleanup(); }
+                }
+            }
+        } finally { UiMessages.selectLanguage(previousLanguage); }
+    }
+
     @Test
     void mixedLibraryAndSelectedPanelsDrawAtNativeAndWideSizes() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "Select surfaceless EGL for browser pixel QA");

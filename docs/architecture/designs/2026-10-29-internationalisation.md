@@ -432,3 +432,21 @@ full value remains discoverable. Fitting diagnostics remain enabled for such
 previews. Account for active-script ink and line pitch, not only ASCII cells.
 The review covers engine-owned menus and the bundled companion UI; arbitrary
 creator-authored custom scenes and original-ROM lettering keep their own owners.
+
+### Menu-overhaul catalogue refresh (2026-10-30)
+
+The 413 added and 123 changed messages from the menu overhaul have current
+machine drafts in all 18 full catalogues. Latin American Spanish keeps a sparse
+overlay and inherits the Spanish catalogue. Independent Opus and Sol reviews
+cover the complete changed inventory; machine status and human-review gates
+remain unchanged.
+
+Playback and import readers also use 37 complete messages for counts, source
+facts and instructions that previously joined translated prefixes to English
+tails. Trace special-stage numbers come from metadata through the trace catalogue
+owner, independently of display language. Playback extents retain their numeric
+count and format their full unit/plural rather than parsing words from a label.
+Technical counters and input offsets keep ungrouped ASCII digits; numeric counts
+select plural grammar independently from their canonical displayed value.
+Build warnings and dates use the selected interface language. File paths and
+creator identities remain exact arguments in the complete readers.

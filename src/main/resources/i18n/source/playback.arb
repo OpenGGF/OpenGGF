@@ -1,0 +1,272 @@
+{
+  "@@locale": "en",
+  "menu.playback.empty_recordings": "{scope, select, all {No engine recordings} other {No {game} engine recordings}}",
+  "@menu.playback.empty_recordings": {
+    "description": "Empty playback filter. scope is all or game; game is the displayed Sonic title. Translate the complete sentence, including word order.",
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.empty_traces": "{scope, select, all {No ROM traces} other {No {game} ROM traces}}",
+  "@menu.playback.empty_traces": {
+    "description": "Empty trace filter. scope is all or game; game is the displayed Sonic title.",
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      },
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.run_segments": "{count, plural, one {Run of {value} segment} other {Run of {value} segments}}",
+  "@menu.playback.run_segments": {
+    "description": "Number of ordered segments in a trace run. A run is a continuous replay, not an ordinal stage number. count selects plural grammar; value is the exact canonical ASCII decimal counter, printed without grouping or locale digit conversion.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.special_stage": "Special stage {stage}",
+  "@menu.playback.special_stage": {
+    "description": "One-based Sonic special-stage number; derived from trace metadata, independent of translated display text.",
+    "placeholders": {
+      "stage": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.playback.zone_act": "Zone {zone}, act {act}",
+  "@menu.playback.zone_act": {
+    "description": "One-based numeric zone and act, shown for a recording or ordinary level trace.",
+    "placeholders": {
+      "zone": {
+        "type": "int"
+      },
+      "act": {
+        "type": "int"
+      }
+    }
+  },
+  "menu.playback.duration_extent": "{duration}, {extent}",
+  "@menu.playback.duration_extent": {
+    "description": "Playback length. duration is a clock such as 1:30; extent is an already-translated complete count such as 100 BK2 rows.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      },
+      "extent": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.game_start": "{game}, {start}",
+  "@menu.playback.game_start": {
+    "description": "Playback start fact. game is the Sonic title; start is an already-translated zone/act, special stage or run-segment count.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.build_version": "OpenGGF {version}",
+  "@menu.playback.build_version": {
+    "description": "Product name and opaque recorded build version; keep both recognizable.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.extent.movie_rows": "{count, plural, one {{value} BK2 row} other {{value} BK2 rows}}",
+  "@menu.playback.extent.movie_rows": {
+    "description": "Count of recorded controller input rows, not rendered video frames. BK2 is the file format. count selects plural grammar; value is the exact canonical ASCII decimal counter, printed without grouping or locale digit conversion.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.extent.trace_frames": "{count, plural, one {{value} trace frame} other {{value} trace frames}}",
+  "@menu.playback.extent.trace_frames": {
+    "description": "Count of ROM-comparison trace frames. count selects plural grammar; value is the exact canonical ASCII decimal counter, printed without grouping or locale digit conversion.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.extent.run_frames": "{count, plural, one {{value} run trace frame} other {{value} run trace frames}}",
+  "@menu.playback.extent.run_frames": {
+    "description": "Count of ROM-comparison frames across a multi-segment trace run. count selects plural grammar; value is the exact canonical ASCII decimal counter, printed without grouping or locale digit conversion.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.type_label": "Type",
+  "@menu.playback.type_label": {
+    "description": "Label for the playback source kind."
+  },
+  "menu.playback.status_label": "Status",
+  "@menu.playback.status_label": {
+    "description": "Label for playback readiness or setup required."
+  },
+  "menu.playback.input_label": "Input",
+  "@menu.playback.input_label": {
+    "description": "Label for the source controller input position."
+  },
+  "menu.playback.folder_label": "Folder",
+  "@menu.playback.folder_label": {
+    "description": "Label for the trace source directory path."
+  },
+  "menu.playback.type.recording": "Engine recording",
+  "@menu.playback.type.recording": {
+    "description": "A recording made by OpenGGF, including its launch metadata."
+  },
+  "menu.playback.type.trace": "ROM comparison trace",
+  "@menu.playback.type.trace": {
+    "description": "A single-segment recording used to compare engine output with the original ROM."
+  },
+  "menu.playback.type.run": "ROM comparison run",
+  "@menu.playback.type.run": {
+    "description": "An ordered multi-segment ROM comparison replay."
+  },
+  "menu.playback.type.movie": "Bare BK2 movie",
+  "@menu.playback.type.movie": {
+    "description": "Standalone controller-input file without OpenGGF launch metadata; bare does not mean empty or nude."
+  },
+  "menu.playback.recording_metadata_missing": "Recording launch metadata is missing",
+  "@menu.playback.recording_metadata_missing": {
+    "description": "The engine recording cannot launch because its starting-state metadata is absent."
+  },
+  "menu.playback.recording_rows_missing": "Recording has no input rows",
+  "@menu.playback.recording_rows_missing": {
+    "description": "The recording contains no controller input rows and cannot replay."
+  },
+  "menu.playback.recording_ready": "Replay from its recorded act start",
+  "@menu.playback.recording_ready": {
+    "description": "Ready engine recording; starts at the beginning of the act stored in its metadata."
+  },
+  "menu.playback.trace_metadata_missing": "Trace launch metadata or input movie is missing",
+  "@menu.playback.trace_metadata_missing": {
+    "description": "Trace is unavailable because required metadata or controller input is absent."
+  },
+  "menu.playback.trace_ready": "Replay with ROM comparison",
+  "@menu.playback.trace_ready": {
+    "description": "Ready trace; compare replay with original-ROM reference data."
+  },
+  "menu.playback.movie_needs_setup": "Needs launch setup: this BK2 does not declare its starting state",
+  "@menu.playback.movie_needs_setup": {
+    "description": "Bare BK2 cannot be launched automatically: filename/current game cannot supply the missing initial state."
+  },
+  "menu.playback.movie_start_unknown": "Not declared. A filename or the current game cannot supply it.",
+  "@menu.playback.movie_start_unknown": {
+    "description": "Starting state is not declared by a bare BK2 movie. Do not infer it from the filename or current game."
+  },
+  "menu.playback.bk2_start_row": "BK2 start row {row}",
+  "@menu.playback.bk2_start_row": {
+    "description": "Zero-based first controller-input row associated with this trace; preserve the numeric row. row is canonical ASCII decimal text: do not group digits or apply locale number formatting.",
+    "placeholders": {
+      "row": {
+        "type": "String"
+      }
+    }
+  },
+  "menu.playback.warning.unknown_build": "Recorded build is unknown; replay may drift",
+  "@menu.playback.warning.unknown_build": {
+    "description": "Recording has no build identity. Drift means replay can diverge from the recorded game state."
+  },
+  "menu.playback.warning.other_release": "Recorded with another release; may drift",
+  "@menu.playback.warning.other_release": {
+    "description": "Recording was made with a different official OpenGGF release."
+  },
+  "menu.playback.warning.other_dev_build": "Recorded with another dev build; may drift",
+  "@menu.playback.warning.other_dev_build": {
+    "description": "Recording was made with a different development build."
+  },
+  "menu.playback.warning.local_changes": "Recorded with local changes; may drift",
+  "@menu.playback.warning.local_changes": {
+    "description": "Recording was made from a build containing uncommitted source changes."
+  },
+  "import.details.checking_source": "Inspecting content...\n\nFrom {path}",
+  "@import.details.checking_source": {
+    "description": "Read-only import details while inspecting a package. Preserve the exact user path as an argument.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "import.details.installing_source": "Installing the confirmed mod package disabled. Wait for installation to finish before choosing another file. The Mods screen will open afterward so you can review enablement and code trust.\n\nSource: {path}",
+  "@import.details.installing_source": {
+    "description": "The user already confirmed installation. The mod stays disabled. Trusting creator code is a separate later decision, not implicit in installation.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "import.details.candidate": "{name}\nType: {type}\nSource: {source}\nAction: {action}",
+  "@import.details.candidate": {
+    "description": "Complete header in the read-only import details. name and source belong to creator/user; type and action are already-translated UI labels.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      },
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "import.details.identity": "Identity: {identity}",
+  "@import.details.identity": {
+    "description": "Read-only package identity facts; preserve opaque creator IDs and versions.",
+    "placeholders": {
+      "identity": {
+        "type": "String"
+      }
+    }
+  },
+  "import.details.game": "Game: {game}",
+  "@import.details.game": {
+    "description": "ROM host chosen for the imported level, or standalone. game is an already-translated display label.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      }
+    }
+  },
+  "import.details.guide": "Drop one file or folder anywhere on the import screen, or choose a path below. The path field supports normal typing, a controller keyboard, and Up to browse paths.\n\nEditable projects: .ogfproject\nLevels: a level folder, level.json, or a ZIP containing one level\nMods and mutators: mod JARs, or a ZIP containing one JAR\n\nReview the name, type and action before confirming. Projects and levels open in the editor. Mods install disabled; use Mods at the title screen to review, enable, trust code if required, and apply. Inspection does not run creator code. Canceling keeps the current screen unchanged.",
+  "@import.details.guide": {
+    "description": "Complete read-only import guide. Up is a navigation control, not upload. Preserve .ogfproject, level.json, ZIP, JAR. Installation remains disabled; code trust is separate. Do not omit safety or file-format instructions."
+  }
+}
