@@ -119281,8 +119281,11 @@ renamed, deleted or linked for these checks.
   pixels, launcher/capture owners, render and recorder failures, and API pins.
   The historical 2,000/20,000-row witnesses each performed held backward seeks
   over two owners within their five-second deadlines, retaining the same owners
-  and exact poses. Individual seek/allocation diagnostics were not retained;
-  no per-seek latency or retained-heap measurement is claimed. Queue wait 10.4 s,
+  and exact poses. The existing Surefire XML supplied bounded diagnostics: 2,000 seeks took
+  2.894 ms total (p95 2.620 us, max 36.761 us), and 20,000 took 5.388 ms
+  (p95 0.500 us, max 30.280 us). Forward admission allocated 6,354.6 and
+  6,299.1 bytes/row respectively, including comparator/test overhead. These
+  are local diagnostics, not calibrated throughput or retained-heap measurements. Queue wait 10.4 s,
   admission hold 90.4 s, combined 100.8 s; Maven reported 1:29. Peak sampled
   process-tree RSS 3.992 GiB. Normal admission reserved 7 GiB / 8 cores and the
   test fork used its unchanged `-Xmx3g` limit. RSS includes compilation/Maven,
@@ -119310,6 +119313,6 @@ or frontier movement is claimed here. The lead separately owns the ROM-free
 trace-invariant guard changes in its provisioned worktree; this leaf does not
 edit those guards. Its guard reconciliation must account for the new engine-only
 presentation bridges while preserving the gameplay hydration prohibition.
-Consumed Surefire output is cleaned by the queue wrapper; no diagnostic archive
-or validation receipt is retained. The local commit/checkout remain for lead
+Consumed task-owned Surefire XML/text output was inspected and removed; no
+diagnostic archive or validation receipt is retained. The local commit/checkout remain for lead
 integration, with no children, extra checkouts, pushes or release action.
