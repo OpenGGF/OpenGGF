@@ -37,7 +37,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * {@link MasterTitleCaptureTool} already covers, for design review.
  *
  * <p>Purpose: one PNG per scene for the Mod manager, recordings, trace picker, details,
- * text/path editors, advanced settings, startup disclaimer, native-mod notice and content
+ * text/path editors, advanced settings, the sidekick team editor, startup disclaimer, native-mod notice and content
  * import, plus a text field mixing narrow and wide letters with its caret and keypad, and the
  * integer and decimal number keypads, driven by
  * scripted {@link InputHandler} key events (never desktop input).
@@ -89,6 +89,9 @@ public final class MenuDesignCaptureTool {
         };
         List<Integer> settings = List.of(up, right, enter);
         List<Integer> advanced = List.of(up, right, right, enter, down, enter);
+        Consumer<Context> sidekicks = c -> c.config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails,knuckles,tails");
+        int sidekickRow = com.openggf.game.EngineSettingsScreen
+                .rowOrder(com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED).indexOf(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
         List<Scene> hubScenes = new ArrayList<>(List.of(
                 new Scene("m01-settings-details", none, concat(settings, f1), 20),
                 new Scene("m01b-settings-sprite-limit", none, concat(settings, repeat(down, 4)), 20),
@@ -105,6 +108,11 @@ public final class MenuDesignCaptureTool {
                 new Scene("m06c-advanced-settings-end", none, concat(advanced, repeat(down, 68)), 20),
                 new Scene("m06d-advanced-details", none, concat(advanced, repeat(down, 10), f1), 20),
                 new Scene("m07-advanced-text-edit", none, concat(advanced, repeat(down, 7), enter), 20),
+                new Scene("m07a-advanced-sidekicks", sidekicks, concat(advanced, repeat(down, sidekickRow), enter), 20),
+                new Scene("m07b-advanced-sidekick-actions", sidekicks,
+                        concat(advanced, repeat(down, sidekickRow), enter, down, enter), 20),
+                new Scene("m07c-advanced-sidekicks-empty", c -> c.config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, ""),
+                        concat(advanced, repeat(down, sidekickRow), enter), 20),
                 new Scene("m08-recordings", recordings, List.of(down, down, right, right, enter), 20),
                 new Scene("m09-recordings-row", recordings, List.of(down, down, right, right, enter, down), 20),
                 new Scene("m10-trace-picker", traces, List.of(), 120),

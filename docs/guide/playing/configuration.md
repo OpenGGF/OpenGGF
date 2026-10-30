@@ -107,8 +107,12 @@ characters:
 ```
 
 To keep Sonic as the main character and add a CPU Tails follower instead, use
-`main: "sonic"` and `sidekick: "tails"`. Hub launches use their per-game setup;
-these global character keys configure direct launches.
+`main: "sonic"` and `sidekick: "tails"`. A comma-separated value such as
+`"tails,knuckles"` adds several CPU sidekicks in follow order. In the engine,
+**Settings > Advanced > Direct-launch sidekicks** edits that line as a list:
+change each sidekick's character, add, move or remove sidekicks, then save Settings.
+Hub launches use their per-game setup; these global character keys configure
+direct launches.
 
 Sonic 2 does not currently expose the ROM's native two-player/competition mode
 (`Two_player_mode`), so Player 2 bindings do not create a human second player.

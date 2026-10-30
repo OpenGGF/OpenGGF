@@ -109,6 +109,13 @@ Unreleased. The earlier development themes remain in
   catalogue. Playback facts and import guidance use complete ICU messages;
   special-stage playback labels come from metadata rather than translated text.
 
+- **Direct-launch sidekick editor:** Settings > Advanced edits the direct-launch
+  sidekick line as an ordered team instead of comma-separated text. Each row shows
+  the character it follows; Left/Right changes the character, and its actions move
+  or remove it. Sidekicks can be added up to 16, the stock line restored, and an
+  empty line explains that the player plays alone. Unlisted stored codes are kept
+  until changed.
+
 - **Original ROM revisions:** Sonic 1 and Sonic 2 recognize their original
   REV00 and REV01 images and select matching ROM data locations and shipped
   behavior. Revision choices belong to the loaded image, including logical
