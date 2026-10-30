@@ -9,6 +9,11 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**DEZ conveyor ownership correction (2026-10-30):** the bounded
+[original-input investigation](status/trace-frontier-log.md#2026-10-30--dez-cold-conveyor-moving-standing-bit-owner)
+repairs moving-pad standing-bit identity and its native airborne return. It adds
+no accepted ROM deviation; whole-act and campaign parity remain unqualified.
+
 **Fresh-entry focus correction (2026-10-28):** the bounded
 [salvage increment](architecture/plans/2026-10-22-native-gap-swarm.md#scoped-native-salvage--2026-10-28)
 restores `Get_LevelSizeStart`'s `$B0` focus-word addition for its selected entries,
@@ -26,13 +31,36 @@ standalone startup behavior without arbitrary RAM emulation. The three
 [KosM adjacent-memory scenarios](#kosm-adjacent-memory-corruption) now have an
 explicit exclusion; focused semantic repairs do not certify complete movies.
 
-**HCZ fan pulse correction (2026-10-29, local candidate):** the fan now returns
-from native initialization before Main and reloads the original 120 idle ticks,
-removing a recurring extra tick rather than fitting a route. The current strict
-Sonic+Tails chain's first returned-HCZ2 non-camera physics mismatch moves from
-row 2147 to 2500; segment 13 retains 364 differences and SS7 still stops in
-results at movie cursor 97208. This adds no accepted deviation and certifies no
-whole act or campaign. See the [current causal and matched-movie record](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#current-hcz-bounded-remeasurement--2026-10-29).
+**Starpost invitation correction (2026-10-29, local candidate):** the ordinary
+bonus invitation uses the native ring gate even after all seven Chaos Emeralds
+are collected. Run/mutator restrictions and consumed-entry state retain their
+existing ownership. This repairs an implementation defect and adds no accepted
+deviation. The [bounded correction record](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+separates the focused checks from the strict continuous route's remaining gaps.
+The [independent lifecycle follow-up](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+also restores checkpoint-only behavior when the ordinary orbit cannot allocate,
+and entry after ring loss using the activation-selected family. Neither repair
+introduces an accepted deviation or certifies the remaining campaign frontiers.
+
+**HCZ fan/platform and column correction (2026-10-29, local candidate):**
+fan initialization and pulse intervals retain the shipped return/reloads. A
+sliding platform now owns the original slot, allocates its fan during native
+initialization and retries rejected allocation. Independent platform/fan
+updates preserve native latch visibility. Spinning columns use the native
+zero-X left-side stop while preserving both velocity words at exact zero
+overlap. The strict original route consumes all 5,393 returned-HCZ2 rows with
+zero physics differences; 182 animation differences remain. Segment 11 retains
+its 62 camera/animation differences. The subsequent SS7 result correction removes
+an extra final reveal wait: one native 240-tick countdown now releases on its
+zero-test pass, admitting `hcz_4` at cursor 97208. All 140 focused checks pass;
+the strict continuous route remains red in newly reached `hcz_4` (first
+non-camera row 1748 Y `$0777/$0772`) and MGZ admission at cursor 100896.
+The [SS7 attribution](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+preserves those limits. This adds no accepted deviation and certifies no whole act or campaign.
+The [causal, matched-baseline and final evidence](architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#remaining-platformfan-dispatch-investigation--2026-10-29)
+retains the unchanged strict-red alternate movie and the earlier results/handoff
+question; the SS7 audit above records the current outgoing frontier. Spin-down
+sound/bubble side effects remain a separate inherited gap.
 
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup
@@ -1188,6 +1216,15 @@ and refreshing the registered level sheet. Previously only palette/children
 were initialized, leaving the crusher's tile bank unloaded. The pre-existing
 `loc_90368` enemy-art requeue omission remains outside this visibility fix.
 
+LRZ crusher timer dispatch correction (2026-10-29): the timer child's initializer
+now falls through into its first decrement, matching `loc_90502` / `loc_90512`
+(`sonic3k.asm:197446-197453`). The previous initializer returned with179 instead
+of178, delaying the world-change request and generated collapsing bridge. Native
+same-input observations identify the bridge's first contact before the later
+Knuckles route deaths; this local correction does not certify those routes or
+Act2. See the [bounded causal record](status/trace-frontier-log.md#2026-10-29--lrz-crusher-timer-first-dispatch-and-route-death-attribution)
+and [Act1 matrix](architecture/validation/levels/s3k-lrz-act1.md#native-crusher-timer-first-dispatch--2026-10-29).
+
 LRZ fireball-launcher flip correction (2026-09-29): launcher rendering retains
 both placement flips, and `loc_42C1A`'s copied render flags now survive shot
 creation, movement and rewind recreation. Previously leftward shots retained
@@ -1944,3 +1981,44 @@ and fresh graph restore controls reproduce three old-red assertion failures.
 Corrected focused qualification is 82 distinct cases across one fixture repair,
 zero skips, including both publication phases and ordinary defeat. See the
 [audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
+
+
+## Knuckles full-chain first-return pose — 2026-10-29
+
+The first returned AIZ row's Duck `$08` / Wait `$05` and mapping `$9B/$56` discrepancy is
+resolved by preserving the grounded crouch selection when terrain collision
+sets InAir before animation publication. Original-movie native callbacks prove
+the ordering; 170 focused cases, including real-ROM registered restore/replay,
+pass without skips. The [bounded audit](architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+records the independent old-reds and exact source/commands.
+
+The chain remains red: first error 446 X `$2026/$201B`, 37,726 incomplete-segment
+errors and the same production-ownership rejection at BK2 cursor 12011. Native
+vine capture is the next physical symptom; its causal phase/position/admission
+owner is not yet proven. Unmatched direct #35/module #24 timing completions remain
+strict failures. This local animation correction certifies no terminal tail,
+fixture endpoint, act-wide route or pixel parity.
+
+
+The [shared-owner qualification follow-up](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-owner-qualification-follow-up-2026-10-29)
+exposed native-correct Up and simultaneous-input failures across eight profiles.
+The [shared-owner implementation](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+closes that bounded gap with host-owned precedence and an admitted pose
+write before terrain detachment. All 390 focused cases pass without skips,
+including the eight native/KiS2/donor configurations, steep-wall no-write controls
+and fresh-player registered replay. S1, S2 and S3K original-movie replays are
+clean; KiS2's 93-error bootstrap/animation frontier exactly matches baseline.
+The fresh original Knuckles closure still records Duck `$08` / mapping `$9B`
+on return and the same row-446 vine symptom, 37,726 errors and ownership
+rejection at cursor 12011. These remain bounded controls, not whole-act,
+all-product, native-pixel or campaign certification; no accepted ROM deviation
+or release/API publication is introduced.
+
+
+The [internal host-policy correction](architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+removes the rejected public ground-pose record extension while preserving the
+native movement ordering and existing rewind authority. Standing precedence is
+an immutable internal host service, independent of donor capabilities and power
+profiles. The public three-component record, ModApiVersion and signature pin
+retain their pre-task contracts. The earlier Knuckles chain frontier above is
+historical evidence, not a newly repeated closure or a complete-chain claim.

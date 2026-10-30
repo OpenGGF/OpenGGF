@@ -3,6 +3,7 @@ package com.openggf.editor;
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
 import com.openggf.control.InputActionMasks;
+import com.openggf.control.MenuRepeat;
 import com.openggf.editor.commands.StrokeCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.MutableLevel;
@@ -50,6 +51,8 @@ public final class EditorInputHandler {
     }
 
     private FrontEnd frontEnd;
+    private final MenuRepeat cursorRepeat = new MenuRepeat();
+    private long inputFrame;
     private java.util.function.Consumer<Action> dispatchListener = action -> { };
 
     public enum Action {
@@ -148,6 +151,7 @@ public final class EditorInputHandler {
 
     public void update(InputHandler inputHandler) {
         Objects.requireNonNull(inputHandler, "inputHandler");
+        inputFrame++;
         if (frontEnd != null && frontEnd.update(inputHandler)) {
             finishActiveStroke();
             return;
@@ -169,7 +173,12 @@ public final class EditorInputHandler {
             if (controlDown && controller.depth() == EditorHierarchyDepth.WORLD) {
                 controller.canvasView().panBy(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
             } else if (controller.depth() == EditorHierarchyDepth.WORLD) {
-                controller.moveWorldCursor(dx * WORLD_MOVE_SPEED, dy * WORLD_MOVE_SPEED);
+                int stepX = 0, stepY = 0;
+                if (repeatDirection(inputHandler, GLFW_KEY_LEFT, AbstractPlayableSprite.INPUT_LEFT)) stepX--;
+                if (repeatDirection(inputHandler, GLFW_KEY_RIGHT, AbstractPlayableSprite.INPUT_RIGHT)) stepX++;
+                if (repeatDirection(inputHandler, GLFW_KEY_UP, AbstractPlayableSprite.INPUT_UP)) stepY--;
+                if (repeatDirection(inputHandler, GLFW_KEY_DOWN, AbstractPlayableSprite.INPUT_DOWN)) stepY++;
+                if (stepX != 0 || stepY != 0) controller.stepWorldCursor(stepX, stepY);
             } else {
                 controller.moveActiveSelection(dx, dy);
             }
@@ -256,6 +265,11 @@ public final class EditorInputHandler {
             else if (controller.regionSelection() != null) handleAction(Action.CLEAR_REGION);
             else handleAction(Action.ASCEND);
         }
+    }
+
+    private boolean repeatDirection(InputHandler input, int key, int direction) {
+        return cursorRepeat.pulse(key, inputFrame, input.isDirectionHeld(key, direction),
+                input.isKeyPressed(key) || (input.logical().player1().pressedMask() & direction) != 0);
     }
 
     public void handleAction(Action action) {

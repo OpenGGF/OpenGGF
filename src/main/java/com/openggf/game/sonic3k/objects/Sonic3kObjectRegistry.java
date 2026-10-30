@@ -767,7 +767,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new SozQuicksandObjectInstance(spawn);
                     }
-                    return new HCZCGZFanObjectInstance(spawn);
+                    return HCZCGZFanObjectInstance.create(spawn);
                 });
         factories.put(Sonic3kObjectIds.HCZ_LARGE_FAN,
                 (spawn, registry) -> {

@@ -1,5 +1,9 @@
 # Level test coverage backlog
 
+AIZ foreground plant visibility (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#foreground-plant-visibility-2026-10-29) adds projected whole-object culling, partial visibility and variant/viewport edges, with a reproduced baseline Sonic+Tails sprite dropout. The three culling cases and 192 feature/API cases pass with no skips; the corrected positioned capture restores the sprite with unchanged recorded state. Final focused/guard runs retain only the matched pre-existing HCZ fan-reference coverage failure described in the linked record. The optional shared scanline budget is a presentation preference; native pixel parity, broader routes/donors/teams and fresh whole-world rewind coverage remain open.
+
+DEZ Spikebonker creation (2026-10-29): the [Act 1 maintenance matrix](../architecture/validation/levels/s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29) adds native-source creation, first companion contact and actual recreation/forward checks. The cold witness uses 200 original Sonic+Tails inputs at native320 with no donor; wider route/configuration obligations and Act 2 incoming qualification remain open. The [shared Act 2 note](../architecture/validation/levels/s3k-dez-act2.md#shared-spikebonker-creation-maintenance--2026-10-29) records that inherited scope.
+
 S3K initial-focus arithmetic (2026-10-28): four added component checks cover
 DEZ1/HPZ2 for Sonic/Tails and Knuckles, Knuckles CNZ1/LRZ1, excluded acts,
 checkpoint bypass, unsigned word wrap and maximum saturation. They retain the
@@ -480,6 +484,18 @@ all four real shields through the completed-list touch consumer. This bounded
 component correction preserves ordinary shield-loss hurt; route, configuration,
 native presentation and existing rewind breadth gaps remain inherited.
 
+S3K seven-emerald starpost correction (2026-10-29): the [HCZ2 obligation update](../architecture/validation/levels/s3k-hcz2.md#seven-emerald-starpost-invitation--2026-10-29)
+separates short general eligibility and actual-ROM allocation/art/rewind
+component checks from the original native 320 Sonic+Tails continuous route.
+Restored invitation work removes two unmatched completions; the existing
+strict-red HCZ row 1748 boss/contact frontier and MGZ admission stop remain.
+No complete act, broader viewport/donor/team matrix or native pixels are certified.
+
+The [independent starpost lifecycle follow-up](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+extends this component floor with ordinary orbit exhaustion/no-art and
+ring-loss-after-activation entry, all three bonus families and destructive
+restore/replay. The HCZ2 matrix retains its route and configuration gaps.
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated
@@ -567,6 +583,13 @@ direct HPZ, broader products and campaign integration remain open.
 [Knuckles LRZ2 current-physics first-door exploration](../architecture/validation/levels/s3k-lrz-act2.md#knuckles-current-physics-first-door-proposal-2026-10-21) now preserves all24028 accepted handoff inputs and26428 R5 approach inputs in a26635-row ordinary proposal. Actual button press26510, door fully open26573 and grounded/free passage26634 at2796/1900 retain3 rings/3 lives without hurt/death. This is bounded input exploration with production loader/all-row proof, not a fresh qualifier pair, maintained method replacement or new rewind coverage. The three longer maintained Knuckles methods/controllers remain unchanged with current input5027 negatives pending.
 
 [Independent Knuckles LRZ2 incoming first-door check](../architecture/validation/levels/s3k-lrz-act2.md#independent-knuckles-incoming-first-door-check-2026-10-21) has a fixed26635-row proposal with two matching full51-field ordinary static replays, initialized six-HP admission, actual load/history retirement and earned3-ring first-door passage. Its exact independent method passes1T/0F/0E/0S with17 destination45-input full-registry replay windows and all60 keys. Existing five method bodies and14 resources remain byte-exact; longer current input5027 negatives are not propagated or waived. This does not certify Act2 completion or native/HPZ/campaign breadth.
+
+The [October29 native crusher-timer correction](../architecture/validation/levels/s3k-lrz-act1.md#native-crusher-timer-first-dispatch--2026-10-29)
+removes an extra initializer-only tick before the world-change/bridge request.
+Its93 focused cases pass without skips, but both maintained routes still die
+in Act1 at15323/5027, before all17/48 destination windows. The first bridge
+contact now matches native722; per-input admission hold723 remains open.
+It does not reinstate historical Act2 windows or certify later route/campaign breadth.
 
 [Knuckles LRZ1 current-physics fight/handoff](../architecture/validation/levels/s3k-lrz-act1.md#knuckles-current-physics-fight-and-act2-handoff-2026-10-21) now preserves the accepted20500-input arrival prefix, defeats the six-health miniboss and reaches released Act2 in24028 inputs with zero death/life loss. The exact second method passes1T/0F/0E/0S with68 all-key45-input replay windows (54 source/14 destination), real Level/ObjectManager replacement and nonempty-history retirement, plus45 successive moved/free destination inputs. Positive-ring carry/recovery/reset from positive remain gaps. The other three methods and other route resources remain unchanged with inherited current input5027 negatives pending; broader products and longer Act2/directHPZ/campaign propagation remain open.
 
@@ -696,7 +719,7 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `SKY_CHASE` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `WING_FORTRESS` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `DEATH_EGG` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
-| S3K | `S3K_ANGEL_ISLAND_1` | [Second Strike hard-mode prototype matrix (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md), including bounded lookout slot-retirement/recreation checks; [Partial Sonic-route matrix](../architecture/validation/levels/s3k-aiz1-sonic.md); other main routes and full conformance pending |
+| S3K | `S3K_ANGEL_ISLAND_1` | [Second Strike hard-mode prototype matrix (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md), including bounded lookout slot-retirement/recreation checks; [Partial Sonic-route matrix](../architecture/validation/levels/s3k-aiz1-sonic.md); [bounded Knuckles first-return pose/rewind evidence](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md); other main routes and full conformance pending |
 | S3K | `S3K_ANGEL_ISLAND_2` | [Second Strike hard-mode obligations (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md); [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. [R11 synchronous retained16](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17) qualifies the known559/unknown30 handoff and queued589 publication with twice-restored world replay (77 construction epoch +4 opaque-restore repair cases, no skips). Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_HYDROCITY_1` | [Sonic-route matrix](../architecture/validation/levels/s3k-hcz1-sonic.md); [local boss obligations and inherited gaps](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md#hcz1-affected-route-matrix). Other main routes and full conformance remain open |
 | S3K | `S3K_HYDROCITY_2` | [Act 2 matrix](../architecture/validation/levels/s3k-hcz2.md), including [snake coarse-cull/re-entry component coverage](../architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
@@ -2140,3 +2163,72 @@ focused cases without skips and the strict returned-HCZ2 physics frontier
 moving from row 2147 to 2500. The same original continuous route still stops
 at SS7 results; alternate product breadth, native pixel and complete-act
 obligations remain open.
+
+HCZ platform/fan dispatch continuation (2026-10-29, local candidate over
+`b0dbd4825`): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocation-and-native-dispatch--2026-10-29)
+adds original-slot solid ownership, real saturated-allocation retry and
+fresh-recreation witnesses, plus an exact latch threshold separated from a
+later fan's lift. Five corrected allocation/graph cases pass without skips;
+the unchanged runtime also passes 13 fan cases and four facing guards.
+The causal audit distinguishes the proven reversed-slot frontier from the
+unobserved stale rejected-handle risk and separate spin-down effects omission.
+No whole-act, expanded configuration, native pixel or campaign certification
+is implied by those 22 distinct focused checks.
+
+Final HCZ object result (same candidate): source-owned fan/platform dispatch and
+column side-stop declarations close segment-13 non-camera physics through all
+5,393 stored rows (zero physics / 182 animation differences). Six new column
+contact/restore cases plus 13 existing column cases pass without skips. The
+separate alternate movie's complete 4,354 error-span list matches fresh
+`b0dbd4825`; its strict first error remains row 9482 `air`. Segment 11 is unchanged
+at 11 camera physics / 51 animation differences. SS7 results still stops at
+cursor 97208, with native results-phase evidence and shared handoff ownership
+unresolved. The [final audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#final-local-qualification-and-handoff)
+records all commands, exact source fingerprint, failures/skips and timings.
+This adds no outgoing, whole-act, expanded configuration or campaign claim.
+
+Knuckles AIZ1 first-return pose (2026-10-29, bounded local repair): the
+[ROM decision and qualification record](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+proves grounded Duck precedes terrain detachment. Two independent old-reds
+become green, with neutral/no-ground-dispatch controls and a native 320px Knuckles
+component using real ROM collision/animation plus two whole-registry
+restore/forward cycles. The 170-case focused selection has zero failures/errors/
+skips. The original continuous chain now first differs at returned row 446,
+X `$2026/$201B`; ownership still fails at cursor 12011. This adds a short detach-edge
+obligation only: Knuckles route/matrix breadth, viewport/donor/team products,
+load-boundary rewind, pixels and later vine/chain parity remain inherited gaps.
+
+
+Shared ground-owner follow-up (2026-10-29, bounded component qualification):
+the [native decision and final result](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#final-focused-qualification-and-remaining-frontiers)
+close Up and simultaneous-input ownership across eight native/KiS2/donor
+profiles. Neutral, Up, Down, simultaneous, forced/object-control, move-lock,
+held-horizontal and steep-wall no-write witnesses include applicable neutral
+air continuation and explicit fresh-player registered restore/replay. All 390
+focused cases pass with zero skips. Original S1/S2/S3K movie checks are clean;
+KiS2's matched bootstrap/animation frontier and the Knuckles return's row-446
+vine / cursor-12011 ownership frontiers remain. These solo 320px first-act
+components extend the detach-edge controls only; whole-act, team, full donor,
+load-boundary and native pixel obligations remain open.
+DEZ1 lift-pad landing follow-up (2026-10-29): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-new-landing-boundary--2026-10-29)
+adds the original-movie zero-overlap decision, independent bounded contact cases
+and the existing allocation/graph-recreation obligations. Complete-act, expanded
+character/team/donor/viewport and campaign certification gaps remain open;
+qualification results and limits belong to its linked frontier entry.
+
+
+DEZ1 lift continued-ride follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#lift-pad-continued-ride-release--2026-10-30)
+adds real P1/P2 landing and walk-off dispatch, held/released latch restoration,
+and destructive pad/arm recreation with forward replay. Original-input cold
+observation remains bounded; whole-act, native-cause, donor, wider viewport and
+expanded roster obligations are not inferred from this local contract.
+
+
+DEZ1 conveyor ownership follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#conveyor-moving-standing-bit-ownership--2026-10-30)
+adds native jump/solid checkpoints, real P1/P2 moving-latch ownership,
+replacement-slot isolation and destructive recreation with forward replay.
+The strict original-input prefix ends at 3280; expanded configuration, whole-act,
+pixel/audio and campaign qualification remain separate obligations.

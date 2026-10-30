@@ -71,6 +71,23 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A callback's row label does not establish its sampling boundary (2026-10-29,
+starpost continuation). `productionOutputRowObserver` is called by
+`stateMovieLogicalRow()` before `loop.step()`, with upcoming movie row + 1.
+A pre-step print labelled98468 therefore observes the state after completed
+input98467. Use `afterProductionStep` for an end-of-step observation, or label
+and translate the pre-step state explicitly; do not fit a one-frame gameplay
+adjustment to the misleading print. See the [bounded starpost record](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29).
+
+A reached run-prefix assertion need not grade its active destination segment
+(2026-10-29, S3K terminal candidate). `ReplayPrefixReached` stops before normal
+source-closure reporting, so a first returned row can log strict animation errors
+while the prefix method passes. Inspect the logged comparison and completed
+segment reports; use a bounded target beyond that segment when its graded
+outcome is required. Canonical and candidate first-return witnesses both passed,
+then matched at the later ownership rejection with identical incomplete segment
+reports. See the [candidate consumption audit](../architecture/audits/2026-10-29-s3k-native-terminal-evidence.md#current-source-candidate-consumption--bounded-java-evidence).
+
 Quantized RGB differences can disappear during grayscale conversion (2026-10-29,
 parity design). A one-pixel Pillow control yields RGB `(0, 0, 1)` but luminance
 zero. `compare_trace_checkpoint_pixels.py` converts its 0..7 channel differences

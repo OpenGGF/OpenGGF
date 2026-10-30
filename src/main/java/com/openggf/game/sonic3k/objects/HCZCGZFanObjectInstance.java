@@ -17,7 +17,6 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.ObjectSpawn;
@@ -41,7 +40,7 @@ import java.util.List;
  *   <li>Always-on mode (bit 4): continuously blowing</li>
  *   <li>Trigger-controlled mode (bit 5): waits for Level_trigger_array[0], then becomes always-on</li>
  *   <li>Underwater mode (bit 6): spawns bubble children, uses special player animation</li>
- *   <li>Platform mode (bit 7): spawns a sliding solid block child</li>
+ *   <li>Platform mode (bit 7): the original slot is a sliding solid block and allocates a fan</li>
  * </ul>
  * <p>
  * ROM references: Obj_HCZCGZFan (sonic3k.asm:65349-65560).
@@ -52,8 +51,8 @@ import java.util.List;
  * Bit  4:   Always-on fan (continuous blowing)
  * Bit  5:   Trigger-controlled (waits for Level_trigger_array[0])
  * Bit  6:   Underwater fan (spawns bubbles, uses anim $F for player)
- * Bit  7:   Has sliding platform child
- * Bits 4-5: (When bit 7 set) Platform slide distance: ($00/$40/$80/$C0)
+ * Bit  7:   Original slot becomes the sliding platform
+ * Bits 4-5: (When bit 7 set) Platform slide distance: ($00/$20/$40/$60)
  * </pre>
  */
 public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
@@ -130,17 +129,10 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
     private int speedRamp;             // $34(a0): animation speed ramp (0..0x400)
     private int animFrameTimer;        // anim_frame_timer(a0)
     private int mappingFrame;          // mapping_frame(a0)
-    private boolean latchedOn;         // $42(a0): set by platform child when player is above
+    private boolean latchedOn;         // $42(a0): platform stops lift while P1 is below
     private boolean initialized;
 
-    // Platform child reference
-    private FanPlatformChild platformChild;
-
     public HCZCGZFanObjectInstance(ObjectSpawn spawn) {
-        this(spawn, true);
-    }
-
-    private HCZCGZFanObjectInstance(ObjectSpawn spawn, boolean spawnPlatform) {
         super(spawn, "HCZCGZFan");
         this.subtype = spawn.subtype();
         this.originalX = spawn.x();
@@ -163,49 +155,23 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         this.animFrameTimer = 0;
         this.mappingFrame = 0;
         this.latchedOn = false;
+    }
 
-        // ROM: btst #7,d0 / beq.s loc_30602
-        if (spawnPlatform && (subtype & BIT_PLATFORM) != 0) {
-            spawnPlatformChild();
-        }
+    /** Obj_HCZCGZFan (sonic3k.asm:65354-65400): a0 is the platform, a1 the fan. */
+    static AbstractObjectInstance create(ObjectSpawn spawn) {
+        return (spawn.subtype() & BIT_PLATFORM) != 0
+                ? new FanPlatformChild(spawn) : new HCZCGZFanObjectInstance(spawn);
     }
 
     @Override
     public HCZCGZFanObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new HCZCGZFanObjectInstance(ctx.spawn(), false);
-    }
-
-    /**
-     * Spawns the sliding platform child when subtype bit 7 is set.
-     * <p>
-     * ROM: Obj_HCZCGZFan (sonic3k.asm:65354-65380) calls AllocateObjectAfterCurrent.
-     * The original object (a0) becomes the platform, the child (a1) becomes the fan.
-     * In our implementation, this object IS the fan, and we spawn the platform as a child.
-     */
-    private void spawnPlatformChild() {
-        // ROM: andi.w #$30,d0 / add.w d0,d0 — slide distance from bits 4-5
-        int slideDist = (subtype & MASK_SLIDE_DIST) * 2;
-        boolean facingLeft = (spawn.renderFlags() & 0x01) != 0;
-
-        // ROM: addi.w #$1C,y_pos(a0) — platform is 28 pixels below fan spawn Y
-        int platformY = y + 0x1C;
-
-        platformChild = spawnChild(() -> new FanPlatformChild(
-                new ObjectSpawn(originalX, platformY, Sonic3kObjectIds.HCZ_CGZ_FAN, 0,
-                        spawn.renderFlags(), false, 0),
-                this, slideDist, facingLeft));
-
-        // ROM: bclr #5,subtype(a1) / bset #4,subtype(a1)
-        // When platform is present, fan child is forced to always-on mode
-        subtype &= ~BIT_TRIGGER;
-        subtype |= BIT_ALWAYS_ON;
+        return new HCZCGZFanObjectInstance(ctx.spawn());
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // HCZCGZFan_InitFan / HCZCGZFan_Return (sonic3k.asm:65382-65400):
         // installing Main returns without executing its pulse or player writes.
-        // Platform children already call the installed fan Main directly below.
         if (!initialized) {
             initialized = true;
             return;
@@ -223,12 +189,6 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             // ROM: bclr #5,subtype(a0) / bset #4,subtype(a0)
             subtype &= ~BIT_TRIGGER;
             subtype |= BIT_ALWAYS_ON;
-        }
-
-        // ROM platform mode makes the original slot the sliding platform and
-        // updates the fan child after the platform has written the fan x_pos.
-        if (platformChild != null) {
-            return;
         }
 
         updateFanRoutine(vIntRunCount, player);
@@ -484,12 +444,12 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         }
     }
 
-    // Called by FanPlatformChild to update this fan's X position
+    // Called by the original-slot platform to update this fan's X position
     void setFanX(int newX) {
         this.x = newX;
     }
 
-    // Called by FanPlatformChild to set/clear latch state
+    // Called by the original-slot platform to set/clear latch state
     void setLatchedOn(boolean latched) {
         if (latched && !this.latchedOn) {
             // ROM: move.w #0,$34(a1) — reset speed ramp on latch
@@ -545,17 +505,18 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         ctx.drawWorldLabel(x, y + 12, 0, state, DebugColor.CYAN);
     }
 
-    // ===== Inner class: Sliding Platform Child =====
+    // ===== Inner class: Original-slot sliding platform =====
 
     /**
-     * Solid sliding platform spawned when subtype bit 7 is set.
+     * Solid sliding platform occupying the original slot when subtype bit 7 is set.
+     * The historical Java class name remains for the rewind inventory; this is a0, not a1.
      * Extends/retracts based on player proximity to the fan.
      * <p>
-     * ROM: loc_30850 (sonic3k.asm:65563-65620).
+     * ROM: HCZCGZFan_Platform (sonic3k.asm:65568-65622).
      * Uses Map_HCZWaterRushBlock mappings, ArtTile_HCZMisc+$A.
      */
     static class FanPlatformChild extends AbstractObjectInstance
-            implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+            implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.Container {
 
         /**
          * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -584,7 +545,8 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         private static final int BELOW_THRESHOLD = 0x20;
         // ROM: cmpi.w #-$30,d0 — above threshold
         private static final int ABOVE_THRESHOLD = -0x30;
-        private final HCZCGZFanObjectInstance fanParent;
+        private HCZCGZFanObjectInstance fanChild;
+        private boolean initialized;
         private int maxSlideDistance;         // $3A(a0): max slide offset
         private boolean facingLeft;
         private int originalX;                // $40(a0): base X position
@@ -593,23 +555,24 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
         private int x;
         private int slideOffset;             // $30(a0): current slide offset
 
-        FanPlatformChild(ObjectSpawn spawn, HCZCGZFanObjectInstance fanParent,
-                         int maxSlideDistance, boolean facingLeft) {
+        FanPlatformChild(ObjectSpawn spawn) {
             super(spawn, "HCZCGZFanPlatform");
-            this.fanParent = fanParent;
-            this.maxSlideDistance = maxSlideDistance;
-            this.facingLeft = facingLeft;
+            // Obj_HCZCGZFan (sonic3k.asm:65374-65380): bits 4/5 times two.
+            this.maxSlideDistance = (spawn.subtype() & MASK_SLIDE_DIST) * 2;
+            this.facingLeft = (spawn.renderFlags() & 1) != 0;
             this.originalX = spawn.x();
             this.x = spawn.x();
             this.y = spawn.y();
-            this.slideOffset = 0;
         }
 
         @Override
         public FanPlatformChild recreateForRewind(RewindRecreateContext ctx) {
-            HCZCGZFanObjectInstance restoredParent =
-                    RewindRecreateObjectLinks.nearestLiveObject(ctx, HCZCGZFanObjectInstance.class);
-            return new FanPlatformChild(ctx.spawn(), restoredParent, 0, false);
+            return new FanPlatformChild(ctx.spawn());
+        }
+
+        @Override
+        public boolean isSolidFor(PlayableEntity player) {
+            return initialized;
         }
 
         @Override
@@ -624,6 +587,26 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
+            if (!initialized) {
+                // Obj_HCZCGZFan (sonic3k.asm:65358-65400): allocation happens in
+                // the original slot's initializer. Failure leaves it installed for retry.
+                var child = spawnChild(() -> new HCZCGZFanObjectInstance(new ObjectSpawn(
+                        originalX, y, Sonic3kObjectIds.HCZ_CGZ_FAN,
+                        (spawn.subtype() & ~BIT_TRIGGER) | BIT_ALWAYS_ON,
+                        0, false, 0)));
+                if (services().objectManager() != null
+                        && (child.getSlotIndex() < 0 || child.isDestroyed())) {
+                    return;
+                }
+                fanChild = child;
+                // InitFan installs Main before Process_Sprites reaches a1 later
+                // in this same pass; a0 returns without platform Main or solids.
+                fanChild.initialized = true;
+                y += 0x1C;
+                initialized = true;
+                return;
+            }
+
             AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
                     ? (AbstractPlayableSprite) playerEntity : null;
 
@@ -635,8 +618,8 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                     // Player above platform
                     if (playerRelY < ABOVE_THRESHOLD) {
                         // Far above — unlatch fan (sonic3k.asm:65589-65596)
-                        if (fanParent.latchedOn) {
-                            fanParent.setLatchedOn(false);
+                        if (fanChild.latchedOn) {
+                            fanChild.setLatchedOn(false);
                             try {
                                 services().playSfx(Sonic3kSfx.FAN_LATCH.id);
                             } catch (Exception e) {
@@ -647,8 +630,8 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
                     }
                 } else if (playerRelY >= BELOW_THRESHOLD) {
                     // Player below platform — latch fan ON (sonic3k.asm:65570-65580)
-                    if (!fanParent.latchedOn) {
-                        fanParent.setLatchedOn(true);
+                    if (!fanChild.latchedOn) {
+                        fanChild.setLatchedOn(true);
                         try {
                             services().playSfx(Sonic3kSfx.FAN_LATCH.id);
                         } catch (Exception e) {
@@ -670,10 +653,9 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
             // ROM: add.w $40(a0),d0
             x = originalX + offset;
             // ROM: move.w d0,x_pos(a1) — set fan X too
-            fanParent.setFanX(x);
+            fanChild.setFanX(x);
 
             checkpointAll();
-            fanParent.updateFanRoutine(vIntRunCount, player);
         }
 
         private void extendPlatform() {
@@ -692,6 +674,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements R
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (!initialized) return;
             PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.HCZ_WATER_RUSH_BLOCK);
             if (r == null) return;
             // ROM: mapping_frame = 0 for platform

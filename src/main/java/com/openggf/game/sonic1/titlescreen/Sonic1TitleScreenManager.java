@@ -24,6 +24,8 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 1 Title Screen.
  *
@@ -404,7 +406,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
      * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
      */
     private static boolean confirmPressed(InputHandler input, int startKey) {
-        return input.isKeyPressed(startKey) || input.logical().menuAccept();
+        return nativeMenuKeyPressed(input, startKey) || input.logical().menuAccept();
     }
 
     private void updateSegaLogo(InputHandler input) {

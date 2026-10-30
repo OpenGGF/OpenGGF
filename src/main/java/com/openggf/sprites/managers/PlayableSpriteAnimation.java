@@ -115,6 +115,17 @@ public class PlayableSpriteAnimation {
     @com.openggf.game.ModApi
     public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
 
+    /** Publish an admitted Move/Roll pose before terrain contact can change dispatch state. */
+    void publishGroundPoseAnimation(int frameCounter) {
+        // The existing forced-byte owner must also govern this earlier publication entry.
+        if (sprite.getForcedAnimationId() >= 0) return;
+        if (sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile profile) {
+            int scriptCount = sprite.getAnimationSet() != null ? sprite.getAnimationSet().getScriptCount() : 0;
+            Integer selected = profile.resolveAnimationId(sprite, frameCounter, scriptCount, false);
+            if (selected != null) sprite.setAnimationId(selected);
+        }
+    }
+
     public void captureGroundMovementAnimSpeed(short speed) {
         groundMovementAnimSpeedSnapshot = speed;
     }

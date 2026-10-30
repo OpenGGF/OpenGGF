@@ -14,7 +14,12 @@ remains future scope; `next` has no separate 0.8 implementation line yet.
 Recent maintenance includes codec-backed rewind snapshot equality, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility timing, S3K fresh-level ring timing,
-S1 Marble flame retirement and visual trace handoff ownership, and Carnival Night cylinder rider ownership.
+S1 Marble flame retirement and visual trace handoff ownership, Carnival Night
+cylinder rider ownership, Lava Reef crusher timer dispatch, the original S3K
+final emerald-reveal countdown and Death Egg lift landing and rider-release boundaries,
+and the scoped host input-pass prerequisite for independent rendering, ordered
+physical gameplay (including controlled native rows) and native-menu short-tap
+admission, and live frame phase separation that preserves current FPS behavior.
 
 ## Release files
 

@@ -472,8 +472,8 @@ class TestLevelEditorController {
 
         handler.update(input);
 
-        assertEquals(103, controller.worldCursor().x());
-        assertEquals(203, controller.worldCursor().y());
+        assertEquals(108, controller.worldCursor().x());
+        assertEquals(208, controller.worldCursor().y());
     }
 
     @Test
@@ -661,7 +661,7 @@ class TestLevelEditorController {
 
             gameLoop.step();
 
-            assertEquals(103, controller.worldCursor().x());
+            assertEquals(108, controller.worldCursor().x());
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_RIGHT));
         } finally {
             SessionManager.clear();

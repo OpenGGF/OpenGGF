@@ -21,6 +21,8 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 
+import static com.openggf.control.InputHandlerInternalAccess.nativeMenuKeyPressed;
+
 /**
  * Manages the Sonic 3&amp;K Level Select screen.
  *
@@ -186,12 +188,12 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         }
 
         // Jump/Start to select
-        if (input.isKeyPressed(jumpKey) || input.logical().menuAccept()) {
+        if (nativeMenuKeyPressed(input, jumpKey) || input.logical().menuAccept()) {
             handleSelect();
         }
 
         // A button adds 0x10 to sound test value (like original, disasm line 8629)
-        if (input.isKeyPressed(configService.getInt(SonicConfiguration.TEST))) {
+        if (nativeMenuKeyPressed(input, configService.getInt(SonicConfiguration.TEST))) {
             if (selectedIndex == Sonic3kLevelSelectConstants.SOUND_TEST_INDEX) {
                 soundTestValue = (soundTestValue + 0x10) & 0xFF;
             }

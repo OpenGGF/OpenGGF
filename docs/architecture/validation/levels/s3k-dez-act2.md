@@ -1645,3 +1645,12 @@ and graph-recreation oracles remain intact. This is component/lifecycle coverage
 not a cold route or native timing certificate; the original same-movie DEZ1
 cold intake at offset468982 still needs requalification. Existing roster, donor,
 viewport and native acceptance gaps above remain.
+
+## Shared Spikebonker creation maintenance — 2026-10-29
+
+The shared mace owner now preserves its native initialization pass before orbit
+or slam dispatch. The [Act 1 maintenance matrix](s3k-dez-act1.md#spikebonker-creation-and-the-original-cold-opening--2026-10-29)
+records the native decision, component checks, actual recreation/forward check
+and original-movie opening coverage. These component contracts also govern Act 2
+placements; no Act 2 cold/incoming route, width/donor/team product or native
+trajectory qualification is inferred for this change.

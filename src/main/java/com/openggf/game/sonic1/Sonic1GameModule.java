@@ -390,6 +390,8 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.StandingInputPolicy.class)
+            return type.cast(com.openggf.game.internal.StandingInputPolicy.UP_FIRST);
         if (type == com.openggf.data.RetailRomRevision.class) return (T) retailRomRevision;
         if (type == com.openggf.game.internal.DyingSolidPushPolicy.class) {
             return retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV00

@@ -5,6 +5,30 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg moving pads:** Exact surface contact leaves an airborne player in
+  flight until the native overlap window is reached, preserving the original
+  cold route's landing timing. Walking or jumping off clears that player's
+  standing latch, allowing the lift's return pause to resume after P1 leaves.
+  Conveyor pads retain each rider's standing bit as they move, preserving the
+  native jump height and clearing support at the pad's own contact checkpoint.
+
+- **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
+  edges stable across logical rereads and acknowledge keyboard/text lifetime once.
+  Engine display controls sample current controller input and hand it to the first
+  GameLoop consumer without nesting scopes or coalescing later fast-forward passes.
+  Modal display frames acknowledge their own controller edges, and pad frame-step
+  capture decisions use the same fresh sample as GameLoop. Deferred passes restore
+  their unacknowledged controller baseline; text claims, recorded native Start and
+  the existing slow-motion carry retain their owners.
+  Ordered gameplay admission now preserves observed keyboard/controller taps released
+  before the consuming tick, including repeated taps and simultaneous controls.
+  Zero-step service previews the same pending prefix; modal/text claims, fixed menu
+  keys and recorded overrides retain their input authority. Native menu bindings
+  consume each admitted edge once; controlled native rows preserve later queued taps,
+  keyboard resume remaps retired paused taps before both ordinary and controlled
+  gameplay, and fixed menu/text controls keep physical authority during replay. This
+  does not connect independent live scheduling or change audio/capture cadence.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 
@@ -633,7 +657,9 @@ Unreleased. The earlier development themes remain in
   retains ROM collision semantics, with explicit compatible-layout cloning and
   save/cancel/discard protection before replacing unsaved work. A tools wheel,
   block and chunk workbenches and button
-  prompts for the pad in use. It is the sole built-in editor UI, with world-space
+  prompts for the pad in use. Canvas zoom spans 0.25×–8×, revealing more terrain
+  below 1×; arrow keys and the D-pad step whole blocks for terrain or eight pixels
+  for objects and rings. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
   and exported. A full clone keeps unplaced library chunks whose art lies outside the
@@ -699,7 +725,9 @@ Unreleased. The earlier development themes remain in
   and tile sizes. Overlapping spheres use the original sprite-table order and
   compare the winning pixel's priority against the floor and HUD planes.
   The results card sits on the locked-on game's grey backdrop
-  instead of white, matching native frames of won and failed stages.
+  instead of white, matching native frames of won and failed stages. The final
+  Chaos Emerald reveal uses the original single countdown before returning to
+  the level, including its zero-timer expiry pass.
   A Super Emerald pedestal loads the S&K sphere layout for its selected stage and
   selects that stage on the frame the player lands on it,
   as the original does, instead of one frame later. White stage transitions follow
@@ -759,7 +787,10 @@ Unreleased. The earlier development themes remain in
   time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
   Hydrocity fan timing. Timer-controlled fans retain their initialization pass
-  and the original idle intervals across repeated pulses. Hydrocity's hand
+  and the original idle intervals across repeated pulses. Sliding fan platforms
+  occupy their original object slots and allocate fans during initialization,
+  preserving latch reads between other fans and retrying when slots become free.
+  Spinning columns stop inertia at native zero-velocity left-side contacts. Hydrocity's hand
   launcher checks its top surface on every pass, as in the original, so a rising
   hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
@@ -780,7 +811,10 @@ Unreleased. The earlier development themes remain in
   Wall climbs
   include the signed native radius in vertical probes, powered speed and upper bound;
   floor landings preserve the native angle, animation and turn byte before landing
-  callbacks, including values written by those callbacks. The native
+  callbacks, including values written by those callbacks. Grounded pose selection
+  and host-owned native Up/Down precedence survive terrain detachment, including Knuckles'
+  special-stage return; a steep-wall slip retains the incoming animation when
+  the ground routine makes no pose write. The native
   second player keeps its ringless hurt response under human control.
   Hydrocity solid blocks retain underside and side contacts while offscreen.
   Snake blocks use their saved origin for camera culling and can reload when the
@@ -822,6 +856,8 @@ Unreleased. The earlier development themes remain in
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
   Death Egg's gravity tubes retain native rider transfers, mount velocities and
   body-size adjustment; Chainspike's floor probe uses its native collision radius.
+  Spikebonker's mace initializes before its first orbit step, preserving the native
+  companion contact timing in Death Egg's opening.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.
@@ -903,7 +939,11 @@ Unreleased. The earlier development themes remain in
   aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
   rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
-  and reuse that work for their marker and bonus stars. Development
+  and reuse that work for their marker and bonus stars. Ordinary starposts retain
+  their ring-based bonus invitation after all seven Chaos Emeralds are collected.
+  Failed ordinary orbit allocation still saves the checkpoint without submitting
+  bonus art; an admitted invitation survives ring loss and retains its selected
+  bonus family through entry and rewind. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
@@ -944,6 +984,9 @@ Unreleased. The earlier development themes remain in
   enforce native scanline piece and pixel budgets, including partial sprites,
   offscreen consumption and overflow-armed masking. ROM HUD pieces share those
   budgets before expanded art is replayed; wider views retain native capacities.
+  Angel Island foreground plants are culled after parallax, so offscreen plants
+  no longer consume that capacity and hide parts of Sonic. Display settings offer
+  a saved Sprite scanline limit toggle, enabled by default.
   In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
@@ -1118,6 +1161,8 @@ Unreleased. The earlier development themes remain in
   the original's fixed clock whoever plays, and the route takes the placed
   fire shield that keeps the lava from hurting Sonic during the fight.
   Wider views restore the entry objects when the camera returns from beyond the level's left edge.
+  Lava Reef crusher timers now decrement during their first dispatch, preserving the
+  original world-change and generated-bridge creation edge.
 
 - **Capture and controller tools:** Direct-level captures can explicitly seed
   the inherited end-of-level flag once after declared setup; title-first captures
@@ -1415,6 +1460,12 @@ its original drawing priority.
   IMEs still need platform verification.
 
 ## Maintenance and release preparation
+
+- **Live frame timing preparation:** Engine now separates its live advance phase
+  from scene presentation, retaining fade-before-update ordering, modal input
+  acknowledgment and one outer audio packet. Frame-step and modal decisions
+  survive input acknowledgment through capture. This extraction preserves the
+  current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
 
 - **Stock parity measurement foundation:** A versioned, explicitly partial
   S1/S2/S3K obligation catalogue and on-demand report distinguish declared

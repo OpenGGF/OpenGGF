@@ -367,6 +367,8 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.StandingInputPolicy.class)
+            return type.cast(com.openggf.game.internal.StandingInputPolicy.UP_FIRST);
         if (type == com.openggf.data.RetailRomRevision.class) return type.cast(retailRevision());
         if (type == Sonic2RevisionProfile.class) return type.cast(revisionProfile);
         boolean verifiedStock = getClass() == Sonic2GameModule.class

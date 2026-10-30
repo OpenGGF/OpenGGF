@@ -16,6 +16,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 
@@ -118,6 +120,32 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
                 "precondition: normal touch (no time attack) still spawns the 4 bonus stars");
     }
 
+    /** sub_2D028 admits the invitation by rings, independently of Chaos emeralds. */
+    @ParameterizedTest
+    @CsvSource({"0,20,true,false,4", "6,20,true,false,4", "7,20,true,false,4",
+            "7,180,true,false,4", "7,19,true,false,0", "7,180,false,false,0",
+            "7,180,true,true,0"})
+    void ordinaryInvitationKeepsRingRunAndConsumedEntryGates(
+            int emeralds, int rings, boolean allowBonus, boolean consumed, int expectedStars) {
+        for (int i = 0; i < emeralds; i++) gameState.markEmeraldCollected(i);
+        assertEquals(emeralds, gameState.getEmeraldCount());
+        if (!allowBonus) runPolicy = com.openggf.game.session.GameplayRunPolicy.isolatedAct();
+        if (consumed) checkpointState.markUsedForSpecialStage();
+        var post = new Sonic3kStarPostObjectInstance(STAR_POST_SPAWN);
+        post.setServices(newServices());
+        var player = mockPlayerAt(STAR_POST_SPAWN.x(), STAR_POST_SPAWN.y(), rings);
+        post.update(1, player);
+        assertTrue(checkpointState.saveCalled);
+        assertEquals(1, liveObjects(Sonic3kStarPostStarChild.class).size());
+        assertEquals(expectedStars, liveObjects(Sonic3kStarPostBonusStarChild.class).size());
+        assertTrue(entries.isEmpty(), "invitation contact cannot enter a stage itself");
+        org.mockito.Mockito.verify(player, org.mockito.Mockito.never())
+                .addRings(org.mockito.ArgumentMatchers.anyInt());
+        post.update(2, player);
+        assertEquals(expectedStars, liveObjects(Sonic3kStarPostBonusStarChild.class).size(),
+                "activated contact must not allocate another graph");
+    }
+
     @Test
     void mutatorDeniesBonusStarsButKeepsCheckpointBankAndNativeAnimation() {
         policies.policy(new com.openggf.game.mutators.LevelMutatorPolicy(java.util.Set.of(), false, true, false, true));
@@ -128,8 +156,10 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
         assertEquals(0, liveObjects(Sonic3kStarPostBonusStarChild.class).size());
     }
 
-    @Test
-    void invitationUsesSelectedNativeFamilyAtZeroRingsAndIsConsumedOnce() {
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 7})
+    void invitationUsesSelectedNativeFamilyAtZeroRingsAndIsConsumedOnce(int emeralds) {
+        for (int i = 0; i < emeralds; i++) gameState.markEmeraldCollected(i);
         var post = (Sonic3kStarPostObjectInstance) Sonic3kStarPostFactory.invitation(
                 STAR_POST_SPAWN, BonusStageType.GUMBALL);
         post.setServices(newServices());

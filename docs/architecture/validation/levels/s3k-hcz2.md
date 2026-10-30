@@ -932,3 +932,115 @@ ownership at the remaining platform/fan disagreement, SS7 results/return,
 whole-act completion, alternate viewport/donor/character/team breadth and
 native pixel coverage remain inherited obligations. No full-act certification
 or comparison relaxation is claimed.
+
+## Platform allocation and native dispatch — 2026-10-29
+
+Local candidate over `b0dbd4825`, `bugfix/ai-hcz-campaign-causal-20261029`:
+the original bit-7 slot now owns the platform and allocates its fan from the
+native initializer. Platform and fan retain independent manager dispatches;
+failed allocation leaves the initializer available for retry. The source-owned
+row-2500 cause and read-only native/engine discrimination are in the
+[causal audit](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#live-baseline-discrimination-and-object-repair).
+
+Three generic-coordinate controls prove the original-slot solid, initializer
+return followed by later fan Main, actual saturated-pool failure/recovery and
+fresh recreation, and the exact `-$30` latch read before a later fan moves P1,
+again after destructive recreation. The existing graph test recreates the
+placed platform, its dynamic fan and bubble, restores exact identities and
+links, and resumes native movement. All five corrected cases pass without
+skips. The same runtime also passes 13 existing fan cases and four native
+facing guards: 22 distinct focused checks, with the separate invocation and
+fixture-correction history retained in the audit.
+
+These local checks use one native P1 model at generic coordinates. The dispatch
+and allocation mechanism contains no viewport/donor/team selector; this does
+not certify traversal across those dimensions. Whole-act completion, alternate
+viewport/donor/character/team breadth and native pixel coverage remain inherited
+obligations. Shared execution, timing, loading, audio and rewind owners are
+unchanged. The omitted spin-down sound/bubble path remains a separate inherited
+risk, with its non-causality at row 2500 documented rather than silently fixed.
+
+The causally reached column inertia frontier is also closed through existing
+native full-solid provider contracts, with six new actual-ROM P2 contact/restore
+cases and five existing lifecycle cases, plus eight existing column unit cases:
+19/0F/0E/0S. Positive/zero/away velocity, opposite-side admission and exact-edge
+preservation of both velocity words are checked, including fresh world/object
+recreation. The source-owned zero-X stop and exact-edge opt-out leave shared
+solids unchanged. One exact-edge control caught and blocked an intermediate
+profile regression; it was retained and extended rather than weakened.
+
+Final affected qualification is 21/2F/0E/0S: the 19 column cases pass; both
+strict movie methods remain red. The continuous route consumes every segment-11
+and segment-13 row. Segment 13 now has zero physics differences and 182 animation
+differences, seven lag rows and zero bootstrap errors. Segment 11 retains 11
+camera physics / 51 animation differences, no non-camera physics mismatch.
+The alternate movie's entire 4,354 error-span list matches a fresh exact
+`b0dbd4825` baseline, first row 9482 `air`, with its inherited 29,302-frame extent
+and missing aux families. SS7 still stops in results at cursor 97208 before
+`hcz_4`; the empty native SS7 aux and unrepresented results interval do not
+attribute that next cause. Exact commands, runtime/source fingerprints,
+queue/execution timings and limits are in the causal audit. This closes the two
+local physics frontiers, not the outgoing boundary or inherited act matrix.
+
+
+## SS7 results release and outgoing route — 2026-10-29
+
+Local correction over pushed develop `2e35b5814`, branch
+`bugfix/ai-s3k-hcz-ss7-results`: the final Chaos Emerald message now owns one
+ROM countdown, with release on the zero-test pass after 240 decrements. Native
+original-movie results execution and the engine align through creation,
+pre-tally, perfect tally, continue wait, cleanup and release. The former
+SPECIAL_STAGE_RESULTS stop at cursor 97208 is closed; no gap frames, comparison
+rules or timing-port authority are changed. The
+[SS7 causal audit](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+records the input identities, executed-body clocks, commands and limits.
+
+Four generic Sonic 3/S&K-origin and below/at-continue-threshold cases fail on the
+old owner and pass after correction. All 140 focused/anchor/rewind/authority
+checks pass without skips. Results remain non-rewindable; the adjacent stage
+exit has its existing sixty-wait capture/restore/forward-completion checks.
+
+The strict continuous candidate consumes all 3,687 `hcz_4` rows with zero
+bootstrap errors, but remains red: first strict camera X row 940 `$3941/$3940`,
+first non-camera Y row 1748 `$0777/$0772`, 27,401 residuals (22,209 physics /
+5,192 animation), then MGZ destination admission denied at cursor 100896 and
+unmatched production timing work. The cause of that later frontier is unassigned.
+Earlier segment-11/13 reports remain identical to the fresh baseline, including
+segment 13's zero physics / 182 animation differences. No whole-act/campaign,
+later-HCZ rewind spots, alternate viewport/donor/roster breadth or native pixels
+are certified by this bounded results correction.
+
+
+## Seven-emerald starpost invitation — 2026-10-29
+
+The [bounded starpost correction](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+removes the non-native Chaos Emerald completion gate while preserving the
+ring/run/consumption and existing graph/art owners. Short ordinary-contact
+eligibility cases cover 0/6/7 emeralds; separate actual-ROM native 320 solo-Sonic
+component cases exercise partial bonus allocation and destructive world
+restore/60-frame forward replay. These use a fixture contact in AIZ2 and are
+mechanism evidence, not traversed HCZ checkpoint/lifecycle coverage.
+
+The original native 320 Sonic+Tails continuous HCZ route restores four real
+bonus children and exact parent 189/direct 269 fingerprints at completed input 98467.
+All nine completed segment report JSONs remain canonically identical to the
+fresh baseline. HCZ segment 15 still consumes 3,687 rows with 27,401 differences,
+first non-camera row 1748 Y `$0777/$0772`, then MGZ admission fails at cursor 100896.
+The next unmatched work moves to raw 2680/2681 (direct 270/parent 190), after the
+earlier boss-hit/contact frontier. No comparison, fixture or timing authority
+is relaxed. The remaining boss/contact cause, actual HCZ checkpoint death/
+reload and later rewind spots, alternate widths/donors/characters/rosters,
+native pixels and full-act/campaign certification remain open. Eligibility is
+not viewport- or movement-rule-sensitive: this edit reads emerald/ring and
+entry-policy state, without changing geometry, motion or roster authority.
+That local sensitivity decision does not fulfill the inherited act matrix.
+
+The [independent lifecycle follow-up](../../audits/2026-10-29-s3k-campaign-terminal-certification.md#inherited-starpost-lifecycle-repair--2026-10-29)
+adds actual-ROM AIZ2 component checks for ordinary orbit allocation exhaustion
+(checkpoint saved, no bonus art) against successful-orbit/failed-bonus allocation
+(art still submitted), with destructive restoration and 60-frame replay. Ordinary
+20/35/50-ring activation followed by ring loss retains all three selected bonus
+families through entry and two destructive restores; disabled/outside contacts
+and consumed siblings remain negative controls. This extends the shared mechanism
+floor only. The HCZ checkpoint route, death/reload, later rewind, viewport/donor/
+roster and native-pixel obligations above remain inherited and unfulfilled.

@@ -116221,3 +116221,1603 @@ records exact commands, source/fixture identities, queue/execution times,
 comparison extents and coverage limits. This is bounded local progress, not a
 zero-difference trace, completed HCZ act or certified campaign. Parent retains
 combined validation, integration and delivery.
+
+## 2026-10-29 — DEZ cold opening: Spikebonker child initialization owns the first contact difference
+
+Implementation leaf `bugfix/ai-dez-campaign-causal-20261029`, provisioned T3
+worktree `t3-e6961816`, starts at `c4cd6ae0e` and fast-forwards to the actual
+local develop tip `f66d4f65ef6df0de850150d8bd0e0a8abbe33db2` before measurement.
+Fetched `origin/develop` is its ancestor `5e75025fd`; no main checkout or foreign
+worktree is changed. The earlier DEZ record at `ca135462a9bca9ce94b06086453ed9ea3305b7a7`
+is comparison evidence, not an implementation or bootstrap input. No identical
+DEZ job is live when this leaf submits its requests.
+
+The original movie is
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2`,
+SHA-256 `ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+The unchanged `ssz/physics.csv.gz` is
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`.
+The absolute original main-checkout S3&K ROM has CRC32 `63522553` and SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; no ROM copies or links are created.
+Disassembly `docs/skdisasm` is clean at pinned
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`. The fixture directory token `ssz`
+still denotes actual zone 11 / DEZ, as its metadata states.
+
+A temporary comparison-only observer retains the cold Sonic+Tails builder,
+`withFreshLevelStartLifecycle()`, and original input offset 468982. Each return
+consumes exactly one unchanged input. On unchanged production source it again
+dies after 1008 inputs, maximum centre X `$02F8`. All compared Tails position,
+velocity, ground speed, fractions, air/roll/routine and animation fields agree
+through row 159. At row 160 the actual overlap is Spikebonker's mace: engine
+Tails enters hurt routine 4, unrolls and changes Y to `$0997`; native Tails is
+still rolling at `$0998`, routine 2, velocity `$0110,$FA60`. Native hurt starts
+at 161. The engine body is at the correct `$01F2,$0974`, but its mace has
+already moved to `$01A6,$0988`; the native end-of-row head is `$01AA,$0988`.
+CPU-generated input and the jump trajectory agree before this contact.
+
+Read-only native corroboration uses the clean pinned TraceChaser harness
+`703bd92d32634ce5ebac60625b48c60ef5500427`, built with its `build.sh`, and the
+verified official BizHawk 2.11 runtime identified in the
+[native terminal audit](../architecture/audits/2026-10-29-s3k-native-terminal-evidence.md#original-inputs-and-runtime).
+This invocation rechecks the core hashes: `gpgx.wbx.zst`
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+`libwaterboxhost.so` `d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`,
+and managed cores `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`.
+The unmodified harness assembly is
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+The temporary C# observer source is
+`67fa2abf501a54b3abe21440917af9795fe31c311115a39a30ffbfc1e9ab7897`.
+It applies original movie buttons from power-on, writes no RAM, and registers
+execute callbacks only after input 469082. It completes 469149 original inputs,
+exit 0. All 67 sampled Tails states (rows 100–166) match 737 committed physics
+fields exactly, including the level counter. No display, video or endpoint
+certification is involved. Native execution wall time was not measured.
+
+The earliest causal difference is **row 109**, original input 469091, ROM
+`Level_frame_counter=$006E`. Execute callbacks prove the original code calls
+`loc_91A0C`, then `loc_91AD2`, then `loc_91BC0` in that same object pass. The
+native head ends at `$0200,$0988`, angle `$00`; engine ends at `$01FE,$0988`,
+angle `$F8`. On the next native pass the head first decrements to `$F8`.
+`loc_91AD2 (sonic3k.asm:199086-199092)` initializes the pivot and creates the
+head; `loc_91BC0 (sonic3k.asm:199173-199179)` initializes that head and returns.
+`loc_91AEC (sonic3k.asm:199094-199108)` owns the later angle/bonk dispatch.
+The engine's folded mace was executing that dispatch during its creation pass.
+Consequently it starts sliding at 142 while native `loc_91B14` only installs
+the slide on 142; native `loc_91B3E (sonic3k.asm:199123-199129)` first moves it
+on 143. This precedes the companion, ring, CPU and later Chainspike cascades.
+
+The repair adds one `INIT` phase to `SpikebonkerMace`, preserving angle/bonk
+state during creation and publishing the initialized position normally.
+No controller, contact geometry, fixture/comparator, input, GameLoop, timing,
+loading, audio or rewind implementation is changed. An actual object-manager
+recreation test covers restoring this new phase. A separate 200-input cold
+regression compares the original companion movement/contact fields through
+its first hurt fall; its expected rows are assertions only.
+
+All Java commands use Java `25.0.5.0.2`, no ambient display, null OpenAL and
+explicit surfaceless EGL. `OPENGGF_ROM_DIR` names the existing original absolute
+ROM directory in the main checkout. The property is:
+
+```bash
+S3K_ROM="$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  "-Dtest=$SELECTION" test -B
+```
+
+Observed unchanged-production requests:
+
+- `SELECTION=TestS3kDezColdRoutes#inspectColdActOneCausalDecision`: 1 observation
+  shell passes, zero failures/errors/skips; the route dies as above. Queue 635s,
+  Maven 1m37s, JUnit 2.049s. Temporary test SHA-256
+  `cc296ac293db8a00888fb4823febbecf901d1e2dc9aed846d8a09baca482c211`.
+- `SELECTION=TestSpikebonkerBadnikInstance#theMaceCreationPassPreservesItsInitialOrbitAngle,TestS3kDezColdRoutes#inspectColdActOneCausalDecision`:
+  2 tests, 1 expected regression failure, zero errors/skips. Native initialization
+  assertion expects 0 and gets 248 (`$F8`). Queue 315s, Maven 36.839s.
+  Expanded observer SHA-256
+  `9a8a32f9c8afec57c2c2a7cc059d262aa062c3da52af0086b1ea59712fdb968a`;
+  regression source SHA-256
+  `4ddc66927d3dbf15cfe479c0b4f90c68fe6e0ead7d1b451a4fcdbcc7cd24bb85`.
+
+The first native launch failed to locate the runtime core. The next reached
+its first sampling hook but failed on the observer's incorrect `A0` register
+name. Neither produced valid decision samples. The corrected observer checks
+`M68K A0/D0/D1` at startup before replay; only its completed invocation supports
+the native conclusions above. Maven FAST-to-NONE profile fallback and compiler
+deprecation warnings remain measurement limits. Queue time and Maven execution
+are separate; total task wall time is unmeasured.
+
+Repaired runtime measurements use the same base plus the sole runtime source
+blob `762e6057ebce6fb0636e6d43037afabb7d600c4c` for
+`src/main/java/com/openggf/game/sonic3k/objects/badniks/SpikebonkerBadnikInstance.java`.
+The combined `SELECTION` is:
+
+```text
+TestSpikebonkerBadnikInstance,TestDeathEggAlertGuard,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+inspectColdActOneCausalDecision,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It completes **105 tests, zero failures/errors/skips**, exit 0: queue 614s,
+Maven 1m36s. Both packages' `TestSonic3kLevelLoading` classes execute. XML
+identities, ROM/backend/Java properties and streams are inspected. The decoding
+warning is the test's deliberate out-of-range index; mocked hurt-contact cases
+emit fallback WAV rejection warnings. Neither is an audio qualification or a
+new runtime correction. The new cold regression exercises hurt contact and
+matches all 200 compared rows. This invocation's temporary observer consumes
+2000 inputs, no death, maximum X `$08B5`, with no companion field differences.
+Row 109 now retains angle 0 at `$0200,$0988`; hurt starts at 161 as in native.
+At the old CPU difference 546, the observed routine is now 6, matching native.
+
+A separate, expanded temporary observer uses the same first command selector
+`TestS3kDezColdRoutes#inspectColdActOneCausalDecision`, adding first-main-field
+reporting and extending only the observation bound to the Act 2 load boundary
+plus 1200 inputs. No runtime or inputs change. It completes **1 observation
+shell, zero failures/errors/skips**, exit 0: queue 438s, Maven 35.987s,
+JUnit 3.383s. It consumes 4843 original inputs before death, maximum X `$1598`.
+All 11 compared main position/velocity/fraction/ring/camera/level-counter fields
+match through 2696; their first differences are Y at **2697** (`$092D/$092B`),
+Y velocity `$0030/$0000`, ground speed `$0032/$0010` and camera Y `$08E8/$08E2`
+(native/engine). X first differs at 2701, rings at 2812. The first of 12
+compared companion movement/pose fields is X at **3007** (`$1248/$1246`).
+Thus the old main ring/velocity differences at 313/853 and the 1008-input death
+are crossed, but this route still fails later; no full-route certification is
+claimed. At 2697 native Sonic is airborne/rolling. A nearby native object is
+code `$00047440` at `$0E18,$0948`; its presence does not prove the engine's
+contact callback or the new landing cause. That causal investigation is open.
+
+The existing standalone segment diagnostic is deliberately separate:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 -Dtrace.frontierOnly=true \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kSonicTailsSszSegmentTraceReplay' "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+It ends **1 test, zero assertion failures, 1 error, zero skips**, exit 1:
+queue 579s, Maven 35.449s, JUnit 2.919s. Its report compares only **3/40049
+planned rows**, comparison gate false, with 2 error spans, no warnings or
+bootstrap errors: camera X at row 0 (`$0040/$0000`), then Tails respawn counter
+at row 1 (1/0). It also lists eight missing advertised auxiliary schema
+observations. This is the standalone declared-position inlet, whose
+`TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap` defaults to
+`LevelCameraInitialization.recenterPositionedEntry`; it is not the fresh cold
+builder measured above. No matched-baseline execution of this separate inlet
+is claimed. Its first difference precedes mace creation and cannot qualify the
+object fix.
+
+After frontier-only termination at row 2, `closeHardwareTimingReplayRun` calls
+`HardwareTimingReplayPort.verifyRunComplete`, which rejects 54 unconsumed future
+completion edges, starting at raw frame 36 `PRE_MAIN_LOOP`,
+`KOS_DECOMPRESSION_QUEUE#1192`, fingerprint
+`sha256:5e0d2fc4425b8f23a6eebd39fff1e7201fd37c8c7e194fd139ee22665d3b84b9`.
+This close-time error does not establish a missing producer at an executed
+frame. The actionable owners for this separate diagnostic are its positioned
+loading/recentering path and incomplete-frontier timing finalization. They are
+outside this leaf's authorized implementation scope and remain unchanged; no
+camera hydration, timing bypass or comparator relaxation is attempted.
+
+The native probe was compiled outside the repositories, with `TASK_ROOT` naming
+that owned directory and `RUNTIME` the verified official installation above.
+Its private `dll` resolution link targets only runtime libraries, never a ROM.
+The recorded native command shape is:
+
+```bash
+BIZHAWK_HOME="$RUNTIME" tools/tracechaser/bizhawk-headless/build.sh
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:$TASK_ROOT/DezDecision.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$RUNTIME/dll/BizHawk.Emulation.Cores.dll" "$TASK_ROOT/DezDecision.cs"
+MONO_PATH="$PWD/tools/tracechaser/bizhawk-headless/bin/Release:$RUNTIME/dll" \
+  LD_LIBRARY_PATH="$RUNTIME/dll" env -u DISPLAY -u WAYLAND_DISPLAY \
+  timeout --signal=TERM --kill-after=10s 600s mono "$TASK_ROOT/DezDecision.exe" \
+  "$S3K_ROM" "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+After removing the temporary Java observer, the final targeted selection is:
+
+```text
+TestSpikebonkerBadnikInstance#theMaceCreationPassPreservesItsInitialOrbitAngle+theMaceAngleWalksDownByEightAndWraps+theSlamSlidesOutSweepsToEightyAndComesBackBeforeReleasingTheBody,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact
+```
+
+Using the first command/environment above, it passes **4 tests, zero
+failures/errors/skips**, exit 0: queue 620s, Maven 35.353s. It verifies the final
+valid V-int test clocks, explicit 320px viewport and shared routine-field
+formatter. XML identities/properties/streams and absence of dumps are inspected;
+compiled test bytecode contains no temporary observer. Runtime blob remains
+`762e6057ebce6fb0636e6d43037afabb7d600c4c`. These four cases overlap the 105-case
+request and are not an additional coverage count.
+
+`git diff --check`, five added local link/anchor checks and matched disassembly
+parser/classifier checks pass. Existing citation findings are unchanged against
+HEAD, the historical frontier prefix is byte-for-byte preserved, and all added
+ROM citations resolve at the clean pin. No broad suite, integration, push, PR,
+publication, fixture regeneration or shared-owner implementation change occurs.
+Owned raw Maven/native diagnostics are consumed and removed before handoff;
+useful build outputs and the small external native probe source are retained.
+The task worktree and local branch remain for the lead to review/integrate.
+
+### Rewind ordinal preservation follow-up
+
+Independent review found that placing the new `INIT` phase first would shift
+existing enum ordinals used by compact rewind codecs. The phase now follows
+`SLAM_BACK`, preserving those ordinals without changing the new initial state.
+On the same branch and verified original S3&K ROM, the following focused run
+completed with **44 tests, zero failures, errors or skips**; Maven execution
+was 1m31s and queue wait was not retained:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestSpikebonkerBadnikInstance,TestDeathEggAlertGuard,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact' test -B
+```
+
+This covers the object, actual rewind recreation and 200-input contact check;
+it does not extend the measured campaign frontier.
+
+## 2026-10-29 — HCZ native platform slots and column inertia close segment-13 physics
+
+Local worker `bugfix/ai-hcz-campaign-causal-20261029`, T3 worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-55adf9be`, reconciled to
+`b0dbd48258417efc60b07d8943b1418b893dae02`. Final fan/column/registry source
+fingerprint (sorted path/NUL/bytes/NUL SHA-256) is
+`67c4eaa1e93f568be70ddac565cc60e4e2a86b8c9251aa7c9971b72505a3d880`.
+Original ROMs and fixture bytes are unchanged; no shared engine, timing, loading,
+audio, solid or rewind owner was edited. This is a local candidate, not delivery
+or campaign certification.
+
+The read-only original prefix reproduced segment 13's 364 differences and first
+non-camera physics at row 2500, Y `$026E/$026B`. Native original platform slots
+14/15 read P1 before fan slots 28/29; the Java second pair instead performed its
+platform/fan work at 48/49, prematurely unlatched, retracted to X `$2978` rather
+than `$2970`, and added three pixels of lift. `Obj_HCZCGZFan` initialization now
+keeps the platform in its original slot, allocates its fan during dispatch,
+returns before platform Main and permits fan Main in the later same-pass slot.
+Rejected allocation is retried. The stale rejected handle was source-confirmed
+but was not a missing-child cause at row 2500. Omitted spin-down sound/bubble
+side effects remain separate; the implicated subtypes have no bubble bit.
+
+That correction moved the first non-camera frontier to row 3596, P2 ground
+speed `$0000/$00C3`, with 190 differences (eight physics / 182 animation).
+Column slot 24's native FullSolid left-side stop accepts zero X velocity and
+clears inertia; its exact-zero overlap bypass preserves both velocity words.
+The column now declares both existing provider contracts. Actual-ROM generic
+contact/restore controls discriminate positive/zero/away velocity, the opposite
+side and exact-edge preservation. An intermediate exact-edge regression was
+caught and corrected through the owner contract, with the control retained.
+
+All final fan allocation/graph/facing checks cover 22 distinct passing cases;
+four creator-restore cases and 60 mandatory S3K anchors also pass in their
+recorded selections, zero skips. A fresh exact-`b0dbd4825` matched check is
+9T/5F/0E/0S: the three final fan controls and the column zero-X witness are
+old-red, four sign/edge controls pass, and the alternate remains red. The
+complete 4,354 alternate error-span dictionaries match the candidate, not just
+their totals or first error. The final column edge qualification uses:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestHczSpinningColumnCachedRelease,TestS3kHczSpinningColumn,TestS3kHczCampaignFrontierProbe#continuousHczThroughSeventhSpecialStageReturn,TestS3kHczZoneSliceTraceReplay#replayMatchesTrace' test -B
+```
+
+Final **21T/2F/0E/0S**, queue 333 seconds, Maven 2m22s: all 19 column cases
+pass; the two strict movie methods remain red. Segment 11 consumes all 14,208
+rows with unchanged 62 differences (11 camera physics / 51 animation), 59 lag
+rows, zero bootstrap errors and no non-camera physics mismatch. Segment 13
+consumes all 5,393 rows with **182 animation differences / zero physics
+differences**, seven lag rows, zero bootstrap errors and no non-camera frontier.
+The dynamic-art partial journal has 14 gaps and zero failures. The alternate is
+unchanged at 4,354 differences (3,425 physics / 929 animation), first row 9482
+`air` one/zero, 29,302 reported frames and zero report warnings/bootstrap errors;
+its eight absent aux families and incomplete full-fixture extent remain limits.
+
+SS7 still stops at cursor **97208**, SPECIAL_STAGE_RESULTS, before `hcz_4`.
+Its native aux is empty and the 1,725-row results/return interval is unrepresented;
+results-entry, routine and shared handoff causes are not yet discriminated.
+That SpecialStageLifecycle/GameLoop/load ownership overlap is reported, not
+silently changed. No extra wait, hydration, fixture predicate, comparator change
+or inferred endpoint is used. The [causal audit](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#remaining-platformfan-dispatch-investigation--2026-10-29)
+contains every command/selection, exact source context, failures/skips,
+queue/execution timings, matched comparison and the removed observer's checksum.
+The [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#platform-allocation-and-native-dispatch--2026-10-29)
+retains outgoing, whole-act and configuration/pixel gaps. Broad smoke and
+integration remain lead-owned. No owned job remains; the local branch/worktree
+are retained and nothing is pushed by this worker.
+
+
+### 2026-10-29 — Sonic+Tails SS7 single results countdown; outgoing HCZ frontier exposed
+
+Leaf `bugfix/ai-s3k-hcz-ss7-results`, T3 checkout `t3-92d6f032`, reconciled to
+pushed develop `2e35b5814db853c592345464ef15e6bb27f0d862`. Original ROM CRC32
+`63522553` / SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`; original
+`s3k-sonic-tails-complete-emeralds.bk2` SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`.
+Clean pinned native/disassembly references and all strict trace contracts remain
+unchanged. The [causal audit and exact commands](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#ss7-results-countdown-attribution--2026-10-29)
+record the source/test/observer/capture hashes and complete bounds.
+
+Read-only original-input native execution shows the results body initializes at
+completed frame 95559, creates the final message/one 240 timer at 96824 and
+releases at 97065. Engine setup/tally/continue/cleanup agree on aligned input
+rows; the old Java owner instead restarts a second 240 wait on zero-based row
+97063 and fails to release at row 97064. The results-only correction arms one
+ROM timer and retains test-before-decrement expiry. No input padding, trace
+hydration, fitted predicate, gap reinterpretation or timing/comparator change.
+The former SS7 results stop at cursor 97208 closes.
+
+Baseline strict continuous prefix: **1T/1F/0E/0S**, queue505s, Maven1m58s.
+Four generic independent controls: **4T/4F/0E/0S** old-red, queue670s,
+Maven34.370s; all four pass after repair. Final combined focused/continuous
+command: **141T/1F/0E/0S**, queue416s, Maven2m17s; 140 focused/anchor/rewind/
+authority checks pass. Its sole strict method now consumes every `hcz_4` row:
+segment15 has 27,401 differences (22,209 physics / 5,192 animation), 145 lag,
+zero bootstrap/report warnings; first strict row940 camera X `$3941/$3940`,
+first non-camera row1748 Y `$0777/$0772`. MGZ admission is denied at cursor
+100896; closing authority retains unmatched native completions beginning at
+segment15 raw1258 `KOS_DECOMPRESSION_QUEUE#269`, engine pending none. That
+later queue/gameplay owner remains unassigned. It is newly visible, not a
+claimed baseline pass or an attributed regression.
+
+Segment11/13 complete JSONs remain identical to fresh base, including 62
+camera/animation and 182 animation-only differences respectively; segment13
+still has zero physics errors. The partial dynamic-art journal has15 gaps/0F.
+Results remain outside rewind; existing stage exit/restore cases pass. No broad
+suite, outgoing-HCZ/campaign certification, push or integration is claimed.
+Native bounded witness completes 97,300 original advances in89.363s; all owned
+jobs end, temporary drivers/consumed diagnostics are removed, and native evidence
+plus the local branch/worktree remain for lead handoff. Timings overlap and are
+not summed into delivery elapsed time.
+## 2026-10-29 — LRZ crusher timer first dispatch and route death attribution
+
+Implementation leaf in provisioned `t3-10e3f407`, initially `lrz-route-blockers`,
+fast-forwards clean `c4cd6ae0e` to pushed develop
+`bca1c3ae2a230d727f7fe801cb7600b6db93b143` before diagnosis. No other active LRZ
+owner or identical live request is found. Broad smoke remains the lead's work;
+this leaf performs no push, integration, PR or release.
+
+The original ROM is the existing absolute main-checkout S3&K image (CRC32
+`63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`). No ROM copy or link
+is created. The unchanged route movies are
+`src/test/resources/routes/s3k/lrz-knuckles-cold-act2-first-door-320.bk2`
+(26635 inputs, SHA-256
+`b7ed53c9c8685c0988b6cdf042ccdaf2e2f373751557dbaec1448d54f96c13cc`)
+and `src/test/resources/routes/s3k/lrz-knuckles-cold-act2-middle-320.bk2`
+(33763 inputs, SHA-256
+`83c4aa1a9933b247c03f7e7033b43d2c6852451286d2a341746071cd3f54e218`).
+Their first differing input is3864; every extracted row and the declared
+`Up,Down,Left,Right,Start,A,B,C` columns are verified against each original BK2.
+
+Baseline read-only death observation, with drawing after every input, again
+reaches first-door15323 at9765/2479 and middle5027 at5782/2869. These are ordinary
+incoming Act1 routes, before the Act2 windows. The first actual death caller is
+`ToxomisterCloudInstance.drainRing`, through its attached zero-ring drain;
+`loc_8FE50` (`sonic3k.asm:196880-196891`) calls the drain owner.
+`sub_881FE` reaches `loc_88258` on negative ring subtraction
+(`sonic3k.asm:184570-184614`). The middle kill is the
+`$21` smashing spike platform, active at5840/2818 subtype09, through the shared
+full-solid squash branch, with player5782/2862, `absDistX=17`, `distY=-7`.
+`loc_431E0` calls the solid owner (`sonic3k.asm:88656-88674`);
+`loc_1E126` / `loc_1E134` own its grounded interior kill
+(`sonic3k.asm:41630-41648`). Its later object hurt callback produces the returned
+hurt/dead state; that later write does not cause the initial kill. No `$6B`
+kill callback is observed. Neither object proximity nor the returned animation
+is used as killer evidence.
+
+The baseline observation selector is
+`TestLrzKnucklesColdRouteCapture#observeOriginalColdRouteDeaths`; its passing
+1T/0F/0E/0S is an observation-shell result, not a passing route. The exact
+common engine command prefix is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM"
+```
+
+Append `-Pexhaustive-audit '-Dtest=com.openggf.tools.<selector>' test -B` for
+the route/observation methods; ordinary owner tests use the selectors below
+without that profile. Java25.0.5.0.2, the explicit EGL backend, actual XML cases,
+skips, output streams and class identities are inspected. Death observation
+waits812s, Maven1:45, JUnit20.491s; the 735-input
+`observeFirstNativeContact` baseline waits425s, Maven36.298s, JUnit2.403s,
+1T/0F/0E/0S. Optional extra player logging was edited after the latter compiler
+had started; the actual class retained the earlier print format. Its saved
+baseline patch preserves that tested format (class SHA-256
+`07a43ad6fdf0c83bd65c1053717eb35eaaa352ab2dac2692c184bf6be9d2ca60`);
+those optional fields are not claimed as observations. The earlier death
+observer initially fails compilation on a misspelled getter, executing zero
+tests (wait592s, Maven1:27); the corrected successful source is separately pinned.
+
+Native references use clean pinned TraceChaser
+`703bd92d32634ce5ebac60625b48c60ef5500427` and clean skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`. A strict official BizHawk2.11 preflight
+passes; deterministic host SHA-256 is
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`,
+Mono `7bd0f4085d29a00b34f309bdb1c12dad62b691be6bfadfe79b304a9c0b90186d`,
+managed cores `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`,
+and GPGX image `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`.
+Sources, native captures and reproducible launchers are owned externally under
+`$TASK_ARTIFACT_ROOT/lrz-causal-20261029/`; Maven output stays in this worktree's
+`target/`. The launchers acquire normal shared admission and build leases.
+No display or sound device is opened.
+Run the owned launchers with `python3 -B
+"$TASK_ARTIFACT_ROOT/lrz-causal-20261029/run-native.py"` (both route caps),
+`run-contact.py` (735-input completed-body reference), or `run-timer.py`
+(735-input timer decision reference). The baseline observation overlays are
+`engine-death-observer.patch` and `engine-contact-baseline.patch`; the corrected
+observer selectors require `engine-corrected-observer.patch` on the matching
+runtime source. These are temporary diagnostic overlays, not shipped tests.
+
+
+The declared native setup enters an actual level through Start, then writes
+only six bytes selecting `Current_zone_and_act=$0900`, `Player_option=3` and
+`Restart_level_flag=1`. Native Level performs initialization. Input0 is consumed
+by the initial `Knuckles_Init` dispatch, which returns without movement
+(`sonic3k.asm:30389-30426`); later inputs drive ordinary LevelLoop ticks. No
+Java position, physics, comparison row or save-state data enters native or
+engine gameplay. The inherited native V-int low word is1094; the engine's
+object counter starts0. Thus this constructed cold reference does not certify
+an original campaign's entry phase or all V-int-gated behavior.
+
+The valid 15400/5100-capped native route probes each record3977 samples and
+stop at input3976, centre5068/3001, level counter3974, native
+`Kill_Character` caller `$1E146` (the same interior-squash family). They do not
+reach either engine death endpoint. Nine sampled position/fraction/velocity/
+inertia/angle/ring fields agree through input721; first Y/angle departure at722
+is native2096/0 versus engine2097/6, both at level tick722. Native status and
+interaction identify the generated `$31` collapsing bridge at1344/2144; the
+engine first acquires that exact bridge at723. The sinking rock observed in
+the same window is at1680/2372 and is not the contact owner. Input723 is the
+first native level-counter hold at722; later per-input comparisons cannot be
+silently shifted to eliminate native clock gaps.
+
+A separate735-input native probe samples immediately after `Process_Sprites`
+at `$6540`, establishing732 completed ordinary object passes and the same
+first difference at level722; it is not merely a mid-pass framebuffer sample.
+Its completed-body CSV SHA-256 is
+`acdf5c46847b335a67b4f088544e805bfa1d563e97831a5adffd850ba5fa0357`.
+Native timer execute callbacks then observe `loc_90502` and `loc_90512` on the
+same tick543, SST`$B172`, with179 at the first decrement entry; the next entry
+at544 reads178. There are180 decrement entries, ending with0 at722, followed
+by the positive request and bridge initialization at SST`$B32E`,1344/2144,
+armed1, still on722. `loc_90502` falls straight through into `loc_90512`
+(`sonic3k.asm:197446-197453`), and `loc_9056E` owns this allocation
+(`sonic3k.asm:197477-197490`). The engine's initializer-only return incorrectly
+preserves179 for an extra update. Removing that return preserves the ROM's
+constant, negative-underflow condition, allocation ordering and existing state.
+There is no route/frame predicate or fitted delay.
+
+The native route probe waits457.607s and executes15.512s for both cases; the
+completed-body contact probe waits375.701s and executes2.526s; the timer probe
+waits516.359s and executes3.326s. These intervals overlap other work and are
+not summed as delivery wall time. The timer-event CSV SHA-256 is
+`11027515b7f4ef013ea791945a514b07bcc8115ece55c4882b8377d32dd38ffc`;
+`LrzTimerProbe.cs` SHA-256 is
+`6344eb46cfe1a0f1957dcc4c04ebde8826d00df9af00ca116303937cb1c105ef`.
+Earlier title-mode setup produces zero route rows, and an earlier wrong-column/
+after-initialization adapter is rejected; neither supplies a parity conclusion.
+Incomplete queued probe versions are cancelled before execution for observation
+boundary corrections, not to evade admission.
+
+The independent old-red selector
+`TestLrzRockCrusher#theTimerChildRaisesTheShakeThenFiresTheNegativeRequestAfterThreeSeconds`
+completes1T/1F/0E/0S:178 expected,179 actual. Queue483s and Maven35.082s are
+separate. It tests the first decrement, retained zero and exact negative
+underflow, independently of the route positions. The corrected focused and
+route results follow below; no passing whole-act or campaign claim follows
+from the old-red control or native execution alone.
+
+
+Corrected-source qualification uses the one-owner timer delta and the preserved
+read-only test observers on the same base. The seven exact selector names
+`TestLrzRockCrusher,TestLrzRockCrusherTimerLifecycle,TestS3kLrzCrusherChunkEditHeadless,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+match eight actual classes (both fully qualified `TestSonic3kLevelLoading`
+classes) and pass **93T/0F/0E/0S**, exit0. Queue425s, Maven1:30. The new lifecycle
+class passes all9 cases: allocation capacity0/1/2, plus subtype0/2 captures
+before initialization, after the first dispatch and at the retained-zero expiry
+edge. Real ObjectManager recreation and the registered object/zone/camera
+snapshots compare immediately and after forward replay through allocation;
+no shared rewind code or comparator is changed. All required S3K anchor cases
+run without skips.
+
+The corrected audit-profile selector is:
+
+```text
+com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor+observeOriginalColdRouteDeaths+observeFirstNativeContact
+```
+
+It completes **4T/2F/0E/0S**, exit1: the two unchanged maintained methods still
+fail at15323 and5027; the two observation shells complete. Queue516s,
+Maven1:08, suite34.493s. Corrected first-door returns9765/2479, zero rings;
+middle returns5782/2869 with7 rings and the same hurt/dead combination. These
+are measured after the fix, not inherited endpoint assumptions. Neither
+maintained case reaches any of its17/48 Act2 replay windows.
+
+The corrected engine now stands on the exact generated bridge at input722,
+Y2096/angle0. The nine sampled fields match all732 completed native ordinary
+object boundaries (level1..732) in the short probe. This body-clock comparison
+is diagnostic alignment, not a shifted playback/comparator pass: strict
+per-input comparison remains different at723, engine level723/Y2097 versus
+native level722/Y2096 during its first held counter. Later differences and
+both route deaths remain unclosed. No new native timing kind, fabricated
+readiness or gameplay hydration is introduced. The next bounded investigation
+must observe native input/control admission and the owning work/service at that
+first hold before proposing timing changes; that implementation is outside
+this leaf. The endpoint clouds/platforms must not be disabled or resized to
+force the controllers through.
+
+Runtime and selected test hashes remain equal to the frozen corrected inputs
+through both completed requests. The temporary observers are retained only as
+external reproducible patches; the maintained route test class is restored
+HEAD-exact. Diagnostic production taps are removed before corrected
+qualification. Consumed Maven logs/XML/series are removed before handoff;
+useful native reference sources/data and build output remain owned externally.
+There are no owned live jobs at local commit. Original route movies and strict
+assertions, all historical entries, complete Act2/HPZ/campaign gaps, configuration
+breadth, native pixels/terrain/clock qualification and positive-ring handoff
+obligations remain unchanged. Broader smoke and delivery belong to the lead.
+
+Documentation checks pass: `git diff --check`, new relative links and anchors,
+AGENTS/CLAUDE identity, current source citations and directly verified named
+label ranges. The historical frontier prefix remains byte-exact. The final
+runtime source SHA-256 is
+`3726b5c8a92eaa59f033d4710841774b29571d3690772c536e8587d9ae95ae71`;
+all three final runtime/owner-test source hashes equal the qualified inputs.
+
+### Manager lifecycle and subtype-2 allocation follow-up
+
+Independent review identified gaps in the original timer tests: they invoked
+`update` directly and did not assert the nonzero subtype's allocation prefix.
+The added manager-driven controls exercise lower-slot deferral, higher-slot
+same-pass initialization, retirement, slot reuse and capture/restore through
+expiry. Subtype 2 now has explicit zero/partial/full-capacity checks for the
+bridge, gradual-camera child order, restored camera target and retained shake.
+The existing negative request is an engine semantic value; the corresponding
+ROM `st` writes the high byte rather than the entire word.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestLrzRockCrusherTimerLifecycle,TestLrzRockCrusher,TestS3kLrzCrusherChunkEditHeadless' test -B
+```
+
+This follow-up completed **40 tests, zero failures, errors or skips**; Maven
+execution was 1m25s. Queue wait was not retained. These checks do not change
+or extend either still-failing route observation above.
+
+## 2026-10-29 — Knuckles first-return Duck owner; vine frontier remains
+
+Leaf `t3-5a0ab4ca`, local branch `bugfix/ai-knuckles-chain-frontier-20261029`,
+fast-forwarded to develop `9999bcbdfc5ac777d335f129c3ae2908bfa7c297` before
+measurement. The [bounded evidence and exact commands](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md)
+record the verified original ROM/movie and unchanged producer/fixture identities.
+No delegates, push, integration or shared loop/timing/loading/audio/rewind edits.
+
+A queued read-only native probe of 8,428 original inputs proves the first return's
+grounded Down branch writes Duck before AnglePos sets InAir; Animate_Knuckles
+then publishes `$08/$9B` and the following air passes retain it. The unchanged 9999
+engine instead has `crouch=true` and a grounded-movement snapshot but reconstructs
+Wait `$05/$56`. Two independent pre-fix regressions fail exactly there; neutral and
+no-ground-dispatch controls pass (4 tests, 2F/0E/0S). The seven-line semantic fix
+honors the already-selected crouch pose inside the existing detach-animation
+branch, without new state, constants or identity predicates.
+
+Focused profile/animation, real-ROM component restore/replay, four S3K anchors
+and authority guard: **170 tests, 0F/0E/0S**, Maven 1m38s after 589s admission wait.
+The separate strict command retains Java 25 / Lua 5.4, unset displays, EGL, absolute
+verified S3K ROM, `-Ptrace-replay-r7`, one reused fork and
+`-Dtest=TestKnucklesFirstAnimationProbe#observeReturnedLevelClosure` with target
+segment 3 row 1. It is **1 test, 1F/0E/0S**, Maven 48.029s after 670s queue wait.
+The temporary observer now sees `$08/$9B` at row 0; the first strict error is 446,
+X native `$2026` / engine `$201B`. The incomplete segment 2 report contains 37,726 errors:
+33,100 physics / 4,626 animation, zero warnings/lag/bootstrap errors. Segment 0 remains
+zero-error and both dynamic-art gaps have zero failures.
+
+Ownership still rejects at BK2 cursor 12011 with the identical full assertion
+and unmatched direct #35/raw 2889/PRE_MAIN_LOOP plus module #24/raw 2890/POST_OBJECTS
+fingerprints recorded in the pushed audit. Against that earlier bca1c3ae2
+matched canonical/candidate evidence, animation falls by 34 errors and the
+physics total is equal; a fresh complete pre-fix closure/error-identity diff
+was not rerun. No complete-chain or zero-error delivery is claimed.
+
+The first physical unknown is the giant-vine capture at row 446: native SST 35
+moves the player to its handle, clears velocity and selects object_control `$03` /
+animation `$14`. Observe native AIZ_vine_angle, actual handle/parent slots, angles,
+positions and CheckGrab decisions against engine-owned state from the first
+return update through capture. Do not fit the handle phase at the failing row
+or bypass the unchanged ownership/timing checks. Existing ring/flash work in
+another checkout was left with its owner. The audit records queue/execution
+separately, bounded coverage and artifact cleanup.
+
+
+## 2026-10-29 — Shared grounded-pose owner qualified across eight profiles
+
+Leaf `bugfix/ai-grounded-air-animation-owner` over pushed develop `430051ee4`
+incorporates source candidates `04e3b285e` and `4afdac4d4` as `4bc22c4a8` and
+`a77ace833`. The [native decision, exact commands and measured qualification](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#shared-ground-owner-implementation-2026-10-29)
+record the ROM identities and source fingerprint. The updated-base old-red is
+44 cases / 8 failures / 13 native Up assertions, zero errors/skips. The shared
+fix selects admitted standing poses and later Roll Duck before terrain contact,
+using host-owned standing precedence and the native flat-angle/zero-inertia gate.
+It adds no game/character/fixture predicate or rewind authority.
+
+The first unrestricted early publisher was rejected: S2 EHZ1 regressed from
+zero to 1,637 errors at row 3667 because it invented Wait while Tails_Move's
+steep-wall branch made no animation write. Matched baseline isolates that
+regression. The final exact focused/movie selection is **395 tests, 2 failures,
+0 errors/skips**: all **390 focused cases** and original S1/S2/S3K movies pass;
+KiS2 retains its exact matched 93-error bootstrap/animation arrays. The repaired
+S2 report is again clean, not merely reduced in totals. The final run waited
+428s; Maven execution was 2m25s. No broad smoke or release full suite ran.
+
+The original Knuckles movie still publishes `$08/$9B` on its first return and
+retains it airborne. Its strict first error remains row 446 X `$2026/$201B`;
+segment 2 is incomplete with 37,726 errors (33,100 physics / 4,626 animation),
+zero bootstrap errors/warnings, and production ownership rejects at cursor
+12011. Segment 0 and both dynamic-art gaps are clean. Matching frontier/totals
+are not claimed as equality of every historical downstream error. The vine
+phase/position/admission and later timing ownership remain open. This closes
+the bounded Up/precedence bug, not a complete chain or pixel/act certificate.
+
+Source/runtime/test bytes are unchanged after the final qualification; only
+prose and owned diagnostic/configuration cleanup follow. All jobs completed.
+No delegation, other checkout, push, PR, integration or publication occurred;
+the lead retains smoke and integration.
+
+
+## 2026-10-29 — Grounded pose host policy preserves the original Mod API
+
+Leaf `bugfix/ai-ground-pose-internal-20261029` in T3 checkout `t3-80c8b5a6`
+reconciles the 430051ee4-based c059f8ac5 stack onto pushed develop
+`bd0fbcd72bda477573e45534b40b7a06808e66f6`. The
+[review correction and exact evidence](../architecture/audits/trace/2026-10-29-knuckles-return-animation.md#internal-host-composition-review-correction-2026-10-29)
+replace the rejected public fourth record component with the internal immutable
+host StandingInputPolicy. The public record, ModApiVersion and pin are unchanged
+from develop. Existing movement ordering and rewind authority remain intact.
+
+The final exact focused selection and matrix-only fixture repair qualify all
+397 permanent focused cases with zero skips, including all eight real-ROM
+profiles, pre-existing forced ownership at the early publisher, independent
+Up/Down expectations and installed power profiles. Original S1 GHZ1 (3,905),
+S2 EHZ1 (5,852) and S3K AIZ (20,463 compared / 20,798 planned rows; HCZ handoff
+reached) remain clean in ALL scope. The seven previously absent advertised S3K
+aux schemas remain absent; no pixel or full auxiliary acceptance is claimed.
+
+Fresh isolated `-Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical
+-Dtest=TestKis2Ehz1TraceReplay#replayMatchesTrace clean test -B` commands use
+queued Java25/EGL, the same private catalogue configuration and absolute original
+ROMs. Every production source/resource byte is restored to bd0fbcd72 for baseline,
+then restored to the complete corrected stack, with fresh class trees on both
+sides. Each executes 1/1 failure/0 errors/0 skips over all 1,817 rows: 93 errors,
+91 bootstrap, first `player_history.pos` `$0068` (slot `$19`) / `$003F`, then
+animation spans at row289. Complete reports, arrays and failure stacks match
+exactly, hash `c671376dd4874bfae19ee943980961db71445d11d810d9f2504c3330388d071d`.
+Baseline waits541s / Maven1m27s; corrected waits581s / Maven1m26s. This remains
+an inherited KiS2 frontier, not a route pass. The earlier Knuckles row446 vine
+and cursor12011 ownership limits are retained historical evidence, not rerun.
+
+The audit records the initial 401/9-failure command, repaired eight-case matrix,
+source/fixture/configuration/ROM fingerprints and every coverage limit. No broad
+suite, endpoint/fixture change, other checkout, push, PR or publication occurs.
+Consumed diagnostics and temporary configuration/source backups are cleaned;
+the lead retains smoke and integration.
+### 2026-10-29 — Post-SS7 first missing work attributed to starpost invitation (found, not fixed)
+
+Worker `bugfix/ai-s3k-post-ss7-causal`, provisioned checkout `t3-3e35c0ca`,
+uses reviewed SS7 merge `4bfc262b50cabfecace02bedfc194901d74a3c0a`, including
+develop `430051ee4`. No production source, shared contract, fixture or submodule
+pin is changed. The first strict continuous probe targets segment 16 row 1:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$JDK25" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM_PATH" \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS3kPostSs7CausalProbe#throughHczReturn' test -B
+```
+
+Completed **1T/1F/0E/0S**, queue **729s**, Maven **2m09s**, method **34.246s**.
+The actual fork reports Java 25.0.5.0.2 and surfaceless EGL. The source closes
+all **3,687** `hcz_4` rows with the reviewed **27,401** differences (22,209
+physics / 5,192 animation), first non-camera row **1748 Y `$0777/$0772`**,
+145 lag rows, zero bootstrap/report warnings, then rejects MGZ admission at
+cursor **100896**. Segment 11/13/15 canonical JSON hashes are identical to
+the SS7 qualification; segment 11 remains 62 differences and segment 13 remains
+182 animation differences. The partial journal remains 15 gaps / zero failures.
+
+Original-input native callbacks identify the first missing submission at
+completed frame **98467** (segment-15 row 1258): `Obj_StarPost` at absolute
+SST28 queues `ArtKosM_StarPost_Stars1` ROM `$187B8A` to VRAM `$BD80`, with
+**7 Chaos emeralds and 180 rings**. Its parent fingerprint is exactly the
+unmatched `KOS_MODULE_QUEUE#189`; its direct child `$187B8C` → `$FFFFD000`
+exactly matches unmatched `KOS_DECOMPRESSION_QUEUE#269`. Native allocates the
+ordinary orbiting child and four routine-8 bonus stars. The native activation
+path checks ring count, with no emerald-count gate; the shared S3K starpost
+implementation contains an explicit seven-emerald suppression.
+
+The external native observation window matches 1,001 original fixture rows
+across six motion/fraction/clock fields (6,006 comparisons, zero differences).
+Native captures take 86.4282945s and 79.5255385s respectively; their intervals
+overlap Java queue waits and are not added into delivery elapsed time.
+The S3K-wide checkpoint/bonus invitation owner is outside this leaf's local
+zone/results edit scope. The lead's next target is that owner and its actual
+art/allocation/return/rewind consumers, before attributing the later boss-hit
+cascade. See the [bounded evidence and identities](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#post-ss7-first-missing-work--starpost-invitation-owner-2026-10-29).
+No campaign or clean outgoing-HCZ parity is certified.
+
+Final gate-observer/regression/consumer command uses the same flags with
+`-Dtest=TestPostSs7SevenEmeraldStarpostProbe#bonusStarsDoNotDependOnChaosEmeraldCount,TestSonic3kStarPostObjectInstanceTimeAttackGate,TestSonic3kStarPostInvitationArtAdmission,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kPostSs7CausalProbe#throughHczReturn`.
+Completed **88T/2F/0E/0S**, queue **616s**, Maven **1m18s**, route **37.754s**.
+All 60 S3K anchors and 24 existing starpost art/policy/allocation/rewind cases
+pass. The new count-0/count-6 controls pass; count 7 fails expecting four bonus
+children and observing zero. The other failure is the unchanged strict route;
+all completed level-report hashes match the first probe. The live post activates
+at completed count 98467 with run policy allowed and consumed-entry flag false,
+but creates only its ordinary orbiting child and no art job. The seven-emerald
+gate is isolated; no local zone/results fix or new-green claim is made. Both
+temporary repository probes and consumed raw diagnostics are removed; native
+evidence and the external old-red reproducer remain for the lead. No owned jobs
+remain, and the local branch/worktree are retained without pushing.
+
+
+## S3K seven-emerald starpost invitation — 2026-10-29
+
+Local branch `bugfix/ai-s3k-starpost-invitation-frontier`, provisioned checkout
+`t3-0b5c8a6a`, based on pushed develop `bd0fbcd72` plus reused evidence commit
+`419a4676491a61ec4666da03550c13bdf96a5350` as `e21023b18`. Remove only the
+non-native emerald-count veto in `Sonic3kStarPostObjectInstance`; preserve
+ring/run/consumption, allocation, entry, art/loading and rewind owners.
+Native `sub_2D028` has no emerald gate; original completed input98467 has seven
+emeralds,180 rings, four children and the BLUE KosM parent/direct pair.
+
+The [full command, source/input identities, exact assertions and sampling correction](../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md#starpost-invitation-correction-and-bounded-continuation--2026-10-29)
+record the Java25/EGL queued focused and bounded segment16-row1 runs. Original
+absolute ROM: `${OPENGGF_MAIN_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen`,
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`; original BK2/manifest and
+fixture tree remain unchanged. Baseline **19T/7F/0E/0S**, queue430s/Maven2m17s.
+Candidate **123T/4F/0E/0S**, queue583s/Maven2m18s: three new tests stopped only
+on a missing `sha256:` prefix in their expected handle representation. Corrected
+three-case rerun **3T/0F/0E/0S**, queue339s/Maven34.593s. Thus **122 unique
+focused/anchor/authority cases pass** across completed runs; no aggregate green
+Maven/campaign result is claimed. No broad suite; lead owns combined validation.
+
+The continuous route remains **1T/1F/0E/0S**, four axes: MGZ admission at
+cursor100896, segment11/13 errors62/182 and segment15 errors27401
+(22209 physics/5192 animation), complete3687 rows,145 lag rows, zero bootstrap
+errors/report warnings. First strict camera X row940 `$3941/$3940`; first
+non-camera row1748 Y `$0777/$0772`. Every completed segment's canonical report
+and the partial15-gap/zero-failure journal match the fresh baseline exactly,
+including segment15 SHA-256
+`499e398d12989301b9f337861ddfd3081f9b4a41563d09b913b2b4c49d50a9af`.
+The temporary observer is pre-step: printed98468 observes completed98467;
+no one-frame gameplay delay is inferred from its misleading label.
+
+Real parent189/direct269 now match fingerprints respectively
+`0fbbcb25822bda53fc0b212780f2218200ef117c753fa623fa1a05c66379f152` and
+`107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6`.
+Closing authority's unmatched list improves27→25; its remaining ordered tuples
+are exactly baseline minus that pair. Next unmatched work is raw2680 PRE_MAIN_LOOP
+`KOS_DECOMPRESSION_QUEUE#270`, fingerprint
+`589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`, then raw2681
+POST_OBJECTS `KOS_MODULE_QUEUE#190`, fingerprint
+`b6debc7640297e307a6987331dd3176f6bf9566d601a8c0d7febad45b7bf458d`, engine
+pending none. These follow the earlier boss-hit/contact frontier at completed
+98956–98957 / segment15 rows1747–1748; no independent later producer cause is
+assigned. Boss phase versus collision eligibility remains unassigned and
+outside this starpost owner. No fixture hydration, comparator relaxation,
+route-specific predicate or shared implementation edit is used. The temporary
+probe and consumed diagnostics are removed; branch/worktree remain for lead
+integration. Broader act/viewport/donor/team, native pixels and campaign limits
+remain open in the HCZ2 matrix.
+
+
+## 2026-10-29 — LRZ input-723 hold is native lag at direct-plane refresh
+
+Implementation leaf `bugfix/ai-lrz-knuckles-causal-20261029`, provisioned T3
+checkout `t3-e2a92490`, starts clean at `c4cd6ae0e` and bases its task branch on
+requested pushed develop `e815aad643ac8cd62467d500e2336ef979e80ef8` before any
+measurement. That base includes the crusher timer fallthrough and 40-case
+manager/rewind follow-up. No worktree, child agent, integration, push, PR or
+release is created. No identical owned job exists at submission. The lead owns
+smoke validation.
+
+Choose the unchanged native320, donor-off, solo-Knuckles first-door movie,
+`src/test/resources/routes/s3k/lrz-knuckles-cold-act2-first-door-320.bk2`:
+SHA-256 `b7ed53c9c8685c0988b6cdf042ccdaf2e2f373751557dbaec1448d54f96c13cc`.
+All 26635 extracted input rows equal the retained original inputs byte-for-byte;
+this bounded comparison uses inputs0..799. The existing absolute original S3&K
+ROM is reverified as CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROM bytes, fixtures, disassemblies
+or TraceChaser files are edited. Both submodules are clean at their unchanged
+pins `8b2cf3c4178f2382f844da67798de4befc50c5e0` and
+`703bd92d32634ce5ebac60625b48c60ef5500427` respectively.
+
+The external task directory is `$TASK_ARTIFACT_ROOT/lrz-causal-next-20261029`.
+It retains `LrzAdmissionProbe.cs`, `run-admission.py`, identity JSON, native
+observations and the exact `engine-observer.patch`. The launcher uses the
+previous retained deterministic harness, SHA-256
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`, without
+rebuilding or editing TraceChaser. Official BizHawk2.11 preflight passes. GPGX
+and managed-core hashes remain respectively
+`c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12` and
+`0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`.
+Native observer SHA-256 is
+`4f00320d87ad4120cf3912b455e7b2d59bde1cab83730a01dc7cffd20d84304c`;
+compiled observer is
+`1fc29fae15e686e988db5518112d5cbf74f4f8894135a3eaabf8e0caee3e5321`.
+Its setup retains the earlier declared restart writes to zone/act `$FE10`,
+character option `$FF0A` and restart `$FE02`; input0 is the native initialization
+pass, then each advance receives the corresponding unchanged original input.
+This is a diagnostic cold-entry reference, not a power-on-only canonical trace.
+The execute callbacks and row samples write no gameplay state.
+
+Native command: `python3 -B "$TASK_ARTIFACT_ROOT/lrz-causal-next-20261029/run-admission.py"`.
+The launcher acquires build/activity leases for preflight/compilation, releases
+them, then acquires ordinary shared test admission. Completed exit0, 800 returned
+samples and797 completed ordinary body callbacks (level1..797); no native
+exception/warning is logged. Queue wait458.725s, native execution3.478s;
+preflight0.214s and observer compilation0.616s are separate.
+
+The temporary engine observer preserves the production cold builder, original
+inputs and drawing after every step. It emits returned state only; its source
+SHA-256 is `76f3c611c200f274c0b3b29ebbfded6614acc67289f25a92960115753da7c139`.
+The exact queued command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off -Pexhaustive-audit \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=com.openggf.tools.TestLrzKnucklesColdRouteCapture#observeOriginalColdRouteDeaths' test -B
+```
+
+Completed **1T/0F/0E/0S**, exit0, at22:55:01UTC. This is an observation-shell
+completion, not a passing route assertion. XML confirms Java25.0.5.0.2,
+surfaceless EGL and the original absolute ROM property; no dump is produced.
+Queue wait455s, Maven1m32s, JUnit2.756s. FAST-to-NONE load-profile fallback,
+compiler/Unsafe deprecations and an initial missing `java.io.tmpdir` warning
+remain explicit limitations. Total task wall time is unmeasured; queue and
+execution intervals are not added across the two requests.
+
+After normalizing the engine's signed angle byte with `&255`, all nine sampled
+fields (X/Y, both fractions, X/Y velocities, inertia, angle, rings) agree through
+input722:6507 comparisons. The first strict difference is **input723 Y2096/2097
+(native/engine)**, level counters722/723. Across all800 input-aligned rows there
+are78 differing field samples; these are diagnostic samples, not canonical
+trace comparator errors. Counter-matched comparison has zero differences across
+7200 field samples through native level797, including two duplicate-level
+returns. That diagnostic alignment does not shift inputs or waive strict parity.
+At input799 native is1358/2162, Y velocity1400, level797; engine is1358/2174,
+Y velocity1512, level799. Both remain alive with3 rings.
+
+Bounded callbacks at ROM `$584` (VInt), `$608` (routine-0 lag), `$10DE`
+(Poll_Controllers), `$6520` (pre-increment body admission), `$6540`
+(post-Process_Sprites) and `$1C1A` (direct Kos service) distinguish the cause:
+
+- Input722 polls the neutral original input and completes level722 at1358/2096,
+  angle0, on the correctly timed bridge.
+- Input723 enters VInt with routine0, interrupted PC `$4ED8E`, and direct Kos
+  count0. It executes the lag callback, with **no poll and no new body**.
+  The returned level counter stays722, V-int advances1816→1817, and lag becomes1.
+  Afterwards the old iteration finishes and the next loop reaches an empty
+  direct-queue service.
+- Input724 polls and dispatches level723, returning1358/2097. Input732 is a
+  second routine-0 lag, interrupted at `$1ADAC` in Render_Sprites, direct count0;
+  input733 resumes level731. Locks/control remain0 throughout the opening.
+
+`Refresh_PlaneDirect / loc_4ED72 (sonic3k.asm:103200-103212)` masks interrupts,
+redraws rows and restores SR; `$4ED8E` is its following RTS. Thus the first hold
+is a V-int delivered at the end of synchronous plane refresh, not a pending Kos
+readiness job or a player control lock. `VInt (sonic3k.asm:532-559)` selects
+routine0, and `VInt_0_Main (sonic3k.asm:591-604)` counts lag;
+`VInt_8 (sonic3k.asm:723-725)` owns polling on an ordinary interrupt.
+The current LRZ chunk request already has a semantic layout/redraw owner;
+`LRZ1_ScreenEvent / loc_56B54 (sonic3k.asm:115245-115273)` clears the request and
+jumps to direct refresh. The interrupted PC proves the refresh boundary, not
+its caller stack or every preceding world field.
+
+Stop at the requested ownership boundary. The ordinary capture API supplies one
+input per GameLoop step, while recorded lag suppression belongs to shared
+loop/replay/timing admission. No LRZ-local ROM-owned defect after the timer fix
+is proven in this window. Do not add a frame-specific wait, CPU/VDP simulation,
+fabricated Kos job, hazard/controller adjustment or comparison-state hydration.
+The next action is a matched native timing/loop reference under the existing
+bounded timing contract before investigating later route differences. The
+historical first-door15323/middle5027 engine deaths and native3976 death are
+not remeasured here; neither Act2 nor those endpoint causes is newly qualified.
+
+There is no runtime or maintained-test edit, hence no old-red/new-green,
+allocation/rewind or new S3K-anchor pass claim. No broad suite is run. The
+observer is removed and its maintained source is HEAD-exact; consumed owned
+Maven/native logs and temporary engine CSV/XML are removed after inspection.
+Useful external native sources/observations and build outputs remain for the
+lead. No owned jobs remain. The local task branch and provisioned checkout
+remain for evidence integration; neither is removed by this leaf.
+
+Documentation verification: `git diff --check`, the new relative link/anchor,
+AGENTS/CLAUDE identity and exact observer restoration pass. The citation tool's
+parser/classifier resolves all five new named ranges at the pinned disassembly;
+existing hard/stale findings are unchanged, and both edited files retain their
+entire HEAD prefix byte-for-byte. Commit hooks provide the staged policy check.
+
+## 2026-10-29 — DEZ cold lift-pad exact-boundary landing
+
+Implementation leaf `bugfix/ai-dez-cold-next-blocker`, provisioned T3 checkout
+`t3-22054cd1`, fast-forwards to requested pushed develop
+`445feabf82ad9cd3607991702a23625fbb886f49`. No additional checkout or child
+agent is created. The original movie and comparison payloads match the preceding
+Spikebonker record: BK2 SHA-256
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`,
+physics `a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`,
+aux `beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`.
+The absolute original ROM is
+`$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen`,
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`, SHA-256
+`fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+`OPENGGF_ROM_DIR` resolves to the existing original main-checkout ROM directory.
+No ROM link/copy, fixture regeneration or observation edit is made.
+
+Read-only native replay uses clean pinned TraceChaser `703bd92d3`, its rebuilt
+harness assembly SHA-256
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`, and the
+same verified official BizHawk 2.11 runtime described above. The bounded probe
+source SHA-256 is
+`e118bc1b1b3e29a77b5b233d4151e8c83f10e43010632347f93c3edae702d157`.
+It applies original controller input from power-on, performs no RAM writes,
+registers callbacks after input 471612, and exits normally after 471693 inputs.
+All 81 end samples (rows 2630–2710) match 891 committed main-player fields
+exactly, including fractions, status, routine, animation and level counter.
+Native execution wall time was not measured; no native pixel or endpoint
+certification is claimed. The deterministic xbuild succeeds with its existing
+.NET v4.8 toolset warnings.
+
+The native causal decision is the lift pad in slot 18 at `$0E18,$0948`,
+`DEZ1_Sprites` record 65 (anchor `$0EB8,$0948`, subtype `$07`). At row 2697,
+original input 471679, level counter `$0A8A`, Sonic reaches its new-contact
+check at `$0E0C,$092D`, radius 14, Y velocity `$0030`. Execute callbacks show
+`loc_47440 -> sub_4748E -> sub_4757A`, then `loc_1E42E`, `loc_1E44C`,
+`loc_1E45A` and `locret_1E4D4`, without `RideObject_SetRide`.
+The surface is `$0948 - 9 = $093F`; Sonic's centre plus radius plus 4 is also
+`$093F`. Native `d0=0` reaches the unsigned `cmpi.w #-$10,d0 / blo` rejection.
+Rows 2698 and 2699 still reject it. At row 2700, `d0=$FFFF` reaches
+`loc_1E4A0`, sets the standing bit and unrolls Sonic. The lift's position and
+angle remain unchanged before that contact.
+
+`loc_47440 (sonic3k.asm:93182-93189)` selects `SolidObjectTop` with width `$18`
+and height 9. `loc_1E45A (sonic3k.asm:42044-42055)` accepts only native overlap
+`[-$10,-1]`, excluding zero. This is already represented by the existing
+object-provider declaration used by DEZ's energy bridge and retracting spring;
+no shared collision algorithm is needed.
+
+The matched engine inlet is the unchanged fresh Sonic+Tails builder, original
+movie offset 468982 and native320 viewport. A temporary read-only callback in
+the lift's `getSolidParams()` observes the actual inline solid checkpoint at
+level counter 2698: pad `$0E18,$0948`, player `$0E0C,$092D`, radius 14, Y
+velocity 48, airborne, overlap zero. The next callback sees Y `$092B`, radius
+19, Y velocity zero and grounded. Both pad position and angle match native
+before that contact. The engine pad occupies slot 17 versus native slot 18;
+this observation does not qualify global slot parity or attribute that separate
+occupancy difference. It does prove the same local geometry and missing rejection.
+
+The corrected observer consumes 4843 original inputs, checks every returned
+normalized input against the committed row, verifies exactly one movie-cursor
+advance and a real gameplay body per return, reaches maximum X `$1598`, then
+dies. Main movement, fractions, rings, camera, level counter, routine, angle and
+air/roll agree through 2696. First Y/Y-speed/G-speed/camera-Y/air/roll/animation
+changes are at 2697; X first differs at 2701, camera X at 2722 and rings at
+2812. This revalidates the post-Spikebonker death and first causal frontier.
+
+All Java requests use this environment and command shape:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  OPENGGF_ROM_DIR="$OPENGGF_ROM_DIR" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  "-Dtest=$SELECTION" test -B
+```
+
+`S3K_ROM` is the absolute original path above; XML confirms Java
+`25.0.5.0.2` and explicit surfaceless EGL. No desktop or visible window is used.
+There is no identical owned/live request when each command is submitted.
+
+- Initial `SELECTION=TestDezNextCausalProbe#observe`: **1T/0F/1E/0S**, exit 1,
+  queue 623s, Maven 1m24s. Its temporary object dump dereferences a null-spawn
+  entry at row 2630. This is an observer bug, not a route result. Source SHA-256
+  `c127e1cf46b7137142872960e4adc62b376af7ce5ff0cafcaea490c91196d537`.
+- Corrected old-behavior selection:
+  `TestDezNextCausalProbe#observe,TestS3kDezLiftPadHeadless#nativeLandingWindowRejectsTheExactBoundary,TestS3kDezColdRoutes#coldActOneLiftLandingPreservesNativeBoundary`:
+  **10T/4F/0E/0S**, exit 1, queue 686s, Maven 41.421s. The three exact-boundary
+  cases fail (rolling/standing/inverted); five separation and positive-overlap
+  controls pass. The independent original-input regression first fails at row
+  2697, Y expected 2349, actual 2347. The observation shell passes and reports
+  the death/causal values above; that shell is not a passing route assertion.
+
+The old behavior is exactly base production plus read-only lift callback logging,
+SHA-256 `41457a5ad5212387d4a6857d6fc90ade60fe2e23b8764687029db2494b348f86`.
+The corrected temporary observer is
+`0a63b5ad52040fd2e6071a688ea5c53f74d3f26486767913b7598b7824b0b846`.
+Regression sources are SHA-256
+`53f79909b33959f10e7cc57098e3142dfeb346d960ee3558f7c710175b773d5c`
+(lift tests) and
+`5d6580225591323219fe4682315ad711d48e5030207c667dd2e021767f6c903a`
+(cold routes).
+
+The correction removes all callback logging and adds only the lift's
+`rejectsZeroDistanceTopSolidLanding()` declaration. The sole production delta
+is blob `d652f37f47484767d601201ab1a910d02967a235`, SHA-256
+`e78faa8602b5d52f04f82287e978d47173fc11ba1a60087695ac18b3ac80914b`.
+No new persistent state, shared collision, GameLoop, timing, loading, audio,
+input or rewind contract changes; no fixture predicates, state hydration,
+fitted constants or comparator relaxation occur.
+
+The final corrected selection is:
+
+```text
+TestDezNextCausalProbe#observe,TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+coldActOneLiftLandingPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It completes **79T/0F/0E/0S**, exit 0, at 23:49:31 UTC: queue **933s**,
+Maven **1m32s**. This consists of 78 asserting cases and one observation shell.
+All eight XML suite identities, individual testcase dispositions, Java/ROM/EGL
+properties and streams are inspected; no dumps occur. Both packages' loading
+classes run. The 16 lift cases include forward-allocation exhaustion without
+retry, owned-arm retirement, all native orientations and actual graph recreation
+with forward replay at 320/800. All eight new landing-window cases and both cold
+regressions pass. The original 200-row companion contact remains green; the
+new main regression matches all 2720 rows, including the native rejection and
+later landing. The lift source and both permanent regression hashes above
+remain exact through this completed run.
+
+The corrected observer still consumes **4843** original inputs/body returns and
+still reaches maximum X `$1598` before death. The endpoint does **not** advance.
+Its first main Y difference moves from **2697 to 3268**, native `$08E9`, engine
+`$08E8`; camera Y first differs at 3275, player X at 3432, camera X at 3438,
+velocities/ground speed at 3607 and rings at 3974. The observed air disagreement
+begins at 3606. The correction closes the first proven landing mechanism; it
+does not certify the later route or explain its death. No new native causal
+verdict is claimed at 3268. The next action is a matched native/engine decision
+probe before that row, rather than tuning the downstream death endpoint.
+
+Known output is compiler/Unsafe deprecation noise, the inherited FAST-to-NONE
+load-profile fallback and the decoding test's deliberate out-of-range warning.
+This is bounded object/lifecycle/anchor qualification, not a broad smoke,
+full-suite, strict whole-segment trace, pixel/audio or campaign pass. Queue and
+Maven execution times above are separate; total task wall time is unmeasured.
+The lead owns combined smoke and integration. The final change-based dry plan
+selects 3766 smoke classes plus guards across common/content/gameplay/physics/
+rendering/rewind/tooling; it is not launched. This stateless local provider
+selection has bounded geometry, real allocation/rewind and S3K anchor coverage;
+the explicit leaf scope delegates combined smoke to the lead. No broad run,
+integration, push, PR or release is performed in this leaf.
+
+Final cleanup removes the temporary Java observer, its stale compiled class,
+consumed owned raw Maven/native diagnostics, and the external probe executable
+and runtime-library link. The small native probe source is retained outside the
+repositories. The provisioned worktree, local branch and useful build outputs
+remain for lead review; foreign worktrees, original ROMs and dirty disassembly/
+TraceChaser state are not modified. No owned test/native job remains live.
+The frontier's pre-task prefix is byte-for-byte unchanged. Matched citation
+classification finds no new hard/stale issues; all four added citations resolve
+to their named pinned labels, with inherited findings preserved. Added local
+links and `git diff --check` pass.
+
+#### Review limit: DEZ lift walk-off latch
+
+Independent source review found an inherited release gap: the lift reads the
+standing bit before its next contact pass, while the engine does not opt this
+object into immediate latch clearing on continued-ride exit. Native `loc_1E2E0`
+(sonic3k.asm:41852) clears the object standing bit on walk-off. The existing
+pause control uses mocked standing bits; it does not establish actual release
+or attribute the later row-3268 difference or death to this gap. A real
+contact-and-release regression and ROM-owned correction remain follow-up work.
+
+## 2026-10-30 — DEZ lift continued-ride standing latch
+
+Implementation leaf in T3-provisioned `t3-60c1d47c`, local branch
+`bugfix/ai-dez-lift-walkoff-latch`, based exactly on pushed develop
+`a3b021ec4f7bdf4ec6a860468fc730d770cc75b5` (includes the landing correction).
+No new worktree, child, integration, push, PR or release is requested.
+The inherited review note above remains historical evidence, not an attribution
+of row 3268 or the 4843-input death.
+
+### Native dispatch and correction boundary
+
+Independent inspection of pinned skdisasm
+`8b2cf3c4178f2382f844da67798de4befc50c5e0` and the verified original ROM finds:
+
+- `loc_47440 (sonic3k.asm:93182-93189)` saves old X, runs `sub_4748E`, then
+  calls `SolidObjectTop`. The motion/pause read precedes the contact tail.
+- `sub_4757A (sonic3k.asm:93306-93324)` tests only P1's standing bit for both
+  the nonzero pause hold and initial movement admission; P2 support cannot
+  start the pad or hold that pause.
+- `SolidObjectTop (sonic3k.asm:41824-41832)` dispatches P1 then P2, selecting
+  the corresponding bit. `SolidObjectTop_1P (sonic3k.asm:41839-41850)` sends an
+  airborne rider or X outside `[-$18,$18)` to `loc_1E2E0`.
+- `loc_1E2E0 (sonic3k.asm:41852-41857)` clears player OnObj, sets Air and clears
+  that participant's object standing bit before returning without carry.
+  Thus the exit dispatch still sees pause 30; the following body sees no P1
+  standing and decrements it to 29. The existing local
+  `clearsStandingBitOnContinuedRideExit` contract models this without a shared edit.
+
+`OPENGGF_ROOT` denotes the existing main checkout; all launched ROM paths were
+resolved absolute paths there. Original S3&K path is `$OPENGGF_ROOT/s3k.gen`, CRC32
+`63522553`, SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`.
+The original S1/S2 absolute root paths were also verified against the required
+REV01 CRC32/SHA-1 pairs. No ROM file/link or submodule was changed by this task.
+ROM bytes at `$047440..$04745B` are
+`3f28001061000048323c0018363c0009381f4eb90001e2a630280044`;
+the motion test at `$04757A` starts
+`4a680034671208280003002a66000086536800346000007e`;
+the release tail at `$01E2E0..$01E2F3` is
+`08a90003002a08e90001002a0da8002a78004e75`.
+These corroborate the actual locked-on routine, rather than a duplicate S3-half
+source. No emulator state was seeded to establish this source/byte evidence.
+
+### Focused regression and observation protocol
+
+`TestS3kDezLiftPadHeadless#continuedRideExitReleasesOnlyItsPlayerBitAndNextUpdatePauseThroughRecreation`
+uses real registered Sonic/Tails, the real ObjectManager execution loop and
+its ordinary body/solid checkpoint. It establishes P2 contact alone, adds P1,
+advances to the real pause, preserves support on both inside edges, then tests
+left/right walk-off and airborne release independently. It checks per-player
+bits, riding support, Air/OnObj, exit-pass pause versus next-update decrement,
+P2-only support through return, and P2's eventual exit. A released-world restore
+must preserve the cleared P1 bit. Destructive pad/arm retirement/removal then
+requires actual graph recreation, held P1/P2 contact relinking and the same
+120-update return trajectory. Existing allocation, cull/unload, pause and
+320/800 placed-lift recreation checks remain separate negative/lifecycle controls.
+There is no new state or shared collision, slot, pause, unload or rewind edit.
+
+The temporary `TestDezWalkoffColdObservation#observe` uses the unchanged fresh
+native320 Sonic+Tails inlet and original movie offset 468982, up to 5000 inputs
+or first player death. Each return checks the committed input, one cursor
+advance and an actual gameplay body. Expected physics rows are comparison-only.
+It records first differences in 15 player/camera/level fields, a per-return
+state digest, lift latch/ride transitions, and conveyor-pad before/after state
+around the later jump. The shell's success is an observer result, never a route
+parity assertion. No movie, comparator, bootstrap, timing input or tolerance changes.
+
+Original movie SHA-256:
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+`ssz/physics.csv.gz` SHA-256:
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`.
+Metadata identifies this `ssz` directory as DEZ; its name is not zone authority.
+
+All Java test commands use:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  OPENGGF_ROM_DIR="$OPENGGF_ROOT" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_ROOT/s3k.gen" \
+  "-Dtest=$SELECTION" test -B
+```
+
+Each selection has one owned request and observer; shared-admission waiting is
+kept separate from Maven execution. No duplicate run is launched for slow admission.
+An earlier environment-free queued version probe was cancelled before execution;
+it supplies no Java-version or test evidence.
+
+### Baseline results and test correction
+
+- Initial selection of the new parameterized regression: **3T/3F/0E/0S**, exit 1,
+  queue **852s**, Maven **1m40s**, completed 00:17:49 UTC. Both walk-off cases
+  fail the intended immediate-bit-clear assertion (expected false, actual true),
+  after real contact and loss of riding support. The airborne control instead
+  reaches a test-only stale-reference assertion: expected pause 30 after restore,
+  but the pre-restore pad still has 29. Restore replaces that owner. The test now
+  reacquires by captured slot after every restore, verifies both physical removals,
+  and checks the restored arm's slot too. This is a test correction, not a rewind
+  implementation change. No old behavior was repaired to satisfy a mistaken oracle.
+- Unchanged-production `SELECTION=TestDezWalkoffColdObservation#observe`:
+  **1T/0F/0E/0S**, exit 0, queue **933s**, Maven **38.293s**, completed
+  00:19:25 UTC; actual observer body 3.604s. It consumes **4843** original inputs
+  and real gameplay bodies, maximum X `$1598`, then dies. First main Y remains
+  row **3268**, expected `$08E9`, actual `$08E8`. First other differences:
+  camera Y 3275, X 3432, camera X 3438, Air 3606, X/Y/G velocities and X fraction
+  3607, Y fraction 3608, rolling 3697, routine 3699, angle 3967, rings 3974.
+  Level counter has no difference in this window. Its 15-field per-return state
+  digest is `3ef4918dec4006ad026f21d0d43966701fc0bc10e4aec1ad88916004d0c18dbe`.
+
+XML confirms Java **25.0.5.0.2**, explicit surfaceless EGL and the verified
+absolute S3&K path for both completed requests. Neither has skipped cases or
+fork errors. Initial regression SHA-256 is
+`1de3f82cd504dc7c1b10a8ec2820c3de4df41522818c09198dd915228fedc5dd`;
+its full `src` plus `pom.xml` fingerprint (sorted path/NUL/bytes/NUL SHA-256)
+is `46a3f5c9e8339db25367c8b0680de4648a587c428e3054fe9f9322c36b0eba72`.
+The observer source is unchanged across baseline/candidate:
+`041a320858dc61b79dd53914e09cff98ac6135cb0ea76435e298c7f07a7ea8bc`.
+Baseline production lift SHA-256 is
+`e78faa8602b5d52f04f82287e978d47173fc11ba1a60087695ac18b3ac80914b`.
+Only unselected regression-source reference/removal assertions were being repaired
+during the baseline observer's test compilation; production, selected observer,
+fixture and runtime setup remained unchanged. Its scoped comparison evidence
+therefore uses those exact owner/observer hashes rather than claiming one stable
+whole-source fingerprint for that request.
+
+Corrected old-behavior regression, same selector/environment: **3T/3F/0E/0S**,
+exit 1, queue **415s**, Maven **36.143s**, completed 00:25:53 UTC.
+Both P1 edge exits fail the immediate-bit-clear assertion. The airborne control
+now passes the released-world restore and complete return before failing P2's
+own final walk-off bit clear. All three are genuine per-player release failures,
+with the stale-reference oracle removed. The final regression source SHA-256 is
+`c080318b9049836b43ab65044df0ce53ca9dfa1ce16d468d22cdcdab09a27d2c`;
+its corrected baseline `src` plus `pom.xml` fingerprint is
+`244970955fd8458d5f851e11f08e70880c47a966d891ca723b8facb97b49e523`.
+The return component deliberately parks departed P1 outside the pad's swept X
+range after verifying release: it omits free-flight physics and must not invent
+an accidental second landing. The independent original-input observer drives
+ordinary complete frame bodies instead.
+
+### Candidate qualification
+
+The sole production change is the lift's local provider override, SHA-256
+`23237ddd8d5876181090111d77c0c5ca1e681e4882d96791a6302c483ca642fc`.
+The complete focused selection is:
+
+```text
+TestDezWalkoffColdObservation#observe,TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+coldActOneLiftLandingPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The committed aux payload independently witnesses the actual native walk-off,
+without a new seeded emulator experiment. Its SHA-256 is
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`.
+At row 2795 native lift slot 18 (`$00047440`) is at `$0E95,$08C8` with status
+`$08`. At row 2796 Sonic is `$0EAD,$08AC`, exactly the excluded right edge
+`pad X + $18`; the lift status is now `$00` and Sonic status `$02`.
+The sticky interaction remains slot 18, correctly distinct from live support.
+The unchanged engine observation sees the same pad/player geometry at row 2796,
+but its slot-17 lift still has standing=true and riding=false; its bit clears
+one row later. This is a real original-route manifestation of the local latch
+gap, separate from the later player-Y frontier. The inherited native/engine
+slot-index difference is recorded, not repaired or claimed accurate here.
+
+The final focused request completes **82T/0F/0E/0S**, exit 0, at
+**00:37:04 UTC**: queue **521s**, Maven **1m45s**. It contains 81 asserting cases
+and one bounded observation shell. All eight suite identities and individual
+case dispositions were inspected, including both packages' loading classes,
+the two exact cold methods (no seeded diagnostic), and all three new release
+parameters. Java **25.0.5.0.2**, surfaceless EGL and the verified original
+absolute ROM path are present in every XML report; there are no dumps.
+All 19 lift cases pass, including the existing allocation exhaustion, owned-arm
+unload, mocked pause/debug controls and real 320/800 placed-graph recreation.
+All 60 mandatory S3K anchor cases and both cold prefix regressions pass.
+
+The frozen tested `src` plus `pom.xml` fingerprint is
+`dafde75312d9a129bf3be1d2eb79ce68c7bac8aea3e99c1255f3d1266d6c8b50`.
+Lift, permanent regression and observer hashes remain the exact candidate hashes
+above through the completed run. A citation-parser ambiguity in the first draft
+comment was corrected before admission, without changing code; the final lift
+has five resolved citations and zero stale findings (baseline had three resolved).
+
+### Relationship to the remaining cold frontier
+
+At row 2796 the candidate lift now reports standing=false/riding=false at the
+same native edge and positions. The local native mismatch is closed. Nevertheless,
+the entire candidate observer summary and its 15-field per-return state digest
+are **byte-for-byte identical to baseline**: first main Y **3268**, expected
+`$08E9`, actual `$08E8`; maximum X `$1598`; death after **4843** consumed inputs.
+The fix produces no endpoint advance and does not explain that later difference
+or death. No whole-segment strict trace, act completion, pixel/audio, broad smoke
+or full-suite pass is claimed.
+
+The next owner is a conveyor pad, not a lift. At native rows 3267/3268/3269,
+aux slot 16 runs `loc_47A14`, subtype `$B0`, X `$1540`, with Y
+`$0908/$0907/$0906`; its status changes `$08` to `$00` at the jump. Sonic's
+interaction pointer stays at slot 16 while his status becomes `$06`.
+The engine's slot-16 conveyor matches those pad positions. Before row 3268 it
+has player `$150D,$08E4`, standing/ride=true, radius 19; afterward it has player
+`$150B,$08E8`, standing/ride=false, radius 14. Native end Y is `$08E9`.
+These end samples bound the question but do not identify the instruction/engine
+operation that introduces the extra pixel. Next: matched read-only samples at
+the player jump/radius write and the conveyor's `loc_47A58` →
+`SolidObjectFull_1P` / `loc_1DC98` boundary. Do not infer a carry, height or stale-bit
+fix solely from the one-pixel endpoint. No independent later DEZ-local causal
+mechanism was proven here, so no conveyor or shared-owner change was made.
+
+Known output is compiler/Unsafe deprecation noise, the inherited FAST-to-NONE
+load-profile fallback and the decoding test's deliberate out-of-range warning.
+No test error or skip is hidden by that output. The initial test-only stale-reference
+failure above was corrected; all genuine old-behavior failures now pass.
+Queue and Maven times are recorded separately per request; waits overlap and must
+not be added as elapsed delivery time. Overall task wall time is unmeasured.
+The change-based dry plan selects 3767 smoke classes including the temporary
+observer; broad validation is not launched under the explicit leaf scope.
+
+Final maintained-source fingerprint after deleting only the temporary observer:
+`d3545cf86787ed9cd92c7c4104a81df6f696ebb8568aaa6c46b4bc3e7e45ccab`.
+Production and permanent regression hashes are unchanged from the completed run;
+removing the uncommitted observation shell changes no maintained executable input.
+The stateless leaf selector is qualified by real manager/P1/P2 edge cases,
+held/released and destructive graph restores, existing 320/800 allocation/lifetime
+coverage, the original-input prefixes/observation and all S3K anchors. Shared
+owners remain untouched; this is focused evidence, not a substituted smoke claim.
+
+Cleanup removes the temporary observer source and bytecode, consumed owned Maven
+XML/text reports, raw task logs and dry-plan/citation output. No diagnostic archive,
+receipt, emulator process or external generated artifact is retained. No owned
+queue request or test job remains live. The T3-provisioned checkout and unmerged
+local bugfix branch are retained for lead handoff; no worktree or child was created.
+Original ROMs, submodules and other worktrees remain untouched. The frontier's
+pre-task prefix, AGENTS/CLAUDE mirror and new local links pass inspection;
+`git diff --check` passes. All added frontier citations classify without a new
+issue; inherited historic/stale findings remain unchanged. No integration,
+push, PR or release is performed.
+
+The first local commit attempt was rejected by the resource-policy hook for
+machine-local home paths in this evidence text. They were normalized to
+`$OPENGGF_ROOT` notation; tested code, fixture paths actually passed at runtime
+and results are unchanged.
+
+#### Controlled-rider review correction — 2026-10-30
+
+Independent review found that the initial unconditional walk-off opt-in also
+cleared an in-bounds object-controlled rider's standing bit. Native
+`loc_1E1CA` (sonic3k.asm:41712-41726) returns without clearing it. A real
+manager-contact regression on `46b005001` failed that assertion: **1T/1F/0E/0S**,
+Maven **36.079s**; queue wait was not retained. The lift now requests clearing
+only for an airborne rider or one outside its `[-24,24)` horizontal bounds.
+The control tests the retained bit and next body pause; it does not claim that
+the shared controller preserves the whole object-controlled riding state.
+
+The candidate plus this source/test correction completed **85 tests, zero
+failures, errors or skips**, queue **49s**, Maven **1m43s**, using Java 25,
+surfaceless EGL and the verified original locked-on ROM:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  OPENGGF_ROM_DIR="$OPENGGF_ROOT" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+```
+
+This is focused qualification; the original-input death, later Y divergence,
+full route, controlled-rider lifetime and pixel/audio results remain open.
+
+
+## 2026-10-30 — DEZ cold conveyor moving standing-bit owner
+
+Implementation leaf `bugfix/ai-dez-cold-input-y-row3268`, provisioned T3
+checkout `t3-a87f37c7`, fast-forwarded cleanly to the requested pushed develop
+`6f267e8103188214ec40570248ad8ea9322cbc40`. No new worktree or child is created.
+The recent editor/render changes are included in every engine execution here.
+Foreign jobs and dirty main-checkout disassembly/TraceChaser are preserved;
+this checkout's pinned reference submodules start and remain clean.
+
+### Original inputs and native jump/solid decision
+
+`OPENGGF_ROOT` denotes the existing main checkout. The actual absolute original
+ROM argument is its `Sonic and Knuckles & Sonic 3 (W) [!].gen`, independently
+verified CRC32 `63522553`, SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`,
+SHA-256 `fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+Original BK2 SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+`ssz/physics.csv.gz` is
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`;
+`ssz/aux_state.jsonl.gz` is
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`.
+No ROM link/copy, movie edit, fixture regeneration or comparison relaxation occurs.
+The `ssz` fixture directory identifies DEZ through metadata, not its name.
+
+The retained earlier `dez-next-20261029/DezDecision.cs` is read and adapted into
+an external, read-only native probe. Its new source SHA-256 is
+`cb9bdca46bff513eb311693b0540b5a2bff1157d147bca4a8f68236e8abadab2`.
+The clean pinned TraceChaser `703bd92d32634ce5ebac60625b48c60ef5500427` is
+rebuilt through `bizhawk-headless/build.sh`; the harness SHA-256 is again
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+Official BizHawk 2.11 runtime preflight passes, with the previous independently
+verified GPGX `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+waterbox `d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`
+and managed-core `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`
+hashes rechecked. `RUNTIME` and `TASK_ROOT` name those external task locations;
+`S3K_ROM` resolves to the absolute original above. Native command shape:
+
+```bash
+BIZHAWK_HOME="$RUNTIME" tools/tracechaser/bizhawk-headless/build.sh
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:$TASK_ROOT/DezDecision.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$RUNTIME/dll/BizHawk.Emulation.Cores.dll" "$TASK_ROOT/DezDecision.cs"
+MONO_PATH="$PWD/tools/tracechaser/bizhawk-headless/bin/Release:$RUNTIME/dll" \
+  LD_LIBRARY_PATH="$RUNTIME/dll" env -u DISPLAY -u WAYLAND_DISPLAY \
+  timeout --signal=TERM --kill-after=10s 600s mono "$TASK_ROOT/DezDecision.exe" \
+  "$S3K_ROM" "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+It consumes 472258 unchanged original inputs from power-on, with no RAM writes,
+registering callbacks only at input 472230 and sampling completed rows 3248–3275.
+All **28 samples / 308 main-player fields** match committed physics exactly.
+Native process exits 0 with its completion marker; no new fixture or pixels are
+published. Native execution time is unmeasured; xbuild retains its known .NET
+v4.8 toolset warnings.
+
+At row 3268, actual advancing movie input 472250 (the callback's previous
+CompletedFrame also reads 472250), `loc_118AE (sonic3k.asm:23385-23389)` sees
+Sonic at `$150D,$08E4`, Y radius already 14, `d0=-5`, velocity `$0138,$F980`,
+status `$0E`; its Y subtraction produces `$08E9`. The engine independently
+matches that exact position/radius/velocity transition during its physics step.
+There is no wrong jump impulse, radius delta, input edge or fractional carry.
+
+Native slot 16 is code `$00047A14`, subtype `$B0`, pad `$1540,$0908`, status
+`$08`. `loc_47A14 (sonic3k.asm:93712-93733)` changes pad Y to `$0907` and
+retains the same status. `sub_47A88 (sonic3k.asm:93752-93758)` carries Sonic's
+X by -2 while retaining his Y `$08E9`. `loc_47A58 (sonic3k.asm:93735-93749)` then calls full solid with `d1=$8B`, `d3=$11`.
+The observed branch is `loc_1DC98 (sonic3k.asm:41075-41081)`: clear OnObj,
+set Air, clear this pad's P1 standing bit, return without changing Y. Native
+end status is `$06`; no new-contact lift or vertical carry runs on this jump.
+
+### Engine cause and bounded old-red checks
+
+The temporary observer uses the unchanged fresh native320 Sonic+Tails builder,
+original offset 468982, normal returned input and drawing. Existing
+`RecordingFrameDriver` step wrappers and `CollisionTrace` callbacks read state
+without a production instrumentation edit. Every return verifies the exact
+committed input, one movie-cursor advance and a real gameplay body.
+
+On the requested base, before physics Sonic is `$150D,$08E4`, radius 19;
+after physics `$150D,$08E9`, radius 14, Y velocity `$F980`, with live pad
+standing/ride both true. The earlier invisible-block checkpoint unseats the
+engine ride but leaves the pad bit true. The conveyor body correctly moves Y
+`$0908->$0907` and carries X `$150D->$150B`. Its `updateDynamicSpawn` then
+replaces coordinate-bearing metadata. At its actual solid checkpoint, the
+standing lookup is now false although the live native SST status is still `$08`.
+The fresh-contact path changes Sonic Y `$08E9->$08E8`; velocities, radius and
+fractions remain unchanged. All later object checkpoints preserve that wrong Y.
+
+`ObjectSolidContactController.airUnseatLatchKeyFor` already offers an explicit
+instance-key contract. This is P41's known moving-solid failure mode, now
+requalified on the current DEZ runtime. The sole production correction selects
+`usesInstanceSolidStateLatchKey` and `airborneRiderUnseatRequiresOwnCheckpoint`
+on `S3kDezConveyorPadObjectInstance`. Status remains owned by the live occupant
+as metadata moves; earlier solids cannot consume its return. No shared owner,
+new state, allocator, timing, input, loading, audio or rewind algorithm changes.
+
+Every Java request uses this exact environment/command shape:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless OPENGGF_ROM_DIR="$OPENGGF_ROOT" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  "-Dtest=$SELECTION" test -B
+```
+
+- Baseline `SELECTION=TestDezJumpCausalObservation#observe`: **1T/0F/0E/0S**, exit 0;
+  queue **157s**, Maven **1m34s**, JUnit case **3.183s**. This is an observation
+  shell, not a passing route assertion. It again consumes **4843** inputs and
+  dies, maximum X `$1598`. First differences: Y **3268** `$08E9/$08E8`, camera Y
+  3275, X 3432, camera X 3438, Air 3606, velocities/ground speed/X fraction 3607,
+  Y fraction 3608, rolling 3697, routine 3699, angle 3967, rings 3974; no level
+  counter difference. Its 15-int-per-row big-endian state digest is
+  `764e390b77042f718d14c21ba205353958683ed43bc6e8b4092661b6170d337e`.
+  Frozen observer SHA-256 `2901186f18ae6293ce2e57467f37829e83608d29a02d01fbf090408a781a0585`,
+  complete `src` plus `pom.xml` path/NUL/bytes/NUL fingerprint
+  `f1ac0c82547419c32d7571b73adbea06f92dc9016f6317f85ce318c539fceb2c`.
+- Initial red selection `TestS3kDezConveyorPadSolidOwnership,TestS3kDezColdRoutes#coldActOneConveyorJumpPreservesNativeBoundary`:
+  **3T/3F/0E/0S**, exit 1; queue **16s**, Maven **38.034s**. The cold assertion
+  fails exactly at row 3268, Y expected 2281, actual 2280. Both new component
+  cases fail before initial contact because their declared pad is outside the
+  camera's solid window; those two failures do not establish the mechanism.
+  The test camera Y is corrected without changing production.
+- Corrected component-only baseline `SELECTION=TestS3kDezConveyorPadSolidOwnership`:
+  **2T/2F/0E/0S**, exit 1; queue **37s**, Maven **34.969s**. Both P1/P2 parameters
+  establish real support, then fail the intended pre-solid assertion:
+  `moving metadata must retain this occupant's airborne standing bit`, expected
+  true, actual false. Final component source SHA-256
+  `b482046e4219efd6a8aecfabfeb81f9924bf0c84f137c046671cf1e4e2b84b25`.
+  Old production conveyor SHA-256
+  `f3ed765021ebb03baae9cc166fab1d7d43cfa002359980600db105824c6b2fab`.
+
+### Candidate qualification and remaining scope
+
+The frozen combined selection is:
+
+```text
+TestDezJumpCausalObservation#observe,TestS3kDezConveyorPadSolidOwnership,TestS3kDezConveyorPadHeadless,TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+coldActOneLiftLandingPreservesNativeBoundary+coldActOneConveyorJumpPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It completes **97T/2F/0E/0S**, exit 1; queue **133s**, Maven **1m48s**.
+All **95 other cases pass**, including 60 S3K anchor cases (both packages'
+loading classes), 20 lift cases, 11 conveyor cases, three original-input
+prefixes and one observation shell. The permanent main prefix matches all
+13 asserted fields and unchanged inputs through 3280 rows. The observer sees
+**no difference in any of its 15 fields through 5000 original inputs** (75,000
+comparison samples), remains alive, maximum X `$1587`, and stops at its declared
+bound. Its digest is
+`17aee0fe25e155b333c8914e5b119728e96f6296dcc69806251ae18b77c92c5a`.
+This crosses the old 4843-input death, but is no act completion or later endpoint
+qualification. Fresh native instruction/end corroboration remains the 28-row
+window described above; the longer engine observer compares the committed rows.
+
+The corrected engine checkpoint now retains standing/ride and OnObj through all
+earlier solids and metadata movement. At its own pad checkpoint Sonic is
+`$150B,$08E9`, radius 14, velocity `$0138,$F980`, pad `$1540,$0907`, standing/ride
+true. The return clears only support and leaves Y `$08E9`, matching native.
+No movement/distance constant, terrain height, jump calculation or shared latch
+map was changed. Those alternative explanations are rejected by the actual
+jump and solid samples, not by the downstream endpoint improvement.
+
+Both new ownership parameters pass their moving-latch, airborne-release,
+other-participant support, actual removal/recreation and 45-update forward-replay
+assertions, then fail only at the final test's allocation assumption: expected
+retired slot 5, generic allocation returned earlier free slot 4. The test now
+requests the exact freed slot through the existing `addDynamicObjectAtSlot` API
+and keeps the exact-slot/no-inherited-bits assertions. This changes only that
+last test allocation; runtime and all previously passing cases are unchanged.
+
+Combined tested `src` plus `pom.xml` fingerprint:
+`d4bf69c72649b35e44c64e7a270dbcf84aa81559085eed9794c21e8a530097dd`.
+Production conveyor SHA-256:
+`1e45a98124bf74930c869ad4da08b49491e827c3add73aae05b4e78a27bb1b5d`;
+permanent cold-route test:
+`d8a0440003ea2045a4fd2c17e565107dd26264f7ae17a8899ee65689683bed7e`.
+The observation source adds only an alive-at-bound summary after the initial
+baseline and is SHA-256
+`abca41f373dda5f5af1b39748972deeb20508e1ef100006a7b3a202c6c514935`.
+The final ownership source is
+`88938eb6f5f59d5b2471664d55ba9d1b1d898080b8395052e5485b980cabec05`;
+with that allocation-only test correction, `src` plus `pom.xml` fingerprint is
+`a03d588f83ed2ff9415138ccf4ba96680c232ecde29345f598bb0233ee862aac`.
+
+The final narrow request, `SELECTION=TestS3kDezConveyorPadSolidOwnership`,
+completes **2T/0F/0E/0S**, exit 0; queue **109s**, Maven **35.015s**.
+Both exact participant identities execute, including the restored 45-update
+trajectory and exact replacement slot. The correction closes only the erroneous
+test allocation assumption; no production change follows the combined run.
+The 95 completed passing cases from that run are reused on their unchanged
+owners/fixtures/environment. This is not a claim that the original 97-case
+invocation passed: its two recorded failures above remain part of the evidence.
+
+All executed XML suite/case identities and dispositions are inspected. Java is
+**25.0.5.0.2**, explicit surfaceless EGL and the verified absolute original ROM
+property are present. No skipped case, fork error or dump occurs. Compiler and
+Unsafe deprecation noise, inherited FAST-to-NONE load-profile fallback and the
+decoding test's deliberate out-of-range warning are retained as known output.
+Queue waiting is distinct from Maven execution; overlapping intervals are not
+summed. Overall task wall and native execution durations are unmeasured.
+
+The change-based dry plan at the pinned integration base selects **3770 smoke
+classes plus guards**, including the temporary observer. It is not launched:
+this stateless pair of existing local provider selections has bounded original
+input, native decision, real P1/P2 lifetime, allocation/recreation/rewind and
+required S3K-anchor coverage under the explicit implementation-leaf scope.
+There is no broad smoke, full suite, strict whole-segment trace, whole-act,
+pixel/audio, integration, push, PR or release claim. Next: extend the matched
+original-input observation beyond 5000 to find the next causal frontier; no
+new first differing field is found inside this bound.
+
+The final maintained `src` plus `pom.xml` fingerprint, after deleting the
+uncommitted observer, is
+`23756b2976ca2e4e0c1a3ec3bea02e5f5d17fec6f785b527f1e71138d8a0b4e3`.
+Conveyor, permanent route and final ownership source hashes remain exactly those
+recorded above. No maintained executable input changes after its affected check.
+
+Cleanup deletes the temporary engine observer and bytecode, consumed owned
+Surefire/XML/text/raw Maven/native diagnostics, dry-plan/citation output and the
+external native executable/runtime-library link. The small native source and
+useful build outputs remain; no validation receipt or diagnostic archive is
+created. No owned native/Maven/queue job remains live. The provisioned checkout
+and local bugfix branch remain for lead review; no extra worktree/child is
+created, and original ROMs, foreign jobs and reference submodule changes are
+untouched. The parent owns integration and checkout/branch removal.
+
+`git diff --check`, new relative links/anchors, AGENTS/CLAUDE and skill mirrors,
+and exact historical evidence prefixes pass. The citation parser resolves all
+four conveyor-code references and finds no new hard/stale/unverifiable issues
+across the added frontier and mirrored P41 example; inherited findings are
+unchanged. Commit hooks validate the staged resource/documentation policy.

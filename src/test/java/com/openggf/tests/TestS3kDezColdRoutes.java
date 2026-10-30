@@ -7,6 +7,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.TraceCharacterState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,9 +16,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -267,6 +270,84 @@ class TestS3kDezColdRoutes {
         assertTrue(survived >= SEEDED_ROUTE_FRONTIER,
                 "the act 2 frontier must not move backwards from " + SEEDED_ROUTE_FRONTIER
                         + " frames:\n" + firstMismatch);
+    }
+
+    /** Original cold movie input through the first mace contact and hurt fall. */
+    @Test
+    void coldActOneOpeningPreservesNativeCompanionMaceContact() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2.toAbsolutePath())
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "original movie viewport");
+        var rows = readRows();
+        // A bounded contact regression, independent of the longer campaign frontier.
+        // Expected rows are comparison-only; all gameplay starts from the fresh ROM inlet.
+        boolean observedHurt = false;
+        for (int rowIndex = 0; rowIndex < 200; rowIndex++) {
+            fixture.stepFrameFromRecording();
+            var companion = GameServices.sprites().getRegisteredSidekicks().getFirst();
+            observedHurt |= companion.isHurt();
+            var row = rows.get(rowIndex);
+            int[] actual = {companion.getCentreX() & 0xFFFF, companion.getCentreY() & 0xFFFF,
+                    companion.getXSpeed() & 0xFFFF, companion.getYSpeed() & 0xFFFF,
+                    companion.getGSpeed() & 0xFFFF, companion.getXSubpixelRaw(),
+                    companion.getYSubpixelRaw(), companion.getAir() ? 1 : 0,
+                    companion.getRolling() ? 1 : 0, TraceCharacterState.routineFromSprite(companion)};
+            int[] columns = {26, 27, 28, 29, 30, 35, 36, 32, 33, 37};
+            int[] expected = Arrays.stream(columns)
+                    .map(column -> Integer.parseInt(row[column], 16)).toArray();
+            assertArrayEquals(expected, actual,
+                    "native companion movement/contact at original movie row " + rowIndex);
+        }
+        assertTrue(observedHurt, "the recorded opening must exercise the mace's hurt contact");
+    }
+
+    /** Original cold input through the first lift's exact-boundary rejection and later landing. */
+    @Test
+    void coldActOneLiftLandingPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(2720);
+    }
+
+    @Test
+    void coldActOneConveyorJumpPreservesNativeBoundary() throws Exception {
+        assertColdActOnePrefixMatchesNative(3280);
+    }
+
+    private void assertColdActOnePrefixMatchesNative(int comparedRows) throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2.toAbsolutePath())
+                .withRecordingStartFrame(SEGMENT_MOVIE_OFFSET)
+                .build();
+        assertEquals(320, GameServices.camera().getWidth(), "original movie viewport");
+        var rows = readRows();
+        var player = fixture.sprite();
+        // Comparison-only native rows: no position, clocks or object state are seeded.
+        for (int index = 0; index < comparedRows; index++) {
+            int input = fixture.stepFrameFromRecording();
+            var row = rows.get(index);
+            assertEquals(Integer.parseInt(row[1], 16), input, "original input " + index);
+            int[] actual = {player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
+                    player.getXSpeed() & 0xFFFF, player.getYSpeed() & 0xFFFF,
+                    player.getGSpeed() & 0xFFFF, player.getXSubpixelRaw(), player.getYSubpixelRaw(),
+                    player.getRingCount(), GameServices.camera().getX() & 0xFFFF,
+                    GameServices.camera().getY() & 0xFFFF, GameServices.level().getFrameCounter() & 0xFFFF,
+                    player.getAir() ? 1 : 0, player.getRolling() ? 1 : 0};
+            int[] columns = {9, 10, 11, 12, 13, 18, 19, 4, 2, 3, 5, 15, 16};
+            int[] expected = Arrays.stream(columns)
+                    .map(column -> Integer.parseInt(row[column], 16)).toArray();
+            assertArrayEquals(expected, actual, "native main movement/contact at original movie row " + index);
+        }
     }
 
     private static List<String[]> readRows() throws Exception {

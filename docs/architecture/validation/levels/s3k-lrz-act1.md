@@ -1858,3 +1858,61 @@ byte-identical to8d064688. Their inherited input5027 negatives and longer
 Act2/HPZ/campaign controllers remain pending. This is bounded maintained Java
 route/rewind coverage, not full-act, broader-product, native-clock/pixel or reset
 parity qualification.
+
+
+## Native crusher timer first dispatch — 2026-10-29
+
+A leaf based on pushed develop `bca1c3ae2` uses the unchanged Knuckles first-door
+and middle-corridor controllers. Read-only baseline observation proves the
+first-door death15323 comes from the attached Toxomister cloud's zero-ring
+drain. Middle death5027 comes from the `$21` smashing spike platform's full-solid
+squash branch with the platform active at5840/2818, subtype09; the nearby `$6B` does not issue that
+kill. These remain Act1 incoming-route endpoints, before the Act2 windows.
+
+An original-ROM cold native reference binds input0 to `Knuckles_Init` and
+records completed `Process_Sprites` boundaries. The first difference in the
+nine sampled position/fraction/velocity/inertia/angle/ring fields is input722:
+native Y2096/angle0/standing on a generated `$31` bridge at1344/2144, engine
+Y2097/angle6 with no rider until723. This is not a sinking-rock contact.
+Native execute callbacks prove timer initialization and its first decrement on
+level tick543, then expiry, bridge allocation and bridge initialization on722.
+The independent baseline test fails178 expected/179 actual. Removing the timer
+initializer's early return models its native fallthrough; its constant and
+negative-underflow branch are unchanged.
+
+The [frontier entry](../../../status/trace-frontier-log.md#2026-10-29--lrz-crusher-timer-first-dispatch-and-route-death-attribution)
+records exact commands, source/ROM/movie identities, measured extents and final
+qualification. This is a local timer obligation: broader viewport, donor,
+roster, native clock/pixel/terrain, positive-ring handoff and complete-act gaps
+remain inherited. No shared loop, loading, timing, audio or rewind implementation
+is changed.
+
+
+Corrected-source result: the focused owner/allocation/rewind/four-anchor
+selection passes93 tests without failures/errors/skips. Both unchanged maintained
+Knuckles route methods still fail in Act1, at15323 (9765/2479) and5027
+(5782/2869), before all17/48 destination windows. The observed bridge contact
+moves from723 to the native722, and the nine sampled fields match completed
+native object passes through level732. Per-input comparison still differs at
+native admission hold723; it is not waived. No new Act2 qualification follows.
+
+
+## Native input admission after crusher expiry — 2026-10-29
+
+On requested develop `e815aad643ac8cd62467d500e2336ef979e80ef8`, a fresh800-input
+first-door comparison matches all nine sampled motion/angle/ring fields through
+input722. At723 native VInt takes routine0 at the return from synchronous plane
+refresh: no controller poll or new body runs, direct Kos count is0, and the
+level counter remains722. The ordinary engine capture advances to723, producing
+the first strict Y2096/2097 difference. A second native lag occurs at732 during
+sprite rendering. Counter-matched diagnostics agree through native level797;
+that alignment is not an input-aligned parity pass.
+
+The [bounded frontier evidence](../../../status/trace-frontier-log.md#2026-10-29--lrz-input-723-hold-is-native-lag-at-direct-plane-refresh)
+records exact source/input identities, callbacks, command, warnings, timing and
+coverage limits. The engine observation shell is1T/0F/0E/0S, not a route test
+pass. No further LRZ-local cause is proven, so no runtime, controller or shared
+loop/timing owner is changed. Allocation/rewind/anchor results from the earlier
+timer repair remain historical; no new qualification is claimed. The later
+Act1 death endpoints, Act2 windows, complete route, native pixels and broader
+viewport/donor/roster obligations remain inherited and unmeasured here.
