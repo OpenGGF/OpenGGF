@@ -1015,7 +1015,7 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 |-------|--------|
 | `Shift+Tab` | Switch between the editor document and its playtest |
 | `F5` | Start a fresh current-project playtest at the authored start; does not save |
-| `F1` / controller Menu | Open the editor menu, including project commands |
+| `F1` / controller Menu | Open the editor menu: everyday commands, projects, the full command sheet and **Exit to title** (asks to save first) |
 | Arrows / gamepad menu directions | Step whole blocks (8 pixels for objects/rings), or move selection in an open library |
 | `Tab` / north controller button | Open the library for the current brush kind |
 | `Page Up` / `Page Down` | Move through pages in an open library |
@@ -1072,7 +1072,7 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 | RT / LT | Edit the block or chunk under the cursor / go back up |
 | East (B / Circle) | Back: close a sheet or return to the parent view |
 | View (hold) | Tools wheel; steer and release, or use the D-pad and South |
-| Menu | Save, playtest, export, project commands and every editor command |
+| Menu | Editor menu: save, playtests, projects, every editor command and Exit to title |
 | L3 / R3 | Toggle FG/BG layer / collision overlay |
 | Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 0.25×–8× |
 | Object properties: up/down / left/right | Choose named field / change value |

@@ -540,6 +540,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		editorPalette.setWorkspaceCommands(java.util.List.of(
 				new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate)));
 		editorPalette.setHostCommands(editorCommands);
+		editorPalette.setExitAction(this::requestEditorExit);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
@@ -1623,6 +1624,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				camera == null ? 0 : camera.getXCopy(), camera == null ? 0 : camera.getYCopy());
 		gameLoop.setEditorProjectModalMode(GameMode.MASTER_TITLE_SCREEN, true);
 		stageplay.requestQuit(() -> editorProjects.requestQuit(this::closeApplicationWindow));
+	}
+
+	/** Leaves the editor for the master title once Stageplay and the level have settled unsaved work. */
+	private void requestEditorExit() {
+		editorInputHandler.finishPendingEdits();
+		stageplay.requestQuit(editorProjects::requestExit);
 	}
 
 	private void restoreEditorQuitView() {

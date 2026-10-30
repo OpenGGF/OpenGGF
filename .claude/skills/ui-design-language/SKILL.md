@@ -73,8 +73,10 @@ frames or icons. Evidence and scoring history:
   (`EditorHudPainter.keycap`) beside labels or in a prompt bar, never letters inside a
   label. Stageplay names its mode in a top-bar chip beside the exit button, as the
   editor's top bar does, and its prompt bar (the shared `promptBar`) keeps the whole width
-  for keys. The editor menu is a captioned command sheet built from the authored
-  `EditorCommandPalette` descriptors (label, group, the shortcut `EditorInputHandler` really
+  for keys. The editor menu opens on a short front page (Resume, Save, the playtests, the
+  level pages, projects and the host's Exit to title, which owns the unsaved-work prompt);
+  its All commands row opens a captioned command sheet, whose Back returns to the front
+  page, built from the authored `EditorCommandPalette` descriptors (label, group, the shortcut `EditorInputHandler` really
   binds, and the editor state in which a shared key reaches it): each command once, held
   controls such as panning left out, and every shown shortcut dispatched through the real
   input path in a test. Host commands keep their group: workspace switches under Editor,
