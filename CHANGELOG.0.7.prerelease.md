@@ -789,6 +789,7 @@ Unreleased. The earlier development themes remain in
   and the original idle intervals across repeated pulses. Sliding fan platforms
   occupy their original object slots and allocate fans during initialization,
   preserving latch reads between other fans and retrying when slots become free.
+  Their allocated fan links are explicitly covered by stable-identity rewind capture.
   Spinning columns stop inertia at native zero-velocity left-side contacts. Hydrocity's hand
   launcher checks its top surface on every pass, as in the original, so a rising
   hand catches a player rolling over it.
