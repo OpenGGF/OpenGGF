@@ -32,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * The existing detached first-pass oracle establishes healthy7775. Later calls
  * use only the unchanged World controller. Expected outputs never execute
  * Body/Frame/Solid/terrain/placement/animation/draw production helpers.
- * Restoration compares complete represented native state. The single7808 is an
- * INCOMPLETE7808 prefix witness: the first later dispatcher failure is retained,
- * never retried/restored/captured after failure. Intervening supported bodies
+ * Restoration compares complete represented native state. The single7808 now
+ * returns through the ordinary Main continuation; its Float33 oracle preserves
+ * the actual pre-scroll cull and prior-selected versus newly completed SAT. Intervening supported bodies
  * have no independent full96 oracle here; changed images are observations only.
  */
 @Isolated
@@ -60,7 +60,7 @@ class TestSonicCdPastFloatBlockWorld {
     @Test void courseHealthy7776And7806CutsRestoreForwardTheirCompleteNativeOutputs() throws Exception {
         replayHealthyEdges(true);
     }
-    @Test void actual7808OnceCompletesFloat33BeforeItsRetainedLaterDispatcherFrontier() throws Exception {
+    @Test void actual7808OnceCompletesFloat33AndTheOrdinaryMainContinuation() throws Exception {
         var p = healthy7775(); advance(p, 7776, 7807); var h = p.harness(); var f = p.frame();
         var pool = p.placement().pool(); var poolOwner = actualField(pool, "owner");
         byte[][] beforeImages = images(pool);
@@ -107,29 +107,26 @@ class TestSonicCdPastFloatBlockWorld {
         var world = h.mode().getWorldSession();
         long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
         var level = actualField(values, "level");
-        // Exactly ONE7808. Unexpected earlier exceptions remain assertion causes.
-        var failure = assertThrowsExactly(SonicCdGameModule.UnsupportedPastLoading.class, () -> {
-            try { step(h, route(7808)); }
-            catch (Throwable first) {
-                try { diagnose(p, beforeImages, first); }
-                catch (Throwable diagnostic) { if (diagnostic != first) first.addSuppressed(diagnostic); }
-                throw first;
-            }
-        });
-        // RETAINED REFERENCES/RAW GETTERS ONLY: no failed-owner capture below.
+        // Exactly ONE ordinary7808. Every unexpected original fault is rethrown.
+        try { step(h, route(7808)); }
+        catch (Throwable first) {
+            try { diagnose(p, beforeImages, first); }
+            catch (Throwable diagnostic) { if (diagnostic != first) first.addSuppressed(diagnostic); }
+            throw first;
+        }
+        // The actual native pass returned; healthy observations are legal below.
         var afterValues = actualField(p.visit(), "values"); var calls = callNames(afterValues);
         int body = calls.indexOf("FLOAT_BLOCK_BODY");
-        assertTrue(body >= 0, () -> "INCOMPLETE7808 before Float33 return: " + failure + " " + calls);
+        assertTrue(body >= 0, () -> "Completed7808 must contain the first Float33 return: " + calls);
         var firstFloat = calls.subList(0, body + 1).stream().filter(x -> x.startsWith("FLOAT_BLOCK_")).toList();
         assertEquals(List.of("FLOAT_BLOCK_SOLID", "FLOAT_BLOCK_SOLID", "FLOAT_BLOCK_BODY"), firstFloat,
                 "Two separately published actual Top outcomes precede first normal body marker");
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, failure.boundary(),
-                "Only the actual later missing dispatcher is an accepted incomplete frontier");
         ordered(calls, "ORDINARY_SERVICE", "LEVEL_FRAME_INCREMENT", "SPAWN_OBJECTS", "PRIMARY_MAIN",
-                "RESERVED_OBJECTS", "RING_BODY", "FLOAT_BLOCK_SOLID", "FLOAT_BLOCK_BODY");
-        assertFalse(calls.contains("DYNAMIC_OBJECTS")); assertFalse(calls.contains("DRAW_OBJECTS"));
-        assertFalse(calls.contains("ORDINARY_MAIN_RETURN"));
-        assertTrue(f.closed()); assertFalse(f.paused());
+                "RESERVED_OBJECTS", "RING_BODY", "FLOAT_BLOCK_SOLID", "FLOAT_BLOCK_BODY",
+                "PATA_BATA_BODY", "DYNAMIC_OBJECTS", "POST_OBJECT_GUARDS", "LEVEL_SCROLL", "DRAW_OBJECTS",
+                "UPDATE_SECTION", "PREPARE_PLCS", "UPDATE_GLOBAL_ANIMATIONS", "ORDINARY_MAIN_RETURN");
+        assertEquals("ORDINARY_MAIN_RETURN", calls.getLast());
+        assertFalse(f.closed()); assertFalse(f.paused());
         assertEquals(78L, f.vIntClock().absoluteValue().orElseThrow());
         assertEquals(34, f.environment().globals().levelFrames());
         assertEquals(8, f.environment().controls().rawHeld());
@@ -140,34 +137,28 @@ class TestSonicCdPastFloatBlockWorld {
         assertArrayEquals(float33AfterBody(cameraX), pool.state(33).copyBytes(),
                 "Every Float33 byte including integer/fraction aliases and nonwrites");
         boolean culled = float33Culled(cameraX, cameraY), deleted = float33OutsideWindow(cameraX);
-        var queue = assertInstanceOf(CdObjectDrawQueue.class, actualField(p.visit(), "drawQueue"));
-        assertEquals(CdObjectDrawQueue.Phase.CLOSED, queue.phase());
-        var pointers = assertInstanceOf(CdObjectDrawQueue.CdSlotRef[][].class, actualField(queue, "pointers"));
-        var counts = assertInstanceOf(int[].class, actualField(queue, "pointerByteCounts"));
-        int occurrences = 0;
-        for (int bucket = 0; bucket < pointers.length; bucket++) {
-            assertTrue(counts[bucket] >= 0 && counts[bucket] <= 0x7E && (counts[bucket] & 1) == 0);
-            for (int ordinal = 0; ordinal < counts[bucket] / 2; ordinal++) {
-                var ref = pointers[bucket][ordinal]; assertNotNull(ref);
-                if (ref.wholeIndex() == 33) { occurrences++; assertEquals(1, bucket); }
-            }
-        }
-        // Even31 reserved + one primary + Ring32 cannot fill a63-pointer bucket
-        // before33. Window deletion happens AFTER Draw and retains its pointer.
-        assertEquals(culled ? 0 : 1, occurrences, "Actual pre-scroll camera controls retained Draw pointer");
-        System.out.println("PAST_FLOAT_INCOMPLETE7808 cameraX=" + cameraX + " cameraY=" + cameraY
-                + " float33Culled=" + culled + " float33WindowDeleted=" + deleted + " float33Pointers=" + occurrences
+        assertTrue(culled, "Fixed native Float33 lies outside the actual pre-scroll viewport");
+        assertFalse(deleted, "Native masked chunk equality280 retains Float33");
+        assertNull(actualField(p.visit(), "drawQueue"), "Completed native DrawObjects retires its actual queue");
+        var completed = completedDraw(p);
+        assertEquals(640, completed.bytes().length);
+        assertEquals(completed.spriteCount(), completed.provenance().size());
+        assertFalse(completed.provenance().stream().anyMatch(x -> x.slotRef().wholeIndex() == 33),
+                "Culled Float33 contributes no mapping pieces to the new CPU table");
+        System.out.println("PAST_FLOAT_RETURNED7808 cameraX=" + cameraX + " cameraY=" + cameraY
+                + " float33Culled=" + culled + " float33WindowDeleted=" + deleted
                 + " bodyMarkers=" + calls.stream().filter("FLOAT_BLOCK_BODY"::equals).count());
         assertSame(world, h.mode().getWorldSession());
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertSame(source, actualField(f, "pastSource")); assertSame(artOwner, actualField(f, "art"));
         assertSame(frameOwner, actualField(f, "captureOwner")); assertSame(poolOwner, actualField(pool, "owner"));
         assertSame(saved, actualField(p.visit(), "saved")); assertEquals(level, actualField(afterValues, "level"));
-        assertSame(scroll.state(), actualField(presentation, "scrollState"), "No post-object camera step");
-        assertSame(scroll.background(), actualField(presentation, "backgroundState"));
-        assertSame(oldCpu, completedDraw(p)); assertSame(cpuBytes, actualField(afterValues, "cpuSat"));
+        assertSame(presentation, actualField(h.module(), "playerPresentation"));
+        assertNotSame(oldCpu, completed, "Successful DrawObjects owns a fresh completed CPU table");
+        assertArrayEquals(completed.bytes(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "cpuSat")).copy());
+        assertArrayEquals(oldCpu.bytes(), cpuBytes.copy(), "The captured healthy7807 CPU image remains immutable");
         assertArrayEquals(oldCpu.bytes(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedSat")).copy(),
-                "Actual earlier VInt publishes prior CPU image; failed objects build no new SAT");
+                "Actual earlier VInt selects the prior CPU image before this Main builds its new table");
         var afterSection = assertInstanceOf(CdR11bSectionArt.State.class, actualField(afterValues, "section"));
         assertSlowPlc(section, afterSection, plcBudget);
         var afterCurrent = afterSection.residency();

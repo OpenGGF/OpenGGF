@@ -40,6 +40,7 @@ final class SonicCdPastLoadingVisit {
     private final CdPlatform platform;
     private final CdFloatBlock floatBlock;
     private final CdAnimal animal;
+    private final CdPataBata pataBata;
     private final CdTunnelDoor tunnelDoor;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
@@ -52,6 +53,7 @@ final class SonicCdPastLoadingVisit {
     private transient SpringInvocation activeSpring;
     private transient PlatformInvocation activePlatform;
     private transient FloatInvocation activeFloat;
+    private transient PataInvocation activePata;
     private transient TunnelDoorInvocation activeTunnelDoor;
     private transient MonitorInvocation activeMonitor;
     private transient DrainInvocation activeDrain;
@@ -67,6 +69,7 @@ final class SonicCdPastLoadingVisit {
     private boolean drawingPlatform;
     private boolean floatPort;
     private boolean drawingFloat;
+    private boolean drawingPata;
     private boolean tunnelDoorPort;
     private boolean drawingTunnelDoor;
     private boolean monitorPort;
@@ -191,6 +194,7 @@ final class SonicCdPastLoadingVisit {
         placement = CdObjectPlacementRuntime.fromAssets(assets, savedObjectFlags);
         this.ring = CdRing.fromAssets(placement, assets);
         animal = new CdAnimal(placement);
+        pataBata = new CdPataBata(placement, CdPataBata.Assets.fromPastAssets(assets), this::drawPataBata);
         primaryScanner = new CdPlayerObjectTouch(CdR11aObjectAssets.decodeTouchDimensions(
                 assets.view(CdR11bAssets.Asset.TOUCH_DIMENSIONS).bytes().copy()));
         primaryResponse = new CdPlayerTouchResponse(assets.view(CdR11bAssets.Asset.ENEMY_POINTS).bytes());
@@ -270,13 +274,13 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || drawQueue != null)
+        if (servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
     private void requireCallback() {
         module.requirePastLoadingVisit(this);
-        if (!servicing || loadingSaved || activeFloat != null || floatPort || drawingFloat) throw new IllegalStateException("No actual Past selectorC callback");
+        if (!servicing || loadingSaved || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat) throw new IllegalStateException("No actual Past selectorC callback");
     }
     private void call(SonicCdGameModule.PastLoadCall call) {
         var calls = new ArrayList<>(values.calls()); calls.add(call);
@@ -380,7 +384,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || drawQueue != null)
+        if (runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -419,6 +423,8 @@ final class SonicCdPastLoadingVisit {
                     runFloatBlock(whole); call(FLOAT_BLOCK_BODY);
                 } else if (id == CdAnimal.OBJECT_ID) {
                     runAnimal(whole); call(ANIMAL_PRESENCE);
+                } else if (id == CdPataBata.OBJECT_ID) {
+                    runPataBata(whole); call(PATA_BATA_BODY);
                 } else if (id == CdSpring.OBJECT_ID) {
                     runSpring(whole); call(SPRING_BODY);
                 } else if (id == CdPlatform.OBJECT_ID) {
@@ -500,7 +506,7 @@ final class SonicCdPastLoadingVisit {
     private void runPrimaryMain(int levelFrame) {
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || reservedPort || drawingReserved
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || reservedPort || drawingReserved
                 || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
                 || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -660,7 +666,7 @@ final class SonicCdPastLoadingVisit {
         if (invocation == null || activePrimary != invocation || invocation.owner != this
                 || !runningObjects || servicing || loadingSaved || activeDrain != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
-                || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
                 || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -757,7 +763,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
-                || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
                 || monitorPort || drawingMonitor || queuePort || drawQueue == null
                 || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
@@ -856,7 +862,7 @@ final class SonicCdPastLoadingVisit {
         var actual = placement.capture();
         if (!runningObjects || servicing || loadingSaved || invocation == null || activeDrain != invocation
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort
                 || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
                 || drawingTunnelDoor || monitorPort || drawingMonitor || invocation.queue != drawQueue
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -928,6 +934,8 @@ final class SonicCdPastLoadingVisit {
         var springView = assets.view(CdR11bAssets.Asset.MAP_SPRING);
         var platformView = assets.view(CdR11bAssets.Asset.PLATFORM_MAPPINGS);
         var floatView = assets.view(CdR11bAssets.Asset.MAP_SPR_FLOAT_BLOCK);
+        var pataNormalView = assets.view(CdR11bAssets.Asset.MAP_SPR_PATA_BATA1);
+        var pataDamagedView = assets.view(CdR11bAssets.Asset.MAP_SPR_PATA_BATA2);
         var tunnelDoorView = assets.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR);
         var sonicView = assets.view(CdR11bAssets.Asset.MAP_SPR_SONIC);
         var sonic = assets.sonic();
@@ -948,6 +956,8 @@ final class SonicCdPastLoadingVisit {
                 new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 80, 3),
                 new CdObjectMappings.DeclaredTable(platformView.range().nativeAddress(), platformView.bytes(), 0, 3),
                 new CdObjectMappings.DeclaredTable(floatView.range().nativeAddress(), floatView.bytes(), 0, 6),
+                new CdObjectMappings.DeclaredTable(pataNormalView.range().nativeAddress(), pataNormalView.bytes(), 0, 3),
+                new CdObjectMappings.DeclaredTable(pataDamagedView.range().nativeAddress(), pataDamagedView.bytes(), 0, 3),
                 new CdObjectMappings.DeclaredTable(tunnelDoorView.range().nativeAddress(), tunnelDoorView.bytes(), 0, 2)),
                 List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
@@ -959,6 +969,7 @@ final class SonicCdPastLoadingVisit {
                         : activeSpring != null ? readSpringDrawSlot(ref)
                         : activePlatform != null ? readPlatformDrawSlot(ref)
                         : activeFloat != null ? readFloatDrawSlot(ref)
+                        : activePata != null ? readPataDrawSlot(ref)
                         : activeTunnelDoor != null ? readTunnelDoorDrawSlot(ref)
                         : activeMonitor != null ? readMonitorDrawSlot(ref) : readRingDrawSlot(ref);
             }
@@ -969,6 +980,7 @@ final class SonicCdPastLoadingVisit {
                 else if (activeSpring != null) writeSpringOnScreen(ref, onScreen);
                 else if (activePlatform != null) writePlatformOnScreen(ref, onScreen);
                 else if (activeFloat != null) writeFloatOnScreen(ref, onScreen);
+                else if (activePata != null) writePataOnScreen(ref, onScreen);
                 else if (activeTunnelDoor != null) writeTunnelDoorOnScreen(ref, onScreen);
                 else if (activeMonitor != null) writeMonitorOnScreen(ref, onScreen);
                 else writeRingOnScreen(ref, onScreen);
@@ -1017,7 +1029,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (!runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat
+        if (!runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
@@ -1045,7 +1057,7 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -1059,7 +1071,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
@@ -1289,7 +1301,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runRing(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -1341,7 +1353,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeRing != invocation || !runningObjects || servicing || loadingSaved
-                || activePrimary != null || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
+                || activePrimary != null || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
                 || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
@@ -1574,7 +1586,7 @@ final class SonicCdPastLoadingVisit {
     private void runSpring(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdSpring.OBJECT_ID || values.phase() != BEGIN_LEVEL
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -1610,7 +1622,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeSpring != invocation || !runningObjects || servicing || loadingSaved
-                || activePrimary != null || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+                || activePrimary != null || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || reservedPort || drawingReserved || ringPort || drawingRing
                 || invocation.body != spring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -1969,7 +1981,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeFloat != null || activeTunnelDoor != null || activeMonitor != null
+                || activeFloat != null || activePata != null || drawingPata || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
                 || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
@@ -2009,7 +2021,7 @@ final class SonicCdPastLoadingVisit {
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (!invocation.active || invocation.body != animal || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeFloat != null || activeTunnelDoor != null || activeMonitor != null
+                || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || drawingPata || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
                 || monitorPort || drawingMonitor || queuePort || invocation.pool != placement.pool()
@@ -2056,6 +2068,398 @@ final class SonicCdPastLoadingVisit {
             throw new IllegalStateException("Animal changed source identity or placement cursors");
     }
 
+
+    /** One real ID3E dispatch. All prefix/scalar models below observe writes; none execute a producer. */
+    private enum PataSite { DRAW, RETURN, FAILURE }
+    private final class PataInvocation {
+        private final CdPataBata body = pataBata;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final List<SonicCdGameModule.PastSound> ledger = sounds;
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final CdPataBata.Globals inputs;
+        private CdObjectState drawSource;
+        private boolean drawn, screenCleared, tailArmed, bodyReady;
+        private CdPataBata.UnsupportedBoundary expectedStop;
+        private PataInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.pastForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+            var gates = frame.environment().movement().gates();
+            inputs = new CdPataBata.Globals(values.globals().retainedDev().goodFuture(),
+                    gates.timeZone(), gates.timeWarpDirection(), camera.xWord());
+        }
+    }
+
+    private void runPataBata(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeFloat != null || activeTunnelDoor != null || activeMonitor != null || activePata != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
+                || monitorPort || drawingMonitor || drawingPata || queuePort || whole < 32 || whole >= 128
+                || placement.pool().state(whole).id() != CdPataBata.OBJECT_ID || values.phase() != BEGIN_LEVEL
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past Pata-Bata dispatch");
+        var invocation = new PataInvocation(whole); activePata = invocation;
+        try {
+            var result = pataBata.run(whole, invocation.inputs);
+            verifyPataInvocation(invocation); validatePataSource(invocation, PataSite.RETURN);
+            verifyPataResult(invocation, result);
+        } catch (RuntimeException | Error original) {
+            verifyPataFailure(invocation, original); throw original;
+        } finally { activePata = null; }
+    }
+
+    private PataInvocation requirePataInvocation(CdObjectPool pool, int whole) {
+        var invocation = activePata;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Pata-Bata callback at this physical pointer");
+        verifyPataInvocation(invocation); return invocation;
+    }
+    private void verifyPataInvocation(PataInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (invocation == null || activePata != invocation || !runningObjects || servicing || loadingSaved
+                || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeFloat != null || activeTunnelDoor != null || activeMonitor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
+                || monitorPort || drawingMonitor || invocation.body != pataBata || invocation.sourceFrame != frame
+                || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
+                || invocation.pool != placement.pool() || invocation.queue != drawQueue || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || values != invocation.base || values.phase() != BEGIN_LEVEL || sounds != invocation.ledger
+                || !placement.status().equals(invocation.before.status()) || !presentation.samePastScroll(invocation.scroll)
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Pata-Bata changed another owner or retained a stale actual World/Frame cut");
+        invocation.pool.validateRestore(invocation.before.pool());
+    }
+    private void verifyPataFailure(PataInvocation invocation, Throwable original) {
+        try {
+            verifyPataInvocation(invocation); validatePataSource(invocation, PataSite.FAILURE);
+            if (original instanceof CdPataBata.UnsupportedPataBata stopped) {
+                var effects = new ArrayList<CdPataBata.Effect>();
+                effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DESTROY_ON_GOOD_FUTURE));
+                var boundary = stopped.boundary();
+                if (boundary == CdPataBata.UnsupportedBoundary.SET_OBJECT_TILE_ID
+                        || boundary == CdPataBata.UnsupportedBoundary.ANIMATE_OBJECT) {
+                    var prefixes = pataBodyPrefixes(invocation);
+                    if (invocation.drawn || invocation.expectedStop != boundary
+                            || !prefixes.getLast().equals(invocation.pool.state(invocation.whole)))
+                        throw new IllegalStateException("Pata-Bata read fault lacks its exact committed native prefix");
+                } else {
+                    if (!invocation.bodyReady || !invocation.drawn)
+                        throw new IllegalStateException("Pata-Bata callback/tail fault preceded its actual body");
+                    effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.ANIMATE_OBJECT));
+                    if (boundary == CdPataBata.UnsupportedBoundary.CHECK_OBJ_DESPAWN2) {
+                        if (!invocation.tailArmed) throw new IllegalStateException("Pata-Bata tail fault preceded returned DrawObject");
+                        effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DRAW_OBJECT));
+                    }
+                }
+                if (stopped.wholeIndex() != invocation.whole || !stopped.completedEffects().equals(effects))
+                    throw new IllegalStateException("Pata-Bata fault metadata changed its physical source/completed calls");
+            }
+        } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /**
+     * Literal observations of the cached body's committed source images, N ObjPataBata:11-77.
+     * Never invokes run, AnimateObject, CalcSine or a gameplay publication. The legacy animator
+     * publishes atomically: an absent selected byte leaves the complete pre-animation image.
+     */
+    private List<CdObjectState> pataBodyPrefixes(PataInvocation invocation) {
+        var prefixes = new ArrayList<CdObjectState>(); var source = invocation.entry;
+        prefixes.add(source); invocation.bodyReady = false; invocation.expectedStop = null;
+        if (source.routine() == 0) {
+            source = source.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                    .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() | 4)
+                    .moveByte(CdObjectState.ByteField.PRIORITY, 3).moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0x2A)
+                    .moveByte(CdObjectState.ByteField.X_RADIUS, 0x10).moveByte(CdObjectState.ByteField.WIDTH, 0x10)
+                    .moveByte(CdObjectState.ByteField.Y_RADIUS, 0x10)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_ANCHOR_X, source.centreX())
+                    .moveLong(CdObjectState.LongField.PATA_BATA_ANCHOR_Y, (source.centreY() << 16) | 0x8000);
+            prefixes.add(source);
+            var tiles = assets.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+            int selected = (short) tiles.unsignedWord(2) + (source.subtype2() << 1);
+            if ((selected & 1) != 0 || selected < 0 || selected > tiles.length() - 2) {
+                invocation.expectedStop = CdPataBata.UnsupportedBoundary.SET_OBJECT_TILE_ID; return prefixes;
+            }
+            source = source.moveWord(CdObjectState.WordField.TILE, tiles.unsignedWord(selected)); prefixes.add(source);
+            boolean damaged = source.subtype() != 0;
+            source = source.moveLong(CdObjectState.LongField.PATA_BATA_X_DELTA, damaged ? -0x4000 : -0x8000)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_PHASE_SPEED, damaged ? -0x100 : -0x200)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_SHIFT, damaged ? 4 : 3)
+                    .moveByte(CdObjectState.ByteField.ANIMATION, damaged ? 1 : 0)
+                    .moveLong(CdObjectState.LongField.MAPPINGS, assets.view(damaged
+                            ? CdR11bAssets.Asset.MAP_SPR_PATA_BATA2 : CdR11bAssets.Asset.MAP_SPR_PATA_BATA1).range().nativeAddress());
+            prefixes.add(source);
+        }
+        // Every nonzero routine enters Main, including odd/FF. No time-stop, player or proximity gate.
+        int delta = source.longBits(CdObjectState.LongField.PATA_BATA_X_DELTA);
+        source = source.addLong(CdObjectState.LongField.X_POSITION, delta); prefixes.add(source);
+        int distance = (source.centreX() - source.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X)) & 0xFFFF;
+        if ((short) distance < 0) distance = (-distance) & 0xFFFF;
+        if ((short) distance >= 0x80) {
+            delta = -delta;
+            source = source.moveLong(CdObjectState.LongField.PATA_BATA_X_DELTA, delta); prefixes.add(source);
+            source = source.addLong(CdObjectState.LongField.X_POSITION, delta); prefixes.add(source);
+            source = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() ^ 1)
+                    .moveByte(CdObjectState.ByteField.FLAGS, source.flags() ^ 1)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_PHASE, 0); prefixes.add(source);
+        }
+        source = source.addWord(CdObjectState.WordField.PATA_BATA_PHASE,
+                source.signedWord(CdObjectState.WordField.PATA_BATA_PHASE_SPEED)); prefixes.add(source);
+        int angle = source.word(CdObjectState.WordField.PATA_BATA_PHASE) >>> 8;
+        // Observe the original B source WORD, not a second CalcSine helper invocation.
+        int sine = (short) assets.player().sineTable().unsignedWord(angle * 2);
+        int swapped = ((sine & 0xFFFF) << 16) | (delta >>> 16);
+        int count = source.word(CdObjectState.WordField.PATA_BATA_SHIFT) & 63;
+        source = source.moveLong(CdObjectState.LongField.Y_POSITION,
+                source.longBits(CdObjectState.LongField.PATA_BATA_ANCHOR_Y) + (count >= 32 ? swapped >> 31 : swapped >> count));
+        prefixes.add(source);
+        var animated = pataAnimationImage(source);
+        if (animated == null) { invocation.expectedStop = CdPataBata.UnsupportedBoundary.ANIMATE_OBJECT; return prefixes; }
+        prefixes.add(animated); invocation.bodyReady = true; return prefixes;
+    }
+
+    /** Read-only scalar Object Animate:14-95 observation over this one shared 18-byte table. */
+    private CdObjectState pataAnimationImage(CdObjectState source) {
+        var expected = source;
+        int animation = source.unsignedByte(CdObjectState.ByteField.ANIMATION);
+        int index = source.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME);
+        if (animation != source.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION)) {
+            index = 0;
+            expected = expected.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, animation)
+                    .moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0).moveByte(CdObjectState.ByteField.ANIMATION_TIME, 0);
+        }
+        expected = expected.addByte(CdObjectState.ByteField.ANIMATION_TIME, -1);
+        if (expected.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME) < 0x80) return expected;
+        var bytes = assets.view(CdR11bAssets.Asset.ANI_PATA_BATA).bytes();
+        if (animation >= 2) return null;
+        int script = (short) bytes.unsignedWord(animation * 2);
+        int timer = pataAnimationByte(bytes, script, 0), raw = pataAnimationByte(bytes, script, 1 + index);
+        if (timer < 0 || raw < 0) return null;
+        expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_TIME, timer);
+        if (raw == 0xFF) {
+            index = 0; raw = pataAnimationByte(bytes, script, 1); if (raw < 0) return null;
+        } else if (raw == 0xFE) {
+            int back = pataAnimationByte(bytes, script, 2 + index); if (back < 0) return null;
+            index = (index - back) & 0xFF;
+            raw = pataAnimationByte(bytes, script, 1 + index); if (raw < 0) return null;
+        } else if (raw >= 0x80) {
+            if (raw == 0xFD) {
+                int next = pataAnimationByte(bytes, script, 2 + index); if (next < 0) return null;
+                expected = expected.moveByte(CdObjectState.ByteField.ANIMATION, next);
+            } else if (raw == 0xFC) expected = expected.addByte(CdObjectState.ByteField.ROUTINE, 2);
+            else if (raw == 0xFB) expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0)
+                    .moveByte(CdObjectState.ByteField.ROUTINE_2, 0);
+            else if (raw == 0xFA) expected = expected.addByte(CdObjectState.ByteField.ROUTINE_2, 2);
+            return expected;
+        }
+        int rotated = ((raw << 3) | (raw >>> 5)) & 0xFF;
+        return expected.moveByte(CdObjectState.ByteField.MAP_FRAME, raw & 0x1F)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, (source.spriteFlags() & 0xFC) | ((rotated ^ source.flags()) & 3))
+                .moveByte(CdObjectState.ByteField.ANIMATION_FRAME, (index + 1) & 0xFF);
+    }
+    private static int pataAnimationByte(CdAssetBytes bytes, int script, int offset) {
+        long address = (long) script + offset;
+        return address < 0 || address >= bytes.length() ? -1 : bytes.unsignedByte((int) address);
+    }
+
+    private void validatePataSource(PataInvocation invocation, PataSite site) {
+        boolean failure = site == PataSite.FAILURE;
+        var actual = invocation.pool.state(invocation.whole); var bank = invocation.before.savedFlags();
+        boolean conversion = invocation.inputs.goodFuture() != 0
+                && (invocation.inputs.timeZone() != 1 || invocation.entry.subtype() != 0);
+        if (conversion) {
+            if (invocation.drawn || site == PataSite.DRAW) throw new IllegalStateException("Converted Pata-Bata reached DrawObject");
+            byte[] deleted = new byte[CdObjectState.BYTE_SIZE], x = deleted.clone();
+            x[8] = (byte) (invocation.entry.centreX() >>> 8); x[9] = (byte) invocation.entry.centreX();
+            byte[] xy = x.clone(); xy[12] = (byte) (invocation.entry.centreY() >>> 8); xy[13] = (byte) invocation.entry.centreY();
+            byte[] converted = xy.clone(); converted[0] = 0x18;
+            byte[] chosen = converted;
+            if (failure) {
+                chosen = null;
+                for (var prefix : List.of(invocation.entry.copyBytes(), deleted, x, xy, converted))
+                    if (Arrays.equals(actual.copyBytes(), prefix)) { chosen = prefix; break; }
+                if (chosen == null) throw new IllegalStateException("Pata-Bata conversion exceeded Delete64/X/Y/ID18");
+            }
+            verifyPataImages(invocation, chosen, bank); return;
+        }
+        if (!invocation.drawn) {
+            var prefixes = pataBodyPrefixes(invocation);
+            byte[] chosen = null;
+            if (failure) {
+                for (var prefix : prefixes) if (prefix.equals(actual)) { chosen = prefix.copyBytes(); break; }
+            } else if (site == PataSite.DRAW && invocation.bodyReady) chosen = prefixes.getLast().copyBytes();
+            if (chosen == null) throw new IllegalStateException("Pata-Bata source is outside its actual Init/motion/animation prefix");
+            verifyPataImages(invocation, chosen, bank); return;
+        }
+        if (site == PataSite.DRAW || invocation.drawSource == null)
+            throw new IllegalStateException("Pata-Bata repeated or lost its native DrawObject source");
+        var source = invocation.drawSource;
+        if (!invocation.tailArmed) {
+            if (!failure) throw new IllegalStateException("Pata-Bata returned before its actual DrawObject returned");
+            verifyPataImages(invocation, source.copyBytes(), bank); return;
+        }
+        // N CheckObjDespawn2:388-446 reloads the live post-Draw anchor and saved ID.
+        boolean outside = (source.spriteFlags() & 0x80) == 0
+                && (((source.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X) & 0xFF80)
+                - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
+        boolean delete = outside || (invocation.inputs.timeZone() & 0x80) != 0;
+        byte[] expectedBank = bank.copy(); boolean owned = true;
+        if (delete && source.savedFlagsId() != 0) {
+            int period = invocation.inputs.timeZone() & 0x7F;
+            if ((invocation.inputs.timeZone() & 0x80) != 0) {
+                period = (short) ((period - (byte) invocation.inputs.timeWarpDir()) & 0xFFFF);
+                period = period < 0 ? 0 : Math.min(period, 2);
+            }
+            int at = 2 + 3 * source.savedFlagsId() + period;
+            owned = period >= 0 && period <= 2 && at >= 0 && at < expectedBank.length;
+            if (owned) expectedBank[at] &= 0x7F;
+        }
+        byte[] expectedSource = delete && owned ? new byte[CdObjectState.BYTE_SIZE] : source.copyBytes();
+        var actualBank = placement.capture().savedFlags();
+        if (failure && Arrays.equals(actual.copyBytes(), source.copyBytes()) && sameBytes(actualBank, bank)) {
+            verifyPataImages(invocation, source.copyBytes(), bank); return;
+        }
+        if (failure && owned && Arrays.equals(actual.copyBytes(), source.copyBytes())
+                && Arrays.equals(actualBank.copy(), expectedBank)) {
+            verifyPataImages(invocation, source.copyBytes(), CdAssetBytes.copyOf(expectedBank)); return;
+        }
+        if (!owned && !failure) throw new IllegalStateException("Pata-Bata returned beyond an unowned native saved-period address");
+        verifyPataImages(invocation, expectedSource, CdAssetBytes.copyOf(expectedBank));
+    }
+
+    private void verifyPataImages(PataInvocation invocation, byte[] source, CdAssetBytes bank) {
+        verifyPataInvocation(invocation);
+        var now = placement.capture();
+        if (!sameBytes(now.savedFlags(), bank) || !now.status().equals(invocation.before.status()))
+            throw new IllegalStateException("Pata-Bata changed unowned saved-bank bits or placement cursors");
+        for (int i = 0; i < 96; i++) {
+            var image = now.pool().slots().get(i);
+            if (i == invocation.whole - 32) {
+                if (!image.identity().equals(invocation.entry.identity()) || !Arrays.equals(image.copyBytes(), source))
+                    throw new IllegalStateException("Pata-Bata changed its actual source identity/full64 prefix");
+            } else if (!image.equals(invocation.before.pool().slots().get(i)))
+                throw new IllegalStateException("Pata-Bata changed another physical image");
+        }
+    }
+    private void verifyPataCallback(PataInvocation invocation, CdObjectPlacementRuntime.Snapshot before) {
+        verifyPataImages(invocation, invocation.drawSource.copyBytes(), before.savedFlags());
+        if (!before.status().equals(invocation.before.status())
+                || !before.pool().slots().get(invocation.whole - 32).identity().equals(invocation.entry.identity()))
+            throw new IllegalStateException("Pata-Bata callback lost its actual pre-call source cut");
+    }
+    private void verifyPataCallbackFailure(PataInvocation invocation, CdObjectPlacementRuntime.Snapshot before, Throwable original) {
+        try { verifyPataCallback(invocation, before); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    private void drawPataBata(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requirePataInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (drawingPata || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+            throw new IllegalStateException("Pata-Bata DrawObject lacks its actual once-only native source");
+        validatePataSource(invocation, PataSite.DRAW);
+        var before = placement.capture(); invocation.drawSource = pool.state(invocation.whole);
+        invocation.drawn = true; drawingPata = true;
+        try {
+            var current = invocation.drawSource;
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Pata-Bata DrawObject did not clear bit7 once");
+            verifyPataCallback(invocation, before); invocation.tailArmed = true;
+        } catch (RuntimeException | Error original) {
+            verifyPataCallbackFailure(invocation, before, original); throw original;
+        } finally { drawingPata = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readPataDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingPata || queuePort || !invocation.drawn) throw new IllegalStateException("No actual Pata-Bata collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            verifyPataCallback(invocation, before); var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyPataCallback(invocation, before); return live;
+        } catch (RuntimeException | Error original) {
+            verifyPataCallbackFailure(invocation, before, original); throw original;
+        } finally { queuePort = false; }
+    }
+    private void writePataOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingPata || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+            throw new IllegalStateException("Only actual Pata-Bata DrawObject may clear bit7 once");
+        var before = placement.capture(); verifyPataCallback(invocation, before);
+        var next = invocation.drawSource.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.drawSource.spriteFlags() & 0x7F);
+        queuePort = true;
+        try {
+            invocation.pool.write(next); invocation.drawSource = next; invocation.screenCleared = true;
+            verifyPataCallback(invocation, before);
+        } catch (RuntimeException | Error original) {
+            verifyPataCallbackFailure(invocation, before, original); throw original;
+        } finally { queuePort = false; }
+    }
+
+    /** Returned effects are checked observations only: no effect grants writes, drawing or another dispatch. */
+    private void verifyPataResult(PataInvocation invocation, CdPataBata.Result result) {
+        var effects = new ArrayList<CdPataBata.Effect>();
+        boolean conversion = invocation.inputs.goodFuture() != 0
+                && (invocation.inputs.timeZone() != 1 || invocation.entry.subtype() != 0);
+        boolean delete = false;
+        if (conversion) effects.add(new CdPataBata.ExplosionConversion(invocation.entry.centreX(), invocation.entry.centreY()));
+        else {
+            if (!invocation.drawn || !invocation.screenCleared || !invocation.tailArmed || !invocation.bodyReady)
+                throw new IllegalStateException("Pata-Bata returned without its complete actual body/Draw cut");
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DESTROY_ON_GOOD_FUTURE));
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.ANIMATE_OBJECT));
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DRAW_OBJECT));
+            var source = invocation.drawSource;
+            boolean outside = (source.spriteFlags() & 0x80) == 0
+                    && (((source.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X) & 0xFF80)
+                    - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
+            delete = outside || (invocation.inputs.timeZone() & 0x80) != 0;
+            if (delete) {
+                int period = -1;
+                if (source.savedFlagsId() != 0) {
+                    period = invocation.inputs.timeZone() & 0x7F;
+                    if ((invocation.inputs.timeZone() & 0x80) != 0) {
+                        period = (short) ((period - (byte) invocation.inputs.timeWarpDir()) & 0xFFFF);
+                        period = period < 0 ? 0 : Math.min(period, 2);
+                    }
+                }
+                effects.add(new CdPataBata.Despawn(outside ? CdPataBata.DespawnEntry.ANCHOR_OFFSCREEN
+                        : CdPataBata.DespawnEntry.TIME_WARP, source.savedFlagsId(), period));
+            }
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.CHECK_OBJ_DESPAWN2));
+        }
+        if (!result.state().equals(invocation.pool.state(invocation.whole)) || !result.effects().equals(effects)
+                || result.converted() != conversion || result.deleted() != delete)
+            throw new IllegalStateException("Pata-Bata returned metadata disagrees with its actual completed native branch");
+    }
+
     /** Actual cached ObjFloatBlock invocation; equal public values cannot create this private scope. */
     private enum FloatSite { SOLID, DRAW, RETURN, FAILURE }
     private final class FloatInvocation {
@@ -2098,7 +2502,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || floatPort || drawingFloat || queuePort || whole < 32 || whole >= 128
@@ -2138,7 +2542,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyFloatInvocation(FloatInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeFloat != invocation || !runningObjects || servicing || loadingSaved || activeDrain != null
+        if (activeFloat != invocation || activePata != null || drawingPata || !runningObjects || servicing || loadingSaved || activeDrain != null
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -2607,7 +3011,7 @@ final class SonicCdPastLoadingVisit {
     private void runPlatform(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -2645,7 +3049,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyPlatformInvocation(PlatformInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
+        if (activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -3005,7 +3409,7 @@ final class SonicCdPastLoadingVisit {
     private void runTunnelDoor(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdTunnelDoor.OBJECT_ID
@@ -3055,7 +3459,7 @@ final class SonicCdPastLoadingVisit {
         if (activeTunnelDoor != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
-                || platformPort || drawingPlatform || activeMonitor != null || activeFloat != null || floatPort || drawingFloat || monitorPort || drawingMonitor || invocation.body != tunnelDoor
+                || platformPort || drawingPlatform || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || monitorPort || drawingMonitor || invocation.body != tunnelDoor
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
@@ -3567,7 +3971,7 @@ final class SonicCdPastLoadingVisit {
     private void runMonitor(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || floatPort || drawingFloat
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdMonitor.OBJECT_ID
@@ -3615,7 +4019,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyMonitorInvocation(MonitorInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMonitor != invocation || activeFloat != null || floatPort || drawingFloat || !runningObjects || servicing || loadingSaved
+        if (activeMonitor != invocation || activeFloat != null || activePata != null || drawingPata || floatPort || drawingFloat || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor

@@ -123,6 +123,9 @@ MAP_SPR_TUNNEL_DOOR 1d6c4 28 7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661
 ANI_MONITOR a81e 136 c3c1fb2135835d0fd96bff9202c7c0be8cddd2bf97caf0209582e5cf03d37d36
 ANI_FLOAT_BLOCK a234 30 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9
 MAP_SPR_FLOAT_BLOCK a252 76 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e
+ANI_PATA_BATA b374 18 a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3
+MAP_SPR_PATA_BATA1 b386 34 9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b
+MAP_SPR_PATA_BATA2 b3a8 40 96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -207,7 +210,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(92, rows.size()); assertEquals(92, CdR11bAssets.Asset.values().length);
+        assertEquals(95, rows.size()); assertEquals(95, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());
@@ -548,7 +551,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
         var keys = new CdR11bAssets.Asset[]{ANI_FLOAT_BLOCK, MAP_SPR_FLOAT_BLOCK};
         String[] labels = {"Ani_FloatBlock", "MapSpr_FloatBlock"};
         int[] offsets = {0xA234, 0xA252}; int[] lengths = {30, 76};
-        assertEquals(92, CdR11bAssets.Asset.values().length);
+        assertEquals(95, CdR11bAssets.Asset.values().length);
         assertEquals(89, ANI_MONITOR.ordinal());
         for (int i = 0; i < keys.length; i++) {
             var key = keys[i]; var view = a.view(key);

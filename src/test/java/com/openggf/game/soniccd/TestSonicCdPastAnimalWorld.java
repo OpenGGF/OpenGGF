@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * The actual outgoing Present DEV pair is carried as its existing value/provenance;
  * this is no claim that native IPX initialization executed. At raw Past0 only the
  * projector byte is reached; these witnesses do not claim goodFuture was prefetched.
- * Actual five-jump/load/7776 and single natural7808 are separate from the expressly
+ * Actual five-jump/load/7776 and natural7808 with full/course replay are separate from the expressly
  * CONSTRUCTED closed-cut Animal40 scene. No Body/Frame/Solid/terrain/placement/
  * animation/draw producer replay or Result-effect replay supplies expected bytes.
  */
@@ -90,9 +90,10 @@ class TestSonicCdPastAnimalWorld {
                 + "TIME_POST_DIRECTION TIME_POST_SUB_CPU MONITOR_BODY TIME_POST_BODY CLEAR_DEMO_INDEX POST_OBJECT_GUARDS "
                 + "DEAD_CAMERA_FREEZE DRAW_OBJECTS PALETTE_CYCLE UPDATE_SECTION PREPARE_PLCS UPDATE_GLOBAL_ANIMATIONS "
                 + "ORDINARY_MAIN_RETURN FLOAT_BLOCK_SOLID FLOAT_BLOCK_BODY").split(" ");
-        assertEquals(oldNames.length + 1, calls.length);
+        assertEquals(oldNames.length + 2, calls.length);
         for (int i = 0; i < oldNames.length; i++) assertEquals(oldNames[i], calls[i].name(), "Existing ordinal " + i);
         assertEquals("ANIMAL_PRESENCE", calls[oldNames.length].name());
+        assertEquals("PATA_BATA_BODY", calls[oldNames.length + 1].name());
         assertCachedAnimal(p, null);
     }
 
@@ -179,14 +180,16 @@ class TestSonicCdPastAnimalWorld {
         assertInstanceOf(NullPointerException.class, rejected.getCause());
     }
 
-    @Test void natural7808OnceReturnsAnimalPresenceThenPreservesTheActualLaterTypedStop() throws Exception {
+    @Test void natural7808ReturnsAnimalPresenceAndReplaysCompleteMainThroughFullAndCourseRestoration() throws Throwable {
         var p = healthy7776(); var h = p.harness(); var f = p.frame(); var dev = retained(p.visit());
         for (int call = 7777; call <= 7807; call++) { step(h, route(call)); assertHealthy(p, call); assertRetained(p.visit(), dev); }
         var pool = p.placement().pool(); var beforeImages = images(pool);
-        var lastClosed = captureNative(h); // Legal healthy7807 capture; never capture a failed owner.
-        assertNotNull(lastClosed);
+        var registry = h.mode().getRewindRegistry();
+        var full = registry.capture(); var course = registry.captureCourse();
+        var lastClosed = captureNative(h); // Legal healthy7807 cut, before any actual7808 call.
         var beforeValues = actualField(p.visit(), "values"); var beforeCalls = callNames(beforeValues);
-        var oldCpu = completedDraw(p); var cpuBytes = actualField(beforeValues, "cpuSat");
+        var oldCpu = completedDraw(p);
+        assertArrayEquals(oldCpu.bytes(), assertInstanceOf(CdAssetBytes.class, actualField(beforeValues, "cpuSat")).copy());
         var beforeSection = assertInstanceOf(CdR11bSectionArt.State.class, actualField(beforeValues, "section"));
         var current = beforeSection.residency();
         var scroll = (SonicCdPlayerPresentation.ScrollCapture) h.module().getScrollHandlerProvider().getHandler(0).captureRewindState();
@@ -205,18 +208,14 @@ class TestSonicCdPastAnimalWorld {
         var poolOwner = actualField(pool, "owner"); var artOwner = actualField(f, "art");
         var presentation = actualField(h.module(), "playerPresentation");
         var cached = assertCachedAnimal(p, null);
-        // EXACTLY ONE natural7808 attempt. Keep the first exception even if diagnostics fail.
-        var failure = assertThrowsExactly(SonicCdGameModule.UnsupportedPastLoading.class, () -> {
-            try { step(h, route(7808)); }
-            catch (Throwable first) {
-                try { diagnoseNatural(p, beforeImages, current, beforeCalls, 77L, 33, first); }
-                catch (Throwable diagnostic) { if (diagnostic != first) first.addSuppressed(diagnostic); }
-                throw first;
-            }
-        });
-        // Only retained references/raw data below: no requirePastLoadingVisit,
-        // module.pastLoadState, capture, restore, retry, extra service or input.
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, failure.boundary());
+        // One initial actual7808. Any unexpected failure escapes unchanged; no failed owner is restored.
+        try { step(h, route(7808)); }
+        catch (Throwable first) {
+            try { diagnoseNatural(p, beforeImages, current, beforeCalls, 77L, 33, first); }
+            catch (Throwable diagnostic) { if (diagnostic != first) first.addSuppressed(diagnostic); }
+            throw first;
+        }
+        assertHealthy(p, 7808);
         var afterValues = actualField(p.visit(), "values"); var calls = callNames(afterValues);
         int animal = calls.indexOf("ANIMAL_PRESENCE"); assertTrue(animal >= 0, () -> "Missing actual Animal return: " + calls);
         var prefix = calls.subList(0, animal);
@@ -224,29 +223,51 @@ class TestSonicCdPastAnimalWorld {
                 "RESERVED_OBJECTS", "RING_BODY", "FLOAT_BLOCK_SOLID", "FLOAT_BLOCK_BODY");
         assertEquals(4L, prefix.stream().filter("FLOAT_BLOCK_BODY"::equals).count());
         assertEquals(8L, prefix.stream().filter("FLOAT_BLOCK_SOLID"::equals).count());
-        assertFalse(calls.contains("DYNAMIC_OBJECTS")); assertFalse(calls.contains("DRAW_OBJECTS"));
-        assertFalse(calls.contains("ORDINARY_MAIN_RETURN"));
+        ordered(calls, "ANIMAL_PRESENCE", "PATA_BATA_BODY", "DYNAMIC_OBJECTS", "POST_OBJECT_GUARDS", "LEVEL_SCROLL",
+                "DRAW_OBJECTS", "UPDATE_SECTION", "PREPARE_PLCS", "UPDATE_GLOBAL_ANIMATIONS", "ORDINARY_MAIN_RETURN");
         assertTrue(calls.stream().filter(x -> x.startsWith("ANIMAL_")).allMatch("ANIMAL_PRESENCE"::equals));
         assertArrayEquals(authenticAnimalImage(), pool.state(62).copyBytes(), "Authentic row359 full64, no Init/flag/map writes");
-        assertTrue(f.closed()); assertFalse(f.paused()); assertEquals(78L, f.vIntClock().absoluteValue().orElseThrow());
+        assertFalse(f.closed()); assertFalse(f.paused()); assertEquals(78L, f.vIntClock().absoluteValue().orElseThrow());
         assertEquals(34, f.environment().globals().levelFrames()); assertEquals(8, f.environment().controls().rawHeld());
         assertRetained(p.visit(), dev); assertSame(cached, actualField(p.visit(), "animal"));
-        var queue = assertInstanceOf(CdObjectDrawQueue.class, actualField(p.visit(), "drawQueue"));
-        assertEquals(CdObjectDrawQueue.Phase.CLOSED, queue.phase()); assertNoPointer(queue, 62);
-        assertSame(oldCpu, completedDraw(p)); assertSame(cpuBytes, actualField(afterValues, "cpuSat"));
-        assertTrue(oldCpu.provenance().stream().noneMatch(x -> x.slotRef().wholeIndex() == 62));
-        assertArrayEquals(oldCpu.bytes(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedSat")).copy());
+        assertNull(actualField(p.visit(), "drawQueue"), "Successful DrawObjects retires its actual queue");
+        var afterCpu = completedDraw(p);
+        assertNotSame(oldCpu, afterCpu, "Completed Main builds its own CPU table after the actual camera step");
+        assertArrayEquals(afterCpu.bytes(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "cpuSat")).copy());
+        assertTrue(afterCpu.provenance().stream().noneMatch(x -> x.slotRef().wholeIndex() == 62),
+                "Animal presence supplies no Draw pointer or selected current CPU sprite");
+        assertArrayEquals(oldCpu.bytes(), assertInstanceOf(CdAssetBytes.class, actualField(afterValues, "displayedSat")).copy(),
+                "This call's earlier V-int selects genuine7807 CPU, not its newly completed7808 table");
         assertSame(world, h.mode().getWorldSession());
         assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
         assertSame(source, actualField(f, "pastSource")); assertSame(artOwner, actualField(f, "art"));
         assertSame(frameOwner, actualField(f, "captureOwner")); assertSame(poolOwner, actualField(pool, "owner"));
         assertSame(saved, actualField(p.visit(), "saved")); assertSame(p.assets(), actualField(p.visit(), "assets"));
-        assertSame(scroll.state(), actualField(presentation, "scrollState"));
-        assertSame(scroll.background(), actualField(presentation, "backgroundState"));
+        var afterScroll = (SonicCdPlayerPresentation.ScrollCapture)
+                h.module().getScrollHandlerProvider().getHandler(0).captureRewindState();
+        assertSame(afterScroll.state(), actualField(presentation, "scrollState"));
+        assertSame(afterScroll.background(), actualField(presentation, "backgroundState"));
         assertFalse((boolean) actualField(p.visit(), "runningObjects"));
         assertNull(actualField(p.visit(), "activeFloat")); assertNull(actualField(p.visit(), "activePrimary"));
+        assertNull(actualField(p.visit(), "activePata")); assertFalse((boolean) actualField(p.visit(), "drawingPata"));
         assertNull(actualField(p.visit(), "activeDrain")); assertFalse((boolean) actualField(f, "bodyEntitled"));
         assertNull(actualField(f, "pending"));
+        var after = captureNative(h);
+        registry.restore(full);
+        assertComplete(lastClosed, captureNative(h), "natural.full.7807.beforeAnyForward");
+        assertHealthy(p, 7807); assertRetained(p.visit(), dev); assertCachedAnimal(p, cached);
+        step(h, route(7808)); assertHealthy(p, 7808);
+        assertComplete(after, captureNative(h), "natural.full.7808.after");
+        assertRetained(p.visit(), dev); assertCachedAnimal(p, cached);
+        registry.restoreCourse(course);
+        assertComplete(lastClosed, captureNative(h), "natural.course.7807.beforeAnyForward");
+        assertHealthy(p, 7807); assertRetained(p.visit(), dev); assertCachedAnimal(p, cached);
+        step(h, route(7808)); assertHealthy(p, 7808);
+        assertComplete(after, captureNative(h), "natural.course.7808.after");
+        assertRetained(p.visit(), dev); assertCachedAnimal(p, cached);
+        assertSame(world, h.mode().getWorldSession());
+        assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertSame(source, f.stageSource()); assertSame(poolOwner, actualField(pool, "owner"));
     }
 
     @Test void constructedHealthy7776AnimalPresenceReplays7777WithNoDrawOrAllocation() throws Exception {

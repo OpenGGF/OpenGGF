@@ -1,6 +1,6 @@
 # Implement Sonic CD with complete regional parity
 
-Date: 2026-10-23; source pause 26 October; delivery 27 October; resumed 28 October 2026. Status: partial implementation, not complete game support.
+Date: 2026-10-23; source pause 26 October; delivery 27 October; resumed 28 October; latest local qualification30October2026. Status: partial implementation, not complete game support.
 Design: [fourth-game architecture](../designs/2026-10-23-sonic-cd-fourth-game.md).
 Engine baseline: `b979916808b7f9379ede2b5dcdde1bcdc8bf8357`.
 Reference pin: `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
@@ -22,7 +22,7 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns through7807 after the native timer210 save, timer230 restart HIGH-byte
+now returns through7808 after the native timer210 save, timer230 restart HIGH-byte
 write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
 source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
@@ -41,9 +41,64 @@ palette, section/PLC preparation and global-animation tail. CPU output contains2
 pieces while the earlier V-int displayed image remains unchanged. Separate
 ordinary World checks now execute Past Sonic Main at7776 and restore/forward its
 healthy7775 cut. A bounded unchanged-controller observation returns through7807,
-with natural Sonic SAT pieces from7777. The actual incomplete7808 pass now
-completes four Float Blocks before the source-ordered next Animal62 dispatcher.
-Selected GPU presentation, whole acts and regional parity remain unfinished.
+with natural Sonic SAT pieces from7777. The actual7808 now completes Float,
+Animal presence and Pata-Bata before the ordinary Main continuation returns.
+Natural full/course7807→7808 restoration compares complete represented native
+state before forwarding the unchanged controller input. Selected GPU presentation,
+whole acts and regional parity remain unfinished.
+
+## Actual Past Pata-Bata and completed7808 — 30 October 2026
+
+Original USA B operands authenticate ID3E as Pata-Bata and native row361, physical64
+at the reached spawn. Three raw views append after the old92 assets: the shared
+18-byte animation and34/40-byte mapping roots. Existing36 PLC lists,37 native readers,
+current regions and art producers stay unchanged. A named Past factory uses those
+views, the real72-byte selector table and existing B math; the shared body and
+legacy Present factory remain byte-exact outside that additive factory.
+
+The private cached body runs once per actual physical visit over fresh source,
+World/generation/Frame/pool/placement/queue cuts. Draw and return/fault observers
+validate literal native writes without replaying Body/animation/math helpers.
+Both mapping roots join the existing queue; live post-draw reload and native
+saved-bit/despawn ordering remain source-owned. No new player/Solid/terrain/FM,
+clock, capture owner, preload, art bank or runtime source is added.
+
+The unchanged controller7808 now RETURNS full Main. Four Float bodies/eight Top
+outputs precede Animal62 and Spring63, then Pata64 and the later native slots;
+a fifth Float body afterward is valid. Pata's natural full64 output and native
+placement/saved-bank association are checked independently. Eight fixed component
+World scenes cover normal/damaged variants and all four placement flips with
+complete state-before-forward full/course replay over7777/7778; they are explicitly
+constructed and do not replace the natural route. Natural full/course7807→7808
+replay now compares the entire captured native state before each restored forward
+and after its real ordinary Main return. First Float33 remains genuinely culled
+at pre-scroll6660/619 and is retained at native masked distance280; its literal64,
+480 current bytes and independent earlier PLC/nonwrite oracle remain intact.
+
+Qualification is381 unchanged successful cases from the initial391-case run plus
+10 refreshed cases after correcting two obsolete expected-stop assertions. The
+initial run391/2failures/0errors/0skips is not described as green; the fresh10-case
+run passes0failures/errors/skips on unchanged production. Both exact class/case
+inventories, Java25, original-media/cwd and terminal source guards were inspected.
+The10-case terminal output budget truncated header/timing fields, so its exact
+callback duration is unknown;452seconds of queue waiting is observed separately.
+The surviving clean terminal decision enforces unchanged source/spec under the
+runner leases, and a separate source observation matches compiler fingerprint
+3e2cd635c122d244b4b86c520278e37ac227eedda783c4193e277f45c91869a6.
+No duplicate broad/release-full run was launched merely to recover output.
+
+Actual CPU output and the prior table selected by V-int are deliberately distinct.
+Past production drawing still stops at DISPLAY_PUBLICATION. Source-first design
+for both native planes and the genuine prior SAT is complete; the renderer's
+25 component tests are only authored/uncompiled, and its production is absent.
+There is no new framebuffer/GPU/audio/whole-act/USA/regional parity qualification.
+Known shared-animation failure remains atomic rather than exposing per-byte
+native failure stores; independently capturing collecting pointers and arbitrary
+private invocation adversaries also remains outside these World proofs.
+
+All changes stay local on the existing feature; main is untouched, no merge/push/
+PR/tag/release occurs. Historical bounded checkpoints below retain their original
+stops and results. Full USA completion first, then Japan and Europe, remains active.
 
 ## Actual Past Animal presence — 29 October 2026
 

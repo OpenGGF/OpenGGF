@@ -4,6 +4,7 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 
 import java.util.ArrayList;
@@ -108,6 +109,25 @@ public final class CdPataBata {
                     objects.view(CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS).range().nativeAddress(),
                     objects.view(CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS).range().nativeAddress(),
                     new CdPlayerMath(playerAssets));
+        }
+
+        /**
+         * B binding over the authenticated original Past owner. These finite mappings share the
+         * actual 18-byte animation table; 50 is the native art source's tile bound, not decoded art.
+         * Pata-Bata/Main.asm:29,39,76; Data/Mappings (Normal).asm:1-32 and (Damaged).asm:1-38.
+         * Current art and the synchronous DrawObject port remain with their existing owners.
+         */
+        public static Assets fromPastAssets(CdR11bAssets pastAssets) {
+            Objects.requireNonNull(pastAssets, "pastAssets");
+            var animations = pastAssets.view(CdR11bAssets.Asset.ANI_PATA_BATA).bytes();
+            var normal = pastAssets.view(CdR11bAssets.Asset.MAP_SPR_PATA_BATA1);
+            var damaged = pastAssets.view(CdR11bAssets.Asset.MAP_SPR_PATA_BATA2);
+            return new Assets(pastAssets.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes(),
+                    CdObjectVisualAssets.decode(normal.bytes().copy(), 3, animations.copy(), 2, 50),
+                    CdObjectVisualAssets.decode(damaged.bytes().copy(), 3, animations.copy(), 2, 50),
+                    new CdObjectAnimation.AnimationTable(animations, 0, 2),
+                    normal.range().nativeAddress(), damaged.range().nativeAddress(),
+                    new CdPlayerMath(pastAssets.player()));
         }
     }
 

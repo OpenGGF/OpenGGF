@@ -113,6 +113,13 @@ Unreleased. The earlier development themes remain in
   next unowned PataBata64. Full/course loading and a constructed presence scene
   replay completely. A333-case run had one new width-fixture failure; its
   test-only correction passes16 checks, retaining317 unchanged affected checks.
+  Pata-Bata now borrows its authenticated Past animation/mapping views through
+  the unchanged shared body. The actual controller7808 now completes Main after
+  Pata64, with natural full/course7807 restore-before-forward equality. The
+  affected391-case run exposed two superseded expected-stop tests; their test-only
+  migration passes10 cases, retaining381 unchanged cases from that run. No single
+  all-green391 run or new rendered Past picture is claimed. Current CPU sprites
+  remain distinct from the genuine prior SAT selected at V-int.
   Destination-picture publication and audible synthesis remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
