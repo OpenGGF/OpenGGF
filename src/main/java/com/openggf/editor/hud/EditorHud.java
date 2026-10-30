@@ -121,6 +121,8 @@ public final class EditorHud {
     private boolean wheelOpenedByHold;
     // Menu
     List<MenuItem> menuItems = List.of();
+    /** True on the full command sheet, whose Back returns to the front page. */
+    boolean menuSheet;
     int menuIndex;
     int propertyIndex;
     int settingsIndex;
@@ -634,17 +636,49 @@ public final class EditorHud {
     // ------------------------------------------------------------------ menu
 
     /**
-     * The menu as a captioned command sheet built from the authored descriptors
-     * ({@link EditorCommandPalette#descriptors}): each command once, in its group, with the
-     * keyboard shortcut the editor really binds (or, on a pad, the pad control the HUD binds).
-     * Continuous panning is a held control, not a menu command.
+     * The menu's front page: the handful of commands an author reaches for (resume, save, the two
+     * playtests, the level pages, projects) and the way out of the editor. Every other command sits
+     * one row further in, on {@link #openCommandSheet the command sheet}.
      */
     void openMenu() {
+        EditorCommandPalette palette = EditorCommandPalette.forController(controller);
         List<MenuItem> items = new ArrayList<>();
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.resume_14fc571"), "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.save"), "Ctrl+S", () -> act(Action.SAVE)));
+        for (EditorCommandPalette.HostCommand command : palette.extraCommands(EditorCommandPalette.Group.PLAYTEST)) {
+            items.add(new MenuItem(command.label(), command.shortcut(), command.action()));
+        }
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.group.level"), "", null));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.library_ua1q57"), "Tab", new PadCap(Glyph.NORTH, ""), this::openLibrary));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
+        items.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
+        for (EditorCommandPalette.HostCommand command : palette.extraCommands(EditorCommandPalette.Group.EDITOR)) {
+            items.add(new MenuItem(command.label(), command.shortcut(), command.action()));
+        }
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.group.more"), "", null));
+        if (controller.projects() != null) {
+            items.add(new MenuItem(UiMessages.text("editor.menu.main.projects"), "", controller.projects()::openMenu));
+        }
+        items.add(new MenuItem(UiMessages.text("editor.menu.main.all_commands"), "", this::openCommandSheet));
+        if (palette.exitAction() != null) {
+            items.add(new MenuItem(UiMessages.text("editor.menu.main.exit"), "", palette.exitAction()));
+        }
+        showMenu(items, false);
+    }
+
+    /**
+     * Every command as a captioned sheet built from the authored descriptors
+     * ({@link EditorCommandPalette#descriptors}): each command once, in its group, with the
+     * keyboard shortcut the editor really binds (or, on a pad, the pad control the HUD binds).
+     * Continuous panning is a held control, not a menu command. Back returns to the front page.
+     */
+    void openCommandSheet() {
+        List<MenuItem> items = new ArrayList<>();
+        Runnable exit = EditorCommandPalette.forController(controller).exitAction();
         for (EditorCommandPalette.Group group : EditorCommandPalette.Group.values()) {
             List<MenuItem> rows = new ArrayList<>();
             if (group == EditorCommandPalette.Group.EDITOR) {
-                rows.add(new MenuItem(UiMessages.text("editor.editor_hud.resume_14fc571"), "Esc", new PadCap(Glyph.EAST, ""), () -> { }));
                 rows.add(new MenuItem(UiMessages.text("editor.editor_hud.object_properties_1cbq7pw"), "F2", this::openProperties));
                 rows.add(new MenuItem(UiMessages.text("editor.editor_hud.level_settings_q9wkm7"), "F3", this::openSettings));
                 rows.add(new MenuItem(UiMessages.text("editor.editor_hud.level_palette_genesis_colors_1xpy33u"), "", this::openPalette));
@@ -656,12 +690,21 @@ public final class EditorHud {
                 rows.add(new MenuItem(descriptor.label(), descriptor.shortcut(), PAD_CAPS.get(action), () -> act(action)));
             }
             addHostCommands(rows, group);
+            if (group == EditorCommandPalette.Group.PROJECT && exit != null) {
+                rows.add(new MenuItem(UiMessages.text("editor.menu.main.exit"), "", exit));
+            }
             if (rows.isEmpty()) continue;
             items.add(new MenuItem(group.caption(), "", null));
             items.addAll(rows);
         }
+        showMenu(items, true);
+    }
+
+    private void showMenu(List<MenuItem> items, boolean sheet) {
         menuItems = List.copyOf(items);
-        menuIndex = 1;
+        menuSheet = sheet;
+        menuIndex = 0;
+        while (menuIndex < menuItems.size() - 1 && menuItems.get(menuIndex).header()) menuIndex++;
         menuScroll = 0;
         notePointer();
         modal = Modal.MENU;
@@ -693,6 +736,11 @@ public final class EditorHud {
             closeModal();
             if (!item.header()) item.action().run();
             contentChanged = true;
+            return;
+        }
+        if (menuSheet && (pad.pressed(EAST) || MenuInput.back(input))) {
+            openMenu();
+            pad.consumeHeld();
             return;
         }
         if (pad.pressed(EAST) || pad.pressed(MENU) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F1)
@@ -904,7 +952,7 @@ public final class EditorHud {
             case MENU -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Arrows", UiMessages.text("editor.editor_hud.select_14w8yl8")));
                 prompts.add(new Prompt(Glyph.SOUTH, "Enter", UiMessages.text("editor.editor_hud.run_1ror")));
-                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text("editor.editor_hud.close_12tjh4")));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", UiMessages.text(menuSheet ? "editor.editor_hud.back_187if" : "editor.editor_hud.close_12tjh4")));
             }
             case NONE -> {
                 EditorHierarchyDepth depth = controller.depth();

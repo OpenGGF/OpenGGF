@@ -526,6 +526,13 @@ public final class EditorProjectWorkspace {
 
     public void requestClose() { beforeReplace(() -> { host.closeDocument(); document = null; }); }
 
+    /** Leaves the editor for the title after the unsaved-work prompt; Keep editing changes nothing. */
+    public void requestExit() {
+        beforeReplace(() -> { host.closeDocument(); document = null; },
+                UiMessages.text("editor.menu.exit.keep_editing"), UiMessages.text("editor.menu.exit.save_and_exit"),
+                UiMessages.text("editor.menu.exit.exit_without_saving"));
+    }
+
     /** Keep the document alive until the host actually tears down the application. */
     public void requestQuit(Runnable quit) {
         Objects.requireNonNull(quit, "quit");

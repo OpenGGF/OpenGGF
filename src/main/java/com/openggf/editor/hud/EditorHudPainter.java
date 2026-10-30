@@ -1105,7 +1105,7 @@ final class EditorHudPainter implements AutoCloseable {
         float h = headerHeight + 8 + shown * rowH;
         float x = (layout.width() - w) / 2f, y = EditorHudLayout.TOP_BAR + 12 + (maxH - h) / 2f;
         c.panel(x, y, w, h, PANEL, .99f);
-        c.text(UiMessages.text("editor.editor_hud_painter.menu_1en33"), x + 12, y + 8, Size.LARGE, TEXT, 1);
+        c.text(UiMessages.text(hud.menuSheet ? "editor.menu.main.all_commands_title" : "editor.editor_hud_painter.menu_1en33"), x + 12, y + 8, Size.LARGE, TEXT, 1);
         float target = hud.menuScroll;
         if (hud.menuIndex < target + 1) target = hud.menuIndex - 1;
         if (hud.menuIndex > target + shown - 2) target = hud.menuIndex - shown + 2;

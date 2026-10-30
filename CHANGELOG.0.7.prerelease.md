@@ -571,9 +571,11 @@ Unreleased. The earlier development themes remain in
   Default and paired cursor keys) and its help says what each one does. The
   level editor's menu, property and settings sheets read in sentence case with whole
   labels, aligned shortcut keys and a scroll bar; its palette shows each colour's
-  hardware channel steps, and button prompts fit the smallest editor window. Its menu is a
-  grouped command sheet (Editor, Edit, Region, Pattern and tile, Objects, View, Playtest,
-  Project) listing each command once with the shortcut it really has, such as Del for
+  hardware channel steps, and button prompts fit the smallest editor window. Its menu opens
+  on a short front page (Resume, Save, both playtests, the level pages, projects and
+  **Exit to title**, which first offers Save and exit, Exit without saving or Keep editing);
+  **All commands and shortcuts** opens a grouped command sheet (Editor, Edit, Region,
+  Pattern and tile, Objects, View, Playtest, Project) listing each command once with the shortcut it really has, such as Del for
   Delete region: Undo and Redo lead Edit, Stageplay sits with the editor's own pages, and
   the two playtests say where the player starts (Shift+Tab from the cursor, F5 from the
   level start). Ctrl+0 resets the zoom without also picking hotbar slot 10.

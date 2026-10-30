@@ -343,6 +343,41 @@ class TestEditorProjectWorkspace {
         assertEquals("Save before quit", new EditorProjectStore().open(file).metadata().name());
     }
 
+    @Test
+    void exitToTitleClosesOnlyAfterTheAuthorChoosesAndNeverDuringKeepEditing() throws Exception {
+        var host = start(GameId.S2);
+        var workspace = host.workspace;
+        var original = workspace.document();
+        workspace.requestExit();
+        assertEquals(java.util.List.of("Keep editing", "Save and exit to title", "Exit without saving"),
+                workspace.menu().actionEntries().stream().map(EditorProjectMenu.Action::label).toList());
+        choose(workspace, fixture.input, 0);
+        assertSame(original, workspace.document(), "Keep editing leaves the project open");
+        assertSame(original, host.shown);
+        assertTrue(original.isModified());
+
+        Path file = temporary.resolve("exit.ogfproject");
+        workspace.requestExit();
+        choose(workspace, fixture.input, 1);
+        assertEquals("Save project as", workspace.menu().title(), "an unnamed project chooses its file first");
+        workspace.menu().setValue("path", file.toString());
+        workspace.menu().submit();
+        assertNull(workspace.document(), "Save and exit closes once the project is published");
+        assertNull(host.shown);
+        assertTrue(Files.exists(file));
+
+        host.workspace.openProject(new EditorProjectStore().open(file));
+        var reopened = workspace.document();
+        workspace.properties();
+        workspace.menu().setValue("name", "Discarded on exit");
+        workspace.menu().submit();
+        workspace.requestExit();
+        choose(workspace, fixture.input, 2);
+        assertNull(workspace.document());
+        assertNotEquals("Discarded on exit", new EditorProjectStore().open(file).metadata().name());
+        assertTrue(reopened.isModified(), "Exit without saving never writes the change");
+    }
+
     private FaultingHost start(GameId game) throws Exception {
         fixture = Fixture.open(game);
         var host = new FaultingHost(fixture);

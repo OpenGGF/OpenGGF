@@ -111,7 +111,10 @@ edit, and pick with West (X / Square). LB/RB change brush along the hotbar.*
 *North (Y / Triangle) or `Tab` opens the library for the current brush kind;
 choosing an entry puts it on the hotbar. RT edits the block under the cursor and
 then its chunk; LT or East goes back up. Hold View (or press `Q`) for a wheel of
-tools for the current view, and press Menu (or `F1`) for the command sheet: every
+tools for the current view, and press Menu (or `F1`) for the editor menu. Its front
+page holds Resume, Save, both playtests, the level pages (library, object properties,
+level settings, palette, Stageplay), **Projects and files** and **Exit to title**.
+**All commands and shortcuts** opens the command sheet (East or `Esc` steps back): every
 editor command once, grouped as Editor (the HUD's own pages and the Stageplay
 workspace), Edit (Undo and Redo first), Region, Pattern and tile, Objects, View,
 Playtest and Project, each with the keyboard shortcut it really has (or, on a pad,
@@ -176,7 +179,7 @@ H/J for flips, and T for priority. Escape returns to Block, then World.*
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
 | `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Zoom in / out / reset (Ctrl+0 never picks hotbar slot 10) |
 | `Ctrl+S` / `Ctrl+Shift+E` | Save the project / export the level |
-| `F1` | Open the editor menu |
+| `F1` | Open the editor menu (front page, command sheet and Exit to title) |
 
 Picking an existing object lets you edit its subtype, flips, and respawn
 tracking without changing the brush for future placements. In spawn mode the HUD
@@ -411,6 +414,12 @@ clone never changes what its layout shows. A placed chunk with unavailable art
 fails the clone. An unplaced library chunk keeps its index and collision, and
 its unavailable tiles draw transparent (stock Sonic 2 Emerald Hill has 32 such
 references).
+
+**Exit to title** on the editor menu leaves the editor for the master title, with a
+project or a native stock layout open. With unsaved work it offers **Save and exit to
+title**, **Exit without saving** and **Keep editing**; an unsaved Stageplay scene is asked
+about first. Native editing replaces the gameplay it was entered from, so leaving never
+resumes that run; use a playtest to keep playing the edited level.
 
 **Close project** asks about unsaved changes. **Save and continue** saves before
 closing; **Discard changes and continue** closes without saving; **Continue
