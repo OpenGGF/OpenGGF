@@ -2235,3 +2235,72 @@ Both parent commands used Java 25, display variables and `LD_LIBRARY_PATH` unset
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestButtonPrompts,TestScenePromptLabels,TestTimeAttackControllerPrompts,TestActPracticeExample,TestModExamplePersistence,TestModSceneHost,TestModSceneHostGameplay,TestGamepadInputManager,TestScenePhysicalInput,TestInputHandlerLogicalSnapshot,TestTimeAttackScene,TestTimeAttackSettings,TestTimeAttackSettingsPersistence,TestRaceLobbyView,TestTimeAttackQuickChat,TestFullTextReader,TestMenuPage,TestTextEntry,TestRacingFullTextAccess,TestTimeAttackModPackage,TestModApiSignatureSurface,TestArchUnitRules,TestArchitecturalSourceGuard' package
 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestFullTextReader,TestRacingFullTextAccess,TestTimeAttackSettingsVotePools,TestTimeAttackModPackage,TestArchitecturalSourceGuard' package
 ```
+
+### Text-input ownership and playback mouse follow-up (2026-10-29–30)
+
+User testing found that typing a Time Attack name could open playback, and that
+Playback Browser did not accept the mouse. The text declaration already existed,
+but only presentation-level display/capture routing checked it. Game-loop playback
+and debug input ran before a scene's text claim reached the input handler. A real
+`GameLoop` regression with no warm-up frame reproduced the playback panel opening
+from a typed key (one expected assertion failure, zero errors/skips).
+
+The scene host now prepares its declared capture before shortcut reads and keyboard
+mapping, using the same text-session owner as the context so pending characters are
+not discarded. Playback routing also suppresses non-printable bindings while a text
+field owns input. Raw scene text/editing keys remain available; a fresh shortcut
+works after the final claim expires. Eight focused classes passed 85 tests, with
+zero failures, errors or skips, including the real loop regression, Time Attack,
+text/IME sessions, scene ownership and keyboard mapping. The public Mod API and its
+pins are unchanged by this follow-up.
+
+The title had already consumed wheel notches before forwarding only keyboard input
+to Playback Browser. It now forwards one rich pointer snapshot in the centred
+native-page coordinates. Browser filters/rows, recording options and frame arrows,
+complete details, trace loading/failure pages and the nested numeric keypad accept
+mouse actions. Right-click goes back one level. Footer hits share their exact
+adaptive layout with drawing and keep source action indices rather than inspecting
+translated labels. Keypad hits come from the native and tall-script render loops.
+Hovering a list row preserves its visible position; a stationary pointer does not
+override subsequent keyboard focus. The tests cover 320/400, gutters, wheel ownership,
+English/Arabic keypads and single activation. No menu artwork or score was changed.
+
+The mouse implementation artifact and applicability notes are in
+`playback-mouse-fix-20261029-ba754759/` outside the repository. Its source copies
+were prepared separately while validation used the checkout; the parent applied
+it after the keyboard run and added the stable-hover regression. The combined
+source compiled successfully before the final hover adjustment. The change planner
+selected all 4,323 smoke classes; focused coverage replaces that disproportionate
+selection for this bounded input-routing/UI change. The final combined selection
+contains 28 affected classes plus packaging; its exact result is recorded below.
+
+Limits: scrollbars are not draggable, clicking a text field retains its current
+caret position, and Time Attack's mod-owned canvas menus have not gained mouse
+controls. Existing user files under the untracked `projects/` directory are preserved.
+
+The combined 28-class run completed 460 tests: 458 passed, two failures, no errors
+or skips. One new recording-menu mouse assertion incorrectly expected a one-frame
+arrow step; the existing keyboard model uses 60 frames, so its expected value was
+corrected from 118 to 59 for a starting target of 119. The new dispatch exceeded
+`stepInternalBody`'s 262-line limit by two lines: playback shortcut routing and
+observed-mode publication were extracted together without changing their order,
+and the ratchet was tightened to 261. No guard allowance was enlarged. The affected
+GameLoop, recording-menu, source-guard, title ownership and admission checks plus
+packaging were queued again. Unchanged passing classes were not rerun just to
+repeat their totals; the final result is recorded below.
+
+Final affected rerun: five classes, 213 tests, zero failures, errors or skips,
+`package` **BUILD SUCCESS** (129 seconds execution after 631 seconds queue wait).
+Latest per-class results across the combined run and affected rerun are 28 classes,
+460 distinct cases passing, not the two totals added together. The package includes
+the engine, bundled mods, creator SDK and Javadoc. No broad smoke, full guards
+profile or public-release full suite was run.
+
+Commands used Java 25, surfaceless EGL, no display environment, and Lua 5.4:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGameLoop#sceneTextClaimProtectsTheFirstTypedFrameFromGlobalShortcuts' test
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGameLoop#sceneTextClaimProtectsTheFirstTypedFrameFromGlobalShortcuts,TestTimeAttackScene,TestKeyboardTextCapture,TestTextInputSession,TestModSceneHost,TestTitleInputOwnership,TestKeyboardInputMapper,TestGameLoopDebugShortcuts' test
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGameLoop,TestTimeAttackScene,TestKeyboardTextCapture,TestTextInputSession,TestModSceneHost,TestTitleInputOwnership,TestKeyboardInputMapper,TestGameLoopDebugShortcuts,TestMasterTitlePlaybackBrowser,TestMasterTitleMouse,TestPlaybackBrowser,TestPlaybackBrowserPresentation,TestUserRecordingMenu,TestTracePlaybackFeedback,TestMenuTextEditor,TestMenuTextEditorMouse,TestMenuDetailsScreen,TestMenuPathBrowser,TestMenuRenderAlignment,TestTranslatedMenuRendering,TestModApiSignatureSurface,TestArchUnitRules,TestArchitecturalSourceGuard,TestScenePhysicalInput,TestModSceneHostGameplay,TestMenuInput,TestInputAdmissionBoundaries,TestMenuTextEditorCompositionRendering' package
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestGameLoop,TestUserRecordingMenu,TestArchitecturalSourceGuard,TestTitleInputOwnership,TestInputAdmissionBoundaries' package
+```

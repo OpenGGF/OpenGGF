@@ -196,6 +196,13 @@ up, and the claim lapses on its own one tick after you stop renewing it. Escape,
 function keys, modifiers and gamepads stay with the host; your own `keyDown`,
 `keyPressed` and `physicalInput()` still see the claimed keys.
 
+For a scene with focused text fields, override `capturesTextInput()` to return
+true while a field is active. The host establishes that scene's capture before
+global shortcuts or keyboard mappings run, including on the first typed frame;
+you do not need a separate `captureKeyboardText()` call for that declaration.
+Playback shortcuts are held back too. Return false when the field closes so
+ordinary shortcuts resume after the final input claim expires.
+
 For five-button instruments or other device-specific controls, use
 `ctx.physicalInput()`: an immutable snapshot of keys, standard GLFW gamepads and
 ordered `PhysicalInputEvent` transitions. Press/release events include sequence and

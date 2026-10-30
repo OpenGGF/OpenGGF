@@ -4,6 +4,7 @@ import com.openggf.i18n.UiMessages;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.game.MenuChrome;
+import com.openggf.game.MasterTitlePointer;
 import com.openggf.game.MenuStyle;
 import com.openggf.game.MenuDetailsScreen;
 import com.openggf.game.MenuFeedback;
@@ -50,6 +51,12 @@ public final class PlaybackBrowser {
     }
 
     private enum Focus { GAME, KIND, LIST }
+    private enum FooterAction { MOVE, OPEN, DETAILS, CHANGE, BACK, SCROLL }
+    private MasterTitlePointer pointer;
+    private int listFirst;
+    private boolean mouseListFocus;
+    private List<MenuChrome.FooterTarget> footerTargets = List.of();
+    private List<FooterAction> footerActions = List.of();
 
     private static final int W = 320;
     private static final int LIST_TOP = 69;
@@ -97,12 +104,16 @@ public final class PlaybackBrowser {
         page = hasTraceFailure() ? new Page.Trace(new TracePlaybackFeedback(null, font)) : LIBRARY;
     }
 
-    public void update(InputHandler input) {
+    public void update(InputHandler input) { update(input, null); }
+
+    /** One already-mapped native-page mouse snapshot, including the title's consumed wheel. */
+    public void update(InputHandler input, MasterTitlePointer pointer) {
         this.input = Objects.requireNonNull(input, "input");
+        this.pointer = pointer != null && !input.hasLogicalOverride() && pointer.over(0, 0, W, 224) ? pointer : null;
         switch (page) {
             case Page.Library ignored -> updateLibrary();
             case Page.Recording selected -> {
-                selected.menu().update(input);
+                selected.menu().update(input, this.pointer);
                 if (selected.menu().consumeCloseRequested()) page = LIBRARY;
             }
             case Page.Trace selected -> updateTrace(selected.feedback());
@@ -112,28 +123,59 @@ public final class PlaybackBrowser {
     }
 
     private void updateLibrary() {
-        if (MenuInput.back(input)) {
+        if (MenuInput.back(input) || pointer != null && pointer.backClick()) {
             MenuFeedback.emit(CANCEL);
             finish(Result.BACK);
             return;
         }
+        if (handleFooter()) return;
         if (MenuInput.details(input)) {
             openDetails(selectedEntry());
             return;
         }
         List<PlaybackEntry> entries = visibleEntries();
+        if (pointer != null) {
+            int before = cursor;
+            Focus previous = focus;
+            if (pointer.wheel() != 0) {
+                mouseListFocus = false;
+                if (pointer.over(10, 35, W - 20, filterPitch())) focus = Focus.GAME;
+                else if (pointer.over(10, 35 + filterPitch(), W - 20, filterPitch())) focus = Focus.KIND;
+                else focus = Focus.LIST;
+                if (focus != Focus.LIST) {
+                    int direction = pointer.wheel() > 0 ? -1 : 1;
+                    for (int i = 0; i < Math.abs(pointer.wheel()); i++) changeFilter(direction);
+                    return;
+                }
+                cursor = Math.clamp(cursor - pointer.wheel(), 0, Math.max(0, entries.size() - 1));
+            }
+            if (pointer.moved() || pointer.click()) {
+                for (int row = 0; row < 2; row++) {
+                    if (!pointer.over(10, 35 + row * filterPitch(), W - 20, filterPitch())) continue;
+                    focus = row == 0 ? Focus.GAME : Focus.KIND;
+                    if (pointer.click()) { changeFilter(pointer.x() < W / 2 ? -1 : 1); return; }
+                    break;
+                }
+                int first = firstVisible(entries.size());
+                for (int i = first; i < Math.min(entries.size(), first + visibleRows()); i++) {
+                    if (!pointer.over(10, listTop() + (i - first) * rowHeight(), W - 20, rowHeight())) continue;
+                    cursor = i;
+                    focus = Focus.LIST;
+                    mouseListFocus = true; // Hover must not scroll this row away from the pointer.
+                    if (pointer.click()) {
+                        if (before != cursor || previous != focus) MenuFeedback.emit(NAVIGATE);
+                        openSelected();
+                        return;
+                    }
+                    break;
+                }
+            }
+            if (before != cursor || previous != focus) MenuFeedback.emit(NAVIGATE);
+        }
         int beforeCursor = cursor;
         Focus beforeFocus = focus;
-        if (MenuInput.up(input)) {
-            if (focus == Focus.LIST && cursor > 0) cursor--;
-            else if (focus == Focus.LIST) focus = Focus.KIND;
-            else if (focus == Focus.KIND) focus = Focus.GAME;
-        }
-        if (MenuInput.down(input)) {
-            if (focus == Focus.GAME) focus = Focus.KIND;
-            else if (focus == Focus.KIND) focus = Focus.LIST;
-            else cursor = Math.min(Math.max(0, entries.size() - 1), cursor + 1);
-        }
+        if (MenuInput.up(input)) move(-1);
+        if (MenuInput.down(input)) move(1);
         if (focus == Focus.LIST) {
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_HOME)) cursor = 0;
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_END)) cursor = Math.max(0, entries.size() - 1);
@@ -141,13 +183,66 @@ public final class PlaybackBrowser {
                 cursor = Math.min(Math.max(0, entries.size() - 1), cursor + visibleRows());
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_UP)) cursor = Math.max(0, cursor - visibleRows());
         }
-        if (beforeCursor != cursor || beforeFocus != focus) MenuFeedback.emit(NAVIGATE);
+        if (beforeCursor != cursor || beforeFocus != focus) {
+            mouseListFocus = false;
+            MenuFeedback.emit(NAVIGATE);
+        }
         if (focus != Focus.LIST && (MenuInput.left(input) || MenuInput.right(input) || MenuInput.accept(input))) {
             changeFilter(MenuInput.left(input) ? -1 : 1);
         } else if (focus == Focus.LIST && MenuInput.accept(input)) openSelected();
     }
 
+    private int firstVisible(int size) {
+        int max = Math.max(0, size - visibleRows());
+        if (!mouseListFocus) listFirst = Math.clamp(cursor - 2, 0, max);
+        return listFirst = Math.clamp(listFirst, 0, max);
+    }
+
+    private void move(int direction) {
+        mouseListFocus = false;
+        if (direction < 0) {
+            if (focus == Focus.LIST && cursor > 0) cursor--;
+            else if (focus == Focus.LIST) focus = Focus.KIND;
+            else if (focus == Focus.KIND) focus = Focus.GAME;
+        } else {
+            if (focus == Focus.GAME) focus = Focus.KIND;
+            else if (focus == Focus.KIND) focus = Focus.LIST;
+            else cursor = Math.min(Math.max(0, visibleEntries().size() - 1), cursor + 1);
+        }
+    }
+
+    private boolean handleFooter() {
+        if (pointer == null || !pointer.click()) return false;
+        for (MenuChrome.FooterTarget target : footerTargets) {
+            if (!target.contains(pointer)) continue;
+            int direction = pointer.x() < target.x() + MenuChrome.keyCapWidth(target.hint().key()) / 2 ? -1 : 1;
+            switch (footerActions.get(target.index())) {
+                case MOVE -> { move(direction); MenuFeedback.emit(NAVIGATE); }
+                case OPEN -> openSelected();
+                case DETAILS -> openDetails(selectedEntry());
+                case CHANGE -> changeFilter(direction);
+                case BACK -> {
+                    if (page instanceof Page.Details) page = LIBRARY;
+                    else finish(Result.BACK);
+                    MenuFeedback.emit(CANCEL);
+                }
+                case SCROLL -> {
+                    if (page instanceof Page.Details details) scrollDetails(details, direction);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void footer(List<MenuChrome.Hint> hints, List<FooterAction> actions) {
+        footerTargets = MenuChrome.footerLayout(W, null, hints, ticks).targets();
+        footerActions = List.copyOf(actions);
+        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input), ticks);
+    }
+
     private void changeFilter(int direction) {
+        mouseListFocus = false;
         PlaybackEntry previous = selectedEntry();
         if (focus == Focus.GAME) {
             gameId = games.get(Math.floorMod(games.indexOf(gameId) + direction, games.size()));
@@ -177,7 +272,7 @@ public final class PlaybackBrowser {
     }
 
     private void updateTrace(TracePlaybackFeedback feedback) {
-        feedback.update(input);
+        feedback.update(input, pointer);
         switch (feedback.consumeResult()) {
             case BACK -> page = LIBRARY;
             case LAUNCH -> {
@@ -225,10 +320,18 @@ public final class PlaybackBrowser {
     }
 
     private void updateDetails(Page.Details details) {
-        if (MenuInput.back(input)) { page = LIBRARY; MenuFeedback.emit(CANCEL); return; }
-        int scroll = details.scroll();
-        if (MenuInput.up(input)) scroll = Math.max(0, scroll - 1);
-        if (MenuInput.down(input)) scroll = Math.min(Math.max(0, details.lines().size() - detailRows()), scroll + 1);
+        if (MenuInput.back(input) || pointer != null && pointer.backClick()) {
+            page = LIBRARY; MenuFeedback.emit(CANCEL); return;
+        }
+        if (handleFooter()) return;
+        int step = pointer == null ? 0 : -pointer.wheel();
+        if (MenuInput.up(input)) step--;
+        if (MenuInput.down(input)) step++;
+        scrollDetails(details, step);
+    }
+
+    private void scrollDetails(Page.Details details, int step) {
+        int scroll = Math.clamp(details.scroll() + step, 0, Math.max(0, details.lines().size() - detailRows()));
         if (scroll != details.scroll()) {
             page = new Page.Details(details.title(), details.lines(), details.labelWidth(), scroll);
             MenuFeedback.emit(NAVIGATE);
@@ -261,21 +364,27 @@ public final class PlaybackBrowser {
         if (entries.isEmpty()) {
             renderEmpty();
         } else {
-            int first = Math.max(0, Math.min(cursor - 2, entries.size() - visibleRows()));
+            int first = firstVisible(entries.size());
             for (int i = first, y = listTop(); i < Math.min(entries.size(), first + visibleRows()); i++, y += rowHeight())
                 renderRow(entries.get(i), y, i == cursor && focus == Focus.LIST);
             MenuChrome.scrollbar(font, W - 7, listTop(), visibleRows() * rowHeight(), first, visibleRows(), entries.size());
             renderSummary(selectedEntry());
         }
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        hints.add(MenuChrome.upDown(input, UiMessages.text("hub.ui.select_caps")));
+        List<FooterAction> actions = new ArrayList<>();
+        hints.add(MenuChrome.upDown(input, UiMessages.text("hub.ui.select_caps"))); actions.add(FooterAction.MOVE);
         if (focus == Focus.LIST) {
-            if (!entries.isEmpty()) hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.path.open_caps")));
-            // Details of an empty list only help when a source could not be read.
+            if (!entries.isEmpty()) {
+                hints.add(MenuChrome.hint(MenuChrome.confirmKey(input), UiMessages.text("menu.path.open_caps")));
+                actions.add(FooterAction.OPEN);
+            }
             hints.add(MenuChrome.hint(MenuChrome.detailsKey(input), UiMessages.text("menu.path.details_caps")));
-        } else hints.add(MenuChrome.leftRight(input, UiMessages.text("launch.ui.change_caps")));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back")));
-        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input), ticks);
+            actions.add(FooterAction.DETAILS);
+        } else {
+            hints.add(MenuChrome.leftRight(input, UiMessages.text("launch.ui.change_caps"))); actions.add(FooterAction.CHANGE);
+        }
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back"))); actions.add(FooterAction.BACK);
+        footer(hints, actions);
     }
 
     /** Names what is missing for this exact scope and the one action that adds it. */
@@ -477,9 +586,12 @@ public final class PlaybackBrowser {
         MenuFieldLines.draw(font, details.lines(), details.scroll(), detailRows(), 16, 54 + MenuChrome.compactMetrics().above(), detailPitch(), details.labelWidth());
         MenuChrome.scrollbar(font, W - 15, 52, 142, details.scroll(), detailRows(), details.lines().size());
         List<MenuChrome.Hint> hints = new ArrayList<>();
-        if (details.lines().size() > detailRows()) hints.add(MenuChrome.upDown(input, UiMessages.text("menu.details.scroll")));
-        hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back")));
-        MenuChrome.footer(font, W, null, hints, MenuChrome.controller(input), ticks);
+        List<FooterAction> actions = new ArrayList<>();
+        if (details.lines().size() > detailRows()) {
+            hints.add(MenuChrome.upDown(input, UiMessages.text("menu.details.scroll"))); actions.add(FooterAction.SCROLL);
+        }
+        hints.add(MenuChrome.hint(MenuChrome.backKey(input), UiMessages.text("language.picker.back"))); actions.add(FooterAction.BACK);
+        footer(hints, actions);
     }
 
     private List<PlaybackEntry> visibleEntries() {

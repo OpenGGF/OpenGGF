@@ -60,6 +60,12 @@ public final class MenuTextEditor {
     private String error;
     private boolean deferAcceptanceFeedback;
     private boolean errorFeedback;
+    private record KeyHit(int index, int x, int y, int width, int height) {
+        boolean contains(MasterTitlePointer p) { return p != null && p.over(x, y, width, height); }
+    }
+    private final java.util.List<KeyHit> keyHits = new java.util.ArrayList<>();
+    private java.util.List<MenuChrome.FooterTarget> footerTargets = java.util.List.of();
+    private int pointerX = Integer.MIN_VALUE, pointerY = Integer.MIN_VALUE;
     private Supplier<String> clipboardReader = () -> {
         long window = glfwGetCurrentContext();
         return window == 0 ? null : glfwGetClipboardString(window);
@@ -110,24 +116,40 @@ public final class MenuTextEditor {
     }
 
     public void update(InputHandler input) {
+        if (input == null) return;
+        MenuInput.Pointer p = frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224));
+        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
+        MasterTitlePointer mouse = p.inside() ? new MasterTitlePointer(p.x(), p.y(),
+                p.x() != pointerX || p.y() != pointerY, p.leftPressed(), p.rightPressed(), wheel) : null;
+        if (mouse != null) { pointerX = mouse.x(); pointerY = mouse.y(); }
+        update(input, mouse);
+    }
+
+    /** The owner may supply coordinates already mapped into this editor's content frame. */
+    public void update(InputHandler input, MasterTitlePointer pointer) {
+        MasterTitlePointer mouse = pointer != null && input != null && !input.hasLogicalOverride()
+                && pointer.over(0, 0, frame.width(), 224) ? pointer : null;
         String beforeValue = value;
         int beforeCaret = caret, beforeCell = cell, beforePage = page;
         boolean beforeTrailingCaret = trailingCaret;
         boolean beforeKeypadFocused = keypadFocused;
         errorFeedback = false;
-        try { updateInput(input); } finally {
+        try { updateInput(input, mouse); } finally {
             if (!finished && !errorFeedback && (!value.equals(beforeValue) || caret != beforeCaret
                     || trailingCaret != beforeTrailingCaret || cell != beforeCell || page != beforePage
                     || keypadFocused != beforeKeypadFocused)) MenuFeedback.emit(NAVIGATE);
         }
     }
 
-    private void updateInput(InputHandler input) {
+    private void updateInput(InputHandler input, MasterTitlePointer mouse) {
         if (finished || input == null) return;
         if (textInput != input) { withdrawText(); textInput = input; }
-        if (details != null) { if (details.update(input, frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224)))) details = null; return; }
+        MenuInput.Pointer local = mouse == null ? MenuInput.Pointer.none()
+                : new MenuInput.Pointer(mouse.x(), mouse.y(), true, mouse.click(), mouse.backClick());
+        if (details != null) { if (details.update(input, local, mouse == null ? 0 : mouse.wheel())) details = null; return; }
         if (browser != null) {
-            browser.update(input, frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224)));
+            if (mouse != null) browser.pointer(mouse.x(), mouse.y(), mouse.moved(), mouse.click(), mouse.backClick(), mouse.wheel());
+            browser.update(input, local);
             if (browser.selected() != null) { value = browser.selected(); setCaret(value.length()); error = null; browser = null; }
             else if (browser.cancelled()) browser = null;
             return;
@@ -141,20 +163,37 @@ public final class MenuTextEditor {
         String typed = MenuInput.consumeText(input);
         if (!typed.isEmpty()) { keypadFocused = false; insert(typed); }
         if (textLease.suppressCommands()) {
-            if (MenuInput.textBack(input)) {
+            if (MenuInput.textBack(input) || mouse != null && mouse.backClick()) {
                 if (textLease.draining()) { finish(Result.CANCELLED); return; }
                 textLease.cancelComposition();
             }
             composition = textLease.composition();
             return;
         }
-        if (MenuInput.textBack(input)) { finish(Result.CANCELLED); return; }
-        if (MenuInput.textDetails(input)) {
+        int footer = -1;
+        if (mouse != null && mouse.click())
+            for (MenuChrome.FooterTarget target : footerTargets) if (target.contains(mouse)) { footer = target.index(); break; }
+        if (MenuInput.textBack(input) || mouse != null && mouse.backClick() || footer == 2) { finish(Result.CANCELLED); return; }
+        if (MenuInput.textDetails(input) || footer == 0) {
             withdrawText();
             details = new MenuDetailsScreen(title, (error == null ? "" : error + "\n\n")
                     + UiMessages.text("menu.text.value_details", java.util.Map.of("value", value)));
             MenuFeedback.emit(CONFIRM);
             return;
+        }
+        if (footer == 1) { if (keypadFocused) chooseCell(); else accept(); return; }
+        if (mouse != null && mouse.click() && mouse.over(8, 37, frame.width() - 16, 31)) {
+            keypadFocused = false;
+            return;
+        }
+        if (mouse != null && (mouse.moved() || mouse.click())) {
+            for (KeyHit hit : keyHits) {
+                if (!hit.contains(mouse)) continue;
+                keypadFocused = true;
+                cell = hit.index();
+                if (mouse.click()) { chooseCell(); return; }
+                break;
+            }
         }
         // Physical typing edits the field directly; device presentation never owns focus.
         boolean paste = mode == Mode.ADDRESS
@@ -318,6 +357,8 @@ public final class MenuTextEditor {
     void render(PixelFont font, int width, MenuContentFrame frame) {
         if (font == null) return;
         this.frame = frame;
+        keyHits.clear();
+        footerTargets = java.util.List.of();
         width = Math.max(320, width);
         if (details != null) { details.render(font, width); return; }
         if (browser != null) { browser.render(font, width); return; }
@@ -369,6 +410,7 @@ public final class MenuTextEditor {
         for (int i = 0; i < cellCount(); i++) {
             int x = 10 + i % columns() * cellWidth;
             int y = 87 + i / columns() * pitch;
+            keyHits.add(new KeyHit(i, x, y, cellWidth - 3, pitch - 3));
             boolean action = i >= characterCells();
             String label = cellLabel(i);
             boolean ok = action && actionCell(i) == 59;
@@ -411,6 +453,7 @@ public final class MenuTextEditor {
         // Prompts name the consequence: Enter sets the value and closes the editor.
         hints.add(MenuChrome.hint(acceptHint, keypadFocused ? UiMessages.text("menu.text.press_key_caps") : UiMessages.text("menu.text.set_caps")));
         hints.add(MenuChrome.hint(backHint, UiMessages.text("menu.text.back_caps")));
+        footerTargets = MenuChrome.footerLayout(width, null, hints, ticks).targets();
         MenuChrome.footer(font, width, null, hints, controller, ticks);
     }
 
@@ -502,6 +545,8 @@ public final class MenuTextEditor {
         for (int i = 0; i < cellCount(); i++) {
             int x = 10 + i % columns() * cellWidth;
             int row = i / columns(), y = rowY[row];
+            keyHits.add(new KeyHit(i, x - 2, tall ? y - rowAbove[row] - 1 : y,
+                    cellWidth - 1, tall ? rowHeight[row] + 2 : 14));
             if (keypadFocused && cell == i) {
                 if (tall) MenuStyle.focus(font, x - 2, y - rowAbove[row] - 1, cellWidth - 1, rowHeight[row] + 2);
                 else MenuStyle.focusLabel(font, x - 2, y, cellWidth - 1, 14);

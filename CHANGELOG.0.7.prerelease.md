@@ -588,6 +588,12 @@ Unreleased. The earlier development themes remain in
   the same label column and the values worded as the page shows them; sentences wrap at
   spaces and addresses after a separator, so no word is split. In a room it opens Room
   details, which now begins with the room's name, next track, phase, rules and any notice.
+  Playback Browser and its recording options, target-frame keypad and trace feedback
+  pages now support mouse selection, actions and wheel scrolling; right-click goes back
+  one level, and the side gutters of a centred native page activate nothing.
+  Text fields in mod scenes reserve typing keys before global shortcuts and keyboard
+  mappings run, so entering a name cannot open playback or toggle debug panels; the
+  field still receives its text and editing keys, and shortcuts resume after it closes.
   Narrow footers leave out arrow hints and shortcuts that repeat a row before an action,
   Details or Back, and secondary buttons such as Back use the row face. Controller key caps
   name the button that actually does the job on that pad (X and A on Xbox, Square and Cross

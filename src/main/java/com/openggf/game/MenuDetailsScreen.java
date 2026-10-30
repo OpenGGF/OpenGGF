@@ -63,12 +63,15 @@ public final class MenuDetailsScreen {
         return update(input, MenuInput.pointer(input,width,224));
     }
 
-    boolean update(InputHandler input, MenuInput.Pointer pointer) {
+    boolean update(InputHandler input, MenuInput.Pointer pointer) { return update(input, pointer, 0); }
+
+    boolean update(InputHandler input, MenuInput.Pointer pointer, int wheel) {
         if (input == null) return false;
         this.input=input;
-        if (MenuInput.textBack(input)) { MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return true; }
+        if (MenuInput.textBack(input) || pointer.inside() && pointer.rightPressed()) { MenuFeedback.emit(MenuFeedback.Cue.CANCEL); return true; }
         int previous=selected, previousScroll=scroll, count=actions.size()+moreOffset();
         boolean textOnly=moreOffset()==0 && actions.size()==1;
+        if (pointer.inside() && wheel != 0) scroll=Math.clamp(scroll-wheel*linePitch(),0,maxScroll);
         if (MenuInput.textUp(input)) { if(textOnly)scroll=Math.max(0,scroll-linePitch());else selected=Math.floorMod(selected-1,count); }
         if (MenuInput.textDown(input)) { if(textOnly)scroll=Math.min(maxScroll,scroll+linePitch());else selected=(selected+1)%count; }
         if (MenuInput.textLeft(input)) scroll=Math.max(0,scroll-60);

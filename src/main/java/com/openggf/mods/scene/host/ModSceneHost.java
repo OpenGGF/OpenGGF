@@ -182,6 +182,8 @@ public final class ModSceneHost {
             return;
         }
         try {
+            prepareTextInput(input);
+            if (context == null) return; // A failing input declaration closes its scene.
             context.beginTick(input);
             context.updating = true;
             try { scene.update(context); }
@@ -191,6 +193,21 @@ public final class ModSceneHost {
             close();
             throw failure;
         }
+    }
+
+    /**
+     * Claims a scene's declared text field before host shortcuts and logical-key mapping run.
+     * Use the same owner as the scene context so preparing its tick cannot discard its text.
+     * The scene still reads raw editing keys; inactive/suspended scenes claim nothing.
+     */
+    public boolean prepareTextInput(InputHandler input) {
+        if (scene == null || context == null || exiting || suspended || pendingAct != null
+                || !capturesTextInput()) return false;
+        if (input != null) {
+            com.openggf.control.InputHandlerInternalAccess.prepareKeyboardTextConsumer(input, context);
+            context.textInputLease = com.openggf.control.InputHandlerInternalAccess.captureKeyboardText(input, context);
+        }
+        return true;
     }
 
     /**
