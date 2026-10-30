@@ -130,7 +130,9 @@ public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
         // loc_47440 (sonic3k.asm:93182-93189) runs motion before the solid tail.
         // loc_1E2E0 (sonic3k.asm:41852-41857) clears only the exiting player's
         // bit, so the next body can release P1's pause even while P2 still rides.
-        return true;
+        // An in-bounds controlled rider returns at loc_1E1CA without an exit.
+        int relativeX=player.getCentreX()-currentX;
+        return player.getAir()||relativeX < -0x18||relativeX >= 0x18;
     }
     @Override public boolean rejectsZeroDistanceTopSolidLanding(){
         // loc_47440 (sonic3k.asm:93182-93189) calls SolidObjectTop.

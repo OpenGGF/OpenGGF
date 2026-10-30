@@ -117444,3 +117444,30 @@ The first local commit attempt was rejected by the resource-policy hook for
 machine-local home paths in this evidence text. They were normalized to
 `$OPENGGF_ROOT` notation; tested code, fixture paths actually passed at runtime
 and results are unchanged.
+
+#### Controlled-rider review correction — 2026-10-30
+
+Independent review found that the initial unconditional walk-off opt-in also
+cleared an in-bounds object-controlled rider's standing bit. Native
+`loc_1E1CA` (sonic3k.asm:41712-41726) returns without clearing it. A real
+manager-contact regression on `46b005001` failed that assertion: **1T/1F/0E/0S**,
+Maven **36.079s**; queue wait was not retained. The lift now requests clearing
+only for an airborne rider or one outside its `[-24,24)` horizontal bounds.
+The control tests the retained bit and next body pause; it does not claim that
+the shared controller preserves the whole object-controlled riding state.
+
+The candidate plus this source/test correction completed **85 tests, zero
+failures, errors or skips**, queue **49s**, Maven **1m43s**, using Java 25,
+surfaceless EGL and the verified original locked-on ROM:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  OPENGGF_ROM_DIR="$OPENGGF_ROOT" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+```
+
+This is focused qualification; the original-input death, later Y divergence,
+full route, controlled-rider lifetime and pixel/audio results remain open.

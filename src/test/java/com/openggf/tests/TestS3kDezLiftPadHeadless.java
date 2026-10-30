@@ -140,6 +140,23 @@ class TestS3kDezLiftPadHeadless {
     }
 
     /** Real player/contact owners, in native body-then-SolidObjectTop dispatch order. */
+    @Test void controlledRiderWithinBoundsRetainsTheLiftLatch() {
+        var f=boot(320,0x560,0x400);
+        f.camera().setX((short)0x500);
+        var manager=GameServices.level().getObjectManager();
+        var p1=f.sprite();var pad=create(0x600,0x500,7,0);
+        dispatch(f);landOn(pad,p1);dispatch(f);
+        assertTrue(manager.hasObjectStandingBit(p1,pad));
+        for(int i=0;i<90;i++)dispatch(f);
+        assertEquals(30,pad.pauseForTest());
+        p1.setObjectControlled(true);
+        dispatch(f);
+        assertTrue(manager.hasObjectStandingBit(p1,pad),
+                "loc_1E1CA returns without clearing an in-bounds controlled rider's latch");
+        pad.update(0,p1);
+        assertEquals(30,pad.pauseForTest(),"the retained latch keeps the following body paused");
+    }
+
     @ParameterizedTest @ValueSource(ints={-25,24,0})
     void continuedRideExitReleasesOnlyItsPlayerBitAndNextUpdatePauseThroughRecreation(int exitX){
         var c=SonicConfigurationService.getInstance();
