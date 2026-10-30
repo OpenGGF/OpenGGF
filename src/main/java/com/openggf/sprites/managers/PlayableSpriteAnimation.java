@@ -115,6 +115,25 @@ public class PlayableSpriteAnimation {
     @com.openggf.game.ModApi
     public record RewindState(int lastAnimationId, int lastGroundMovementAnimId) {}
 
+    PlayableAnimationInternalAccess.PresentationState capturePresentationState() {
+        return new PlayableAnimationInternalAccess.PresentationState(lastAnimationId, lastGroundMovementAnimId,
+                groundMovementAnimSpeedSnapshot, groundMovementAnimationSuppressed,
+                nextUpdateSuppressed, animationUpdateSuppressedThisFrame,
+                bootstrapDynamicArtPrime, mappingPublishedThisUpdate, levelFrameCounterThisTick);
+    }
+
+    void restorePresentationState(PlayableAnimationInternalAccess.PresentationState state) {
+        lastAnimationId = state.lastAnimationId();
+        lastGroundMovementAnimId = state.lastGroundMovementAnimId();
+        groundMovementAnimSpeedSnapshot = state.groundMovementAnimSpeedSnapshot();
+        groundMovementAnimationSuppressed = state.groundMovementAnimationSuppressed();
+        nextUpdateSuppressed = state.nextUpdateSuppressed();
+        animationUpdateSuppressedThisFrame = state.animationUpdateSuppressedThisFrame();
+        bootstrapDynamicArtPrime = state.bootstrapDynamicArtPrime();
+        mappingPublishedThisUpdate = state.mappingPublishedThisUpdate();
+        levelFrameCounterThisTick = state.levelFrameCounterThisTick();
+    }
+
     /** Publish an admitted Move/Roll pose before terrain contact can change dispatch state. */
     void publishGroundPoseAnimation(int frameCounter) {
         // The existing forced-byte owner must also govern this earlier publication entry.

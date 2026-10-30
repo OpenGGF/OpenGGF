@@ -6,7 +6,9 @@ import com.openggf.game.GroundMode;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess.GhostPresentationState;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess.GhostPresentationInput;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -42,8 +44,8 @@ public final class GhostTraceRenderer {
     private int consumedRows;
     // Presentation checkpoints only: captured from our unregistered copies, never
     // the live team. At most one entry per trace row and two native character slots.
-    // Keeping the owner's snapshot (without follower history) also retains private
-    // controller state rather than guessing which animation fields matter next.
+    // Each fixed-size value contains only local presentation inputs/outputs and
+    // Animate trackers. Full player rewind callbacks can escape to live services.
     private List<VisualCheckpoint> visualHistory = new ArrayList<>();
     private int validHistoryRows;
     private boolean visualStateAvailable;
@@ -104,15 +106,22 @@ public final class GhostTraceRenderer {
                 || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
                 || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
         List<String> recorded = trace.metadata().recordedCharacters();
-        prepareCharacter("main", recorded.isEmpty() ? "sonic" : recorded.getFirst(),
-                row.primaryCharacterState(), row, row.input(), animate);
-        prepareCharacter("sidekick0", recorded.size() > 1 ? recorded.get(1) : "tails",
-                row.sidekick(), row, 0,
-                animate && phase != TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
-        var checkpoint = new VisualCheckpoint(slots.entrySet().stream()
-                .map(entry -> new SlotCheckpoint(entry.getKey(), entry.getValue(),
-                        entry.getValue().sprite().captureRewindState(false)))
-                .toList());
+        VisualCheckpoint before = visualStateAvailable && consumedRows <= validHistoryRows
+                ? visualHistory.get(consumedRows - 1) : captureVisualSlots();
+        VisualCheckpoint checkpoint;
+        try {
+            prepareCharacter("main", recorded.isEmpty() ? "sonic" : recorded.getFirst(),
+                    row.primaryCharacterState(), row, row.input(), animate);
+            prepareCharacter("sidekick0", recorded.size() > 1 ? recorded.get(1) : "tails",
+                    row.sidekick(), row, 0,
+                    animate && phase != TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD);
+            checkpoint = captureVisualSlots();
+        } catch (RuntimeException | Error failure) {
+            // Neither a partial main/sidekick preparation nor its exception may
+            // publish history. Scalar rollback has no shared gameplay callbacks.
+            restoreVisualSlots(before);
+            throw failure;
+        }
         if (end <= visualHistory.size()) visualHistory.set(end - 1, checkpoint);
         else visualHistory.add(checkpoint);
         validHistoryRows = end;
@@ -123,15 +132,26 @@ public final class GhostTraceRenderer {
 
     private boolean restoreVisualRow(int end) {
         if (end > validHistoryRows) return false;
-        slots.clear();
-        for (SlotCheckpoint checkpoint : visualHistory.get(end - 1).slots()) {
-            checkpoint.slot().sprite().restoreRewindState(checkpoint.state());
-            slots.put(checkpoint.key(), checkpoint.slot());
-        }
+        restoreVisualSlots(visualHistory.get(end - 1));
         consumedRows = end;
         visualFrame = visualTrace.getFrame(end - 1);
         visualStateAvailable = true;
         return true;
+    }
+
+    private VisualCheckpoint captureVisualSlots() {
+        return new VisualCheckpoint(slots.entrySet().stream()
+                .map(entry -> new SlotCheckpoint(entry.getKey(), entry.getValue(),
+                        PlayableSpriteInternalAccess.captureGhostPresentation(entry.getValue().sprite())))
+                .toList());
+    }
+
+    private void restoreVisualSlots(VisualCheckpoint state) {
+        slots.clear();
+        for (SlotCheckpoint checkpoint : state.slots()) {
+            PlayableSpriteInternalAccess.restoreGhostPresentation(checkpoint.slot().sprite(), checkpoint.state());
+            slots.put(checkpoint.key(), checkpoint.slot());
+        }
     }
 
     private void missingVisualHistory(int end) {
@@ -321,19 +341,12 @@ public final class GhostTraceRenderer {
     }
 
     private static void hydrateVisualState(AbstractPlayableSprite sprite, TraceCharacterState state, int inputMask) {
-        sprite.setDirection((state.statusByte() & 0x01) != 0 ? Direction.LEFT : Direction.RIGHT);
-        sprite.setRolling(state.rolling());
-        sprite.setAir(state.air());
-        sprite.setGroundMode(groundMode(state.groundMode()));
-        sprite.setCentreXPreserveSubpixel(state.x());
-        sprite.setCentreYPreserveSubpixel(state.y());
-        sprite.setSubpixelRaw(state.xSub(), state.ySub());
-        sprite.setXSpeed(state.xSpeed());
-        sprite.setYSpeed(state.ySpeed());
-        sprite.setGSpeed(state.gSpeed());
-        sprite.setAngle(state.angle());
-        sprite.setMovementInputActive(movementInputActive(inputMask, state));
-        sprite.setObjectMappingFrameControl(false);
+        PlayableSpriteInternalAccess.applyGhostPresentationInput(sprite, new GhostPresentationInput(
+                state.x(), state.y(), state.xSub(), state.ySub(),
+                state.xSpeed(), state.ySpeed(), state.gSpeed(), state.angle(), state.air(), state.rolling(),
+                groundMode(state.groundMode()),
+                (state.statusByte() & 0x01) != 0 ? Direction.LEFT : Direction.RIGHT,
+                movementInputActive(inputMask, state)));
     }
 
     private static boolean movementInputActive(int inputMask, TraceCharacterState state) {
@@ -358,7 +371,7 @@ public final class GhostTraceRenderer {
 
     private record VisualCheckpoint(List<SlotCheckpoint> slots) { }
 
-    private record SlotCheckpoint(String key, GhostSlot slot, PerObjectRewindSnapshot state) { }
+    private record SlotCheckpoint(String key, GhostSlot slot, GhostPresentationState state) { }
 
     private record GhostSlot(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer,
                              String code, SpriteArtSet art) {
