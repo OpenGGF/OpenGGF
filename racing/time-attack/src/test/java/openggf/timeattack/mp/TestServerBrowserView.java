@@ -254,6 +254,19 @@ class TestServerBrowserView {
     }
 
     @Test
+    void browserSaysUnverifiedRoomsHaveNoSharedTimes() {
+        ControlMessage.RoomSummary room = new ControlMessage.RoomSummary("room", "Room", "s2", 0, 0,
+                "OPEN", 1, 8, "RELAY", false);
+        ServerBrowserView view = browser(new Directory(List.of(room)));
+        input.idle(view::update);
+
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        view.draw(canvas);
+
+        assertTrue(canvas.shows("NO SHARED TIMES"), canvas.joined());
+    }
+
+    @Test
     void readsTheCompleteSelectedRoomAndFailureBeforeJoining() {
         String name = "部屋e\u0301🚀".repeat(35) + "ROOM_NAME_TAIL";
         var room = new ControlMessage.RoomSummary("id", name, "s2", 0, 0, "OPEN", 1, 8, "RELAY", true);
