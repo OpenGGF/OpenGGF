@@ -10,6 +10,22 @@ Unreleased. The earlier development themes remain in
   cold route's landing timing. Walking or jumping off clears that player's
   standing latch, allowing the lift's return pause to resume after P1 leaves.
 
+- **Input-pass ownership prerequisite:** Existing GameLoop passes keep controller
+  edges stable across logical rereads and acknowledge keyboard/text lifetime once.
+  Engine display controls sample current controller input and hand it to the first
+  GameLoop consumer without nesting scopes or coalescing later fast-forward passes.
+  Modal display frames acknowledge their own controller edges, and pad frame-step
+  capture decisions use the same fresh sample as GameLoop. Deferred passes restore
+  their unacknowledged controller baseline; text claims, recorded native Start and
+  the existing slow-motion carry retain their owners.
+  Ordered gameplay admission now preserves observed keyboard/controller taps released
+  before the consuming tick, including repeated taps and simultaneous controls.
+  Zero-step service previews the same pending prefix; modal/text claims, fixed menu
+  keys and recorded overrides retain their input authority. Native menu bindings
+  consume each admitted edge once; keyboard resume retires paused taps, and fixed
+  menu/text controls keep physical authority during replay. This does not connect
+  independent live scheduling or change audio/capture cadence.
+
 - **Carnival Night cylinders:** Unloading an inactive cylinder no longer releases
   a player held by another cylinder.
 
@@ -1438,6 +1454,12 @@ its original drawing priority.
   IMEs still need platform verification.
 
 ## Maintenance and release preparation
+
+- **Live frame timing preparation:** Engine now separates its live advance phase
+  from scene presentation, retaining fade-before-update ordering, modal input
+  acknowledgment and one outer audio packet. Frame-step and modal decisions
+  survive input acknowledgment through capture. This extraction preserves the
+  current FPS behavior; fixed PAL50/NTSC60 live scheduling remains unimplemented.
 
 - **Stock parity measurement foundation:** A versioned, explicitly partial
   S1/S2/S3K obligation catalogue and on-demand report distinguish declared
