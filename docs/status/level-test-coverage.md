@@ -2201,3 +2201,11 @@ adds real P1/P2 landing and walk-off dispatch, held/released latch restoration,
 and destructive pad/arm recreation with forward replay. Original-input cold
 observation remains bounded; whole-act, native-cause, donor, wider viewport and
 expanded roster obligations are not inferred from this local contract.
+
+
+DEZ1 conveyor ownership follow-up (2026-10-30): the
+[act matrix](../architecture/validation/levels/s3k-dez-act1.md#conveyor-moving-standing-bit-ownership--2026-10-30)
+adds native jump/solid checkpoints, real P1/P2 moving-latch ownership,
+replacement-slot isolation and destructive recreation with forward replay.
+The strict original-input prefix ends at 3280; expanded configuration, whole-act,
+pixel/audio and campaign qualification remain separate obligations.

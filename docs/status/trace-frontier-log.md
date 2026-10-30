@@ -117471,3 +117471,236 @@ env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
 
 This is focused qualification; the original-input death, later Y divergence,
 full route, controlled-rider lifetime and pixel/audio results remain open.
+
+
+## 2026-10-30 — DEZ cold conveyor moving standing-bit owner
+
+Implementation leaf `bugfix/ai-dez-cold-input-y-row3268`, provisioned T3
+checkout `t3-a87f37c7`, fast-forwarded cleanly to the requested pushed develop
+`6f267e8103188214ec40570248ad8ea9322cbc40`. No new worktree or child is created.
+The recent editor/render changes are included in every engine execution here.
+Foreign jobs and dirty main-checkout disassembly/TraceChaser are preserved;
+this checkout's pinned reference submodules start and remain clean.
+
+### Original inputs and native jump/solid decision
+
+`OPENGGF_ROOT` denotes the existing main checkout. The actual absolute original
+ROM argument is its `Sonic and Knuckles & Sonic 3 (W) [!].gen`, independently
+verified CRC32 `63522553`, SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`,
+SHA-256 `fba0677fde9f76df93f3e98d6310d8af68b9847bde16e253d73cd4dd8134ed23`.
+Original BK2 SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+`ssz/physics.csv.gz` is
+`a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`;
+`ssz/aux_state.jsonl.gz` is
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`.
+No ROM link/copy, movie edit, fixture regeneration or comparison relaxation occurs.
+The `ssz` fixture directory identifies DEZ through metadata, not its name.
+
+The retained earlier `dez-next-20261029/DezDecision.cs` is read and adapted into
+an external, read-only native probe. Its new source SHA-256 is
+`cb9bdca46bff513eb311693b0540b5a2bff1157d147bca4a8f68236e8abadab2`.
+The clean pinned TraceChaser `703bd92d32634ce5ebac60625b48c60ef5500427` is
+rebuilt through `bizhawk-headless/build.sh`; the harness SHA-256 is again
+`dad8d30f427978166fcc048dafc8a8d41e6dfce9615a664f33b159cd2f6c44a3`.
+Official BizHawk 2.11 runtime preflight passes, with the previous independently
+verified GPGX `c4231296ec5ba59b431df22b68e234ae7bfbbfc87b6e72fa471234ac1b220d12`,
+waterbox `d2367818aafb4e520ad5ab005b5762c61506b0c819c4d79687235acfb0fc0c78`
+and managed-core `0144e6e236be68ce126eb771dcb5a9ae7c153a083fa0333f345ac37b4a60acf7`
+hashes rechecked. `RUNTIME` and `TASK_ROOT` name those external task locations;
+`S3K_ROM` resolves to the absolute original above. Native command shape:
+
+```bash
+BIZHAWK_HOME="$RUNTIME" tools/tracechaser/bizhawk-headless/build.sh
+mono /usr/lib/mono/msbuild/Current/bin/Roslyn/csc.exe /nologo \
+  "/out:$TASK_ROOT/DezDecision.exe" \
+  /r:tools/tracechaser/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe \
+  "/r:$RUNTIME/dll/BizHawk.Emulation.Cores.dll" "$TASK_ROOT/DezDecision.cs"
+MONO_PATH="$PWD/tools/tracechaser/bizhawk-headless/bin/Release:$RUNTIME/dll" \
+  LD_LIBRARY_PATH="$RUNTIME/dll" env -u DISPLAY -u WAYLAND_DISPLAY \
+  timeout --signal=TERM --kill-after=10s 600s mono "$TASK_ROOT/DezDecision.exe" \
+  "$S3K_ROM" "$PWD/src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2"
+```
+
+It consumes 472258 unchanged original inputs from power-on, with no RAM writes,
+registering callbacks only at input 472230 and sampling completed rows 3248–3275.
+All **28 samples / 308 main-player fields** match committed physics exactly.
+Native process exits 0 with its completion marker; no new fixture or pixels are
+published. Native execution time is unmeasured; xbuild retains its known .NET
+v4.8 toolset warnings.
+
+At row 3268, actual advancing movie input 472250 (the callback's previous
+CompletedFrame also reads 472250), `loc_118AE (sonic3k.asm:23385-23389)` sees
+Sonic at `$150D,$08E4`, Y radius already 14, `d0=-5`, velocity `$0138,$F980`,
+status `$0E`; its Y subtraction produces `$08E9`. The engine independently
+matches that exact position/radius/velocity transition during its physics step.
+There is no wrong jump impulse, radius delta, input edge or fractional carry.
+
+Native slot 16 is code `$00047A14`, subtype `$B0`, pad `$1540,$0908`, status
+`$08`. `loc_47A14 (sonic3k.asm:93712-93733)` changes pad Y to `$0907` and
+retains the same status. `sub_47A88 (sonic3k.asm:93752-93758)` carries Sonic's
+X by -2 while retaining his Y `$08E9`. `loc_47A58 (sonic3k.asm:93735-93749)` then calls full solid with `d1=$8B`, `d3=$11`.
+The observed branch is `loc_1DC98 (sonic3k.asm:41075-41081)`: clear OnObj,
+set Air, clear this pad's P1 standing bit, return without changing Y. Native
+end status is `$06`; no new-contact lift or vertical carry runs on this jump.
+
+### Engine cause and bounded old-red checks
+
+The temporary observer uses the unchanged fresh native320 Sonic+Tails builder,
+original offset 468982, normal returned input and drawing. Existing
+`RecordingFrameDriver` step wrappers and `CollisionTrace` callbacks read state
+without a production instrumentation edit. Every return verifies the exact
+committed input, one movie-cursor advance and a real gameplay body.
+
+On the requested base, before physics Sonic is `$150D,$08E4`, radius 19;
+after physics `$150D,$08E9`, radius 14, Y velocity `$F980`, with live pad
+standing/ride both true. The earlier invisible-block checkpoint unseats the
+engine ride but leaves the pad bit true. The conveyor body correctly moves Y
+`$0908->$0907` and carries X `$150D->$150B`. Its `updateDynamicSpawn` then
+replaces coordinate-bearing metadata. At its actual solid checkpoint, the
+standing lookup is now false although the live native SST status is still `$08`.
+The fresh-contact path changes Sonic Y `$08E9->$08E8`; velocities, radius and
+fractions remain unchanged. All later object checkpoints preserve that wrong Y.
+
+`ObjectSolidContactController.airUnseatLatchKeyFor` already offers an explicit
+instance-key contract. This is P41's known moving-solid failure mode, now
+requalified on the current DEZ runtime. The sole production correction selects
+`usesInstanceSolidStateLatchKey` and `airborneRiderUnseatRequiresOwnCheckpoint`
+on `S3kDezConveyorPadObjectInstance`. Status remains owned by the live occupant
+as metadata moves; earlier solids cannot consume its return. No shared owner,
+new state, allocator, timing, input, loading, audio or rewind algorithm changes.
+
+Every Java request uses this exact environment/command shape:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless OPENGGF_ROM_DIR="$OPENGGF_ROOT" \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" \
+  "-Dtest=$SELECTION" test -B
+```
+
+- Baseline `SELECTION=TestDezJumpCausalObservation#observe`: **1T/0F/0E/0S**, exit 0;
+  queue **157s**, Maven **1m34s**, JUnit case **3.183s**. This is an observation
+  shell, not a passing route assertion. It again consumes **4843** inputs and
+  dies, maximum X `$1598`. First differences: Y **3268** `$08E9/$08E8`, camera Y
+  3275, X 3432, camera X 3438, Air 3606, velocities/ground speed/X fraction 3607,
+  Y fraction 3608, rolling 3697, routine 3699, angle 3967, rings 3974; no level
+  counter difference. Its 15-int-per-row big-endian state digest is
+  `764e390b77042f718d14c21ba205353958683ed43bc6e8b4092661b6170d337e`.
+  Frozen observer SHA-256 `2901186f18ae6293ce2e57467f37829e83608d29a02d01fbf090408a781a0585`,
+  complete `src` plus `pom.xml` path/NUL/bytes/NUL fingerprint
+  `f1ac0c82547419c32d7571b73adbea06f92dc9016f6317f85ce318c539fceb2c`.
+- Initial red selection `TestS3kDezConveyorPadSolidOwnership,TestS3kDezColdRoutes#coldActOneConveyorJumpPreservesNativeBoundary`:
+  **3T/3F/0E/0S**, exit 1; queue **16s**, Maven **38.034s**. The cold assertion
+  fails exactly at row 3268, Y expected 2281, actual 2280. Both new component
+  cases fail before initial contact because their declared pad is outside the
+  camera's solid window; those two failures do not establish the mechanism.
+  The test camera Y is corrected without changing production.
+- Corrected component-only baseline `SELECTION=TestS3kDezConveyorPadSolidOwnership`:
+  **2T/2F/0E/0S**, exit 1; queue **37s**, Maven **34.969s**. Both P1/P2 parameters
+  establish real support, then fail the intended pre-solid assertion:
+  `moving metadata must retain this occupant's airborne standing bit`, expected
+  true, actual false. Final component source SHA-256
+  `b482046e4219efd6a8aecfabfeb81f9924bf0c84f137c046671cf1e4e2b84b25`.
+  Old production conveyor SHA-256
+  `f3ed765021ebb03baae9cc166fab1d7d43cfa002359980600db105824c6b2fab`.
+
+### Candidate qualification and remaining scope
+
+The frozen combined selection is:
+
+```text
+TestDezJumpCausalObservation#observe,TestS3kDezConveyorPadSolidOwnership,TestS3kDezConveyorPadHeadless,TestS3kDezLiftPadHeadless,TestS3kDezColdRoutes#coldActOneOpeningPreservesNativeCompanionMaceContact+coldActOneLiftLandingPreservesNativeBoundary+coldActOneConveyorJumpPreservesNativeBoundary,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It completes **97T/2F/0E/0S**, exit 1; queue **133s**, Maven **1m48s**.
+All **95 other cases pass**, including 60 S3K anchor cases (both packages'
+loading classes), 20 lift cases, 11 conveyor cases, three original-input
+prefixes and one observation shell. The permanent main prefix matches all
+13 asserted fields and unchanged inputs through 3280 rows. The observer sees
+**no difference in any of its 15 fields through 5000 original inputs** (75,000
+comparison samples), remains alive, maximum X `$1587`, and stops at its declared
+bound. Its digest is
+`17aee0fe25e155b333c8914e5b119728e96f6296dcc69806251ae18b77c92c5a`.
+This crosses the old 4843-input death, but is no act completion or later endpoint
+qualification. Fresh native instruction/end corroboration remains the 28-row
+window described above; the longer engine observer compares the committed rows.
+
+The corrected engine checkpoint now retains standing/ride and OnObj through all
+earlier solids and metadata movement. At its own pad checkpoint Sonic is
+`$150B,$08E9`, radius 14, velocity `$0138,$F980`, pad `$1540,$0907`, standing/ride
+true. The return clears only support and leaves Y `$08E9`, matching native.
+No movement/distance constant, terrain height, jump calculation or shared latch
+map was changed. Those alternative explanations are rejected by the actual
+jump and solid samples, not by the downstream endpoint improvement.
+
+Both new ownership parameters pass their moving-latch, airborne-release,
+other-participant support, actual removal/recreation and 45-update forward-replay
+assertions, then fail only at the final test's allocation assumption: expected
+retired slot 5, generic allocation returned earlier free slot 4. The test now
+requests the exact freed slot through the existing `addDynamicObjectAtSlot` API
+and keeps the exact-slot/no-inherited-bits assertions. This changes only that
+last test allocation; runtime and all previously passing cases are unchanged.
+
+Combined tested `src` plus `pom.xml` fingerprint:
+`d4bf69c72649b35e44c64e7a270dbcf84aa81559085eed9794c21e8a530097dd`.
+Production conveyor SHA-256:
+`1e45a98124bf74930c869ad4da08b49491e827c3add73aae05b4e78a27bb1b5d`;
+permanent cold-route test:
+`d8a0440003ea2045a4fd2c17e565107dd26264f7ae17a8899ee65689683bed7e`.
+The observation source adds only an alive-at-bound summary after the initial
+baseline and is SHA-256
+`abca41f373dda5f5af1b39748972deeb20508e1ef100006a7b3a202c6c514935`.
+The final ownership source is
+`88938eb6f5f59d5b2471664d55ba9d1b1d898080b8395052e5485b980cabec05`;
+with that allocation-only test correction, `src` plus `pom.xml` fingerprint is
+`a03d588f83ed2ff9415138ccf4ba96680c232ecde29345f598bb0233ee862aac`.
+
+The final narrow request, `SELECTION=TestS3kDezConveyorPadSolidOwnership`,
+completes **2T/0F/0E/0S**, exit 0; queue **109s**, Maven **35.015s**.
+Both exact participant identities execute, including the restored 45-update
+trajectory and exact replacement slot. The correction closes only the erroneous
+test allocation assumption; no production change follows the combined run.
+The 95 completed passing cases from that run are reused on their unchanged
+owners/fixtures/environment. This is not a claim that the original 97-case
+invocation passed: its two recorded failures above remain part of the evidence.
+
+All executed XML suite/case identities and dispositions are inspected. Java is
+**25.0.5.0.2**, explicit surfaceless EGL and the verified absolute original ROM
+property are present. No skipped case, fork error or dump occurs. Compiler and
+Unsafe deprecation noise, inherited FAST-to-NONE load-profile fallback and the
+decoding test's deliberate out-of-range warning are retained as known output.
+Queue waiting is distinct from Maven execution; overlapping intervals are not
+summed. Overall task wall and native execution durations are unmeasured.
+
+The change-based dry plan at the pinned integration base selects **3770 smoke
+classes plus guards**, including the temporary observer. It is not launched:
+this stateless pair of existing local provider selections has bounded original
+input, native decision, real P1/P2 lifetime, allocation/recreation/rewind and
+required S3K-anchor coverage under the explicit implementation-leaf scope.
+There is no broad smoke, full suite, strict whole-segment trace, whole-act,
+pixel/audio, integration, push, PR or release claim. Next: extend the matched
+original-input observation beyond 5000 to find the next causal frontier; no
+new first differing field is found inside this bound.
+
+The final maintained `src` plus `pom.xml` fingerprint, after deleting the
+uncommitted observer, is
+`23756b2976ca2e4e0c1a3ec3bea02e5f5d17fec6f785b527f1e71138d8a0b4e3`.
+Conveyor, permanent route and final ownership source hashes remain exactly those
+recorded above. No maintained executable input changes after its affected check.
+
+Cleanup deletes the temporary engine observer and bytecode, consumed owned
+Surefire/XML/text/raw Maven/native diagnostics, dry-plan/citation output and the
+external native executable/runtime-library link. The small native source and
+useful build outputs remain; no validation receipt or diagnostic archive is
+created. No owned native/Maven/queue job remains live. The provisioned checkout
+and local bugfix branch remain for lead review; no extra worktree/child is
+created, and original ROMs, foreign jobs and reference submodule changes are
+untouched. The parent owns integration and checkout/branch removal.
+
+`git diff --check`, new relative links/anchors, AGENTS/CLAUDE and skill mirrors,
+and exact historical evidence prefixes pass. The citation parser resolves all
+four conveyor-code references and finds no new hard/stale/unverifiable issues
+across the added frontier and mirrored P41 example; inherited findings are
+unchanged. Commit hooks validate the staged resource/documentation policy.
