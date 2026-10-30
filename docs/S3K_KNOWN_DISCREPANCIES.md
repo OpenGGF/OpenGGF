@@ -1986,3 +1986,11 @@ and fresh graph restore controls reproduce three old-red assertion failures.
 Corrected focused qualification is 82 distinct cases across one fixture repair,
 zero skips, including both publication phases and ordinary defeat. See the
 [audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
+
+
+DEZ staircase airborne release (2026-10-30): moving parent/child sections now
+retain each native participant's standing latch and consume an airborne rider
+only at that section's own `SolidObjectFull` checkpoint. The native return
+clears support without a position lift. See the [frontier evidence](status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797)
+for matched old/new checks and the bounded original-input continuation; expanded
+viewport/donor/roster, whole-act and campaign qualification remain separate.

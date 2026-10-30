@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Death Egg staircases:** Moving sections preserve their own standing bits.
+  A jumping rider releases at the ridden section's collision checkpoint,
+  preserving the native jump height.
+
 - **Death Egg moving pads:** Exact surface contact leaves an airborne player in
   flight until the native overlap window is reached, preserving the original
   cold route's landing timing. Walking or jumping off clears that player's
