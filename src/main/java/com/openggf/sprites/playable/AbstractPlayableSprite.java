@@ -2447,7 +2447,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (currentAngle == 0) {
                         return; // Already at 0
                 }
-                // ROM: Sonic_JumpAngle (s2.asm:37465-37486)
+                // ROM: Sonic_JumpAngle (s2.asm:37793-37814)
                 // ROM uses bpl (branch if positive, i.e., bit 7 clear) to determine direction
                 // Angles 0x01-0x7F (1-127): bit 7 clear = positive, subtract 2
                 // Angles 0x80-0xFF (128-255): bit 7 set = negative, add 2

@@ -3393,7 +3393,7 @@ public class ObjectManager {
     }
 
     /**
-     * ROM parity: S1 {@code out_of_range} macro (Macros.asm line 261).
+     * ROM parity: S1 {@code out_of_range} macro (Macros.asm line 278).
      * <p>
      * Computes unsigned 16-bit distance between object and screen position:
      * <pre>

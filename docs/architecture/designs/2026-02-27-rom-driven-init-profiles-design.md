@@ -126,7 +126,7 @@ current engine implementation state.
 | # | ROM Routine | ROM Reference | Engine Operation | Status |
 |---|-------------|---------------|-----------------|--------|
 | 36 | `WaterEffects` (initial water processing) | s2.asm:4940 | `WaterSystem::update()` | Exists |
-| 37 | `InitPlayers` (spawn Sonic and/or Tails based on `Player_mode`, spawn spindash dust objects) | s2.asm:4941 | Player sprites created via `SpriteManager` during `GameLoop` init; player state reset in `LevelManager::loadCurrentLevel()` | Exists |
+| 37 | `InitPlayers` (spawn Sonic and/or Tails based on `Player_mode`, spawn spindash dust objects) | s2.asm:5178 | Player sprites created via `SpriteManager` during `GameLoop` init; player state reset in `LevelManager::loadCurrentLevel()` | Exists |
 | 38 | Clear/lock controls: zero logical+physical, `Control_Locked=1` both players, `Level_started_flag=0` | s2.asm:4942-4948 | `AbstractPlayableSprite::setControlLocked(true)` + `Camera::setLevelStarted(false)` | Exists |
 | 39 | Water surface objects: if water zone, spawn two `ObjID_WaterSurface` at X offsets $60/$120 | s2.asm:4950-4955 | `Sonic2ZoneFeatureProvider::initZoneFeatures()` calls `initWaterSurfaceManager()` | Exists |
 | 40 | Zone-specific objects: CPZ → `ObjID_CPZPylon`; OOZ → `ObjID_Oil` | s2.asm:4957-4963 | `Sonic2ZoneFeatureProvider::initZoneFeatures()` calls `initCPZPylon()` for CPZ; `OilSurfaceManager` for OOZ | Partial (CPZ pylon exists; OOZ oil exists) |

@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  *   <li>Bits [7:4]: phase offset (shifted left by max(period-3, 0))</li>
  * </ul>
  * <p>
- * ROM references: Obj_AIZFallingLog (sonic3k.asm line 59927), word_2B566 (line 59868),
+ * ROM references: Obj_AIZFallingLog (sonic3k.asm line 59932), word_2B566 (line 59868),
  * loc_2B5D4 (spawner loop), loc_2B6A0 (log falling), loc_2B6BC (log at water),
  * loc_2B6D8 (solid + draw), loc_2B72C (splash animation).
  */

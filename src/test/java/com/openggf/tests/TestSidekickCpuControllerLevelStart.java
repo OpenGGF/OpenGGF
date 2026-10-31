@@ -56,7 +56,7 @@ class TestSidekickCpuControllerLevelStart {
         assertEquals(0x40, tails.getCentreX() & 0xFFFF);
         assertEquals(0x294, tails.getCentreY() & 0xFFFF);
         // TailsCPU_Init sets Tails_CPU_routine to 6 and RETURNS -- it does not fall
-        // through to TailsCPU_Normal (docs/s2disasm/s2.asm:39093-39103, next label
+        // through to TailsCPU_Normal (docs/s2disasm/s2.asm:39258-39268, next label
         // TailsCPU_Spawning; dispatched via TailsCPU_States :39081-39087). S3K's
         // routine-0 entry likewise ends every path in rts (sonic3k.asm:26429-26511).
         // So the init pass sets up and steers nothing; the first follow input is

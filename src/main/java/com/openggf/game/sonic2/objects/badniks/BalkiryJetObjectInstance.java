@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * Balkiry Jet (0x9C) - Jet exhaust child that follows the Balkiry parent.
  *
- * Based on disassembly Obj9C (s2.asm lines 74480-74523).
+ * Based on disassembly Obj9C (s2.asm lines 75110-75153).
  *
  * Main (Obj9C_Main):
  *   - Read parent address from objoff_2C

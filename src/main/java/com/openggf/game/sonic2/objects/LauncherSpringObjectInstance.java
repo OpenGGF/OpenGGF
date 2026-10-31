@@ -636,11 +636,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      * Called when all players have left the spring.
      */
     private void resetAnimationState() {
-        // ROM loc_2AD14 (s2.asm:57937-57941) handles spring decompression by only
+        // ROM loc_2AD14 (s2.asm:58115-58119) handles spring decompression by only
         // resetting mainspr_mapframe (move.b #1,mainspr_mapframe) and decaying
         // objoff_38 by 4 per frame. It does NOT touch objoff_32 (the compression
         // countdown). objoff_32 is only written by Obj85_Init's spawn-clear (0) and
-        // by loc_2ADB0's underflow reset to 3 (s2.asm:58000). So a spring that has
+        // by loc_2ADB0's underflow reset to 3 (s2.asm:58172). So a spring that has
         // compressed at least once retains objoff_32's residual countdown across
         // decompression and re-capture, which is what makes the FIRST compression
         // increment after a re-capture land a partial interval later than a

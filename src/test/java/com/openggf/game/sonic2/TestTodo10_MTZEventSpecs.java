@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p>ROM reference:
  * <ul>
- *   <li>LevEvents_MTZ (s2.asm:20471-20472): Acts 1/2 - immediate RTS (no events)</li>
+ *   <li>LevEvents_MTZ (s2.asm:20493-20494): Acts 1/2 - immediate RTS (no events)</li>
  *   <li>LevEvents_MTZ3 (s2.asm:20476-20556): Act 3 - 5 routines for boss arena</li>
  * </ul>
  *
@@ -113,7 +113,7 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ Acts 1 and 2 have no events (immediate RTS).
-     * ROM reference: LevEvents_MTZ (s2.asm:20471-20472)
+     * ROM reference: LevEvents_MTZ (s2.asm:20493-20494)
      * <pre>
      *   LevEvents_MTZ:
      *     rts
@@ -135,7 +135,7 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ3 Routine 0: Set initial Y boundary when camera reaches X >= $2530.
-     * ROM reference: LevEvents_MTZ3_Routine1 (s2.asm:20491-20499)
+     * ROM reference: LevEvents_MTZ3_Routine1 (s2.asm:20509-20517)
      * <pre>
      *   cmpi.w #$2530,(Camera_X_pos).w
      *   blo.s  +
@@ -163,7 +163,7 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ3 Routine 2: Lock left boundary and lower max Y at X >= $2980.
-     * ROM reference: LevEvents_MTZ3_Routine2 (s2.asm:20502-20511)
+     * ROM reference: LevEvents_MTZ3_Routine2 (s2.asm:20520-20529)
      * <pre>
      *   cmpi.w #$2980,(Camera_X_pos).w
      *   blo.s  +
@@ -194,7 +194,7 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ3 Routine 4: Lock boss arena at $2AB0 and load boss PLC.
-     * ROM reference: LevEvents_MTZ3_Routine3 (s2.asm:20514-20529)
+     * ROM reference: LevEvents_MTZ3_Routine3 (s2.asm:20532-20547)
      * <pre>
      *   cmpi.w #$2A80,(Camera_X_pos).w
      *   blo.s  +
@@ -229,7 +229,7 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ3 Routine 6: Lock min Y at $400, spawn MTZ boss after 90-frame delay.
-     * ROM reference: LevEvents_MTZ3_Routine4 (s2.asm:20532-20549)
+     * ROM reference: LevEvents_MTZ3_Routine4 (s2.asm:20550-20567)
      * <pre>
      *   cmpi.w #$400,(Camera_Y_pos).w
      *   blo.s  +
@@ -293,7 +293,7 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ3 Routine 8: Track camera position (boss active).
-     * ROM reference: LevEvents_MTZ3_Routine5 (s2.asm:20542-20544)
+     * ROM reference: LevEvents_MTZ3_Routine5 (s2.asm:20574-20576)
      * <pre>
      *   move.w (Camera_X_pos).w,(Camera_Min_X_pos).w
      *   rts

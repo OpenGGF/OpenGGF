@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests the MGZ Act 2 end-boss arena handoff.
  *
  * <p>ROM: {@code MGZ2_Resize} (sonic3k.asm:39383-39458) and
- * {@code Obj_MGZEndBoss} setup (sonic3k.asm:142780+).
+ * {@code Obj_MGZEndBoss} setup (sonic3k.asm:142785+).
  */
 class TestSonic3kMgz2EndBossEvents {
 

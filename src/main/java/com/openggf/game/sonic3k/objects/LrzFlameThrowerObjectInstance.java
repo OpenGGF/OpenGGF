@@ -257,7 +257,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         return isWithinSolidContactBounds() && getRenderer(Sonic3kObjectArtKeys.LRZ2_FLAME_THROWER) != null;
     }
 
-    /** {@code loc_43E14} / {@code loc_43F4A} (sonic3k.asm:89321-89366, :89412-89473). */
+    /** {@code loc_43E14} / {@code loc_43F4A} (sonic3k.asm:89367-89412, :89412-89473). */
     private void advanceFiringFrame(int levelFrame) {
         // subq.b #1,$24(a0) / bpl / move.b #2,$24(a0) / addq.b #1,$25(a0) / andi.b #1,$25(a0).
         flameFrameTimer = (flameFrameTimer - 1) & 0xFF;

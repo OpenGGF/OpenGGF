@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 /**
  * Sonic 3&K StarPost/Checkpoint (Object 0x34).
  * <p>
- * Based on disassembly: Obj_StarPost (sonic3k.asm line 61594).
+ * Based on disassembly: Obj_StarPost (sonic3k.asm line 61599).
  * <p>
  * Init (routine 0, loc_2CFC0):
  * <ul>

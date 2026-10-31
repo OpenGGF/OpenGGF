@@ -618,7 +618,7 @@ public final class S3kSlotBonusStageRuntime {
 
     private void checkRingPickup() {
         // ROM sub_4BDCA reads x_pos(a0)/y_pos(a0) as they stand right after
-        // sub_4BABC's ground-velocity projection (sonic3k.asm:98822-98824), before
+        // sub_4BABC's ground-velocity projection (sonic3k.asm:98837-98839), before
         // MoveSprite2 folds air x_vel/y_vel into position (sonic3k.asm:98826). Using
         // the fully-stepped position here (currentPlayerOriginX/Y, which reflects
         // this frame's air-velocity step too) lets the engine reach a ring cell one

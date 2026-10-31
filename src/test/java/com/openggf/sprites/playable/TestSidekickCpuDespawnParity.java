@@ -591,7 +591,7 @@ class TestSidekickCpuDespawnParity {
         // (sonic3k.asm:28483), and Kill_Character's `rts` (sonic3k.asm:21195)
         // unwinds to the caller of Tails_Check_Screen_Boundaries
         // (e.g. Tails_Stand_Path at sonic3k.asm:27566), which then runs
-        // MoveSprite_TestGravity2 (->MoveSprite2 at sonic3k.asm:36128,36093)
+        // MoveSprite_TestGravity2 (->MoveSprite2 at sonic3k.asm:36128,36130)
         // applying the negative y-velocity to y_pos in the same frame.
         // Trace AIZ F7171 records the post-shift state with y_vel=-$700
         // retained.

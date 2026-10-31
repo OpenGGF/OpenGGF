@@ -5,3 +5,15 @@ set -eu
 HOOK_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 
 "$HOOK_DIR/run-policy" pre-commit "$@"
+
+# Inspect index blobs, not working files, so partial staging cannot hide drift.
+REPO_ROOT=$(git rev-parse --show-toplevel)
+if command -v python3 >/dev/null 2>&1; then
+    citation_python=python3
+elif command -v python >/dev/null 2>&1; then
+    citation_python=python
+else
+    echo "pre-commit: Python is required for the staged disassembly citation guard." >&2
+    exit 1
+fi
+"$citation_python" "$REPO_ROOT/tools/disasm/disasm_citations.py" --repo "$REPO_ROOT" check-staged

@@ -107,7 +107,7 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
-        // ROM Obj47_Main (s2.asm:50826-50827) gates the ENTIRE button routine
+        // ROM Obj47_Main (s2.asm:50889-50890) gates the ENTIRE button routine
         // behind the render_flags.on_screen bit:
         //   _btst #render_flags.on_screen,render_flags(a0)
         //   _beq.s BranchTo_JmpTo12_MarkObjGone   ; off-screen -> MarkObjGone, return

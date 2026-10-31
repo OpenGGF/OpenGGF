@@ -189,7 +189,7 @@ the ROM `SolidObject` call site's d2 value.
 
 1. *Per-object unseeded counter:* Any per-object `animCounter` initialized to 0 at construction diverges from the shared `v_ani0_frame` whenever the object streams in mid-level (the real `v_ani0_frame` has been ticking since level start). Always derive `v_ani0_frame` from `levelManager.getFrameCounter() + 1` (= current gfc), not from a per-object accumulator. See also SBZ Electrocuter pattern (`v_framecount` source).
 
-2. *Off-by-one: ExecuteObjects runs before SynchroAnimate:* ROM `Level_MainLoop` (sonic.asm:2980) order is:
+2. *Off-by-one: ExecuteObjects runs before SynchroAnimate:* ROM `Level_MainLoop` (sonic.asm:2998) order is:
    ```
    addq.w #1,(v_framecount).w   ; gfc++ at top of loop (line 2984)
    jsr ExecuteObjects            ; objects READ v_ani0_frame (line 2988)
@@ -307,7 +307,7 @@ The engine models `locktime`/`move_lock` as `moveLockTimer`, decremented only in
 
 **ROM citation.** `docs/s1disasm/_incObj/26, 2E Monitors and Power-Ups.asm:183` (`move.b #col_none,obColType(a0)` — broken monitor stops further collision). Gate: `docs/s1disasm/_incObj/Sonic ReactToItem.asm:52-53`.
 
-**Cross-game note.** S2 `Touch_Loop` reads `collision_flags(a1)` and `bne` to the check (zero = skipped, `docs/s2disasm/s2.asm:85048-85049`); S3K only touch-checks objects added to `Collision_response_list`. A consumed object must clear its flags / not re-add itself in all three.
+**Cross-game note.** S2 `Touch_Loop` reads `collision_flags(a1)` and `bne` to the check (zero = skipped, `docs/s2disasm/s2.asm:85210-85211`); S3K only touch-checks objects added to `Collision_response_list`. A consumed object must clear its flags / not re-add itself in all three.
 
 **Originating commit.** `466f408a8` (S1 broken monitor clears col type so it stops preempting ReactToItem).
 
@@ -554,7 +554,7 @@ which is what makes it confusing -- the recorded `player_x` and
 a position bug. If `player_x` and `player_stand_on_obj` both match the
 recording, the width is the only remaining input.
 
-**What `obActWid` actually is.** `_Constants.asm:230` names it *action width*,
+**What `obActWid` actually is.** `_Constants.asm:251` names it *action width*,
 and the per-object comments call it *sprite display width*, but neither is the
 whole story: it is one byte with several consumers and it is never the rendered
 sprite extent (the mappings own that). It is read by `BuildSprites`' horizontal

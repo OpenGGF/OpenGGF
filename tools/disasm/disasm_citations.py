@@ -11,6 +11,11 @@ a disassembly gains comments or labels. This tool:
   the superproject's pinned gitlink): the file must exist, the lines must exist,
   and when a disassembly label is named just before the citation, that label
   must sit in or just before the cited range.
+* ``repair`` searches local history, newest first, for an ``ok`` labelled citation
+  and carries its unchanged range to the pin with the same diff mapping. Changed
+  ranges and citations without historical evidence are reported and left alone.
+* ``check-staged`` rejects per-file increases in stale/out-of-range citations in
+  the index versus HEAD (the pre-commit guard); unavailable references warn.
 * ``remap``  carries citations from revision A to revision B of one submodule
   through the line mapping of ``git diff A B``. Citations touching changed
   lines are reported, never guessed. Run it in the same commit that moves a
@@ -19,7 +24,7 @@ a disassembly gains comments or labels. This tool:
 Inputs: the superproject (cwd or --repo); disassembly history is read from git
 objects, so a linked worktree whose submodules are not initialised still works
 (the main checkout's submodule repositories are used).
-Outputs: a report on stdout (``--json`` for machine use); ``remap --write``
+Outputs: a report on stdout (``--json`` for machine use); ``remap --write`` or ``repair --write``
 edits citing files in place, preserving line endings.
 Origin: citation-audit task, 2026-10-09 (feature/ai-disasm-citation-check).
 """
@@ -30,6 +35,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 DEFAULT_SCAN = ('src/main/java', 'src/test/java', 'docs', '.agents', '.claude', 'tools')
@@ -100,7 +106,8 @@ class Disasm:
     def __init__(self, sp, name, path):
         self.sp, self.name, self.path = sp, name, path
         self._gitdir = None
-        self._files, self._trees, self._renames = {}, {}, None
+        self._files, self._trees, self._renames = collections.OrderedDict(), {}, None
+        self._history = None
 
     def gitdir(self):
         if self._gitdir is None:
@@ -174,7 +181,31 @@ class Disasm:
                         if alias:
                             labels.setdefault(alias.group(1), i)
                 self._files[key] = (text, labels)
+        self._files.move_to_end(key)
+        # History contains large monolithic files; bound the per-revision cache.
+        while len(self._files) > 8:
+            self._files.popitem(last=False)
         return self._files[key]
+
+    def history_versions(self, pin, rel):
+        """Newest local revisions of each distinct file blob, including unpushed refs.
+
+        Batch object lookup avoids one git process per revision. Date order keeps
+        descendants before ancestors; equal versions need only be examined once.
+        """
+        if self._history is None:
+            self._history = self.git(
+                "rev-list", "--date-order", "--all", pin).stdout.splitlines()
+        specs = [f"{rev}:{rel}" for rev in self._history]
+        p = subprocess.run(["git", "-C", self.gitdir(), "cat-file",
+                            "--batch-check=%(objectname) %(objecttype)"],
+                           input="\n".join(specs) + "\n", capture_output=True, text=True, check=True)
+        seen = set()
+        for rev, entry in zip(self._history, p.stdout.splitlines()):
+            oid, kind = entry.rsplit(" ", 1)
+            if kind == "blob" and oid not in seen:
+                seen.add(oid)
+                yield rev
 
 
 Citation = collections.namedtuple('Citation', 'file line spans sub rel a b kind anchor text')
@@ -332,14 +363,16 @@ def scan(sp, revs, scan_paths):
         content = raw.decode('utf-8', errors='replace')
         if ':' not in content and 'line' not in content:
             continue
-        found = parse_file(f, content, resolve)
-        if f in protected:
-            # lines starting inside the hook-pinned prefix are history, written against older revisions
-            last = raw[:protected[f]].count(b'\n') + (0 if raw[:protected[f]].endswith(b'\n') else 1)
-            found = [c._replace(kind='historic') if c.line < last or (c.line == last and raw[:protected[f]].endswith(b'\n')) else c
-                     for c in found]
-        cites.extend(found)
+        cites.extend(parse_protected(f, raw, resolve, protected.get(f, 0)))
     return cites
+
+
+def parse_protected(source, raw, resolve, protected=0):
+    found = parse_file(source, raw.decode('utf-8', errors='replace'), resolve)
+    # The first line starting at/after the prefix is eligible, even for a partial line prefix.
+    prefix = raw[:protected]
+    last = prefix.count(b'\n') + bool(prefix and not prefix.endswith(b'\n'))
+    return [c._replace(kind='historic') if c.line <= last else c for c in found]
 
 
 def reference_revs(sp, rev_arg, need_objects=True):
@@ -486,7 +519,7 @@ def line_kind(line):
 
 
 def file_linemap(d, a, b, rel):
-    p = d.git('diff', '--no-ext-diff', '--no-color', '--ignore-cr-at-eol', '-U0', a, b, '--', rel, check=False)
+    p = d.git('diff', '--no-ext-diff', '--no-color', '--ignore-cr-at-eol', '-U0', a, b, '--', rel, check=True)
     hunks = []
     for line in p.stdout.splitlines():
         m = re.match(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', line)
@@ -570,6 +603,115 @@ def cmd_remap(args):
     return 1 if unmapped and args.strict else 0
 
 
+def cmd_repair(args):
+    started = time.monotonic()
+    sp = Superproject(args.repo)
+    revs, problems = reference_revs(sp, {})
+    for problem in problems:
+        print('warning:', problem, file=sys.stderr)
+    counts, groups = collections.Counter(), collections.defaultdict(list)
+    for c in scan(sp, revs, args.paths or DEFAULT_SCAN):
+        status, _ = classify(sp, revs, c)
+        if status == 'historic':
+            counts['protected-history'] += 1
+        elif status in ('stale', 'out-of-range'):
+            if c.file.endswith('.json'):
+                counts['json-evidence'] += 1
+            else:
+                groups[c.sub, c.rel].append(c)
+    edits, findings = collections.defaultdict(list), []
+
+    def leave(c, reason):
+        counts[reason] += 1
+        findings.append((c, reason))
+
+    for (sub, rel), candidates in sorted(groups.items()):
+        d, pin = sp.subs[sub], revs[sub]
+        pin_lines, pin_labels = d.lines(pin, rel)
+        pending = []
+        for c in candidates:
+            _, label, _ = anchor_status(c, pin_lines, pin_labels)
+            if label is None:
+                leave(c, 'no-named-label')
+            else:
+                pending.append((c, label))
+        if not pending:
+            continue
+        print(f'searching {sub}/{rel}: {len(pending)} citations', file=sys.stderr, flush=True)
+        for rev in d.history_versions(pin, rel):
+            lines, labels = d.lines(rev, rel)
+            remaining, matched = [], []
+            for c, label in pending:
+                if (1 <= c.a <= c.b <= len(lines) and
+                        anchor_status(c, lines, labels)[:2] == ('ok', label)):
+                    matched.append(c)
+                else:
+                    remaining.append((c, label))
+            if matched:
+                lm = file_linemap(d, rev, pin, rel)
+                for c in matched:
+                    mapped = lm.map_range(c.a, c.b)
+                    if mapped is None:
+                        leave(c, 'touches-changed-lines')
+                        continue
+                    na, nb = mapped
+                    updated = c._replace(a=na, b=nb)
+                    if classify(sp, revs, updated)[0] != 'ok':
+                        leave(c, 'mapped-anchor-not-ok')
+                        continue
+                    counts['repaired'] += 1
+                    values = [str(na)] + ([str(nb)] if len(c.spans) > 1 else [])
+                    edits[c.file].append((c.line, c.spans, values))
+                    print(f'{c.file}:{c.line}: repair: {sub}/{rel}:{c.a}-{c.b} -> '
+                          f'{na}-{nb} (source {rev[:12]})')
+            pending = remaining
+            if not pending:
+                break
+        for c, _ in pending:
+            leave(c, 'no-ok-revision')
+    for c, reason in findings:
+        print(f'{c.file}:{c.line}: needs review: {c.sub}/{c.rel}:{c.a}-{c.b}: {reason}')
+    if args.write:
+        protected = protected_prefixes(sp.root)
+        for f, items in edits.items():
+            skipped = apply_edits(sp.root / f, items, protected.get(f, 0))
+            counts['repaired'] -= skipped
+            counts['protected-history'] += skipped
+    left = sum(counts[k] for k in ('no-named-label', 'touches-changed-lines',
+                                  'mapped-anchor-not-ok', 'no-ok-revision', 'json-evidence'))
+    print('repair summary:', ', '.join(f'{k}={v}' for k, v in sorted(counts.items())),
+          f'; left={left}; runtime={time.monotonic() - started:.2f}s',
+          '(written)' if args.write else '(dry run; --write to apply)')
+    return 1 if args.strict and (left or problems) else 0
+
+
+def cmd_check_staged(args):
+    sp = Superproject(args.repo)
+    paths = run(['git', 'diff', '--cached', '--name-only', '-z', '--diff-filter=ACMRT',
+                 '--no-renames'], cwd=sp.root).stdout.split('\0')
+    paths = [f for f in paths if f.endswith(SCAN_SUFFIXES) and not f.startswith(SKIP_PREFIXES)]
+    # No history walk or whole-tree scan in a commit hook.
+    if not paths:
+        return 0
+    revs, problems = reference_revs(sp, {})
+    resolve, protected = Resolver(sp, revs), protected_prefixes(sp.root)
+    failures = []
+    for path in paths:
+        counts = []
+        for ref in ('HEAD:', ':'):
+            p = subprocess.run(['git', 'show', ref + path], cwd=sp.root, capture_output=True)
+            cites = parse_protected(path, p.stdout, resolve, protected.get(path, 0))
+            counts.append(sum(classify(sp, revs, c)[0] in ('stale', 'out-of-range') for c in cites))
+        if counts[1] > counts[0]:
+            failures.append(f'{path}: stale/out-of-range citations increased {counts[0]} -> {counts[1]}; '
+                            'cite the pinned disassembly (check/repair for details)')
+    for problem in problems:
+        print('warning: citation guard:', problem, file=sys.stderr)
+    for failure in failures:
+        print(failure, file=sys.stderr)
+    return int(bool(failures))
+
+
 PROTECTED_LIST = '.githooks/machine-local-path-grandfather.sha256'
 
 
@@ -644,8 +786,14 @@ def main(argv=None):
     r.add_argument('--carry-edited', action='store_true',
                    help='also carry ranges across same-size, same-mnemonic edits (e.g. renamed constants)')
     r.add_argument('--strict', action='store_true', help='exit non-zero when any citation needs review')
+    r = sub.add_parser('repair', help='recover labelled citations from local history and map to the pin')
+    r.add_argument('paths', nargs='*')
+    r.add_argument('--write', action='store_true', help='edit files in place; default is a dry run')
+    r.add_argument('--strict', action='store_true', help='exit non-zero for citations left for review')
+    sub.add_parser('check-staged', help='reject per-file increases in stale/out-of-range index citations')
     args = p.parse_args(argv)
-    return {'check': cmd_check, 'remap': cmd_remap}[args.cmd](args)
+    return {'check': cmd_check, 'remap': cmd_remap, 'repair': cmd_repair,
+            'check-staged': cmd_check_staged}[args.cmd](args)
 
 
 if __name__ == '__main__':

@@ -36,7 +36,7 @@ import java.util.List;
  * Art is loaded from the level's pattern buffer (zone-specific tiles). The door does not
  * animate its mappings in the ROM; opening is represented only by moving the solid object.
  * <p>
- * ROM reference: Obj_Door (sonic3k.asm:66076), loc_30FD2 (horizontal variant).
+ * ROM reference: Obj_Door (sonic3k.asm:66081), loc_30FD2 (horizontal variant).
  */
 public class DoorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable,
@@ -143,7 +143,7 @@ public class DoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getOnScreenHalfWidth() {
-        // ROM byte_30FCE (sonic3k.asm:66207) sets width_pixels = $20 for the
+        // ROM byte_30FCE (sonic3k.asm:66212) sets width_pixels = $20 for the
         // horizontal CNZ door; byte_30E18 sets width_pixels per vertical-door
         // variant (HCZ/CNZ/DEZ). The horizontal half-width $20 is wider than
         // the engine's default 16-px on-screen margin, so the camera+margin

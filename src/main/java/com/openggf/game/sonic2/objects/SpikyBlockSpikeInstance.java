@@ -37,7 +37,7 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
         implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.PoseOwned {
     // Obj68_Spike_Directions selects complete Up/Right/Down/Left mapping poses from routine_secondary, with no separate horizontal flip owner.
 
-    // From disassembly: Obj68_CollisionFlags (s2.asm line 53386-53390)
+    // From disassembly: Obj68_CollisionFlags (s2.asm line 53864-53868)
     // Direction 0=Up ($84), 1=Right ($A6), 2=Down ($84), 3=Left ($A6)
     private static final int[] COLLISION_FLAGS = {0x84, 0xA6, 0x84, 0xA6};
 
@@ -106,7 +106,7 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
         updateAction(vIntRunCount);
         updatePosition();
         updateDynamicSpawn(currentX, currentY);
-        // ROM Obj68_Spike (s2.asm:53302) ends with MarkObjGone2 keyed on
+        // ROM Obj68_Spike (s2.asm:53773) ends with MarkObjGone2 keyed on
         // spikearoundblock_initial_x_pos (the block's anchor X), not the spike's
         // extended currentX — so the spike does not despawn early when it pokes
         // off-screen. This object intentionally performs no self off-screen
@@ -116,7 +116,7 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj68_Spike_Action (s2.asm lines 53345-53382)
+     * ROM: Obj68_Spike_Action (s2.asm lines 53792-53829)
      * Handles the expand/retract/wait cycle and direction rotation.
      */
     private void updateAction(int vIntRunCount) {
@@ -168,7 +168,7 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
 
     /**
      * Update current position based on direction and offset.
-     * ROM: Obj68_Spike_Up/Right/Down/Left (s2.asm lines 53311-53342)
+     * ROM: Obj68_Spike_Up/Right/Down/Left (s2.asm lines 53776-53807)
      * Note: move.b reads the high byte of the 16-bit offset word,
      * so effective pixel offset = offset >> 8.
      */

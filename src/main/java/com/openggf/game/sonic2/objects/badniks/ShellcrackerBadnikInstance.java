@@ -25,7 +25,7 @@ import java.util.List;
  * Walks back and forth on platforms, detects the player, stops and extends
  * its claw arm to attack, then retracts and resumes walking.
  *
- * Based on disassembly Obj9F (s2.asm:74955).
+ * Based on disassembly Obj9F (s2.asm:75602).
  *
  * State machine:
  *   Routine 0 (INIT): LoadSubObject, set velocity/radii, transition to WALKING

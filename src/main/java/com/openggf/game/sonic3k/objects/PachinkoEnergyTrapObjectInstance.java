@@ -118,7 +118,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
 
         maybePlayTransporterSfx(vIntRunCount, playerEntity);
-        // ROM loc_49FD6 (docs/skdisasm/sonic3k.asm:96680-96683) runs sub_49FE4 once for
+        // ROM loc_49FD6 (docs/skdisasm/sonic3k.asm:96685-96688) runs sub_49FE4 once for
         // Player_1 and once for Player_2, so the sidekick is captured by exactly the same
         // subroutine. Only the tail after `cmpa.w #Player_1,a1` is main-player-only.
         AbstractPlayableSprite mainPlayer =
@@ -214,7 +214,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         } else {
             int relativeY = playerCenterY - currentY;
             if (relativeY < CAPTURE_TOP || relativeY >= CAPTURE_BOTTOM_EXCLUSIVE) {
-                // ROM `addi.w #$C,d0 / cmpi.w #$18,d0 / bhs.s locret_4A078` (:96699-96701).
+                // ROM `addi.w #$C,d0 / cmpi.w #$18,d0 / bhs.s locret_4A078` (:96736-96738).
                 return;
             }
             if (isMainPlayer) {
@@ -223,13 +223,13 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             releaseCompetingMagnetOrbs(player, vIntRunCount);
             NativePositionOps.writeYPosPreserveSubpixel(player, currentY);
             if (!player.isObjectControlled()) {
-                // ROM `tst.b $2E(a1) / bne.s loc_4A024` then sfx_Bouncy (:96707-96710):
+                // ROM `tst.b $2E(a1) / bne.s loc_4A024` then sfx_Bouncy (:96714-96717):
                 // the bounce plays on every frame the player enters with no object control.
                 playSfx(Sonic3kSfx.BOUNCY);
             }
         }
 
-        // loc_4A024 (:96711-96713).
+        // loc_4A024 (:96716-96718).
         ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAir(true);
         if (!isMainPlayer) {

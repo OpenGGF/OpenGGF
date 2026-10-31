@@ -704,7 +704,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             if (!paletteSwapped) {
                 loadPaletteFromPalPointers(PAL_AIZ_INDEX);
             }
-            // AIZ1_ScreenInit -> Adjust_AIZ1Chunks (sonic3k.asm:104383-104384): for
+            // AIZ1_ScreenInit -> Adjust_AIZ1Chunks (sonic3k.asm:104495-104496): for
             // Player_mode 3, Adjust_AIZ1Chunks2 writes word_4FAE4 to
             // Target_palette_line_4+$10 (104498-104502), which the level fade reaches.
             // The chunk edits in the same routine are a separate owner.
@@ -995,7 +995,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void releaseAizIntroSidekickMarker() {
-        // ROM AIZ1_Resize loc_1C4C4 (sonic3k.asm:38938-38940):
+        // ROM AIZ1_Resize loc_1C4C4 (sonic3k.asm:38943-38945):
         // after the main AIZ palette handoff, Tails_CPU_routine is set to 2.
         SpriteManager sm = spriteManager();
         if (sm == null) {
@@ -1687,7 +1687,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // ROM: ShakeScreen_Setup — timed (bomb) and constant (water trigger) modes
         tickScreenShake();
 
-        // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39052)
+        // ROM: AIZ2_Resize — dynamic boundary state machine (sonic3k.asm:39057)
         updateAiz2EndBossSpawn();
     }
 
@@ -1858,7 +1858,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * equivalent to checking that {@link LevelManager#getApparentAct()} is 1.
      * The engine's seamless AIZ1 -> AIZ2 fire transition (and the trace
      * reload-resume path) preserves apparentAct, matching ROM where
-     * {@code AIZ1_AIZ2_Transition} (sonic3k.asm:104673) does not write
+     * {@code AIZ1_AIZ2_Transition} (sonic3k.asm:104678) does not write
      * {@code Apparent_zone_and_act}.  Direct AIZ2 entry (level select,
      * starpost respawn from a saved AIZ2 starpost) sets it to $0001 via
      * {@code LevelSelect_StartZone} (sonic3k.asm:10258) /
@@ -2131,7 +2131,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
         // AIZ2SE_Normal falls through to AIZ2SE_ShipRefresh. The plane redraw
         // must report complete on the following ScreenEvents pass before ROM calls
-        // AllocateObject for Obj_AIZBattleship (sonic3k.asm:104931-104971).
+        // AllocateObject for Obj_AIZBattleship (sonic3k.asm:105311-105351).
         // Snapshot-at-entry dispatch above prevents this newly armed work from
         // being consumed in the same pass.
         battleshipSpawnRefreshPasses = 1;
@@ -2549,7 +2549,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     /**
      * True while the post-bombing ship loop is repeating the forest section
-     * ({@code AIZ2_DoShipLoop} with {@code Events_bg+$02 = $46C0}, s3.asm:70625,
+     * ({@code AIZ2_DoShipLoop} with {@code Events_bg+$02 = $46C0}, s3.asm:71015,
      * 70956-70971). ROM state only: the auto-scroll loop is active and its wrap
      * boundary is the post-bombing forest boundary. Drives the FG Plane A {@code $200}
      * horizontal wrap that keeps the looped forest canopy continuous across the
@@ -2601,7 +2601,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /**
      * Ticks the screen shake. Called each frame from {@link #updateAct2Continuation(int)}.
      * <p>
-     * ROM: ShakeScreen_Setup (sonic3k.asm:104229) supports two modes:
+     * ROM: ShakeScreen_Setup (sonic3k.asm:104234) supports two modes:
      * <ul>
      *   <li>Positive Screen_shake_flag → timed countdown with ScreenShakeArray (bomb impacts)</li>
      *   <li>Negative Screen_shake_flag (-1) → constant shake with ScreenShakeArray2,

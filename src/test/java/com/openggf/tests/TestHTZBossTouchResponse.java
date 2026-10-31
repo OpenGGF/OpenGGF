@@ -125,8 +125,8 @@ public class TestHTZBossTouchResponse {
         objectManager.addDynamicObject(boss);
         objectManager.update(GameServices.camera().getX(), player, List.of(), 1);
 
-        // ROM Obj52_Mobile_Flee (docs/s2disasm/s2.asm:64598-64606) falls through to
-        // loc_30170 (docs/s2disasm/s2.asm:64608-64612) in the SAME frame it sets
+        // ROM Obj52_Mobile_Flee (docs/s2disasm/s2.asm:64713-64721) falls through to
+        // loc_30170 (docs/s2disasm/s2.asm:64723-64727) in the SAME frame it sets
         // Boss_defeated_flag, so y_pos and Camera_Max_X_pos advance immediately.
         assertTrue(GameServices.gameState().isBossDefeatedFlag());
         assertEquals(initialY + 2, boss.getState().y);

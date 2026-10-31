@@ -411,7 +411,7 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
         // 0x0210 once the launch no longer zeroed g_speed outright).
         applyLaunchTriggerFrameGroundVelDecel(player);
 
-        // loc_49D68's bra.w loc_49DE4 (sonic3k.asm:96508) does not stop at the
+        // loc_49D68's bra.w loc_49DE4 (sonic3k.asm:96556) does not stop at the
         // ground_vel nudge above -- it falls all the way through loc_49E0A
         // (sonic3k.asm:96578-96587), which projects the just-nudged ground_vel
         // onto the player's angle into x_vel/y_vel and runs MoveSprite_TestGravity2,

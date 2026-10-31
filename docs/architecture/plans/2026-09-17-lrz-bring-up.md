@@ -2278,7 +2278,7 @@ see, and why every test added here watches a value across frames.
 | Item | ROM | What was wrong |
 | --- | --- | --- |
 | 2 hand motion | `loc_7897A` (sonic3k.asm:160498-160522) positions the hand with `MoveSprite_AtAngleLookup` over `AngleLookup_2` anchored on `parent3` = the subtype-`$14` link; `$3C` stays `$80` so `AtAngle_80_BF` at `lo = 0` gives `(0, -$18)` | The hand inherited the shared sync-to-parent, so it rode the drill body and its shots left the drill instead of the arm |
-| 3 child stagger | `sub_78BD6` (sonic3k.asm:160718-160724) parks each link and hand on `Wait_Draw` for the `$2E` `loc_7880A` gave it: `(mirrored ? $10 : 0) + subtype * 2` (sonic3k.asm:160334-160337, 160352-160355) | Absent. Both arms snapped out fully formed on one frame instead of unrolling |
+| 3 child stagger | `sub_78BD6` (sonic3k.asm:160718-160724) parks each link and hand on `Wait_Draw` for the `$2E` `loc_7880A` gave it: `(mirrored ? $10 : 0) + subtype * 2` (sonic3k.asm:160339-160342, 160352-160355) | Absent. Both arms snapped out fully formed on one frame instead of unrolling |
 | 4 raw animation phase | `Animate_RawMultiDelay`'s `addq.w #2,d0` runs *before* the read, on an `anim_frame` `Set_Raw_Animation` cleared (sonic3k.asm:177654-177670), so the first pair played is index 2 and index 0/1 is only `loc_845F2`'s restart target | The walk started at index 0, stretching every script by one pair: `byte_78DF1`'s drop was four frames and 16 px instead of three and 12 |
 | 5 orbiter angle | `loc_788F4`'s out-of-window branch negates `$40` and then *falls through* to the same `move.b d0,$3C(a0)` at `loc_7890C` (sonic3k.asm:160437-160453) | The angle was recomputed after the flip, so it never reached `$6F`/`$91` and the sway was two units short at each end |
 | 6 link offsets | `MoveSprite_CircularSimple` (sonic3k.asm:178515-178532): ROM sine table, `asr.l #4`, anchor read and written as longwords | `Math.sin` and a rounded pixel. The table disagrees with `Math.sin` by up to 1/16 px per joint, and truncating to pixels shortened a ten-joint chain |
@@ -3087,7 +3087,7 @@ This is focused validation, not a suite pass: no trace fixtures beyond the SOZ c
 the pattern pulled in, and no `run_categories.py` selection.
 
 **Still owed on slice 6**: the two camera releases and `word_78EAA` (`loc_78AA8`/`loc_78B00`/
-`loc_78B08`, sonic3k.asm:160585-160604: `Camera_X_pos >= $2C0` sets `Camera_min_X_pos = $2C0` and
+`loc_78B08`, sonic3k.asm:160600-160619: `Camera_X_pos >= $2C0` sets `Camera_min_X_pos = $2C0` and
 swaps `Pal_LRZ2` into line 2 with `Pal_LRZMiniboss3` into line 3; `Camera_X_pos >= $940` sets
 `Camera_min_X_pos = $940` and clears `Palette_cycle_counter1`), `LRZ2_BackgroundEvent` stages 0
 and 4 (`loc_5700C`/`loc_57040`, :115739-115768), timeline isolation across the change, rewind

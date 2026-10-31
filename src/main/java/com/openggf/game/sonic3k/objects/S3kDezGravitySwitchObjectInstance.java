@@ -100,7 +100,7 @@ public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInsta
         // ROM: andi.w #$14,d0 (:94863). $14 is Player 1's top and bottom contact bits --
         // the pad answers to being stood on and to being hit from underneath, which is the
         // whole point: under reverse gravity the player arrives at its other face. Player 2's
-        // pair is $28 and reaches sub_48B40 only, never this test (:94872-94879).
+        // pair is $28 and reaches sub_48B40 only, never this test (:94887-94894).
         boolean topOrBottom = contact.touchTop() || contact.touchBottom();
         if (!isPlayerOne(player)) {
             return;

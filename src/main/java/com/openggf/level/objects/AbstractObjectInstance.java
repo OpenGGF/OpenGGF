@@ -741,7 +741,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
-     * ROM parity for SolidObject_OnScreenTest (s2.asm:35140-35145,
+     * ROM parity for SolidObject_OnScreenTest (s2.asm:35337-35342,
      * sonic3k.asm:41430-41432 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm
      * Solid_ChkEnter / SolidObject2F): returns true when the object's render
      * box currently overlaps the camera viewport. ROM equivalent is render_flags
@@ -780,7 +780,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * (sonic3k.asm:36387 / s2.asm equivalent). Defaults to the widely shared
      * gameplay sprite half-width of 16 px so existing call sites stay
      * unchanged; objects with a wider rendered footprint (e.g. CNZ horizontal
-     * door byte_30FCE = $20, $08 at sonic3k.asm:66207) override this to match
+     * door byte_30FCE = $20, $08 at sonic3k.asm:66212) override this to match
      * the ROM-side on-screen test.
      */
     public int getOnScreenHalfWidth() {

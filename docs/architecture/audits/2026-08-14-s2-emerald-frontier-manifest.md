@@ -215,7 +215,7 @@ edge[16].present        expected false  actual true
 edge[17].present        expected false  actual true
 ```
 
-**Mapping frame 105 = `0x69` = `TailsAni_Balance` frame 0** (`s2.asm:41570`). The engine
+**Mapping frame 105 = `0x69` = `TailsAni_Balance` frame 0** (`s2.asm:41571`). The engine
 emits a Tails balancing-on-a-ledge animation frame the ROM never produces and submits art
 for it. That inserts two extra ledger edges, shifting `gap_edge_index` by 2 and pushing
 every later edge's mapping frame, row, requests and fingerprints out of alignment.

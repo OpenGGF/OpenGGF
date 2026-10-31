@@ -159,7 +159,7 @@ package com.openggf.level.objects;
  *
  * <ul>
  *   <li>{@link #ID_BYTE} — S1/S2: {@code tst.b id(a1)} (id byte == 0 ⇒ empty).
- *       DeleteObject zeroes the slot incl. the id byte (s2.asm:30324).</li>
+ *       DeleteObject zeroes the slot incl. the id byte (s2.asm:30330).</li>
  *   <li>{@link #ROUTINE_POINTER} — S3K: {@code tst.l (a1)} (first longword /
  *       object routine-pointer == 0 ⇒ empty), s3k AllocateObject; Delete_Current_Sprite
  *       zeroes the slot incl. the routine pointer.</li>
@@ -539,7 +539,7 @@ void chkLoadObj_alreadyLoadedContinuesScan_onlyFullStops() {
     public enum LoadOutcome { LOADED, ALREADY_LOADED_CONTINUE, SST_FULL_STOP }
 
     /**
-     * ROM ChkLoadObj (s2.asm:33592): bset #7 tests-and-sets the respawn entry.
+     * ROM ChkLoadObj (s2.asm:33598): bset #7 tests-and-sets the respawn entry.
      * If bit 7 was already set, the object is already loaded → advance the list
      * pointer and CONTINUE scanning (success). Otherwise allocate; only a full SST
      * (no allocatable slot) STOPS the scan.
@@ -672,7 +672,7 @@ The S2 load must consume `S2ObjectWindowing.forwardLoadEdge`/`backwardLoadEdge`/
 
 - [ ] **Step 1: Read** `AbstractPlacementManager.getWindowStart/getWindowEnd`, the S2 `Placement.update`/`syncActiveSpawnsLoad` path, and confirm the directional-cursor gap vs `ObjectsManager_GoingForward/GoingBackward`.
 - [ ] **Step 2: Write the failing scan test** — a real sorted spawn list (e.g. x = {0x1000, 0x1180, 0x1400, 0x1700, 0x1A00}) driven through camera motion **forward then reverse**, asserting the ROM **exclusive** load boundary:
-  - ROM `ObjectsManager_GoingForward` does `cmp.w (a0),d6 / bls.s .done` (`s2.asm:33095`): `bls` stops when `d6 <= objX`, so it loads while `objX < d6`. **The load edge is EXCLUSIVE** — a spawn loads iff `spawn.x < forwardLoadEdge(cam)`; a spawn exactly at `forwardLoadEdge` does **NOT** load; `forwardLoadEdge − 1` loads.
+  - ROM `ObjectsManager_GoingForward` does `cmp.w (a0),d6 / bls.s .done` (`s2.asm:33101`): `bls` stops when `d6 <= objX`, so it loads while `objX < d6`. **The load edge is EXCLUSIVE** — a spawn loads iff `spawn.x < forwardLoadEdge(cam)`; a spawn exactly at `forwardLoadEdge` does **NOT** load; `forwardLoadEdge − 1` loads.
   - the left cursor trims per ROM's exact branch at `leftTrimEdge(cam)`; moving backward, loads use `backwardLoadEdge(cam)` (same exclusive `<` rule) and the right cursor trims at `rightTrimEdge(cam)`. **Match each cursor's comparison to its exact ROM branch** (`bls`/`bcs`/`bcc`) — verify per cursor, do not assume inclusive.
   - no spawn loads/trims `$80` early or late (spec trap) and none is off-by-one inclusive (this finding).
 

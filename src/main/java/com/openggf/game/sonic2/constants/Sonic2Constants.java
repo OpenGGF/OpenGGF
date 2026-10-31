@@ -168,16 +168,16 @@ public class Sonic2Constants {
     public static final int CYCLING_PAL_CPZ3_LEN = 32;
 
     // Palette cycling (WFZ - Wing Fortress Zone)
-    // CyclingPal_WFZFire (s2.asm:3098) - Fire palette when WFZ_SCZ_Fire_Toggle == 0
+    // CyclingPal_WFZFire (s2.asm:3102) - Fire palette when WFZ_SCZ_Fire_Toggle == 0
     public static final int CYCLING_PAL_WFZ_FIRE_ADDR = 0x0020A2;  // 4 frames × 8 bytes = 32 bytes (4 colors)
     public static final int CYCLING_PAL_WFZ_FIRE_LEN = 32;
-    // CyclingPal_WFZBelt (s2.asm:3101) - Conveyor belt palette when WFZ_SCZ_Fire_Toggle != 0
+    // CyclingPal_WFZBelt (s2.asm:3105) - Conveyor belt palette when WFZ_SCZ_Fire_Toggle != 0
     public static final int CYCLING_PAL_WFZ_BELT_ADDR = 0x0020C2;  // 4 frames × 8 bytes = 32 bytes (4 colors)
     public static final int CYCLING_PAL_WFZ_BELT_LEN = 32;
-    // CyclingPal_WFZ1 (s2.asm:3104) - Flashing light cycle 1 (1 color, 34 frames)
+    // CyclingPal_WFZ1 (s2.asm:3108) - Flashing light cycle 1 (1 color, 34 frames)
     public static final int CYCLING_PAL_WFZ1_ADDR = 0x0020E2;  // 34 frames × 2 bytes = 68 bytes
     public static final int CYCLING_PAL_WFZ1_LEN = 68;
-    // CyclingPal_WFZ2 (s2.asm:3107) - Flashing light cycle 2 (1 color, 12 frames)
+    // CyclingPal_WFZ2 (s2.asm:3111) - Flashing light cycle 2 (1 color, 12 frames)
     public static final int CYCLING_PAL_WFZ2_ADDR = 0x002126;  // 12 frames × 2 bytes = 24 bytes
     public static final int CYCLING_PAL_WFZ2_LEN = 24;
 
@@ -197,7 +197,7 @@ public class Sonic2Constants {
     public static final int CYCLING_PAL_OIL_ADDR = 0x001F76;  // 4 frames × 4 bytes = 16 bytes
     public static final int CYCLING_PAL_OIL_LEN = 16;
 
-    // OOZ Oil Surface (Obj07) - ROM: s2.asm:49667-49672
+    // OOZ Oil Surface (Obj07) - ROM: s2.asm:50125-50130
     public static final int OIL_SURFACE_Y = 0x758;       // Default Y position of oil surface
     public static final int OIL_SUBMERSION_MAX = 0x30;    // 48 frames before suffocation
     public static final int OIL_WIDTH = 0x20;             // Platform half-width (tracks player X)
@@ -1056,7 +1056,7 @@ public class Sonic2Constants {
     // Shared Obj65/Obj6A/Obj6B MTZ moving-platform level-art mappings
     // (Obj65_Obj6A_Obj6B_MapUnc_26EC8 = obj65_a.asm, 4 frames), rendered against level art
     // (ArtTile_ArtKos_LevelArt) on VDP palette line 3. Used by Obj65 (s2.asm:52381),
-    // Obj6A MTZ (s2.asm:53688), and Obj6B MTZ (s2.asm:53911).
+    // Obj6A MTZ (s2.asm:54154), and Obj6B MTZ (s2.asm:53911).
     public static final int MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR = 0x26EC8; // Obj65_Obj6A_Obj6B_MapUnc_26EC8 (obj65_a)
     public static final int MAP_UNC_BUTTON_ADDR = 0x24D96;           // Obj47_MapUnc_24D96
     public static final int MAP_UNC_MTZ_FLOOR_SPIKE_ADDR = 0x27750;  // Obj68_Obj6D_MapUnc_27750

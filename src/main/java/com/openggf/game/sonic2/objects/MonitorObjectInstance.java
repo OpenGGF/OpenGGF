@@ -201,7 +201,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 : player.getAnimationSet().getScriptCount();
 
         // Hitting from below (Moving Up)
-        // ROM reference: Touch_Monitor (s2.asm lines 84742-84763)
+        // ROM reference: Touch_Monitor (s2.asm lines 85418-85439)
         // Check: player.y - 0x10 >= monitor.y (player center minus 16 must be >= monitor y)
         if (player.getYSpeed() < 0) {
             int playerCenterY = player.getCentreY();
@@ -406,7 +406,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
             return true;
         }
-        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25586-25616):
+        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25592-25622):
         //   btst d6,status(a0)              ; is Sonic already standing on the monitor?
         //   bne.s Obj26_ChkOverEdge         ; if yes → carry him regardless of rolling
         //   cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic's ANIMATION the ball/jump anim?
@@ -701,13 +701,13 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 services.gameState().addLife();
             }
             case EGGMAN, STATIC -> {
-                // ROM: robotnik_monitor (s2.asm:25656-25658)
+                // ROM: robotnik_monitor (s2.asm:25834-25836)
                 // Both Static (subtype 0) and Eggman (subtype 3) call Touch_ChkHurt2.
                 // Hurts the player as if touching a badnik.
                 player.setHurt(true);
             }
             case TELEPORT -> {
-                // ROM: teleport_monitor (s2.asm:25825-25845)
+                // ROM: teleport_monitor (s2.asm:25999-26019)
                 // Swaps player positions in 2P mode. No-op in 1P mode.
                 // 2P mode is not yet implemented.
             }

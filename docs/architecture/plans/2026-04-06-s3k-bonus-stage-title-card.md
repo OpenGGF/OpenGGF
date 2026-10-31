@@ -322,7 +322,7 @@ In `src/main/java/com/openggf/game/sonic3k/titlecard/Sonic3kTitleCardManager.jav
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62522).
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62527).
      */
     @Override
     public void initializeBonus() {

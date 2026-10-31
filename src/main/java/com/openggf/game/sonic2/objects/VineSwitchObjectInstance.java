@@ -295,7 +295,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
             com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y() + HANG_Y_OFFSET);
         }
 
-        // ROM Obj7F_Action grabbed branch (s2.asm:56500-56522): once a player is
+        // ROM Obj7F_Action grabbed branch (s2.asm:56669-56691): once a player is
         // grabbed (tst.b (a2) set), the routine ONLY tests for a release press and
         // otherwise falls through to return_29936. It does NOT rewrite x_pos/y_pos
         // while grabbed -- the hang position is written exactly once at grab time

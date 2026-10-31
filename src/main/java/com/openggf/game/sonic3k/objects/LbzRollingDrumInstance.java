@@ -45,7 +45,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private static final int FLIP_SPEED_RELEASE = 4;
     private static final int RIDE_ANGLE_STEP = 2;
     private static final int ANIMATION_ROLLING_DRUM = Sonic3kAnimationIds.WALK.id();
-    // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60625-60634).
+    // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60630-60639).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
 
     private int leftBound;

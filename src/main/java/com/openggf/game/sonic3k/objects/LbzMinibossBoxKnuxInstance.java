@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Knuckles-route LBZ1 miniboss staging box.
  *
- * <p>ROM: {@code Obj_LBZMinibossBoxKnux} at {@code sonic3k.asm:192636}. It
+ * <p>ROM: {@code Obj_LBZMinibossBoxKnux} at {@code sonic3k.asm:192641}. It
  * locks the camera over the Knuckles arena ({@code word_8CF70}), hosts two
  * closed boxes ({@code loc_8D046}, dx ±$20), spawns two {@code Obj_LBZMiniboss}
  * instances (subtypes 0/2), and after both report defeat ({@code $38} bits 0/2)

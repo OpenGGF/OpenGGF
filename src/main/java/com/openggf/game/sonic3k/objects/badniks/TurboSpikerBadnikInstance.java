@@ -482,7 +482,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
          * code pointer and then falls through to {@code Sprite_CheckDeleteTouchXY}
          * -- it never calls {@code MoveSprite2} itself. The dispatcher has already
          * jumped through the old pointer for this frame, so the installed
-         * {@code TurboSpiker_SpikeChild_Move} (loc_87DA4, :184149-184151), whose
+         * {@code TurboSpiker_SpikeChild_Move} (loc_87DA4, :184154-184156), whose
          * only work is {@code MoveSprite2}, first executes on the FOLLOWING frame.
          */
         private boolean moveRoutineInstalled;

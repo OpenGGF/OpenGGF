@@ -188,7 +188,7 @@ public final class LrzSinkingRockObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
-        // loc_1DC98 (sonic3k.asm:41068-41074) clears Status_OnObj / d6 and returns d4 = 0 without
+        // loc_1DC98 (sonic3k.asm:41073-41079) clears Status_OnObj / d6 and returns d4 = 0 without
         // falling through to SolidObject_cont, so neither MvSonicOnPtfm nor loc_1E154's
         // upward-velocity lift (:41648-41677) runs on the frame the rider jumps off. Without this
         // the block's sink is applied on top of Sonic_Jump's own y_pos change.

@@ -24335,7 +24335,7 @@ fallback. Root's checkout was reference-only. No command used Root or Main as
 its working directory; Main supplied only the existing queue wrapper and ROMs.
 
 The reused independent operand audit was checked against the actual reference
-text: native `CNZ2_ScreenEvent`, `sonic3k.asm:107927..107943`, submodule
+text: native `CNZ2_ScreenEvent`, `sonic3k.asm:107932..107943`, submodule
 `044fa46725c71187399e13f5ddb70e11d32dc024`, blob
 `0f10a373ff0e3d5c0033ed7d13c678bcb927c7b0`, SHA-256
 `d2ce907d1bad9447fbd11196a498a65a73f744ee8e57153b62c46581b1368ed1`.

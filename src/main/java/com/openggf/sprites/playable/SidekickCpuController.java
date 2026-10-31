@@ -227,7 +227,7 @@ public class SidekickCpuController {
     private int deadFallingRomCpuRoutine = -1;
     // Set by updateDeadFallingDeferredS2 when running the per-frame Obj02_Dead
     // ObjectMoveAndFall continuation (frame N+1+ of the deferred death-fall,
-    // before crossing Tails_Max_Y_pos + $100). ROM Obj02_Dead (s2.asm:40736-40742)
+    // before crossing Tails_Max_Y_pos + $100). ROM Obj02_Dead (s2.asm:41131-41137)
     // runs ONLY ObjectMoveAndFall (no Tails_DoLevelCollision), so PlayableSpriteMovement
     // skips its post-kill collision pass when this flag is set. Cleared at the start of
     // every CPU update tick.
@@ -1590,7 +1590,7 @@ public class SidekickCpuController {
      * {@code jsr (ObjectMoveAndFall).l} but does NOT call
      * {@code Tails_DoLevelCollision} — Tails simply falls without colliding
      * with terrain or moving solids. The kill frame itself (frame N) runs
-     * through ROM {@code Obj02_MdAir} (s2.asm:39259-39274) which DOES call
+     * through ROM {@code Obj02_MdAir} (s2.asm:39606-39621) which DOES call
      * {@code Tails_DoLevelCollision} as its final step, so it stays in the
      * engine's post-kill collision pass.
      */
@@ -2476,7 +2476,7 @@ public class SidekickCpuController {
         // ROM loc_13DD0 only uses d4 (the delayed status byte) to decide
         // whether to bypass FollowLeft/FollowRight. The Ctrl_2 word in d1 was
         // already loaded from the same Stat_table entry and is preserved when
-        // branching to loc_13E9C (sonic3k.asm:26736-26745,26815-26825; S2
+        // branching to loc_13E9C (sonic3k.asm:26808-26817,26815-26825; S2
         // s2.asm:38939-38946). Do not re-read an older input slot here: CNZ1
         // F3925 has Status_Push set but still carries delayed RIGHT in d1, and
         // Tails_InputAcceleration_Path consumes it for +$000C ground speed
@@ -2906,7 +2906,7 @@ public class SidekickCpuController {
             // (sonic3k.asm:26723-26729), then applies the +1 x_pos nudge in
             // FollowRight when Tails faces right and object_control bit 0 is
             // clear (sonic3k.asm:26774-26781). Around AIZ's hollow-tree handoff,
-            // Sonic is on Obj_AIZHollowTree (sonic3k.asm:43645,43689-43695);
+            // Sonic is on Obj_AIZHollowTree (sonic3k.asm:43646,43689-43695);
             // that object-order player update can leave the nudge sign on either
             // adjacent completed leader-position sample while the delayed
             // input/status sample remains aligned.
@@ -5193,7 +5193,7 @@ public class SidekickCpuController {
      * {@code ObjectMoveAndFall} when Tails is above the threshold and the
      * threshold has already been crossed (i.e. {@code routine=2} for the
      * despawn re-spawn flow). Until that branch fires, every Frame N+k
-     * applies {@code ObjectMoveAndFall} (s2.asm:29967-29981): position
+     * applies {@code ObjectMoveAndFall} (s2.asm:30164-30178): position
      * gets the OLD {@code y_vel}, then {@code y_vel += $38} gravity. The
      * engine reproduces this without writing the off-screen marker so
      * trace baselines see Tails fall naturally from his death position.
@@ -5213,12 +5213,12 @@ public class SidekickCpuController {
         int markerThreshold = resolveDeadFallMarkerThresholdY();
         if (markerThreshold != Integer.MIN_VALUE && currentY > markerThreshold) {
             // Crossed below Tails_Max_Y_pos + $100: ROM sets routine=2 and
-            // branches to TailsCPU_Despawn (s2.asm:40756-40759, 39043-39052)
+            // branches to TailsCPU_Despawn (s2.asm:40756-40759, 39390-39399)
             // which writes x_pos=$4000, y_pos=0 via `move.w` (word-sized)
             // stores that preserve the low 16-bit y_sub/x_sub fields. ROM
             // control then unwinds via `rts` back to Obj02_Dead, which
             // continues with `jsr (ObjectMoveAndFall).l` (s2.asm:40738).
-            // ObjectMoveAndFall (s2.asm:29967-29981) does the 16:16
+            // ObjectMoveAndFall (s2.asm:30164-30178) does the 16:16
             // fixed-point update:
             //     move.l y_pos(a0),d3        ; load full y_pos:y_sub long
             //     move.w y_vel(a0),d0
@@ -5255,7 +5255,7 @@ public class SidekickCpuController {
         //
         // Mark this frame as a deferred-fall continuation so
         // PlayableSpriteMovement skips its post-kill Tails_DoLevelCollision
-        // pass: ROM Obj02_Dead (s2.asm:40736-40742) calls ObjectMoveAndFall
+        // pass: ROM Obj02_Dead (s2.asm:41131-41137) calls ObjectMoveAndFall
         // but NOT Tails_DoLevelCollision. Without this gate, MCZ Tails
         // (kill triggered above CollapsingPlatform s17) lands on the
         // platform at trace F443 because the engine's normal post-kill

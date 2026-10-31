@@ -585,7 +585,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         // release paths (loc_8D820/loc_8D85E into loc_8D834,
         // sonic3k.asm:193436-193445 and 193363-193367) only set Status_InAir,
         // clear object_control and drop the arm to routine 6. The stale
-        // back-reference is what loc_8D724 (sonic3k.asm:193321-193327) re-uses
+        // back-reference is what loc_8D724 (sonic3k.asm:193336-193342) re-uses
         // when the arm later scrolls off-camera, so it must outlive
         // capturedPlayer rather than be nulled at release.
         private AbstractPlayableSprite releaseTargetPlayer;
@@ -640,7 +640,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
             // TouchResponse only writes collision_property. The arm consumes it
             // later in its own SST slot: sub_8D8E6 for a straight drill or
-            // sub_8D94A for an arcing drill (sonic3k.asm:193349-193365,
+            // sub_8D94A for an arcing drill (sonic3k.asm:193552-193568,
             // 193427-193452). Apply that pending response before the arm moves.
             if (arcing) {
                 applyPendingArcCapture();

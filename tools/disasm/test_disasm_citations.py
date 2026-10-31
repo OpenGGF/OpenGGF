@@ -2,6 +2,8 @@
 
 Run: python3 -m unittest discover -s tools/disasm -p 'test_*.py'
 """
+import contextlib
+import io
 import os
 import subprocess
 import sys
@@ -263,6 +265,96 @@ class CheckAndRemapTest(unittest.TestCase):
         with contextlib.redirect_stdout(out):
             dc.main(['--repo', str(self.fx.sup), 'remap', 'fakedisasm', self.fx.B, self.fx.C])
         self.assertIn('renamed to obj/01 Thing Renamed.asm', out.getvalue())
+
+
+class RepairTest(unittest.TestCase):
+    def setUp(self):
+        self.fx = Fixture()
+        # The superproject pin, not the checkout, is the repair destination.
+        git(self.fx.sup, 'update-index', '--cacheinfo', f'160000,{self.fx.B},docs/fakedisasm')
+        git(self.fx.sup, 'commit', '-qm', 'pin B')
+
+    def tearDown(self):
+        self.fx.close()
+
+    def repair(self, *extra):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = dc.main(['--repo', str(self.fx.sup), 'repair', *extra])
+        return code, out.getvalue()
+
+    def test_repair_and_crlf_preservation(self):
+        path = self.fx.write('src/main/java/M.java', '// Obj_A (game.asm:10-12)\n', newline='\r\n')
+        before = path.read_bytes()
+        _, report = self.repair()
+        self.assertEqual(path.read_bytes(), before)  # dry run
+        self.assertIn('repaired=1', report)
+        self.assertIn('runtime=', report)
+        _, report = self.repair('--write')
+        self.assertEqual(path.read_bytes(), b'// Obj_A (game.asm:13-15)\r\n')
+        self.assertIn(self.fx.A[:12], report)
+        self.assertIn('left=0', report)
+
+    def test_changed_range_and_no_historical_match_are_left_alone(self):
+        path = self.fx.write('src/main/java/M.java', '// Obj_A (game.asm:10-26)\n'
+                             '// Obj_A (game.asm:5-7)\n'
+                             '// Widget Thing.asm:900\n')
+        # First is already ok (label falls in the range); make the pin label far
+        # enough away that a historically valid range touches an edited line.
+        dis = self.fx.sup / 'docs/fakedisasm'
+        git(dis, 'checkout', '-q', self.fx.B)
+        lines = (dis / 'game.asm').read_text().splitlines(keepends=True)
+        lines[24] = '\tmove.w d2,d3\n'
+        lines[2:2] = ['; insert\n'] * 30
+        (dis / 'game.asm').write_text(''.join(lines))
+        git(dis, 'commit', '-qam', 'D')
+        rev = git(dis, 'rev-parse', 'HEAD')
+        git(self.fx.sup, 'update-index', '--cacheinfo', f'160000,{rev},docs/fakedisasm')
+        git(self.fx.sup, 'commit', '-qm', 'pin D')
+        before = path.read_bytes()
+        code, report = self.repair('--write', '--strict')
+        self.assertEqual(code, 1)
+        self.assertEqual(path.read_bytes(), before)
+        self.assertIn('touches-changed-lines=1', report)
+        self.assertIn('no-ok-revision=1', report)
+
+    def test_newest_ok_revision_is_used_even_when_an_older_one_would_map(self):
+        # The newer candidate has a different line in the cited range. Never fall
+        # back to A to make the repair appear safe.
+        dis = self.fx.sup / 'docs/fakedisasm'
+        git(dis, 'checkout', '-q', '-b', 'alternate', self.fx.A)
+        lines = (dis / 'game.asm').read_text().splitlines(keepends=True)
+        lines[10] = '\tmove.w d0,d1\n'
+        (dis / 'game.asm').write_text(''.join(lines))
+        git(dis, 'commit', '-qam', 'newest historical match')
+        path = self.fx.write('src/main/java/M.java', '// Obj_A (game.asm:10-12)\n')
+        _, report = self.repair('--write')
+        self.assertEqual(path.read_text(), '// Obj_A (game.asm:10-12)\n')
+        self.assertIn('touches-changed-lines=1', report)
+
+    def test_out_of_range_can_be_repaired_from_a_longer_historical_file(self):
+        dis = self.fx.sup / 'docs/fakedisasm'
+        git(dis, 'checkout', '-q', self.fx.A)
+        lines = (dis / 'game.asm').read_text().splitlines(keepends=True)
+        lines[:0] = ['; removed later\n'] * 100
+        (dis / 'game.asm').write_text(''.join(lines))
+        git(dis, 'commit', '-qam', 'long historical file')
+        path = self.fx.write('src/main/java/M.java', '// Obj_A (game.asm:110-112)\n')
+        _, report = self.repair('--write')
+        self.assertEqual(path.read_text(), '// Obj_A (game.asm:13-15)\n')
+        self.assertIn('repaired=1', report)
+
+    def test_historic_prefix_and_json_evidence_are_untouched(self):
+        first = '// Obj_A (game.asm:10-12)\r\n'
+        path = self.fx.write('src/main/java/H.java', first + '// Obj_A (game.asm:10-12)\r\n')
+        self.fx.write('.githooks/machine-local-path-grandfather.sha256',
+                      f'# baseline-prefix\t{len(first)}\t{"0" * 64}\tsrc/main/java/H.java\n')
+        evidence = self.fx.write('docs/evidence.json', '{"source": "Obj_A (game.asm:10-12)"}\n')
+        _, report = self.repair('--write')
+        self.assertEqual(path.read_bytes(), first.encode() + b'// Obj_A (game.asm:13-15)\r\n')
+        self.assertIn('protected-history=1', report)
+        self.assertIn('json-evidence=1', report)
+        self.assertIn('10-12', evidence.read_text())
 
 
 if __name__ == '__main__':

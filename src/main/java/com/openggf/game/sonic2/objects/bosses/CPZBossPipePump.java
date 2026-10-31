@@ -116,7 +116,7 @@ public class CPZBossPipePump extends AbstractObjectInstance implements RewindRec
             return;
         }
 
-        // ROM Obj5D_Pipe_Pump_4 (docs/s2disasm/s2.asm:62199-62218): after
+        // ROM Obj5D_Pipe_Pump_4 (docs/s2disasm/s2.asm:62314-62333): after
         // `subq.b #1,Obj5D_timer3 / beq.s +`, the would-be repeat branch writes
         // anim/timer/routine_secondary/y_offset but has NO rts — it FALLS
         // THROUGH to `+`, which switches the control object to

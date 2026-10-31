@@ -81,7 +81,7 @@ public class TestPachinkoFlipperObjectInstance {
         flipper.onSolidContact(player, standing, 0);
         flipper.onSolidContact(player, standing, 1);
 
-        // ROM loc_49D68's fall-through to loc_49DE4 (sonic3k.asm:96506-96508,
+        // ROM loc_49D68's fall-through to loc_49DE4 (sonic3k.asm:96557-96559,
         // 96532-96541) projects ground_vel onto angle into x_vel/y_vel and moves
         // the player BEFORE sub_49D72 (sonic3k.asm:96515-96550) overwrites
         // x_vel/y_vel with the distance-based launch velocity, so setXSpeed/

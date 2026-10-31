@@ -37,7 +37,7 @@ import java.util.List;
  * (:88898-88899). {@code sfx_MechaLand} plays whenever the boulder was drawn last frame and
  * {@code Level_frame_counter+1 & $F} is zero (:89031-89036).
  *
- * <h2>Subtype {@code $C0} -- the swinging boulder that breaks loose ({@code loc_437FE}, :88904)</h2>
+ * <h2>Subtype {@code $C0} -- the swinging boulder that breaks loose ({@code loc_437FE}, :88909)</h2>
  * <ul>
  *   <li>Every frame it takes the same {@code cos(angle) asr 2} X, then clears
  *       {@code collision_flags} and the priority bit and puts BOTH back only while

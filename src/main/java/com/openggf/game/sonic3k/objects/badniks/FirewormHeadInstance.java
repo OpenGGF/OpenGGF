@@ -30,12 +30,12 @@ import java.util.List;
  * {@code make_art_tile(ArtTile_Fireworm,1,1)}, {@code priority $180}, a {@code $C x $C} box,
  * {@code mapping_frame} 0, {@code collision_flags $1A} -- and reserves two VRAM slots, because
  * this is the one part of the object with dynamic art: {@code loc_8F7A4} runs
- * {@code Perform_DPLC} from {@code DPLCPtr_Fireworm} every frame (:196343-196344).
+ * {@code Perform_DPLC} from {@code DPLCPtr_Fireworm} every frame (:196578-196579).
  *
  * <p>{@code loc_8F7EA} falls straight through into {@code loc_8F7F4} (:196366-196372), which
  * enters routine 4, sets {@code $2E(a0) = 3}, points {@code $34(a0)} at {@code loc_8F81E} and
  * calls {@code Set_VelocityXTrackSonic} with {@code d4 = -$100}, so the head sets off at one pixel
- * a frame toward Player 1 and faces that way. Routine 4 ({@code loc_8F812}, :196374-196376) is
+ * a frame toward Player 1 and faces that way. Routine 4 ({@code loc_8F812}, :196379-196381) is
  * {@code MoveSprite2} plus {@code Obj_Wait}, i.e. four frames of straight travel, and then
  * {@code loc_8F81E} (:196382-196385) puts {@code mapping_frame} on 1 and creates the four segments
  * of {@code ChildObjDat_8FA16}, all at {@code (0,0)}.

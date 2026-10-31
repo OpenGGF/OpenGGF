@@ -173,7 +173,7 @@ that music is not updated until the next frame (`docs/s2disasm/s2.sounddriver.as
 
 `zTrack.Transpose` is defined as transpose from coordination flag E9, and note paths add
 that byte to the note (`docs/s2disasm/s2.sounddriver.asm:100,878,1178`). E0 dispatches to
-`cfPanningAMSFMS` (`docs/s2disasm/s2.sounddriver.asm:2867-2873,3004-3021`). E9 dispatches
+`cfPanningAMSFMS` (`docs/s2disasm/s2.sounddriver.asm:3005-3011,3004-3021`). E9 dispatches
 to the routine that adds its signed byte to the current `zTrack.Transpose` using eight-bit
 arithmetic (`docs/s2disasm/s2.sounddriver.asm:2913-2921,3197-3202`).
 

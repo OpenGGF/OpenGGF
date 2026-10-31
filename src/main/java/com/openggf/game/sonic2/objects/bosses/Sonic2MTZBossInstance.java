@@ -196,7 +196,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     /**
      * objoff_38: per-hit "one orb should break away" flag.
      * ROM Obj54_AnimateFace @s2.asm:67117 sets it (st.b objoff_38) on the
-     * invuln edge; ROM Obj53_Main @s2.asm:67344-67348 consumes it for exactly
+     * invuln edge; ROM Obj53_Main @s2.asm:67979-67983 consumes it for exactly
      * one orb per frame, clearing it on the boss.
      */
     private boolean pendingOrbBreak;
@@ -240,7 +240,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     private boolean initDispatchPending = true;
 
     /**
-     * Boss_defeated_flag. ROM Obj54_MainSub12 @s2.asm:67197-67200 sets it once
+     * Boss_defeated_flag. ROM Obj54_MainSub12 @s2.asm:67826-67829 sets it once
      * on the first flee frame and triggers the animal-explosion PLC; the level
      * layout's capsule (not the boss) handles the actual prison.
      */
@@ -255,7 +255,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void initializeBossState() {
-        // ROM: Obj54_Init (s2.asm:66694-66753)
+        // ROM: Obj54_Init (s2.asm:67296-67355)
         state.routine = 0; // boss_routine = Sub0
         state.x = SPAWN_X;
         state.y = SPAWN_Y;
@@ -351,7 +351,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     // =========================================================================
 
     /**
-     * ROM: Boss_MoveObject (s2.asm:60795-60808)
+     * ROM: Boss_MoveObject (s2.asm:61392-61405)
      * Updates Boss_X/Y_pos using Boss_X/Y_vel in 16.16 fixed-point.
      */
     private void bossMoveObject() {
@@ -374,7 +374,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     // =========================================================================
 
     /**
-     * ROM: Obj54_Float (s2.asm:66808-66815)
+     * ROM: Obj54_Float (s2.asm:67450-67457)
      * y_pos = Boss_Y_pos + (sin(boss_sine_count) >> 6)
      * boss_sine_count += 4
      */
@@ -494,7 +494,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub0: Descend
-    // ROM: Obj54_MainSub0 (s2.asm:66775-66805)
+    // ROM: Obj54_MainSub0 (s2.asm:67404-67434)
     // =========================================================================
 
     private void updateSub0Descend(AbstractPlayableSprite player) {
@@ -527,7 +527,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub2: Horizontal pacing
-    // ROM: Obj54_MainSub2 (s2.asm:66818-66862)
+    // ROM: Obj54_MainSub2 (s2.asm:67420-67464)
     // =========================================================================
 
     private void updateSub2HorizontalPace() {
@@ -572,7 +572,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub4: Return to center
-    // ROM: Obj54_MainSub4 (s2.asm:66865-66889)
+    // ROM: Obj54_MainSub4 (s2.asm:67494-67518)
     // =========================================================================
 
     private void updateSub4ReturnToCenter() {
@@ -605,7 +605,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub6: Expand orbs
-    // ROM: Obj54_MainSub6 (s2.asm:66892-66905)
+    // ROM: Obj54_MainSub6 (s2.asm:67527-67540)
     // =========================================================================
 
     private void updateSub6ExpandOrbs() {
@@ -627,7 +627,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub8: Contract orbs, restart cycle
-    // ROM: Obj54_MainSub8 (s2.asm:66908-66923)
+    // ROM: Obj54_MainSub8 (s2.asm:67543-67558)
     // =========================================================================
 
     private void updateSub8ContractOrbs() {
@@ -650,7 +650,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // SubA: Retract after hit
-    // ROM: Obj54_MainSubA (s2.asm:66926-66953)
+    // ROM: Obj54_MainSubA (s2.asm:67555-67582)
     // =========================================================================
 
     private void updateSubARetractAfterHit() {
@@ -693,7 +693,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // SubC: Decision point
-    // ROM: Obj54_MainSubC (s2.asm:66956-66987)
+    // ROM: Obj54_MainSubC (s2.asm:67585-67616)
     // =========================================================================
 
     private void updateSubCDecision(AbstractPlayableSprite player) {
@@ -733,7 +733,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // SubE: Laser dive attack (3 sub-phases)
-    // ROM: Obj54_MainSubE (s2.asm:66990-67079)
+    // ROM: Obj54_MainSubE (s2.asm:67592-67681)
     // =========================================================================
 
     private void updateSubELaserDive() {
@@ -845,11 +845,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Laser firing
-    // ROM: Obj54_FireLaser (s2.asm:67082-67096)
+    // ROM: Obj54_FireLaser (s2.asm:67717-67731)
     // =========================================================================
 
     private void fireLaser() {
-        // ROM: Obj54_FireLaser (s2.asm:67086-67100)
+        // ROM: Obj54_FireLaser (s2.asm:67715-67729)
         // subi.w #1,(Boss_Countdown).w / bne.s + (rts)
         bossCountdown--;
         if (bossCountdown != 0) {
@@ -879,11 +879,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub10: Defeat explosions
-    // ROM: Obj54_MainSub10 (s2.asm:67144-67178)
+    // ROM: Obj54_MainSub10 (s2.asm:67773-67807)
     // =========================================================================
 
     private void updateSub10DefeatExplosions(int vIntRunCount) {
-        // ROM: Obj54_MainSub10 (s2.asm:67148-67166)
+        // ROM: Obj54_MainSub10 (s2.asm:67777-67795)
         // subq.w #1,(Boss_Countdown).w
         bossCountdown--;
 
@@ -923,11 +923,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Sub12: Flee
-    // ROM: Obj54_MainSub12 (s2.asm:67181-67218)
+    // ROM: Obj54_MainSub12 (s2.asm:67810-67847)
     // =========================================================================
 
     private void updateSub12Flee() {
-        // ROM: Obj54_MainSub12 (s2.asm:67185-67205)
+        // ROM: Obj54_MainSub12 (s2.asm:67814-67834)
         state.xVel = VEL_FLEE_X; // move.w #$400,(Boss_X_vel)
         state.yVel = VEL_FLEE_Y; // move.w #-$40,(Boss_Y_vel)
 
@@ -968,11 +968,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Hit checking
-    // ROM: Obj54_CheckHit (s2.asm:67230-67265)
+    // ROM: Obj54_CheckHit (s2.asm:67859-67894)
     // =========================================================================
 
     /**
-     * ROM: Obj54_AnimateFace face-update tail (s2.asm:67131-67145).
+     * ROM: Obj54_AnimateFace face-update tail (s2.asm:67746-67760).
      * Shows the laughing face when the player is in the hurt routine. The actual
      * hit-reaction (angry face, orb-break flag, SubA entry) is in {@link #onHitTaken}.
      */
@@ -1019,7 +1019,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     @Override
     protected void onDefeatStarted() {
         if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
-        // ROM: Obj54_Defeated (s2.asm:67258-67265) runs from Obj54_CheckHit,
+        // ROM: Obj54_Defeated (s2.asm:67900-67907) runs from Obj54_CheckHit,
         // after this frame's old-routine movement. Latch and apply post-move in
         // applyPendingHitReactionAfterMove(); dispatching Sub10 on the killing
         // touch frame starts the defeat countdown (and later the Sub12 flee
@@ -1177,7 +1177,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     public static class MTZBossOrb extends AbstractBossChild
             implements TouchResponseProvider, TouchResponseAttackable, TouchResponseListener, RewindRecreatable {
 
-        /** Obj53 routine states (Obj53_Index, s2.asm:67282-67287). */
+        /** Obj53 routine states (Obj53_Index, s2.asm:67917-67922). */
         private static final int RT_INIT = 0;
         private static final int RT_MAIN = 2;
         private static final int RT_BREAK_AWAY = 4;
@@ -1294,7 +1294,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             Sonic2MTZBossInstance boss = (Sonic2MTZBossInstance) parent;
 
             switch (routine) {
-                // ROM Obj53_Init (s2.asm:67782-67798): orb 0's spawn-frame
+                // ROM Obj53_Init (s2.asm:67933-67949): orb 0's spawn-frame
                 // dispatch is the init pass itself — no orbit, no display.
                 case RT_INIT -> routine = RT_MAIN;
                 case RT_MAIN -> updateMain(boss, player);
@@ -1309,7 +1309,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_Main (s2.asm:67340-67375).
+         * ROM: Obj53_Main (s2.asm:67969-68004).
          * Mirrors the boss position, then consumes the boss break flag for exactly
          * one orb per frame (objoff_38). On break: increment boss objoff_2C, advance
          * to BreakAway, set y_vel=-$400, x_vel=+/-$80 clamped at the dive boundaries.
@@ -1348,7 +1348,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 xSub = 0;
                 ySub = 0;
                 // ROM: the break path ends with `bra.s +` into the tail of
-                // Obj53_ClearBossCollision (s2.asm:67865-67875), so the orb still
+                // Obj53_ClearBossCollision (s2.asm:68016-68026), so the orb still
                 // runs Obj53_OrbitBoss + Obj53_SetAnimPriority on the same pass:
                 // the launch velocities above are computed from the pre-orbit
                 // x_pos, then the orbit overwrites x_pos/y_pos so BreakAway
@@ -1364,7 +1364,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_OrbitBoss (s2.asm:67386-67443). Register-faithful port.
+         * ROM: Obj53_OrbitBoss (s2.asm:67988-68045). Register-faithful port.
          * a1 = boss, a0 = orb. objoff_38(orb) holds the boss x_pos, objoff_2A(orb)
          * holds boss y_pos - 4 (both copied in Obj53_Main before this call).
          */
@@ -1510,7 +1510,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_SetAnimPriority (s2.asm:67449-67473).
+         * ROM: Obj53_SetAnimPriority (s2.asm:68078-68102).
          * Uses the orb's own depth word (objoff_30) vs +$C / -$C, not a re-derived sine.
          */
         private void setAnimPriority() {
@@ -1535,7 +1535,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_BreakAway (s2.asm:67476-67519).
+         * ROM: Obj53_BreakAway (s2.asm:68078-68121).
          * ObjectMoveAndFall adds +$38, then subi #$20 (net +$18/frame), clamp y_vel
          * to max $180, floor at y=$4AC, then advance to BounceAround.
          */
@@ -1577,7 +1577,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_BounceAround (s2.asm:67522-67561).
+         * ROM: Obj53_BounceAround (s2.asm:68151-68190).
          * y = $4AC - (sin(objoff_2C) >> 2); increment objoff_2C; +/-1px x drift on
          * objoff_2C bit0; FaceLeader on ground touch. Stays alive until burst.
          */
@@ -1636,7 +1636,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_FaceLeader (s2.asm:67564-67573).
+         * ROM: Obj53_FaceLeader (s2.asm:68199-68208).
          * Face toward MainCharacter (clear x_flip if player is left, set if right).
          */
         private void faceLeader(AbstractPlayableSprite player) {
@@ -1649,7 +1649,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         /**
-         * ROM: Obj53_Burst (s2.asm:67593-67598).
+         * ROM: Obj53_Burst (s2.asm:68235-68240).
          * PlaySound boss-explosion; decrement boss objoff_2C; DeleteObject.
          */
         private void finishBurst() {
@@ -1752,7 +1752,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Inner class: Laser Shooter (Obj54 subtype 6)
-    // ROM: Obj54_LaserShooter (s2.asm:67641-67691)
+    // ROM: Obj54_LaserShooter (s2.asm:68243-68293)
     // =========================================================================
 
     /**
@@ -1809,7 +1809,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     // =========================================================================
     // Inner class: Laser projectile (Obj54 subtype 4 => Obj54_Laser)
-    // ROM: Obj54_Laser_Init / Obj54_Laser_Main (s2.asm:67601-67642)
+    // ROM: Obj54_Laser_Init / Obj54_Laser_Main (s2.asm:68243-68284)
     // =========================================================================
 
     /**
@@ -1826,11 +1826,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     public static class MTZBossLaser extends AbstractObjectInstance
             implements TouchResponseProvider, RewindRecreatable {
 
-        /** ROM: Obj54_Laser_Init move.w #-$400,d0 (s2.asm:67625) — base x velocity. */
+        /** ROM: Obj54_Laser_Init move.w #-$400,d0 (s2.asm:68254) — base x velocity. */
         private static final int LASER_SPEED = 0x400;
         /** ROM: move.b #$99,collision_flags (s2.asm:67632). $99 & $C0 = $80 = HURT. */
         private static final int COLLISION_FLAGS = 0x99;
-        /** ROM: Obj54_Laser_Main left delete bound, cmpi.w #$2AB0 (s2.asm:67638). */
+        /** ROM: Obj54_Laser_Main left delete bound, cmpi.w #$2AB0 (s2.asm:68280). */
         private static final int DELETE_LEFT = 0x2AB0;
         /** ROM: Obj54_Laser_Main right delete bound, cmpi.w #$2BF0 (s2.asm:67640). */
         private static final int DELETE_RIGHT = 0x2BF0;
@@ -1847,7 +1847,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         public MTZBossLaser(Sonic2MTZBossInstance boss, int bossX, int bossY, boolean facingRight) {
             super(new ObjectSpawn(bossX, bossY, Sonic2ObjectIds.MTZ_BOSS, 0, 0, false, 0),
                     "MTZ Boss Laser");
-            // ROM Obj54_Laser_Init (s2.asm:67619-67631):
+            // ROM Obj54_Laser_Init (s2.asm:68248-68260):
             //   x = boss x; y = boss y + 7; x -= 4; d0 = -$400.
             //   if boss x_flip set: neg d0 (=> +$400) and x += 8.
             int x = bossX - 4;
@@ -1883,7 +1883,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
                 // ROM: Obj54_Laser_Init PlaySound SndID_LaserBurst (== Sonic2Sfx.LASER_BURST $EA).
                 services().playSfx(Sonic2Sfx.LASER_BURST.id);
             }
-            // ROM: Obj54_Laser_Main (s2.asm:67636-67642).
+            // ROM: Obj54_Laser_Main (s2.asm:68278-68284).
             // ObjectMove (16.8 fixed): x_pos += x_vel.
             currentX += (xVel >> 8);
             // ROM: cmpi.w #$2AB0,x_pos / blo DeleteObject ; cmpi.w #$2BF0 / bhs DeleteObject.

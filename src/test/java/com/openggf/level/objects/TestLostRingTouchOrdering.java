@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
 /**
  * Stage-2.1 ordering invariant for the type-keyed every-frame lost-ring touch branch.
  * <p>
- * Models ROM {@code Touch_ChkValue} ring branch (docs/s2disasm/s2.asm:85196-85219):
+ * Models ROM {@code Touch_ChkValue} ring branch (docs/s2disasm/s2.asm:85405-85428):
  * a spilled ring ({@link LostRingObjectInstance}) in slot order collects when the toucher
  * is not invulnerable ({@code invulnerable_time < 90}) and, either way, breaks the touch
  * loop - so a lower-slot ring suppresses a later hazard exactly as ROM does. The branch is

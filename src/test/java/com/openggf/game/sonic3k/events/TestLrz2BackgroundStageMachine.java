@@ -69,7 +69,7 @@ class TestLrz2BackgroundStageMachine {
     @Test
     void stageEightIsWhereADirectLoadLivesAndItNeverRearms() {
         LrzZoneRuntimeState lrz = actTwoState();
-        // LRZ2_BackgroundInit's move.w #8,(Events_routine_bg).w (sonic3k.asm:115707).
+        // LRZ2_BackgroundInit's move.w #8,(Events_routine_bg).w (sonic3k.asm:115712).
         lrz.setBackgroundRoutine(Lrz2BackgroundStageMachine.BG_STAGE_STEADY);
         AtomicInteger refreshes = new AtomicInteger();
 

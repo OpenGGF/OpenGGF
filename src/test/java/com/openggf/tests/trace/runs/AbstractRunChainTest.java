@@ -4567,7 +4567,7 @@ abstract class AbstractRunChainTest {
      * ordinary logical iteration, because a lag V-blank does not run the mode's
      * handler at all: {@code V_Int} branches to {@code Vint_Lag} while
      * {@code Vint_routine} is still 0 (docs/s2disasm/s2.asm:483-484, 529) —
-     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) has the same shape
+     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:712) has the same shape
      * — so an in-progress blocking fade's per-V-blank work
      * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482, whose body runs in the main
      * loop between its own {@code WaitForVint}s) does not advance on that
@@ -4898,7 +4898,7 @@ abstract class AbstractRunChainTest {
 
     /**
      * The whole of a lag row's engine-visible V-int work: the ROM's
-     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:505-506) on
+     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:507-508) on
      * every dispatch, lag included, and that counter is what
      * {@code ObjectInstance.update} sees as {@code vblaCounter}. Everything
      * else {@code Vint_Lag} does on the in-level path (sound-driver input,
@@ -4990,7 +4990,7 @@ abstract class AbstractRunChainTest {
      *
      * <p>{@code VintRet: addq.l #1,(Vint_runcount).w}
      * (docs/s2disasm/s2.asm:507-508) sits AFTER the
-     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:504) and is reached by
+     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:515) and is reached by
      * every V-int the ROM takes, whichever routine the dispatch selected —
      * {@code Vint_Lag}, {@code Vint_Level}, {@code Vint_TitleCard} or
      * {@code Vint_Fade}. The object-visible clock therefore advances exactly

@@ -98,7 +98,7 @@ public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: loc_65C72 (sonic3k.asm:134029) — CutsceneButton subtype 2 action.
+     * ROM: loc_65C72 (sonic3k.asm:134034) — CutsceneButton subtype 2 action.
      * Sets Level_trigger_array[8] which the tension bridge monitors.
      */
     private void press() {

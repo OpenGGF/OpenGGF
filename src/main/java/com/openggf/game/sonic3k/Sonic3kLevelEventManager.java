@@ -83,7 +83,7 @@ import java.util.logging.Logger;
 
 /**
  * Sonic 3&K implementation of dynamic level events.
- * ROM equivalent: ScreenEvents (sonic3k.asm:102274)
+ * ROM equivalent: ScreenEvents (sonic3k.asm:102279)
  *
  * S3K uses dual foreground/background event routines (Events_routine_fg
  * and Events_routine_bg) with a stride of 4 per state transition.

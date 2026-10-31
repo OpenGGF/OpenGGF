@@ -473,7 +473,7 @@ public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjec
                 // $38, so the normal solid pass must still see this object as solid.
                 if (releasePending) {
                     if (releaseSolidPassExposed) {
-                        // ROM loc_205DE (sonic3k.asm:44890-44894) performs
+                        // ROM loc_205DE (sonic3k.asm:44895-44899) performs
                         // sub_205B6 before rewriting the action pointer and
                         // clearing any rider in sub_205FC. Expose one engine
                         // post-update solid pass first; if no contact consumed

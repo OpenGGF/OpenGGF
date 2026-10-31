@@ -31,7 +31,7 @@ import java.util.List;
  *       Reads MTZ_Platform_Cog_X shared variable to determine animation frame.</li>
  * </ul>
  * <p>
- * Cog animation frames from byte_26EBA (s2.asm line 52727):
+ * Cog animation frames from byte_26EBA (s2.asm line 53209):
  * <pre>
  * Value & 7: 0->frame 0, 1->frame 0, 2->frame 2, 3->frame 2,
  *            4->frame 2, 5->frame 1, 6->frame 1, 7->frame 1
@@ -42,7 +42,7 @@ import java.util.List;
 public class MTZLongPlatformCogInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj65 cog rotation is geometric; neither standalone nor parent-driven cogs face horizontally.
 
-    // byte_26EBA: cog animation frame lookup (s2.asm line 52727)
+    // byte_26EBA: cog animation frame lookup (s2.asm line 53209)
     private static final int[] COG_FRAMES = {0, 0, 2, 2, 2, 1, 1, 1};
 
     private int x;

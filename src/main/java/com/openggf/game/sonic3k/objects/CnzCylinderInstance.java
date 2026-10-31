@@ -614,7 +614,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         boolean latchedContact = slot.contactLatched;
         slot.contactLatched = false;
 
-        // ROM sub_324C0 loc_32538 (sonic3k.asm:68059-68062): when the captured
+        // ROM sub_324C0 loc_32538 (sonic3k.asm:68064-68067): when the captured
         // rider is offscreen (`tst.b render_flags(a1); bpl.w loc_325F2`), the
         // cylinder takes the release branch every frame. ROM SolidObjectFull
         // (sonic3k.asm:41046-41048) ALSO skips Player_2 when his render_flags

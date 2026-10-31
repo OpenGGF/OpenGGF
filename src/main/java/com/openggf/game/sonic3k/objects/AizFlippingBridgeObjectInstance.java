@@ -37,7 +37,7 @@ import java.util.List;
  * If the object's status bit 0 (X-flip) is set, the animation direction is
  * reversed (-1) and the max frame is decremented by 1.
  * <p>
- * ROM references: Obj_AIZFlippingBridge (sonic3k.asm:58912), loc_2AA56,
+ * ROM references: Obj_AIZFlippingBridge (sonic3k.asm:58917), loc_2AA56,
  * sub_2AA7E, sub_2ABF2, sub_2AC08, SolidObjSloped2.
  */
 public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance

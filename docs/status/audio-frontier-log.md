@@ -350,7 +350,7 @@ defined by `com.openggf.tools.audio.parity`.
   reference `FF`, engine `00`; the first 1,594 services match.
 - **ROM owner:** `zFinishTrackUpdate` resets `VolEnv` on an attacked note, but
   `zUpdatePSGTrack` returns on the music track's override bit before calling
-  `zDoVolEnv` (`Sound/Z80 Sound Driver.asm:1055-1069, :4058-4115`). The first
+  `zDoVolEnv` (`Sound/Z80 Sound Driver.asm:1055-1069, :4101-4158`). The first
   envelope byte is consumed only on the first pass after release.
 - **Evidence:** a focused red test observed cursor `1` under override; it now
   pins reset cursor `0`, no volume latch before release, and one first-step
@@ -875,7 +875,7 @@ defined by `com.openggf.tools.audio.parity`.
 - **Not an ordering fault, which is worth recording.** `zUpdatePSGTrack` sends
   the frequency first and reads the volume envelope after, and an `83h`
   terminator then jumps to `zRestTrack`, which falls through into
-  `zSilencePSGChannel` (Sound/Z80 Sound Driver.asm:4058-4130, :4189-4194,
+  `zSilencePSGChannel` (Sound/Z80 Sound Driver.asm:4058-4130, :4232-4237,
   :4220-4245). Frequency-then-silence is exactly what the ROM would emit. The
   engine's order was right; it simply reached the terminator and the ROM did
   not.
@@ -4870,7 +4870,7 @@ stream.
 - **Next.** Tick 150's `MUS_DAC.resting`. The engine sets a DAC track's rest
   bit from its note, but none of the three drivers' DAC paths touch it: S3K's
   `zUpdateDACTrack` jumps a rest straight to
-  `zUpdateDACTrack_GetDuration` (:2889-2896) without setting
+  `zUpdateDACTrack_GetDuration` (:2901-2908) without setting
   `PlaybackControl` bit 4, and S1's `DACUpdateTrack`
   (s1.sounddriver.asm:277-307) and S2's `zDACUpdateTrack`
   (s2.sounddriver.asm:759-790) have no rest test at all. That looks like a
@@ -5122,7 +5122,7 @@ stream.
   ticks 139 and 140. S3K re-sends it anyway: `zUpdateFMorPSGTrack`'s
   `.note_going` path calls `zUpdateFreq`, returns early only on the
   sustain-frequency bit, then calls `zDoModulation` and **falls through** to
-  `zFMSendFreq` (Sound/Z80 Sound Driver.asm:783-799), and that
+  `zFMSendFreq` (Sound/Z80 Sound Driver.asm:799-815), and that
   `zDoModulation` is an ordinary subroutine whose `ret z` on inactive
   modulation lands on the fall-through (:1279-1283).
   S2 is genuinely different and the engine currently implements S2's shape:

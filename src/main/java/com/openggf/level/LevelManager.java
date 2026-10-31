@@ -3555,7 +3555,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         profile.completeInitialPresentationPlcs();
         // Only an OMITTED presentation needs its player object passes replayed.
         // A presented card really dispatches them: the provider runs the ROM's
-        // own pre-Level_MainLoop passes (S2: the s2.asm:5006 RunObjects plus
+        // own pre-Level_MainLoop passes (S2: the s2.asm:5089 RunObjects plus
         // the 25 iterations of the s2.asm:5060-5066 leave loop) with player
         // physics live, so replaying them here would advance the animation and
         // the persistent last-loaded-DPLC byte a second time.

@@ -56,7 +56,7 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
         return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
     }
 
-    // Touch collision size index from subObjData. Obj8D_SubObjData (s2.asm:73505)
+    // Touch collision size index from subObjData. Obj8D_SubObjData (s2.asm:73712)
     //   subObjData Obj8D_MapUnc_36CF0, make_art_tile(...), 1<<level_fg, 5, $10, 2
     // The subObjData macro fields are (mappings, vram, renderflags, priority,
     // width, collision) (s2.macros.asm:231), so collision_flags = 2 (the trailing
@@ -376,10 +376,10 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance implements Re
      * - Wait for pause timer (seeded with 0x3B on entry, loc_36B5C s2.asm:73326-73328)
      * - Then reverse direction and return to MOVEMENT
      *
-     * From disassembly loc_36B6A (s2.asm:73332-73335):
+     * From disassembly loc_36B6A (s2.asm:73539-73542):
      *   subq.b #1,objoff_2A(a0)     ; Decrement timer
      *   bmi.s loc_36B74             ; Reverse only once the timer goes NEGATIVE
-     * loc_36B74 (s2.asm:73338-73342):
+     * loc_36B74 (s2.asm:73545-73549):
      *   move.b #8,routine(a0)       ; Back to routine 8 (MOVEMENT)
      *   neg.w x_vel(a0)             ; Reverse velocity
      *   bchg #status.npc.x_flip,status(a0)

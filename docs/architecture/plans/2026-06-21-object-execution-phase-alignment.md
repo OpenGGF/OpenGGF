@@ -183,7 +183,7 @@ Re-read the queue at the start of every work session; it advances as other branc
 - **Targets:** OOZ2-LS f1070 (`air 0/1` on popping platform), MHZ-CR f72 (rolls off
   mushroom vs engine lands/rides), GHZ1/GHZ2-CR f2573/f2369 (`y_speed` large→0),
   S3K LBZ-CR f1694 (`air`).
-- **ROM refs:** `SolidObjectTop` / `SolidObject_Landed` (s2.asm:35368-35387),
+- **ROM refs:** `SolidObjectTop` / `SolidObject_Landed` (s2.asm:35588-35607),
   S3K `SolidObjectFull2_1P` new-landing reads pre-`RideObject_SetRide`
   (sonic3k.asm:42022-42055), S1 `Plat_NoXCheck_AltY` / `SlopeObject` (sonic.lst gates
   0x7AF2-0x7B24). Note: GHZ ledge needs the heightmap **and** index-range modelled
@@ -219,7 +219,7 @@ Re-read the queue at the start of every work session; it advances as other branc
 ### Family D — Sidekick CPU follow/contact phase mechanics
 - **Targets:** tails_x onesies (CPZ f3365, CPZ2 f2889, MCZ2 f4485, CNZ2 f4418,
   MTZ3 f1973), CNZ-CR f1846 (CPU steering + spring).
-- **ROM refs:** `TailsCPU`/`loc_13DD0`-`loc_13E64` (sonic3k.asm:26730-26783),
+- **ROM refs:** `TailsCPU`/`loc_13DD0`-`loc_13E64` (sonic3k.asm:26740-26793),
   `Status_Push` btst gating. This lives in the fragile `SidekickCpuController`.
 - **Mandatory gate:** `TestSidekickCpuFollowParity` (79 tests; NOT in must-keep-green,
   has merged regressions before — see memory `sidekick-cpu-validation-gap`) on every

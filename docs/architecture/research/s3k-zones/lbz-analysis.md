@@ -18,19 +18,19 @@ Prefer `docs/skdisasm/sonic3k.asm` labels and S&K-side addresses for all runtime
 
 | Category | Label | Location |
 |----------|-------|----------|
-| Dynamic resize | `LBZ1_Resize` | `sonic3k.asm:39521` |
-| Dynamic resize | `LBZ2_Resize` | `sonic3k.asm:39525` |
+| Dynamic resize | `LBZ1_Resize` | `sonic3k.asm:39526` |
+| Dynamic resize | `LBZ2_Resize` | `sonic3k.asm:39530` |
 | Palette cycling | `AnPal_LBZ1` / `AnPal_LBZ2` | `sonic3k.asm:3472` / `3445` |
 | Animated tiles | `AnimateTiles_LBZ1` / `AnimateTiles_LBZ2` | `sonic3k.asm:54579` / `54634` |
-| AniPLC data | `AniPLC_LBZ1`, `AniPLC_LBZSpec`, `AniPLC_LBZ2` | `sonic3k.asm:55940`, `55909`, `55926` |
-| Screen/background events | `LBZ1_ScreenInit` / `LBZ1_ScreenEvent` | `sonic3k.asm:110879` / `110880` |
-| Screen/background events | `LBZ1_BackgroundInit` / `LBZ1_BackgroundEvent` | `sonic3k.asm:111209` / `111190` |
+| AniPLC data | `AniPLC_LBZ1`, `AniPLC_LBZSpec`, `AniPLC_LBZ2` | `sonic3k.asm:55971`, `55909`, `55926` |
+| Screen/background events | `LBZ1_ScreenInit` / `LBZ1_ScreenEvent` | `sonic3k.asm:110931` / `110880` |
+| Screen/background events | `LBZ1_BackgroundInit` / `LBZ1_BackgroundEvent` | `sonic3k.asm:111241` / `111190` |
 | Screen/background events | `LBZ2_ScreenInit` / `LBZ2_ScreenEvent` | `sonic3k.asm:111336` / `111302` |
 | Screen/background events | `LBZ2_BackgroundInit` / `LBZ2_BackgroundEvent` | `sonic3k.asm:111429` / `111405` |
 | Parallax | `LBZ2_Deform` / `LBZ2_DeathEggDeform` | `sonic3k.asm:111627` / `111847` |
-| Death Egg motion | `LBZ2_DeathEggMoveScreen` | `sonic3k.asm:112106` |
+| Death Egg motion | `LBZ2_DeathEggMoveScreen` | `sonic3k.asm:112111` |
 | Boss/object code | `Obj_LBZFinalBoss1`, `Obj_LBZFinalBossKnux`, `Obj_LBZFinalBoss2` | `sonic3k.asm:152001`, `152493`, `154226` |
-| Robotnik ride ship | `Obj_LBZ2RobotnikShip` | `sonic3k.asm:192926` |
+| Robotnik ride ship | `Obj_LBZ2RobotnikShip` | `sonic3k.asm:192931` |
 
 ## Current Engine Routing
 

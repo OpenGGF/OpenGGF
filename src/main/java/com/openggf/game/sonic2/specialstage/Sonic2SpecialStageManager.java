@@ -1408,7 +1408,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             completePlayerScalarInitializationBootstrap();
             // That first player-slot scan runs Obj09/Obj10's display code,
             // which ends in LoadSSSonicDynPLC / LoadSSTailsDynPLC /
-            // LoadSSTailsTailsDynPLC (docs/s2disasm/s2.asm:69194, 70493,
+            // LoadSSTailsTailsDynPLC (docs/s2disasm/s2.asm:69194, 70691,
             // 70575). Their "already loaded" latch was cleared with the rest
             // of the special-stage object RAM, so the bootstrap pass is where
             // the players' first art transfer is queued -- not the first
@@ -2015,7 +2015,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
     /**
      * Updates the skydome scroll offset based on track animation state.
-     * Implements SSPlaneB_SetHorizOffset from the original game (s2.asm line 9238).
+     * Implements SSPlaneB_SetHorizOffset from the original game (s2.asm line 9242).
      *
      * The scroll delta is applied during turning segments to create the illusion
      * of the background dome rotating as the track curves.
@@ -2097,7 +2097,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
 
     /**
      * Updates the vertical scroll (vScrollBG) based on track animation state.
-     * Implements SSTrack_SetVscroll from the original game (s2.asm line 9316).
+     * Implements SSTrack_SetVscroll from the original game (s2.asm line 9320).
      *
      * The original uses a two-level lookup:
      * 1. Animation frame determines table index (into BG_SCROLL_DELTA_TABLE)
@@ -2188,14 +2188,14 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
                     | (capturedPressedButtons & 0xFF);
             // SSTailsCPU_Control is reached from Obj10_MdNormal only, and only
             // on its non-hurt path: Obj10_MdNormal tests routine_secondary and
-            // branches to Obj10_Hurt before calling it (s2.asm:70408-70412).
+            // branches to Obj10_Hurt before calling it (s2.asm:70553-70557).
             // While Tails is in Obj10_MdJump / Obj10_MdAir / Obj10_Hurt nothing
             // overwrites Ctrl_2_Logical after the main loop's own
             // "move.w (Ctrl_2).w,(Ctrl_2_Logical).w" (s2.asm:6716-6717,6741),
             // so SSPlayer_ChgJumpDir reads the real port-2 pad rather than the
             // delayed record buffer -- and the buffer clear and
             // Tails_control_counter decrement that live inside
-            // SSTailsCPU_Control (s2.asm:70453-70481) do not run either. The
+            // SSTailsCPU_Control (s2.asm:70533-70561) do not run either. The
             // unconditional part is the buffer *shift*, which sits in Obj09
             // ahead of its routine jump (s2.asm:69048,69063-69069) and so runs
             // whatever Tails is doing.

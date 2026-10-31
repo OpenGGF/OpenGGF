@@ -239,7 +239,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * into {@code RAM_start} before {@code Wait_TitleS3K} starts
      * (sonic3k.asm:5557-5560), and {@code TitleSonic_LoadFrame} takes the
      * {@code loc_4446} DMA path for it instead of decompressing
-     * ({@code cmpi.w #7,d7 / beq.s loc_4446}, sonic3k.asm:5864-5865).
+     * ({@code cmpi.w #7,d7 / beq.s loc_4446}, sonic3k.asm:5874-5875).
      * {@code Process_Kos_Queue} is resumable across V-ints, so the ROM never
      * stalls on it; the engine only requires it to be ready when frame 7 loads.
      */

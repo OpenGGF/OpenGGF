@@ -63,7 +63,7 @@ public record PlayerMovementRules(
          * <p>S3K gates it explicitly: {@code Player_TouchFloor_Check_Spindash} is
          * {@code tst.b spin_dash_flag(a0) / bne / move.b #0,anim(a0)}
          * (docs/skdisasm/sonic3k.asm:24365-24369), reached from all five
-         * {@code Player_TouchFloor} landing exits (:24142, :24153, :24262, :24302,
+         * {@code Player_TouchFloor} landing exits (:24142, :24376, :24262, :24302,
          * :24357) and mirrored for Tails at {@code Tails_TouchFloor_Check_Spindash}
          * (:29163-29167, called from :28978, :28989, :29058, :29098, :29153).
          * Sonic 2 has the same shape through its spindash alias:

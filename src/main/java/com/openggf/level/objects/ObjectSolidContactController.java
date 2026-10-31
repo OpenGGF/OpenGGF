@@ -408,7 +408,7 @@ public final class ObjectSolidContactController {
      * not execute at all on this frame ({@link SolidObjectProvider#suppressSlopeSampleThisFrame}).
      * On such a frame the object performs no rider state change -- no sloped
      * y_pos write and no airborne-rider unseat -- exactly as ROM's
-     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45434) jmps to
+     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45439) jmps to
      * {@code Play_SFX} without falling through to {@code sub_205B6}
      * (SolidObjectTopSloped2). Used to defer the generic air-unseat paths by
      * one frame so a player who jumps on the collapse-transition frame keeps
@@ -1512,7 +1512,7 @@ public final class ObjectSolidContactController {
 
     private boolean blocksSolidContacts(PlayableEntity player, ObjectInstance candidate) {
         var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
-        // ROM SolidObject_ChkBounds (docs/s2disasm/s2.asm:35181-35182):
+        // ROM SolidObject_ChkBounds (docs/s2disasm/s2.asm:35378-35379):
         //   cmpi.b   #6,routine(a1)
         //   bhs.w    SolidObject_NoCollision
         // Skips solid-object collisions when the player's routine is >= 6
@@ -2189,7 +2189,7 @@ public final class ObjectSolidContactController {
         boolean wasAirborne = player.getAir();
         boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
 
-        // ROM parity: SolidObject_cont (s2.asm:35140-35145 SolidObject_OnScreenTest,
+        // ROM parity: SolidObject_cont (s2.asm:35341-35346 SolidObject_OnScreenTest,
         // sonic3k.asm:41430-41432 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm:124-126
         // Solid_ChkEnter and 86-87 SolidObject2F) gates the side/top/bottom contact
         // path on the object's render_flags bit 7. Render_Sprites clears bit 7 each
@@ -2216,9 +2216,9 @@ public final class ObjectSolidContactController {
         // rider. Only the new-contact resolveContact path is gated here.
         //
         // Per-object opt-out (bypassesOffscreenSolidGate): the ROM gate at
-        // loc_1DF88 lives only in SolidObjectFull_1P (sonic3k.asm:41056-41058).
+        // loc_1DF88 lives only in SolidObjectFull_1P (sonic3k.asm:41061-41063).
         // Spring variants and several other objects route through the sibling
-        // helper SolidObjectFull2_1P (sonic3k.asm:41105-41107) which falls
+        // helper SolidObjectFull2_1P (sonic3k.asm:41110-41112) which falls
         // through directly to SolidObject_cont without the bit-7 test, so
         // they must continue to resolve push/side contact even when their
         // bounding box has scrolled off-screen.  Without this opt-out, the
@@ -2231,10 +2231,10 @@ public final class ObjectSolidContactController {
         // SolidObjectTopSloped2_1P (sonic3k.asm:41880-41907) ALL bypass
         // loc_1DF88 entirely.  When the player isn't yet standing
         // (d6,status(a0) clear), they branch directly into SolidObjCheckSloped /
-        // SolidObjCheckSloped2 / loc_1E42E (sonic3k.asm:42111, 42135, 42022)
+        // SolidObjCheckSloped2 / loc_1E42E (sonic3k.asm:42111, 42135, 42027)
         // which do NOT test render_flags(a0). The same pattern holds in S2:
-        // SlopedSolid_SingleCharacter (s2.asm:34927-34952) jumps to
-        // SlopedSolid_cont (s2.asm:35066) without any on-screen test, and
+        // SlopedSolid_SingleCharacter (s2.asm:35106-35131) jumps to
+        // SlopedSolid_cont (s2.asm:35263) without any on-screen test, and
         // the inline-MvSonicOnPtfm SolidObject45_alt path (s2.asm:35040)
         // also bypasses it.  The on-screen optimisation in ROM
         // ("if Sonic outruns the screen he can phase through solid objects")
@@ -2516,7 +2516,7 @@ public final class ObjectSolidContactController {
             // method, before the player.getAir() unseat branch, so a player
             // who jumps on the transition frame keeps Status_OnObj for that
             // one frame (matching ROM ObjPlatformCollapse_CreateFragments
-            // skipping sub_205B6 entirely; sonic3k.asm:44858, 45434).
+            // skipping sub_205B6 entirely; sonic3k.asm:44875, 45434).
             int surfaceOffset;
             if (instance instanceof SlopedSolidProvider sloped) {
                 int slopeAnchorX = currentX + params.offsetX();
@@ -2606,7 +2606,7 @@ public final class ObjectSolidContactController {
         }
         player.setOnObject(false);
         if (solidProfile.forceAirOnRideExit() && !usesUnifiedCollisionModel(player)) {
-            // ROM PlatformObject_SingleCharacter exit path (s2.asm:35506-35511):
+            // ROM PlatformObject_SingleCharacter exit path (s2.asm:35735-35740):
             //   bclr #status.player.on_object,status(a1)
             //   bset #status.player.in_air,status(a1)
             // Bridge-specific helpers such as PlatformObject11_cont clear only
@@ -3115,7 +3115,7 @@ public final class ObjectSolidContactController {
         if (ridingObject != null && ridingObject instanceof SolidObjectProvider provider) {
             SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
             // ROM: S3K SolidObjectFull tests Player_2 render_flags before
-            // entering SolidObjectFull_1P (sonic3k.asm:41046-41050), so an
+            // entering SolidObjectFull_1P (sonic3k.asm:41061-41065), so an
             // offscreen CPU sidekick does not run the standing-bounds unseat
             // branch at 41021-41034. Keep the existing ride latched.
             if (!shouldSkipOffscreenSidekickFullSolid(player, ridingObject, solidProfile)) {
@@ -3230,7 +3230,7 @@ public final class ObjectSolidContactController {
                     setObjectStandingBit(player, ridingObject, ridingPieceIndex);
                     clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
 
-                    // ROM: DropOnFloor (s2.asm:35810) — after repositioning the player
+                    // ROM: DropOnFloor (s2.asm:36114) — after repositioning the player
                     // on a platform, check if terrain is at or above the player's feet.
                     // If so, detach the player so terrain collision takes over next frame.
                     if (solidProfile.dropOnFloor()) {
@@ -3846,7 +3846,7 @@ public final class ObjectSolidContactController {
             // Provider-specific ROM ports can request a different sampled
             // player-position phase for top- or full-solid helper geometry.
             // S3K SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
-            // before RideObject_SetRide (sonic3k.asm:42022-42055); full-solid
+            // before RideObject_SetRide (sonic3k.asm:42037-42070); full-solid
             // callers can likewise model their concrete player-slot phase.
             int historyFrames = Math.max(0, topSolidOnly
                     ? InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopSolidPlayerPositionHistoryFrames(player))
@@ -4159,7 +4159,7 @@ public final class ObjectSolidContactController {
                 || usesUnifiedCollisionModel(player)) {
             return;
         }
-        // ROM: SolidObject_Landed (s2.asm:35368-35387) uses playerY - relY + 3,
+        // ROM: SolidObject_Landed (s2.asm:35588-35607) uses playerY - relY + 3,
         // which resolveContactInternal already computes correctly. The absolute
         // anchorY-groundHalfHeight formula below only matches PlatformObject_ChkYRange
         // (s2.asm:35696-35712). Skip the snap for SolidObject-based objects so
@@ -4311,7 +4311,7 @@ public final class ObjectSolidContactController {
             return SolidContact.STANDING;
         }
 
-        // ROM SolidObject_AtEdge (s2.asm:35241-35248): for any side contact
+        // ROM SolidObject_AtEdge (s2.asm:35438-35445): for any side contact
         // when the player is not in air, set the OBJECT's push bit AND the
         // player's pushing bit, regardless of moving direction.  Position
         // correction and speed zeroing remain gated on movingInto.  This is
@@ -4425,7 +4425,7 @@ public final class ObjectSolidContactController {
             return null;
         }
 
-        // ROM parity: SlopedSolid_SingleCharacter (s2.asm:34902) when the standing
+        // ROM parity: SlopedSolid_SingleCharacter (s2.asm:35124) when the standing
         // bit is already set (player is riding the slope) does NOT use the generic
         // side-vs-top classification. It only checks:
         //   1. Is the player in the air? → unseat
@@ -4453,7 +4453,7 @@ public final class ObjectSolidContactController {
                 && relY <= maxTop
                 && isWithinTopLandingWidth(instance, player, relX, halfWidth, -1)) {
             if (apply) {
-                // ROM parity: S2 SlopedSolid_cont (s2.asm:34927-35099) still
+                // ROM parity: S2 SlopedSolid_cont (s2.asm:35106-35278) still
                 // enters SolidObject_Landed (s2.asm:35178-35383) before Obj41's
                 // diagonal launch reads y_pos and applies its +6 nudge
                 // (s2.asm:34028-34088).  The grounded catch window only
@@ -4865,10 +4865,10 @@ public final class ObjectSolidContactController {
             //   and returns d4=0 (no contact), but the lift has already
             //   been applied.  CNZ trace F7614 exercises this when
             //   Tails_Jump (sonic3k.asm:28559+) sets y_vel=-$680 on the
-            //   same frame Obj_Spring_Horizontal (sonic3k.asm:47811+)
+            //   same frame Obj_Spring_Horizontal (sonic3k.asm:47816+)
             //   reaches loc_1E154 with d3=1 against Tails.
             //   S1 Solid_Landed (s1disasm/_incObj/sub SolidObject.asm:278)
-            //   and S2 SolidObject_Landed (s2.asm:35379-35380) test y_vel
+            //   and S2 SolidObject_Landed (s2.asm:35589-35590) test y_vel
             //   FIRST and branch to SolidObject_Miss with no lift.
             //
             // ROM only reaches loc_1E154 via SolidObjectFull2_1P's
@@ -4903,7 +4903,7 @@ public final class ObjectSolidContactController {
             // unconditional on the shipped ROM -- `tst.w y_vel(a1) / bmi.s ..._Miss` in
             // SolidObject_Landed (s2.asm:35615-35616) and the same test in
             // PlatformObject11_cont, PlatformObject_cont, SlopedPlatform_cont and
-            // PlatformObject2_cont (s2.asm:35920, 35951, 36056, 36095). The fixBugs=1
+            // PlatformObject2_cont (s2.asm:35920, 36086, 36056, 36095). The fixBugs=1
             // branch (s2.asm:35599-35619 and the mirrors at 35909-35924, 35935-35950,
             // 36045-36060, 36084-36099) skips the velocity test entirely when the player
             // is on the ground with an angle inside [-$10,$10], so a shallow slope meeting
@@ -4988,7 +4988,7 @@ public final class ObjectSolidContactController {
                 player.setY((short) newY);
                 if (upwardVelocity) {
                     // ROM: loc_1E154 path with tst.w y_vel(a1) / bmi.s
-                    // loc_1E198 (sonic3k.asm:41665-41666) -> moveq #0,d4 /
+                    // loc_1E198 (sonic3k.asm:41680-41681) -> moveq #0,d4 /
                     // rts at 41636-41637.  The position lift fires but
                     // RideObject_SetRide does not, so we leave angle,
                     // y_vel, ground_vel, on_object, in_air, rolling, and
@@ -5040,13 +5040,13 @@ public final class ObjectSolidContactController {
             return null;
         }
 
-        // ROM: SolidObject_InsideBottom (s2.asm:35307-35333)
+        // ROM: SolidObject_InsideBottom (s2.asm:35486-35512)
         // When y_vel == 0 and player is on ground, the ROM branches to SolidObject_Squash
         // which checks horizontal overlap and kills the player if sandwiched.
         if (!player.getAir() && (player.getYSpeed() == 0
                 || (instance instanceof SolidObjectProvider provider
                     && InitialObjectDispatchController.afterCallback(initialDispatch, provider.groundedBottomContactAlwaysSquashes())))) {
-            // ROM: SolidObject_Squash (s2.asm:35336-35361)
+            // ROM: SolidObject_Squash (s2.asm:35533-35558)
             // mvabs.w d0,d4; cmpi.w #$10,d4; blo.w SolidObject_LeftRight
             // If player is near the horizontal edge (absDistX < 16), push sideways instead.
             if (absDistX < 0x10) {
@@ -5078,7 +5078,7 @@ public final class ObjectSolidContactController {
                 return SolidContact.side(pushing, distX, movingInto);
             }
             // Player is well inside horizontally - crush death.
-            // ROM: KillCharacter (s2.asm:84995) - unconditional death.
+            // ROM: KillCharacter (s2.asm:85671) - unconditional death.
             if (apply) {
                 LOGGER.fine(() -> "SolidObject crush: player sandwiched (absDistX=" + absDistX + ")");
                 player.applyCrushDeath();
@@ -5586,7 +5586,7 @@ public final class ObjectSolidContactController {
             // resets y_radius/x_radius before testing Status_Roll. S3K despawn marker
             // writes Status_InAir directly and can leave Tails with rolling radii but no
             // roll bit — so S3K needs this reset even when not rolling.
-            // S2 Tails_ResetOnFloor (s2.asm:40624-40641) uses btst/bne to gate the
+            // S2 Tails_ResetOnFloor (s2.asm:41012-41029) uses btst/bne to gate the
             // y_radius reset on Status_Roll being set; when not rolling it skips the
             // reset, preserving any stale y_radius value from the despawn path.
             // Gate this non-rolling radius reset to S3K (landingRollClearUsesCurrentYRadiusDelta).

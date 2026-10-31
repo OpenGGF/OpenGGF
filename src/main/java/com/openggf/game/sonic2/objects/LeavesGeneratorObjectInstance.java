@@ -45,7 +45,7 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
     // Minimum speed required to trigger leaves (0x200 in either axis)
     private static final int MIN_TRIGGER_SPEED = 0x200;
 
-    // Obj2C_CollisionFlags (docs/s2disasm/s2.asm:52046-52049).
+    // Obj2C_CollisionFlags (docs/s2disasm/s2.asm:52053-52056).
     private static final int[] COLLISION_FLAGS = {0xD6, 0xD4, 0xD5};
 
     private static final int MAIN_TOUCH_BIT = 0x01;

@@ -168,7 +168,7 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         currentVIntRunCount = vIntRunCount;
         if (!initRoutineFrameConsumed) {
-            // ROM: Obj56_Init ends in rts (docs/s2disasm/s2.asm:63325) after
+            // ROM: Obj56_Init ends in rts (docs/s2disasm/s2.asm:63373) after
             // addq.b #2,routine(a0) (:63278), so the first executed frame runs the
             // init only. The children it allocates sit in higher SST slots and do
             // still run in that same pass, which is why only the main object's
@@ -436,12 +436,12 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     /**
      * Obj56 is a read-once-at-head dispatcher, so its defeat routine first runs next frame.
      *
-     * <p>{@code loc_2F262} (docs/s2disasm/s2.asm:63420-63424) reads
+     * <p>{@code loc_2F262} (docs/s2disasm/s2.asm:63535-63539) reads
      * {@code routine_secondary(a0)} exactly once into d0 and {@code jmp}s through
      * {@code off_2F270}; the selected handler never re-reads the field. The defeat write
      * {@code move.b #6,routine_secondary(a0)} (docs/s2disasm/s2.asm:63665, in
-     * {@code loc_2F4EE}) is reached from {@code loc_2F4A6} (:63632-63636), which
-     * {@code loc_2F304} / Sub4 calls at :63486 - i.e. strictly downstream of that head
+     * {@code loc_2F4EE}) is reached from {@code loc_2F4A6} (:63747-63751), which
+     * {@code loc_2F304} / Sub4 calls at :63601 - i.e. strictly downstream of that head
      * read. So the ROM finishes the frame in Sub4 and only dispatches Sub6 on the
      * following frame.
      *
