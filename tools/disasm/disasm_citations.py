@@ -63,8 +63,8 @@ ANCHOR_WINDOW = 120   # characters before the citation searched for a label name
 ROUTINE_SPAN = 250    # a range may sit this many lines inside the named label's code
 
 
-def run(args, cwd=None, check=True):
-    p = subprocess.run(args, cwd=cwd, capture_output=True, text=True, errors='replace')
+def run(args, cwd=None, check=True, env=None):
+    p = subprocess.run(args, cwd=cwd, env=env, capture_output=True, text=True, errors='replace')
     if check and p.returncode:
         raise RuntimeError(f'{" ".join(args)}: {p.stderr.strip()[:300]}')
     return p
@@ -108,6 +108,11 @@ class Disasm:
         self._gitdir = None
         self._files, self._trees, self._renames = collections.OrderedDict(), {}, None
         self._history = None
+        # Commit hooks in linked worktrees export GIT_DIR and other local state.
+        # Keep that state for index/HEAD reads, but never pass it to another repo.
+        self.env = os.environ.copy()
+        for key in run(['git', 'rev-parse', '--local-env-vars'], cwd=sp.root).stdout.splitlines():
+            self.env.pop(key, None)
 
     def gitdir(self):
         if self._gitdir is None:
@@ -120,7 +125,7 @@ class Disasm:
             candidates.append(common / 'modules' / self.path)
             for c in candidates:
                 if (c / '.git').exists() or (c / 'HEAD').exists() and (c / 'objects').exists():
-                    p = run(['git', '-C', str(c), 'rev-parse', '--git-dir'], check=False)
+                    p = run(['git', '-C', str(c), 'rev-parse', '--git-dir'], check=False, env=self.env)
                     if p.returncode == 0:
                         self._gitdir = str(c)
                         break
@@ -129,7 +134,7 @@ class Disasm:
         return self._gitdir or None
 
     def git(self, *args, check=True):
-        return run(['git', '-C', self.gitdir(), *args], check=check)
+        return run(['git', '-C', self.gitdir(), *args], check=check, env=self.env)
 
     def resolve_rev(self, rev):
         if rev in (None, 'pinned'):
@@ -199,7 +204,7 @@ class Disasm:
         specs = [f"{rev}:{rel}" for rev in self._history]
         p = subprocess.run(["git", "-C", self.gitdir(), "cat-file",
                             "--batch-check=%(objectname) %(objecttype)"],
-                           input="\n".join(specs) + "\n", capture_output=True, text=True, check=True)
+                           input="\n".join(specs) + "\n", capture_output=True, text=True, check=True, env=self.env)
         seen = set()
         for rev, entry in zip(self._history, p.stdout.splitlines()):
             oid, kind = entry.rsplit(" ", 1)

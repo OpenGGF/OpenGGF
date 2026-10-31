@@ -4,6 +4,7 @@ Run: python3 -m unittest discover -s tools/testing -p 'test_disasm_citation_poli
 """
 import contextlib
 import io
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -41,6 +42,17 @@ class CitationPolicyTest(unittest.TestCase):
         result = self.policy()
         self.assertNotEqual(result.returncode, 0, result.stderr)
         self.assertIn('increased 0 -> 1', result.stderr)
+
+    def test_real_git_hook_keeps_submodule_lookups_outside_superproject_environment(self):
+        self.fx.write('src/main/java/M.java', '// Obj_A (game.asm:5-7)\n')
+        result = subprocess.run(['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid',
+                                 '-c', 'core.hooksPath=.githooks', '-c', 'commit.gpgsign=false',
+                                 'commit', '-m', 'must be rejected'],
+                                cwd=self.fx.sup, text=True, capture_output=True,
+                                env={**os.environ, 'GIT_DIR': str(self.fx.sup / '.git')})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('increased 0 -> 1', result.stderr)
+        self.assertNotIn('revision ' + self.fx.A[:12] + ' not present', result.stderr)
 
     def test_existing_debt_and_unstaged_regression_do_not_block(self):
         path = self.fx.write('src/main/java/M.java', '// Obj_A (game.asm:5-7)\n')
