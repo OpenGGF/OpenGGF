@@ -63,6 +63,8 @@ public final class ProjectScaffolder {
                     + "The included src/test/java integration test uses the opt-in creator-tests profile. "
                     + "Follow handbook/testing.md to verify and install the matching separate mod-testkit, "
                     + "then run mvn test -Pcreator-tests -Dopenggf.testkit.version=<kit-version> with the same jar properties.\n"
+                    + "For the portable workflow, run python3 /absolute/kit/tools/build_project.py . --doctor, "
+                    + "then omit --doctor to build; add --test with a matching --testkit or --run to play. "
                     + "See the creator kit handbook's getting-started.md and installing-mods.md.\n");
             Files.move(staging, output);
             return output;
@@ -146,6 +148,7 @@ public final class ProjectScaffolder {
     }
 
     private static void writeTestSupport(Path root, String id, String pkg) throws IOException {
+        writeText(root.resolve(".gitignore"), "/target/\nggfmod.local.json\n");
         Path pomPath = root.resolve("pom.xml");
         String pom = Files.readString(pomPath, StandardCharsets.UTF_8);
         if (!pom.contains("<id>creator-tests</id>")) {

@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+import zlib
 
 
 def matching_artifacts(engine, sdk, testkit=None):
@@ -22,9 +23,12 @@ def matching_artifacts(engine, sdk, testkit=None):
     if testkit:
         artifacts.append((testkit, "META-INF/openggf-build.properties"))
     for artifact, identity_path in artifacts:
-        with zipfile.ZipFile(artifact) as archive:
-            identities.append(dict(line.split("=", 1) for line in archive.read(identity_path).decode().splitlines()
-                                   if "=" in line and not line.startswith("#")))
+        try:
+            with zipfile.ZipFile(artifact) as archive:
+                identities.append(dict(line.split("=", 1) for line in archive.read(identity_path).decode().splitlines()
+                                       if "=" in line and not line.startswith("#")))
+        except (OSError, KeyError, ValueError, RuntimeError, zlib.error) as error:
+            raise ValueError(f"Cannot read candidate identity from {artifact}: {error}") from error
     if any(identity != identities[0] for identity in identities[1:]):
         raise ValueError("Engine, SDK and optional testkit must come from the same candidate build")
     if not identities[0].get("app.commit") or "${" in identities[0]["app.commit"]:

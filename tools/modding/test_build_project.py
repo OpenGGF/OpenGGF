@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import struct
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -115,6 +116,32 @@ class BuildProjectTest(unittest.TestCase):
             result, report = self.doctor("--config", self.write_external_config(), "--sdk", artifact)
             self.assertEqual(1, result)
             self.assertIn("artifact.identity", [f["code"] for f in report["findings"]])
+
+    def test_unreadable_compressed_identity_members_remain_json(self):
+        self.settings()
+        member = "META-INF/openggf-build.properties"
+        for shape in ("corrupt-deflate", "unsupported-compression", "encrypted"):
+            with self.subTest(shape=shape):
+                artifact = Path(self.temp.name) / "unreadable.jar"
+                with zipfile.ZipFile(artifact, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                    archive.writestr(member, "app.commit=abc123\napp.baseVersion=0.7\n")
+                raw = bytearray(artifact.read_bytes())
+                central = raw.index(b"PK\x01\x02")
+                if shape == "corrupt-deflate":
+                    name_size, extra_size = struct.unpack_from("<HH", raw, 26)
+                    raw[30 + name_size + extra_size] = 7  # Reserved DEFLATE block type.
+                elif shape == "unsupported-compression":
+                    struct.pack_into("<H", raw, 8, 99)
+                    struct.pack_into("<H", raw, central + 10, 99)
+                else:
+                    struct.pack_into("<H", raw, 6, 1)
+                    struct.pack_into("<H", raw, central + 8, 1)
+                artifact.write_bytes(raw)
+                result, report = self.doctor("--sdk", artifact)
+                self.assertEqual(1, result)
+                self.assertEqual("artifact.identity", report["findings"][0]["code"])
+                self.assertEqual("fail", report["result"])
+                self.assertFalse((self.project / "target").exists())
 
     def write_external_config(self):
         path = Path(self.temp.name) / "valid.json"

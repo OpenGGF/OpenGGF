@@ -24,7 +24,8 @@ control, ordered physical gameplay and native-menu short-tap admission, and live
 PAL50/NTSC60 simulation/audio scheduling independent of the window rendering limit,
 with region-cadence viewport recording and row-owned trace-ghost animation whose
 seeks preserve observed historical context. The level editor menu now opens on a
-short front page with Exit to title.
+short front page with Exit to title. Creator tooling now includes task recipes,
+local build/test/run configuration, read-only preflight and actionable SDK reports.
 
 ## Release files
 

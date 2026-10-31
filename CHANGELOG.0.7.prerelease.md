@@ -1561,6 +1561,15 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Mod authoring entry points:** Six task recipes and mirrored agent guidance
+  route creator work to supported helpers while retaining expert overrides. The
+  portable project launcher supports local artifact/ROM paths, CLI overrides and
+  read-only text/JSON preflight, alongside build/test/run and the advanced Maven
+  workflow. Starter and kit projects ignore personal local path configuration.
+  SDK validate/package reports retain their v1 fields and add next actions and
+  documentation references; requested JSON also covers input/operational errors.
+  Ownership, trust, warning policy, runtime APIs and publication rules are unchanged.
+
 - **Live frame timing preparation:** Engine now separates its live advance phase
   from scene presentation, retaining fade-before-update ordering, modal input
   acknowledgment and one outer audio packet. Frame-step and modal decisions

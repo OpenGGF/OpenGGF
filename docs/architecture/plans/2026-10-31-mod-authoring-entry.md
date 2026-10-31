@@ -47,10 +47,32 @@ large implementations or making every mod read the entire handbook.
 
 ## Checkpoint
 
-The recipe worker delivered `e62f044a88e272310868b71f5ccae7ca871bd909`, now
-fast-forwarded into the integration tree. Its checks cover 139 links/anchors,
-skill syntax/mirrors and manual routing; no new runtime passes are claimed.
-The lead checked the documented physics transform, level assembly and save-slot
-seams against production source. Workflow and diagnostic workers remain active;
-their completion notifications drive the next integration steps. No broad run,
-main integration, push or cleanup has occurred yet.
+All three worker slices are integrated locally: recipes `e62f044a8`, workflow
+`5f72fa891`, diagnostics `916f6d4f0`. The lead additionally aligns generated/kit
+instructions with the canonical portable workflow and ignores personal config in
+new projects. Worker verification: recipe syntax/139 references and routing;
+37 Python tests; 34 SDK checks with zero skips. Historical dirty artifacts used by
+the workflow worker do not qualify current-source binaries. The diagnostics
+worker's initial lean compilation exhausted heap before any tests; its normal
+rerun passed. Lead combined Python checks pass 37/37 and real tool preflight passes.
+
+The change-based plan selects 4,366 smoke classes because SDK/tool paths and
+`.gitignore` are conservatively unclassified. This is disproportionate here:
+changes are confined to creator CLI presentation, scaffolding, portable tooling
+and prose, with no runtime/physics, selection policy, POM or workflow change.
+Combined validation instead covers SDK diagnostics/packaging, all starter purposes,
+SDK artifact/Javadoc boundaries and converters, Python tooling, actual matching
+current-source artifacts and portable starter/test witnesses. An independent
+review checks the combined source and uncommitted reconciliation. This is bounded
+creator coverage, not engine gameplay qualification. No broad suite is launched.
+Main integration, push and cleanup remain pending.
+
+Combined focused Java invocation (normal queue lane) passed 85 tests across 12
+SDK/scaffolder/converter classes, zero failures/errors/skips; Maven execution
+reported 1m27s, queue wait 0s. Python checks now pass 38/38 after the independent
+review identified an unreadable-compressed-identity error path. Three archive
+shapes reproduced escaping exceptions against the worker version and now produce
+structured artifact.identity failures. The lead repaired it without another review
+round. Skill syntax, 86 focused local links/anchors, code fences and both mirror
+pairs pass. The lean worker compilation failure remains reported above; it did
+not execute tests. Current-source artifact build and consumer qualification follow.
