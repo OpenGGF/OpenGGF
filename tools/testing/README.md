@@ -120,6 +120,42 @@ reduced their combined reported class time from 37.92 seconds to 24.70–25.06
 seconds, with a small increase in sampled test-process RSS. This measures those
 two audits, not a new complete-suite duration or low-heap qualification.
 
+## Coordination and progress
+
+- Give delegated work a bounded outcome, owned files/worktree, focused checks
+  and a stopping condition. Delegate independent work that can advance the task;
+  do not create extra workers just to watch the same job or repeat an unchanged review.
+- One lead owns the delivery-wide validation plan and schedules combined smoke
+  coverage when the policy below requires it. Workers validate their own changes
+  with relevant focused checks; do not assign the same broad run to every worker.
+- Before submitting costly validation, check the task's existing queued/running
+  jobs. For the same unchanged worktree/source fingerprint (including uncommitted
+  inputs), selection, fixtures, flags and environment, use the existing job
+  instead of submitting another copy. A completed result is
+  reusable only when current policy permits it and its tested state and coverage
+  match; a branch name or identical command alone is insufficient. New edits,
+  failures or unresolved risk still require the affected checks.
+- Keep one command session and one observer per job. Prefer completion
+  notifications or a bounded wait. For lengthy jobs that need polling, back off
+  to 30–60 seconds or longer, read only changed status or a bounded final
+  summary, and avoid repeated full-log reads or identical progress commands.
+  Report meaningful progress to the user independently of the polling cadence.
+- Queue waiting is pending work, not a failed run. Keep the existing request
+  alive and advance independent work while it waits. Cancel only task-owned jobs
+  that are no longer needed; do not restart a request merely because admission is
+  slow. Coordination never bypasses the Maven queue, changes resource limits or
+  forces unrelated worktrees to serialize.
+- At a work-slice boundary, handoff, compaction or changed blocker, update a
+  compact checkpoint in the existing task plan/status or a task message: outcome,
+  current/tested SHA and relevant uncommitted changes, ownership,
+  validation selection/results/limits, live job
+  handles, blocker and next action. Reuse that summary; load only the references
+  needed for the next question. Do not create pass caches, validation receipts or
+  extra log archives; existing diagnostic cleanup still applies.
+- Distinguish queue delay, execution, user-response waits and unmeasured time in
+  status reports. Parallel worker/process intervals overlap; their sum is not
+  elapsed delivery time. Report unavailable timing as unknown.
+
 ## Test categories
 
 Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
@@ -259,6 +295,53 @@ These are execution-cost clues, not elapsed delivery time; they exclude Maven
 preparation and queue waits, may overlap across two forks, and do not attribute
 work in a crashed JVM that produced no report. Existing acknowledgment/cleanup
 rules remove these diagnostics along with the rest of the run.
+
+### Validation decisions and failure attribution
+
+Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs; PowerShell quotes
+`-D...` arguments. Surefire inherits Maven's JVM; set `JAVA_HOME` to JDK 25.
+Maven output belongs in the current worktree's `target/` directory. Do not share or
+copy build trees. Per-Surefire-fork LWJGL extraction uses `target/test-tmp`.
+Keep diagnostic output bounded with targeted searches and reads.
+
+Use headless engine tests for behavior and offscreen captures for routine visual
+validation and promo footage. Never automate focus or keyboard input on the user's
+shared desktop. Window/focus/close diagnostics must use an owned isolated display
+and fail before Engine launch if isolation is unavailable; never fall back to the
+ambient X11/Wayland session. Keep such diagnostics separate from routine tests.
+
+**Proportionate validation:** choose checks from changed behavior, consumers
+and plausible failure modes. Focused regression/integration checks can replace
+broad smoke when impact is bounded and understood and no cross-cutting risk
+remains. Inspect the change-based plan and explain a disproportionate selection;
+no further approval is needed. Shared algorithm, public contract, build/selection-policy,
+timing/physics or uncertain changes normally use change-based smoke. Documentation-only
+changes use syntax, links, mirrors, policy and scenario checks. Required affected
+ROM/trace/domain checks remain separate; routine validation is not an exhaustive trace sweep.
+Do not manually narrow the runner's selection; add semantic dependencies with `--category`.
+
+Before broad smoke, state candidate class count, expected cost and stopping rule.
+Complete required checks once; repeat for new edits, failures, repaired prerequisites
+or unresolved risk. Do not rerun unchanged smoke on baseline, development and
+integrated trees as a ceremony. Attribute disputed failures with bounded matched
+baseline/current checks, comparing exact test identities, assertions and skips.
+New/worsened failures block delivery. After a red broad run, fix regressions caused
+by the change and verify narrowly; do not fix unrelated donor paths, graphics helpers
+or platform tooling merely to turn it green. Unattributed failures remain explicitly
+unattributed. Report remaining failures and incomplete coverage; partial validation
+is never fully green and does not waive applicable CI/release gates.
+
+For changes confined to the Python category-runner implementation/tests and its prose
+(no POM, selection-policy, Java, workflow or hook changes), run the Python safety suite
+and actual tool preflight, not the engine suite. Broader changes follow change-based validation.
+A smoke/category/focused pass is bounded validation, never a full-suite pass.
+Record exact commands, outcomes, skips and coverage limits. Public releases retain
+full ordinary (`-Pfull-suite`), guards and required ROM/trace validation.
+Before reporting suite results, read the
+[measurement-hazard table](../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output);
+attribute results to the command, commit and completed run and inspect skips.
+The focused wrapper preserves Maven output/exit status and adds no test timeout;
+local category timeouts do not alter CI/release timeouts.
 
 ### Cost, prerequisites and stopping
 
@@ -433,6 +516,12 @@ Exact POM defaults `-Dsurefire.forkCount=1` and `-Dsurefire.reuseForks=true`
 retain shared admission, including for trace/audio profiles. Other fork counts,
 reuse settings, heap overrides or unknown profiles remain exclusive. A safe flag
 does not neutralize an unsafe flag elsewhere in the command.
+
+OS locks release automatically; never delete Maven queue/slot/worktree lock files
+to force access. Waiting requires no permission or manual lock cleanup. Cancellation
+releases a waiting request or stops its running Maven process tree; the slot is held
+only during execution. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
+Do not clear required graphics flags to get a slot.
 
 #### Queue telemetry
 
@@ -745,6 +834,15 @@ execution admission after compilation releases those leases. Their fixed 128 MiB
 children use the existing 4 GiB/4-core small-job reservation and inherit their
 leases; they do not reserve a normal 7 GiB Maven/engine job. These controls can wait behind isolated measurements even
 though the rest of the Python safety suite uses private repositories or mocks.
+
+## CI selection and scheduling
+
+CI runs smoke on develop/next after a 30-minute quiet period. Non-draft pull
+requests run branch policy, smoke and separate guards; manual CI uses smoke and
+guards too. Feature/bugfix pushes run nothing. Direct integration pushes are not
+guard-checked by CI. Master pushes run Release's explicit `-Pfull-suite`, guards,
+packaging and publication. Manual Release dispatch is public-release preparation:
+it validates/builds with full-suite without publishing. Routine CI dispatch never selects it.
 
 ## Local exact-candidate release pilot
 
