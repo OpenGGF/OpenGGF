@@ -262,6 +262,66 @@ class TestHomingAttackMutator {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_2)
+    void launchLagsTheCameraLikeTheFireDashAndTheReticleMarksTheTarget() {
+        var world = open(MutatorPolicy.HomingMode.HOMING);
+        var fixture = settledEhz1();
+        var sonic = fixture.sprite();
+        GameServices.level().getObjectManager().createDynamicObject(() -> new BuzzerBadnikInstance(new ObjectSpawn(
+                sonic.getCentreX() + 96, sonic.getCentreY() - 72, Sonic2ObjectIds.BUZZER, 0, 0, false, 0)));
+        fixture.stepIdleFrames(2);
+        fixture.stepFrame(false, false, false, false, true);
+        for (int frame = 0; frame < 6; frame++) fixture.stepFrame(false, false, false, false, false);
+        assertTrue(runtime(world).reticleVisible(), "Airborne with a target in range shows the lock-on reticle");
+        fixture.stepFrame(false, false, false, false, true);
+        assertEquals(HomingAttackRuntime.Phase.HOMING, runtime(world).phase());
+        int lag = GameServices.camera().getHorizScrollDelay();
+        assertTrue(lag > 0 && lag <= HomingAttackRuntime.CAMERA_LAG_FRAMES, "The launch sets the fire-dash scroll delay: " + lag);
+        assertFalse(sonic.getInvulnerable(), "Ordinary homing keeps native vulnerability");
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_2)
+    void instagibShardsStrikeOtherBadniksAndReplayFromHistory() {
+        var world = open(MutatorPolicy.HomingMode.INSTAGIB);
+        var fixture = settledEhz1();
+        var sonic = fixture.sprite();
+        var objects = GameServices.level().getObjectManager();
+        var first = objects.createDynamicObject(() -> new BuzzerBadnikInstance(new ObjectSpawn(
+                sonic.getCentreX() + 96, sonic.getCentreY() - 72, Sonic2ObjectIds.BUZZER, 0, 0, false, 0)));
+        fixture.stepIdleFrames(2);
+        jumpAndRepress(fixture);
+        assertTrue(sonic.getInvulnerable(), "An Instagib strike makes the leader invulnerable");
+        for (int frame = 0; frame < 40 && !first.isDestroyed(); frame++) fixture.stepFrame(false, false, false, false, false);
+        assertTrue(first.isDestroyed());
+        var shards = runtime(world).shards();
+        assertEquals(HomingAttackRuntime.SHARDS_PER_BURST, shards.size(), "The kill throws a full burst of shards");
+        // Put a second badnik six ticks down the path of the most downward shard, away from the
+        // leader's upward rebound, so only a shard can reach it.
+        var falling = shards.stream().max(java.util.Comparator.comparingInt(HomingAttackRuntime.Shard::vy)).orElseThrow();
+        int ticks = 6, gravity = HomingAttackRuntime.SHARD_GRAVITY * ticks * (ticks - 1) / 2;
+        int sx = (falling.x() + falling.vx() * ticks) >> 8, sy = (falling.y() + falling.vy() * ticks + gravity) >> 8;
+        assertTrue(Math.abs(sx - sonic.getCentreX()) > 40 || sy - sonic.getCentreY() > 40, "The probe must sit clear of the leader");
+        var second = objects.createDynamicObject(() -> new BuzzerBadnikInstance(new ObjectSpawn(
+                sx, sy, Sonic2ObjectIds.BUZZER, 0, 0, false, 0)));
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        var expected = new java.util.ArrayList<String>();
+        for (int frame = 0; frame < 12; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            expected.add(runtime(world).shards().toString());
+        }
+        assertTrue(second.isDestroyed(), "A shard strikes the second badnik as the leader's attack");
+        assertTrue(runtime(world).shards().size() > HomingAttackRuntime.SHARDS_PER_BURST / 2,
+                "The second kill throws its own burst");
+        registry.restore(before);
+        for (int frame = 0; frame < 12; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            assertEquals(expected.get(frame), runtime(world).shards().toString(), "Shard replay frame " + frame);
+        }
+    }
+
+    @Test
     void hiddenPriorityThenFacingThenKindThenDistanceSelectTheTarget() {
         var boss = new HomingTarget(HomingTargetKind.BOSS, 0, 0, 0);
         var badnik = new HomingTarget(HomingTargetKind.BADNIK, 0, 0, 0);

@@ -55,6 +55,25 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     static final int BADNIK_CHAIN_POP = -0x500;
     static final int BOSS_REBOUND_SPEED = 0x400;
     static final int FLAME_AFTER_TICKS = 8;
+    /** Fire-shield dash camera lag: H_scroll_frame_offset $2000 (sonic3k.asm:23463). */
+    public static final int CAMERA_LAG_FRAMES = 32;
+    /** Instagib invulnerability continues this long after a strike, covering its rebound arc. */
+    static final int INSTAGIB_GUARD_TICKS = 32;
+    /** Heat reaches full intensity after this many homing ticks. */
+    static final int HEAT_BUILD_TICKS = 4;
+    static final int SHARDS_PER_BURST = 16;
+    static final int MAX_SHARDS = 160;
+    static final int SHARD_TICKS = 48;
+    static final int SHARD_GRAVITY = 0x30;
+    /** A shard strikes a badnik whose centre is within this box half-size. */
+    static final int SHARD_HIT_RADIUS = 16;
+
+    /**
+     * One Instagib shard in 8.8 world coordinates. Shards are gameplay: they fly from a defeated
+     * enemy with the strike's momentum and strike other badniks natively. {@code burst} and
+     * {@code index} only select which captured picture tile draws it.
+     */
+    public record Shard(long burst, int index, int x, int y, int vx, int vy, int age) { }
 
     private final Supplier<Policy> policies;
     private SpriteManager roster;
@@ -65,7 +84,14 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     private HomingTargetKind kind = HomingTargetKind.BADNIK;
     private Mode launchMode = Mode.OFF;
     private int flameTicks;
+    private int heatTicks;
+    private int guardTicks;
+    private java.util.List<Shard> shards = java.util.List.of();
+    private long nextBurst;
     private final HomingAttackEffects effects = new HomingAttackEffects();
+    // Presentation-only reticle, recomputed every leader tick from live objects.
+    private boolean reticleVisible, reticleLocked;
+    private int reticleX, reticleY;
 
     public HomingAttackRuntime(Supplier<Policy> policies) {
         this.policies = Objects.requireNonNull(policies, "policies");
@@ -79,6 +105,23 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
 
     /** True while an Instagib launch is homing or its trail is still fading. */
     public boolean flameActive() { return launchMode == Mode.INSTAGIB && flameTicks > 0; }
+
+    /** Instagib strike plus its trail: native hurt and hazard owners treat the leader as invulnerable. */
+    public boolean invulnerable(PlayableEntity player) {
+        return launchMode == Mode.INSTAGIB && leader(player) && (phase != Phase.IDLE || guardTicks > 0);
+    }
+
+    /** 0..1 friction-heat build-up in front of the striking leader. */
+    float heat() {
+        if (launchMode != Mode.INSTAGIB || !flameActive()) return 0f;
+        float built = 0.55f + 0.45f * Math.min(1f, heatTicks / (float) HEAT_BUILD_TICKS);
+        // After the strike the heat bleeds away over the trail's fade.
+        return phase == Phase.IDLE ? built * flameTicks / (float) FLAME_AFTER_TICKS : built;
+    }
+
+    java.util.List<Shard> shards() { return shards; }
+
+    boolean reticleVisible() { return reticleVisible; }
 
     /** True when an Instagib homing strike, not an ordinary jump, is the current attack. */
     public boolean instagibStrike(PlayableEntity player) {
@@ -119,14 +162,95 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     /** Once per player movement tick, before input and air control. */
     public void beforeMovement(AbstractPlayableSprite sprite) {
         if (!leader(sprite)) return;
-        effects.tick();
-        if (flameTicks > 0 && phase == Phase.IDLE) flameTicks--;
+        tickShards(sprite);
+        effects.tick(this, sprite);
+        if (phase != Phase.IDLE) guardTicks = INSTAGIB_GUARD_TICKS;
+        else if (guardTicks > 0) guardTicks--;
+        if (phase == Phase.HOMING) heatTicks++;
+        else if (flameTicks > 0) flameTicks--;
+        if (flameTicks == 0 && phase == Phase.IDLE) heatTicks = 0;
+        else if (phase == Phase.IDLE && heatTicks < HEAT_BUILD_TICKS) heatTicks++;
         if (!sprite.getAir() || !enabledFor(sprite) || !free(sprite)) {
             // Landing, a grab, hurt, death or a policy change ends the air action and refreshes it.
             phase = Phase.IDLE;
             spent = false;
             ticks = 0;
         }
+        updateReticle(sprite);
+    }
+
+    private void updateReticle(AbstractPlayableSprite sprite) {
+        reticleLocked = phase == Phase.HOMING;
+        if (reticleLocked) {
+            reticleVisible = true;
+            reticleX = targetX;
+            reticleY = targetY;
+            return;
+        }
+        var target = enabledFor(sprite) && free(sprite) && !spent ? select(sprite) : null;
+        reticleVisible = target != null;
+        if (target != null) {
+            reticleX = target.x();
+            reticleY = target.y();
+        }
+    }
+
+    /** Shards fly under gravity and strike any badnik they pass through, as the leader's attack. */
+    private void tickShards(AbstractPlayableSprite leader) {
+        if (shards.isEmpty()) return;
+        LevelManager level = leader.currentLevelManagerIfAvailable();
+        var objects = level == null ? null : level.getObjectManager();
+        var badniks = new java.util.ArrayList<ObjectInstance>();
+        if (objects != null) {
+            for (ObjectInstance object : objects.getActiveObjects()) {
+                var target = HomingTargets.classify(object, leader);
+                if (target != null && target.kind() == HomingTargetKind.BADNIK) badniks.add(object);
+            }
+        }
+        var moved = new java.util.ArrayList<Shard>(shards.size());
+        for (var shard : shards) {
+            if (shard.age() + 1 >= SHARD_TICKS) continue;
+            moved.add(new Shard(shard.burst(), shard.index(), shard.x() + shard.vx(), shard.y() + shard.vy(),
+                    shard.vx(), shard.vy() + SHARD_GRAVITY, shard.age() + 1));
+        }
+        shards = java.util.List.copyOf(moved);
+        // A kill bursts new shards onto the list; they first fly on the next tick.
+        for (var shard : moved) {
+            for (var badnik : badniks) {
+                if (badnik.isDestroyed()) continue;
+                if (Math.abs((shard.x() >> 8) - badnik.getCollisionX()) > SHARD_HIT_RADIUS
+                        || Math.abs((shard.y() >> 8) - badnik.getCollisionY()) > SHARD_HIT_RADIUS) continue;
+                strikeWithShard(objects, leader, badnik, shard);
+            }
+        }
+    }
+
+    private void strikeWithShard(com.openggf.level.objects.ObjectManager objects, AbstractPlayableSprite leader,
+                                 ObjectInstance badnik, Shard shard) {
+        if (!(badnik instanceof com.openggf.level.objects.TouchResponseAttackable attackable)
+                || !(badnik instanceof com.openggf.level.objects.TouchResponseProvider provider)) return;
+        int cx = badnik.getCollisionX(), cy = badnik.getCollisionY();
+        var result = new com.openggf.level.objects.TouchResponseResult(provider.getCollisionFlags() & 0x3F,
+                8, 8, com.openggf.level.objects.TouchCategory.ENEMY, 0);
+        // The native badnik owner runs its own defeat: explosion, animal and score.
+        com.openggf.level.objects.ObjectCallbackDispatch.run(objects, badnik,
+                () -> attackable.onPlayerAttack(leader, result));
+        if (badnik.isDestroyed()) burst(cx, cy, shard.vx(), shard.vy());
+    }
+
+    /** Throw a deterministic ring of shards from a defeated enemy along the strike's momentum. */
+    private void burst(int centreX, int centreY, int impulseX, int impulseY) {
+        long id = nextBurst++;
+        effects.capture(id, centreX, centreY);
+        var next = new java.util.ArrayList<>(shards);
+        for (int i = 0; i < SHARDS_PER_BURST && next.size() < MAX_SHARDS; i++) {
+            double angle = Math.PI * 2 * i / SHARDS_PER_BURST + 0.2;
+            int speed = 0x280 + (i % 4) * 0xA0;
+            int vx = impulseX * 3 / 4 + (int) Math.round(Math.cos(angle) * speed);
+            int vy = impulseY * 3 / 4 + (int) Math.round(Math.sin(angle) * speed) - 0x180;
+            next.add(new Shard(id, i, centreX << 8, centreY << 8, vx, vy, 0));
+        }
+        shards = java.util.List.copyOf(next);
     }
 
     /**
@@ -153,6 +277,8 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         ticks = 0;
         launchMode = policy().mode();
         flameTicks = FLAME_AFTER_TICKS;
+        heatTicks = HEAT_BUILD_TICKS / 2;
+        guardTicks = INSTAGIB_GUARD_TICKS;
         return true;
     }
 
@@ -165,6 +291,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         targetY = target.y();
         launchMode = policy().mode();
         flameTicks = FLAME_AFTER_TICKS;
+        guardTicks = INSTAGIB_GUARD_TICKS;
         aim(sprite, targetX, targetY);
     }
 
@@ -239,7 +366,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     public void beforeAttack(PlayableEntity player, ObjectInstance target) {
         if (!instagibStrike(player)) return;
         if (target instanceof InstagibBossTarget boss) boss.collapseToFinalHit();
-        if (target != null) effects.burst(target.getCollisionX(), target.getCollisionY(),
+        if (target != null) burst(target.getCollisionX(), target.getCollisionY(),
                 player.getXSpeed(), player.getYSpeed());
     }
 
@@ -339,9 +466,16 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
                 leader == null ? 0 : leader.getCentreX(), leader == null ? 0 : leader.getCentreY());
     }
 
-    /** Renderer seam: draw the Instagib effects behind the live sprite table. */
+    /** Renderer seam: draw the Instagib afterimages and shards behind the live sprite table. */
     public void drawEffects(com.openggf.graphics.GraphicsManager graphics, int cameraX, int cameraY) {
-        effects.draw(graphics, cameraX, cameraY);
+        effects.drawBehind(graphics, cameraX, cameraY, shards);
+    }
+
+    /** Renderer seam: friction heat, embers and the lock-on reticle above the live sprite table. */
+    public void drawOverlay(com.openggf.graphics.GraphicsManager graphics, int cameraX, int cameraY) {
+        var leader = roster == null ? null : roster.getMainPlayable();
+        effects.drawFront(graphics, cameraX, cameraY, heat(), leader,
+                reticleVisible, reticleLocked, reticleX, reticleY);
     }
 
     public void reset() {
@@ -351,12 +485,17 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         ticks = 0;
         launchMode = Mode.OFF;
         flameTicks = 0;
+        heatTicks = 0;
+        guardTicks = 0;
+        shards = java.util.List.of();
+        reticleVisible = false;
     }
 
     @Override public String key() { return "homing-attack"; }
 
     @Override public Snapshot capture() {
-        return new Snapshot(phase, spent, ticks, targetX, targetY, kind, launchMode, flameTicks);
+        return new Snapshot(phase, spent, ticks, targetX, targetY, kind, launchMode, flameTicks,
+                heatTicks, guardTicks, shards, nextBurst);
     }
 
     @Override public void restore(Snapshot snapshot) {
@@ -370,13 +509,20 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         kind = snapshot.kind();
         launchMode = snapshot.launchMode();
         flameTicks = snapshot.flameTicks();
+        heatTicks = snapshot.heatTicks();
+        guardTicks = snapshot.guardTicks();
+        shards = snapshot.shards();
+        nextBurst = snapshot.nextBurst();
+        reticleVisible = false;
     }
 
     @Override public void resetForMissingSnapshot() { reset(); }
 
     public record Snapshot(Phase phase, boolean spent, int ticks, int targetX, int targetY,
-                           HomingTargetKind kind, Mode launchMode, int flameTicks) {
+                           HomingTargetKind kind, Mode launchMode, int flameTicks,
+                           int heatTicks, int guardTicks, java.util.List<Shard> shards, long nextBurst) {
         public Snapshot {
+            shards = java.util.List.copyOf(shards);
             Objects.requireNonNull(phase, "phase");
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(launchMode, "launchMode");

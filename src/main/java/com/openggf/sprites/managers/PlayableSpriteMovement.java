@@ -407,6 +407,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.currentLevelManager();
 	}
 
+	/** Homing and dash launches lag the camera exactly like the fire-shield dash below. */
+	private void applyHomingCameraLag() {
+		sprite.resetPositionAndStatTableHistory();
+		Camera camera = camera();
+		if (camera != null && camera.getFocusedSprite() == sprite) {
+			camera.setHorizScrollDelay(com.openggf.game.mutators.HomingAttackRuntime.CAMERA_LAG_FRAMES);
+		}
+	}
+
 	private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
 		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
 	}
@@ -1619,9 +1628,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// without one the native move runs and the forward air dash is the fallback.
 				var homingAttack = homingAttack();
 				if (homingAttack != null && homingAttack.tryLaunch(sprite)) {
-					if (homingAttack.phase() == com.openggf.game.mutators.HomingAttackRuntime.Phase.HOMING) {
-						com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
-					}
+					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+					applyHomingCameraLag();
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
 					return;
@@ -1658,6 +1666,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				}
 				if (homingAttack != null && homingAttack.tryAirDash(sprite)) {
 					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+					applyHomingCameraLag();
 					jumpReleasedSinceJump = false;
 					inputJumpPress = false;
 					return;

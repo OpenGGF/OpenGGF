@@ -57,6 +57,29 @@ The user agreed these rules before implementation:
   live scene capture. It owns a presentation trail bank, takes no object slot, never
   feeds gameplay, and is cleared on restore and reload.
 
+## Revision after first review (2026-10-31)
+
+The user reviewed the first clips and asked for four changes, now implemented:
+
+- Launches and dashes lag the camera like the fire-shield dash. They reset the
+  position history and set a 32-frame horizontal scroll delay (sonic3k.asm:23463).
+- A lock-on reticle is drawn on the target a re-press would take: green while
+  acquiring, red while locked. It is recomputed every leader tick and is
+  presentation only.
+- The Instagib heat is more visible. A layered bow shock (white-hot nose, then
+  yellow, orange and red) sits on the leading side and reaches full strength within
+  4 ticks. Embers stream back behind the sprites and the heat fades after the strike.
+  The leader is invulnerable (through `getInvulnerable()`) for the strike and 32
+  ticks after it. An 8-tick grace was too short: a Coconuts' coconut that was
+  already in the air landed on its last tick.
+- Debris became gameplay. Each kill throws 16 deterministic shards, held in the
+  runtime snapshot. A shard that passes within 16 px of a badnik calls that badnik's
+  native `onPlayerAttack` as the leader's attack, and the new kill bursts in turn.
+  The shard pictures repeat the victim's captured tiles, so parts are duplicated.
+  The first test placement passed even with shard hits disabled, because the
+  leader's own rebound killed the probe. The test now spawns its probe on the most
+  downward shard's path and fails when hits are disabled.
+
 ## Boss audit (hidden priorities and exclusions)
 
 An Explore pass checked every engine boss against the disassemblies. Using the
