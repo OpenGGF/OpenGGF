@@ -247,4 +247,38 @@ Two independent candidates (Opus, Sol) converged on exclusive wall/display caden
    demote before the next service; jitter stays locked; one missed vblank is one slow interval; stalls
    reset), and production-path fake-vsync cases with identical per-service state.
 4. **Draw purity.** Mutator fixes, bytecode guard, behavioural redraw check, with negative controls.
+
+   **Implementation notes (unit 4).** `Obj_FlickerMove` toggles its visibility bit after
+   movement/culling (sonic3k.asm:179086-179101). `LevelLoop` executes objects
+   (sonic3k.asm:7916-7926); the lag-only `VInt_0_Level` path does not
+   (sonic3k.asm:606-671). MGZ defeat fragments therefore retain their flicker in
+   rewind state and advance it only in `update`, with the first executed phase hidden.
+   Pachinko's render count and ICZ's tile count have no ROM temporal counterpart.
+   The former is removed, including its debug overlay field; the latter is returned
+   per draw instead of being stored. `Obj_ICZ1BigSnowPile` supplies collision without
+   a sprite submission (sonic3k.asm:110484-110530), while `loc_49FD6` submits the
+   current Pachinko sprite without a draw clock (sonic3k.asm:96684-96688).
+   FBZ cloud projection and MGZ capsule mapping selection now use draw-local values.
+   S3K preparation/publication phases are unchanged.
+
+   `TestDrawPathFieldWriteGuard` scans compiled draw roots and transitive same-class
+   private helpers, including lambda handles. It rejects direct, helper, static and
+   enclosing-instance writes in negative controls. The reviewed cache inventory
+   records 48 fields / 53 write sites, each with a reason. The wider scan also found
+   31 logical debt fields / 43 sites, frozen separately in
+   `src/test/resources/architecture/draw-purity/logical-debt.txt`. These include
+   MCZ/LRZ lazy initialization, HCZ rocket and OOZ child storage initialization,
+   SSZ screen-event position refresh, S2 results-message timeline initialization,
+   and HCZ water-column spray animation. Moving the latter needs the independently
+   executed spray child's init/release phases, rather than an unconditional parent
+   update tick. Neither debt nor render caches may gain silent extra write sites;
+   retired entries must be removed.
+
+   `TestRepeatedPictureDrawPurity` belongs to routine rendering smoke and uses
+   production offscreen boots for GHZ1, EHZ1 and AIZ1. At a fixed service boundary
+   it compares every registered rewind key before/after one and three extra draws,
+   including the first picture. A test-only draw mutator registered in the same
+   live registry proves the detector rejects state changes. This is bounded
+   three-level evidence; it does not certify the debt paths or unregistered state.
+
 5. **Delivery validation.** Change-based smoke plus guards and the S3K four.

@@ -29,7 +29,7 @@ import java.util.List;
  * IceCap Act 1 big snow pile used after Sonic crashes into the wall.
  *
  * <p>ROM reference: {@code Obj_ICZ1BigSnowPile} at
- * {@code docs/skdisasm/sonic3k.asm:110479}. The visual snow fall is background
+ * {@code docs/skdisasm/sonic3k.asm:110484}. The visual snow fall is background
  * event driven; this object supplies the sloped top collision and the jump-out
  * release once the pile reaches its final Y position.
  */
@@ -74,7 +74,6 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
     private final Sonic3kICZEvents events;
     private final PatternDesc renderDesc = new PatternDesc();
     private int currentY = BASE_Y;
-    private int lastRenderedTileCount;
 
     public IczBigSnowPileInstance(ObjectSpawn spawn, Sonic3kICZEvents events) {
         super(spawn, "ICZ1BigSnowPile");
@@ -122,21 +121,13 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
-            lastRenderedTileCount = 0;
-        }
+        // Obj_ICZ1BigSnowPile (sonic3k.asm:110484-110530) owns collision, not drawing.
     }
 
-    public void renderBackgroundLayer(SpecialRenderEffectContext context) {
-        if (isDestroyed()) {
-            lastRenderedTileCount = 0;
-            return;
-        }
-        renderBackgroundSnowSource(context.levelManager(), context.graphicsManager());
-    }
-
-    public int getLastRenderedTileCountForTests() {
-        return lastRenderedTileCount;
+    /** Returns this draw's diagnostic tile count without retaining it in rewind state. */
+    public int renderBackgroundLayer(SpecialRenderEffectContext context) {
+        if (isDestroyed()) return 0;
+        return renderBackgroundSnowSource(context.levelManager(), context.graphicsManager());
     }
 
     @Override
@@ -187,10 +178,9 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         handleJumpEscape(player);
     }
 
-    private void renderBackgroundSnowSource(LevelManager levelManager, GraphicsManager graphicsManager) {
+    private int renderBackgroundSnowSource(LevelManager levelManager, GraphicsManager graphicsManager) {
         if (levelManager == null || graphicsManager == null) {
-            lastRenderedTileCount = 0;
-            return;
+            return 0;
         }
 
         int drawn = 0;
@@ -213,7 +203,7 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
                 drawn++;
             }
         }
-        lastRenderedTileCount = drawn;
+        return drawn;
     }
 
     private static int alignDown(int value) {

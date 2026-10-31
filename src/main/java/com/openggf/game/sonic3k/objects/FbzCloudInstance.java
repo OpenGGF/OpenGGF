@@ -37,13 +37,21 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
     }
 
     private void resolveWorldPosition() {
+        Position position = currentWorldPosition();
+        worldX = position.x();
+        worldY = position.y();
+        updateDynamicSpawn(worldX, worldY);
+    }
+
+    private record Position(int x, int y) { }
+
+    private Position currentWorldPosition() {
         var handler = services().parallaxManager().getHandler(services().featureZoneId());
-        if (!(handler instanceof FbzCloudPositionSource source)) return;
+        if (!(handler instanceof FbzCloudPositionSource source)) return new Position(worldX, worldY);
         SwScrlFbz.CloudPosition screen = source.cloudPositionAtAddressSlot(addressSlot);
         // CloudDeform writes VDP screen coordinates ($80 bias on both axes).
-        worldX = (services().camera().getX() + screen.x() - 0x80) & 0xFFFF;
-        worldY = (services().camera().getY() + screen.y() - 0x80) & 0xFFFF;
-        updateDynamicSpawn(worldX, worldY);
+        return new Position((services().camera().getX() + screen.x() - 0x80) & 0xFFFF,
+                (services().camera().getY() + screen.y() - 0x80) & 0xFFFF);
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
@@ -54,12 +62,11 @@ public final class FbzCloudInstance extends AbstractObjectInstance implements Sp
         // the current HScroll/address-table output rather than yesterday's cache.
         // A cinematic projection owns only this draw's coordinates. In particular,
         // never publish the temporary director camera into the object's native RAM.
-        if (projected == null) resolveWorldPosition();
+        Position current = projected == null ? currentWorldPosition() : new Position(projected.x(), projected.y());
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_CLOUD);
         if (renderer != null && renderer.isReady()) {
             // FBZ_CLOUD filters native frames 1/2/3 into sheet indices 0/1/2.
-            renderer.drawFrameIndex(mappingFrame - 1, projected == null ? worldX : projected.x(),
-                    projected == null ? worldY : projected.y(), false, false);
+            renderer.drawFrameIndex(mappingFrame - 1, current.x(), current.y(), false, false);
         }
     }
 

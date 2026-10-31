@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Repeated picture draws:** MGZ Knuckles boss fragments advance their defeat
+  flicker only when the object executes, preserving the ROM's first hidden phase.
+  Redrawing ICZ snow overlays and Pachinko traps no longer changes rewind state
+  through diagnostic counters. FBZ cloud draws and MGZ capsule animal art selection
+  also keep their temporary presentation values out of native object state.
+
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an
