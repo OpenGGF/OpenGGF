@@ -415,6 +415,7 @@ public final class EditorProjectMenu {
         if (MenuInput.left(input)) changeChoice(-1);
         if (MenuInput.right(input)) changeChoice(1);
         var pointer = MenuInput.pointer(input, width, 224);
+        if (pointer.inside()) selected = Math.clamp(selected - pointer.wheel(), 0, count - 1);
         boolean clicked = false;
         int first = firstVisible();
         var rows = formRows(); int pointerY = rowsTop();

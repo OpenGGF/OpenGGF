@@ -151,6 +151,7 @@ public final class ContentImportScreen implements AutoCloseable {
         if (MenuInput.up(input)) selected = Math.floorMod(selected - 1, count);
         if (MenuInput.down(input)) selected = (selected + 1) % count;
         var pointer = MenuInput.pointer(input, width, 224);
+        if (pointer.inside()) selected = Math.clamp(selected - pointer.wheel(), 0, count - 1);
         boolean clicked = false;
         for (int i = 0; i < count; i++) {
             int top = candidate == null ? browseTop() : actionTop() + i * rowHeight();

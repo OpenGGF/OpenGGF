@@ -118,9 +118,8 @@ public final class MenuTextEditor {
     public void update(InputHandler input) {
         if (input == null) return;
         MenuInput.Pointer p = frame.local(MenuInput.pointer(input, frame.surfaceWidth(), 224));
-        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
         MasterTitlePointer mouse = p.inside() ? new MasterTitlePointer(p.x(), p.y(),
-                p.x() != pointerX || p.y() != pointerY, p.leftPressed(), p.rightPressed(), wheel) : null;
+                p.x() != pointerX || p.y() != pointerY, p.leftPressed(), p.rightPressed(), p.wheel()) : null;
         if (mouse != null) { pointerX = mouse.x(); pointerY = mouse.y(); }
         update(input, mouse);
     }
@@ -145,8 +144,8 @@ public final class MenuTextEditor {
         if (finished || input == null) return;
         if (textInput != input) { withdrawText(); textInput = input; }
         MenuInput.Pointer local = mouse == null ? MenuInput.Pointer.none()
-                : new MenuInput.Pointer(mouse.x(), mouse.y(), true, mouse.click(), mouse.backClick());
-        if (details != null) { if (details.update(input, local, mouse == null ? 0 : mouse.wheel())) details = null; return; }
+                : new MenuInput.Pointer(mouse.x(), mouse.y(), true, mouse.click(), mouse.backClick(), mouse.wheel());
+        if (details != null) { if (details.update(input, local)) details = null; return; }
         if (browser != null) {
             if (mouse != null) browser.pointer(mouse.x(), mouse.y(), mouse.moved(), mouse.click(), mouse.backClick(), mouse.wheel());
             browser.update(input, local);

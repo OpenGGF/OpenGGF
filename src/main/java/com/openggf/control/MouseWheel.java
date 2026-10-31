@@ -2,9 +2,10 @@ package com.openggf.control;
 
 /**
  * The mouse wheel, kept off the creator-facing {@link InputHandler}: the window's scroll
- * callback adds movement and the one screen that is reading the mouse (the master title or a mod
- * scene) takes whole notches each frame. One wheel belongs to each input handler
- * ({@link #of}). Engine-internal.
+ * callback adds movement, and whichever screen reads the mouse this input pass sees the same
+ * whole notches, like a button press. {@link InputHandler#update()} retires them at the end of
+ * the pass, so notches nobody read (during gameplay, say) never reach a later screen.
+ * One wheel belongs to each input handler ({@link #of}). Engine-internal.
  */
 public final class MouseWheel {
     private final InputHandler owner;
@@ -25,13 +26,13 @@ public final class MouseWheel {
         accumulated += yOffset;
     }
 
-    /**
-     * Whole notches scrolled since the last call (positive = away from the user), keeping any
-     * fractional remainder from smooth-scrolling devices.
-     */
-    public int takeNotches() {
-        int notches = (int) accumulated;
-        accumulated -= notches;
-        return notches;
+    /** Whole notches scrolled this input pass (positive = away from the user). Reading does not consume them. */
+    public int notches() {
+        return (int) accumulated;
+    }
+
+    /** Retires this pass's whole notches, keeping any fractional remainder from smooth-scrolling devices. */
+    void endPass() {
+        accumulated -= (int) accumulated;
     }
 }
