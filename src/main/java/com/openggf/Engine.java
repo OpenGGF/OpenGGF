@@ -192,6 +192,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				com.openggf.game.presentation.TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
 	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
+	private com.openggf.graphics.DisplayInterpolationController displayInterpolationController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
 	private final DisplayShaderPickerRenderer displayShaderPickerRenderer = new DisplayShaderPickerRenderer();
@@ -1002,6 +1003,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void initializePresentationGraphics() throws IOException {
 		graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
 		com.openggf.graphics.GraphicsProjectionAccess.install(graphicsManager, this);
+		displayInterpolationController = new com.openggf.graphics.DisplayInterpolationController(configService);
 		displayColorProfileController = DisplayColorProfileController.fromConfig(
 				configService,
 				graphicsManager,
@@ -3156,7 +3158,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
-				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
+				() -> {
+					if (displayColorProfileController != null) displayColorProfileController.update(inputHandler);
+					if (displayInterpolationController != null) displayInterpolationController.update(inputHandler);
+				},
 				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
 	}
 
@@ -3766,10 +3771,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderDisplayColorProfileNotification() {
-		if (displayColorProfileController == null) {
-			return;
+		String text = displayInterpolationController != null ? displayInterpolationController.notificationText() : null;
+		if (text == null && displayColorProfileController != null) {
+			text = displayColorProfileController.notificationText();
 		}
-		String text = displayColorProfileController.notificationText();
 		if (text == null) {
 			return;
 		}

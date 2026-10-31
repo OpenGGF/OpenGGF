@@ -735,6 +735,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
 		putDefault(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "FULL");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
+		putDefaultKey(SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY, GLFW_KEY_N);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");

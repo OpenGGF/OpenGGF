@@ -58,6 +58,7 @@ public class ConfigMigrationService {
         SonicConfiguration.LIVE_REWIND_KEY,
         SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY,
         SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
+        SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY,
         SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY
     );
 

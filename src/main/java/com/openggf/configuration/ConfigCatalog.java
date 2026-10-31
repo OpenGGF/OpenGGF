@@ -95,6 +95,8 @@ public final class ConfigCatalog {
                 Set.of("FULL", "LIMITED")));
         put(DISPLAY_COLOR_PROFILE_TOGGLE_KEY, of("display", "colorProfileToggleKey", KEY,
                 "Runtime key to cycle the display color profile"));
+        put(DISPLAY_INTERPOLATION_TOGGLE_KEY, of("display", "interpolationToggleKey", KEY,
+                "Runtime key to toggle presentation interpolation"));
         put(DISPLAY_PACING, ofEnum("display", "pacing",
                 "Live cadence: AUTO locks to a display refresh near the region rate, EXACT keeps nominal speed",
                 Set.of("AUTO", "EXACT")));

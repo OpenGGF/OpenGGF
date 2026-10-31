@@ -136,6 +136,14 @@
   "@settings.key.display_color_profile_toggle_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
+  "settings.key.display_interpolation_toggle_key.label": "Interpolation shortcut",
+  "@settings.key.display_interpolation_toggle_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_INTERPOLATION_TOGGLE_KEY (display.interpolationToggleKey)."
+  },
+  "settings.key.display_interpolation_toggle_key.help": "Toggle and save motion interpolation during play. Binding changes apply after restart.",
+  "@settings.key.display_interpolation_toggle_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_INTERPOLATION_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
   "settings.key.fps.label": "Rendering limit",
   "@settings.key.fps.label": {
     "description": "Settings label for stable configuration key FPS (display.fps)."

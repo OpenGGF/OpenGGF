@@ -84,7 +84,8 @@ Unreleased. The earlier development themes remain in
   cap snap;
   special stages, competition, bonus stages, Stageplay and the editor stay exact. It
   uses the default Auto rendering limit, which follows the display refresh. The limit
-  sits beside Interpolation in Display → Picture. VRR qualification remains future work.
+  sits beside Interpolation in Display → Picture; the rebindable `N` shortcut toggles and
+  saves interpolation during play with brief On/Off feedback. VRR qualification remains future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM
   across producer packets and video drains, preserving sample order and unused
