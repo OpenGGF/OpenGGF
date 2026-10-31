@@ -157,6 +157,30 @@ class TestDisplayCadencePolicy {
     }
 
     @Test
+    void jitteredProbeLocksOnANearRatePanelAndRefusesAnOffRatePanel() {
+        var random = new SplittableRandom(0xF17);
+        for (int trial = 0; trial < 50; trial++) {
+            assertEquals(Verdict.LOCK, probeWithJitter(60_000.0 / 1001, random),
+                    "59.94 Hz with 2 ms return jitter, trial " + trial);
+            assertEquals(Verdict.EXACT, probeWithJitter(59.7, random),
+                    "59.7 Hz is 0.5% off, trial " + trial);
+            assertEquals(Reason.OUT_OF_BAND, policy.reason());
+        }
+    }
+
+    /** A fresh probe of a 60 Hz request against a jittered blocking display; returns its outcome. */
+    private Verdict probeWithJitter(double displayHz, SplittableRandom random) {
+        var request = new Request(DisplayPacing.AUTO, true, 60, 60, new DisplayOutput(random.nextLong(), 60));
+        policy.probe(request, policy.nominate(request));
+        vblank = SECOND / displayHz;
+        for (int swap = 0; swap < 600; swap++) {
+            var verdict = swapAfter(1, random.nextLong(-2_000_000, 2_000_001));
+            if (verdict == Verdict.LOCK || verdict == Verdict.EXACT) return verdict;
+        }
+        return fail("probe undecided");
+    }
+
+    @Test
     void oneMissedVblankIsOneSlowIntervalButRepeatedMissesDemote() {
         lock(request(60, 60, 60), 60);
         assertEquals(Verdict.SERVICE, swapAfter(2), "one missed vblank still grants exactly one service");

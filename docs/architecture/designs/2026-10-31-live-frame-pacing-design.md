@@ -1,7 +1,7 @@
 # Live frame pacing: display-locked cadence, tick-gated pictures, regulated speaker
 
 Date: 2026-10-31
-Status: synthesized design; implementation on `feature/ai-live-frame-pacing`.
+Status: implemented on `feature/ai-live-frame-pacing`; real-display qualification open.
 Base: `develop` at `599d46762`. Follows
 [independent rendering rate](2026-09-14-independent-render-frame-rate-design.md),
 whose live region scheduler this design keeps.
@@ -326,12 +326,17 @@ Two independent candidates (Opus, Sol) converged on exclusive wall/display caden
 - An immediate return generalises to `Δ < (n − ½)` vblanks, which equals `P/2` at `n = 1` and
   also rejects an interval-2 request the driver honours as interval 1 (119.88 Hz returning every
   8.3 ms). A slow interval is `round(Δ / vblank) > n`.
-- The probe uses the plain per-window mean, as designed. The locked check cannot: that mean
-  telescopes to its endpoints, so ±2 ms return jitter is ±0.4% per one-second window, twice the
-  band. Locked windows therefore roll over eight one-second marks (probe marks carry into the
-  lock) and allow `2 × RETURN_JITTER_NANOS / span` on top of the band; a 5% rate shift still
-  demotes at the next window close. With ±2 ms jitter on a 59.94 Hz panel the probe itself can
-  refuse `OUT_OF_BAND`; that fails safe to `Exact` and is a device-qualification question.
+- A plain per-window mean telescopes to its two endpoints, so ±2 ms return jitter is ±0.4% per
+  one-second window, twice the band. The first lane commit worked around that only while locked
+  (an eight-second span plus a jitter allowance) and left the probe able to refuse a jittered
+  59.94 Hz panel. Lead integration replaced both with one rule: each window fits its vblank period
+  by least squares over every swap return, and decisions use the mean of the recent window fits
+  (the two probe windows; the last eight while locked). A single one-second fit was still not
+  enough, because a 59.94 Hz panel already spends 0.1% of the 0.2% band and one fit at ±2 ms
+  uniform jitter has σ ≈ 0.05% (inferred; an hour of locked windows demoted at swap 1207).
+  `jitteredProbeLocksOnANearRatePanelAndRefusesAnOffRatePanel` probes 50 seeded 59.94 Hz and
+  59.7 Hz panels under ±2 ms jitter; all lock and refuse respectively. A 5% shift still demotes at
+  the next window close.
 - `MAX_MISSES_PER_SECOND = 2`, counted per window and checked as each miss arrives.
 - `Locked` ticks on every iteration, including the first after a boundary change: it holds no
   wall debt, so it does not insert the zero-service picture `Exact` shows at a boundary. Boundary
@@ -347,3 +352,26 @@ Two independent candidates (Opus, Sol) converged on exclusive wall/display caden
 - The production-path tests drive `Engine.LiveEndpoints` (render, swap, swap interval, output,
   speaker regulation, clock) with a blocking fake vsync; `TestScheduledNativeGameplay` adds one
   S2 locked restore/replay case on the same seam.
+
+## Integration validation — 2026-10-31
+
+Lanes: draw purity `5187fd24a`, speaker regulation `36f3438de` (merged `2411b9272`, query moved
+off the Mod API surface in `0e296306d`), runtime cadence `545d23b96` + `76dd927c3` (merged
+`e9f2e2b6d`). Integration base `599d46762`.
+
+- `run_categories.py --base 599d46762 --workers 2 --run` on `e9f2e2b6d` (surfaceless EGL, Java 25,
+  Lua 5.4, pwsh): change-based selection was the whole smoke inventory (4,369 classes, 10
+  categories). Ordinary lane 36,310 tests in 1,490 s: 8 failures, 0 errors, 49 skips. Guards lane
+  816 tests in 135 s: all passed.
+- The 8 failures (`TestMasterTitleScreenLayout` ×2, `TestSonic2InterlacePixels`,
+  `TestNativeCompetitionViews`, `TestNativeSpriteSatGameplay` ×3, `TestPrivateLobbyScreenRendering`)
+  reproduce with identical test identities on a detached `599d46762` checkout with the same
+  five-class selection and ROMs. They predate this work and are not attributed to it.
+- The 49 skips are opt-in capture, benchmark and performance probes plus
+  `TestOpenAlIsolatedContext` (no OpenAL device in the headless environment; the speaker lane ran
+  it with `ALSOFT_DRIVERS=null`).
+- After the smoke run, the cadence fit changed (least squares, mean of window fits).
+  `TestDisplayCadencePolicy` and `TestLiveFrameRuntime` were rerun: 56 passed, 0 skipped.
+- Not run: any real window, real OpenAL device, VRR panel, Wayland/macOS swap interval 2, or
+  trace replay sweep. `AUTO` locking on real hardware is unqualified; the probe falls back to
+  `Exact` when a display does not qualify.

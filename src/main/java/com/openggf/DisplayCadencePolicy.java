@@ -7,7 +7,10 @@ import com.openggf.configuration.DisplayPacing;
  *
  * <p>Swap returns are measured in vblanks of the nominated display, {@code n x regionHz}.
  * A swap at interval {@code n} spans {@code n} vblanks, so a locked service lasts
- * {@code 1 / regionHz} within the lock band. Thresholds are host policy, not gameplay.
+ * {@code 1 / regionHz} within the lock band. Each window fits the period by least squares
+ * over every swap return, and decisions use the mean of recent window fits, so return jitter
+ * averages out instead of landing on two endpoints.
+ * Thresholds are host policy, not gameplay.
  */
 final class DisplayCadencePolicy {
     private static final long SECOND = 1_000_000_000L;
@@ -21,12 +24,10 @@ final class DisplayCadencePolicy {
     static final int ACCEPT_WINDOWS = 2;
     // A rare missed vblank costs one slow interval; more per second means Exact catch-up serves better.
     static final int MAX_MISSES_PER_SECOND = 2;
+    // Locked play averages the last eight window fits, so return jitter cannot read as a period change.
+    static final int LOCK_HORIZON_WINDOWS = 8;
     // A gap past the live debt bound is a host stall (load, drag, debugger), not a display measurement.
     static final long STALL_NANOS = LiveFrameRuntime.MAX_DEBT_NANOS;
-    // Locked rate checks span eight windows, so return jitter cannot read as a period change.
-    static final int LOCK_HORIZON_WINDOWS = 8;
-    // A swap may return this far either side of its vblank; a locked span tolerates that endpoint error.
-    static final long RETURN_JITTER_NANOS = 2_000_000L;
 
     enum Phase { EXACT, PROBING, LOCKED }
 
@@ -52,9 +53,10 @@ final class DisplayCadencePolicy {
     private boolean measuring;
     private long lastSwap, windowStart, windowStartVblanks, vblanks;
     private int windowSwaps, windowMisses, goodWindows;
-    private final long[] markNanos = new long[LOCK_HORIZON_WINDOWS + 1];
-    private final long[] markVblanks = new long[LOCK_HORIZON_WINDOWS + 1];
-    private int marks;
+    private int fitPoints;
+    private double fitX, fitY, fitXX, fitXY;
+    private final double[] windowPeriods = new double[LOCK_HORIZON_WINDOWS];
+    private int periods;
     private double measuredHz;
 
     /** Swap interval to probe, or zero with {@link #reason()} explaining why Exact stays. */
@@ -119,7 +121,7 @@ final class DisplayCadencePolicy {
             measuring = true;
             lastSwap = windowStart = returnedAtNanos;
             windowStartVblanks = vblanks = 0;
-            mark(returnedAtNanos);
+            fit(returnedAtNanos);
             return granted();
         }
         long delta = returnedAtNanos - lastSwap;
@@ -138,31 +140,53 @@ final class DisplayCadencePolicy {
         long spanned = Math.round(delta / vblankNanos);
         vblanks += spanned;
         if (spanned > interval && ++windowMisses > MAX_MISSES_PER_SECOND) return refuse(Reason.MISSES);
+        fit(returnedAtNanos);
         if (returnedAtNanos - windowStart < WINDOW_NANOS) return granted();
-        long windowNanos = returnedAtNanos - windowStart, windowVblanks = vblanks - windowStartVblanks;
+        recordPeriod(fittedVblankNanos());
         closeWindow(returnedAtNanos);
-        if (phase == Phase.PROBING) {
-            if (!inBand(windowNanos, windowVblanks, 0)) return refuse(Reason.OUT_OF_BAND);
-            if (++goodWindows < ACCEPT_WINDOWS) return Verdict.MEASURED;
-            phase = Phase.LOCKED;
-            return Verdict.LOCK;
-        }
-        long horizonNanos = returnedAtNanos - markNanos[0], horizonVblanks = vblanks - markVblanks[0];
-        // Demote only when the period is outside the band by more than return jitter explains.
-        if (!inBand(horizonNanos, horizonVblanks, 2.0 * RETURN_JITTER_NANOS / horizonNanos)) {
-            return refuse(Reason.OUT_OF_BAND);
-        }
-        return Verdict.SERVICE;
+        if (!inBand(meanPeriod())) return refuse(Reason.OUT_OF_BAND);
+        if (phase == Phase.LOCKED) return Verdict.SERVICE;
+        if (++goodWindows < ACCEPT_WINDOWS) return Verdict.MEASURED;
+        phase = Phase.LOCKED;
+        return Verdict.LOCK;
     }
 
     private Verdict granted() {
         return phase == Phase.LOCKED ? Verdict.SERVICE : Verdict.MEASURED;
     }
 
-    private boolean inBand(long nanos, long spannedVblanks, double allowance) {
-        if (spannedVblanks <= 0) return false;
-        double period = (double) nanos / spannedVblanks;
-        return Math.abs(period / vblankNanos - 1) <= LOCK_BAND + allowance;
+    private boolean inBand(double fittedVblankNanos) {
+        return Math.abs(fittedVblankNanos / vblankNanos - 1) <= LOCK_BAND;
+    }
+
+    private void recordPeriod(double period) {
+        if (periods == windowPeriods.length) {
+            System.arraycopy(windowPeriods, 1, windowPeriods, 0, periods - 1);
+            periods--;
+        }
+        windowPeriods[periods++] = period;
+    }
+
+    private double meanPeriod() {
+        double sum = 0;
+        for (int i = 0; i < periods; i++) sum += windowPeriods[i];
+        return sum / periods;
+    }
+
+    /** Adds one swap return as (vblanks since window start, nanos since window start). */
+    private void fit(long now) {
+        double x = vblanks - windowStartVblanks, y = now - windowStart;
+        fitPoints++;
+        fitX += x;
+        fitY += y;
+        fitXX += x * x;
+        fitXY += x * y;
+    }
+
+    /** Least-squares slope of return time against vblank count; NaN without two distinct counts. */
+    private double fittedVblankNanos() {
+        double spread = fitPoints * fitXX - fitX * fitX;
+        return spread <= 0 ? Double.NaN : (fitPoints * fitXY - fitX * fitY) / spread;
     }
 
     private void closeWindow(long now) {
@@ -170,18 +194,13 @@ final class DisplayCadencePolicy {
         windowStart = now;
         windowStartVblanks = vblanks;
         windowSwaps = windowMisses = 0;
-        mark(now);
+        clearFit();
+        fit(now);
     }
 
-    private void mark(long now) {
-        if (marks == markNanos.length) {
-            System.arraycopy(markNanos, 1, markNanos, 0, marks - 1);
-            System.arraycopy(markVblanks, 1, markVblanks, 0, marks - 1);
-            marks--;
-        }
-        markNanos[marks] = now;
-        markVblanks[marks] = vblanks;
-        marks++;
+    private void clearFit() {
+        fitPoints = 0;
+        fitX = fitY = fitXX = fitXY = 0;
     }
 
     private Verdict refuse(Reason why) {
@@ -195,7 +214,8 @@ final class DisplayCadencePolicy {
 
     private void restart() {
         measuring = false;
-        marks = 0;
+        periods = 0;
+        clearFit();
         windowSwaps = windowMisses = goodWindows = 0;
     }
 
@@ -204,7 +224,7 @@ final class DisplayCadencePolicy {
         measuring = true;
         lastSwap = windowStart = now;
         windowStartVblanks = vblanks = 0;
-        mark(now);
+        fit(now);
     }
 
     Phase phase() { return phase; }
