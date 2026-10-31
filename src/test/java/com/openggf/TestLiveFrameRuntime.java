@@ -137,7 +137,7 @@ class TestLiveFrameRuntime {
 
     private static LiveFrameRuntime.HostState host(int hz, int fps, Object boundary) {
         return new LiveFrameRuntime.HostState(hz, fps, true, false, boundary, false, false,
-                com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false, false, false);
+                com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false, false, false, false);
     }
 
     @ParameterizedTest @CsvSource({"50,30", "50,50", "50,60", "50,120", "50,144",
@@ -172,6 +172,28 @@ class TestLiveFrameRuntime {
             assertEquals(0, runtime.statistics().pendingTicks());
             assertEquals(0, runtime.statistics().discardedWallNanos());
         }
+    }
+
+    @ParameterizedTest @CsvSource({"60,AUTO,PANEL_RATE", "60,60,FPS_LIMIT", "60,144,PANEL_RATE", "50,AUTO,PANEL_RATE", "0,AUTO,FPS_LIMIT"})
+    void liveAutoDiagnosticSeparatesPanelRateFromExplicitLimit(int refresh, String limit, String status) throws Exception {
+        var runtime = open(60, 60);
+        config.setConfigValue(SonicConfiguration.FPS, limit);
+        config.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, true);
+        output = new DisplayOutput(1, refresh);
+        runtime.iterate();
+        iterate(runtime, 16_666_667);
+        assertEquals(status, runtime.statistics().interpolation().name());
+    }
+
+    @ParameterizedTest @CsvSource({"120,2", "240,4"})
+    void autoWithInterpolationOffAllowsMultipleRefreshLock(int refresh, int interval) throws Exception {
+        open(60, 60);
+        config.setConfigValue(SonicConfiguration.FPS, "AUTO");
+        config.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, false);
+        var runtime = paced(new FakeVsync(refresh), request -> pictures++);
+        runUntilLocked(runtime, runtime.iterate());
+        assertEquals(interval, runtime.statistics().swapInterval());
+        assertEquals(LiveFrameRuntime.InterpolationStatus.OFF, runtime.statistics().interpolation());
     }
 
     @Test void firstIterationIsTheSoleSwapIntervalWriter() throws Exception {
@@ -624,7 +646,7 @@ class TestLiveFrameRuntime {
         InterpolatedHost(int hz, int cap) { this.hz = hz; this.cap = cap; }
         public LiveFrameRuntime.HostState hostState() {
             return new LiveFrameRuntime.HostState(hz, cap, true, paused, boundary, capture, forced,
-                    com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false, enabled, screenshot);
+                    com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false, enabled, screenshot, false);
         }
         public boolean tick(boolean active) { ticks++; retained.add(active); now += work; return true; }
         public boolean draw(LivePictureRequest picture) { requests.add(picture); screenshot = false; return true; }

@@ -83,7 +83,8 @@ Unreleased. The earlier development themes remain in
   reloads, Tails respawns, the CNZ teleporter and camera jumps beyond the native scroll
   cap snap;
   special stages, competition, bonus stages, Stageplay and the editor stay exact. It
-  needs an FPS limit at or above the panel rate. VRR qualification remains future work.
+  uses the default Auto rendering limit, which follows the display refresh. The limit
+  sits beside Interpolation in Display → Picture. VRR qualification remains future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM
   across producer packets and video drains, preserving sample order and unused

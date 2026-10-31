@@ -2895,13 +2895,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		var swap = endpoints.swap();
 		return new LiveFrameRuntime(new LiveFrameRuntime.Owner() {
 			public LiveFrameRuntime.HostState hostState() {
+				DisplayOutput output = endpoints.output().get();
 				return new LiveFrameRuntime.HostState(FrameRateResolver.simulation(configService),
-						resolveTargetFps(configService), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
+						FrameRateResolver.presentation(configService, output.advertisedRefreshHz()), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
 						liveCaptureController.state() == LiveCaptureController.State.ACTIVE,
 						suspension.requiresScenePicture() || liveStepPicturePending,
-						FrameRateResolver.pacing(configService), endpoints.output().get(),
+						FrameRateResolver.pacing(configService), output,
 						endpoints.speakerRegulated().getAsBoolean(),
-						configService.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION), screenshotRequested);
+						configService.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION), screenshotRequested,
+						FrameRateResolver.automaticPresentation(configService));
 			}
 			public boolean tick(boolean interpolationActive) {
 				return runFrameWithModAbort(() -> {

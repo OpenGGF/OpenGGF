@@ -25,6 +25,36 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void renderingLimitOffersAutoBesideInterpolationAndRetainsCustomNumbers() {
+        Fixture f = new Fixture();
+        var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.DISPLAY);
+        assertEquals(keys.indexOf(FPS) + 1, keys.indexOf(DISPLAY_INTERPOLATION));
+        assertFalse(EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.ADVANCED).contains(FPS));
+        assertEquals("PICTURE", EngineSettingLabels.group(FPS));
+        f.focus(FPS);
+        assertTrue(f.texts().contains("Auto (display refresh)"));
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Auto (display refresh)"));
+        assertTrue(f.texts().contains("30"));
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals(30, f.config.getInt(FPS));
+        f.config.setConfigValue(FPS, 137);
+        f.config.saveConfig();
+        f = new Fixture();
+        f.focus(FPS);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("137"));
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ESCAPE);
+        assertEquals(137, f.config.getInt(FPS));
+    }
+
+    @Test
     void spriteScanlineLimitIsEditableAndPersistsOnTheDisplayPage() {
         var key = ConfigCatalog.byPath("display.spriteScanlineLimit");
         assertNotNull(key, "sprite scanline limit must be a persisted setting");
@@ -393,7 +423,7 @@ class TestEngineSettingsScreen {
                 "a game-start setting keeps both description lines");
         assertFalse(f.texts().contains("RESTART"), "unchanged settings need no restart badge");
 
-        f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
+        f = new Fixture();
         f.focus(FPS);
         assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
         f.press(GLFW_KEY_RIGHT);
@@ -421,7 +451,7 @@ class TestEngineSettingsScreen {
         List<String> texts = f.texts();
         assertTrue(texts.contains("ADVANCED SETTINGS"));
         assertFalse(texts.contains("DISPLAY"), "no tab strip for a single page");
-        assertTrue(texts.stream().anyMatch(text -> text.startsWith("Rendering limit")), "technical display controls live here");
+        assertFalse(texts.stream().anyMatch(text -> text.startsWith("Rendering limit")), "the rendering limit lives beside Interpolation on Display");
     }
 
     @Test
@@ -548,7 +578,7 @@ class TestEngineSettingsScreen {
                 "every non-debug hotkey lives under Controls");
         assertEquals(EngineSettingsDraft.Category.INPUT, EngineSettingsDraft.category(LIVE_REWIND_KEY));
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(MAIN_CHARACTER_CODE));
-        for (var key : List.of(FPS, SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
+        for (var key : List.of(SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
             assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(key));
         }
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(CROSS_GAME_SOURCE));

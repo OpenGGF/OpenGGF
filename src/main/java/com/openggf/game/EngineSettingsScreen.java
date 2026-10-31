@@ -260,7 +260,7 @@ public final class EngineSettingsScreen {
         ConfigType type = ConfigCatalog.meta(selected()).type();
         if (selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) return;
         if (type == ConfigType.KEY) { keyMenu = true; choice = 0; }
-        else if (type == ConfigType.BOOL || type == ConfigType.ENUM) {
+        else if (selected() == SonicConfiguration.FPS || type == ConfigType.BOOL || type == ConfigType.ENUM) {
             choosing = true;
             choice = Math.max(0, options().indexOf(draft.text(selected())));
         } else openTextEditor();
@@ -699,6 +699,12 @@ public final class EngineSettingsScreen {
     }
 
     private List<String> options() {
+        if (selected() == SonicConfiguration.FPS) {
+            var limits = new ArrayList<>(EngineSettingsDraft.presentationLimits());
+            String current = draft.text(selected()).toUpperCase(java.util.Locale.ROOT);
+            if (!limits.contains(current)) limits.add(current);
+            return limits;
+        }
         return optionCache.computeIfAbsent(selected(), key -> {
             if (ConfigCatalog.meta(key).type() == ConfigType.BOOL) return List.of("false", "true");
             return ConfigCatalog.meta(key).allowedValues().stream().sorted().toList();
