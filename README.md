@@ -24,9 +24,16 @@ An emulator pretends to be a Mega Drive. It runs the original code exactly as th
 console did, one instruction at a time.
 
 OpenGGF doesn't do that. We rewrote the code for all three games in Java, by hand.
-To do it, we read the disassemblies, which are the games' original code turned back
-into readable form by the Sonic fan community. OpenGGF loads the data from your ROM
-file, the copy of the cartridge you supply, and runs our code in place of Sega's.
+To make it, we used a combination of strategies:
+
+1. Resources written by the Sonic fan community on the games' physics and mechanics.
+2. Emulators and Lua scripts that watch the console's memory and pinpoint exactly
+   what changes during gameplay.
+3. The disassemblies, which are the games' original code turned back into readable
+   form by the fan community, when we need to understand complex behaviour.
+
+You don't need any of these to play. OpenGGF loads the data from your ROM file, the
+copy of the cartridge you supply, and runs our code in place of Sega's.
 
 The goal is for OpenGGF to play exactly like the original games, bugs included. To
 check, our tests press the same buttons in OpenGGF and in an emulator and compare the
