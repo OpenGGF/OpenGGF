@@ -858,6 +858,9 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback visib
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HeadTarget visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HomingAttack visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HomingCharacter visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HomingMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$MonitorFilter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$NoBonusStages visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints visible @com.openggf.game.ModApi
@@ -1899,6 +1902,7 @@ CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,j
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback public  <init>(int,int)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public  <init>(int)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public  <init>(int,boolean)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  <init>(com.openggf.mods.mutators.MutatorPolicy$HomingMode,java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public  <init>(java.util.Set<com.openggf.game.mutators.MonitorContent>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$NoBonusStages public  <init>()
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints public  <init>()
@@ -3439,6 +3443,7 @@ FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.opengg
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability FLUID_CONTEXT
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability GAMEPLAY_HOLD
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability GAMEPLAY_SPEED
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability HOMING_ATTACK
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability HUD_PRESENTATION
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability INPUT_CONTROL
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability MONITOR_FILTER
@@ -3468,6 +3473,11 @@ FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com
 FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget BOSSES
 FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget PLAYER
 FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget SIDEKICKS
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter KNUCKLES
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter SONIC
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter TAILS
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingMode HOMING
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingMode INSTAGIB
 FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target ALL_TEAM
 FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target LEADER
 FIELD com.openggf.mods.mutators.MutatorScope public,static,final com.openggf.mods.mutators.MutatorScope LAUNCH
@@ -4270,6 +4280,7 @@ INTERFACE com.openggf.mods.mutators.MutatorPolicy$BigHead com.openggf.mods.mutat
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed com.openggf.mods.mutators.MutatorPolicy
+INTERFACE com.openggf.mods.mutators.MutatorPolicy$HomingAttack com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$MonitorFilter com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$NoBonusStages com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints com.openggf.mods.mutators.MutatorPolicy
@@ -12606,6 +12617,16 @@ METHOD com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public,final  int h
 METHOD com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static  com.openggf.mods.mutators.MutatorPolicy$HeadTarget valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static  com.openggf.mods.mutators.MutatorPolicy$HeadTarget[] values()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  com.openggf.mods.mutators.MutatorPolicy$HomingMode mode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter> characters()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static  com.openggf.mods.mutators.MutatorPolicy$HomingCharacter valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static  com.openggf.mods.mutators.MutatorPolicy$HomingCharacter[] values()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static  com.openggf.mods.mutators.MutatorPolicy$HomingMode valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static  com.openggf.mods.mutators.MutatorPolicy$HomingMode[] values()
 METHOD com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public  java.util.Set<com.openggf.game.mutators.MonitorContent> removedContents()
 METHOD com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public,final  boolean equals(java.lang.Object)
@@ -17066,6 +17087,9 @@ NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Mutator
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HeadTarget
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingAttack
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingCharacter
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingMode
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$MonitorFilter
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoBonusStages
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints
@@ -17424,6 +17448,7 @@ PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Mutato
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingAttack
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$MonitorFilter
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoBonusStages
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints
@@ -19294,6 +19319,8 @@ RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback vertica
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity percent int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed audioFollowsSpeed boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed percent int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$HomingAttack characters java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$HomingAttack mode com.openggf.mods.mutators.MutatorPolicy$HomingMode
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$MonitorFilter removedContents java.util.Set<com.openggf.game.mutators.MonitorContent>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAppendage boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAttachedEffects boolean
@@ -21219,6 +21246,8 @@ TYPE enum public,static,final com.openggf.mods.mutators.HudPresentationPolicy$Mo
 TYPE enum public,static,final com.openggf.mods.mutators.InputControlPolicy$Mode SUPER java.lang.Enum<com.openggf.mods.mutators.InputControlPolicy$Mode>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorConfigurationScreen$Cue>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$HeadTarget>
+TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter>
+TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingMode SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$HomingMode>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$Target SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$Target>
 TYPE enum public,static,final com.openggf.mods.mutators.NativePowerupPolicy$Kind SUPER java.lang.Enum<com.openggf.mods.mutators.NativePowerupPolicy$Kind>
 TYPE enum public,static,final com.openggf.mods.mutators.ObjectFieldPolicy$Mode SUPER java.lang.Enum<com.openggf.mods.mutators.ObjectFieldPolicy$Mode>
@@ -21820,6 +21849,7 @@ TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$BigHead 
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingAttack SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$MonitorFilter SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoBonusStages SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints SUPER java.lang.Record
@@ -22895,6 +22925,9 @@ TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback @com.ope
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HeadTarget @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HomingAttack @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HomingCharacter @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HomingMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$MonitorFilter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$NoBonusStages @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints @com.openggf.game.ModApi

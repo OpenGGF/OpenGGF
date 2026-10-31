@@ -9,7 +9,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** loc_7F336: native-slot tracking bumper; contact is latched until its own SST pass. */
 final class DezEndBossBumper extends DezEndBossSprite
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial, ObjectVisualFacing.PoseOwned {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial, ObjectVisualFacing.PoseOwned,
+        com.openggf.level.objects.homing.HomingTargetSource {
     private DezEndBossSprite parent;
     private int angle;
     private int animation;
@@ -121,4 +122,6 @@ final class DezEndBossBumper extends DezEndBossSprite
     }
     DezEndBossSprite parentForTest() { return parent; }
     int angleForTest() { return angle; }
+    /** Homing: never a target (a $D7 deflector that tracks the player, loc_7F336). */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) { return null; }
 }

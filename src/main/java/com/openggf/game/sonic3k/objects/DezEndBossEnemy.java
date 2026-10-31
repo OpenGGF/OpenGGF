@@ -11,7 +11,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** loc_7F398: released enemy, its gravity/roll response and three-shot death burst. */
 final class DezEndBossEnemy extends DezEndBossSprite
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial, ObjectVisualFacing.PoseOwned {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial, ObjectVisualFacing.PoseOwned,
+        com.openggf.level.objects.homing.HomingTargetSource {
     interface Owner {
         DezEndBossDamageState.Contact enemyContact(int x, int y, boolean flipY, int yVelocity);
         void enemyRetired();
@@ -160,7 +161,9 @@ final class DezEndBossEnemy extends DezEndBossSprite
     private int ceilingContact(int vIntRunCount) {
         var player=consumeContact(); if(player==null) return 0;
         if(player.getAnimationId()!=2) { hurt(player,vIntRunCount); return 0; }
-        if(player.getAir()) {
+        // Homing-attack mutator: a strike arrives as if spindashed in, so it kicks the car.
+        boolean homing=com.openggf.game.mutators.HomingAttackRuntime.striking(services().worldSession(),player);
+        if(player.getAir() && !homing) {
             int x=player.getCentreX(),y=player.getCentreY(); player.setRolling(true);
             if(player instanceof AbstractPlayableSprite sprite) {
                 sprite.applyCustomRadii(7,0xE);
@@ -173,15 +176,18 @@ final class DezEndBossEnemy extends DezEndBossSprite
         xVelocity=player.getXSpeed()<0?-0x200:0x200;
         int speed=Math.max(0x500,Math.abs((short)player.getGSpeed()));
         yVelocity=(short)(flipY?-speed:speed);
+        if(homing) com.openggf.game.mutators.HomingAttackRuntime.struck(services().worldSession(),player);
         return 1;
     }
     private void floorContact(int vIntRunCount) {
         var player=consumeContact(); if(player==null) return;
-        if(player.getAnimationId()!=2 || player.getAir()) { hurt(player,vIntRunCount); return; }
+        boolean homing=com.openggf.game.mutators.HomingAttackRuntime.striking(services().worldSession(),player);
+        if(player.getAnimationId()!=2 || (player.getAir() && !homing)) { hurt(player,vIntRunCount); return; }
         boolean left=(short)(getX()-player.getCentreX())>=0;
         if(left==(player.getXSpeed()>=0)) {
             player.setXSpeed((short)-player.getXSpeed()); player.setGSpeed((short)-player.getGSpeed());
         }
+        if(homing) com.openggf.game.mutators.HomingAttackRuntime.struck(services().worldSession(),player);
     }
     private boolean airborne(int vIntRunCount) {
         var player=consumeContact();
@@ -228,6 +234,20 @@ final class DezEndBossEnemy extends DezEndBossSprite
     }
     @Override public void orCollisionProperty(int mask) { if(touchPublished) collisionProperty|=mask; }
     @Override public int getCollisionFlags() { return state>=5?0xC6:0; }
+    /**
+     * Homing priority: the boss body has no collision and only a kicked car damages it
+     * (sub_7FB4E, sonic3k.asm:170649). A ceiling car (routine 0) is the kickable one, so it
+     * outranks a walking floor car (routine 2), which only deflects a roll. Falling, kicked
+     * and retiring cars are not targets.
+     */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        if(!touchPublished) return null;
+        return switch(routine) {
+            case 0 -> com.openggf.level.objects.HomingTargets.bossPart(this,2);
+            case 2 -> com.openggf.level.objects.HomingTargets.bossPart(this,1);
+            default -> null;
+        };
+    }
     @Override public int getCollisionProperty() { return collisionProperty; }
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
     @Override public boolean requiresContinuousTouchCallbacks() { return true; }

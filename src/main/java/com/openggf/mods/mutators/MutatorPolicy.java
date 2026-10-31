@@ -8,7 +8,7 @@ public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
         MutatorPolicy.PlayerStealth, MutatorPolicy.Ringfall, MutatorPolicy.BigHead,
         MutatorPolicy.MonitorFilter, MutatorPolicy.NoCheckpoints, MutatorPolicy.NoRings,
         MutatorPolicy.GameplaySpeed, MutatorPolicy.NoSpecialStages, MutatorPolicy.NoBonusStages,
-        MutatorPolicy.DefeatKnockback, GameplayHoldPolicy, ScenePresentationPolicy, SpritePresentationPolicy, HudPresentationPolicy, AudioEffectPolicy, OverlayPolicy, EncounterPolicy, EnemyRulePolicy, ProjectileRulePolicy, ObjectFieldPolicy, RingEconomyPolicy, NativePowerupPolicy, RelocationPolicy, TransportPolicy, ChallengePolicy, PlayerMotionPolicy, InputControlPolicy, SignedGravityPolicy, SpringResponsePolicy, FluidContextPolicy {
+        MutatorPolicy.DefeatKnockback, MutatorPolicy.HomingAttack, GameplayHoldPolicy, ScenePresentationPolicy, SpritePresentationPolicy, HudPresentationPolicy, AudioEffectPolicy, OverlayPolicy, EncounterPolicy, EnemyRulePolicy, ProjectileRulePolicy, ObjectFieldPolicy, RingEconomyPolicy, NativePowerupPolicy, RelocationPolicy, TransportPolicy, ChallengePolicy, PlayerMotionPolicy, InputControlPolicy, SignedGravityPolicy, SpringResponsePolicy, FluidContextPolicy {
     MutatorCapability capability();
 
     /** Dimensionless integer percent; only the host's documented dry Sonic owner consumes it. */
@@ -119,6 +119,26 @@ public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
         }
         @Override public MutatorCapability capability() { return MutatorCapability.DEFEAT_KNOCKBACK; }
     }
+
+    /**
+     * A double-jump homing attack for the selected leader characters. The host scans for
+     * targets and steers the native roll; contact, defeat and breakage stay native.
+     * {@link HomingMode#INSTAGIB} also ends bosses in one hit and blows defeated enemies apart.
+     */
+    @com.openggf.game.ModApi
+    record HomingAttack(HomingMode mode, java.util.Set<HomingCharacter> characters) implements MutatorPolicy {
+        public HomingAttack {
+            Objects.requireNonNull(mode, "mode");
+            characters = java.util.Set.copyOf(characters);
+        }
+        @Override public MutatorCapability capability() { return MutatorCapability.HOMING_ATTACK; }
+    }
+
+    @com.openggf.game.ModApi
+    enum HomingMode { HOMING, INSTAGIB }
+
+    @com.openggf.game.ModApi
+    enum HomingCharacter { SONIC, TAILS, KNUCKLES }
 
     @com.openggf.game.ModApi
     enum Target { LEADER, ALL_TEAM }

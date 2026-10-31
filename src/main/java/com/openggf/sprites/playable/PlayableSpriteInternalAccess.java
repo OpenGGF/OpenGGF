@@ -192,6 +192,11 @@ public final class PlayableSpriteInternalAccess {
         sprite.mutatorPolicySource = source;
     }
 
+    public static com.openggf.game.mutators.HomingAttackRuntime homingAttack(AbstractPlayableSprite sprite) {
+        PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
+        return source == null ? null : source.homingAttack();
+    }
+
     public static PlayableMutatorPolicy mutatorPolicy(AbstractPlayableSprite sprite) {
         PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
         return source == null ? PlayableMutatorPolicy.STOCK

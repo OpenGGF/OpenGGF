@@ -19,7 +19,7 @@ import java.util.List;
 
 /** SKL $98, Obj_SOZEndBoss ($7764A). Shell, pilot and arena remain separate native owners. */
 public final class SozEndBossInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable, ObjectVisualFacing.Source {
+        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The frontal walking machine has no horizontal direction. The dismantled pilot escape owns flipped, set for rightward flight.
         return escapePhase == 0 ? ObjectVisualFacing.Basis.NON_DIRECTIONAL : (flipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT);
@@ -251,4 +251,6 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     @Override public boolean isPersistent(){return true;} @Override public int getPriorityBucket(){return 6;}
     @Override public void appendRenderCommands(List<GLCommand> commands){if(hidden)return;var r=getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if(r!=null&&r.isReady())r.drawFrameIndex(10,getX(),getY(),flipped,false);}
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hits > 1) hits = 1; }
 }

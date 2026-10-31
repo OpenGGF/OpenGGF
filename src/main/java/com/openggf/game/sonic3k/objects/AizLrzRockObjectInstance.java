@@ -40,7 +40,7 @@ import java.util.logging.Logger;
  */
 public class AizLrzRockObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RomObjectCodePointerProvider,
-        SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     private static final Logger LOG = Logger.getLogger(AizLrzRockObjectInstance.class.getName());
 
@@ -576,5 +576,10 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     private ObjectPlayerQuery playerQuery(PlayableEntity primary) {
         ObjectPlayerQuery query = services().playerQuery();
         return new ObjectPlayerQuery(() -> primary, query::sidekicks);
+    }
+    /** Homing: a breakable rock; Knuckles-only rocks stay his. Native contact decides the break. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        if (knucklesOnly && !com.openggf.level.objects.HomingTargets.knuckles(player)) return null;
+        return com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }
