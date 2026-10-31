@@ -452,7 +452,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      * ROM Obj54_AnimateFace's hit branch runs AFTER the current routine's
      * Boss_MoveObject within the same Obj54 pass (round-92 PC-probe dispatch
      * order: Obj54_Main -> Boss_MoveObject -> Obj54_AnimateFace -> Obj54_CheckHit
-     * -> Obj53 dispatch; Obj54_Main s2.asm:67402, Obj54_AnimateFace s2.asm:67755). Touch_Enemy reaches onHitTaken()
+     * -> Obj53 dispatch). See Obj54_Main (s2.asm:67402) and Obj54_AnimateFace
+     * (s2.asm:67755). Touch_Enemy reaches onHitTaken()
      * before Obj54's own update in the engine's player-slot-first order, so the
      * whole reaction (orb-break flag, angry face, SubA entry, velocity writes)
      * is latched there and applied here, after this frame's old-routine movement
