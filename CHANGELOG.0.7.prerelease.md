@@ -5,6 +5,19 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Homing Attack mutator:** Mutator Lab adds Homing Attack for Sonic 1, Sonic 2
+  and Sonic 3 & Knuckles. Jumping again in the air homes the leader in on the best
+  target in range: a boss part with a hidden priority first, then targets ahead,
+  then bosses, badniks, breakable walls, grab points and breakables. The leader
+  stays in the native roll, so hits, breakage and grabs follow the original rules.
+  With no target, the native double-jump move runs; failing that, Sonic dashes
+  forward. A reticle marks the target, launches lag the camera like the fire-shield
+  dash, a faint blue glow trails each strike, strikes chain and bosses bounce the
+  player off. Sonic, Tails and Knuckles
+  can each be enabled. Instagib mode builds friction heat in front of the player,
+  makes the strike invulnerable, ends bosses in one hit and bursts defeated enemies
+  into shards that defeat other badniks they hit; bosses are immune to shards.
+
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an

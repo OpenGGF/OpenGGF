@@ -61,7 +61,7 @@ import java.util.logging.Logger;
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
         SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable,
-        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     // Obj_Monitor draws box/icon frames and explosion effects without a native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
@@ -1001,5 +1001,9 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             }
             return EGGMAN;
         }
+    }
+    /** Homing: an intact monitor; the native roll contact breaks it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }
