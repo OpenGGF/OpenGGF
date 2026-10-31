@@ -11,6 +11,32 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Synthetic wall time and tick-indexed input; no sleeping, window, ROM or device. */
 class TestFixedSimulationScheduler {
+    @ParameterizedTest @CsvSource({"50,75", "50,144", "50,165", "60,75", "60,144", "60,165"})
+    void phaseObservationsNeverChangeReservations(int hz, int cap) {
+        var observed = new FixedSimulationScheduler(hz, cap, 4, SECOND);
+        var control = new FixedSimulationScheduler(hz, cap, 4, SECOND);
+        for (long delta : new long[]{0, 1, 9_000_000, 20_000_000, SECOND, 0, 0, 400_000_000}) {
+            for (long work : new long[]{0, 1, 1_000_000, Long.MAX_VALUE}) observed.observePhase(work);
+            assertEquals(control.advance(delta), observed.advance(delta));
+            assertEquals(observed.observePhase(0), observed.observePhase(0));
+        }
+    }
+
+    @Test void phaseRefusesDebtClippingAbortAndWholeTickDue() {
+        var scheduler = new FixedSimulationScheduler(60, 144, 4, 250_000_000);
+        assertEquals(new FixedSimulationScheduler.Available(0.3), scheduler.observePhase(5_000_000));
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(16_666_667));
+        scheduler.advance(100_000_000);
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(0));
+        scheduler.reset();
+        scheduler.advance(SECOND);
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(0));
+        scheduler.reset();
+        scheduler.invalidatePhase();
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(0));
+        assertThrows(IllegalArgumentException.class, () -> scheduler.observePhase(-1));
+    }
+
     private static final long SECOND = 1_000_000_000L;
 
     @ParameterizedTest

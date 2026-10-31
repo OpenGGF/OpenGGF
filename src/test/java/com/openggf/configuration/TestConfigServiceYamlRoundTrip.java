@@ -13,6 +13,17 @@ class TestConfigServiceYamlRoundTrip {
     @TempDir
     Path tempDir;
 
+    @Test void interpolationDefaultsOffAndRoundTrips() throws Exception {
+        var service = SonicConfigurationService.createStandalone(tempDir);
+        assertFalse(service.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION));
+        service.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, true);
+        service.saveConfig();
+        assertTrue(SonicConfigurationService.createStandalone(tempDir)
+                .getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION));
+        assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("interpolation: true"));
+        assertEquals(SettingTiming.NOW, SettingTiming.of(SonicConfiguration.DISPLAY_INTERPOLATION));
+    }
+
     @Test
     void saveWritesGroupedYaml() throws Exception {
         Path yaml = tempDir.resolve("config.yaml");

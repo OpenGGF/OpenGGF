@@ -144,6 +144,14 @@
   "@settings.key.fps.help": {
     "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
   },
+  "settings.key.display_interpolation.label": "Interpolation",
+  "@settings.key.display_interpolation.label": {
+    "description": "Settings label for stable configuration key DISPLAY_INTERPOLATION (display.interpolation)."
+  },
+  "settings.key.display_interpolation.help": "Smooths motion between game ticks. Needs a frame rate limit at or above the panel rate. Adds up to one tick of visual latency. Recordings and screenshots stay exact.",
+  "@settings.key.display_interpolation.help": {
+    "description": "Settings help for stable configuration key DISPLAY_INTERPOLATION."
+  },
   "settings.key.display_pacing.label": "Display pacing",
   "@settings.key.display_pacing.label": {
     "description": "Settings label for stable configuration key DISPLAY_PACING (display.pacing)."

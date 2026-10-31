@@ -2884,7 +2884,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	/** Window, device and clock endpoints the live runtime drives; tests substitute fakes. */
-	record LiveEndpoints(java.util.function.Consumer<Boolean> render, Runnable swap,
+	record LiveEndpoints(java.util.function.Consumer<LivePictureRequest> render, Runnable swap,
 			java.util.function.IntConsumer swapInterval, java.util.function.Supplier<DisplayOutput> output,
 			java.util.function.BooleanSupplier speakerRegulated, java.util.function.LongSupplier clock) { }
 
@@ -2899,9 +2899,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						liveCaptureController.state() == LiveCaptureController.State.ACTIVE,
 						suspension.requiresScenePicture() || liveStepPicturePending,
 						FrameRateResolver.pacing(configService), endpoints.output().get(),
-						endpoints.speakerRegulated().getAsBoolean());
+						endpoints.speakerRegulated().getAsBoolean(),
+						configService.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION), screenshotRequested);
 			}
-			public boolean tick() {
+			public boolean tick(boolean interpolationActive) {
 				return runFrameWithModAbort(() -> {
 					suspension.betweenFrames(suspensionEffects);
 					// Resource installation is a window-thread obligation even without a picture.
@@ -2916,10 +2917,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					graphicsManager.runPendingRenderThreadTasks();
 				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
 			}
-			public boolean draw(boolean capture) {
+			public boolean draw(LivePictureRequest picture) {
 				liveSceneSubmissionsBefore = gameLoop.modSceneHost.renderedSubmissions();
 				return runFrameWithModAbort(() -> {
-					render.accept(capture);
+					render.accept(picture);
 					liveStepPicturePending = false;
 				},
 						Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
@@ -3025,7 +3026,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void displayFrame() {
 		suspension.betweenFrames(suspensionEffects);
 		liveFrame = advanceFrame();
-		renderScheduledFrame(true);
+		renderScheduledFrame(new LivePictureRequest.CaptureLatest());
 	}
 
 	private boolean beginPictureProfiling() {
@@ -3042,7 +3043,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		return performanceOverlayEnabled;
 	}
 
-	private void renderScheduledFrame(boolean capture) {
+	/** Window selections draw Latest here until the level lane wires Between. */
+	private void renderScheduledFrame(LivePictureRequest picture) {
 		boolean performanceOverlayEnabled = beginPictureProfiling();
 
 		syncEditorChromeViewport();
@@ -3069,7 +3071,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		FrameAdvance frame = liveFrame != null ? liveFrame
 				: new FrameAdvance(graphicsManager.getUiRenderPipeline(), false, false);
-		renderAdvancedFrame(frame, performanceOverlayEnabled, capture);
+		renderAdvancedFrame(frame, performanceOverlayEnabled, picture.capture());
 
 		profiler.endFrame();
 		overlayStateReady = false;
