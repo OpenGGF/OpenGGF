@@ -1565,7 +1565,8 @@ its original drawing priority.
   route creator work to supported helpers while retaining expert overrides. The
   portable project launcher supports local artifact/ROM paths, CLI overrides and
   read-only text/JSON preflight, alongside build/test/run and the advanced Maven
-  workflow. Starter and kit projects ignore personal local path configuration.
+  workflow. Portable builds convert object sheets, playable art and level inputs
+  from the seven maintained starter conventions. Starter and kit projects ignore personal local path configuration.
   SDK validate/package reports retain their v1 fields and add next actions and
   documentation references; requested JSON also covers input/operational errors.
   Ownership, trust, warning policy, runtime APIs and publication rules are unchanged.

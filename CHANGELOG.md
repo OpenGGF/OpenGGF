@@ -25,7 +25,8 @@ PAL50/NTSC60 simulation/audio scheduling independent of the window rendering lim
 with region-cadence viewport recording and row-owned trace-ghost animation whose
 seeks preserve observed historical context. The level editor menu now opens on a
 short front page with Exit to title. Creator tooling now includes task recipes,
-local build/test/run configuration, read-only preflight and actionable SDK reports.
+local build/test/run configuration for all seven starter purposes, read-only
+preflight and actionable SDK reports.
 
 ## Release files
 

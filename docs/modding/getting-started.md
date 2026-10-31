@@ -125,7 +125,8 @@ or `--s3k` as needed. A standalone starter needs no ROM. The output is
 `/absolute/path/my-mod/target/my-mod-mod.jar` (the project directory names the
 portable output). The launcher copies main resources, runs an optional trusted
 `generate_resources.py`, and converts the SDK starter's `src/main/mod/sample.png`
-with `sample-sheet.yaml` and `level-source/` when present. Custom Maven plugin
+with `sample-sheet.yaml`, playable `runner.png` with `runner-sheet.yaml`, and
+`level-source/` when present. Custom Maven plugin
 workflows still use Maven. Test/run are opt-in; build needs neither ROMs nor testkit.
 
 ### Optional local paths

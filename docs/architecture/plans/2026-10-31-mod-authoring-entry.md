@@ -76,3 +76,15 @@ structured artifact.identity failures. The lead repaired it without another revi
 round. Skill syntax, 86 focused local links/anchors, code fences and both mirror
 pairs pass. The lean worker compilation failure remains reported above; it did
 not execute tests. Current-source artifact build and consumer qualification follow.
+
+The clean `93e6704e1` universal/SDK/testkit/Javadoc build and creator-kit export
+passed (build-only verify, 43.436s). Fresh music/reskin/object portable starter
+registration tests passed. Character packaging passed but its real registration
+failed because portable conversion omitted the maintained runner.png -> runner.ggfp
+step present in the starter POM (also needed by standalone). This exposed a gap
+not covered by the worker's three-purpose witness. A focused regression failed
+on stale output, then passed after adding the exact playable converter path;
+Python checks pass 39/39. The same real character registration now passes with
+zero skips. No validator or runtime contract was weakened. Fresh matching artifacts
+and all seven purpose witnesses will qualify the repaired candidate; Java source
+is unchanged from the completed 85-test run.

@@ -82,6 +82,11 @@ def convert_starter_resources(project, classes, cli):
         output.unlink(missing_ok=True)
         subprocess.run([*cli, "convert", "art", "--image", str(source / "sample.png"),
                         "--sheet", str(source / "sample-sheet.yaml"), "--out", str(output)], check=True)
+    if (source / "runner.png").is_file():
+        output = classes / "art/runner.ggfp"
+        output.unlink(missing_ok=True)
+        subprocess.run([*cli, "convert", "art", "--playable", "--image", str(source / "runner.png"),
+                        "--sheet", str(source / "runner-sheet.yaml"), "--out", str(output)], check=True)
     if (source / "level-source").is_dir():
         output = classes / "levels/sample"
         if output.exists():

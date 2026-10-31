@@ -231,6 +231,26 @@ class BuildProjectTest(unittest.TestCase):
                           "--out", str(classes / "levels/sample")], run.call_args_list[1].args[0])
         self.assertEqual(b"original PNG", (source / "sample.png").read_bytes())
 
+    def test_playable_starter_rebuilds_runner_art_without_changing_sources(self):
+        source = self.project / "src/main/mod"
+        source.mkdir(parents=True)
+        (source / "runner.png").write_bytes(b"authored playable PNG")
+        (source / "runner-sheet.yaml").write_text("playable sheet")
+        classes = self.project / "target/classes"
+        (classes / "art").mkdir(parents=True)
+        output = classes / "art/runner.ggfp"
+        output.write_bytes(b"stale")
+        def convert(command, **kwargs):
+            self.assertEqual(["sdk-cli", "convert", "art", "--playable", "--image",
+                              str(source / "runner.png"), "--sheet", str(source / "runner-sheet.yaml"),
+                              "--out", str(output)], command)
+            self.assertFalse(output.exists(), "converter outputs must be fresh")
+            output.write_bytes(b"rebuilt playable art")
+        with patch.object(launcher.subprocess, "run", side_effect=convert):
+            launcher.convert_starter_resources(self.project, classes, ["sdk-cli"])
+        self.assertEqual(b"rebuilt playable art", output.read_bytes())
+        self.assertEqual(b"authored playable PNG", (source / "runner.png").read_bytes())
+
     def test_local_settings_never_copied_to_packaged_resources(self):
         resources = self.project / "src/main/resources"
         (resources / launcher.LOCAL_CONFIG).write_text('{"s1":"private"}')
