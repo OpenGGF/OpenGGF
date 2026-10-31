@@ -127,3 +127,38 @@ claimed. Queue wait for the combined focused invocation was 0s; end-to-end task
 wall time was not measured. Documentation-only evidence updates do not repeat
 unchanged executable checks. Delivery follows merge to the existing `develop`
 branch, push only that branch, and removal of fully accounted task trees/branches.
+
+## CI fixture correction
+
+CI run 41196711655 at `e7a64336a` exposed two failures in
+`TestPhase2SampleModIntegration`: the checked reference lacked the newly generated
+`.gitignore`. Its README also predated the portable workflow text. The earlier
+12-class creator selection missed this exact generated/reference oracle even
+though fresh starter witnesses passed. Synchronize both fixture files; do not
+ignore dotfiles or weaken inventory/byte equality. The creator testing guide now
+names this consumer and the maintained-gallery packaging check for starter edits.
+
+The change-based selector conservatively selects all 4,366 smoke classes for
+these fixture inputs. No runtime source, selection policy or generated behavior
+changes in the correction. Use focused coverage of the exact failing class,
+`TestSampleModsPackage`, `TestProjectScaffolder` and `TestPurposeStarters`, with
+an absolute verified S2 REV01 ROM path so the load/rewind/save obligation executes.
+This supplements the failed hosted smoke evidence without repeating unaffected
+engine breadth locally. New hosted CI status is reported separately from local
+regression results.
+
+Correction validation: the queued normal-lane command below passed 22 tests across
+all four classes with zero failures/errors/skips, including both failed hosted
+cases and the S2 load/rewind/keyed-save check. The original S2 path was verified
+as CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+Maven execution reported 1m51s and queue admission reported 0s wait. Exact command
+from the correction worktree (Java 25 and Lua 5.4 environment), with the local
+absolute original-ROM directory represented by `OPENGGF_ROM_ROOT`:
+
+```sh
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dtest=TestPhase2SampleModIntegration,TestSampleModsPackage,TestProjectScaffolder,TestPurposeStarters "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test
+```
+
+Fixture README rendering, whitespace and guide code fences were checked. No
+runtime implementation changes were needed. The hosted rerun remains a separate
+pending result after the correction push; the local result is bounded validation.
