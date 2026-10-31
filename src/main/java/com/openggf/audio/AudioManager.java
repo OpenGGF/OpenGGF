@@ -391,6 +391,14 @@ public class AudioManager implements MusicRestoreSink {
         return presentationBinding.outputSampleRate();
     }
 
+    /** Whether live output can follow the producer clock without long-term speaker drift. */
+    public boolean isSpeakerRateRegulated() {
+        AudioPresentationSink sink = presentationBinding.presentationSink;
+        if (sink instanceof OpenAlPcmSink speaker) return speaker.isRateRegulated();
+        return sink instanceof NoDeviceAudioSink
+                || (sink == null && (backend == null || backend instanceof NullAudioBackend));
+    }
+
     /** Host-owned finite scene music routed through the existing capture/speaker producer. */
     public void setScenePcmSource(com.openggf.audio.presentation.ScenePcmSource source) {
         presentationBinding.setScenePcmSource(source);
