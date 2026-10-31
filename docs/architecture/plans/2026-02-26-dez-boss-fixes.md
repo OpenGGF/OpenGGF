@@ -434,14 +434,14 @@ git commit -m "fix: DEZ window visibility during Silver Sonic fight"
 - Possibly modify: `src/main/java/com/openggf/game/sonic2/Sonic2ObjectArt.java` (art loading)
 - Possibly modify: `src/main/java/com/openggf/game/sonic2/constants/Sonic2Constants.java` (ROM addresses)
 
-**Context:** ROM ObjC6 (s2.asm:81568-81785) handles Robotnik running from the Silver Sonic arena to the Egg Robo cockpit. Uses `ArtTile_ArtKos_LevelArt` (DEZ level art tiles) with mappings from `objC6_a.asm`. The object has 5 phases: init, wait for player, pause, run right, jump into cockpit.
+**Context:** ROM ObjC6 (s2.asm:82051-82268) handles Robotnik running from the Silver Sonic arena to the Egg Robo cockpit. Uses `ArtTile_ArtKos_LevelArt` (DEZ level art tiles) with mappings from `objC6_a.asm`. The object has 5 phases: init, wait for player, pause, run right, jump into cockpit.
 
 **Step 1: Create Sonic2DEZEggmanInstance**
 
 ```java
 package com.openggf.game.sonic2.objects.bosses;
 
-// ROM: ObjC6 (s2.asm:81568-81785)
+// ROM: ObjC6 (s2.asm:82051-82268)
 // Robotnik transition character between Silver Sonic and Death Egg Robot fights.
 // Spawned after Silver Sonic defeat, runs right and jumps into Egg Robo cockpit.
 

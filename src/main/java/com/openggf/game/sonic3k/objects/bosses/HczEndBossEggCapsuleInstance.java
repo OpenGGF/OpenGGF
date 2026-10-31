@@ -33,7 +33,7 @@ import java.util.logging.Logger;
 /**
  * Standard ground-based egg capsule for HCZ2 (and other S3K zones).
  *
- * <p>ROM reference: Obj_EggCapsule (sonic3k.asm line 181587).
+ * <p>ROM reference: Obj_EggCapsule (sonic3k.asm line 181592).
  * The capsule sits at a fixed position on the ground with the button
  * on TOP at offset (0, -0x24). The player must STAND on the button
  * (SolidObjectFull) to open the capsule.
@@ -335,7 +335,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
 
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
-        // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
+        // Set_PlayerEndingPose (sonic3k.asm:182067-182088).
         tailsEndingPoseApplied = true;
         if (sidekick.getCpuController() != null) {
             sidekickPoseOwners.add(sidekick);

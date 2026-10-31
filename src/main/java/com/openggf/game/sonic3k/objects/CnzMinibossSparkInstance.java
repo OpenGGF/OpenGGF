@@ -97,7 +97,7 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        // ObjDat3_CNZMinibossSpark collision byte is $92 (sonic3k.asm:145725-145728).
+        // ObjDat3_CNZMinibossSpark collision byte is $92 (sonic3k.asm:145730-145733).
         return isDestroyed() ? 0 : COLLISION_FLAGS;
     }
 

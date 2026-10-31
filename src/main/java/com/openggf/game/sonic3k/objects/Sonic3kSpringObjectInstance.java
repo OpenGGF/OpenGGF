@@ -492,7 +492,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
                 applyHorizontalCheckpointContact(participant, checkpointPlayer(participant));
             }
         }
-        // ROM sub_2326C (sonic3k.asm:47997) — proactive horizontal-spring zone.
+        // ROM sub_2326C (sonic3k.asm:48002) — proactive horizontal-spring zone.
         // The whole routine is gated on `cmpi.b #3,anim(a0) / beq.w locret_23324`
         // (sonic3k.asm:47998-47999); within that gate, Player_1 (line 47973) and
         // Player_2 (line 47999) are checked independently. Engine equivalent:
@@ -865,7 +865,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      * 47779/47798/47829/47848/48036/48045/48064/48074), and that helper's
      * non-standing branch falls through directly to {@code SolidObject_cont}
      * (sonic3k.asm:41107) without the {@code render_flags} bit-7 gate at
-     * {@code loc_1DF88} (sonic3k.asm:41430-41432).  S2 mirrors this: every
+     * {@code loc_1DF88} (sonic3k.asm:41435-41437).  S2 mirrors this: every
      * spring variant uses {@code SolidObject_Always_SingleCharacter}
      * (s2.asm:33709/33718/33784/33802) which jumps straight to
      * {@code SolidObject_cont} without the {@code SolidObject_OnScreenTest}

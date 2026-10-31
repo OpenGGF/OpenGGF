@@ -27,7 +27,7 @@ These are the rule-113 shapes: correct-looking, and invisible to any output chec
 | site | margin | cites | what that routine actually computes |
 |---|---|---|---|
 | `ArrowProjectileInstance:107` | 480 | `MarkObjGone` | **640** (`s2.asm:30222`) — and the comment's own expression evaluates to 640 while calling it 480 |
-| `BalkiryJetObjectInstance:79` | 64 | `Obj_DeleteBehindScreen` | **no number at all** — `bmi` on the coarse difference (`s2.asm:72983-72992`), a sign test that deletes only *behind* the camera |
+| `BalkiryJetObjectInstance:79` | 64 | `Obj_DeleteBehindScreen` | **no number at all** — `bmi` on the coarse difference (`s2.asm:73098-73107`), a sign test that deletes only *behind* the camera |
 | `HtzFireProjectileObjectInstance:96` | 128 | `Camera_Max_Y_pos` + `screen_height` | a **bottom-of-level Y** test — different quantity *and* different axis from a camera band |
 
 `BalkiryJet` is the sharpest: half 2 **passes** — the ROM really does route Balkiry to

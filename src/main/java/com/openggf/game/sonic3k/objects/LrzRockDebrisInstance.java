@@ -61,7 +61,7 @@ public final class LrzRockDebrisInstance extends AbstractObjectInstance implemen
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // tst.b render_flags(a0) / bpl loc_43A88 (:89106-89107, :89114).
+        // tst.b render_flags(a0) / bpl loc_43A88 (:89113-89114, :89114).
         if (!renderedLastFrame) {
             // jmp (Delete_Current_Sprite): a routine-spawned dynamic that never respawns.
             ObjectLifetimeOps.expireDynamic(this);

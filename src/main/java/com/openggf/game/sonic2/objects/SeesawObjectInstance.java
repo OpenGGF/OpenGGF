@@ -259,7 +259,7 @@ public class SeesawObjectInstance extends BoxObjectInstance
         // Spawn ball on first update
         ensureBallSpawned();
 
-        // ROM Obj14_Main (s2.asm:47037-47115) order:
+        // ROM Obj14_Main (s2.asm:47464-47542) order:
         //   1. Read previous-frame p1_standing_bit / p2_standing_bit on the
         //      seesaw object (status(a0)).
         //   2. If any standing bit is set, recompute target d1 from the

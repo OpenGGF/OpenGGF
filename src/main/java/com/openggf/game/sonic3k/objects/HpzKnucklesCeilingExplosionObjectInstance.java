@@ -24,7 +24,7 @@ import java.util.List;
  * frame the object becomes an explosion.
  *
  * <p>{@link #normalExplosion} is the same {@code Obj_Explosion} routine 2 object as created by
- * {@code Obj_NormalExpControl} ({@code Child6_MakeNormalExplosion}, sonic3k.asm:176873).
+ * {@code Obj_NormalExpControl} ({@code Child6_MakeNormalExplosion}, sonic3k.asm:176986).
  */
 public final class HpzKnucklesCeilingExplosionObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {

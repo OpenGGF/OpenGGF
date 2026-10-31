@@ -65,7 +65,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj65 owns a platform and cog child; mirrored attachment/travel is geometry, not facing.
 
-    // Obj65_Properties table (s2.asm line 52362)
+    // Obj65_Properties table (s2.asm line 52844)
     // {width_pixels, y_radius, movementData, childSubtype}
     private static final int[][] PROPERTIES = {
             {0x40, 0x0C},  // Index 0: frame 0
@@ -291,7 +291,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         }
         executeMovement(vIntRunCount, player);
         updateDynamicSpawn(x, y);
-        // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
+        // ROM loc_26C1C tail (s2.asm:52916-52931) marks the object gone + clears
         // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
         // anchor to the shared ObjectManager out_of_range path.
     }

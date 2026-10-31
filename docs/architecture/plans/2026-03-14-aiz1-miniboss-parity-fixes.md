@@ -11,10 +11,10 @@
 **Tech Stack:** Java 21, JUnit 5 / Jupiter only, no new dependencies.
 
 **ROM References:**
-- `Obj_BossExplosionSpecial` (sonic3k.asm:176903) — explosion controller
-- `Obj_BossExpControl2` (sonic3k.asm:176883) — spawns children every 2 frames
-- `Obj_BossExplosion2` (sonic3k.asm:176931) — individual explosion with `sfx_Explode` (0xB4)
-- `CreateBossExp02` (sonic3k.asm:176794) — timer=$28, range=±$80, routine set $18
+- `Obj_BossExplosionSpecial` (sonic3k.asm:176908) — explosion controller
+- `Obj_BossExpControl2` (sonic3k.asm:176888) — spawns children every 2 frames
+- `Obj_BossExplosion2` (sonic3k.asm:176936) — individual explosion with `sfx_Explode` (0xB4)
+- `CreateBossExp02` (sonic3k.asm:176799) — timer=$28, range=±$80, routine set $18
 - `AIZTrans_WavyFlame` (Screen Events.asm:702-729) — VDP Vscroll-based fire wave
 - `AIZ_FlameVScroll` (Screen Events.asm:740) — wave amplitude table (max -15px)
 
@@ -217,7 +217,7 @@ git commit -m "feat(s3k): add S3K boss explosion controller (ROM: Obj_BossExplos
 
 ### Task 2: Create S3kBossExplosionChild
 
-Individual explosion child that plays S3K SFX and animates. ROM: `Obj_BossExplosion2` (sonic3k.asm:176931).
+Individual explosion child that plays S3K SFX and animates. ROM: `Obj_BossExplosion2` (sonic3k.asm:176936).
 
 **Files:**
 - Create: `src/main/java/com/openggf/game/sonic3k/objects/S3kBossExplosionChild.java`

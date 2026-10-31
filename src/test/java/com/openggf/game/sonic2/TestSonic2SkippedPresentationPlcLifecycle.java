@@ -40,7 +40,7 @@ class TestSonic2SkippedPresentationPlcLifecycle {
 
         // EHZ2 is small enough that the 25-frame title-card leave loop
         // (docs/s2disasm/s2.asm:5060-5066) retires it entirely, so
-        // Level_MainLoop (s2.asm:5082-5087) is entered with an empty Plc_Buffer.
+        // Level_MainLoop (s2.asm:5086-5091) is entered with an empty Plc_Buffer.
         assertEquals(List.of(), service.capture().queuedEntries(),
                 "the title-card leave loop fully services the header secondary for EHZ");
     }

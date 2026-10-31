@@ -10,7 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 
 /**
  * Hill Top Zone events.
- * ROM: LevEvents_HTZ (s2.asm:20543-20670)
+ * ROM: LevEvents_HTZ (s2.asm:20586-20713)
  *
  * HTZ has complex earthquake/lava events with screen shake zones.
  * The screen shake is triggered when the player enters certain areas

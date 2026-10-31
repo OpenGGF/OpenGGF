@@ -77,7 +77,7 @@ public interface SolidObjectProvider {
      * (reached via {@code SolidObject_TopBottom}) rather than
      * {@code PlatformObject_ChkYRange} accept the exact surface boundary on every
      * game: {@code SolidObject_TopBottom} does {@code cmpi.w #$10,d3 / blo
-     * SolidObject_Landed} (docs/s2disasm/s2.asm:35488-35494), and {@code blo}
+     * SolidObject_Landed} (docs/s2disasm/s2.asm:35590-35596), and {@code blo}
      * (unsigned lower-than $10) covers {@code d3 == 0}.  The engine identifies the
      * {@code SolidObject_Landed} routine by {@code !usesPlatformObjectLandingSnap()}
      * (the same predicate that selects the {@code playerY - distY + 3} snap), so a
@@ -88,7 +88,7 @@ public interface SolidObjectProvider {
      * top with exactly {@code d3 == 0} and must still land that frame.
      */
     default boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
-        // SolidObject_Landed (s2.asm:35488-35494 blo covers d3==0) accepts the
+        // SolidObject_Landed (s2.asm:35590-35596 blo covers d3==0) accepts the
         // exact boundary; PlatformObject_ChkYRange (game flag) governs the rest.
         return isTopSolidOnly() && !usesPlatformObjectLandingSnap();
     }
@@ -945,7 +945,7 @@ public interface SolidObjectProvider {
      * the player each frame. When enabled, if terrain is detected at or above the
      * player's feet, the player detaches from this object and enters the air state.
      * <p>
-     * ROM: DropOnFloor (s2.asm:35810) — called by objects that can push the player
+     * ROM: DropOnFloor (s2.asm:36114) — called by objects that can push the player
      * into solid terrain (e.g., vertically-moving platforms like HTZ rising lava).
      */
     default boolean dropOnFloor() {
@@ -987,7 +987,7 @@ public interface SolidObjectProvider {
      * <p>
      * Default: {@code false} (slope sample writes y_pos every frame, matching
      * ROM {@code SolidObjSloped2} sonic3k.asm:41767-41792 / {@code MvSonicOnSlope}
-     * s2disasm:35429 invoked by {@code sub_205B6} sonic3k.asm:44870).
+     * s2disasm:35429 invoked by {@code sub_205B6} sonic3k.asm:44875).
      * <p>
      * ROM divergence covered by this hook: S3K {@code Obj_CollapsingPlatform}
      * state-1 routine {@code loc_20594} (sonic3k.asm:44854-44864) decrements its
@@ -995,7 +995,7 @@ public interface SolidObjectProvider {
      * start, branches to {@code ObjPlatformCollapse_CreateFragments}
      * (sonic3k.asm:45434-45482). That branch rewrites {@code (a0)} to
      * {@code loc_205DE} and {@code jmp}s to {@code Play_SFX} <em>without</em>
-     * falling through to {@code sub_205B6} (sonic3k.asm:44870) -- so the slope
+     * falling through to {@code sub_205B6} (sonic3k.asm:44875) -- so the slope
      * sample / y_pos write is skipped on the state-1 to state-2 transition
      * frame. Sonic remains attached because {@code Status_OnObj} and
      * {@code p1_standing_bit} are not cleared, but his y_pos is held at the
@@ -1063,7 +1063,7 @@ public interface SolidObjectProvider {
      * ROM divergence: the on-screen gate at {@code loc_1DF88}
      * (sonic3k.asm:41430) lives <em>only</em> in the {@code SolidObjectFull_1P}
      * helper (sonic3k.asm:41056-41058). Objects that route through the
-     * sibling helper {@code SolidObjectFull2_1P} (sonic3k.asm:41105-41107)
+     * sibling helper {@code SolidObjectFull2_1P} (sonic3k.asm:41110-41112)
      * fall through directly to {@code SolidObject_cont} and never test
      * {@code render_flags} bit 7. Notably <strong>all spring variants</strong>
      * call {@code SolidObjectFull2_1P} (sonic3k.asm:47704/47673/47692/47701/

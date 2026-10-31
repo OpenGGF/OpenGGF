@@ -304,7 +304,7 @@ public class SpringboardObjectInstance extends BoxObjectInstance
 
     /**
      * ROM: Obj40_Main calls SlopedSolid_SingleCharacter which dispatches to
-     * SlopedSolid_cont (s2.asm:35066) on new contact. SlopedSolid_cont adds
+     * SlopedSolid_cont (s2.asm:35263) on new contact. SlopedSolid_cont adds
      * the object's half-height (d2) to the catch range before computing relY:
      * {@code add.w d3,d2} (d2 = halfHeight + yRadius)
      * {@code add.w d2,d3} (d3 = playerY - baseY + 4 + halfHeight + yRadius)

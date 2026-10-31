@@ -165,7 +165,7 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         reserveDisplayChildSlot();
         playerOnePushedThisUpdate = false;
-        // loc_49986 :96147-96156. The sine of the *current* angle is used and the angle is
+        // loc_49986 :96184-96193. The sine of the *current* angle is used and the angle is
         // advanced afterwards, so the first update of the object's life sits at offset 0.
         int sine = TrigLookupTable.sinHex(bobAngle & 0xFF);
         int offset = sine >> BOB_SHIFT;

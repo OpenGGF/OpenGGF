@@ -36,7 +36,7 @@ public abstract class SuperStateController {
 
     /**
      * The ROM's {@code Sonic_JumpHeight} test, which reaches
-     * {@code Sonic_CheckGoSuper} (docs/s2disasm/s2.asm:37432, :37455).
+     * {@code Sonic_CheckGoSuper} (docs/s2disasm/s2.asm:37432, :37456).
      *
      * <p>It is called from {@code Obj01_MdJump}, which the {@code Obj01_Modes}
      * dispatch enters BEFORE the frame's {@code Sonic_ChgJumpDir} and

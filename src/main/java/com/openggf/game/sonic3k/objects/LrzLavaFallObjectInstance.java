@@ -91,7 +91,7 @@ public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
         emitDrop();
     }
 
-    /** {@code loc_436C8} through {@code loc_43746} (sonic3k.asm:88831-88852). */
+    /** {@code loc_436C8} through {@code loc_43746} (sonic3k.asm:88836-88857). */
     private void emitDrop() {
         // addq.b #1,$25(a0) / cmpi.b #2,$25(a0) / blo: the second of every two drops is the one
         // given the routine that plays the sound.

@@ -9,7 +9,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 /**
  * S3K SKL Obj $8F - Butterdroid.
  *
- * <p>ROM reference: {@code Obj_Butterdroid} at {@code sonic3k.asm:194095}.
+ * <p>ROM reference: {@code Obj_Butterdroid} at {@code sonic3k.asm:194100}.
  * The main routine faces the nearest player, calls {@code Chase_Object} with
  * max speed {@code $100} and acceleration {@code 4}, then runs the raw
  * eight-step wing animation.

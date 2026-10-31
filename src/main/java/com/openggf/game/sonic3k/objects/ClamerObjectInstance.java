@@ -267,7 +267,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
                 addToList = true;
             }
             case COOLDOWN_DRAIN -> {
-                // ROM loc_890C8 (sonic3k.asm:186058-186061): subq.w #1, $2E(a0);
+                // ROM loc_890C8 (sonic3k.asm:186063-186066): subq.w #1, $2E(a0);
                 // bmi.s loc_890D0; rts. Both paths skip Child_DrawTouch_Sprite,
                 // so the slot is NOT added to the list this frame.
                 springRoutine = SpringRoutine.COOLDOWN_DONE;
@@ -434,7 +434,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_8904E (sonic3k.asm:186012-186014): snap-shut animation after
+     * ROM loc_8904E (sonic3k.asm:186017-186019): snap-shut animation after
      * spring-child fires. We collapse this onto our local close timer and
      * then return to routine 0x02 via loc_89056.
      */

@@ -614,7 +614,7 @@ public class AnimatedStillSpriteInstance extends AbstractObjectInstance {
         /*  7 */ { 0x440F, 0x0300, 0x54, 0x04 },  // SOZ torch 4-wide
     };
 
-    // Animation scripts from Ani_AnimatedStillSprites (sonic3k.asm:60464)
+    // Animation scripts from Ani_AnimatedStillSprites (sonic3k.asm:60469)
     // All use LOOP end action (0xFF terminator)
     private static final SpriteAnimationSet ANIMATIONS = createAnimations();
 

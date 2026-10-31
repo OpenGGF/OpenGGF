@@ -57913,7 +57913,7 @@ to synthesize a POST phase on a VBLANK-only row.
   `Level_MainLoop` re-arms `v_vblank_routine` at its top
   (docs/s1disasm/sonic.asm:3000) and bumps `v_framecount` in the instruction
   after `WaitForVBlank` returns (3001-3002), so a V-blank taken with the
-  gameplay counter unchanged is `VBlank_Lag` (sonic.asm:709) fired *inside* the
+  gameplay counter unchanged is `VBlank_Lag` (sonic.asm:712) fired *inside* the
   previous row's iteration. `RunPLC` (3032) sits behind every expensive call in
   that iteration — `ExecuteObjects` (3010), `DeformLayers` (3025),
   `BuildSprites` (3028), `ObjPosLoad` (3029), `PaletteCycle` (3031) — and only
@@ -62876,7 +62876,7 @@ landed deliberately red). Nothing else moved.
 - **ss_2 GREEN: the engine applied an S3K-SHAPED CAMERA-Y BAND TO S2's LOADER.** S2's
   object loader has NO `Camera_Y` test anywhere: `ObjectsManager_Init` falls straight
   through into `ObjectsManager_Main` (s2.asm:33062-33068 -> :33032), and both
-  `ObjectsManager_GoingForward` (:33101-33124) and `GoingBackward` (:33047-33075) test the
+  `ObjectsManager_GoingForward` (:33101-33124) and `GoingBackward` (:33077-33105) test the
   X window only. S3K's `Load_Sprites` (skdisasm/sonic3k.asm:37585-37628, 37763-37811)
   genuinely does have that pass — and the engine had generalised it. Every EHZ1 layout
   entry whose y sat outside the initial camera band (the two Obj49 waterfalls, the Obj36
@@ -63283,7 +63283,7 @@ CPZ2 12927 -> 2268; the three mid-act segment tests 41/41/43 -> 3/3/5.
   `CPZStaircaseObjectInstance` folds Obj78's four SST slots into one instance but did not
   declare `usesPieceScopedStandingBits()`. ROM keeps the standing bit in each object's OWN
   status byte (`btst d6,status(a0)`, s2.asm:35070-35072), so landing on a neighbouring step
-  re-seats the rider via `SolidObject_Landed` -> `RideObject_SetRide` (:35619-35626).
+  re-seats the rider via `SolidObject_Landed` -> `RideObject_SetRide` (:35988-35995).
   Without piece scoping the rider stayed latched to step 1 forever: `MvSonicOnPtfm` kept
   pulling y back to slot 55's surface (05A6 instead of 05A8) and — the detonating part —
   slot 55 kept taking the continued-ride branch instead of falling through to
@@ -64238,7 +64238,7 @@ round-trip chains: `TestS1GhzMazeRoundTripChain` and `TestS2EhzHalfpipeRoundTrip
   Two independent defects fed it:
   (1) **FITTED CONSTANT:** `Sonic1CreditsDemoData.LZ_LAMP_VBLA_COUNTER = 52`, commented
   "preserving the REV01 y-bump cadence", pushed into `ObjectManager.initVblaCounter`.
-  `EndDemo_LampVar` (sonic.asm:3879) has no vblank field and `v_vblank_count` has exactly one
+  `EndDemo_LampVar` (sonic.asm:3955) has no vblank field and `v_vblank_count` has exactly one
   writer in the ROM — 52 was measured off an older cadence and is unreachable from ROM data.
   Removed. Seed is now `trace.initialVblankCounter() - 1`, the identical expression
   `TraceReplaySessionBootstrap.alignObjectVblankCounterForReplayStart` already uses for every
@@ -65509,7 +65509,7 @@ After: **769 / 8 / 64, identical failing set** — a correctness-only round.
   during frame F's `sub_9B62` and handed to the decompression FIFO by frame F's own module-queue
   call at the loop tail (sonic3k.asm:10789), which runs after the clear routine. So a 1-module
   archive with instantaneous decompression blocks exactly 1 routine-2 call; the other 3 are
-  `Process_Kos_Queue` main-loop budget (:2872, bookmarked/resumed across V-ints at :2850-2862).
+  `Process_Kos_Queue` main-loop budget (:2872, bookmarked/resumed across V-ints at :2860-2872).
   Archive confirmed 1 module: `Special Stage Chaos Emerald.bin` header 0x0B00 -> 0x0580 words ->
   ceil(0x580/0x800) = 1 (Super Emerald 0x0A20 -> 0x0510 -> 1).
 - **THE GHZ MAZE 36-ROW SPAN IS NOT COMPUTABLE. Settled, with evidence.** The committed
@@ -66880,7 +66880,7 @@ same iteration). No constant was introduced.
   the special stage shares them with the level (s2.asm:69095, 69205, 70378,
   70403, 70504, 70586-70588 against :38834-38836, 41639-41641, 41663-41665),
   and `Level_ClrRam` zeroes all three on every level load
-  (`clearRAM Misc_Variables,Misc_Variables_End`; s2.constants.asm:1484, 1556,
+  (`clearRAM Misc_Variables,Misc_Variables_End`; s2.constants.asm:1484, 1629,
   1625-1626, 1629). The engine kept a private special-stage dedup namespace and
   never cleared the level's.
 - After: both gaps carry `sonic mf1` and `tails mf1` submitted on the same row,
@@ -67099,7 +67099,7 @@ list in `ArtLoadCues` (`Sonic2Constants.ART_LOAD_CUES_ADDR` = 0x42660). The
 three queued fingerprints are entries 1-3 of **PLC 38 = `PLCptr_Results`**
 (`docs/s2disasm/s2.asm:89232`), i.e. the end-of-act results art submitted by
 `Load_EndOfAct`'s `LoadPLC2` (`s2.asm:34856-34862`). The 1-entry load at f657 is
-PLC 39 `PLCptr_Signpost` (`s2.asm:89233`), and the engine already matched it.
+PLC 39 `PLCptr_Signpost` (`s2.asm:89360`), and the engine already matched it.
 So frame 821 is the frame the ROM's `Obj0D_Main_State3` triggers end-of-act.
 
 `Obj0D_Main_State3` is a `fixBugs` site (`s2.asm:34815-34838`); the disassembly
@@ -67522,7 +67522,7 @@ Segments 0-10 remain at 0 errors, and no player position/velocity/angle/air/roll
 mismatch remains on any row of any segment of the run.
 
 Root cause: the engine ran `Obj56`'s routine-2 dispatch on the object's first `update()`
-instead of spending that frame on `Obj56_Init` (docs/s2disasm/s2.asm:63256-63325, which
+instead of spending that frame on `Obj56_Init` (docs/s2disasm/s2.asm:63371-63440, which
 ends in `rts`). Measured from the fixture's own `object_near` slot-20 stream, the
 engine's boss X equalled the ROM's *next-frame* value on every compared row; the player
 consequently took the spike's hurt at row 1732 where the ROM takes it at 1733. The
@@ -67590,7 +67590,7 @@ failure counts.
   the restore (the same shape `Obj47`'s `ButtonObjectInstance` already uses). Removed
   the invented `y_speed >= 0` trigger gate. No constant introduced: the +8, the
   $1B/8/8 solid box and the -$28 base offset are all ROM immediates at the cited lines
-  (`Obj3E_ObjLoadData` entry `$28,4,$10,5,4`, s2.asm:84825).
+  (`Obj3E_ObjLoadData` entry `$28,4,$10,5,4`, s2.asm:84951).
 - `TestS2CompleteEmeraldRunChain`: 5 axes before and after. `[segment-physics]` seg11
   **4192 -> 287** errors, first non-camera mismatch **frame 3383 `sidekick_y`** ->
   **frame 3518 `queue.s2_nemesis_plc.busy`**. All 287 survivors are
@@ -68678,7 +68678,7 @@ That tail writes `mapping_frame(a1) = 0`, `anim(a1) = $1C` and
 `object_control(a1) = $53` on Player_1, repeating the triple on Player_2 only
 when `Flying_carrying_Sonic_flag` is set, and **never touches the camera**.
 `Camera_X_pos` stops advancing on its own because object_control bit 0 skips
-`Sonic_Modes` (`sonic3k.asm:22009-22013`) so the player stops moving, which means
+`Sonic_Modes` (`sonic3k.asm:22061-22065`) so the player stops moving, which means
 `ScrollHoriz` still performs its last step **on the capture frame itself**
 (recorded: 0x1B0A, 0x1B0C, 0x1B0E, 0x1B10 hold, follow offset a constant 0xA0).
 
@@ -71701,7 +71701,7 @@ fixture's `slot_dump`/`object_appeared` stream names the mechanism exactly: the
 cage (`0x0004BF9A` = `loc_4BF9A`) sits in **slot 4**, and each `Obj_SlotRing`
 (`0x0001A9EE`) is allocated into slots **5, 6, 7, ... 27** -- every child lands
 *above* the cage. Spawns occur on odd `gameplay_frame_counter`, matching
-`loc_4C172`'s `btst #0,(Level_frame_counter+1).w` (`sonic3k.asm:99481`).
+`loc_4C172`'s `btst #0,(Level_frame_counter+1).w` (`sonic3k.asm:99516`).
 
 Rows 2340 and 2371 are **lag frames** (`lag_counter=1`): `gameplay_frame_counter`
 repeats (0x923, 0x941) while `vblank_counter` advances. In `Level_frame_counter`
@@ -71911,7 +71911,7 @@ An intra-frame ordering inversion, not a value error.
 The ROM's per-frame player routine `loc_903E` calls `sub_9580`
 (sonic3k.asm:11503) **first**. `sub_9580` moves the player and ends with its own
 gate -- `tst.b (Special_stage_jumping).w` / `bmi.s locret_972C`
-(sonic3k.asm:12110-12111) -- before `bsr.s sub_972E` (sonic3k.asm:12114), the
+(sonic3k.asm:12110-12111) -- before `bsr.s sub_972E` (sonic3k.asm:12124), the
 cell-collision routine. Only *afterwards*, at `loc_911E`
 (sonic3k.asm:11556-11563), does the jump physics land the player and write 0 to
 `Special_stage_jumping`.
@@ -72364,7 +72364,7 @@ That extra forward step is the ROM standing still for one frame *without
 interacting with the cell it is on*. `loc_96CE` (sonic3k.asm:12073-12075), the
 bumper's different-cell unlock, is `move.w d2,(Special_stage_velocity).w / rts`.
 The `rts` leaves `sub_9580` before the position update at `loc_96FA` **and**
-before `bsr.s sub_972E` at sonic3k.asm:12114 — unlike the same-cell branches
+before `bsr.s sub_972E` at sonic3k.asm:12124 — unlike the same-cell branches
 `loc_96F2`/`loc_96F8`, which `bra` into the shared tail. So the bumper the player
 is standing on cannot re-arm on that frame; it re-arms on the next one, after the
 player has been carried one step past it, and the bounce reverses from there.
@@ -72875,7 +72875,7 @@ recorded `status_secondary` is `0x21` for this segment — `Status_Shield` plus
 
 ROM `SpawnLevelMainSprites_SpawnPowerup` (sonic3k.asm:8296-8322) restores the saved
 elemental shield on the BONUS zone's own level spawn; zone `$14` has its own `beq
-loc_69E0` arm at :8305. The engine restored it only on the way back to the level.
+loc_69E0` arm at :8313. The engine restored it only on the way back to the level.
 
 ### Result (fix worktree vs control worktree, same base)
 
@@ -73118,8 +73118,8 @@ the exact-touch case.
 
 1. **(ROM-cited, measured, NOT landed — see the hold below.)** Every S3K top-solid ride
    routine — `SolidObjectTop`, `SolidObjectTopSloped`, `SolidObjectTopSloped2` and the
-   `sub_1E410`/`loc_1E42E` entries (sonic3k.asm:41824-41926, 42003-42036, 42116-42137) —
-   funnels into one window at `loc_1E45A` (sonic3k.asm:42014-42024):
+   `sub_1E410`/`loc_1E42E` entries (sonic3k.asm:41998-42100, 42003-42036, 42116-42137) —
+   funnels into one window at `loc_1E45A` (sonic3k.asm:42045-42055):
    `sub.w d1,d0 / bhi.w locret_1E4D4` then `cmpi.w #-$10,d0 / blo.w locret_1E4D4`.
    `bhi` is *not* taken on a zero result, and the following unsigned `blo` against `$FFF0`
    then rejects it, so the accepted window is exactly `d0 ∈ [-$10,-1]` — engine `distY ∈
@@ -74612,7 +74612,7 @@ reads as sub-pixel drift.
 
 ### The owner: a badnik that alternates target on V-blank parity
 
-`Obj4B_ChkPlayers` (`s2.asm:60990-60998`):
+`Obj4B_ChkPlayers` (`s2.asm:61105-61113`):
 
 ```
 lea     (MainCharacter).w,a1
@@ -74982,7 +74982,7 @@ Level->level 10 at 20 of 21 boundaries, **9** at `seg20_ooz1 -> seg21_ooz2`; lev
 
 ### The phase hazard, measured
 
-`Obj4B_ChkPlayers` picks its target on `btst #0,(Vint_runcount+3).w` (`s2.asm:60990-60998`), so
+`Obj4B_ChkPlayers` picks its target on `btst #0,(Vint_runcount+3).w` (`s2.asm:61105-61113`), so
 a tick-count change flips low-byte phase. **All five `TestS2*CompleteEmeraldsSegmentTraceReplay`
 classes are green on BOTH trees** -- Arz1, Cpz2Seg9, Ehz1Seg1, Ehz1Seg2, Ehz2Seg6. **The S2
 standalone delta is zero.**
@@ -75065,7 +75065,7 @@ alignment enabled.
 | dynamic-art-gap axes | `seg4_ehz1->seg5_ehz2`, `ss_4->seg6_ehz2`, `ss_5->seg7_ehz2` | same three, same fields |
 
 `seg5_ehz2` did **not** go red. The parity hazard that sank the earlier held branch
-(`Obj4B_ChkPlayers`'s `btst #0,(Vint_runcount+3).w`, s2.asm:60990-60998) did not fire here,
+(`Obj4B_ChkPlayers`'s `btst #0,(Vint_runcount+3).w`, s2.asm:61105-61113) did not fire here,
 because this change moves only the level->level residual and leaves the ~19.3k special-stage
 interior deficit -- a separate, unlanded strand -- untouched.
 
@@ -75143,7 +75143,7 @@ right.
 
 **The actual owner.** Object ids from the ROM pointer table: `$28` Animal (:29954), `$3A`
 end-of-level results (:29974), `$3E` Egg prison (:29978). The capsule's final state
-`loc_3F406` (:85001-85012) scans `Dynamic_Object_RAM` for any live `ObjID_Animal`, returns
+`loc_3F406` (:85127-85138) scans `Dynamic_Object_RAM` for any live `ObjID_Animal`, returns
 if one is found, and only when none remain calls `Load_EndOfAct` - spawning Obj3A and
 queueing `PLCID_Results` / `PLCID_ResultsTails` (:34848-34860) - then deletes itself. The
 fixture matches exactly: last `$28` removed f3545, `$3A` spawn + `$3E` removal f3546.
@@ -75207,7 +75207,7 @@ frames (`s2.asm:84995`) and spawns fire when `(Vint_runcount+3) & 7 == 0` (:8497
 **180/8 = 22.5**, so the window contains 22 or 23 spawn frames purely according to the
 counter phase when the capsule enters the spawning state. The engine's
 `SPAWN_PHASE_DURATION` is already `0xB4`, and its spawn-then-decrement ordering already
-matches `loc_3F3F4` (:84991-84995). Neither is wrong. The engine simply enters the state on
+matches `loc_3F3F4` (:85117-85121). Neither is wrong. The engine simply enters the state on
 a phase that captures one extra boundary.
 
 **Consequences of the extra spawn**, both of which are downstream of the same half-interval:
@@ -76646,7 +76646,7 @@ or observation plumbing rather than engine defects, and a two-row cursor oversho
   on the flattening slope at `x=0x142D`; `air` then diverges 406-416 where the
   ROM leaves the ground and the engine stays attached. BK2 cursor 83819 is this
   segment's row 1477, well downstream of that cascade. The owning routines are
-  `AnglePos` / `Sonic_Angle` (`docs/s2disasm/s2.asm:43048-43077`,
+  `AnglePos` / `Sonic_Angle` (`docs/s2disasm/s2.asm:43096-43125`,
   `43120-43146`) over `FindFloor` (`s2.asm:43413-43470`). NOT root-caused.
 - Landed instead: the CPZ warp-pipe exit spring now performs the
   `bclr #status.player.on_object` of `loc_296C2`
@@ -77407,7 +77407,7 @@ was introduced and nothing keys on zone, act, route or frame.
   offset 24). At segment row 0 both lanes agree on player position and on slot
   occupancy, so no carried *value* differs. What differs is how many object
   passes each lane has already spent since the level load: the standalone lane
-  24, the chain 91. ObjA7 patrols at `x_vel #-$40` (s2.asm:76662-76668), so the
+  24, the chain 91. ObjA7 patrols at `x_vel #-$40` (s2.asm:76760-76766), so the
   chain's Grabbers enter 16-17 px further along — slot 22 at 4225 against 4241,
   slot 37 at 4760 against 4776.
 - Consequences, in order: segment row 43 the chain unloads the slot-22 Grabber
@@ -77479,7 +77479,7 @@ own rows:
 So the death is the third link in a chain, not the defect: the engine takes two
 extra miniboss fire hits that the ROM does not take, and the second of those lands
 with zero rings because the first scattered them. `HurtCharacter`'s ring branch is
-`btst #0,status_secondary(a0) / bne.s loc_102DA` (docs/skdisasm/sonic3k.asm:21110-21122)
+`btst #0,status_secondary(a0) / bne.s loc_102DA` (docs/skdisasm/sonic3k.asm:21120-21132)
 — a shielded hit skips the scatter entirely and `Ring_count` is never written by
 that routine at all, which is why the recording's 111 rings survive its own hurt.
 
@@ -78433,7 +78433,7 @@ land *with* the pair is right about necessity and wrong about sufficiency.
 ### A hypothesis raised and killed by measurement
 
 `Sonic_Animate` / `Animate_Player` clear the player's pushing flag on **any**
-animation change, before `SAnim_Do` dispatches (`docs/s2disasm/s2.asm:38386-38391`;
+animation change, before `SAnim_Do` dispatches (`docs/s2disasm/s2.asm:38392-38397`;
 `docs/skdisasm/sonic3k.asm:29398-29404`, `:24741-24747`). The engine models that
 clear only inside `PlayableSpriteAnimation`'s walk-special branch, gated on a
 `ScriptedVelocityAnimationProfile`, so it does not fire for Hurt, Spring or Roll
@@ -79154,7 +79154,7 @@ verdict**, which called the cluster a DPLC stream-ordering problem.
 Both sides model it. The recorder hooks the ROM decision window `0x1D184-0x1D1FE`
 with VRAM bank `0xF600`
 (`tools/bizhawk-headless/src/Recording/DynamicArtRomProfile.cs`:83, :125), which
-is `LoadTailsDynPLC` (docs/s2disasm/s2.asm:41658) -- the DPLC for Tails' twin
+is `LoadTailsDynPLC` (docs/s2disasm/s2.asm:41659) -- the DPLC for Tails' twin
 tails, a genuinely separate art stream from his body. The engine carries a
 matching `ProductionArtProfile`
 (`src/main/java/com/openggf/game/resources/DynamicArtLifecycleService.java`:38-53).
@@ -79231,8 +79231,8 @@ So the twin-tails mapping frame is not a function of the body's, and a
 body-cadence fix cannot close it.
 
 **Structural**, from the ROM. They are two routines with two dedup bytes:
-`LoadTailsTailsDynPLC` (docs/s2disasm/s2.asm:41636, ROM `0x1D184`) dedups on
-`TailsTails_LastLoadedDPLC` (`0xF7DF`), and `LoadTailsDynPLC` (:41658, ROM
+`LoadTailsTailsDynPLC` (docs/s2disasm/s2.asm:41637, ROM `0x1D184`) dedups on
+`TailsTails_LastLoadedDPLC` (`0xF7DF`), and `LoadTailsDynPLC` (:41659, ROM
 `0x1D1AC`) dedups on `Tails_LastLoadedDPLC` (`0xF7DE`) -- adjacent bytes,
 separate gates (s2.constants.asm:1625-1626, whose own comment reads "mapping
 frame number when Tails' **tails** last had their tiles requested"). The recorder
@@ -79374,7 +79374,7 @@ it rather than confirming the shape was the right instruction.
 
     Obj05Ani_Swish:  dc.b 7, 9,$A,$B,$C,$D,$FF          (s2.asm:41815)
     Obj05Ani_Flick:  dc.b 3, 9,$A,$B,$C,$D,$FD,1        (:41817)
-    Obj05Ani_Pushing: dc.b 9,$87,$88,$89,$8A,$FF        (:41830)
+    Obj05Ani_Pushing: dc.b 9,$87,$88,$89,$8A,$FF        (:41831)
 
 against `SWISH_FRAMES_S2 = {9,A,B,C,D}` delay 7, `FLICK_FRAMES_S2 = {9,A,B,C,D}`
 delay 3 ending into Swish, `SKID_PUSH_FRAMES_S2 = {87,88,89,8A}`
@@ -79433,7 +79433,7 @@ nothing landed. This round **retracts a conclusion from the previous one**.
 ### `Obj05_Main` has no execution gate
 
 `Obj05` is an ordinary two-routine object (`Obj05_Init`, `Obj05_Main`,
-docs/s2disasm/s2.asm:41697-41707). `Obj05_Main` (:41722) copies the parent's
+docs/s2disasm/s2.asm:41697-41707). `Obj05_Main` (:41723) copies the parent's
 angle, status and position, applies the priority bit, runs the selection guard,
 then falls through `.display` to `Tails_Animate_Part2`, `LoadTailsTailsDynPLC`
 and `DisplaySprite` (:41758-41763). There is **no on-screen test, no early
@@ -80024,7 +80024,7 @@ slot, on every gap row and on no other row:
 
 Slot 29 holds **`Obj5D`, the CPZ boss** (docs/s2disasm/s2.asm:61449). Its routine
 steps `$0E` -> `$08` at row 5553 and holds `$08` across the whole gap; `$08` is
-`Obj5D_Pipe_Retract` (`Obj5D_Index`, :61472-61484).
+`Obj5D_Pipe_Retract` (`Obj5D_Index`, :61587-61599).
 
 ### The mechanism, and the disassembly says it outright
 
@@ -80250,7 +80250,7 @@ meeting a different local rate.
 ### The error is a one-step phase slip in Sonic's Roll script
 
 Mapping frames `0x40` and `0x41` belong to animation `02`, and
-`SonAni_Roll` is (docs/s2disasm/s2.asm:38695)
+`SonAni_Roll` is (docs/s2disasm/s2.asm:38696)
 
     dc.b $FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF
 
@@ -83227,7 +83227,7 @@ new guise: the latch is not null here, it is stuck at zero.
 `fixture.beginTraceRow(ssCursor, ssCursor)`, so a frozen latch means `ssCursor` is frozen.
 With the edge unreachable, the queued module never becomes ready, and
 `Sonic3kSpecialStageManager.updateClearEmeraldLoad` — which models `loc_9C5C`'s
-`tst.b Kos_modules_left; bne locret_9C7E` poll (`docs/skdisasm/sonic3k.asm:12649-12656`) —
+`tst.b Kos_modules_left; bne locret_9C7E` poll (`docs/skdisasm/sonic3k.asm:12659-12666`) —
 returns early forever. Measured: **34,693** `WAITING modulesLeft` iterations and 34,933
 `clearRoutine == 2` passes, against the walker's 40,650-step cap. The special stage never
 clears, so `stage_exit` never settles, and `verifyRunComplete` reports both edges at
@@ -84111,7 +84111,7 @@ remain open on the evidence gathered so far.
 
 `V_Int` reads `Vint_routine` and immediately stores `VintID_Lag` back into it
 (`docs/s2disasm/s2.asm:500-501`), so any V-int arriving before the main loop re-arms the
-routine dispatches through `Vint_Lag` (:484, :513, :529). **`Vint_Lag` calls neither
+routine dispatches through `Vint_Lag` (:484, :532, :529). **`Vint_Lag` calls neither
 `ProcessDPLC` nor `ProcessDPLC2` on any of its three paths**: the non-level path does
 `sndDriverInput` then `bra.s VintRet` (:533-539), the water path ends `bra.w VintRet`
 (:574-583), and `Vint0_noWater` ends `bra.w VintRet` (:586-642). A lag row therefore
@@ -84709,7 +84709,7 @@ Baseline re-reproduced before and after every probe: segment 15 = 7575 errors, f
 
 Yes — two V-int waits, and two object passes, with an arm between them.
 
-`Level`'s title-card leave loop (`docs/s2disasm/s2.asm:5060-5066`):
+`Level`'s title-card leave loop (`docs/s2disasm/s2.asm:4752-4758`):
 
 ```
 -	move.b	#VintID_TitleCard,(Vint_routine).w
@@ -86631,7 +86631,7 @@ trap for any future fix. Both claims are wrong, and I had the suppressed row bac
 `TraceRunFrameDriver.presentationRowIsCarriedLagClosure` suppresses the row **after** a
 non-advancing sample (and a dv==0 row only when the next row is not deferred) — so at a tear it
 suppresses the **dv>=2** row (row 70), not the dv==0 row (row 69). Its javadoc already derives
-this from ROM structure and cites `VBlank_Lag` (`sonic.asm:709`) and `ProcessPLC_9Tiles`
+this from ROM structure and cites `VBlank_Lag` (`sonic.asm:712`) and `ProcessPLC_9Tiles`
 (`:1430-1440`): after a `disable_ints` span, `enable_ints` is reached with `v_vblank_routine`
 still 0, so the first `V_Int` back runs no mode handler. That is a correct, cited model, not
 luck.
@@ -89071,7 +89071,7 @@ dumps:
 Both segments are **Sonic animation-frame divergences**; every dynamic-art error is downstream.
 Confirmed mechanically from the fixture: across all 873 `lz1` and 3383 `lz1_2` edge events, an
 edge frame is *always* (mapping-frame change frame + 1) — the recorded edge is the VBlank DMA
-after `Sonic_LoadGfx` (`01 Sonic.asm:2393+`). One mapping-frame slip produces an edge on the
+after `Sonic_LoadGfx` (`01 Sonic.asm:2396+`). One mapping-frame slip produces an edge on the
 wrong frame and shifts every later ordinal. Segment 24's 18684 is **one frame of phase lead**,
 not thousands of events: identical ordinals emitted one frame early across 2430 rows.
 
@@ -90076,7 +90076,7 @@ missed:
    player was airborne.
 
 None of the three exists in the ROM. `Obj_IncLevEndXGradual` /
-`Obj_IncLevEndYGradual` (`sonic3k.asm:178250-178259,178306-178315`) unconditionally
+`Obj_IncLevEndYGradual` (`sonic3k.asm:178308-178317,178306-178315`) unconditionally
 add `$4000`/`$8000` to `$30` and add the accumulated **high word** to the boundary;
 `CreateChild1_Normal` (`:176924-176936`) allocates through
 `AllocateObjectAfterCurrent` (`:37917`), which by construction only returns a slot
@@ -91446,7 +91446,7 @@ on. `ghz2_2` frame 107 is the repo's only recorded held-iteration row: 106 ends
 with `remaining_work` 3, 107 completes the entry and arms nothing, the lag
 V-blank closes 108 **already carrying the armed 14**, and 109 services it to 11.
 
-The ROM reaches `RunPLC` (sonic.asm:3032) after `VBlank_Lag` (:709) and before
+The ROM reaches `RunPLC` (sonic.asm:3032) after `VBlank_Lag` (:712) and before
 108 is sampled. The engine could not: `a51ce6820` exempted a hardware-timed arm
 from the row-shape hold, and a V-blank-only closure has no preparation boundary
 of its own (`hasPreparationBoundary(LAG)` is false), so the tail had no row to
@@ -94250,7 +94250,7 @@ Comparing the compared animation fields frame by frame:
 
 Probing the engine's walk handler across the window, `push` is **true** from 1725 to 1732.
 S2's walk special handler holds the already-published mapping while the timer runs and only
-selects `SAnim_Push` when the step expires (`docs/s2disasm/s2.asm:38449-38474`), which is
+selects `SAnim_Push` when the step expires (`docs/s2disasm/s2.asm:38614-38639`), which is
 exactly the shape observed: frame 15 held for eight frames, then `$49`.
 
 The recording contradicts it. `player_status_byte` is `0x49` for the whole window —
@@ -97340,7 +97340,7 @@ frame **5662**.
 
 ### The ROM defers the splash by a frame, and the engine models that correctly
 
-`Obj5D_Gunk_Main` (`docs/s2disasm/s2.asm:62818-62841`), on the frame it hits the
+`Obj5D_Gunk_Main` (`docs/s2disasm/s2.asm:62933-62956`), on the frame it hits the
 floor, snaps `y_pos` with `add.w d1,y_pos(a0)`, does
 `addq.b #2,routine_secondary(a0)` to `Obj5D_Gunk_Droplets`, and then
 `jmp (DisplaySprite).l` — it **returns**; it does not fall through into the
@@ -98711,7 +98711,7 @@ Round `s1-slz1-graze-r1`, classification. **No source change beyond the discrepa
 
 | reader | verdict |
 |---|---|
-| **`CNZSlotMachineManager`** (S2 CNZ) | **AFFECTED.** `Sonic2ZoneFeatureProvider.updatePrePhysics` calls it, and its own comment cites the reason: "ROM `LevEvents_CNZ` calls SlotMachine before object execution (`s2.asm:21494, 58827-58840`)". The ROM's V-int has already incremented by then; the engine's has not. |
+| **`CNZSlotMachineManager`** (S2 CNZ) | **AFFECTED.** `Sonic2ZoneFeatureProvider.updatePrePhysics` calls it, and its own comment cites the reason: "ROM `LevEvents_CNZ` calls SlotMachine before object execution (`s2.asm:21494, 59408-59421`)". The ROM's V-int has already incremented by then; the engine's has not. |
 | `Sonic3kTitleCardManager` | **Not a ROM gate.** The two `& 3` reads are inside `requestLevelGamestateResetAtInLevelDisplay(...)` — one-shot transition requests, not per-frame gates, and the mask feeds an *engine* dispatch-count heuristic ("the slotless manager reaches its predicted display point after 24 updates"), not a ported ROM test. **But it is phase-sensitive**, so a tick move could shift it; it wants checking in any fixing round. |
 | `S3kSlotBonusStageRuntime` | **Not a level-pass reader.** `rawVblaCounter()` falls back to its own `lastFrameCounter`, and it runs in the bonus-stage runtime rather than the level object pass. |
 
@@ -99790,7 +99790,7 @@ is needed.
 The ROM derives slot state from `Vint_runcount` by pure byte arithmetic, so the recorded
 state can be **inverted** to the seed the ROM actually used. Two independent instructions:
 
-- `SlotMachine_Routine3` (`s2.asm:59360-59375`): `slot1_speed = ((V+3 & 7) - 4) + $30`,
+- `SlotMachine_Routine3` (`s2.asm:59475-59490`): `slot1_speed = ((V+3 & 7) - 4) + $30`,
   `slot2_speed` the same on `rol.b #4` of that byte, `slot3_speed` the same on `V+2`.
 - `SlotMachine_Routine4`: `slot_timer = (V+3 & $0F) + $0C`.
 
@@ -100383,7 +100383,7 @@ six coincidences.
 
 ### The S2 Octus skips its Init dispatch too
 
-`Obj4A_Init` (`docs/s2disasm/s2.asm:60380-60401`) does its setup, `ObjectMoveAndFall` +
+`Obj4A_Init` (`docs/s2disasm/s2.asm:60495-60516`) does its setup, `ObjectMoveAndFall` +
 `ObjCheckFloorDist`, advances the routine only once landed, and `rts` at `:60401`;
 `Obj4A_Main` begins on a later frame. The engine does all of that in the **constructor**
 (`src/main/java/com/openggf/game/sonic2/objects/badniks/OctusBadnikInstance.java:63-77`,
@@ -100828,7 +100828,7 @@ independently, by `vIntRunCount` against the comparator's own `vbc` calibration:
 
 **`x` cannot settle the creation frame here, and that is a property of this scene.** During
 the capsule's initial phase the camera advances +1/frame and `$3A(a0)` is `+1`
-(`loc_86592`, `sonic3k.asm:181625`), so capsule and camera move in lockstep and a one-frame
+(`loc_86592`, `sonic3k.asm:181630`), so capsule and camera move in lockstep and a one-frame
 shift in creation is invisible in `x`. Confirmed directly: with one idle frame inserted before
 the motion, `x` still matched 63 of 63. Any future round that reads this object's `x` as a
 clock will get a false confirmation.
@@ -101936,7 +101936,7 @@ BossDefeated:
         move.w  #$3F,$2E(a0)
 ```
 
-— which **falls through** into `BossDefeated` (`sonic3k.asm:180905-180912`). The defeat path
+— which **falls through** into `BossDefeated` (`sonic3k.asm:180910-180917`). The defeat path
 does write `$2E`, and stage A is a fixed **`$3F`** = 63. The write is easy to miss because the
 routine being jumped to is named for stopping a *different* timer, and because the fall-through
 crosses a `; End of function` banner.
@@ -103389,7 +103389,7 @@ Segment 18's offset is 101691, so those are segment frames **4018** and
 `Sonic2GameModule.createSuperStateController` returns a
 `Sonic2SuperStateController` for any playable, with no character gate. S2 has no
 Super Tails — the transformation check is Sonic's `Obj01` routine
-(`Sonic_CheckGoSuper`, s2.asm:37455) and no Tails equivalent exists; Super Tails
+(`Sonic_CheckGoSuper`, s2.asm:37456) and no Tails equivalent exists; Super Tails
 is S3K with super emeralds. The recording agrees independently: at segment-18
 frame 4035 `sidekick_animation_id` is rom `0x0002` against engine `0x001F`, the
 transformation animation.
@@ -103980,9 +103980,9 @@ PROBE after next-frame update: defeatTimer=125
 `defeatTimer = 0x7F`; `updateBossLogic`'s `if (defeatStarted) updateDefeat()` then runs later in
 that same frame and does `--defeatTimer`. End of the killing frame: **126, not 127.**
 
-**`Sonic2WFZBossInstance`.** ROM: `ObjC5_LaserCase` (`s2.asm:81246-81251`) reads
+**`Sonic2WFZBossInstance`.** ROM: `ObjC5_LaserCase` (`s2.asm:81372-81377`) reads
 `routine_secondary(a0)` **once**, `jsr`s the case, then `bra.w ObjC5_HandleHits`;
-`ObjC5_NoHitPointsLeft` (`s2.asm:82045-82053`) sets `objoff_30 = $EF` and
+`ObjC5_NoHitPointsLeft` (`s2.asm:82171-82179`) sets `objoff_30 = $EF` and
 `routine_secondary = $1E`. The `$1E` case is the one that decrements `objoff_30`, and the head
 read is already past. End of the killing frame: `objoff_30 = 239`.
 
@@ -104084,10 +104084,10 @@ Nothing in Sonic's own code clears that `obj_control` afterwards. There is no
 instructions are `(a1)` forms in unrelated objects, and the `move.b #0` forms
 belong to the 2P reset (:38329), the hurt-landing path (:38222) and Tails
 (:39095, :39231). The transformation animation does not clear it either:
-`SupSonAni_Transform` (:38818) ends `$FD, 0`, and `SAnim_End_FD` (:38439) only
+`SupSonAni_Transform` (:38819) ends `$FD, 0`, and `SAnim_End_FD` (:38440) only
 writes `anim(a0)`.
 
-**The clear lives in the palette cycler.** `PalCycle_SuperSonic` (:3118) runs
+**The clear lives in the palette cycler.** `PalCycle_SuperSonic` (:3122) runs
 the fade-in branch while `Super_Sonic_palette == 1`: it decrements
 `Palette_timer`, reloads it with `#3`, advances `Palette_frame` by 8 per step,
 and when `Palette_frame` reaches `$30` it marks the fade done and executes
@@ -104728,7 +104728,7 @@ same lever):
 - S3K `Touch_Enemy`'s boss path (`sonic3k.asm:20944-20961`): negates the player's velocities,
   backs `collision_flags` into `$25`, records the hitting player in `$1C`, zeroes
   `collision_flags`, decrements `boss_hitcount2`, and on reaching zero does `bset #7,status(a1)`.
-- S2 `Touch_Enemy_Part2` (`s2.asm:85373-85382`): zeroes `collision_flags`, decrements
+- S2 `Touch_Enemy_Part2` (`s2.asm:85499-85508`): zeroes `collision_flags`, decrements
   `collision_property`, and on reaching zero sets status bit 7.
 
 **Neither writes a routine.** The install is always in the boss's own dispatch, testing the
@@ -105107,7 +105107,7 @@ unchanged. Characterised, not fixed.
 
 ### It is a phase, exactly as predicted, and the phase is 3
 
-`SonAni_Roll` is `$FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF` (s2.asm:38695) — an
+`SonAni_Roll` is `$FE,$3D,$41,$3E,$41,$3F,$41,$40,$41,$FF` (s2.asm:38696) — an
 eight-entry cycle `3D,41,3E,41,3F,41,40,41`. Over the whole 17-frame window both
 sides are walking that one script, one entry per frame, and every "delta" is
 just two different indices into it:
@@ -105393,7 +105393,7 @@ axis-choice fix on purpose because it is not that defect and has no measured pay
 
 `Obj82_Main`'s `_btst #render_flags.on_screen,render_flags(a0) / _beq.s +`
 (`docs/s2disasm/s2.asm:57205-57206`) skips past **both** `JmpTo23_SolidObject` and
-`loc_2A432`. `loc_2A432` (`docs/s2disasm/s2.asm:57340-57365`) holds the `objoff_3E`
+`loc_2A432`. `loc_2A432` (`docs/s2disasm/s2.asm:57455-57480`) holds the `objoff_3E`
 angle counter *and* the `CalcSine` `y_pos` write, so the freeze covers the angle: an
 off-screen platform mid-decay holds its offset instead of returning to `objoff_30`.
 `Obj82_Types` runs before the gate and is unaffected.
@@ -105506,7 +105506,7 @@ mechanism no longer needs one to be understood.
 
 ### The two new candidates, both discarded on execution evidence
 
-- **`Debug_ExitDebugMode` (s2.asm:88684).** Its `AniIDSonAni_Roll` write sits
+- **`Debug_ExitDebugMode` (s2.asm:88791).** Its `AniIDSonAni_Roll` write sits
   behind `cmpi.b #GameModeID_SpecialStage,(Game_Mode).w / bne`, and the
   disassembly calls it a "useless leftover ... for S1's special stage". It
   cannot run in ARZ1 gameplay.
@@ -105559,7 +105559,7 @@ cannot see object collision flags.
 
 ### What the evidence actually supports
 
-`Touch_ChkHurt` (`sonic3k.asm:20988+`) spares the player only for shields, invincibility, or
+`Touch_ChkHurt` (`sonic3k.asm:21040+`) spares the player only for shields, invincibility, or
 `double_jump_flag == 1` (Insta-Shield / Tails flying / Knuckles gliding). The recording has the
 player **rolling** (`anim = 2`), none of which apply. So a ROM player who overlapped that spike
 **would** have been hurt, and the recording shows they were not.
@@ -107053,7 +107053,7 @@ most one frame and none of them the inflate climb:
    row 932 where the ROM allocates it on 933, so the whole rise series is one row
    early. It is not a uniform phase: `object_appeared` puts the two ROM firings at
    903 and 933 (interval 30) and the engine's at 904 and 932 (interval 28), so the
-   `objoff_38` reload `andi.w #$1F` draw at `loc_1FA2A` (`s2.asm:45325-45327`)
+   `objoff_38` reload `andi.w #$1F` draw at `loc_1FA2A` (`s2.asm:45331-45333`)
    differs -- a `BubbleGeneratorObjectInstance` RNG/timer question, not the
    bubble's.
 
@@ -107673,7 +107673,7 @@ Player at row 841 is `x = 0x2525`, `y = 0x0576`, airborne and rolling. The neigh
 | 32, 34 | `0x71` | 0x24D0 / 0x2550 | 0x0510 | |
 
 `EggmanCylinder_UpdatePos` calls `SolidObject` with half-width `64/2 + sonic_solid_width`,
-and `sonic_solid_width` is `22/2` = 11 (`docs/s1disasm/_Constants.asm:265`), so the half-width
+and `sonic_solid_width` is `22/2` = 11 (`docs/s1disasm/_Constants.asm:286`), so the half-width
 is **43 = 0x2B** and slot 42's left solid edge is `0x2550 - 0x2B` = **`0x2525`** -- the
 player's x to the pixel. The player is precisely on that cylinder's left solid edge.
 
@@ -108298,7 +108298,7 @@ The other three death arms remain coordinates only.
 - Root and fix: ObjB2's WFZ-start `SolidObject` result now updates its object-owned
   `p1_standing` latch (`SolidObject` / `RideObject_SetRide`,
   `s2.asm:35014-35044, 35986-36045`). Snapshots retain routine 0 until
-  `ObjB2_Init` executes (`s2.asm:78777-78813`) and encode the WFZ-end
+  `ObjB2_Init` executes (`s2.asm:78892-78928`) and encode the WFZ-end
   `objoff_2E` word from the existing `leaderWaitCounter` / `jumpTimer` semantic
   state (`ObjB2_Wait_Leader_position` and `ObjB2_Prepare_to_jump`,
   `s2.asm:78972-78979, 79042-79052`). The implementation consumes no trace state,

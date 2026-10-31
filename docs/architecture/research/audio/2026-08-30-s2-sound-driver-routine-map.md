@@ -8,7 +8,7 @@ flags, the data tables, and every `FixDriverBugs` conditional and what the shipp
 ## Sources and rules
 
 - Primary: `docs/s2disasm/s2.sounddriver.asm` (4104 lines; assembled as Z80 and
-  Saxman-compressed into the ROM at `Snd_Driver`, `s2.asm:91436-91441`). Anchors below
+  Saxman-compressed into the ROM at `Snd_Driver`, `s2.asm:91562-91567`). Anchors below
   of the form `sd:NNN` mean `docs/s2disasm/s2.sounddriver.asm:NNN`.
 - 68k interface: `docs/s2disasm/s2.asm` (`s2.asm:NNN`), ID constants
   `docs/s2disasm/s2.constants.asm` (`const:NNN`), header macros
@@ -132,7 +132,7 @@ None of these are cleared by `zClearTrackPlaybackMem` (which clears only `1B80-1
 | `PlayMusic` | `s2.asm:1520-1527` | writes `Music0` if empty else `Music1` |
 | `PlaySound` / `PlaySound2` / `PlaySoundLocal` | `s2.asm:1535-1562` | write `SFX0` / `SFX1` / `SFX0` (only when the object is on screen). Music and command ids may be sent through any slot |
 | `sndDriverInput` | `s2.asm:1270-1330` | called from every 68k VInt routine (incl. `Vint_Lag`, `s2.asm:539-541`) between `stopZ80`/`startZ80` (Z80 bus held). If `QueueToPlay == 80`: take `Music0` else `Music1`; ids `>= MusID_Pause (FE)` become `StopMusic = id - FE + 7F` (`FE→7F`, `FF→80`) and are not sent; otherwise `QueueToPlay = id`. Then for `d1 = 3..0` (fixBugs off: 4 slots, `s2.asm:1309-1316`) copy `SFX0[d1]` into `Queue0[d1]` when the driver slot is 0 |
-| `SoundDriverLoad` | `s2.asm:91301-91323` | bus request, release reset, `DecompressSoundDriver` (68k Saxman, `s2.asm:91342-91416`), `zPalModeByte = PAL`, hold reset, release bus, wait, release reset |
+| `SoundDriverLoad` | `s2.asm:91416-91438` | bus request, release reset, `DecompressSoundDriver` (68k Saxman, `s2.asm:91457-91531`), `zPalModeByte = PAL`, hold reset, release bus, wait, release reset |
 | Pause / unpause senders | `s2.asm:1593`, `1620`, `1631`, `6825` | level pause loop, slow-motion, special-stage unpause |
 
 The 68k never reads driver RAM. Music ids sent through the SFX slots reach
@@ -238,7 +238,7 @@ ignored (`cp MusID_Pause; ret nc`); `F8-FD` → self-modified `jr` into `zComman
 | `FD` | `MusID_Stop` | `zStopSoundAndMusic` (`sd:2545`) |
 
 Id ranges (`const:828-970`): music `81-9F` (`zMasterPlaylist`, 31 songs, `sd:3823-3855`), SFX
-`A0-F0` (`SoundIndex`, `s2.asm:91668`), commands `F8-FD`, pause/unpause `FE/FF` handled on the
+`A0-F0` (`SoundIndex`, `s2.asm:91795`), commands `F8-FD`, pause/unpause `FE/FF` handled on the
 68k. Sound-test index = id − `80`. Id `80` ("reserved for silence") is not filtered by the
 driver: it reaches `zPlayMusic` with index `-1` (see open questions).
 

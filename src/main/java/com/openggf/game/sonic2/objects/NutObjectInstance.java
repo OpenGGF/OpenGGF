@@ -52,7 +52,7 @@ import java.util.Map;
  *   <li>Mode 4: Screwing - player pushes nut, accumulating displacement</li>
  * </ul>
  * <p>
- * <b>Two-player handling:</b> ROM Obj69_Main (s2.asm:53523-53531) runs
+ * <b>Two-player handling:</b> ROM Obj69_Main (s2.asm:53995-54003) runs
  * Obj69_Action TWICE — once for MainCharacter (objoff_38 / p1_standing_bit) and
  * once for Sidekick (objoff_3C / p2_standing_bit) — each gated by that player's
  * own standing bit. This class mirrors that with per-player action state and a
@@ -282,7 +282,7 @@ public class NutObjectInstance extends AbstractObjectInstance
             case ROUTINE_MAIN -> updateMain(participants);
             case ROUTINE_FALLING -> {
                 updateFalling();
-                // ROM loc_279FC falls through to loc_278F4 (s2.asm:53655), so the
+                // ROM loc_279FC falls through to loc_278F4 (s2.asm:54012), so the
                 // SolidObject + MarkObjGone tail also runs while falling. The
                 // engine provides solid collision via SolidObjectProvider and
                 // despawn via placement windowing each frame regardless of routine.

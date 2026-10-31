@@ -81,7 +81,7 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      *   -$30: 9 passes.
      *
      * So the players run 1 + 25 = 26 object passes between InitPlayers and
-     * Level_MainLoop (:5087).
+     * Level_MainLoop (:5091).
      */
     private static final int LEAVE_PRELOOP_PASSES = 1;
     private static final int LEAVE_LEFT_PASSES = 5;
@@ -1150,7 +1150,7 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      */
     @Override
     public void beginOmittedPresentationExitTail(int zoneIndex, int actIndex) {
-        // Animal_PLCTable is indexed by Current_Zone (s2.asm:27633-27636), so
+        // Animal_PLCTable is indexed by Current_Zone (s2.asm:27639-27642), so
         // the tail needs the zone the omitted card would have shown.
         currentZone = zoneIndex;
         currentAct = actIndex;

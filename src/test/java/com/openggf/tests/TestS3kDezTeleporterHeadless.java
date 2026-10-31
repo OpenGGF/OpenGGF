@@ -135,7 +135,7 @@ class TestS3kDezTeleporterHeadless {
     }
 
     /**
-     * {@code loc_48D2C} :95039-95052. {@code 4(a4)} climbs by 8 and the launch happens on the
+     * {@code loc_48D2C} :95044-95057. {@code 4(a4)} climbs by 8 and the launch happens on the
      * update it reaches exactly {@code $300}: 96 updates, not the capture frame.
      */
     @Test

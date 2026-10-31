@@ -75,26 +75,26 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
 
 
     // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145076) ----
-    /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145083). */
+    /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145088). */
     private static final int ROUTINE_INIT = 0;
-    /** Routine 2 — Obj_CNZMinibossTopWait (sonic3k.asm:145091). */
+    /** Routine 2 — Obj_CNZMinibossTopWait (sonic3k.asm:145096). */
     private static final int ROUTINE_WAIT = 2;
-    /** Routine 4 — Obj_CNZMinibossTopWait2 (sonic3k.asm:145105). */
+    /** Routine 4 — Obj_CNZMinibossTopWait2 (sonic3k.asm:145110). */
     private static final int ROUTINE_WAIT2 = 4;
-    /** Routine 6 — Obj_CNZMinibossTopMain (sonic3k.asm:145118). */
+    /** Routine 6 — Obj_CNZMinibossTopMain (sonic3k.asm:145123). */
     private static final int ROUTINE_MAIN = 6;
 
     private static final int FRAME_TOP_WAIT = 7;
     private static final int FRAME_TOP_MAIN = 9;
     /**
-     * ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145774).
+     * ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145779).
      * Byte 0 seeds {@code $2E(a0)}, byte 1 is the terminal {@code $2F(a0)}
      * loop count, and bytes from offset 2 are mapping frames until {@code $FC}.
      */
     private static final int TOP_SPINUP_INITIAL_DELAY = 0x07;
     private static final int TOP_SPINUP_TERMINAL_LOOPS = 0x08;
     private static final int[] TOP_SPINUP_MAPPING_FRAMES = {7, 8, 9};
-    /** ROM: {@code AniRaw_CNZMinibossTop2} (sonic3k.asm:145776). */
+    /** ROM: {@code AniRaw_CNZMinibossTop2} (sonic3k.asm:145781). */
     private static final int TOP_MAIN_DELAY = 0;
     private static final int[] TOP_MAIN_FRAMES = {7, 8, 9};
     private static final int TOP_COLLISION_FLAGS = 0xAA;
@@ -295,7 +295,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopInit (sonic3k.asm:145083):
+     * ROM: Obj_CNZMinibossTopInit (sonic3k.asm:145088):
      * <pre>
      *   lea ObjDat3_CNZMinibossTop(pc),a1
      *   jsr (SetUp_ObjAttributes3).l        ; addq.b #2,routine(a0) tail
@@ -314,7 +314,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopWait (sonic3k.asm:145091):
+     * ROM: Obj_CNZMinibossTopWait (sonic3k.asm:145096):
      * <pre>
      *   movea.w parent3(a0),a1
      *   btst    #1,$38(a1)
@@ -329,7 +329,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
      * </pre>
      *
      * <p>The ROM gates the transition on {@code $38} bit 1 of the parent
-     * boss — which {@code Obj_CNZMinibossGo2} (sonic3k.asm:144971,
+     * boss — which {@code Obj_CNZMinibossGo2} (sonic3k.asm:144976,
      * {@code bset #1,$38(a0)}) sets during the base's Init/Lower/Move
      * handoff. When the boss is absent (for example, the physics test
      * builds the top piece without a parent), the engine falls through
@@ -353,7 +353,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopWait2 (sonic3k.asm:145105):
+     * ROM: Obj_CNZMinibossTopWait2 (sonic3k.asm:145110):
      * <pre>
      *   jsr (Refresh_ChildPosition).l
      *   jmp (Animate_RawGetFaster).l
@@ -372,7 +372,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj_CNZMinibossTopGo (sonic3k.asm:145110):
+     * ROM: Obj_CNZMinibossTopGo (sonic3k.asm:145115):
      * <pre>
      *   move.b #6,routine(a0)
      *   move.l #AniRaw_CNZMinibossTop2,$30(a0)
@@ -414,8 +414,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: {@code Animate_RawGetFaster} (sonic3k.asm:177840) over
-     * {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145774). Fresh scripts
+     * ROM: {@code Animate_RawGetFaster} (sonic3k.asm:177845) over
+     * {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145779). Fresh scripts
      * {@code bset #5,$38(a0)}, copy byte 0 to {@code $2E}, clear
      * {@code $2F}, and advance {@code anim_frame} before reading from
      * {@code 2(a1,d0)}, so frame 8 is the first visible Wait2 mapping frame.

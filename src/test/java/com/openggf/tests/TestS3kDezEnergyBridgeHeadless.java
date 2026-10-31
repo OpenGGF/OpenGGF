@@ -210,7 +210,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_47EBE} :93991-93993: {@code Level_frame_counter+1} is the counter's low byte,
+     * {@code loc_47EBE} :94006-94008: {@code Level_frame_counter+1} is the counter's low byte,
      * so the frame is the counter and 3. {@code Map_DEZEnergyBridge} has exactly four.
      */
     @Test
@@ -230,7 +230,7 @@ class TestS3kDezEnergyBridgeHeadless {
     }
 
     /**
-     * {@code loc_47EBE} :93994-93999: {@code sfx_EnergyZap} ({@code $A8}) every eighth frame
+     * {@code loc_47EBE} :94009-94014: {@code sfx_EnergyZap} ({@code $A8}) every eighth frame
      * while the object is on screen. The off routine never reaches this code, so a bridge
      * outside its window is silent.
      */

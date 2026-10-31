@@ -94,7 +94,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     /**
-     * Obj4A_Init (docs/s2disasm/s2.asm:60380-60401).
+     * Obj4A_Init (docs/s2disasm/s2.asm:60495-60516).
      *
      * <p>A falling init: every dispatch runs ObjectMoveAndFall then
      * ObjCheckFloorDist, and only the dispatch on which the Octus is overlapping
@@ -173,7 +173,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateDelayBeforeRise() {
-        // ROM Obj4A_DelayBeforeMoveUp (s2.asm:59958-59967):
+        // ROM Obj4A_DelayBeforeMoveUp (s2.asm:60547-60556):
         //   subq.w #1, objoff_2C(a0)
         //   bmi.s +                  ; branch when timer goes NEGATIVE (after the
         //                              ; decrement), not when it hits zero
@@ -196,7 +196,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateMovingUp() {
-        // ROM Obj4A_MoveUp (s2.asm:60450-60458):
+        // ROM Obj4A_MoveUp (s2.asm:60565-60573):
         //   addi.w #$10,y_vel(a0)
         //   bpl.s  +                ; y_vel >= 0 -> transition, WITHOUT moving
         //   jmpto  ObjectMove       ; still rising -> move, and that is the whole
@@ -217,7 +217,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateHovering() {
-        // ROM Obj4A_Hover (s2.asm:59981-59988):
+        // ROM Obj4A_Hover (s2.asm:60570-60577):
         //   subq.w #1, objoff_2C(a0)
         //   bmi.s +
         //   rts
@@ -232,7 +232,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void updateMovingDown() {
-        // ROM Obj4A_MoveDown (s2.asm:60471-60483):
+        // ROM Obj4A_MoveDown (s2.asm:60586-60598):
         //   addi.w #$10,y_vel(a0)
         //   move.w y_pos(a0),d0
         //   cmp.w  octus_start_position(a0),d0

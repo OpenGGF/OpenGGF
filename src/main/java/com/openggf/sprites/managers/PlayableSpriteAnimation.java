@@ -516,7 +516,7 @@ public class PlayableSpriteAnimation {
         if (pushUsesWalkSpecialHandler() && sprite.getPushing()) {
             // S2 Sonic publishes the already-selected walk/run mapping before
             // its timer gate. A push that begins while that timer is live does
-            // not select SAnim_Push until the step expires (s2.asm:38449-38474,
+            // not select SAnim_Push until the step expires (s2.asm:38614-38639,
             // 38627-38649). Tails and S1 return at the earlier outer timer gate.
             if (walkRunPublishesFrameBeforeTimerAdvance(baseScript.delay() & 0xFF)
                     && remaining >= 0) {

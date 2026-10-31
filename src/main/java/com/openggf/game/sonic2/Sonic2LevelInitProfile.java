@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * Sonic 2 level initialization profile.
  * <p>
- * Aligned to the S2 {@code Level:} routine at {@code s2.asm:4753} (57 steps
+ * Aligned to the S2 {@code Level:} routine at {@code s2.asm:4757} (57 steps
  * across phases A-J). The teardown steps undo the state set up by that routine.
  * <p>
  * S2-specific characteristics:
@@ -318,7 +318,7 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         // still inside the title-card sequence. The title-card leave loop
         // (s2.asm:5060-5066) then runs VintID_TitleCard + RunPLC_RAM every frame
         // until TitleCard_Background unloads, before Level_StartGame /
-        // Level_MainLoop (s2.asm:5082-5087). That loop is exactly 25 frames long,
+        // Level_MainLoop (s2.asm:5086-5091). That loop is exactly 25 frames long,
         // fixed by the Obj34 leave routines and their RAM slot order
         // (s2.asm:27368-27374): TitleCard_Left runs Obj34_LeftPartOut for 5 frames
         // from titlecard_location $A (s2.asm:5058, 27518-27540: $A -> 6 -> 2 -> 0

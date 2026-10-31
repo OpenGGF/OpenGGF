@@ -392,7 +392,7 @@ public class TestDEZDeathEggRobot {
 
     @Test
     public void breakVelocitiesMatchRom() throws Exception {
-        // ROM: ObjC7_BreakSpeeds (s2.asm:83258-83267)
+        // ROM: ObjC7_BreakSpeeds (s2.asm:83930-83939)
         // 8 entries: {x_vel, y_vel} for each body part during break-apart
         java.lang.reflect.Field field =
                 Sonic2DeathEggRobotInstance.class.getDeclaredField("BREAK_VELOCITIES");
@@ -419,7 +419,7 @@ public class TestDEZDeathEggRobot {
 
     @Test
     public void childDeltasMatchRom() throws Exception {
-        // ROM: ObjC7_ChildDeltas (s2.asm:83536-83544)
+        // ROM: ObjC7_ChildDeltas (s2.asm:84208-84216)
         // 7 entries: {dx, dy} position offsets for articulated children
         java.lang.reflect.Field field =
                 Sonic2DeathEggRobotInstance.class.getDeclaredField("CHILD_DELTAS");

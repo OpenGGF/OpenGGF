@@ -2142,7 +2142,7 @@ Slice 6 is complete and reviewed; **slice 7 (Mecha Sonic) was not started.**
    taken when `y_pos < $680` and the spawn fires when `Camera_Y_pos == Camera_max_Y_pos`, through a
    **plain** `AllocateObject` — not `AllocateObjectAfterCurrent`, so the new slot may not run that
    frame. The final arena's own lock (`$19A0`/`$5C0`) is already in `Sonic3kSSZEvents.dynamicResize`.
-2. **`Obj_SSZEndBoss` is a 21-entry table from `loc_7B308`** (`SSZEndBoss_Index`, sonic3k.asm:164248)
+2. **`Obj_SSZEndBoss` is a 21-entry table from `loc_7B308`** (`SSZEndBoss_Index`, sonic3k.asm:164253)
    and it is much larger than either recreation: it runs `sub_7D312`, `sub_7D2D8` and
    `Perform_DPLC` over `DPLCPtr_MechaSonic` on every dispatch, so its art is a per-frame DPLC and
    not a static sheet. Budget for that before budgeting for the routines.

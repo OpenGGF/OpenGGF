@@ -247,7 +247,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_25ACE and loc_25BF6 in disassembly.
      */
     private void releasePlayerAndBreak(AbstractPlayableSprite player) {
-        // ROM loc_25AF6 (s2.asm:51393-51405) does: bset rolling; move.b #$E,y_radius;
+        // ROM loc_25AF6 (s2.asm:51864-51876) does: bset rolling; move.b #$E,y_radius;
         // move.b #7,x_radius; set Roll anim; bset in_air; bclr on_object; routine=2.
         // ROM y_pos is the CENTRE, so the y_radius change does not move the centre.
         // The engine stores top-left, so naively calling setRolling(true) here would

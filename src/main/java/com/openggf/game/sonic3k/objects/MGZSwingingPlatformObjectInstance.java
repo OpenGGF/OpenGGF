@@ -132,7 +132,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
         }
         // ROM Obj_MGZSwingingPlatform allocates a visual child immediately
         // after the parent with AllocateObjectAfterCurrent before entering
-        // loc_3403A (docs/skdisasm/sonic3k.asm:70508-70539). The engine draws
+        // loc_3403A (docs/skdisasm/sonic3k.asm:70523-70554). The engine draws
         // that child inline, but its SST slot must remain reserved so later
         // ObjPosLoad/AllocateObject calls see the same low-slot pressure.
         svc.objectManager().allocateChildSlotsAfter(spawn, ROM_CHILD_SLOT_COUNT, getSlotIndex());

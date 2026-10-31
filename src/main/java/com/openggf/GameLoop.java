@@ -186,7 +186,7 @@ public class GameLoop {
          * {@code RunObjects} (docs/s2disasm/s2.asm:6694-6721), so a pass that
          * returned during the preceding frame had its queued work carried
          * through the V-blank that opened this observation, and that V-blank
-         * already ran {@code ProcessDMAQueue} (s2.asm:1769) over it. Work
+         * already ran {@code ProcessDMAQueue} (s2.asm:1770) over it. Work
          * queued by a later pass in the same observation stays pending. The
          * standalone harness models the same boundary
          * ({@code S2SpecialStageReplayHarness.stepPasses}).

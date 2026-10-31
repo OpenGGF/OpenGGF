@@ -91,7 +91,7 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
                 // ROM: cmpi.w #$400,(Camera_Y_pos).w / blo.s +
                 //      move.w #$400,(Camera_Min_Y_pos).w
                 if (camera().getY() >= 0x400) {
-                    // ROM LevEvents_MTZ3_Routine4 (s2.asm:20537-20540):
+                    // ROM LevEvents_MTZ3_Routine4 (s2.asm:20555-20558):
                     //   cmpi.w #$400,(Camera_Y_pos).w / blo.s +
                     //   move.w #$400,(Camera_Min_Y_pos).w
                     //   move.w #$400,(Tails_Min_Y_pos).w
@@ -110,7 +110,7 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
                 }
             }
             case 8 -> {
-                // ROM LevEvents_MTZ3_Routine5 (s2.asm:20542-20544):
+                // ROM LevEvents_MTZ3_Routine5 (s2.asm:20574-20576):
                 //   move.w (Camera_X_pos).w,(Camera_Min_X_pos).w
                 //   rts
                 // A single, UNCONDITIONAL write of Camera_Min_X_pos = Camera_X_pos.
@@ -137,7 +137,7 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
         ObjectSpawn bossSpawn = new ObjectSpawn(
                 0x2B50, 0x380, Sonic2ObjectIds.MTZ_BOSS, 0, 0, false, 0);
         // ROM Obj54 is already the current SST object before Obj54_Init allocates
-        // the laser shooter and Obj53 orb parent (docs/s2disasm/s2.asm:67224-67240).
+        // the laser shooter and Obj53 orb parent (docs/s2disasm/s2.asm:67902-67918).
         objectManager.createDynamicObjectWithReservedSlot(
                 () -> new Sonic2MTZBossInstance(bossSpawn));
     }

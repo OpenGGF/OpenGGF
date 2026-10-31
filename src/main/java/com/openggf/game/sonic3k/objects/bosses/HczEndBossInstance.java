@@ -732,7 +732,7 @@ public class HczEndBossInstance extends AbstractBossInstance
 
     /**
      * HCZEndBoss_StartPostDefeat retains the hidden root as the native
-     * HCZEndBoss_WaitPostDefeatGeyser owner (sonic3k.asm:140963-141015).
+     * HCZEndBoss_WaitPostDefeatGeyser owner (sonic3k.asm:141028-141080).
      */
     private void onFleeComplete() {
         state.routine = ROUTINE_CAPSULE_WAIT;

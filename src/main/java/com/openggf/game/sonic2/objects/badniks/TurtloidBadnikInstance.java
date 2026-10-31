@@ -32,7 +32,7 @@ import java.util.List;
  * fire a projectile, then resumes movement. Player can stand on it (platform).
  * Spawns a rider (Obj9B) and jet exhaust (Obj9C) as children.
  *
- * Based on disassembly Obj9A (s2.asm:74332-74418).
+ * Based on disassembly Obj9A (s2.asm:74934-75020).
  */
 public class TurtloidBadnikInstance extends AbstractBadnikInstance
         implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Source {
@@ -135,7 +135,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             case DONE -> {} // Do nothing, just drift
         }
 
-        // ROM ObjectMove (s2.asm:29993-30008): 16.16 position += sign-extended x_vel << 8.
+        // ROM ObjectMove (s2.asm:30190-30205): 16.16 position += sign-extended x_vel << 8.
         motionState.x = currentX;
         motionState.y = currentY;
         motionState.xVel = xVelocity;

@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 /**
  * HTZ Smashable Ground (Object 0x2F) - Breakable rock platform that progressively crumbles.
  *
- * Based on Obj2F in the Sonic 2 disassembly (s2.asm lines 48634-48826).
+ * Based on Obj2F in the Sonic 2 disassembly (s2.asm lines 48958-49150).
  *
  * Behavior:
  * - Acts as a solid platform that players can stand on
@@ -315,7 +315,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     }
 
     private void awardChainBonus() {
-        // Chain bonus system from SmashableObject_LoadPoints (s2.asm:48975-48998):
+        // Chain bonus system from SmashableObject_LoadPoints (s2.asm:49444-49467):
         // ROM: move.w (Chain_Bonus_counter).w,d2
         //      addq.w #2,(Chain_Bonus_counter).w
         //      cmpi.w #6,d2 / blo.s + / moveq #6,d2  - cap at 6

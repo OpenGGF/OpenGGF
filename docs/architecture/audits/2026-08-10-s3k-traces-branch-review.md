@@ -412,7 +412,7 @@ producer, this method should go with it.
 **Rule:** citation accuracy.
 
 The added `publishSolidPushReleaseAnimationWord(...)` call is **correct** — I verified it — but
-the comment attributes the walk/run write to `sub_1E0C2` (`sonic3k.asm:41568-41572`), which
+the comment attributes the walk/run write to `sub_1E0C2` (`sonic3k.asm:41573-41577`), which
 only clears the two push bits:
 
 ```

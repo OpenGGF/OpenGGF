@@ -75,13 +75,13 @@ import java.util.List;
  *       {@code $2E = $27}, {@code $3A = word_902EC[subtype]} ({@code $850} or {@code $950}),
  *       restores {@code Camera_target_max_Y_pos} and creates {@code Child7_ChangeLevSize}.
  *       {@code loc_902F0} then counts {@code $2E} down.</li>
- *   <li>{@code loc_902FE} (:197251-197259): {@code MoveSprite} -- gravity {@code $38} -- until
+ *   <li>{@code loc_902FE} (:197256-197264): {@code MoveSprite} -- gravity {@code $38} -- until
  *       {@code y_pos} reaches {@code $3A(a0)}, then routine 8 with {@code y_vel $40},
  *       {@code $2E = $7F} and a {@code Child6_CreateBossExplosion}.</li>
- *   <li>{@code loc_90338} (:197269-197275): {@code bset #7,status(a0)} on the frame {@code $2E}
+ *   <li>{@code loc_90338} (:197274-197280): {@code bset #7,status(a0)} on the frame {@code $2E}
  *       reaches {@code $40} -- the flicker the pieces read -- {@code MoveSprite2}, then
  *       {@code Obj_Wait}; {@code loc_90352} re-arms the wait for {@code $BF} frames and
- *       {@code loc_90368} (:197282-197291) requeues the two badnik art modules, restores
+ *       {@code loc_90368} (:197287-197296) requeues the two badnik art modules, restores
  *       {@code Pal_LRZ1} and deletes the crusher.</li>
  * </ol>
  *
@@ -96,7 +96,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
 
     // Obj_LRZRockCrusher and its rock pieces/explosions form a vertical crushing assembly without horizontal facing.
 
-    /** {@code ObjDat_LRZRockCrusher}: {@code dc.w $180} (sonic3k.asm:197534). */
+    /** {@code ObjDat_LRZRockCrusher}: {@code dc.w $180} (sonic3k.asm:197539). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);
     /** {@code dc.b $80,$40,0,$10} (:197535). */
     private static final int WIDTH_PIXELS = 0x80;
@@ -107,7 +107,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     /** {@code word_901B8} and {@code word_901C4} (sonic3k.asm:197157-197159). */
     private static final int[] WINDOW_SUBTYPE_ZERO = {0x5E0, 0x740, 0xDC0, 0xEC0, 0xEA0, 0x6A0};
     private static final int[] WINDOW_OTHER = {0x680, 0x880, 0x400, 0x780, 0x4A0, 0x790};
-    /** {@code word_902EC} (:197244-197245). */
+    /** {@code word_902EC} (:197249-197250). */
     private static final int[] DROP_TARGET_Y = {0x850, 0x950};
     /** {@code move.w #$27,$2E(a0)} (:197237). */
     private static final int DROP_DELAY = 0x27;
@@ -378,7 +378,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
         }
     }
 
-    /** {@code loc_902FE} / {@code loc_90310} (sonic3k.asm:197251-197267). */
+    /** {@code loc_902FE} / {@code loc_90310} (sonic3k.asm:197256-197272). */
     private void drop() {
         SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
         if ((motion.y & 0xFFFF) < dropTargetY) {
@@ -393,7 +393,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
                 motion.x & 0xFFFF, motion.y & 0xFFFF, 0, services().rng());
     }
 
-    /** {@code loc_90338}, {@code loc_90352} and {@code loc_90368} (sonic3k.asm:197269-197291). */
+    /** {@code loc_90338}, {@code loc_90352} and {@code loc_90368} (sonic3k.asm:197274-197296). */
     private void explodeAndClean() {
         tickExplosions();
         if (timer == FLICKER_AT) {
@@ -430,7 +430,7 @@ public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_90368} (sonic3k.asm:197282-197291). The two badnik art modules it requeues belong
+     * {@code loc_90368} (sonic3k.asm:197287-197296). The two badnik art modules it requeues belong
      * to {@code Obj_Fireworm} and {@code Obj_Iwamodoki}. Their standalone sheets remain intact,
      * but restoring the native shared tile bank is still an unimplemented cleanup obligation.
      * This currently restores the palette and deletes.

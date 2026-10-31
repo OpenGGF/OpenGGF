@@ -524,7 +524,7 @@ data. `TitleCardManager.advanceZoneNamePieceTail` owns the delayed zone-name
 exit and `queueExitPlcs`; inspect its first production pass across an act load
 and the earlier gap publication before altering queue service or adding delays.
 The owning native routine is KiS2 `Obj34_WaitAndGoAway` /
-`Obj34_LoadStandardWaterAndAnimalArt` (s2.asm:28927-28960).
+`Obj34_LoadStandardWaterAndAnimalArt` (s2.asm:27606-27639).
 
 The chip ROM confirms that fingerprint match: PLC 2 begins with the 68-pattern
 explosion at $27B592 -> VRAM $B480, followed by $27393C (14 patterns) and

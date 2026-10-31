@@ -24,7 +24,7 @@ import java.util.List;
  * Wind-blowing object that pushes the player horizontally or vertically.
  * The vertical variant causes the player to tumble in the air.
  * <p>
- * Based on Obj3F from the Sonic 2 disassembly (s2.asm lines 57155-57381).
+ * Based on Obj3F from the Sonic 2 disassembly (s2.asm lines 57564-57790).
  * <p>
  * Subtype encoding:
  * - Bit 7 (0x80): Vertical fan (upward blowing) if set, horizontal if clear
@@ -56,7 +56,7 @@ public class FanObjectInstance extends AbstractObjectInstance implements RewindR
 
     // Timer state machine
     // NOTE: 'spinUp' maps to objoff_32 != 0 in the disassembly.
-    // ROM Obj3F_Vertical/Horizontal (s2.asm:57606-57615, 57704-57713) reloads
+    // ROM Obj3F_Vertical/Horizontal (s2.asm:57606-57615, 57873-57882) reloads
     // objoff_30 = #$78 by default, then BCHG #0,objoff_32 (which sets Z from the
     // ORIGINAL bit) and BEQ skips the #$B4 override when the new objoff_32 bit0 == 1.
     // Result: objoff_32 -> 1 (spinUp=true, NO push) keeps #$78 = 120 = IDLE_DURATION;

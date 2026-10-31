@@ -30,7 +30,7 @@ import java.util.Objects;
 /**
  * S3K SKL Obj $90 - Cluckoid.
  *
- * <p>ROM reference: {@code Obj_Cluckoid} at {@code sonic3k.asm:194150}. The
+ * <p>ROM reference: {@code Obj_Cluckoid} at {@code sonic3k.asm:194155}. The
  * Cluckoid idles until the player is within {@code $80} X and {@code $40} Y,
  * then runs the raw breath animation. Wind pressure starts once the mapping
  * frame reaches 7 and breath child particles are emitted every 8 frames.

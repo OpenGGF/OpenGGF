@@ -159,7 +159,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         switch (routine) {
             case INIT -> init();
             case WAITING -> {
-                // loc_91C9A :199256-199259.
+                // loc_91C9A :199271-199274.
                 if (!reactToNearbyPlayer(playerEntity)) {
                     objWait();
                 }
@@ -502,7 +502,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
             // (:199418-199423): only the outbound half looks for a floor.
             boolean outbound = extendVelocity > 0;
             if (outbound) {
-                // tst.w d1 / bmi.s loc_91E46 (:199430-199431): the floor turns it around.
+                // tst.w d1 / bmi.s loc_91E46 (:199445-199446): the floor turns it around.
                 if (hitFloor()) {
                     bounceBack();
                     return;
@@ -516,7 +516,7 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
                     return;
                 }
             }
-            // loc_91E1C :199427: both the inbound half and a live outbound spike fall through
+            // loc_91E1C :199432: both the inbound half and a live outbound spike fall through
             // to Obj_Wait, whose handler is loc_91E46.
             if (--extendTimer < 0) {
                 bounceBack();

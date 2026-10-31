@@ -194,7 +194,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
         // `btst d6,status(a0)` (docs/s2disasm/s2.asm:35070-35072), so each step
         // owns its own standing bit and a landing on a neighbouring step
         // re-seats the rider onto that step via SolidObject_Landed ->
-        // RideObject_SetRide (docs/s2disasm/s2.asm:35619-35626). Folding the
+        // RideObject_SetRide (docs/s2disasm/s2.asm:35988-35995). Folding the
         // four slots into one engine instance must keep the bits piece-scoped
         // or the rider stays latched to the step it first landed on.
         return true;

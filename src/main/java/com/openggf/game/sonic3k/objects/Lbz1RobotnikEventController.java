@@ -40,7 +40,7 @@ import java.util.List;
 /**
  * LBZ1 Robotnik approach / miniboss handoff entity.
  *
- * <p>ROM: {@code Obj_LBZ1Robotnik} at {@code sonic3k.asm:192147}. This covers
+ * <p>ROM: {@code Obj_LBZ1Robotnik} at {@code sonic3k.asm:192251}. This covers
  * the visible Robotnik ship/head, the pre-collapse hover/rise sequence, the
  * {@code LBZ1_EventVScroll} ownership, and the handoff into {@code Obj_LBZMiniboss}.
  */

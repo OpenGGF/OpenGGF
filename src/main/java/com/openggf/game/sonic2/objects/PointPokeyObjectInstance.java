@@ -155,7 +155,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     public boolean bypassesOffscreenSolidGate() {
         // ROM ObjD6 (PointPokey) reaches SolidObject_cont via
         // SolidObject_Always_SingleCharacter (s2.asm:59013), bypassing the
-        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
+        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35336-35342.
         // Off-screen pokeys still resolve solid contact in ROM. Required so
         // enabling CollisionRules.solidObjectOffscreenGate for S2 does not
         // change CNZ pokey solid behaviour off-screen.
@@ -480,7 +480,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
             // NO SFX during prize spawning - ROM only plays sound during waiting/countdown
 
-            // loc_2BD4E (rings, s2.asm:59156-59193) and its identical twin at
+            // loc_2BD4E (rings, s2.asm:59271-59308) and its identical twin at
             // loc_2BC86 (bombs, s2.asm:59110-59148) gate on the *global* clock:
             // "btst #0,(Level_frame_counter+1).w / beq.w return_2BDF6". A prize is
             // therefore only ever created on an odd Level_frame_counter, and that
@@ -547,7 +547,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private boolean releaseIfOccupiedOffScreen(AbstractPlayableSprite player) {
         // ROM ObjD6 occupied routine tests render_flags.on_screen before the
         // simple countdown or linked-slot handling. If bit 7 is clear, it jumps
-        // directly to loc_2BE2E and releases the player (s2.asm:59152-59156).
+        // directly to loc_2BE2E and releases the player (s2.asm:59334-59338).
         if (isWithinSolidContactBounds()) {
             return false;
         }

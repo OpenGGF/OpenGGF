@@ -21,42 +21,42 @@ package com.openggf.game.sonic2.bumpers;
 public enum CNZBumperType {
     /**
      * Type 0: 32x32 diagonal, down-right oriented.
-     * Handler: loc_17586 (s2.asm line 32386)
+     * Handler: loc_17586 (s2.asm line 32608)
      * Base reflection angle: $20 (45 degrees clockwise from up)
      */
     DIAGONAL_DOWN_RIGHT(0, 0x20, 0x20, 0x20),
 
     /**
      * Type 1: 32x32 diagonal, down-left oriented.
-     * Handler: loc_17638 (s2.asm line 32456)
+     * Handler: loc_17638 (s2.asm line 32678)
      * Base reflection angle: $60 (135 degrees clockwise from up)
      */
     DIAGONAL_DOWN_LEFT(1, 0x20, 0x20, 0x60),
 
     /**
      * Type 2: 64x8 narrow top horizontal bar.
-     * Handler: loc_1769E (s2.asm line 32499)
+     * Handler: loc_1769E (s2.asm line 32721)
      * Bounces downward or diagonally based on position.
      */
     NARROW_TOP(2, 0x40, 0x08, -1),
 
     /**
      * Type 3: 64x8 narrow bottom horizontal bar.
-     * Handler: loc_176F6 (s2.asm line 32537)
+     * Handler: loc_176F6 (s2.asm line 32759)
      * Bounces upward or diagonally based on position.
      */
     NARROW_BOTTOM(3, 0x40, 0x08, -1),
 
     /**
      * Type 4: 8x64 narrow left vertical bar.
-     * Handler: loc_1774C (s2.asm line 32574)
+     * Handler: loc_1774C (s2.asm line 32796)
      * Bounces rightward or diagonally based on position.
      */
     NARROW_LEFT(4, 0x08, 0x40, -1),
 
     /**
      * Type 5: 8x64 narrow right vertical bar.
-     * Handler: loc_177A4 (s2.asm line 32612)
+     * Handler: loc_177A4 (s2.asm line 32834)
      * Bounces leftward or diagonally based on position.
      */
     NARROW_RIGHT(5, 0x08, 0x40, -1);

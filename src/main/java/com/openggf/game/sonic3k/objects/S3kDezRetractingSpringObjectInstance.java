@@ -96,7 +96,7 @@ public final class S3kDezRetractingSpringObjectInstance extends AbstractObjectIn
     /** {@code addq.w #8,y_pos(a1)} (:47761). */
     private static final int LAUNCH_Y_NUDGE = 8;
 
-    /** {@code Obj_DEZRetractingSpring} installs {@code loc_480D4} (:94156), ROM {@code $000480D4}. */
+    /** {@code Obj_DEZRetractingSpring} installs {@code loc_480D4} (:94161), ROM {@code $000480D4}. */
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0004;
 
     private static final int ANIM_IDLE = 0;

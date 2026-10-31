@@ -590,7 +590,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL) {
-                        // SKL $5A is Obj_DEZGravityTube (sonic3k.asm:95215); S3KL $5A is
+                        // SKL $5A is Obj_DEZGravityTube (sonic3k.asm:95219); S3KL $5A is
                         // Obj_MGZPulley. The two object tables share the number.
                         return new S3kDezGravityTubeObjectInstance(spawn);
                     }
@@ -1707,7 +1707,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                 (spawn, registry) -> new com.openggf.game.sonic3k.objects.bosses
                         .LrzMinibossInstance(spawn));
         // Ids $2B and $2C are Obj_LRZOrbitingSpikeBallHorizontal and
-        // Obj_LRZOrbitingSpikeBallVertical in the SKL set (sonic3k.asm:89123, :89195); the S3KL
+        // Obj_LRZOrbitingSpikeBallVertical in the SKL set (sonic3k.asm:89195, :89195); the S3KL
         // set spends them on Obj_AIZFlippingBridge and Obj_AIZCollapsingLogBridge, which are the
         // names the id constants carry. Both place only in Lava Reef act 2.
         registerStockRomZoneBound(Sonic3kObjectIds.AIZ_FLIPPING_BRIDGE,
@@ -1720,7 +1720,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                         spawn, LrzOrbitingSpikeBallObjectInstance.Axis.VERTICAL));
         // Id $29 is Obj_LRZFlameThrower in the SKL set (sonic3k.asm:89273); the S3KL set spends
         // it on Obj_AIZDisappearingFloor, which is the name the id constant carries. Its own
-        // subtype bit 7 picks the variant, exactly as bpl.s loc_43DC4 does (:89281).
+        // subtype bit 7 picks the variant, exactly as bpl.s loc_43DC4 does (:89297).
         registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzFlameThrowerObjectInstance(spawn));

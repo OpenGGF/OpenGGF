@@ -2281,7 +2281,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// acknowledged during a hurt state", docs/s1disasm/_incObj/01 Sonic.asm:1814-1817),
 		// and S3K Tails hurt loc_156D6 likewise omits it (docs/skdisasm/sonic3k.asm:29234-29250).
 		// Only the next, first normal-control frame's Obj02_Control reaches Tails_Water,
-		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:38973 move, :38981 water),
+		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:39673 move, :39676 water),
 		// so the underwater acceleration switch (Tails_acceleration $C->$6,
 		// docs/s2disasm/s2.asm:39550 vs dry $C at :38902/:39045) is first observed by the
 		// frame after that move. Skipping the water update on the hurt-landing frame keeps
@@ -2455,12 +2455,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 			// mask; preserve the same native dispatch as PlayableSpriteMovement.
 			return;
 		}
-		// ROM Obj02_Dead (docs/s2disasm/s2.asm:40736-40742) runs the dead CPU
+		// ROM Obj02_Dead (docs/s2disasm/s2.asm:41131-41137) runs the dead CPU
 		// sidekick's fall through jsr (ObjectMoveAndFall).l directly and never
 		// applies the Screen_Y_wrap mask that the live control/hurt paths use, so
 		// the falling body's y_pos keeps climbing past the wrap boundary until
-		// Obj02_CheckGameOver (s2.asm:40747-40759) crosses Tails_Max_Y_pos+$100 and
-		// branches to TailsCPU_Despawn (s2.asm:39043-39052). Mirror that by skipping
+		// Obj02_CheckGameOver (s2.asm:41135-41147) crosses Tails_Max_Y_pos+$100 and
+		// branches to TailsCPU_Despawn (s2.asm:39390-39399). Mirror that by skipping
 		// the wrap for a dead CPU sidekick on the dead-fall path — matching the
 		// existing bypass in PlayableSpriteMovement.applyScreenYWrapValueAfterControl().
 		// Without this, the engine masked the dead Tails' y_pos at 0x800

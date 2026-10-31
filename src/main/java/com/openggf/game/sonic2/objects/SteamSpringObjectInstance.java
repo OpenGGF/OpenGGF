@@ -221,7 +221,7 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
      * (s2.asm:35147) without traversing the {@code SolidObject_OnScreenTest}
      * on-screen gate (s2.asm:35140-35145) and without consulting the
      * sidekick render_flags.on_screen check that the regular
-     * {@code SolidObject} P2 prologue performs (s2.asm:34825-34828).
+     * {@code SolidObject} P2 prologue performs (s2.asm:35012-35015).
      * Off-screen Tails must therefore still resolve top/side/bottom contact
      * against the steam piston, matching the MTZ3 trace at f460 where Tails
      * lands on this spring while vertically below the camera viewport.

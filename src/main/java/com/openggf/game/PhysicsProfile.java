@@ -198,7 +198,7 @@ public record PhysicsProfile(
             (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 
-    // S3K Sonic Competition mode — Character_Speeds table (sonic3k.asm:202403, loaded at line 21467)
+    // S3K Sonic Competition mode — Character_Speeds table (sonic3k.asm:202408, loaded at line 21467)
     // Only used by Sonic2P_Index (Competition mode init, line 21457), NOT normal single-player.
     // Differs from canonical in accel ($10 vs $C), decel ($20 vs $80).
     public static final PhysicsProfile SONIC_3K_SONIC_INIT = new PhysicsProfile(
@@ -224,7 +224,7 @@ public record PhysicsProfile(
             (short) 2      // onObjectBalanceShift
     );
 
-    // S3K Tails Competition mode — Character_Speeds table (sonic3k.asm:202405)
+    // S3K Tails Competition mode — Character_Speeds table (sonic3k.asm:202410)
     // Only used by Competition mode. max=$4C0, accel=$1C, decel=$70.
     public static final PhysicsProfile SONIC_3K_TAILS_INIT = new PhysicsProfile(
             (short) 0x1C,  // runAccel (Character_Speeds word 2)

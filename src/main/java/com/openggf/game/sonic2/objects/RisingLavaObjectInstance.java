@@ -196,7 +196,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         // Store frame counter for use in onSolidContact callback
         this.lastVIntRunCount = vIntRunCount;
 
-        // ROM: Obj30_Main (s2.asm:49083-49086)
+        // ROM: Obj30_Main (s2.asm:49573-49576)
         // y_pos = objoff_32 + Camera_BG_Y_offset (ONLY bgYOffset, no shake)
         // Ripple shake is a global screen-space effect applied via Camera shake offsets,
         // so objects don't add it to their world positions.
@@ -353,7 +353,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // ROM: Subtypes 4 and 6 fall through to Obj30_HurtSupportedPlayers (s2.asm:49151).
+        // ROM: Subtypes 4 and 6 fall through to Obj30_HurtSupportedPlayers (s2.asm:49620).
         // Subtype 4 uses jsrto (JSR) for DropOnFloor at line 49149, so execution returns
         // and falls directly into the hurt routine. Subtype 6 has an explicit bra.s to it.
         // Subtypes 0/2/8 use jmpto (JMP = tail call) so they never reach the hurt code.

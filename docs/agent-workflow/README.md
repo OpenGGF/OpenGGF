@@ -89,7 +89,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [Disassembly citation checker](../../tools/disasm/disasm_citations.py): `check` verifies
   `file.asm:N-M` citations in code, tests and docs against the pinned (or `--rev checkout`/any)
   disassembly revision, using the label named beside each citation; `remap` carries citations
-  through a disassembly diff when a pin moves, refusing ranges that touch edited lines.
+  through a disassembly diff when a pin moves; `repair [paths] --write` recovers stale labelled
+  citations from local history, refusing ranges that touch edited lines. The pre-commit
+  `check-staged` guard rejects per-file increases in stale/out-of-range index citations.
   Origin: citation audit, 2026-10-09; evidence in the
   [audit](../architecture/audits/2026-10-09-disassembly-line-citations.md).
 

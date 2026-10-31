@@ -80,7 +80,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
 
-    /** ROM {@code byte_39CA4} (sonic3k.asm:77446). Verified bytes {@code 40 20 08 00}. */
+    /** ROM {@code byte_39CA4} (sonic3k.asm:77448). Verified bytes {@code 40 20 08 00}. */
     private static final int PARAM_TABLE_ADDR = 0x00039CA4;
     /**
      * Fallback for {@code byte_39CA4} index 0, used only when the ROM handle is
@@ -90,7 +90,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     private static final int[] PARAM_TABLE_ENTRY_0 = {0x40, 0x20, 0x08, 0x00};
     /** ROM {@code move.b #$1C,y_radius(a0)} (sonic3k.asm:77444). */
     private static final int Y_RADIUS = 0x1C;
-    /** ROM {@code move.b #$2A,$30(a0)} in {@code loc_39D84} (sonic3k.asm:77538). */
+    /** ROM {@code move.b #$2A,$30(a0)} in {@code loc_39D84} (sonic3k.asm:77548). */
     private static final int POST_COLLAPSE_SOLID_FRAMES = 0x2A;
     /** ROM {@code move.w #$80,priority(a0)} (sonic3k.asm:77428). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
@@ -232,7 +232,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         if (timer != 0) {
             return;
         }
-        // sub_39D1A for Player_1 then Player_2 (:77488-77493), then
+        // sub_39D1A for Player_1 then Player_2 (:77503-77508), then
         // Delete_Current_Sprite.
         if (p1StandingLatched) {
             releaseRider(playerEntity);
@@ -282,7 +282,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
                     childX, childY, childFrame, childDelay));
         }
 
-        // loc_39E08 (sonic3k.asm:77580-77585): bclr #7 on the respawn table entry
+        // loc_39E08 (sonic3k.asm:77585-77590): bclr #7 on the respawn table entry
         // so the bridge is eligible to load again.
         try {
             ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, getSpawn());
@@ -338,7 +338,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     /**
-     * The break frame reaches {@code loc_39D84} (sonic3k.asm:77537) by a
+     * The break frame reaches {@code loc_39D84} (sonic3k.asm:77548) by a
      * {@code bra.w} that jumps over {@code loc_39CCC}'s {@code SolidObjectTop}
      * call, so the ROM performs no solid processing on that one frame. It also
      * touches neither {@code status(a0)}'s standing bits nor the riders'
@@ -495,7 +495,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            // loc_39D3E (sonic3k.asm:77511-77515): hold, drawing only.
+            // loc_39D3E (sonic3k.asm:77516-77520): hold, drawing only.
             if (holdTimer != 0) {
                 holdTimer = (holdTimer - 1) & 0xFF;
                 return;

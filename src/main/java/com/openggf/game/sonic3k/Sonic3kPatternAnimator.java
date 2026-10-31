@@ -2201,7 +2201,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     /**
      * Gumball bonus stage animated tiles.
-     * ROM: AnimateTiles_Gumball (sonic3k.asm:55306).
+     * ROM: AnimateTiles_Gumball (sonic3k.asm:55311).
      * <p>
      * Computes a scroll index from (Events_bg+$10 - Camera_Y_BG) &amp; $1F,
      * uses it as a byte offset into ArtUnc_AniGumball, then DMA copies

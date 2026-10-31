@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
  * Focused tests for the {@link AbstractPlayableSprite#captureOnObjectAtFrameStart()}
  * / {@link AbstractPlayableSprite#getOnObjectAtFrameStart()} pair that mirrors
  * the ROM's mid-frame {@code Status_OnObj} read in {@code Tails_CPU_Control}
- * (sonic3k.asm:26728-26740) / {@code TailsCPU_Normal} (s2.asm:38933+).
+ * (sonic3k.asm:26728-26740) / {@code TailsCPU_Normal} (s2.asm:39262+).
  *
  * <p>The snapshot is the foundation for closing the OnObj timing gap between
  * engine and ROM: ROM reads {@code status(a1)} mid-frame, before solid-object

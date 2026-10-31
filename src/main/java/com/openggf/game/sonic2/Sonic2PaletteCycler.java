@@ -630,7 +630,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== CNZ Boss Cycle 2 (electricity effect - 1 color scrolling) ==========
-    // ROM: CyclingPal_CNZ2_B (s2.asm:2932-2938)
+    // ROM: CyclingPal_CNZ2_B (s2.asm:3083-3089)
     // 10 frames (0x14 bytes / 2 = 10), writes to palette line 1, offset $3C (index 14)
     private static class CnzBossCycle2 extends PaletteCycle {
         CnzBossCycle2(byte[] data) {
@@ -665,7 +665,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
     }
 
     // ========== CNZ Boss Cycle 3 (electricity effect - 1 color cycling) ==========
-    // ROM: CyclingPal_CNZ3_B (s2.asm:2939-2943)
+    // ROM: CyclingPal_CNZ3_B (s2.asm:3090-3094)
     // 8 frames (andi.w #$E wraps frame counter), writes to palette line 1, offset $3E (index 15)
     private static class CnzBossCycle3 extends PaletteCycle {
         CnzBossCycle3(byte[] data) {

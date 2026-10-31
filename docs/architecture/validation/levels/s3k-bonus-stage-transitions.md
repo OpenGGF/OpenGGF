@@ -557,7 +557,7 @@ queued in the ROM and is still written immediately (AIZ→HCZ stability); the
 HCZ1 setup strips written while the animator is constructed precede display.
 Observed, not changed: at `Events_bg+$10 == 0` `AnimateTiles_HCZ1` stores 1
 in `Anim_Counters+4` and falls through `AniHCZ_FixLowerBG` into
-`AniHCZ_FixUpperBG` (:54033, :54111-54131), returning before
+`AniHCZ_FixUpperBG` (:54123, :54111-54131), returning before
 `AnimateTiles_DoAniPLC`; the engine uploads only the lower fix strips there.
 
 **Pachinko composition buffer.** `AnimateTiles_Pachinko` composes its

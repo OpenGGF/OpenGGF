@@ -171,7 +171,7 @@ public class BarrierObjectInstance extends AbstractObjectInstance
      * Checks if a character is within the detection zone.
      * If so, sets the barrier to move up.
      * <p>
-     * From Obj2D_CheckCharacter (s2.asm lines 24259-24277)
+     * From Obj2D_CheckCharacter (s2.asm lines 24383-24401)
      */
     private void checkCharacter(AbstractPlayableSprite character, int left, int right, int top, int bottom) {
         if (character == null) {

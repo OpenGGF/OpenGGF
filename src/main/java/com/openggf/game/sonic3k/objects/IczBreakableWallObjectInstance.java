@@ -38,7 +38,7 @@ import java.util.List;
 /**
  * Object 0xB1 - ICZ breakable wall.
  *
- * <p>ROM reference: {@code Obj_ICZBreakableWall} at sonic3k.asm:187786.
+ * <p>ROM reference: {@code Obj_ICZBreakableWall} at sonic3k.asm:187791.
  * The wall uses {@code Map_ICZWallAndColumn} frame 6 and breaks when Knuckles
  * side-contacts it or when {@code Obj_ICZPathFollowPlatform_2} enters the
  * trigger box from {@code word_8A2FC}.

@@ -345,7 +345,7 @@ the ROM:
 | 32795–32847 | 53 | no | `Level_TtlCard` loop, one `WaitForVint`/pass, PLC drain (`s2.asm:4914-4920`) |
 | 32848–32861 | **14** | **YES** | `Hud_Base`, `PalLoad_ForFade`, `LevelSizeLoad`, `DeformBgLayer`, `Horiz_Scroll_Buf` clear (`s2.asm:4923-4936`) |
 | 32862–32869 | 8 | no | `LoadZoneTiles`, one `WaitForVint` per `$1000`-byte chunk (`s2.asm:6519`) |
-| 32870–32906 | **37** | **YES** | `loadZoneBlockMaps`, `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`, `LoadCollisionIndexes`, `WaterEffects`, `InitPlayers` (`s2.asm:4938-4946`) |
+| 32870–32906 | **37** | **YES** | `loadZoneBlockMaps`, `LoadAnimatedBlocks`, `DrawInitialBG`, `ConvertCollisionArray`, `LoadCollisionIndexes`, `WaterEffects`, `InitPlayers` (`s2.asm:5175-5183`) |
 | 32907–32930 | 24 | no | leave loop, `VintID_TitleCard` + `WaitForVint`/pass (`s2.asm:5060-5066`) |
 
 **Lag frames: 11 + 14 + 37 = 62. The residual this note abandoned is 63.**
@@ -420,7 +420,7 @@ runs exactly once. Straight-line 68K code between `WaitForVint` calls therefore 
 ROM's own `Vint_Lag` classification coincide **by construction**. This is not an emulator
 artefact standing in for game behaviour; it is the game's own scheduling outcome.
 
-`VintRet` still does `addq.l #1,(Vint_runcount).w` (`s2.asm:505-506`) on the lag path, which
+`VintRet` still does `addq.l #1,(Vint_runcount).w` (`s2.asm:507-508`) on the lag path, which
 is what replay must advance on such a row — and is the principled form of the
 `interLevelVblankBudget` trap, which advances the same counter by a frame-index arithmetic
 without spending the rows.
@@ -502,7 +502,7 @@ close, for a reason the measurement makes precise.
 2. **Replay (contract 1).** `AbstractRunChainTest.admitLevelWhenReady` expands the census
    (its origin is `destinationOffset - sum`, so no recorded index is consumed) and, on a lag
    row, runs no gameplay lifecycle and only advances the object-visible V-blank counter —
-   the ROM's `addq.l #1,(Vint_runcount).w` at `VintRet` (`s2.asm:505-506`), which executes on
+   the ROM's `addq.l #1,(Vint_runcount).w` at `VintRet` (`s2.asm:507-508`), which executes on
    the lag path too, while `Level_frame_counter` (`Level_MainLoop`, `s2.asm:5092`) does not.
 
 The regenerated capture **independently reproduces this note's hand-taken decomposition**,
