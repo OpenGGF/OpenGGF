@@ -101,7 +101,20 @@ single-jar `ggfmod validate` command:
 | `MOD_CHARACTER_DISABLED_FALLBACK` / `MOD_CHARACTER_UNKNOWN_FALLBACK` | Re-enable/install the saved character owner or select an available character; launch used a stock fallback. |
 
 Successful packaging prints warnings too. `--format json` emits versioned structured
-findings. `--warnings allow` is the default; `--warnings error` makes warnings fail
+findings with additive `guidance.documentation`, `guidance.nextAction`, and (only
+when known) `guidance.supportedReplacement`. Original code, severity, location,
+member and message remain unchanged. Guidance is advisory: it does not relax
+validation, prove runtime safety, or invent a public replacement for an internal
+symbol. Unknown codes link back to this catalog and ask for inspection in the
+matching build. Text reports include the next action and documentation reference.
+
+For validate/package JSON input and operational failures, inspect the error finding
+(`CLI_INPUT_INVALID`, `COMMAND_FAILED`, or `VALIDATION_FAILED`); correct arguments,
+paths or filesystem access before retrying. The command exits nonzero and emits
+one JSON report. No successful artifact validation is implied by an operational
+failure. See the [CLI report contract](ggfmod.md).
+
+`--warnings allow` is the default; `--warnings error` makes warnings fail
 CI and prevents publication when used with `package`. Errors always fail.
 
 Run validation again after every change. A zero-finding result prints
