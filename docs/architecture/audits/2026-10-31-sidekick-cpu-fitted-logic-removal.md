@@ -13,6 +13,11 @@ to the sidekick trace set.
 Disassembly citations are at the project pins (`s2disasm` `34fc7f130a96`,
 `skdisasm` `8b2cf3c4178f`).
 
+Follow-up: the "root cause" below was revisited in
+[ROM-owned solid contact](2026-10-31-rom-owned-solid-contact.md). The outer
+frame order already matched the ROM; the remaining defect was which code
+writes `Status_OnObj` and which register carries a rider.
+
 ## Method
 
 1. Read the pinned ROM routines in full: S2 `TailsCPU_Control` and its states
