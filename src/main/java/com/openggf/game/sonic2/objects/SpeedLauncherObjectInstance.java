@@ -8,7 +8,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -389,6 +388,14 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     public boolean isTopSolidOnly() {
         // PlatformObject is top-solid only (player can only stand on top)
         return true;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // ObjC0_Main passes d4 = x_pos(a0) after the routine moved the launcher
+        // (s2.asm:80889-80896), so PlatformObject never carries the rider; the
+        // routine's loc_3BFB4 writes the rider's x_pos itself.
+        return false;
     }
 
     @Override
