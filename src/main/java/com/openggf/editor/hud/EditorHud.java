@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.control.MouseWheel;
 import com.openggf.editor.EditorCommandPalette;
 import com.openggf.editor.EditorFocusRegion;
 import com.openggf.editor.EditorHierarchyDepth;
@@ -410,6 +411,7 @@ public final class EditorHud {
         if (MenuInput.right(input)) dx++;
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
+        dy -= MouseWheel.of(input).notches();
         int page = libraryColumns * Math.max(1, libraryVisibleRows);
         int move = dx + dy * libraryColumns;
         if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) move -= page;
@@ -566,7 +568,8 @@ public final class EditorHud {
     private void updateSettings(InputHandler input) {
         var workspace = controller.projects();
         if (workspace == null || workspace.document() == null) { closeModal(); return; }
-        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
+        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0)
+                - MouseWheel.of(input).notches();
         int dx = pad.navX() + (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
         settingsIndex = Math.floorMod(settingsIndex + Integer.signum(dy), workspace.settingsRows().size());
         if (dx != 0) {
@@ -613,6 +616,7 @@ public final class EditorHud {
         int dy = pad.navY(), dx = pad.navX();
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
+        dy -= MouseWheel.of(input).notches();
         if (MenuInput.left(input)) dx--;
         if (MenuInput.right(input)) dx++;
         propertyIndex = Math.floorMod(propertyIndex + dy, gizmoFields.isEmpty() ? fields.size() : gizmoFields.size());
@@ -709,7 +713,7 @@ public final class EditorHud {
     }
 
     private void updateMenu(InputHandler input, boolean click) {
-        int dy = pad.navY();
+        int dy = pad.navY() - MouseWheel.of(input).notches();
         if (MenuInput.up(input)) dy--;
         if (MenuInput.down(input)) dy++;
         if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) dy -= 8;

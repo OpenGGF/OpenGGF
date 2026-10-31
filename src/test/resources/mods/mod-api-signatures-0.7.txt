@@ -1424,7 +1424,7 @@ CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.S
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource)
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource,java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.control.LogicalInputSnapshot public  <init>(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
-CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean,int)
 CONSTRUCTOR com.openggf.control.PhysicalBinding public  <init>(char,int,int,int)
 CONSTRUCTOR com.openggf.control.PhysicalGamepad public  <init>(int,java.lang.String,boolean[],float[])
 CONSTRUCTOR com.openggf.control.PhysicalInput public  <init>(long,java.util.List<java.lang.Integer>,java.util.List<com.openggf.control.PhysicalGamepad>,java.util.List<com.openggf.control.PhysicalInputEvent>,int)
@@ -5416,6 +5416,7 @@ METHOD com.openggf.control.MenuInput$Pointer public  boolean inside()
 METHOD com.openggf.control.MenuInput$Pointer public  boolean leftPressed()
 METHOD com.openggf.control.MenuInput$Pointer public  boolean over(int,int,int,int)
 METHOD com.openggf.control.MenuInput$Pointer public  boolean rightPressed()
+METHOD com.openggf.control.MenuInput$Pointer public  int wheel()
 METHOD com.openggf.control.MenuInput$Pointer public  int x()
 METHOD com.openggf.control.MenuInput$Pointer public  int y()
 METHOD com.openggf.control.MenuInput$Pointer public,final  boolean equals(java.lang.Object)
@@ -17732,6 +17733,7 @@ RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot player2 com.openggf.co
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer inside boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer leftPressed boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer rightPressed boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer wheel int
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer x int
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer y int
 RECORD-COMPONENT com.openggf.control.PhysicalBinding code int

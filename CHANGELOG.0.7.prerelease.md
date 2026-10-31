@@ -1572,6 +1572,15 @@ its original drawing priority.
   composition has been checked with an isolated Linux X11/IBus session; other OS
   IMEs still need platform verification.
 
+- **Mouse wheel in menus:** the wheel now moves through Engine Settings (including its
+  value and key-binding choices, language picker and team editors), Game Setup and its
+  change summary, the display shader picker, mutator configuration, content import, the
+  editor project menu and the editor's library, menu, settings, properties and Details
+  sheets; Details pages scroll with it wherever they open. Every menu reading the mouse
+  in a frame sees the same notches, and notches scrolled during gameplay are dropped
+  instead of jumping the next menu or zooming the editor canvas. Creator menus read the
+  notches from `MenuInput.Pointer.wheel()`.
+
 ## Maintenance and release preparation
 
 - **Mod authoring entry points:** Six task recipes and mirrored agent guidance

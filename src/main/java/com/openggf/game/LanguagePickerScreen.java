@@ -67,6 +67,7 @@ public final class LanguagePickerScreen {
         int before = selected;
         if (MenuInput.textUp(input)) selected = Math.floorMod(selected - 1, choices.size());
         if (MenuInput.textDown(input)) selected = (selected + 1) % choices.size();
+        if (pointer.inside()) selected = Math.clamp(selected - pointer.wheel(), 0, choices.size() - 1);
         int pitch = rowPitch();
         boolean clicked = false;
         for (int row = 0; row < visibleRows(); row++) {
