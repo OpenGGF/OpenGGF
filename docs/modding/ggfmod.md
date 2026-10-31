@@ -64,7 +64,19 @@ Use `ggfmod validate <mod.jar>` to print the sorted findings for an existing jar
 Both `package --input <classes> --out <mod.jar>` and `validate <mod.jar>` accept
 `--format text|json` and `--warnings allow|error`. Successful packaging prints all
 warnings. JSON uses format version 1, structural `valid`, warning count/policy,
-and the same sorted finding records as text. The default allows warnings; explicit
+and the same sorted finding records as text. Each finding preserves `severity`,
+`code`, `location`, `member`, and `message`, with additive `guidance` metadata:
+`documentation` is a repository-relative reference, `nextAction` is a safe suggested
+step, and optional `supportedReplacement` names a known supported API alternative.
+Unknown codes and internal references receive honest fallback guidance without a
+guessed replacement. Text reports include the suggested next action too.
+Consumers should ignore unknown metadata fields. For these two commands,
+`--format json` also emits a single v1 report on invalid inputs or operational
+failure, with an error finding and nonzero exit, without text/stack traces or a
+package-success message. Such failures use `CLI_INPUT_INVALID`, `COMMAND_FAILED`,
+or `VALIDATION_FAILED` and empty location/member when no source symbol is known.
+`valid` describes structural findings, so it remains true for warning-only reports
+even when strict warning policy makes the command fail. The default allows warnings; explicit
 `--warnings error` returns failure on warnings and prevents package publication.
 Internal API references can intentionally warn in experimental examples; review the
 actual findings before selecting your CI policy. A successful structural validation
