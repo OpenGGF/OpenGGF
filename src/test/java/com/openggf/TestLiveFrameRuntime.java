@@ -643,6 +643,7 @@ class TestLiveFrameRuntime {
         assertEquals("EXACT", runtime.statistics().cadence());
         assertTrue(host.retained.stream().allMatch(Boolean::booleanValue));
         assertTrue(host.requests.stream().anyMatch(p -> p.selection() instanceof PictureSelection.Between));
+        assertEquals(LiveFrameRuntime.InterpolationStatus.BLENDING, runtime.statistics().interpolation());
         host.requests.forEach(p -> {
             if (p.selection() instanceof PictureSelection.Between between) {
                 assertTrue(between.alpha() >= 0 && between.alpha() < 1);
@@ -656,6 +657,27 @@ class TestLiveFrameRuntime {
         runUntil(runtime, runtime.iterate(), SECOND);
         assertEquals(hz, host.ticks);
         assertTrue(host.requests.stream().allMatch(p -> p.selection() instanceof PictureSelection.Latest));
+        assertEquals(LiveFrameRuntime.InterpolationStatus.OFF, runtime.statistics().interpolation());
+    }
+
+    @Test void interpolationStatusNamesTheFpsLimitAndReportsMeasuredRates() {
+        var host = new InterpolatedHost(60, 60);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        runUntil(runtime, runtime.iterate(), 3 * SECOND);
+        var stats = runtime.statistics();
+        assertEquals(LiveFrameRuntime.InterpolationStatus.FPS_LIMIT, stats.interpolation());
+        assertEquals(0, stats.blendedPerSecond());
+        assertEquals(60, stats.servicesPerSecond(), 1.5);
+
+        now = 0;
+        var blending = new LiveFrameRuntime(new InterpolatedHost(60, 144), () -> now);
+        runUntil(blending, blending.iterate(), 3 * SECOND);
+        var measured = blending.statistics();
+        stats = measured;
+        assertEquals(60, stats.servicesPerSecond(), 1.5);
+        assertTrue(stats.picturesPerSecond() > 60, () -> "render deadlines add pictures: " + measured);
+        assertTrue(stats.blendedPerSecond() > 0, () -> "blended pictures are counted: " + measured);
+        assertTrue(stats.lastAlpha() >= 0 && stats.lastAlpha() < 1);
     }
 
     @Test void screenshotBarrierNeverMovesBackwardWithinAServiceInterval() {

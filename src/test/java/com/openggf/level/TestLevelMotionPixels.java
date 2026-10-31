@@ -74,6 +74,7 @@ class TestLevelMotionPixels {
             var latest = session.render();
             var focus = focusMask(level, session);
             var blend = between(session, .5, true);
+            assertEquals("lvl BLENDED", LevelMotionAccess.panelOutcome(level), "diagnostics report an adopted blend");
             sameMaskedPixels(latest, blend, focus, "followed player remains at the latest screen position");
             samePixels(blend, between(session, .5, true), "repeated Between pictures");
             var terrain = session.render(false);
@@ -102,6 +103,7 @@ class TestLevelMotionPixels {
             assertNull(renderer.motionHistory.offer(PictureSelection.between(.5)).sprites(),
                     "Forced centering cuts the picture when its generation publishes");
             samePixels(session.render(), between(session, .5, true), "forced-centering latest");
+            assertEquals("lvl SNAPPED", LevelMotionAccess.panelOutcome(level), "diagnostics report the snap");
             publishObservation(level);
             assertNotNull(renderer.motionHistory.offer(PictureSelection.between(.5)).sprites(),
                     "An unchanged recenter serial allows the next generation to pair");

@@ -63,6 +63,11 @@ final class LiveFrameRuntime {
     private int regionHz, pictureCap, swapInterval;
     private long anchor;
     private long services, pictures, swaps, discardedWallNanos;
+    private InterpolationStatus interpolationStatus = InterpolationStatus.OFF;
+    private long blendedPictures;
+    private double lastAlpha = Double.NaN;
+    private long rateStart, servicesAtRateStart, picturesAtRateStart, blendedAtRateStart;
+    private double servicesPerSecond, picturesPerSecond, blendedPerSecond;
     private long pendingTicks;
 
     LiveFrameRuntime(Owner owner, LongSupplier monotonicNanos) {
@@ -94,8 +99,10 @@ final class LiveFrameRuntime {
         boolean changed = configure(host);
         long elapsed = first || changed ? 0 : now - anchor;
         anchor = now;
+        sampleRates(now);
         if (swapInterval == 0) applySwapInterval(1);
         if (!host.focused()) {
+            interpolationStatus = InterpolationStatus.UNFOCUSED;
             toExact();
             scheduler.reset();
             suspended = true;
@@ -120,7 +127,11 @@ final class LiveFrameRuntime {
                 cadence = new Probing(interval, request);
             }
         }
-        return cadence instanceof Locked ? runLocked(host) : runExact(host, elapsed, changed);
+        if (cadence instanceof Locked) {
+            interpolationStatus = Objects.requireNonNullElse(inactiveStatus(host), InterpolationStatus.DISPLAY_LOCKED);
+            return runLocked(host);
+        }
+        return runExact(host, elapsed, changed);
     }
 
     private Step runExact(HostState host, long elapsed, boolean changed) {
@@ -182,11 +193,21 @@ final class LiveFrameRuntime {
         if (!present) return new Step(completed, false, wake, reanchorDelay);
         LivePictureRequest picture = exactPicture(false);
         if (host.screenshotPending() || forcedPicture || changed) latestBarrier = true;
-        if (!drawn && active && usable(host) && !latestBarrier) {
+        InterpolationStatus inactive = inactiveStatus(host);
+        if (!active || inactive != null) {
+            interpolationStatus = inactive != null ? inactive
+                    : changed ? InterpolationStatus.BOUNDARY : InterpolationStatus.DISPLAY_LOCKED;
+        } else if (drawn || latestBarrier) {
+            interpolationStatus = InterpolationStatus.EXACT_PICTURE;
+        } else {
             var phase = scheduler.observePhase(clock.getAsLong() - anchor);
             if (phase instanceof FixedSimulationScheduler.Available available) {
                 picture = new LivePictureRequest.Window(PictureSelection.between(available.alpha()));
+                interpolationStatus = InterpolationStatus.BLENDING;
+                lastAlpha = available.alpha();
+                blendedPictures++;
             } else {
+                interpolationStatus = InterpolationStatus.BEHIND;
                 wake = clock.getAsLong();
             }
         }
@@ -233,8 +254,32 @@ final class LiveFrameRuntime {
     }
 
     private static boolean usable(HostState host) {
-        return host.interpolation() && host.pictureCap() > host.regionHz()
-                && !host.hostPaused() && !host.captureActive() && !host.forcedPicture();
+        return inactiveStatus(host) == null;
+    }
+
+    /** The first host reason the window cannot blend, or null when it may. */
+    private static InterpolationStatus inactiveStatus(HostState host) {
+        if (!host.interpolation()) return InterpolationStatus.OFF;
+        if (host.pictureCap() <= host.regionHz()) return InterpolationStatus.FPS_LIMIT;
+        if (host.hostPaused()) return InterpolationStatus.PAUSED;
+        if (host.captureActive()) return InterpolationStatus.RECORDING;
+        if (host.forcedPicture()) return InterpolationStatus.STEPPING;
+        return null;
+    }
+
+    /** Diagnostic rates over windows of at least one second of host time. */
+    private void sampleRates(long now) {
+        long span = now - rateStart;
+        if (span < SECOND) return;
+        if (rateStart != 0) {
+            servicesPerSecond = (services - servicesAtRateStart) * (double) SECOND / span;
+            picturesPerSecond = (pictures - picturesAtRateStart) * (double) SECOND / span;
+            blendedPerSecond = (blendedPictures - blendedAtRateStart) * (double) SECOND / span;
+        }
+        rateStart = now;
+        servicesAtRateStart = services;
+        picturesAtRateStart = pictures;
+        blendedAtRateStart = blendedPictures;
     }
 
     private static LivePictureRequest exactPicture(boolean capture) {
@@ -301,7 +346,8 @@ final class LiveFrameRuntime {
             case Locked locked -> "LOCKED";
         };
         return new Statistics(regionHz, pictureCap, name, policy.reason().name(), policy.measuredHz(),
-                swapInterval, services, pictures, swaps, pendingTicks, discardedWallNanos);
+                swapInterval, services, pictures, swaps, pendingTicks, discardedWallNanos,
+                interpolationStatus, servicesPerSecond, picturesPerSecond, blendedPerSecond, lastAlpha);
     }
 
     private static long ceilingPeriod(int hz) { return (SECOND + hz - 1) / hz; }
@@ -313,5 +359,13 @@ final class LiveFrameRuntime {
     record Iteration(int services, boolean presented, long wakeAtNanos) { }
     record Statistics(int regionHz, int pictureCap, String cadence, String reason, double measuredPresentHz,
                       int swapInterval, long services, long pictures, long swaps,
-                      long pendingTicks, long discardedWallNanos) { }
+                      long pendingTicks, long discardedWallNanos, InterpolationStatus interpolation,
+                      double servicesPerSecond, double picturesPerSecond, double blendedPerSecond,
+                      double lastAlpha) { }
+
+    /** Why window pictures are or are not blended; diagnostics only, never a scheduling input. */
+    enum InterpolationStatus {
+        OFF, FPS_LIMIT, UNFOCUSED, PAUSED, RECORDING, STEPPING, DISPLAY_LOCKED, BOUNDARY,
+        EXACT_PICTURE, BEHIND, BLENDING
+    }
 }

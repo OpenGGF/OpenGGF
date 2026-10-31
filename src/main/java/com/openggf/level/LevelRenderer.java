@@ -927,6 +927,11 @@ public final class LevelRenderer {
     long motionCutOrdinal;
     LevelMotionHistory.Offer motionOffer;
     boolean motionScope;
+    /** Diagnostics only: what the last live picture did with its selection. */
+    enum MotionOutcome { NOT_DRAWN, LATEST, INACTIVE, PRIMING, UNSUPPORTED_SCENE, STALE, SNAPPED, BLENDED }
+    MotionOutcome motionOutcome = MotionOutcome.NOT_DRAWN;
+    boolean motionRequestedBlend;
+    long motionBlendedPictures;
     private boolean motionAdopted;
     private int motionObservedFrame;
     private com.openggf.graphics.SpriteMotionProjection motionSpriteProjection;
@@ -1005,9 +1010,24 @@ public final class LevelRenderer {
         if (lm != null && lm.graphicsManager != null) com.openggf.graphics.SpriteMotionInternalAccess.clearProjection(lm.graphicsManager);
     }
     private void adoptMotion() {
-        if (motionOffer == null || !motionPackets.active || !supportsMotion() || motionObservedFrame != lm.frameCounter)
+        if (!motionScope) return;
+        if (!motionRequestedBlend) { motionOutcome = MotionOutcome.LATEST; }
+        else if (!motionPackets.active) { motionOutcome = MotionOutcome.INACTIVE; }
+        else if (!supportsMotion()) { motionOutcome = MotionOutcome.UNSUPPORTED_SCENE; }
+        else if (motionOffer == null) { motionOutcome = MotionOutcome.PRIMING; }
+        if (motionOffer == null || !motionPackets.active || !supportsMotion() || motionObservedFrame != lm.frameCounter) {
+            if (motionRequestedBlend && motionOffer != null && motionPackets.active && supportsMotion())
+                motionOutcome = MotionOutcome.STALE;
             return;
-        if (LevelSpritePresentation.enabled(lm) && spriteTables.published() != motionOffer.frame()) return;
+        }
+        if (LevelSpritePresentation.enabled(lm) && spriteTables.published() != motionOffer.frame()) {
+            if (motionRequestedBlend) motionOutcome = MotionOutcome.STALE;
+            return;
+        }
+        if (motionRequestedBlend) {
+            motionOutcome = motionOffer.sprites() == null ? MotionOutcome.SNAPPED : MotionOutcome.BLENDED;
+            if (motionOffer.sprites() != null) motionBlendedPictures++;
+        }
         motionAdopted = true;
         currentScrollPresentation = motionOffer.scroll();
         liveSpriteFrame = motionOffer.frame();

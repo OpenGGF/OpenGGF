@@ -2936,6 +2936,17 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	/** Host diagnostics; no gameplay or scheduler state is exposed through the Mod API. */
+	/** Short performance-panel lines; empty when no live window scheduler runs (offline tools). */
+	public static java.util.List<String> livePresentationPanelLines() {
+		if (instance == null || instance.liveFrames == null) return java.util.List.of();
+		var stats = instance.liveFrames.statistics();
+		return java.util.List.of(
+				String.format(java.util.Locale.ROOT, "pic %.1f svc %.1f", stats.picturesPerSecond(), stats.servicesPerSecond()),
+				String.format(java.util.Locale.ROOT, "blend %.1f a%.2f", stats.blendedPerSecond(), stats.lastAlpha()),
+				"int " + stats.interpolation(),
+				LevelMotionAccess.panelOutcome(instance.levelManager));
+	}
+
 	public static String liveSchedulingDiagnostics() {
 		if (instance == null || instance.liveFrames == null) return "Live scheduler: inactive\n";
 		var stats = instance.liveFrames.statistics();
@@ -2944,7 +2955,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				+ stats.reason() + "); measured presents: " + String.format(java.util.Locale.ROOT, "%.3f", stats.measuredPresentHz())
 				+ " Hz\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
 				+ "; swaps: " + stats.swaps() + "\nPending services: " + stats.pendingTicks()
-				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n";
+				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n"
+				+ String.format(java.util.Locale.ROOT, "Interpolation: %s; alpha %.2f\nRates: %.1f pictures/s, %.1f blended/s, %.1f services/s\n",
+						stats.interpolation(), stats.lastAlpha(), stats.picturesPerSecond(), stats.blendedPerSecond(),
+						stats.servicesPerSecond())
+				+ LevelMotionAccess.diagnostics(instance.levelManager) + "\n";
 	}
 
 	private void discardAbortedLiveFrame() {
