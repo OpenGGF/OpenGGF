@@ -110,16 +110,16 @@ clear solid terrain. The player stays in the native roll, so native touch, solid
 defeat code decides each hit. A strike counts as a spindash where the native code
 distinguishes ground from air: breakable walls and the Death Egg Act 2 spike cars.
 Hits refresh the air action, so attacks chain, and bosses bounce the player off.
-A reticle marks the target a re-press would take, and launches lag the camera like
-the Sonic 3 & Knuckles fire-shield dash.
+A reticle marks the target a re-press would take, launches lag the camera like
+the Sonic 3 & Knuckles fire-shield dash, and a faint blue glow and echoes trail the strike.
 Knuckles-only walls and rocks remain his. Multi-part bosses carry a hidden priority
 on the part that must be struck, and parts that only hurt or pop are never targets.
 Instagib builds a bow of friction heat in front of the player, sheds embers and
 hue-shifted afterimages, and makes the leader invulnerable for the strike and 32
 ticks after it. The next hit on any boss is its defeating one; the native defeat
-sequence still runs. Each defeated enemy bursts into 16 shards carrying the strike's
+sequence still runs. Each defeated enemy bursts into 32 shards carrying the strike's
 momentum. Shards are gameplay: they live in rewind history and defeat any badnik they
-pass through, which can chain. Each shard is drawn with one of the enemy's own
+pass through, which can chain. Bosses never take shard hits. Each shard is drawn with one of the enemy's own
 on-screen tiles, so parts repeat; a world that never rendered draws sparks instead.
 The heat, embers, afterimages and reticle are presentation only.
 

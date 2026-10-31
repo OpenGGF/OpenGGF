@@ -80,6 +80,22 @@ The user reviewed the first clips and asked for four changes, now implemented:
   leader's own rebound killed the probe. The test now spawns its probe on the most
   downward shard's path and fails when hits are disabled.
 
+Second review (2026-10-31): ordinary homing gained a subdued blue version of the
+heat front, embers and echoes (55% intensity, fewer embers, unshifted hue at 60%
+opacity). Kills now throw 32 shards (capped at 320 live). Bosses stay immune to shards,
+and Instagib keeps invulnerability, both as the user confirmed. The invulnerability
+hook moved into `HomingAttackRuntime.invulnerable(source, sprite)`. As an inline
+helper it pushed `AbstractPlayableSprite` 2 lines over its release-critical size
+budget, which the guard caught.
+
+Smoke validation at `12ccc0e6a` (`run_categories.py --base 599d46762 --workers 2`)
+ran 36,263 ordinary tests with 8 failures, plus 813 guard tests with 1 failure (the
+size budget above, since fixed). All 8 ordinary failures reproduced identically on
+the unmodified base in a matched run: `TestMasterTitleScreenLayout` (2),
+`TestSonic2InterlacePixels`, `TestNativeCompetitionViews`, `TestNativeSpriteSatGameplay`
+(3) and `TestPrivateLobbyScreenRendering`. They are present on develop and are not
+attributable to this branch.
+
 ## Boss audit (hidden priorities and exclusions)
 
 An Explore pass checked every engine boss against the disassemblies. Using the

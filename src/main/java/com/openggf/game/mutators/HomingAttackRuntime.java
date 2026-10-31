@@ -61,8 +61,8 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     static final int INSTAGIB_GUARD_TICKS = 32;
     /** Heat reaches full intensity after this many homing ticks. */
     static final int HEAT_BUILD_TICKS = 4;
-    static final int SHARDS_PER_BURST = 16;
-    static final int MAX_SHARDS = 160;
+    static final int SHARDS_PER_BURST = 32;
+    static final int MAX_SHARDS = 320;
     static final int SHARD_TICKS = 48;
     static final int SHARD_GRAVITY = 0x30;
     /** A shard strikes a badnik whose centre is within this box half-size. */
@@ -103,8 +103,18 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
 
     public Phase phase() { return phase; }
 
-    /** True while an Instagib launch is homing or its trail is still fading. */
-    public boolean flameActive() { return launchMode == Mode.INSTAGIB && flameTicks > 0; }
+    /** True while a launch is homing or its trail is still fading; Instagib burns, Homing glows blue. */
+    public boolean flameActive() { return launchMode != Mode.OFF && flameTicks > 0; }
+
+    /** Instagib's fire palette; ordinary homing uses the subdued blue one. */
+    boolean instagibVisuals() { return launchMode == Mode.INSTAGIB; }
+
+    /** Native {@code getInvulnerable()} hook: true while the sprite's world grants an Instagib strike. */
+    public static boolean invulnerable(com.openggf.sprites.playable.PlayableMutatorPolicySource source,
+                                       AbstractPlayableSprite sprite) {
+        var homing = source == null ? null : source.homingAttack();
+        return homing != null && homing.invulnerable(sprite);
+    }
 
     /** Instagib strike plus its trail: native hurt and hazard owners treat the leader as invulnerable. */
     public boolean invulnerable(PlayableEntity player) {
@@ -113,8 +123,10 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
 
     /** 0..1 friction-heat build-up in front of the striking leader. */
     float heat() {
-        if (launchMode != Mode.INSTAGIB || !flameActive()) return 0f;
+        if (!flameActive()) return 0f;
         float built = 0.55f + 0.45f * Math.min(1f, heatTicks / (float) HEAT_BUILD_TICKS);
+        // Ordinary homing keeps a quieter blue glow.
+        if (launchMode != Mode.INSTAGIB) built *= 0.55f;
         // After the strike the heat bleeds away over the trail's fade.
         return phase == Phase.IDLE ? built * flameTicks / (float) FLAME_AFTER_TICKS : built;
     }
@@ -462,7 +474,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
      */
     public void observeFrame(com.openggf.graphics.SpritePresentation.Frame frame, int cameraX, int cameraY) {
         var leader = roster == null ? null : roster.getMainPlayable();
-        effects.observe(frame, cameraX, cameraY, flameActive() && leader != null,
+        effects.observe(frame, cameraX, cameraY, flameActive() && leader != null, instagibVisuals(),
                 leader == null ? 0 : leader.getCentreX(), leader == null ? 0 : leader.getCentreY());
     }
 
@@ -474,7 +486,7 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     /** Renderer seam: friction heat, embers and the lock-on reticle above the live sprite table. */
     public void drawOverlay(com.openggf.graphics.GraphicsManager graphics, int cameraX, int cameraY) {
         var leader = roster == null ? null : roster.getMainPlayable();
-        effects.drawFront(graphics, cameraX, cameraY, heat(), leader,
+        effects.drawFront(graphics, cameraX, cameraY, heat(), instagibVisuals(), leader,
                 reticleVisible, reticleLocked, reticleX, reticleY);
     }
 

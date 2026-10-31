@@ -2680,14 +2680,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public boolean getInvulnerable() {
                 // Debug mode and Super Sonic make player completely invulnerable
-                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt
-                        || homingAttackInvulnerable();
-        }
-
-        /** Homing-attack mutator: an Instagib strike shrugs off hurt like native invulnerability. */
-        private boolean homingAttackInvulnerable() {
-                var homing = mutatorPolicySource == null ? null : mutatorPolicySource.homingAttack();
-                return homing != null && homing.invulnerable(this);
+                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
         }
 
         public int getInvulnerableFrames() {

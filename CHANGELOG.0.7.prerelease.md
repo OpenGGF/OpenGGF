@@ -12,10 +12,11 @@ Unreleased. The earlier development themes remain in
   stays in the native roll, so hits, breakage and grabs follow the original rules.
   With no target, the native double-jump move runs; failing that, Sonic dashes
   forward. A reticle marks the target, launches lag the camera like the fire-shield
-  dash, strikes chain and bosses bounce the player off. Sonic, Tails and Knuckles
+  dash, a faint blue glow trails each strike, strikes chain and bosses bounce the
+  player off. Sonic, Tails and Knuckles
   can each be enabled. Instagib mode builds friction heat in front of the player,
   makes the strike invulnerable, ends bosses in one hit and bursts defeated enemies
-  into shards that defeat other badniks they hit.
+  into shards that defeat other badniks they hit; bosses are immune to shards.
 
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
