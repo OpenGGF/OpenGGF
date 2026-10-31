@@ -249,7 +249,9 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         //   bset #1,obStatus(a1)  ; set in-air flag
         //   bclr #3,obStatus(a1)  ; clear standing-on-object flag
         //   move.b #2,obRoutine(a1) ; set player to normal routine
+        // (Smab_Solid .smash, _incObj/51 MZ Smashable Green Block.asm:52-67)
         player.setAir(true);
+        player.setOnObject(false);
 
         // From disassembly:
         //   bclr #3,obStatus(a0)  ; clear player-standing flag on block
