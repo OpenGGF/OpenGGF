@@ -1,6 +1,9 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.solid.SolidExecutionFrames;
+import com.openggf.level.LevelManager;
+import com.openggf.level.LevelRewindBoundaryAccess;
 import com.openggf.game.PlayableEntity;
 
 import java.util.Collections;
@@ -12,9 +15,65 @@ import java.util.function.BooleanSupplier;
 /** Owns the exceptional initial object-dispatch scope and its fixed-slot set. */
 final class InitialObjectDispatchController {
     private final ObjectManager objects;
-    private final Set<ObjectInstance> fixedObjects =
+    private Set<ObjectInstance> fixedObjects =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private Scope active;
+    private Object incarnation = new Object();
+
+    void retireState() {
+        if (active != null) objects.retireInitialExecution();
+        incarnation = new Object();
+        active = null;
+        fixedObjects = Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+
+    Reservation capture() { return new Reservation(); }
+
+    Reservation currentReservation() {
+        return active != null && active.original.isCurrent() ? active.original : null;
+    }
+
+    static Reservation currentReservation(ObjectManager manager) {
+        var controller = manager.initialDispatch();
+        return controller != null ? controller.currentReservation() : null;
+    }
+
+    static void requireCurrent(Reservation original) {
+        if (original != null) original.requireCurrent();
+    }
+
+    static <T> T afterCallback(Reservation original, T result) {
+        requireCurrent(original);
+        return result;
+    }
+
+    final class Reservation {
+        private final Object originalIncarnation = incarnation;
+        private final LevelManager level = objects.services() instanceof DefaultObjectServices actual
+                ? actual.initialDispatchLevel() : null;
+        private final ObjectManager attachment = level != null
+                ? LevelRewindBoundaryAccess.attachedObjectManager(level) : null;
+        private SolidExecutionFrames.Frame frame = SolidExecutionFrames.capture(
+                objects.services() instanceof DefaultObjectServices actual
+                        ? actual.initialDispatchSolids() : objects.solidExecutionRegistry());
+
+        boolean ownsManager() {
+            return incarnation == originalIncarnation && (level == null
+                    || LevelRewindBoundaryAccess.attachedObjectManager(level) == attachment);
+        }
+
+        boolean isCurrent() { return ownsManager() && frame.isCurrent(); }
+
+        void requireCurrent() {
+            if (!isCurrent()) throw ObjectManagerInternalAccess.supersededInitialDispatch();
+        }
+
+        void beginSolidFrame(int counter, List<? extends PlayableEntity> players) {
+            requireCurrent();
+            frame = frame.begin(counter, players);
+            requireCurrent();
+        }
+    }
 
     InitialObjectDispatchController(ObjectManager objects) {
         this.objects = objects;
@@ -58,20 +117,32 @@ final class InitialObjectDispatchController {
             int cameraX,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks) {
-        if (active != null) {
+        return begin(capture(), cameraX, player, sidekicks);
+    }
+
+    InitialObjectDispatchScope begin(Reservation original, int cameraX,
+            PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
+        original.requireCurrent();
+        if (active != null && active.original.isCurrent()) {
             throw new IllegalStateException("initial Process_Sprites dispatch already active");
         }
+        if (active != null) {
+            fixedObjects = Collections.newSetFromMap(new IdentityHashMap<>());
+            active = null;
+        }
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
-        SolidExecutionRegistry registry =
-                objects.beginInitialSolidExecution(player, activeSidekicks);
-        active = new Scope(cameraX, player, activeSidekicks, registry);
+        objects.beginInitialSolidExecution(player, activeSidekicks, original);
+        original.requireCurrent();
+        active = new Scope(cameraX, player, activeSidekicks, original, fixedObjects);
         return active;
     }
 
     void loadDynamicSlots(InitialObjectDispatchScope scope) {
         Scope dispatch = require(scope);
         objects.runTwoAxisLoadThenExecutePlacement(dispatch.cameraX, true);
+        dispatch.original.requireCurrent();
         objects.cleanupDestroyedDynamicObjects();
+        dispatch.original.requireCurrent();
     }
 
     void processAbsoluteDynamicSlot3(InitialObjectDispatchScope scope) {
@@ -82,7 +153,7 @@ final class InitialObjectDispatchController {
         }
         for (ObjectInstance instance : objects.getActiveObjects()) {
             if (instance instanceof AbstractObjectInstance object
-                    && object.getSlotIndex() == 3) {
+                    && objects.callObjectCallback(object, object::getSlotIndex) == 3) {
                 throw new IllegalStateException(
                         "fresh initial Process_Sprites unexpectedly registered absolute slot 3");
             }
@@ -93,28 +164,34 @@ final class InitialObjectDispatchController {
         Scope dispatch = require(scope);
         objects.runExecLoop(
                 dispatch.cameraX, dispatch.player, dispatch.sidekicks, false, false);
+        dispatch.original.requireCurrent();
         objects.flushPostExecDynamicSpawns();
+        dispatch.original.requireCurrent();
     }
 
     void freezeCollisionReadView() {
+        Reservation original = active != null ? active.original : null;
+        requireCurrent(original);
         objects.initialCollisionResponseList().freezePreviousReadView();
         objects.snapshotTouchResponseState(true);
+        requireCurrent(original);
     }
 
     void resetCollisionBuild() {
+        if (active != null) active.original.requireCurrent();
         objects.initialCollisionResponseList().resetCurrentBuild();
     }
 
     void markDynamicCollisionBuildComplete() {
+        if (active != null) active.original.requireCurrent();
         objects.initialCollisionResponseList().markDynamicBuildComplete();
     }
 
     void captureCollisionBuild() {
-        if (active == null) {
-            throw new IllegalStateException("no active initial Process_Sprites dispatch");
-        }
+        Scope dispatch = requireActive();
         objects.initialCollisionResponseList().captureCompletedBuild();
-        active.finished = true;
+        dispatch.original.requireCurrent();
+        dispatch.finished = true;
     }
 
     void finish(InitialObjectDispatchScope scope) {
@@ -123,11 +200,11 @@ final class InitialObjectDispatchController {
     }
 
     boolean isActive() {
-        return active != null;
+        return currentReservation() != null;
     }
 
     boolean excludesFromDynamicPass(ObjectInstance object) {
-        return active != null && fixedObjects.contains(object);
+        return isActive() && active.fixedObjects.contains(object);
     }
 
     void registerFixedObject(ObjectInstance object) {
@@ -148,18 +225,29 @@ final class InitialObjectDispatchController {
     }
 
     private void processFixedObject(Scope dispatch, ObjectInstance object) {
-        if (object == null || object.isDestroyed() || !fixedObjects.contains(object)) {
-            return;
-        }
+        dispatch.original.requireCurrent();
+        if (object == null) return;
+        boolean destroyed = objects.callObjectCallback(object, object::isDestroyed);
+        dispatch.original.requireCurrent();
+        if (destroyed || !dispatch.fixedObjects.contains(object)) return;
         objects.executeObjectWithSolidContext(
                 object, dispatch.player, dispatch.sidekicks, false, false);
+        dispatch.original.requireCurrent();
         objects.publishInitialCollisionResponse(object);
+        dispatch.original.requireCurrent();
+    }
+
+    private Scope requireActive() {
+        if (active == null) throw ObjectManagerInternalAccess.supersededInitialDispatch();
+        active.original.requireCurrent();
+        return active;
     }
 
     private Scope require(InitialObjectDispatchScope scope) {
         if (!(scope instanceof Scope dispatch) || dispatch != active || dispatch.closed) {
             throw new IllegalArgumentException("scope does not own the active initial dispatch");
         }
+        dispatch.original.requireCurrent();
         return dispatch;
     }
 
@@ -167,7 +255,8 @@ final class InitialObjectDispatchController {
         private final int cameraX;
         private final PlayableEntity player;
         private final List<? extends PlayableEntity> sidekicks;
-        private final SolidExecutionRegistry solidExecutionRegistry;
+        private final Reservation original;
+        private final Set<ObjectInstance> fixedObjects;
         private boolean finished;
         private boolean closed;
 
@@ -175,11 +264,12 @@ final class InitialObjectDispatchController {
                 int cameraX,
                 PlayableEntity player,
                 List<? extends PlayableEntity> sidekicks,
-                SolidExecutionRegistry solidExecutionRegistry) {
+                Reservation original, Set<ObjectInstance> fixedObjects) {
             this.cameraX = cameraX;
             this.player = player;
             this.sidekicks = sidekicks;
-            this.solidExecutionRegistry = solidExecutionRegistry;
+            this.original = original;
+            this.fixedObjects = fixedObjects;
         }
 
         @Override
@@ -189,13 +279,12 @@ final class InitialObjectDispatchController {
             }
             closed = true;
             try {
-                if (!finished) {
-                    objects.initialCollisionResponseList().abortCurrentBuild();
+                if (active == this && original.isCurrent()) {
+                    if (!finished) objects.initialCollisionResponseList().abortCurrentBuild();
+                    original.frame.finish();
                 }
             } finally {
-                try {
-                    solidExecutionRegistry.finishFrame();
-                } finally {
+                if (active == this) {
                     fixedObjects.clear();
                     active = null;
                 }

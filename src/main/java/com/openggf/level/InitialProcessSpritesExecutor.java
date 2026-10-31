@@ -7,6 +7,7 @@ import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.animation.InitialLevelAnimationPass;
 import com.openggf.level.objects.InitialObjectDispatchScope;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.sprites.managers.ProcessSpritesEpoch;
 import com.openggf.sprites.managers.SpriteManager;
 
@@ -23,40 +24,51 @@ final class InitialProcessSpritesExecutor {
             ZoneFeatureProvider zoneFeatureProvider,
             AnimatedPatternManager animatedPatternManager,
             int frameCounter) {
+        var original = ObjectManagerInternalAccess.captureInitialDispatch(objectManager);
         // Optional game/profile ownership: S3K Level/loc_6310 deforms the
         // initial scene before its loc_6468 player/object setup walk. This
         // executor is reached only by an admitted fresh-assembly token.
-        if (gameModule.getLevelInitProfile()
-                instanceof com.openggf.game.internal.InitialLevelScrollPreparation preparation) {
+        var profile = gameModule.getLevelInitProfile();
+        original.requireCurrent();
+        if (profile instanceof com.openggf.game.internal.InitialLevelScrollPreparation preparation) {
             preparation.prepareInitialLevelScroll();
+            original.requireCurrent();
         }
         InitialFixedSstDispatcher fixed =
                 gameModule.createInitialFixedSstDispatcher(
                         spriteManager, objectManager, zoneFeatureProvider);
-        InitialDynamicSstDispatcher dynamic = dynamicDispatcher(objectManager, spriteManager, camera);
+        original.requireCurrent();
+        InitialDynamicSstDispatcher dynamic = dynamicDispatcher(objectManager, spriteManager, camera, original);
         CollisionListSstDispatcher collision = collisionDispatcher(objectManager);
         int objectOrdinal = objectManager.getFrameCounter() + 1;
-        new InitialProcessSpritesCoordinator().execute(new InitialProcessSpritesContext(
+        new InitialProcessSpritesCoordinator(original::requireCurrent).execute(new InitialProcessSpritesContext(
                 new InitialProcessSpritesStages(dynamic, spriteManager, collision, fixed),
                 new ProcessSpritesEpoch(frameCounter, objectOrdinal, false)));
+        original.requireCurrent();
         // S3K loc_6468: Process_Sprites / Render_Sprites / Animate_Tiles precede
         // LevelLoop. Optional semantic ownership excludes palette and frame clocks.
         if (animatedPatternManager instanceof InitialLevelAnimationPass initialAnimation) {
             initialAnimation.runInitialLevelAnimationPass();
+            original.requireCurrent();
         }
     }
 
     private static InitialDynamicSstDispatcher dynamicDispatcher(
-            ObjectManager objectManager, SpriteManager spriteManager, Camera camera) {
+            ObjectManager objectManager, SpriteManager spriteManager, Camera camera,
+            ObjectManagerInternalAccess.InitialDispatch original) {
         return new InitialDynamicSstDispatcher() {
             private InitialObjectDispatchScope scope;
 
             @Override
             public InitialObjectDispatchScope begin(ProcessSpritesEpoch epoch) {
-                scope = objectManager.beginInitialProcessSprites(
-                        camera.getX(),
-                        spriteManager.getMainPlayable(),
-                        spriteManager.getSidekicks());
+                original.requireCurrent();
+                int cameraX = camera.getX();
+                original.requireCurrent();
+                var player = spriteManager.getMainPlayable();
+                original.requireCurrent();
+                var sidekicks = spriteManager.getSidekicks();
+                original.requireCurrent();
+                scope = original.begin(cameraX, player, sidekicks);
                 return scope;
             }
 

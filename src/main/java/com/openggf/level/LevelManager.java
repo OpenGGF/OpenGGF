@@ -1054,6 +1054,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase G: Create ObjectManager, TouchResponseTable, and wire CollisionSystem.
      */
     public void initObjectManager() throws IOException {
+        com.openggf.level.objects.ObjectManagerInternalAccess.retireInitialDispatch(objectManager);
         lostRingSpawnCoordinator.reset();
         touchResponseTable = gameModule.createTouchResponseTable(worldSession.getDataSource());
         objectManager = new ObjectManager(level.getObjects(),
@@ -2985,6 +2986,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int observedViewportWidth() { return camera==null?320:camera.getWidth(); }
     int observedViewportHeight() { return camera==null?224:camera.getHeight(); }
 
+    final ObjectManager attachedObjectManager() { return objectManager; }
+
     public ObjectManager getObjectManager() {
         return objectManager;
     }
@@ -4132,6 +4135,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void rebuildManagersForActTransition(Camera cam, List<TransitionSstOccupant> persistentDynamicObjects,
                                          SeamlessLevelTransitionRequest request, int cameraX) {
+        com.openggf.level.objects.ObjectManagerInternalAccess.retireInitialDispatch(objectManager);
         lostRingSpawnCoordinator.reset();
         ObjectManager previousObjectManager = objectManager;
         // V_int_run_count is global work RAM, outside Dynamic_object_RAM, and
@@ -4627,6 +4631,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
     public void resetGameplayState() {
+        com.openggf.level.objects.ObjectManagerInternalAccess.retireInitialDispatch(objectManager);
         discardPreparedLevelLoad();
         discardInitialProcessSpritesLifecycle();
         lostRingSpawnCoordinator.reset();

@@ -56,6 +56,8 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
         } catch (CallbackAborted aborted) {
             throw aborted;
         } catch (Throwable failure) {
+            if (com.openggf.level.objects.ObjectManagerInternalAccess.isInitialDispatchCancellation(failure))
+                throw (com.openggf.level.objects.ObjectCallbackAbortException) failure;
             rethrowIfFatal(failure);
             // A checked deferred load still belongs to the callback that failed, not
             // to a later consumer. Recognize only the loader and our own IO carrier.

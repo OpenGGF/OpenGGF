@@ -60,6 +60,9 @@ public class DefaultObjectServices implements ObjectServices {
         java.util.logging.Logger.getLogger(DefaultObjectServices.class.getName());
 
     private final LevelManager levelManager;
+
+    final LevelManager initialDispatchLevel() { return levelManager; }
+    final SolidExecutionRegistry initialDispatchSolids() { return solidExecutionRegistry; }
     private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final Camera camera;
     private final GameStateManager gameState;

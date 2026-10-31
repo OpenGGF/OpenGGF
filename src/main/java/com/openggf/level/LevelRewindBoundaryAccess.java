@@ -7,6 +7,10 @@ public final class LevelRewindBoundaryAccess {
     private LevelRewindBoundaryAccess() {
     }
 
+    public static com.openggf.level.objects.ObjectManager attachedObjectManager(LevelManager manager) {
+        return manager.attachedObjectManager();
+    }
+
     public static void bind(LevelManager manager, RewindBoundaryReporter reporter) {
         java.util.Objects.requireNonNull(manager, "manager").setRewindBoundaryReporter(reporter);
     }

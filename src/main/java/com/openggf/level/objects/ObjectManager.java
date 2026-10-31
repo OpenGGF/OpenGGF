@@ -293,7 +293,7 @@ public class ObjectManager {
             stageplayDirection = new StageplayObjectDirection(this, directionPolicy);
         }
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
-        this.objectCallbacks = new ObjectCallbackRouter(registry);
+        this.objectCallbacks = new ObjectCallbackRouter(registry, initialDispatch);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
         this.nativeSstWord2C = new ObjectNativeSstWord2C(slotLayout.lastProcessSlotExclusive(), this::currentNativeSstOwner, objectCallbacks, () -> rewindReconstructionChildCapture);
         this.windowingStrategy = registry != null
@@ -401,6 +401,15 @@ public class ObjectManager {
 
     ObjectCallbackRouter objectCallbacks() { return objectCallbacks; }
 
+    InitialObjectDispatchController initialDispatch() { return initialDispatch; }
+
+    void retireInitialExecution() {
+        updating = false;
+        currentExecSlot = -1;
+        processedInExecLoopScratch.clear();
+        deferredDynamicExecThisFrame.clear();
+    }
+
     ObjectSpawn managedSpawn(ObjectInstance instance) {
         ObjectSpawn placed = instanceToSpawn.get(instance);
         return placed != null ? placed
@@ -497,6 +506,7 @@ public class ObjectManager {
 
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
+        initialDispatch.retireState();
         if (stageplayDirection != null) {
             stageplayDirection.close();
         }
@@ -903,14 +913,24 @@ public class ObjectManager {
 
     SolidExecutionRegistry beginInitialSolidExecution(
             PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
+        return beginInitialSolidExecution(player, sidekicks, null);
+    }
+
+    SolidExecutionRegistry beginInitialSolidExecution(PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks, InitialObjectDispatchController.Reservation original) {
         frameCounter++;
         beginNativeSpriteFrame();
+        InitialObjectDispatchController.requireCurrent(original);
         updateCameraBounds();
+        InitialObjectDispatchController.requireCurrent(original);
         solidContacts.captureExecStartPlayerCentreY(player, sidekicks);
+        InitialObjectDispatchController.requireCurrent(original);
         SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
-        registry.beginFrame(
-                frameCounter,
-                execution.collectActivePlayers(player, sidekicks, activePlayersScratch));
+        InitialObjectDispatchController.requireCurrent(original);
+        var players = execution.collectActivePlayers(player, sidekicks, activePlayersScratch);
+        if (original == null) registry.beginFrame(frameCounter, players);
+        else original.beginSolidFrame(frameCounter, players);
+        InitialObjectDispatchController.requireCurrent(original);
         return registry;
     }
 
@@ -929,10 +949,12 @@ public class ObjectManager {
     public boolean admitTransientContactBeforePlayer(AbstractObjectInstance object) {
         if (object == null) return false;
         return objectCallbacks.call(object, () -> {
-            if (ObjectDirectionAccess.suspended(this, object) || object.isDestroyed()
-                    || object.getSlotIndex() < 0 || objectQuery().identityOf(object).isEmpty()) return false;
-            object.snapshotTouchResponseState();
-            return collisionResponseList.admitBeforePlayer(object);
+            if (ObjectDirectionAccess.suspended(this, object)
+                    || objectCallbacks.call(object, object::isDestroyed)
+                    || objectCallbacks.call(object, object::getSlotIndex) < 0
+                    || objectQuery().identityOf(object).isEmpty()) return false;
+            objectCallbacks.run(object, object::snapshotTouchResponseState);
+            return collisionResponseList.admitBeforePlayer(object, objectCallbacks);
         });
     }
 
@@ -996,7 +1018,7 @@ public class ObjectManager {
                 instance = currentNativeSstOwner(slot);
                 if (instance == null) return;
             }
-            collisionResponseList.addToCurrentBuild(instance);
+            collisionResponseList.addToCurrentBuild(instance, objectCallbacks);
         }
     }
 
@@ -1238,6 +1260,7 @@ public class ObjectManager {
     void runExecLoop(int cameraX, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution, boolean solidPostMovement) {
+        var originalDispatch = initialDispatch.currentReservation();
         int unloadCameraX = objectUnloadCameraX(cameraX);
         // ROM parity: Snapshot all objects' positions BEFORE their updates run.
         for (ObjectInstance inst : activeObjects.values()) {
@@ -1436,15 +1459,17 @@ public class ObjectManager {
                 }
             }
         } finally {
-            slotRetirement.drainChildReleases(
-                    execIndex -> releaseSlot(slotIndexForExec(execIndex)));
-            currentExecSlot = -1;
-            updating = false;
-            deferredDynamicExecThisFrame.clear();
-            processedInExecLoopScratch.clear();
-            if (objectsRemoved) {
-                bucketsDirty = true;
-                markActiveObjectCachesDirty();
+            if (originalDispatch == null || originalDispatch.ownsManager()) {
+                slotRetirement.drainChildReleases(
+                        execIndex -> releaseSlot(slotIndexForExec(execIndex)));
+                currentExecSlot = -1;
+                updating = false;
+                deferredDynamicExecThisFrame.clear();
+                processedInExecLoopScratch.clear();
+                if (objectsRemoved) {
+                    bucketsDirty = true;
+                    markActiveObjectCachesDirty();
+                }
             }
         }
     }
@@ -4222,6 +4247,7 @@ public class ObjectManager {
 
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
+                initialDispatch.retireState();
                 playerBoundRewind.clear();
                 // The restore is TWO-PHASE so object-reference resolution is order-independent.
                 //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every

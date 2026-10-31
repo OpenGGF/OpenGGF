@@ -1368,6 +1368,9 @@ Unreleased. The earlier development themes remain in
   aborts while retaining ordinary lookup fallbacks. Object ROM reads follow their
   owning world's source, and world metadata writes remain with the engine lifecycle.
   Preparation retirement waits for its decoder before releasing ROM resources.
+  Initial object dispatch stops when a callback replaces or restores its owners.
+  Its cleanup preserves restored standing state, and valid successor operations
+  remain usable without quarantining creator code for engine cancellation.
   Rewind seeks, backward steps and optional
   audits refuse fade snapshots whose completion callbacks cannot be restored.
   Standalone audio callers supply their selected profile to the reusable presentation host;

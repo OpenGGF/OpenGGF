@@ -19,14 +19,24 @@ final class InitialProcessSpritesCoordinator {
     }
 
     private final java.util.function.Consumer<Checkpoint> checkpoint;
+    private final Runnable requireCurrent;
 
     InitialProcessSpritesCoordinator() {
         this(ignored -> { });
     }
 
-    InitialProcessSpritesCoordinator(
-            java.util.function.Consumer<Checkpoint> checkpoint) {
+    InitialProcessSpritesCoordinator(Runnable requireCurrent) {
+        this(ignored -> { }, requireCurrent);
+    }
+
+    InitialProcessSpritesCoordinator(java.util.function.Consumer<Checkpoint> checkpoint) {
+        this(checkpoint, () -> { });
+    }
+
+    private InitialProcessSpritesCoordinator(java.util.function.Consumer<Checkpoint> checkpoint,
+            Runnable requireCurrent) {
         this.checkpoint = checkpoint;
+        this.requireCurrent = requireCurrent;
     }
 
     void execute(InitialProcessSpritesContext context) {
@@ -34,18 +44,30 @@ final class InitialProcessSpritesCoordinator {
         InitialDynamicSstDispatcher dynamic = stages.dynamic();
         try (InitialObjectDispatchScope ignored = dynamic.begin(context.epoch())) {
             stages.fixed().onInitialScopeAcquired();
+            requireCurrent.run();
             stages.collisionList().freezePreviousReadView();
+            requireCurrent.run();
             dynamic.loadSprites();
+            requireCurrent.run();
             stages.playables().processInitialPlayableSlots(
                     context.epoch(), InitialPlayableInput.nativeNeutral());
+            requireCurrent.run();
             checkpoint.accept(Checkpoint.AFTER_PLAYABLES_BEFORE_RESET);
+            requireCurrent.run();
             stages.collisionList().resetCurrentBuild();
+            requireCurrent.run();
             dynamic.processAbsoluteDynamicSlot3();
+            requireCurrent.run();
             dynamic.processManagedDynamicSlots4Through93();
+            requireCurrent.run();
             stages.collisionList().markDynamicBuildComplete();
+            requireCurrent.run();
             checkpoint.accept(Checkpoint.AFTER_DYNAMIC_BEFORE_FIXED);
+            requireCurrent.run();
             stages.fixed().processPostDynamicFixedSlots(context.epoch());
+            requireCurrent.run();
             stages.collisionList().captureCompletedBuild();
+            requireCurrent.run();
         }
     }
 }

@@ -9052,3 +9052,301 @@ the directly affected behavior and fresh owning structural guards. The fresh
 `TestModApiSignatureSurface`, with no failures, errors or skips. API pins and
 architecture allowances remain unchanged. No full-suite, trace-route, emulator,
 GPU or global-green claim follows from these local checks.
+
+
+## Callback lifetime follow-up preparation, 2026-10-30
+
+The user requested preparation while PR #240 runs hosted CI. This local branch
+starts at that PR's head, `aef90c1eb3a05ff7563435141f627eaee833e300`.
+It is a preparation artifact, not a second implementation or a runtime result.
+No callback-lifetime change is included in PR #240.
+
+The first increment is initial object dispatch. It must stop suspended engine
+work after a supported nested load or restore supersedes its owners. It must
+preserve valid operations on the successor while the old callback remains on
+the stack. It must not simulate hardware, use a gameplay clock as an ownership
+version, or import the archived Source and physical-return framework.
+
+### Current source evidence
+
+`InitialObjectDispatchController.Scope.close` at lines 185-202 aborts the
+collision build and calls the captured shared solid registry's `finishFrame`.
+It then clears fixed objects and the active scope. These are writes that must
+belong to that exact dispatch, not merely to its ObjectManager reference.
+
+`DefaultSolidExecutionRegistry.finishFrame` at lines 77-89 clears previous
+standing and rebuilds it from the current frame. Its restore method at lines
+145-160 restores previous standing while clearing the current frame. An old
+scope finishing afterward can therefore erase the restored standing state.
+
+`ObjectExecutionController` at lines 76-90 continues after an object's update
+into policy and solid tails, then calls `endObject`. Initial fixed dispatch
+similarly continues into collision publication. The existing callback router
+tracks creator ownership, not load or restore freshness. Its outer wrapper can
+also enclose the whole execution controller.
+
+ObjectManager reset begins at line 498. Its rewind adapter restore begins at
+line 4224. Both can enter callbacks after mutation starts. A successful-load
+counter, `completedProductionLoadGeneration`, is consequently too late.
+`RewindRegistry.courseLayoutVersion` changes
+adapter layout, not every restore, and cannot stand in for a restore identity.
+
+### Bounded design decision
+
+Two shapes were considered. A single ambient load generation is smaller in
+appearance, but misses same-manager restore and independent solid-frame
+replacement. An ambient lexical guard can also reject valid successor calls
+because the old callback is still on the stack. Do not use this shape.
+
+Prefer ownership local to the existing initial-dispatch controller and solid
+registry. A dispatch carries its own identity and a captured solid-frame
+identity. Reset, restore and frame replacement retire the old identities before
+any callback can adopt replacement state. These identities are runtime lifetime
+state and must not be restored from gameplay snapshots.
+
+Capture the original manager, its state incarnation and its LevelManager
+attachment before InitialProcessSpritesExecutor invokes profile preparation or
+fixed-dispatch factories. Capturing only when beginInitialProcessSprites starts
+would adopt a callback-created replacement. Binding the later solid frame must
+also reject an intervening replacement rather than adopting its current stamp.
+The exact handoff remains to be proved by an early-preparation replacement test.
+
+Capture the relevant lease for each operation. Validate between separate
+external callbacks, including getter, policy and listener calls. A compound
+lambda containing several external calls is not one safe callback boundary.
+A stale close must skip both collision/solid writes and clearing successor
+controller fields. Ordinary owned success and exception cleanup remain intact.
+The exact shared solid-scope API remains to be chosen after the first regressions.
+Keep the implementation in existing controllers rather than growing ObjectManager
+or introducing a general capability framework.
+
+### Test-first sequence
+
+Use a new `TestInitialObjectDispatchSuccessorOwnership` beside
+`TestObjectManagerInitialS3kSetupPass`. Keep the existing success and failure
+controls. Borrow the real session, object-before-solid registration ordering and
+captured standing setup from `TestNativeCompetitionCameraRestore` at lines
+88-144. Use a genuine S3K-layout registry for S3K initial dispatch, rather than
+calling those APIs on the S2 layout. Use the real DefaultSolidExecutionRegistry
+and actual captured snapshots, not a recording registry or fabricated state.
+A ROM-free fixture is a candidate, not an observed qualification.
+
+1. Complete successor state B before A begins. Establish nonempty standing
+   through the real solid checkpoint owner and capture the actual registry.
+2. In A's actual object update, restore B, re-resolve its objects and verify
+   unchanged world/context, fresh identities, capture success and standing.
+   The existing `setRewindInPlaceRestoreEnabledForTest(false)` seam can prove
+   reconstruction rather than accidental reuse.
+3. Throw a sentinel after those prerequisites. Require exact primary identity
+   and unchanged B standing after A unwinds. This first cleanup discriminator
+   does not require inventing an abort type. It is currently UNRUN.
+4. Add an independent normal-return variant. Require engine supersession
+   rejection, no subsequent old-object callbacks or publisher tails, and
+   unchanged B state. The fence acts after the user callback returns. It must
+   not prohibit legitimate successor operations inside that callback.
+5. Add a real ROM-backed nested fresh-load variant. Load-method return is not
+   sufficient. Require the destination, a different ObjectManager, completed
+   initial processing, successful capture and a meaningful standing/control
+   state. The exact pending-pass completion sequence is still an open fixture
+   prerequisite. Earlier boot or recipe failures do not count as RED.
+6. Inside the replacement callback, independently exercise a two-object typed
+   query, supported null-spawn admission and an ordinary successor update where
+   its lifecycle allows it. Compare B after those operations and after A's
+   cleanup. These controls prevent ambient stale-A guards from disabling B.
+
+### Creator fault boundary and exclusions
+
+Add authentic creator registration using the existing
+`TestCourseRestoreCreatorOwnerScope` setup at lines 192-239. A legitimate nested
+restore must not quarantine its owner, while an ordinary creator failure still
+must. ModFaultBoundary currently exempts only its own CallbackAborted. Throwing
+a different engine abort inside that boundary can quarantine valid code.
+Do not exempt every public ObjectCallbackAbortException; creator code can
+subclass that signal. Either place the freshness check outside the entire
+creator fault boundary or use a specifically engine-created cancellation signal.
+This choice needs its own behavioral control before implementation.
+
+The first follow-up excludes a whole ordinary-frame callback audit, new world
+admission policy, scene-format changes, raw palette or video state, and hardware
+timing models. Shared helpers may need an explicit initial-dispatch lease, but
+ordinary dispatch behavior stays unchanged in this increment. Source preparation
+is complete enough to start the first regression. No test, compilation, runtime
+RED, execution cost or all-callers closure is claimed for this follow-up.
+
+
+## Initial callback lifetime implementation, 2026-10-30
+
+The implementation starts from merged PR #240 at develop
+`062e8a9f2610ef149cff53b26b28f3378ab8fe79`. It implements the bounded
+initial-dispatch follow-up above. The archived Native experiment is excluded.
+
+The first original-production run used
+`maven_queue.py -Dmse=off -Dtest=TestInitialObjectDispatchSuccessorOwnership test`.
+Two controls passed. The third case restored real nonempty standing inside an
+object update and threw an exact sentinel. The sentinel survived, but old scope
+cleanup erased the restored standing. This was an observed failure at the final
+standing assertion, with no errors or skips.
+
+An expanded original-production run selected
+`TestInitialObjectDispatchSuccessorOwnership,TestInitialDispatchCreatorCancellation,TestInitialProcessSpritesEntryLifetime`.
+It reported 18 cases, ten passes and eight failures, with no errors or skips.
+The failures covered direct and full-registry standing cleanup, two successor
+operations, creator restoration, and three pre-scope callbacks. The pre-scope
+cases completed B inside the callback before A incorrectly began its own frame
+and reached the existing sprite-epoch rejection. The required earlier engine
+cancellation was absent. Ordinary creator errors and a forged public abort still
+quarantined their owner in the controls.
+
+A separate original-production run of `TestInitialSolidCallbackLifetime`
+reported six cases, three passes and three failures. Execution-mode,
+solid-parameter and participant-admission callbacks each completed a genuine
+manager restore, then returned into the old engine tail without cancellation.
+
+The existing initial-dispatch controller now owns a runtime incarnation and
+captures its real LevelManager attachment. Reset, rewind restore and manager
+replacement retire that incarnation before callbacks. The solid registry owns
+an independent runtime frame identity. Its begin, restore and transient clear
+retire old frames. The internal solid bridge captures both frame and object
+context for cleanup. These identities are absent from gameplay snapshots.
+The public SolidExecutionRegistry interface and API pins are unchanged.
+
+Each routed callback captures its initial reservation before invoking creator
+code. Solid helper methods capture before their provider, listener and object
+reads, then check immediately after each extension call. A callback may complete
+B's restore and perform valid B queries or null-spawn allocation before returning.
+The old reservation rejects A afterward. There is no thread-local old-A fence.
+A private final engine cancellation subtype is exempt from creator quarantine;
+the public abort base and creator-defined subclasses are not.
+
+InitialProcessSpritesExecutor captures before profile lookup, scroll preparation
+and the fixed-dispatch factory. That same reservation acquires the later scope.
+Coordinator stage checks stop publication after replacement. Scope close and
+object/loop cleanup mutate only their original owners and preserve primary
+exceptions.
+
+The final validation results and review disposition are recorded below after
+execution. The change-based selection maps shared owners to all smoke categories.
+Hosted PR CI will own that broad selection. Local coverage targets actual initial
+flows, solid contacts, creator fault boundaries, restore and fresh structural
+guards. Routine validation does not select the release-only full suite.
+
+Independent custom SolidExecutionRegistry implementations retain their existing
+methods and normal cleanup behavior. The engine detects their manager replacement
+or restore, but cannot detect an independent out-of-band custom-registry restore
+through the unchanged public interface. No whole ordinary-frame callback audit,
+console emulation, or physical-device accuracy claim is included.
+
+
+The independent source review identified three remaining callback boundaries in
+the first implementation: collision-list eligibility and slot reads were not
+routed during initial publication; slope adapters contained virtual calls; and
+the piece-specific landing-width cast bypassed the direct-provider checks.
+The targeted candidate run reported 15 cases, nine passes, three failures and
+three errors, with no skips. Slope/piece cases reached the restored owner and
+then observed retired calls. Collision cases qualified the completed snapshot
+inside the callback, then old publication added an unmanaged object to B's
+collision list, making its later capture fail with a missing rewind identity.
+That failure occurred after the completed-restore prerequisite. The test now
+asserts that post-unwind capture must succeed before comparing the full state.
+
+The same run passed both actual-ROM AIZ2-to-HCZ1 load controls and the restored
+ordinary-update control. The nested load completed HCZ1 initial processing,
+installed a different ObjectManager, published nonempty standing through the
+real solid owner and captured the whole registry before A returned. The update
+control completed B's ordinary update before A's cancellation. Their historical
+run used the first candidate; final qualification follows the corrections.
+
+The correction supplies the existing callback router explicitly at initial
+collision publication, checks between adapter calls and after the cast-based
+piece-width hook, and keeps the old checkpoint cleanup from overwriting a
+restored manager. No new API allowance or device behavior was introduced.
+
+
+### Final local qualification
+
+The final implementation working tree atop test commit `bb147d130` passed
+145 affected cases across 21 classes, with zero failures, errors or skips.
+All 39 new cases executed, including both actual-ROM nested-load controls.
+The command used the queued wrapper with `-Dmse=off`, explicit absolute S2 REV01
+and locked-on S3K ROM paths, and these exact selectors:
+
+```text
+TestInitialObjectDispatchSuccessorOwnership,TestInitialDispatchCreatorCancellation,TestInitialProcessSpritesEntryLifetime,TestInitialSolidCallbackLifetime,TestInitialCollisionCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialDispatchNestedFreshLoad,TestObjectManagerInitialS3kSetupPass,TestInitialProcessSpritesCoordinator,TestInitialProcessSpritesArmingEpoch,TestInitialProcessSpritesPartialRewind,TestSolidExecutionRegistry,TestSolidExecutionRewindSnapshot,TestObjectSolidContactController,TestCourseRestoreCreatorOwnerScope,TestNativeCompetitionCameraRestore,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The first combined run had four errors in the existing isolated solid-controller
+fixtures. Their mock ObjectManager has no dispatch controller. The initial-only
+lookup now treats that unscoped state as absent, while real manager captures
+retain their original ownership checks. Existing test assertions were not
+changed. The final 145-case run includes all four repaired fixtures.
+Expected diagnostic faults came from the existing rejected-load, creator-failure
+and forged-abort controls. The final run introduced no skipped prerequisites.
+
+A separate fresh JVM then ran:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestArchUnitRules,TestArchitecturalSourceGuard,TestRewindCoverageGuard,TestModApiSignatureSurface' test
+```
+
+All 134 guard cases passed with no failures, errors or skips. The API declarations,
+pins, architecture allowances and facade limits remain unchanged. Both runs used
+Java 25. The S3K ROM identity was SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`, CRC32 `63522553`; S2 REV01 was
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, CRC32 `7B905383`.
+
+`run_categories.py --base 062e8a9f2610ef149cff53b26b28f3378ab8fe79 --json`
+selects 4,365 smoke candidates and separate guards. Hosted PR CI owns that broad
+selection. The local results above are affected-domain and guard qualification,
+not a full-suite or campaign parity claim. Main's existing dirty submodules and
+untracked files were preserved. The fully merged PR #240 worktree and local task
+branch were removed; this follow-up worktree remains while its PR is open.
+
+
+### PR #242 hosted-smoke compatibility correction, 2026-10-30
+
+Hosted `test` job `124327525442` in run `41132728981`, at PR head
+`613d2f12dcbda0f1993398c8ab59184470246ac7`, reported 32,924 cases,
+zero assertion failures, three errors and 6,580 skips. Hosted policy and guards
+passed. The three errors reproduced exactly in a queued 47-case local run of
+`TestCinematicScrollPublication,TestLevelSeamlessTransitionExecutor,TestNativeCompetitionFixedSstAccess`.
+No baseline waiver or job retry was used.
+
+Two errors came from cleanup retiring a mocked ObjectManager whose dispatch
+controller is absent. The retirement bridge now checks for that optional state,
+as the existing unscoped solid helper already does. Real managers still retire
+their original incarnation before teardown callbacks.
+
+The third error came from the ordinary canonical collision-builder reset after
+a completed initial scope. The existing test fills both physical address lists,
+deletes their occupants, and then reclaims only current-builder capacity while
+preserving all 63 previous addresses. Absence of an initial scope was a valid
+operation before this PR. Freeze, reset and mark now validate the original scope
+when present. Freeze retains its locally captured reservation across snapshot
+callbacks; it does not adopt a replacement scope after the callback returns.
+Capture completion still requires an active scope.
+
+Six new cases distinguish unscoped builder operations from an open scope that a
+real solid-only restore supersedes. Before the correction, all three unscoped
+operations failed and all three stale-scope rejection controls passed. The checks
+retain the stale scope directly rather than using `currentReservation()`, which
+intentionally filters stale scopes to null for valid successor operations.
+
+After the correction, the 13-class CI and callback selection passed 105 cases,
+with no failures, errors or skips. Its command was the queued wrapper with
+`-Dmse=off` and this selector:
+
+```text
+TestCinematicScrollPublication,TestLevelSeamlessTransitionExecutor,TestNativeCompetitionFixedSstAccess,TestInitialObjectDispatchSuccessorOwnership,TestInitialProcessSpritesEntryLifetime,TestInitialDispatchCreatorCancellation,TestInitialSolidCallbackLifetime,TestInitialSolidAdapterLifetime,TestInitialCollisionCallbackLifetime,TestObjectManagerInitialS3kSetupPass,TestInitialProcessSpritesCoordinator,TestInitialProcessSpritesArmingEpoch,TestInitialProcessSpritesPartialRewind
+```
+
+A disjoint six-class selection passed 62 cases with explicit verified S2 and S3K
+ROM paths. It selected `TestInitialDispatchNestedFreshLoad,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+There were no failures, errors or skips. Both selections ran on the corrected
+working tree atop `613d2f12d`. All 45 new cases executed across these runs.
+
+
+A fresh JVM repeated the four owning guards using the same `-Pguards` command
+recorded above. All 134 cases passed with no failures, errors or skips. API pins,
+architecture allowances and facade limits remain unchanged. These are bounded
+local results; a fresh hosted smoke result is required after publishing the fix.
