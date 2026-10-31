@@ -15,6 +15,10 @@ checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-
 
 ## Delivery skills
 
+- [Mod authoring](../../.agents/skills/mod-authoring/SKILL.md) routes creator
+  requests through task recipes, supported extension points and focused checks
+  while preserving expert overrides.
+
 - [S3K zone bring-up](../../.agents/skills/s3k-zone-bring-up/SKILL.md) is the
   end-to-end entry point: inventory, playable slices, visual/native evidence,
   compatibility and rewind, current acceptance status, media and integration.

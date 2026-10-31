@@ -533,6 +533,10 @@ never preserved.
 - Current gaps: [general](docs/status/known-discrepancies.md),
   [S3K](docs/S3K_KNOWN_DISCREPANCIES.md). Configuration: [CONFIGURATION.md](CONFIGURATION.md).
 
+- Mod authoring: [mod-authoring skill](.agents/skills/mod-authoring/SKILL.md)
+  and [task recipes](docs/modding/task-recipes.md) route creator work to supported
+  helpers, lifecycle contracts and focused verification.
+
 - Next-line Mod API and multiplayer contracts: [subsystem reference](docs/architecture/next-line-subsystems.md),
   [creator handbook](docs/modding/index.md), and
   [API compatibility](docs/architecture/mod-api-compatibility.md).
