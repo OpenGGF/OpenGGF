@@ -162,7 +162,7 @@ class TestCollisionSystemAirLanding {
         sprite.setAngle((byte) 0x08);
 
         CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
-        collisionSystem.resolveGroundAttachment(sprite, 14, () -> true);
+        collisionSystem.resolveGroundAttachment(sprite, 14);
 
         assertTrue(sprite.getAir(), "Stale object-side support must still allow terrain walk-off once Status_OnObj is clear");
         assertFalse(sprite.getPushing(), "Walk-off should clear pushing just like the normal terrain path");
@@ -186,7 +186,7 @@ class TestCollisionSystemAirLanding {
         assertEquals(0x2F, sprite.getMappingFrame(), "Fixture should begin partway through Roll2");
 
         CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
-        collisionSystem.resolveGroundAttachment(sprite, 14, () -> false);
+        collisionSystem.resolveGroundAttachment(sprite, 14);
         sprite.getAnimationManager().update(2);
 
         assertTrue(sprite.getAir(), "Missing terrain support should put the player in the air");
@@ -210,7 +210,7 @@ class TestCollisionSystemAirLanding {
         assertEquals(0x11, sprite.getMappingFrame(), "Fixture should begin partway through Run");
 
         CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
-        collisionSystem.resolveGroundAttachment(sprite, 14, () -> false);
+        collisionSystem.resolveGroundAttachment(sprite, 14);
         sprite.getAnimationManager().update(2);
 
         assertTrue(sprite.getAir(), "Missing terrain support should put the player in the air");
@@ -220,7 +220,11 @@ class TestCollisionSystemAirLanding {
     }
 
     @Test
-    void staleStatusOnObjectDoesNotSuppressTerrainWalkOffWhenObjectSupportIsGone() {
+    void statusOnObjectWithoutLiveSupportStillSkipsTerrainAttachment() {
+        // Player_AnglePos returns on Status_OnObj without asking which object set
+        // it (sonic3k.asm:18771-18777; S2 AnglePos, S1 Sonic_AnglePos likewise).
+        // A support that disappeared without clearing the bit leaves the player
+        // grounded on it (FixBugs=0); only an object routine clears the bit.
         AbstractPlayableSprite sprite = newTestSprite();
         sprite.setAir(false);
         sprite.setOnObject(true);
@@ -229,15 +233,15 @@ class TestCollisionSystemAirLanding {
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0x025A);
 
-        CollisionSystem collisionSystem = new CollisionSystem(new StubTerrainCollisionManager(null, null));
-        collisionSystem.resolveGroundAttachment(sprite, 14, () -> false);
+        StubTerrainCollisionManager terrain = new StubTerrainCollisionManager(null, null);
+        CollisionSystem collisionSystem = new CollisionSystem(terrain);
+        collisionSystem.resolveGroundAttachment(sprite, 14);
 
-        assertTrue(sprite.getAir(), "Stale Status_OnObj must not suppress Player_AnglePos walk-off");
-        assertFalse(sprite.isOnObject(), "Stale object support should be cleared before terrain walk-off");
-        assertFalse(sprite.getPushing(), "Player_AnglePos walk-off clears Status_Push");
-        assertFalse(sprite.getRolling(), "Terrain walk-off should not become a vine/jump release");
-        assertEquals((short) 0, sprite.getYSpeed(), "Walk-off preserves y_vel until gravity runs next frame");
-        assertEquals((short) 0x025A, sprite.getGSpeed(), "Walk-off preserves the ground-speed path");
+        assertFalse(sprite.getAir(), "Player code never turns a set Status_OnObj into a walk-off");
+        assertTrue(sprite.isOnObject(), "Player_AnglePos never clears Status_OnObj");
+        assertTrue(sprite.getPushing(), "the early return writes no status bits");
+        assertEquals(0, terrain.probeCount, "the early return precedes every terrain probe");
+        assertEquals((short) 0x025A, sprite.getGSpeed());
     }
 
     @Test
@@ -248,7 +252,7 @@ class TestCollisionSystemAirLanding {
 
         StubTerrainCollisionManager terrain = new StubTerrainCollisionManager(null, null);
         CollisionSystem collisionSystem = new CollisionSystem(terrain);
-        collisionSystem.resolveGroundAttachment(sprite, 14, () -> true);
+        collisionSystem.resolveGroundAttachment(sprite, 14);
 
         assertFalse(sprite.getAir(), "Supported object riders should not be detached by terrain probes");
         assertEquals(0, terrain.probeCount, "Supported object riders should skip terrain attachment probes");

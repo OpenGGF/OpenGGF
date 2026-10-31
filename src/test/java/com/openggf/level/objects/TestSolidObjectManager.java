@@ -229,7 +229,9 @@ public class TestSolidObjectManager {
         player.setCentreY((short) centreY);
         player.setYSpeed((short) 0);
 
-        assertTrue(manager.hasStandingContact(player));
+        runObjectPass(manager, player);
+        assertTrue(manager.isRidingObject(player, object));
+        assertTrue(player.isOnObject());
     }
 
     @Test
@@ -394,14 +396,6 @@ public class TestSolidObjectManager {
 
         runObjectPass(manager, sidekick);
         assertTrue(manager.isRidingObject(sidekick));
-        assertTrue(manager.hasGroundingObjectSupport(sidekick));
-
-        sidekick.setOnObject(true);
-        sidekick.setAir(true);
-        sidekick.setYSpeed((short) 0x0038);
-        assertFalse(manager.hasGroundingObjectSupport(sidekick),
-                "A stale airborne SolidObject standing bit is not active grounding support because "
-                        + "the helper returns before SolidObject_cont (s2.asm:35028-35046)");
 
         sidekick.setRenderFlagOnScreen(false);
         sidekick.setOnObject(true);
@@ -410,9 +404,6 @@ public class TestSolidObjectManager {
 
         assertTrue(manager.isRidingObject(sidekick),
                 "S2 SolidObject preserves the stale P2 ride latch when render_flags.on_screen is clear");
-        assertFalse(manager.hasGroundingObjectSupport(sidekick),
-                "The preserved offscreen P2 latch is not active grounding support because "
-                        + "SolidObject returns before SolidObject_cont (s2.asm:35022-35031)");
 
         runObjectPass(manager, sidekick);
 
@@ -421,7 +412,6 @@ public class TestSolidObjectManager {
         assertTrue(sidekick.getAir(),
                 "Skipping offscreen P2 SolidObject preserves Status_InAir");
         assertTrue(manager.isRidingObject(sidekick));
-        assertFalse(manager.hasGroundingObjectSupport(sidekick));
         assertEquals(0x0038, sidekick.getYSpeed() & 0xFFFF,
                 "No SolidObject_cont support pass should zero the airborne sidekick's y_vel");
     }
@@ -562,23 +552,6 @@ public class TestSolidObjectManager {
                 "S3K SolidObjectFull_1P/SolidObjectTop_1P treat relX == width*2 as outside ride bounds");
         assertTrue(player.getAir(),
                 "Leaving exact ride bounds sets Status_InAir instead of extending support with a sticky buffer");
-    }
-
-    @Test
-    public void testHeadroomDistanceUpward() {
-        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
-        TestSolidObject object = new TestSolidObject(100, 70, params);
-        ObjectManager manager = buildManager(object);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.setWidth(20);
-        player.setHeight(20);
-        player.setCentreX((short) 100);
-        player.setCentreY((short) 100);
-
-        int distance = manager.getHeadroomDistance(player, 0x00);
-
-        assertEquals(3, distance);
     }
 
     @Test
@@ -2244,67 +2217,6 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void groundedPrePhysicsStatusClearWaitsForLaterRidingCheckpoint() {
-        AutoCheckpointProbeObject clearingObject = new AutoCheckpointProbeObject(60, 100);
-        AutoCheckpointProbeObject support = new AutoCheckpointProbeObject(100, 100);
-        SolidObjectParams params = support.getSolidParams();
-        ObjectManager manager = buildManager(clearingObject);
-        manager.addDynamicObject(support);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useGameRules(GameRules.SONIC_1);
-        player.setWidth(20);
-        player.setHeight(20);
-        player.setCentreX((short) 100);
-        player.setCentreY((short) (100 - params.groundHalfHeight()
-                - player.getYRadius()));
-        player.setYSpeed((short) 0);
-        manager.forceRidingObjectForBootstrap(player, support);
-
-        // A lower SST slot runs after Sonic in the ROM, but before physics in
-        // the engine's legacy order. Its grounded Status_OnObj clear must not
-        // manufacture InAir before this later support slot executes.
-        manager.solidContacts().noteGroundedOnObjectClearedBeforePhysics(player, clearingObject);
-        player.setOnObject(false);
-        player.setAir(true);
-
-        runObjectPass(manager, player);
-
-        assertFalse(player.getAir());
-        assertTrue(player.isOnObject());
-        assertTrue(manager.isRidingObject(player, support));
-    }
-
-    @Test
-    public void groundedStatusClearAfterRidingCheckpointIsNotRestored() {
-        AutoCheckpointProbeObject support = new AutoCheckpointProbeObject(100, 100);
-        AutoCheckpointProbeObject laterClearingObject = new AutoCheckpointProbeObject(140, 100);
-        SolidObjectParams params = support.getSolidParams();
-        ObjectManager manager = buildManager(support);
-        manager.addDynamicObject(laterClearingObject);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useGameRules(GameRules.SONIC_1);
-        player.setWidth(20);
-        player.setHeight(20);
-        player.setCentreX((short) 100);
-        player.setCentreY((short) (100 - params.groundHalfHeight()
-                - player.getYRadius()));
-        player.setYSpeed((short) 0);
-        manager.forceRidingObjectForBootstrap(player, support);
-
-        manager.solidContacts().noteGroundedOnObjectClearedBeforePhysics(player, laterClearingObject);
-        player.setOnObject(false);
-        player.setAir(true);
-
-        runObjectPass(manager, player);
-
-        assertTrue(player.getAir());
-        assertFalse(player.isOnObject());
-        assertFalse(manager.isRidingObject(player));
-    }
-
-    @Test
     public void earlierSolidCannotConsumeAnotherObjectsAirborneRidingState() {
         SolidObjectParams supportParams = new SolidObjectParams(0x2B, 0x30, 0x31);
         TestSolidObject earlierSolid = new TestSolidObject(0, 0,
@@ -2691,8 +2603,6 @@ public class TestSolidObjectManager {
             player.setCentreX((short)200);
             int surfaceY = 340 - 48;
             player.setCentreY((short)(surfaceY - player.getYRadius() - 4 + overlap));
-            assertEquals(overlap > 0 && overlap <= 16, manager.hasStandingContact(player),
-                    "geometry overlap="+overlap+" radius="+player.getYRadius()+" y="+player.getCentreY()+" anchor="+vine.getY());
             manager.processImmediateInlineSolidCheckpoint(vine, player, List.of());
             assertEquals(overlap > 0 && overlap <= 16, player.isOnObject(), "native overlap=" + overlap);
             // Snap reads the incoming radius; ResetOnFloor then restores standing radii.
@@ -2915,11 +2825,6 @@ public class TestSolidObjectManager {
     private static final class OwnCheckpointAirUnseatSolidObject extends TestSolidObject {
         private OwnCheckpointAirUnseatSolidObject(int x, int y, SolidObjectParams params) {
             super(x, y, params);
-        }
-
-        @Override
-        public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-            return true;
         }
     }
 
@@ -3211,11 +3116,6 @@ public class TestSolidObjectManager {
 
         @Override
         public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
-            return true;
-        }
-
-        @Override
-        public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
             return true;
         }
     }

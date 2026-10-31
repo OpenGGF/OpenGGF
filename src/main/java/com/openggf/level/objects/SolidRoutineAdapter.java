@@ -45,10 +45,6 @@ public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProf
         SolidRoutineProviderForwarding.onRejectedZeroDistanceTopSolidLanding(provider, player);
     }
 
-    public boolean providesPreMovementGroundAttachmentSupport() {
-        return SolidRoutineProviderForwarding.providesPreMovementGroundAttachmentSupport(provider);
-    }
-
     public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
         return SolidRoutineProviderForwarding.preservesObjectManagedRideWhileNotSolidFor(provider, player);
     }

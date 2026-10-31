@@ -1382,8 +1382,7 @@ public final class TraceReplaySessionBootstrap {
         var collision = GameServices.collisionOrNull();
         if (collision != null && sprite != null
                 && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
-            collision.resolveGroundAttachment(
-                    FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
+            collision.placeOnTerrain(sprite, 14);
         }
     }
 
@@ -1462,8 +1461,7 @@ public final class TraceReplaySessionBootstrap {
         if (collision != null
                 && TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
                 && !shouldPreserveFreshGroundedStatusUntilFirstDispatch(trace)) {
-            collision.resolveGroundAttachment(
-                    FrameCollisionPlan.terrainOnly(), sprite, 14, () -> false);
+            collision.placeOnTerrain(sprite, 14);
         }
     }
 

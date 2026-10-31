@@ -339,13 +339,6 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        // loc_1DC98 belongs to this elevator's SolidObjectFull call. Earlier
-        // objects must not consume its ride record before that early return.
-        return true;
-    }
-
-    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         // d4 = x_pos(a0) (sonic3k.asm:88512); the platform only ever moves vertically.
         return false;

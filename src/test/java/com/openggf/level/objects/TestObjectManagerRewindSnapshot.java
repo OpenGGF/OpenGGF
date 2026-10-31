@@ -612,27 +612,17 @@ class TestObjectManagerRewindSnapshot {
         var p1 = contactPlayer("sonic");
         var p2 = contactPlayer("tails");
         owners.roster(p1, p2);
-        // Declared unit state: exercise every hidden channel, including two cached angles.
+        // Declared unit state: exercise every contact channel.
         manager.solidContacts().restoreRewindState(contactState(p1, p2, spawn, platform.getSlotIndex()));
         var adapter = manager.rewindSnapshottable();
         var a = adapter.capture();
         var contact = a.solidContactState();
         assertEquals(2, contact.riding().size());
-        assertEquals(2, contact.standingSnapshots().size());
-        assertEquals(4, contact.headroomSnapshots().size());
         assertEquals(2, contact.standingBits().size());
         assertEquals(2, contact.pushingBits().size());
-        assertEquals(2, contact.standingBitSnapshots().size());
-        assertEquals(2, contact.inlineSupportedPlayerBindings().size());
-        assertEquals(2, contact.forceAirOnStaleSupportLossPlayerBindings().size());
-        assertTrue(contact.inlineSupportedPlayers().isEmpty());
-        assertTrue(contact.forceAirOnStaleSupportLoss().isEmpty());
         assertTrue(contact.riding().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
-        assertTrue(contact.standingSnapshots().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
-        assertTrue(contact.headroomSnapshots().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
         assertTrue(contact.standingBits().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
         assertTrue(contact.pushingBits().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
-        assertTrue(contact.standingBitSnapshots().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
         forwardContacts(manager, p1, p2);
         var b = adapter.capture();
         forwardContacts(manager, p1, p2);
@@ -653,8 +643,6 @@ class TestObjectManagerRewindSnapshot {
             assertNotSame(platform, manager.getRidingObject(freshP1));
             assertTrue(manager.hasObjectStandingBit(freshP1, manager.getRidingObject(freshP1)));
             assertTrue(manager.hasObjectPushingBit(freshP2));
-            assertEquals(7, manager.latestHeadroomSnapshot(freshP1, 0));
-            assertEquals(11, manager.latestHeadroomSnapshot(freshP1, 0x40));
             forwardContacts(manager, freshP1, freshP2);
             assertContactWorld(b, adapter.capture());
             forwardContacts(manager, freshP1, freshP2);
@@ -669,12 +657,11 @@ class TestObjectManagerRewindSnapshot {
         var p2 = contactPlayer("tails");
         owners.roster(p1, p2);
         var controller = owners.manager.solidContacts();
-        controller.markObjectSupportThisFrame(p2);
-        controller.forceAirOnStaleObjectSupportLoss(p2);
+        controller.restoreRewindState(latchState(p2));
         var saved = controller.captureRewindState(owners.manager.captureIdentityContext());
         owners.roster(contactPlayer("sonic"));
         controller.reset();
-        controller.markObjectSupportThisFrame(p1);
+        controller.restoreRewindState(latchState(p1));
         var before = controller.captureRewindState();
         var failure = assertThrows(IllegalStateException.class,
                 () -> controller.restoreRewindState(saved, owners.manager.captureIdentityContext()));
@@ -693,12 +680,10 @@ class TestObjectManagerRewindSnapshot {
         var standalone = contactPlayer("m-legacy");
         owners.roster(p1, p2);
         var controller = owners.manager.solidContacts();
-        for (var player : List.of(p1, standalone, p2)) {
-            controller.markObjectSupportThisFrame(player);
-            controller.forceAirOnStaleObjectSupportLoss(player);
-        }
+        controller.restoreRewindState(latchState(p1, standalone, p2));
         var legacy = controller.captureRewindState();
-        assertEquals(List.of(p2, standalone, p1), legacy.inlineSupportedPlayers());
+        assertEquals(List.of(p2, standalone, p1),
+                legacy.standingBits().stream().map(ObjectManagerSnapshot.SolidContactLatchEntry::player).toList());
         controller.reset();
         controller.restoreRewindState(legacy);
         assertEquals(legacy, controller.captureRewindState(), "original raw overload keeps exact standalone identity");
@@ -708,8 +693,9 @@ class TestObjectManagerRewindSnapshot {
                 new ObjectManagerSnapshot.SolidContactPlayerBinding(null, PlayerRefId.sidekick(0)),
                 new ObjectManagerSnapshot.SolidContactPlayerBinding(standalone, null),
                 new ObjectManagerSnapshot.SolidContactPlayerBinding(null, PlayerRefId.mainPlayer()));
-        assertEquals(expected, structural.inlineSupportedPlayerBindings());
-        assertEquals(expected, structural.forceAirOnStaleSupportLossPlayerBindings());
+        assertEquals(expected, structural.standingBits().stream()
+                .map(entry -> new ObjectManagerSnapshot.SolidContactPlayerBinding(entry.player(), entry.playerId()))
+                .toList());
         controller.reset();
         controller.restoreRewindState(structural, context);
         assertEquals(legacy, controller.captureRewindState(), "unchanged roster restores every mixed member in order");
@@ -767,14 +753,16 @@ class TestObjectManagerRewindSnapshot {
         return new ObjectManagerSnapshot.SolidContactState(17,
                 List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(p1, spawn, slot, -1),
                         new ObjectManagerSnapshot.SolidContactRidingEntry(p2, spawn, slot, -1)),
-                List.of(p1, p2), List.of(p1, p2),
-                List.of(new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(p1, ContactKind.TOP, true, true),
-                        new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(p2, ContactKind.TOP, true, true)),
-                List.of(new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p1, 0, 7),
-                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p1, 0x40, 11),
-                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p2, 0, 13),
-                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p2, 0x40, 19)),
-                latches, latches, latches);
+                latches, latches);
+    }
+
+    /** Standing bits on one spawn-keyed object for each player, in the given order. */
+    private static ObjectManagerSnapshot.SolidContactState latchState(PlayableEntity... players) {
+        var key = new ObjectManagerSnapshot.SolidContactLatchKey(spawn(200, 200), -1, false);
+        var entries = java.util.Arrays.stream(players)
+                .map(player -> new ObjectManagerSnapshot.SolidContactLatchEntry(player, List.of(key)))
+                .toList();
+        return new ObjectManagerSnapshot.SolidContactState(0, List.of(), entries, List.of());
     }
 
     private static final class ContactRoster extends StubObjectServices {

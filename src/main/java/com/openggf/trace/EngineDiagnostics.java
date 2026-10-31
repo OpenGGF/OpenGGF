@@ -21,13 +21,10 @@ package com.openggf.trace;
  * @param solidEvent    Description of SolidContacts/touch event this frame, or empty
  * @param ridingObject  Tri-state engine truth from {@code ObjectManager.isRidingObject(player)}:
  *                      1 = riding, 0 = not riding, -1 = not captured.
- * @param standingSnapshot Tri-state engine truth from
- *                      {@code ObjectManager.latestStandingSnapshot(player)}:
- *                      1 = standing, 0 = not standing, -1 = not captured. The
- *                      snapshot is the latched standing flag that persists for a
- *                      frame after physical contact ends; it diverges from
- *                      {@code statusByte} bit 0x08 (the live on-object flag) on
- *                      walk-off and platform-release transitions.
+ * @param standingSnapshot Legacy tri-state slot; always -1 (not captured). The
+ *                      engine keeps no standing snapshot separate from the
+ *                      ride record, so {@code ridingObject} is the only
+ *                      engine-side support state.
  */
 public record EngineDiagnostics(
     int routine,

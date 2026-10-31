@@ -59,7 +59,6 @@ class TestLevelSeamlessTransitionExecutor {
                 .lockPlayerControlForInLevelTitleCard(true)
                 .inLevelTitleCardExitAdditionalDispatches(10)
                 .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
-                .forceAirOnStaleObjectSupportLoss(true)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(101)
                 .postTransitionMaxX(102)
@@ -100,8 +99,6 @@ class TestLevelSeamlessTransitionExecutor {
                 normalized.inLevelTitleCardExitAdditionalDispatches());
         assertEquals(source.inLevelTitleCardExitPhaseOneDispatchOverlap(),
                 normalized.inLevelTitleCardExitPhaseOneDispatchOverlap());
-        assertEquals(source.forceAirOnStaleObjectSupportLoss(),
-                normalized.forceAirOnStaleObjectSupportLoss());
         assertEquals(source.preserveOffsetCameraPosition(),
                 normalized.preserveOffsetCameraPosition());
         assertEquals(source.postTransitionMinX(), normalized.postTransitionMinX());

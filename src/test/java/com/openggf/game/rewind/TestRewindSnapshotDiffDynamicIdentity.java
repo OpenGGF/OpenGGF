@@ -60,7 +60,7 @@ class TestRewindSnapshotDiffDynamicIdentity {
     }
 
     @Test void hiddenSolidContactStateCannotBeOmittedFromWorldEquality() {
-        var state=new ObjectManagerSnapshot.SolidContactState(1,List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of());
+        var state=new ObjectManagerSnapshot.SolidContactState(1,List.of(),List.of(),List.of());
         assertDifferent(withCaptured(snapshot(),state,null,null,null,null,null),snapshot(),"solidContactState");
     }
     @Test void capturedPlaneCrossingSideMustRemainCompared() {
@@ -94,8 +94,7 @@ class TestRewindSnapshotDiffDynamicIdentity {
     @Test
     void equalNonCachedScalarCountersDoNotAppearAsDiagnosticDifferences() {
         var a = withCaptured(snapshot(), null, null, null, null, 200, 200);
-        var changed = new ObjectManagerSnapshot.SolidContactState(1, List.of(), List.of(),
-                List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+        var changed = new ObjectManagerSnapshot.SolidContactState(1, List.of(), List.of(), List.of());
         var b = withCaptured(a, changed, null, null, null, null, null);
         assertDifferent(a, b, "solidContactState");
         var differences = RewindSnapshotDiff.diffKey("object-manager", a, b);

@@ -843,9 +843,8 @@ public class ObjectManager {
             }
             flushPostExecDynamicSpawns();
         } finally {
-            if (inlineSolidResolution) {
-                solidContacts.finishInlineFrame(player, activeSidekicks);
-            }
+            // No solid pass runs after the objects: each helper already wrote
+            // Status_OnObj / Status_InAir at its own call site.
             solidExecutionRegistry.finishFrame();
         }
 
@@ -3131,25 +3130,7 @@ public class ObjectManager {
         solidContacts.clearRidingObjectForJump(player);
     }
 
-    public void forceAirOnStaleObjectSupportLoss(PlayableEntity player) {
-        solidContacts.forceAirOnStaleObjectSupportLoss(player);
-    }
-
-    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) { return solidContacts.hasPendingStaleObjectSupportLoss(player); }
-
     public ObjectSolidContactController solidContacts() { return solidContacts; }
-
-    /**
-     * Preserves a non-solid object's ownership of the player's on-object state for the
-     * current inline ExecuteObjects pass.
-     * <p>
-     * Some ROM objects (for example S2 Obj06 spiral) set {@code status.player.on_object}
-     * without going through SolidObject. Inline solid cleanup must not clear that state at
-     * frame end, so these objects can mark the player as supported for the current pass.
-     */
-    public void markObjectSupportThisFrame(PlayableEntity player) {
-        solidContacts.markObjectSupportThisFrame(player);
-    }
 
     /**
      * Get the object that this player is currently standing on (riding).
@@ -3170,29 +3151,9 @@ public class ObjectManager {
         return solidContacts.getRidingPieceIndex(player);
     }
 
-    public boolean hasStandingContact(PlayableEntity player) {
-        return solidContacts.hasStandingContact(player);
-    }
-
-    public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
-        return solidContacts.getHeadroomDistance(player, hexAngle);
-    }
-
     /** Player y-radius captured before the currently executing solid checkpoint. */
     public int getPreContactYRadius() {
         return solidContacts.getPreContactYRadius();
-    }
-
-    public boolean latestStandingSnapshot(PlayableEntity player) {
-        return solidContacts.latestStandingSnapshot(player);
-    }
-
-    public boolean hasGroundingObjectSupport(PlayableEntity player) {
-        return solidContacts.hasGroundingObjectSupport(player);
-    }
-
-    public int latestHeadroomSnapshot(PlayableEntity player, int hexAngle) {
-        return solidContacts.latestHeadroomSnapshot(player, hexAngle);
     }
 
     /**

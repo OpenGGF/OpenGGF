@@ -138,13 +138,6 @@ public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        // SolidObjectFull2_1P (sonic3k.asm:41110-41129) reads this object's
-        // standing bit; an earlier solid cannot consume its riding record.
-        return true;
-    }
-
-    @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         // loc_1DCF0 (sonic3k.asm:41124-41129) clears OnObj and this slot's
         // standing bit, then returns without re-entering the landing path.

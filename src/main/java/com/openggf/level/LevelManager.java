@@ -4064,12 +4064,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }
-            // ROM Load_Level clears Dynamic_object_RAM. If the player was riding
-            // an act-1 transition helper, the next ExecuteObjects pass clears the
-            // stale on-object bit and produces the one-frame airborne handoff.
-            if (request.forceAirOnStaleObjectSupportLoss() && objectManager != null) {
-                objectManager.forceAirOnStaleObjectSupportLoss(playable);
-            }
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
             int newX = sidekick.getCentreX() + request.playerOffsetX();
@@ -4078,9 +4072,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             sidekick.setCentreYPreserveSubpixel((short) newY);
             if (sidekick.getSpriteRenderer() != null) {
                 sidekick.getSpriteRenderer().invalidateDplcCache();
-            }
-            if (request.forceAirOnStaleObjectSupportLoss() && objectManager != null) {
-                objectManager.forceAirOnStaleObjectSupportLoss(sidekick);
             }
         }
         // The transition owns both the live and copied camera words. Use the

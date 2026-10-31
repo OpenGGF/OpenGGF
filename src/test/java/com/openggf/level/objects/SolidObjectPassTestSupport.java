@@ -55,8 +55,7 @@ public final class SolidObjectPassTestSupport {
             List<? extends PlayableEntity> sidekicks, boolean postMovement) {
         ObjectSolidContactController solid = manager.solidContacts();
         solid.beginInlineFrame(player, sidekicks, postMovement);
-        try {
-            for (ObjectInstance object : List.copyOf(manager.getSolidProviderObjects())) {
+        for (ObjectInstance object : List.copyOf(manager.getSolidProviderObjects())) {
                 if (object.isDestroyed() || !(object instanceof SolidObjectProvider provider)) {
                     continue;
                 }
@@ -66,9 +65,6 @@ public final class SolidObjectPassTestSupport {
                 SolidEntryRegisters registers = new SolidEntryRegisters(manager, object, provider,
                         object.getPreUpdateX(), captured.pieceEntryX(), null);
                 solid.processCompatibilityCheckpoint(object, player, sidekicks, postMovement, registers);
-            }
-        } finally {
-            solid.finishInlineFrame(player, sidekicks);
         }
     }
 }

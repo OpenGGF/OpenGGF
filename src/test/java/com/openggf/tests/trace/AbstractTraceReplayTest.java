@@ -1363,10 +1363,11 @@ public abstract class AbstractTraceReplayTest {
         // late-game frontiers like WFZ f7065 where ROM transitions to
         // airborne one frame before engine drops the ride.
         int ridingObject = -1;
+        // The engine no longer caches a separate standing snapshot: the ride
+        // record (interact) is the only engine-side support state.
         int standingSnapshot = -1;
         if (om != null) {
             ridingObject = om.isRidingObject(sprite) ? 1 : 0;
-            standingSnapshot = om.latestStandingSnapshot(sprite) ? 1 : 0;
         }
 
         String solidEvent = "";

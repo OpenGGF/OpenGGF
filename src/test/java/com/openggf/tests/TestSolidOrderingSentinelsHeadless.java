@@ -304,7 +304,7 @@ class TestSolidOrderingSentinelsHeadless {
             firstStandingLastFrame = result != null && result.standingLastFrame();
 
             updateDynamicSpawn(getX() + 0x80, getY());
-            helperStandingAfterMove = GameServices.collision().hasStandingContact((AbstractPlayableSprite) player);
+            helperStandingAfterMove = GameServices.collision().isRidingObject((AbstractPlayableSprite) player);
         }
 
         private void handleNoContactClear(PlayableEntity player) {
@@ -319,7 +319,7 @@ class TestSolidOrderingSentinelsHeadless {
                 return;
             }
 
-            helperStandingAfterMoveBack = GameServices.collision().hasStandingContact((AbstractPlayableSprite) player);
+            helperStandingAfterMoveBack = GameServices.collision().isRidingObject((AbstractPlayableSprite) player);
         }
 
         private void handleMultiPlayerBatch(PlayableEntity player) {
@@ -334,8 +334,8 @@ class TestSolidOrderingSentinelsHeadless {
             sidekickStandingFromBatch = sidekickResult != null && sidekickResult.standingNow();
 
             updateDynamicSpawn(getX() + 0x80, getY());
-            mainStandingAfterMove = GameServices.collision().hasStandingContact((AbstractPlayableSprite) player);
-            sidekickStandingAfterMove = GameServices.collision().hasStandingContact(batchSidekick);
+            mainStandingAfterMove = GameServices.collision().isRidingObject((AbstractPlayableSprite) player);
+            sidekickStandingAfterMove = GameServices.collision().isRidingObject(batchSidekick);
         }
 
         boolean firstStandingNow() {

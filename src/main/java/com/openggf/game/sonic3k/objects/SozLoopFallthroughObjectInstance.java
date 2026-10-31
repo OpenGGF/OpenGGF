@@ -59,10 +59,6 @@ public final class SozLoopFallthroughObjectInstance extends AbstractObjectInstan
             ObjectControlState.nativeBit7FullControl().applyTo(player); // object_control = $81
             player.setXSpeed((short) 0);
         }
-        if (participants.flag(slot, 0) && player.isOnObject()) {
-            var manager = services().objectManager();
-            if (manager != null) manager.markObjectSupportThisFrame(player);
-        }
     }
 
     // loc_40508: release the participant without advancing its flight or this routine.

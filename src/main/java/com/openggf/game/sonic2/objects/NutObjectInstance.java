@@ -239,14 +239,6 @@ public class NutObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
-        // Obj69 runs player movement before its late SolidObject tail, so a
-        // stale airborne ride must not be converted back into ground support
-        // before Obj69 can clear it (s2.asm:35028-35046,54006-54013).
-        return player instanceof AbstractPlayableSprite;
-    }
-
-    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!(contact.standing() || contact.touchTop())) {
             return;

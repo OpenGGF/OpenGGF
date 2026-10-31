@@ -19,7 +19,6 @@ public final class SolidRoutineProviderForwarding {
     public static boolean allowsZeroDistanceTopSolidLanding(SolidObjectProvider provider, PlayableEntity player) { return provider.allowsZeroDistanceTopSolidLanding(player); }
     public static boolean gatesNewTopSolidLandingWithPreviousPosition(SolidObjectProvider provider) { return provider.gatesNewTopSolidLandingWithPreviousPosition(); }
     public static void onRejectedZeroDistanceTopSolidLanding(SolidObjectProvider provider, PlayableEntity player) { provider.onRejectedZeroDistanceTopSolidLanding(player); }
-    public static boolean providesPreMovementGroundAttachmentSupport(SolidObjectProvider provider) { return provider.providesPreMovementGroundAttachmentSupport(); }
     public static boolean preservesObjectManagedRideWhileNotSolidFor(SolidObjectProvider provider, PlayableEntity player) { return provider.preservesObjectManagedRideWhileNotSolidFor(player); }
     public static Integer getObjectManagedRideCentreY(SolidObjectProvider provider, PlayableEntity player, int objectY, SolidObjectParams params) { return provider.getObjectManagedRideCentreY(player, objectY, params); }
     public static int getTopLandingSnapAdjustment(SolidObjectProvider provider, PlayableEntity player, int solidTopYRadius) { return provider.getTopLandingSnapAdjustment(player, solidTopYRadius); }

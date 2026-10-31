@@ -115,20 +115,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether this solid can keep a grounded player attached during the
-     * pre-movement terrain attachment check used by S2/S3K inline solid
-     * resolution.
-     * <p>
-     * Normal solids rely on the previous frame's standing snapshot. ROM helper
-     * objects spawned immediately before their first {@code SolidObjectTop}
-     * call do not have a previous snapshot yet, but can still support the
-     * player in the same frame.
-     */
-    default boolean providesPreMovementGroundAttachmentSupport() {
-        return false;
-    }
-
-    /**
      * Whether this solid should still be evaluated while the player is in an
      * object-controlled state. Most scripted object-control states suppress
      * generic solid contacts; a few ROM routines still call SolidObject and only
@@ -217,33 +203,6 @@ public interface SolidObjectProvider {
      * as CNZ cylinders, are not forced through plain full-solid semantics.
      */
     default boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether an airborne rider must retain this object's riding record until
-     * this same object's inline solid checkpoint consumes its standing bit.
-     *
-     * <p>Use this for native routines whose post-{@code SolidObjectFull}
-     * behavior depends on the per-object {@code a0.d6} result. An earlier
-     * object's solid checkpoint must not consume that state on its behalf.
-     */
-    default boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether a stale riding record that would be consumed by this object's
-     * airborne standing-bit branch is also ineligible for pre-movement
-     * ground-recovery support.
-     * <p>
-     * Most objects that opt into {@link #airborneStaleStandingBitReturnsNoContact}
-     * still use the engine riding record as the best available live-support
-     * signal before their own solid pass runs. Obj69-style callers can opt in
-     * when the ROM object tail reaches standard {@code SolidObject} late enough
-     * that the stale airborne branch must be visible to player movement first.
-     */
-    default boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
         return false;
     }
 

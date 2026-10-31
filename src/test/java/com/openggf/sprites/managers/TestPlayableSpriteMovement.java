@@ -2804,7 +2804,7 @@ public class TestPlayableSpriteMovement {
                 GroundSensor.setLevelManager(level);
                 var collision = new CollisionSystem(new TerrainCollisionManager()) {
                     @Override public void resolveGroundAttachment(FrameCollisionPlan plan,
-                            AbstractPlayableSprite player, int threshold, BooleanSupplier support) {
+                            AbstractPlayableSprite player, int threshold) {
                         player.setAir(false); // independent stable object support; real BG probes remain active
                     }
                 };
@@ -3850,16 +3850,14 @@ public class TestPlayableSpriteMovement {
                 @Override
                 public void resolveGroundAttachment(FrameCollisionPlan plan,
                                                     AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(true);
                         sprite.setPushing(false);
                 }
 
                 @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(true);
                         sprite.setPushing(false);
                 }
@@ -3873,15 +3871,13 @@ public class TestPlayableSpriteMovement {
                 @Override
                 public void resolveGroundAttachment(FrameCollisionPlan plan,
                                                     AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
 
                 @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
         }
@@ -3894,15 +3890,13 @@ public class TestPlayableSpriteMovement {
                 @Override
                 public void resolveGroundAttachment(FrameCollisionPlan plan,
                                                     AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
 
                 @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
 

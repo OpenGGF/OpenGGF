@@ -3115,7 +3115,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .showInLevelTitleCard(false)
                         .objectSurvivalPolicy(SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
                         .romWorldObjectOffsetRange(firstOffsetSlot, endOffsetSlot)
-                        .forceAirOnStaleObjectSupportLoss(true)
                         .mutationKey(S3kSeamlessMutationExecutor.MUTATION_AIZ1_POST_RELOAD_ACT2)
                         .playerOffset(-0x2F00, -0x80)
                         .cameraOffset(-0x2F00, -0x80)

@@ -60,7 +60,7 @@ class TestFrameCollisionPlan {
     void terrainPlayableApisExposePlanAwareOverloads() {
         assertPlanAwareCollisionMethod("resolveGroundWallCollision", AbstractPlayableSprite.class);
         assertPlanAwareCollisionMethod("resolveGroundAttachment",
-                AbstractPlayableSprite.class, int.class, BooleanSupplier.class);
+                AbstractPlayableSprite.class, int.class);
         assertPlanAwareCollisionMethod("resolveAirCollision",
                 AbstractPlayableSprite.class, Consumer.class);
         assertPlanAwareCollisionMethod("resolveAirCollision",
@@ -76,7 +76,7 @@ class TestFrameCollisionPlan {
         assertThrows(IllegalArgumentException.class,
                 () -> collisionSystem.resolveGroundWallCollision(noTerrain, sprite));
         assertThrows(IllegalArgumentException.class,
-                () -> collisionSystem.resolveGroundAttachment(noTerrain, sprite, 14, () -> false));
+                () -> collisionSystem.resolveGroundAttachment(noTerrain, sprite, 14));
         assertThrows(IllegalArgumentException.class,
                 () -> collisionSystem.resolveAirCollision(noTerrain, sprite, ignored -> { }));
     }

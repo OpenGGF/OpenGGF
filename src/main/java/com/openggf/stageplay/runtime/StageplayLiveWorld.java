@@ -265,7 +265,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 sprite.setTopSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0C : 0x0E));
                 sprite.setLrbSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0D : 0x0F));
                 sprite.setAir(true);
-                if (performer.track.snapToFloor()) owned.getCollisionSystem().resolveGroundAttachment(sprite, 14, () -> false);
+                if (performer.track.snapToFloor()) owned.getCollisionSystem().placeOnTerrain(sprite, 14);
                 while (performer.index < performer.track.commands().size()
                         && performer.track.commands().get(performer.index).frame() < first) performer.index++;
                 performer.lastProgress = first;
