@@ -573,10 +573,16 @@ class TestArchitecturalSourceGuard {
                 "liveCapturePresentation.present(");
         assertOrdered(source, "handleLiveCaptureShortcut();",
                 "updateDisplayShaderInput()");
-        assertTrue(source.contains("createLiveFrameRuntime(this::renderScheduledFrame, () -> glfwSwapBuffers(window))"));
+        assertTrue(source.contains("createLiveFrameRuntime(new LiveEndpoints(this::renderScheduledFrame, () -> glfwSwapBuffers(window),"));
+        // Engine.loop polls, iterates and waits; the runtime owns its clock and the swap interval.
+        assertTrue(source.contains("org.lwjgl.glfw.GLFW::glfwSwapInterval, displayWindowController::output,"));
+        assertTrue(source.contains("() -> com.openggf.audio.AudioManagerInternalAccess.speakerRateRegulated(audioManager), System::nanoTime));"));
+        assertTrue(source.contains("waitForFrameDeadline(liveFrames.iterate().wakeAtNanos());"));
+        assertEquals(1, source.split("glfwSwapInterval", -1).length - 1,
+                "LiveFrameRuntime is the sole live swap-interval writer");
         assertTrue(source.contains("sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions())"));
         String coordinator = Files.readString(SRC_MAIN.resolve("com/openggf/LiveFrameRuntime.java"));
-        assertOrdered(coordinator, "owner.tick()", "owner.draw(owner.captureActive())");
+        assertOrdered(coordinator, "owner.tick()", "owner.draw(host.captureActive())");
         assertOrdered(coordinator, "owner.draw(false)", "owner.swap()");
         String presenter = Files.readString(SRC_MAIN.resolve("com/openggf/SceneFocusPresentation.java"));
         assertOrdered(presenter, "Engine.displayAndSwap(display, swap)",
@@ -693,7 +699,7 @@ class TestArchitecturalSourceGuard {
     private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
-            new MethodBudget(ENGINE_PATH, "init", 159),
+            new MethodBudget(ENGINE_PATH, "init", 156),
             // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
             // pass (RewindVhsEffectPass.apply between the fade pass and the
             // PRESENTATION display-shader phase; the pass itself is a collaborator).

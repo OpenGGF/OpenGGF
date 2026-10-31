@@ -53,7 +53,16 @@ Unreleased. The earlier development themes remain in
   Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
   window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
   session changes retain their semantic owners. Repeated pictures acknowledge no
-  input and produce no audio. Native menu/background and MGZ blink clocks advance
+  input and produce no audio. Window pictures follow completed services: a service
+  is shown in the iteration that ran it, a limit below the region rate only thins
+  those pictures, and unchanged state is not redrawn, including while recording.
+  With `display.pacing: AUTO` (default), a display refreshing at a whole multiple of
+  the region rate is probed for two seconds and then paces one service per swap,
+  removing the periodic repeated or doubled picture on 59.94/60.02 Hz panels. Locked
+  play runs at the measured display speed and returns to host time on repeated missed
+  vblanks, non-blocking swaps or an out-of-band rate; `EXACT` keeps nominal speed.
+  The lock needs a rate-regulated speaker, so it stays off until the speaker reports one.
+  Native menu/background and MGZ blink clocks advance
   with updates. Trace ghosts advance their private animation on admitted replay
   rows, including pictures omitted during fast-forward; repeated pictures and
   layer/visibility filtering preserve the pose. Seeks restore observed private

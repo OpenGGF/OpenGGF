@@ -75,7 +75,8 @@ public final class EngineSettingsDraft {
         if (key == SonicConfiguration.DEBUG_VIEW_ENABLED) return Category.GAMEPLAY;
         if (key == SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT
                 || key == SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE
-                || key == SonicConfiguration.FPS || key == SonicConfiguration.SCALE) return Category.ADVANCED;
+                || key == SonicConfiguration.FPS || key == SonicConfiguration.DISPLAY_PACING
+                || key == SonicConfiguration.SCALE) return Category.ADVANCED;
         if (section.equals("ui") || section.startsWith("display")) return Category.DISPLAY;
         if (section.startsWith("audio")) return Category.AUDIO;
         if (section.startsWith("input")) return Category.INPUT;
