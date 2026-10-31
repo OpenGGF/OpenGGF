@@ -24,6 +24,25 @@ class TestConfigServiceYamlRoundTrip {
         assertEquals(SettingTiming.NOW, SettingTiming.of(SonicConfiguration.DISPLAY_INTERPOLATION));
     }
 
+    @Test void interpolationShortcutRoundTripsAndHasNoDefaultBindingConflict() throws Exception {
+        var service = SonicConfigurationService.createStandalone(tempDir);
+        var key = SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY;
+        assertEquals("N", service.getDefaultValue(key));
+        var draft = new EngineSettingsDraft(service);
+        assertTrue(draft.bindingConflicts(key).isEmpty());
+        for (var toggle : com.openggf.debug.DebugOverlayToggle.values()) {
+            assertNotEquals(toggle.keyCode(), service.getInt(key), toggle.name());
+        }
+        assertEquals(EngineSettingsDraft.category(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY),
+                EngineSettingsDraft.category(key));
+        assertEquals(SettingTiming.RESTART, SettingTiming.of(key));
+        service.setConfigValue(key, "F8");
+        service.saveConfig();
+        assertEquals(org.lwjgl.glfw.GLFW.GLFW_KEY_F8,
+                SonicConfigurationService.createStandalone(tempDir).getInt(key));
+        assertTrue(Files.readString(tempDir.resolve("config.yaml")).contains("interpolationToggleKey: F8"));
+    }
+
     @Test
     void saveWritesGroupedYaml() throws Exception {
         Path yaml = tempDir.resolve("config.yaml");

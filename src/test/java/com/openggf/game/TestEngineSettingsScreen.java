@@ -25,6 +25,29 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void interpolationShortcutIsRebindableBesideTheColourProfileShortcut() {
+        Fixture f = new Fixture();
+        var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.INPUT);
+        assertEquals(keys.indexOf(DISPLAY_COLOR_PROFILE_TOGGLE_KEY) + 1,
+                keys.indexOf(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+        f.tab(CONTROLS);
+        f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT, 3);
+        f.press(GLFW_KEY_DOWN);
+        f.focus(DISPLAY_INTERPOLATION_TOGGLE_KEY);
+        assertTrue(f.texts().contains("Interpolation shortcut"));
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_F8);
+        assertEquals(GLFW_KEY_N, f.config.getInt(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals(GLFW_KEY_F8, f.config.getInt(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+    }
+
+    @Test
     void renderingLimitOffersAutoBesideInterpolationAndRetainsCustomNumbers() {
         Fixture f = new Fixture();
         var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.DISPLAY);
