@@ -39,6 +39,8 @@ class TestLiveFrameRuntime {
     private ObservedScreen screen;
     private FadeManager fade;
     private int pictures, swaps;
+    private long now;
+    private final List<Integer> intervals = new ArrayList<>();
 
     @AfterEach void close() {
         if (engine != null) engine.getGameLoop().closePresence();
@@ -72,7 +74,33 @@ class TestLiveFrameRuntime {
         engine.getGameLoop().setGameMode(GameMode.LEGAL_DISCLAIMER);
         screen = new ObservedScreen();
         field("legalDisclaimerScreen", screen);
-        return engine.createLiveFrameRuntime(capture -> pictures++, () -> swaps++);
+        return runtime(capture -> pictures++, () -> swaps++);
+    }
+
+    private LiveFrameRuntime runtime(java.util.function.Consumer<Boolean> render, Runnable swap) {
+        return engine.createLiveFrameRuntime(render, swap, intervals::add, () -> now);
+    }
+
+    /** Advances the fake monotonic clock by the host interval since the previous iteration. */
+    private LiveFrameRuntime.Iteration iterate(LiveFrameRuntime runtime, long elapsedNanos) {
+        now += elapsedNanos;
+        return runtime.iterate();
+    }
+
+    /** Engine.loop on fake time: each iteration starts at the previous wake deadline. */
+    private List<LiveFrameRuntime.Iteration> runUntil(LiveFrameRuntime runtime, LiveFrameRuntime.Iteration last, long end) {
+        var iterations = new ArrayList<LiveFrameRuntime.Iteration>();
+        while (last.wakeAtNanos() <= end) {
+            now = Math.max(now, last.wakeAtNanos());
+            last = runtime.iterate();
+            iterations.add(last);
+        }
+        return iterations;
+    }
+
+    private static LiveFrameRuntime.HostState host(int hz, int fps, Object boundary) {
+        return new LiveFrameRuntime.HostState(hz, fps, true, false, boundary, false, false,
+                com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false);
     }
 
     @ParameterizedTest @CsvSource({"50,30", "50,50", "50,60", "50,120", "50,144",
@@ -80,7 +108,7 @@ class TestLiveFrameRuntime {
     void actualCallerHasIdenticalPerTickStateAndOneSecondOfPcmAcrossPictureSchedules(int hz, int fps)
             throws Exception {
         var runtime = open(hz, fps);
-        runtime.iterate(0);
+        var initial = runtime.iterate();
         pictures = swaps = 0;
         var expected = new ArrayList<Long>();
         long state = 0;
@@ -92,16 +120,14 @@ class TestLiveFrameRuntime {
         input.setLogicalOverride(sample(0));
         fade.startFadeFromBlack(null);
         try (var tap = audio.beginLiveCaptureAudio(hz)) {
-            long previous = 0;
-            for (int picture = 1; picture <= fps; picture++) {
-                long now = (picture * SECOND + fps - 1) / fps;
-                runtime.iterate(now - previous);
-                previous = now;
-            }
+            var iterations = runUntil(runtime, initial, SECOND);
             assertEquals(expected, screen.states, "all completed real GameLoop samples, not only a final counter");
             assertEquals(hz, screen.samples.size());
-            assertEquals(fps, swaps);
-            assertEquals(fps, pictures);
+            assertEquals(hz, iterations.size(), "the loop wakes on service deadlines, not picture deadlines");
+            assertEquals(Math.min(fps, hz), swaps, "pictures follow completed services, thinned by the cap");
+            assertEquals(Math.min(fps, hz), pictures, "unchanged state is never redrawn");
+            if (fps >= hz) assertTrue(iterations.stream().allMatch(i -> i.services() == 1 && i.presented()),
+                    "a service and its picture share one iteration");
             assertEquals(hz, AudioManagerTestDiagnostics.shadowParitySnapshot(audio).presentedFrames());
             short[] packet = new short[2 * tap.maxStereoFramesPerPacket()];
             for (int tick = 0; tick < hz; tick++) tap.drainPresentationFrame(packet);
@@ -111,18 +137,39 @@ class TestLiveFrameRuntime {
         }
     }
 
+    @Test void firstIterationIsTheSoleSwapIntervalWriter() throws Exception {
+        var runtime = open(60, 60);
+        assertTrue(intervals.isEmpty());
+        runUntil(runtime, runtime.iterate(), SECOND);
+        assertEquals(List.of(1), intervals);
+    }
+
+    @Test void cap30At60HzPresentsEveryOtherServiceWithoutRedrawingUnchangedState() throws Exception {
+        var runtime = open(60, 30);
+        var iterations = runUntil(runtime, runtime.iterate(), SECOND);
+        assertEquals(60, iterations.size());
+        assertTrue(iterations.stream().allMatch(i -> i.services() == 1));
+        for (int index = 0; index < iterations.size(); index++) {
+            assertEquals(index % 2 == 1, iterations.get(index).presented(), "iteration " + index);
+        }
+        assertEquals(31, swaps, "the initial picture plus 30 thinned service pictures");
+        assertEquals(31, pictures);
+    }
+
     @Test void zeroTickPicturesCannotAcknowledgeTwoReleasedInputTaps() throws Exception {
         var runtime = open(60, 144);
-        runtime.iterate(0);
+        runtime.iterate();
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
-        assertEquals(0, runtime.iterate(7_000_000).services());
-        assertEquals(0, runtime.iterate(7_000_000).services());
+        var early = iterate(runtime, 7_000_000);
+        assertEquals(0, early.services());
+        assertFalse(early.presented(), "an early wake has no completed service to show");
+        assertEquals(0, iterate(runtime, 7_000_000).services());
         assertTrue(screen.samples.isEmpty());
-        assertEquals(3, runtime.iterate(36_000_000).services()); // 50 ms admits three ticks.
-        runtime.iterate(16_666_667);
+        assertEquals(3, iterate(runtime, 36_000_000).services()); // 50 ms admits three ticks.
+        iterate(runtime, 16_666_667);
         assertEquals(List.of(1, 0, 1, 0), screen.samples.stream()
                 .map(s -> s.player1().actionPressedMask()).toList());
         assertEquals(List.of(1, 0, 1, 0), screen.samples.stream()
@@ -131,32 +178,34 @@ class TestLiveFrameRuntime {
 
     @Test void shortStallRetainsDebtAndLongStallBoundsEachRealCallerBatch() throws Exception {
         var runtime = open(60, 30);
-        runtime.iterate(0);
-        assertEquals(4, runtime.iterate(100_000_000).services());
+        runtime.iterate();
+        var stalled = iterate(runtime, 100_000_000);
+        assertEquals(4, stalled.services());
         assertEquals(2, runtime.statistics().pendingTicks());
-        assertEquals(2, runtime.iterate(0).services());
+        assertEquals(now, stalled.wakeAtNanos(), "pending services wake immediately");
+        assertEquals(2, iterate(runtime, 0).services());
         assertEquals(6, screen.samples.size());
-        assertEquals(4, runtime.iterate(5 * SECOND).services());
+        assertEquals(4, iterate(runtime, 5 * SECOND).services());
         assertEquals(4_750_000_000L, runtime.statistics().discardedWallNanos());
         assertEquals(11, runtime.statistics().pendingTicks());
-        for (int batch = 0; batch < 3; batch++) assertTrue(runtime.iterate(0).services() <= 4);
+        for (int batch = 0; batch < 3; batch++) assertTrue(iterate(runtime, 0).services() <= 4);
         assertEquals(21, screen.samples.size(), "discarded wall time never invents skipped semantic identities");
         assertEquals(0, runtime.statistics().pendingTicks());
     }
 
     @Test void pauseBoundaryStopsCatchUpAndResumeCannotSpendThePausedInterval() throws Exception {
         var runtime = open(60, 144);
-        runtime.iterate(0);
+        runtime.iterate();
         // The actual host pause owner is active only in gameplay-capable modes. A boot
         // screen update toggles through that owner here, without manufacturing a world.
         screen.after = () -> engine.getGameLoop().toggleUserPause();
-        assertEquals(1, runtime.iterate(100_000_000).services());
+        assertEquals(1, iterate(runtime, 100_000_000).services());
         assertTrue(engine.getGameLoop().isUserPaused());
         assertEquals(0, runtime.statistics().pendingTicks());
         screen.after = () -> { };
         engine.getGameLoop().toggleUserPause();
-        assertEquals(0, runtime.iterate(10 * SECOND).services(), "external pause boundary rebases before admission");
-        assertEquals(1, runtime.iterate(16_666_667).services());
+        assertEquals(0, iterate(runtime, 10 * SECOND).services(), "external pause boundary rebases before admission");
+        assertEquals(1, iterate(runtime, 16_666_667).services());
         assertEquals(2, screen.samples.size());
     }
 
@@ -167,11 +216,11 @@ class TestLiveFrameRuntime {
         when(capture.thumbnailWidth()).thenReturn(1);
         when(capture.thumbnailHeight()).thenReturn(1);
         var owner = engine.getGameLoop().suspension;
-        var runtime = engine.createLiveFrameRuntime(output -> {
+        var runtime = runtime(output -> {
             pictures++;
             owner.afterScene(capture);
         }, () -> swaps++);
-        runtime.iterate(0);
+        runtime.iterate();
         var request = GameLoopSuspension.class.getDeclaredField("suspendThumbnailRequested");
         request.setAccessible(true);
         screen.after = () -> {
@@ -179,20 +228,22 @@ class TestLiveFrameRuntime {
             catch (IllegalAccessException failure) { throw new AssertionError(failure); }
         };
         int before = swaps;
-        assertEquals(1, runtime.iterate(100_000_000).services(), "a thumbnail opportunity ends the old batch");
+        assertEquals(1, iterate(runtime, 100_000_000).services(), "a thumbnail opportunity ends the old batch");
         screen.after = () -> { };
         assertFalse(owner.requiresScenePicture(), "the real after-scene owner consumes its request");
         assertEquals(before + 1, swaps, "the full-size picture is shown before another service can park the world");
-        assertEquals(0, runtime.iterate(0).services(), "old reserved allowances cannot run after that boundary");
+        int afterPicture = swaps;
+        assertEquals(0, iterate(runtime, 0).services(), "old reserved allowances cannot run after that boundary");
+        assertEquals(afterPicture, swaps, "the consumed request is not a second boundary change");
     }
 
     @Test void sustainedOverloadStillPollsBetweenBoundedRealCallerBatchesAndAdmitsEachTapOnce() throws Exception {
         var runtime = open(60, 30);
-        runtime.iterate(0);
+        runtime.iterate();
         for (int batch = 0; batch < 20; batch++) {
             input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
             input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
-            assertEquals(4, runtime.iterate(500_000_000).services());
+            assertEquals(4, iterate(runtime, 500_000_000).services());
             var samples = screen.samples.subList(batch * 4, batch * 4 + 4);
             assertEquals(List.of(1, 0, 0, 0), samples.stream().map(x -> x.player1().actionPressedMask()).toList());
             assertTrue(runtime.statistics().pendingTicks() <= 11);
@@ -203,16 +254,13 @@ class TestLiveFrameRuntime {
 
     @Test void failedSemanticServiceStopsTheBatchBeforeAnyPictureOrSwap() {
         var owner = mock(LiveFrameRuntime.Owner.class);
-        when(owner.simulationHz()).thenReturn(60);
-        when(owner.presentationHz()).thenReturn(30);
-        when(owner.focused()).thenReturn(true);
-        when(owner.boundary()).thenReturn("visit");
+        when(owner.hostState()).thenReturn(host(60, 30, "visit"));
         when(owner.draw(anyBoolean())).thenReturn(true);
-        var runtime = new LiveFrameRuntime(owner);
-        runtime.iterate(0);
+        var runtime = new LiveFrameRuntime(owner, () -> now);
+        runtime.iterate();
         clearInvocations(owner);
         when(owner.tick()).thenReturn(false);
-        assertEquals(0, runtime.iterate(100_000_000).services());
+        assertEquals(0, iterate(runtime, 100_000_000).services());
         verify(owner, times(1)).tick();
         verify(owner, never()).draw(anyBoolean());
         verify(owner, never()).swap();
@@ -222,37 +270,41 @@ class TestLiveFrameRuntime {
     @Test void transitionWorkIsExcludedFromTheNewBoundaryWallAnchor() {
         var owner = mock(LiveFrameRuntime.Owner.class);
         var boundary = new java.util.concurrent.atomic.AtomicReference<>("old");
-        when(owner.simulationHz()).thenReturn(60);
-        when(owner.presentationHz()).thenReturn(30);
-        when(owner.focused()).thenReturn(true);
-        when(owner.boundary()).thenAnswer(invocation -> boundary.get());
+        long[] work = {SECOND}; // one second spent in the transitioning service
+        when(owner.hostState()).thenAnswer(invocation -> host(60, 30, boundary.get()));
         when(owner.draw(anyBoolean())).thenReturn(true);
-        when(owner.tick()).thenAnswer(invocation -> { boundary.set("new"); return true; });
-        var runtime = new LiveFrameRuntime(owner);
-        runtime.iterate(0);
+        when(owner.tick()).thenAnswer(invocation -> {
+            boundary.set("new");
+            now += work[0];
+            return true;
+        });
+        var runtime = new LiveFrameRuntime(owner, () -> now);
+        runtime.iterate();
 
-        var transition = runtime.iterate(100_000_000L);
+        var transition = iterate(runtime, 100_000_000L);
         assertEquals(1, transition.services());
         assertEquals(0, runtime.statistics().pendingTicks());
-        long completed = 1_100_000_000L; // one second spent in the transitioning service
-        long anchor = transition.wallAnchor(100_000_000L, completed);
-        assertEquals(completed, anchor);
-        var next = runtime.iterate(completed + 16_666_667L - anchor);
+        long completed = 1_100_000_000L;
+        assertEquals(completed + 16_666_667L, transition.wakeAtNanos());
+        work[0] = 5_000_000L;
+        now = transition.wakeAtNanos();
+        long observed = now;
+        var next = runtime.iterate();
         assertEquals(1, next.services());
         assertEquals(0, runtime.statistics().pendingTicks());
-        assertEquals(200L, next.wallAnchor(200L, 300L),
+        assertEquals(observed + 16_666_667L, next.wakeAtNanos(),
                 "ordinary work and swap time remain part of the following interval");
     }
 
     @Test void focusLossAndRegainInOnePollStillInvalidateOldWallDebt() throws Exception {
         var runtime = open(60, 144);
-        runtime.iterate(0);
+        runtime.iterate();
         engine.observeWindowActivation();
         assertTrue(Engine.applyWindowActivation(false, input, engine.getGameLoop()::pause, engine.getGameLoop()::resume));
         engine.observeWindowActivation();
         assertFalse(Engine.applyWindowActivation(true, input, engine.getGameLoop()::pause, engine.getGameLoop()::resume));
-        assertEquals(0, runtime.iterate(10 * SECOND).services(), "the final focused boolean alone misses this discontinuity");
-        assertEquals(1, runtime.iterate(16_666_667).services());
+        assertEquals(0, iterate(runtime, 10 * SECOND).services(), "the final focused boolean alone misses this discontinuity");
+        assertEquals(1, iterate(runtime, 16_666_667).services());
     }
 
     @Test void deviceOnlyServiceCannotRetireAudioCommandsOrProduceHistory() throws Exception {
@@ -265,27 +317,30 @@ class TestLiveFrameRuntime {
 
     @Test void focusAndClockDiscontinuitiesRebaseWithoutForwardAdmission() throws Exception {
         var runtime = open(50, 120);
-        runtime.iterate(0);
+        runtime.iterate();
         field("paused", true);
-        assertEquals(0, runtime.iterate(20 * SECOND).services());
+        var unfocused = iterate(runtime, 20 * SECOND);
+        assertEquals(0, unfocused.services());
+        assertFalse(unfocused.presented());
+        assertEquals(now + LiveFrameRuntime.UNFOCUSED_WAIT_NANOS, unfocused.wakeAtNanos(), "unfocused waits, never spins");
         field("paused", false);
-        assertEquals(0, runtime.iterate(20 * SECOND).services());
-        assertEquals(1, runtime.iterate(20_000_000).services());
-        assertEquals(0, runtime.iterate(-1).services());
-        assertEquals(1, runtime.iterate(20_000_000).services());
+        assertEquals(0, iterate(runtime, 20 * SECOND).services());
+        assertEquals(1, iterate(runtime, 20_000_000).services());
+        assertEquals(0, iterate(runtime, -1).services());
+        assertEquals(1, iterate(runtime, 20_000_000).services());
         assertEquals(2, screen.samples.size());
     }
 
     @Test void modalHostPassAcknowledgesWithoutAWorldOrPictureAndKeepsRegionAudioSilent() throws Exception {
         var runtime = open(60, 30);
-        runtime.iterate(0);
+        runtime.iterate();
         var picker = new com.openggf.graphics.shaderlib.DisplayShaderPickerController(
                 new com.openggf.graphics.shaderlib.DisplayShaderSelectionModel(List.of(
                         com.openggf.graphics.shaderlib.DisplayShaderPresetRef.OFF)), GLFW_KEY_F6);
         // Constructor shape deliberately comes from the same production fixture as Engine advance.
         field("displayShaderPickerController", picker);
         input.handleKeyEvent(GLFW_KEY_F6, GLFW_PRESS);
-        runtime.iterate(16_666_667);
+        iterate(runtime, 16_666_667);
         assertTrue(screen.samples.isEmpty());
         assertEquals(1, AudioManagerTestDiagnostics.shadowParitySnapshot(audio).silentFrames());
         assertEquals(1, pictures, "the initial picture only: host UI service does not require a swap");
@@ -325,15 +380,10 @@ class TestLiveFrameRuntime {
             field("liveCaptureController", controller);
             field("liveCaptureFrameRate", hz);
             var presentation = new com.openggf.capture.LiveCapturePresentationCoordinator(controller);
-            var runtime = engine.createLiveFrameRuntime(capture -> presentation.present(viewport, capture, () -> { }, () -> { }),
+            var runtime = runtime(capture -> presentation.present(viewport, capture, () -> { }, () -> { }),
                     () -> swaps++);
             controller.start(viewport, hz);
-            runtime.iterate(0);
-            long previous = 0;
-            for (int picture = 1; picture <= fps; picture++) {
-                long now = (picture * SECOND + fps - 1) / fps;
-                runtime.iterate(now - previous); previous = now;
-            }
+            runUntil(runtime, runtime.iterate(), SECOND);
             controller.requestStop(com.openggf.capture.LiveCaptureController.StopReason.USER);
             finalizer.submit(() -> { }).get(5, java.util.concurrent.TimeUnit.SECONDS);
             assertEquals(com.openggf.capture.LiveCaptureController.State.INACTIVE, controller.state());
@@ -353,7 +403,9 @@ class TestLiveFrameRuntime {
             }
             assertEquals(48_000, pcmIndex, "video end time and PCM duration both span exactly one second");
             assertEquals(48_000, sourceSample[0], "capture/presentation repeats cannot synthesize audio");
-            assertEquals(fps + 1, swaps, "capture draws cannot silently raise the window swap rate");
+            assertEquals(1 + Math.min(fps, hz), swaps, "capture draws cannot silently raise the window swap rate");
+            assertEquals(1 + hz, runtime.statistics().pictures(),
+                    "a coincident window present reuses the capture draw; no capture-only redraws");
         }
     }
 

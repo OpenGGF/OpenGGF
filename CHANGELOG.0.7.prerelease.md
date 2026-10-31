@@ -47,7 +47,10 @@ Unreleased. The earlier development themes remain in
   Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
   window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
   session changes retain their semantic owners. Repeated pictures acknowledge no
-  input and produce no audio. Native menu/background and MGZ blink clocks advance
+  input and produce no audio. Window pictures follow completed services: a service
+  is shown in the iteration that ran it, a limit below the region rate only thins
+  those pictures, and unchanged state is not redrawn, including while recording.
+  Native menu/background and MGZ blink clocks advance
   with updates. Trace ghosts advance their private animation on admitted replay
   rows, including pictures omitted during fast-forward; repeated pictures and
   layer/visibility filtering preserve the pose. Seeks restore observed private

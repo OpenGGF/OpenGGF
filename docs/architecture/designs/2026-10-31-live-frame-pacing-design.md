@@ -248,3 +248,15 @@ Two independent candidates (Opus, Sol) converged on exclusive wall/display caden
    reset), and production-path fake-vsync cases with identical per-service state.
 4. **Draw purity.** Mutator fixes, bytecode guard, behavioural redraw check, with negative controls.
 5. **Delivery validation.** Change-based smoke plus guards and the S3K four.
+
+### Implementation notes: unit 1
+
+- `HostState` is sampled before the batch, after every tick and after every swap. After a
+  changed or forced present, the post-swap sample becomes the reference boundary: the picture
+  consumes the forced request, so the pre-draw sample would read as a second change.
+- `isSpeakerRateRegulated()` is a public member of `@ModApi` `AudioManager`, so the 0.7
+  candidate signature pin gains its line. Unit 2 replaces the placeholder body only.
+- `waitForFrameDeadline` no longer exits while unfocused; the runtime's 33 ms unfocused
+  deadline goes through the same 2 ms polling slices, replacing the separate sleep.
+- Removing the init `glfwSwapInterval(1)` lowers the `Engine#init` dispatcher ratchet from
+  159 to 156 lines. The source guard pins one `glfwSwapInterval` reference in `Engine`.

@@ -1131,6 +1131,14 @@ public class AudioManager implements MusicRestoreSink {
         return heldReverseRestore.isReverseAudioOutputActive();
     }
 
+    /**
+     * Whether the speaker trims its playback rate against host time. Until it does, a
+     * display-paced service rate would drain or flood the device FIFO.
+     */
+    public boolean isSpeakerRateRegulated() {
+        return false;
+    }
+
     /** Records actual final forward PCM without changing developer rewind history.
      * Session-owned public replay capabilities retain and close this exact producer handle. */
     public AudioReplay recordPresentationAudio(int maxSeconds) {
