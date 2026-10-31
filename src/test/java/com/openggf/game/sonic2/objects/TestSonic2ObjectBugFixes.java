@@ -277,7 +277,7 @@ class TestSonic2ObjectBugFixes {
         tails.setCentreX((short) 0x04CB);
         tails.setCentreY((short) 0x0150);
 
-        manager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, tails);
 
         assertTrue(tails.getPushing(),
                 "Obj42 SolidObject_cont uses bhi, so relX == $1B*2 must still set Status_Push");
@@ -1231,7 +1231,7 @@ class TestSonic2ObjectBugFixes {
         sonic.setCentreX((short) 0x04D0);
         sonic.setCentreY((short) 0x0464);
 
-        manager.updateSolidContacts(sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
 
         assertTrue(sonic.isOnObject(),
                 "Obj70 SolidObject_Landed re-checks width_pixels=$10, so x_pos +8 from tooth centre must land");
@@ -1270,7 +1270,7 @@ class TestSonic2ObjectBugFixes {
         sonic.endOfTick();
         sonic.setCentreY((short) 0x036A);
 
-        manager.updateSolidContacts(sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
 
         assertFalse(sonic.getAir(),
                 "OOZ1 f7671: Obj26 runs after Sonic movement, so SolidObject_cont sees the top crossing "
@@ -1300,7 +1300,7 @@ class TestSonic2ObjectBugFixes {
         TestablePlayableSprite sonic = ooz1LauncherReleaseMonitorPlayer();
         sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
 
-        manager.updateSolidContacts(sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
 
         assertFalse(sonic.getAir(),
                 "OOZ1 f7671: Obj3D has just cleared obj_control/on_object without writing anim; "
@@ -1326,7 +1326,7 @@ class TestSonic2ObjectBugFixes {
         sonic.setCentreY((short) 0x00D0);
         sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
 
-        manager.updateSolidContacts(sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
 
         assertTrue(sonic.getAir(),
                 "Without a live Obj3D off-screen release residue, Obj26's Sonic path must keep "
@@ -1357,7 +1357,7 @@ class TestSonic2ObjectBugFixes {
         sonic.setCentreY((short) 0x0374);
         sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
 
-        manager.updateSolidContacts(sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
 
         assertTrue(sonic.getAir(),
                 "OOZ1 f7731: the ROM has returned Sonic's anim byte to Roll before Obj26 samples it, "
@@ -1388,11 +1388,13 @@ class TestSonic2ObjectBugFixes {
         tails.setWidth(18);
         tails.setHeight(18);
         tails.setCpuControlled(true);
+        // SolidObject skips an off-screen Sidekick (s2.asm:35023-35025).
+        tails.setRenderFlagOnScreen(true);
         tails.setAir(false);
         tails.setXSpeed((short) 0x01E7);
         tails.setGSpeed((short) 0x01EB);
 
-        manager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, tails);
 
         assertTrue(tails.getPushing(),
                 "Grounded Obj70 side contact without a standing bit must set Status_Push");
@@ -1419,11 +1421,13 @@ class TestSonic2ObjectBugFixes {
         tails.setWidth(18);
         tails.setHeight(18);
         tails.setCpuControlled(true);
+        // SolidObject skips an off-screen Sidekick (s2.asm:35023-35025).
+        tails.setRenderFlagOnScreen(true);
         tails.setAir(false);
         tails.setXSpeed((short) -0x0080);
         tails.setGSpeed((short) -0x0080);
 
-        manager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, tails);
 
         assertTrue(tails.getPushing(),
                 "Obj70 reaches SolidObject_cont with no standing bit; moving left must not be mistaken "
@@ -1455,7 +1459,7 @@ class TestSonic2ObjectBugFixes {
         tails.setXSpeed((short) -0x0700);
         tails.setGSpeed((short) -0x0700);
 
-        manager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, tails);
 
         assertFalse(tails.getPushing(),
                 "A high-speed leftward Obj70 release is stale folded-slot geometry, not a fresh grounded push");
@@ -1484,13 +1488,15 @@ class TestSonic2ObjectBugFixes {
         tails.setWidth(18);
         tails.setHeight(18);
         tails.setCpuControlled(true);
+        // SolidObject skips an off-screen Sidekick (s2.asm:35023-35025).
+        tails.setRenderFlagOnScreen(true);
         tails.setAir(true);
         tails.setHurt(true);
         tails.setXSpeed((short) -0x0200);
         tails.setYSpeed((short) 0x0170);
         tails.setGSpeed((short) -0x0200);
 
-        manager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, tails);
 
         assertEquals(0, tails.getXSpeed(),
                 "Obj02_Hurt does not self-clear x_vel until landing; an airborne clear-bit Obj70 side hit "

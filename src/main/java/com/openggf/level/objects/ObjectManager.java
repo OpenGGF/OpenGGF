@@ -3194,34 +3194,6 @@ public class ObjectManager {
     }
 
     /**
-     * Run solid contacts resolution for a player sprite.
-     * This is called by the CollisionSystem as part of the unified collision pipeline.
-     */
-    public void updateSolidContacts(PlayableEntity player) {
-        solidContacts.setDeferSideToPostMovement(false);
-        solidContacts.update(player, false);
-    }
-
-    /**
-     * Update solid contacts with an explicit post-movement flag. When {@code postMovement}
-     * is true, the velocity classification adjustment is skipped because the player's
-     * position already reflects their velocity (movement has already happened).
-     * <p>Used by the S1 UNIFIED model where solid objects run AFTER Sonic's movement,
-     * unlike S2/S3K where solid contacts run before movement.
-     *
-     * @param deferSideToPostMovement when true, side collision effects (speed zeroing,
-     *     position correction) are skipped in this pass because a post-movement pass will
-     *     handle them. This is used for the pre-movement pass in S1 UNIFIED, where the ROM
-     *     processes solid objects AFTER Sonic's movement — side collisions at the pre-movement
-     *     position are spurious.
-     */
-    public void updateSolidContacts(PlayableEntity player, boolean postMovement,
-                                     boolean deferSideToPostMovement) {
-        solidContacts.setDeferSideToPostMovement(deferSideToPostMovement);
-        solidContacts.update(player, postMovement);
-    }
-
-    /**
      * Resolves a newly-created ROM helper's inline solid checkpoint immediately.
      * <p>
      * Some S3K event routines allocate an object from a background/event path after

@@ -221,7 +221,7 @@ class TestObjectSolidContactController {
         player.setCentreY((short) (owner.getPieceY(piece) - 4 - maxTop + 8));
         player.setAir(true);
         player.setYSpeed((short) 0x100);
-        manager.updateSolidContacts(player);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         assertSame(owner, manager.getRidingObject(player), "ordinary solid resolution established the ride");
         return player;
     }

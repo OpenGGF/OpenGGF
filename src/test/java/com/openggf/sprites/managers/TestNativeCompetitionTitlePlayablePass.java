@@ -230,7 +230,6 @@ class TestNativeCompetitionTitlePlayablePass {
         var objects = mock(ObjectManager.class);
         when(level.getWorldSession()).thenReturn(gameplay.getWorldSession());
         when(level.getObjectManager()).thenReturn(objects);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         var terrain = mock(TerrainCollisionManager.class);
         gameplay.attachLevelManagers(new WaterSystem(), new ParallaxManager(), terrain,
                 new CollisionSystem(terrain), sprites, level);

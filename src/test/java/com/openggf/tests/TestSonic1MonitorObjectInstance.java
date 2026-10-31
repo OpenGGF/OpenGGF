@@ -129,7 +129,10 @@ class TestSonic1MonitorObjectInstance {
         player.setAir(true);
         player.setYSpeed((short) -0x01F8);
 
-        objectManager.updateSolidContacts(player);
+        // Solid_ChkEnter reads the render flag from the camera bounds ObjectManager.update caches.
+        com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(
+                0x07B8, 0x0220, 0x07B8 + 320, 0x0220 + 224, 0);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(objectManager, player);
 
         assertFalse(player.getAir(),
                 "S1 Mon_Solid only uses upward velocity to block breaking; top contact still lands");
@@ -162,7 +165,10 @@ class TestSonic1MonitorObjectInstance {
         player.setYSpeed((short) -0x0418);
         objectManager.solidContacts().markSameFrameMonitorBreakBounce(player);
 
-        objectManager.updateSolidContacts(player);
+        // Solid_ChkEnter reads the render flag from the camera bounds ObjectManager.update caches.
+        com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(
+                0x07B8, 0x0220, 0x07B8 + 320, 0x0220 + 224, 0);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(objectManager, player);
 
         assertFalse(player.getAir(),
                 "A break-bounce must not masquerade as a new upward jump at the adjacent monitor");

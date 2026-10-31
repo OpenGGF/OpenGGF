@@ -278,9 +278,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         // grab byte at $32/$33 and player fields (docs/skdisasm/sonic3k.asm:
         // 46731-46743). It does not alter the first child; loc_2248A continues
         // to read AIZ_vine_angle on subsequent frames (sonic3k.asm:46880-46894).
-        if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
-            AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
-        }
+        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     private void reserveRomChildSlots() {

@@ -255,19 +255,6 @@ public class TestPhysicsProfile {
 
 
     @Test
-    public void testObjectsExecuteAfterPlayerPhysics_PerGame() {
-        // All three games use post-physics object execution per the
-        // 2026-04-18-solid-ordering-rom-accuracy plan: S2/S3K via DUAL_PATH
-        // collision model, S1 via the bridged inline-order path.
-        assertTrue(GameRules.SONIC_1.objectInteraction().objectsExecuteAfterPlayerPhysics(),
-                "S1 uses post-physics object ordering");
-        assertTrue(GameRules.SONIC_2.objectInteraction().objectsExecuteAfterPlayerPhysics(),
-                "S2 uses post-physics object ordering");
-        assertTrue(GameRules.SONIC_3K.objectInteraction().objectsExecuteAfterPlayerPhysics(),
-                "S3K uses post-physics object ordering");
-    }
-
-    @Test
     public void testSpeedShoesCountdownIsADisplayPhaseTimer() {
         // All three games decrement the shoes timer in Sonic_Display, which the
         // control routine calls after dispatching the movement modes, and do the

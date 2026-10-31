@@ -25,10 +25,11 @@ final class LevelFrameRuntimeUpdater {
             nativeOrder.afterRings(player);
         }
         if (levelManager.objectManager != null) {
+            // Player slots run before ExecuteObjects: read the frame-start snapshot.
             levelManager.objectManager.runTouchResponsesForPlayer(
                     player,
                     levelManager.frameCounter,
-                    levelManager.objectsExecuteAfterPlayerPhysics());
+                    true);
         }
         if (!nativePlayer) collectRingsForTouchResponse(player);
     }

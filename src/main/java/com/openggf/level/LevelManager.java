@@ -1385,23 +1385,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
-     * Returns true when the active module executes objects after player physics and
-     * solid checkpoints are resolved during object execution. Driven by the
-     * {@link ObjectInteractionRules#objectsExecuteAfterPlayerPhysics()} flag — independent
-     * of collision model so S1 (UNIFIED) and S2/S3K (DUAL_PATH) can share the
-     * post-physics ordering per the 2026-04-18-solid-ordering-rom-accuracy plan.
-     */
-    public boolean objectsExecuteAfterPlayerPhysics() {
-        GameModule activeModule = activeGameModule();
-        if (activeModule == null
-                || activeModule.getRules() == null
-                || activeModule.getRules().objectInteraction() == null) {
-            return false;
-        }
-        return activeModule.getRules().objectInteraction().objectsExecuteAfterPlayerPhysics();
-    }
-
-    /**
      * Returns true when the active module advances the dynamic water level (move
      * toward target) BEFORE the player's underwater check, matching S1/S2 ROM
      * order ({@code LZWaterFeatures}/{@code WaterEffects} run before
@@ -1722,14 +1705,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameRuntimeUpdater.updateLevelState(playable, worldSession);
 
         frameRuntimeUpdater.updateParallaxAndAnimatedContent();
-
-        // Legacy object-before-physics modules update playable water state here.
-        // Inline-order modules run this immediately after the player slot in
-        // LevelFrameStep, before ExecuteObjects, matching S3K's Sonic_Water /
-        // Tails_Water ordering.
-        if (!objectsExecuteAfterPlayerPhysics()) {
-            updatePlayableWaterStatesForCurrentLevel();
-        }
     }
 
     /**

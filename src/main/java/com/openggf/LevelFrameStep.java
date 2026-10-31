@@ -350,7 +350,6 @@ public final class LevelFrameStep {
             wrapper.wrap("water-move", levelManager::advanceDynamicWaterLevel);
         }
 
-        boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         SpriteManager spriteManager = context.spriteManager();
         // ROM RunObjects covers the level-only fixed slots (Tails' tails, dust,
         // shields, bubbles, stars) only while the game mode carries no title-card
@@ -363,53 +362,32 @@ public final class LevelFrameStep {
                                 .shouldRunLevelOnlyFixedSlotsDuringLockedPhase())
                 ? spriteManager
                 : null;
-        if (inlineSolidResolution) {
-            // 2. Inline-order modules need a frame-start snapshot of object touch
-            //    state because player-slot ReactToItem runs before ExecuteObjects.
-            levelManager.prepareTouchResponseSnapshots();
+        // 2. Player-slot ReactToItem runs before ExecuteObjects, so touch checks
+        //    read a frame-start snapshot of object touch state.
+        levelManager.prepareTouchResponseSnapshots();
 
-            // 2. Inline solid-resolution path: player physics first. Touch responses
-            //    run per-player inside tickPlayablePhysics after movement, matching
-            //    the player-slot-first ROM ordering.
-            wrapper.wrap("physics", spriteUpdate);
+        // 2. Player slots first (ExecuteObjects / RunObjects / Process_Sprites
+        //    dispatch slot 0, then slot 1). Touch responses run per player inside
+        //    tickPlayablePhysics after movement.
+        wrapper.wrap("physics", spriteUpdate);
 
-            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
-            if (fixedSlotEvents != null) {
-                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
-            }
-            runNativeFixedObjectsBeforeDynamic(context, wrapper);
-
-            // 3. Object execution after player physics, with inline solid checkpoints
-            //    so later objects see earlier contact adjustments.
-            Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
-                    ? () -> {
-                        levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
-                        levelManager.updateZoneFeaturesAfterObjectExecution();
-                    }
-                    : levelManager::updateZoneFeaturesAfterObjectExecution;
-            wrapper.wrap("objects",
-                    () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                            afterExecBeforePlacement, false));
-        } else {
-            LevelEventProvider fixedSlotEvents = context.levelEventProvider();
-            if (fixedSlotEvents != null) {
-                wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
-            }
-            runNativeFixedObjectsBeforeDynamic(context, wrapper);
-
-            // 2. Legacy compatibility path keeps objects before physics. Touch
-            //    responses are still deferred to tickPlayablePhysics after movement.
-            wrapper.wrap("objects", () -> levelManager.updateObjectPositionsWithoutTouches(false));
-
-            // 3. Sprite / player physics update (caller-provided).
-            wrapper.wrap("physics", spriteUpdate);
-
-            // 3b. Some later SST-slot scripts read Sonic after his movement has
-            //     completed and only write globals for the next frame. Legacy
-            //     object-order modules need an explicit post-player hook for
-            //     those cases because regular object updates already ran.
-            wrapper.wrap("post-player-hooks", levelManager::updateObjectPostPlayerHooks);
+        LevelEventProvider fixedSlotEvents = context.levelEventProvider();
+        if (fixedSlotEvents != null) {
+            wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
         }
+        runNativeFixedObjectsBeforeDynamic(context, wrapper);
+
+        // 3. Object slots in slot order; each object resolves its own solid
+        //    calls, so later objects see earlier contact adjustments.
+        Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
+                ? () -> {
+                    levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
+                    levelManager.updateZoneFeaturesAfterObjectExecution();
+                }
+                : levelManager::updateZoneFeaturesAfterObjectExecution;
+        wrapper.wrap("objects",
+                () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
+                        afterExecBeforePlacement, false));
 
         // 4. Camera scroll + dynamic level events, in ROM order.
         //
@@ -474,9 +452,6 @@ public final class LevelFrameStep {
         //     post-scroll camera. fixed-in-level objects run alongside.
         if (levelEvents != null && !levelExitRequestedDuringObjects) {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
-        }
-        if (levelOnlyFixedSlots != null && !inlineSolidResolution) {
-            wrapper.wrap("fixed-dust", levelOnlyFixedSlots::advancePlayableFixedSlotsAfterObjectExecution);
         }
 		// ROM ScreenEvents publishes Camera_*_pos_copy before the zone event
 		// handlers. Event-owned camera motion after this point must not move the

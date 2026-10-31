@@ -1637,7 +1637,7 @@ CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,bo
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel,com.openggf.game.rules.PaletteWhiteFadeModel)
-CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
+CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
@@ -2137,7 +2137,7 @@ CONSTRUCTOR com.openggf.physics.BackgroundPlaneCollisionProvider$State public  <
 CONSTRUCTOR com.openggf.physics.CollisionEvent public  <init>(com.openggf.physics.CollisionEvent$EventType,java.lang.String,int,int,int,byte,boolean,boolean)
 CONSTRUCTOR com.openggf.physics.CollisionSystem public  <init>()
 CONSTRUCTOR com.openggf.physics.CollisionSystem public  <init>(com.openggf.physics.TerrainCollisionManager)
-CONSTRUCTOR com.openggf.physics.FrameCollisionPlan public  <init>(boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.physics.FrameCollisionPlan public  <init>(boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.physics.GroundSensor public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.physics.Direction,byte,byte,boolean)
 CONSTRUCTOR com.openggf.physics.Sensor public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.physics.Direction,byte,byte,boolean)
 CONSTRUCTOR com.openggf.physics.SensorResult public  <init>()
@@ -3826,7 +3826,6 @@ FIELD com.openggf.physics.Direction public,static,final com.openggf.physics.Dire
 FIELD com.openggf.physics.Direction public,static,final com.openggf.physics.Direction RIGHT
 FIELD com.openggf.physics.Direction public,static,final com.openggf.physics.Direction UP
 FIELD com.openggf.physics.FrameCollisionPlan$Phase public,static,final com.openggf.physics.FrameCollisionPlan$Phase POST_RESOLUTION_GROUND_MODE
-FIELD com.openggf.physics.FrameCollisionPlan$Phase public,static,final com.openggf.physics.FrameCollisionPlan$Phase SOLID_OBJECT_RESOLUTION
 FIELD com.openggf.physics.FrameCollisionPlan$Phase public,static,final com.openggf.physics.FrameCollisionPlan$Phase TERRAIN_PROBES
 FIELD com.openggf.physics.Sensor protected boolean active
 FIELD com.openggf.physics.Sensor protected byte x
@@ -8349,7 +8348,6 @@ METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitHalv
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitNegatesGroundSpeed()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean isBossDuckTouchBoxMappingFrame(int)
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean isDuckTouchBoxMappingFrame(int)
-METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean objectsExecuteAfterPlayerPhysics()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean permanentRespawnTableLatch()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean sidekickDespawnUsesInteractCodeWordChange()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean sidekickDespawnUsesObjectIdMismatch()
@@ -9558,7 +9556,6 @@ METHOD com.openggf.level.LevelManager public  boolean isSuppressNextMusicChange(
 METHOD com.openggf.level.LevelManager public  boolean isTitleCardRequested()
 METHOD com.openggf.level.LevelManager public  boolean isTransitionRingInitializationPendingForRewind()
 METHOD com.openggf.level.LevelManager public  boolean isVerticalWrapEnabled()
-METHOD com.openggf.level.LevelManager public  boolean objectsExecuteAfterPlayerPhysics()
 METHOD com.openggf.level.LevelManager public  boolean prepareActTransitionLevelLoad(int,int,java.lang.String)
 METHOD com.openggf.level.LevelManager public  boolean requestSanctuaryExit()
 METHOD com.openggf.level.LevelManager public  boolean setForegroundTileDescriptorAtWorld(int,int,int)
@@ -10789,8 +10786,6 @@ METHOD com.openggf.level.objects.ObjectManager public  void update(int,com.openg
 METHOD com.openggf.level.objects.ObjectManager public  void update(int,com.openggf.game.PlayableEntity,java.util.List<? extends com.openggf.game.PlayableEntity>,int,boolean)
 METHOD com.openggf.level.objects.ObjectManager public  void update(int,com.openggf.game.PlayableEntity,java.util.List<? extends com.openggf.game.PlayableEntity>,int,boolean,boolean,boolean)
 METHOD com.openggf.level.objects.ObjectManager public  void update(int,com.openggf.game.PlayableEntity,java.util.List<? extends com.openggf.game.PlayableEntity>,int,boolean,boolean,boolean,java.lang.Runnable)
-METHOD com.openggf.level.objects.ObjectManager public  void updateSolidContacts(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.ObjectManager public  void updateSolidContacts(com.openggf.game.PlayableEntity,boolean,boolean)
 METHOD com.openggf.level.objects.ObjectManager public  void validateRewindReferenceClosure()
 METHOD com.openggf.level.objects.ObjectManager public <T extends com.openggf.level.objects.ObjectInstance> T createDynamicObject(java.util.function.Supplier<T>)
 METHOD com.openggf.level.objects.ObjectManager public <T extends com.openggf.level.objects.ObjectInstance> T createDynamicObjectAtSlot(java.util.function.Supplier<T>,int)
@@ -14457,10 +14452,8 @@ METHOD com.openggf.physics.CollisionSystem public  void resolveGroundAttachment(
 METHOD com.openggf.physics.CollisionSystem public  void resolveGroundWallCollision(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.physics.CollisionSystem public  void resolveGroundWallCollision(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.physics.CollisionSystem public  void resolvePostMovementBackgroundWallClamp(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite)
-METHOD com.openggf.physics.CollisionSystem public  void resolveSolidContacts(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.physics.CollisionSystem public  void restore(com.openggf.game.rewind.snapshot.CollisionSystemSnapshot)
 METHOD com.openggf.physics.CollisionSystem public  void run(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.physics.Sensor[],com.openggf.physics.Sensor[])
-METHOD com.openggf.physics.CollisionSystem public  void runSolidObjectResolution(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite,boolean,boolean)
 METHOD com.openggf.physics.CollisionSystem public  void setObjectManager(com.openggf.level.objects.ObjectManager)
 METHOD com.openggf.physics.CollisionSystem public  void setTrace(com.openggf.physics.CollisionTrace)
 METHOD com.openggf.physics.CollisionSystem public  void step(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.physics.Sensor[],com.openggf.physics.Sensor[])
@@ -14483,13 +14476,11 @@ METHOD com.openggf.physics.Direction public,static  com.openggf.physics.Directio
 METHOD com.openggf.physics.Direction public,static  com.openggf.physics.Direction[] values()
 METHOD com.openggf.physics.FrameCollisionPlan public  boolean recordsTrace()
 METHOD com.openggf.physics.FrameCollisionPlan public  boolean runsPostResolutionGroundMode()
-METHOD com.openggf.physics.FrameCollisionPlan public  boolean runsSolidObjectResolution()
 METHOD com.openggf.physics.FrameCollisionPlan public  boolean runsTerrainProbes()
 METHOD com.openggf.physics.FrameCollisionPlan public  java.util.List<com.openggf.physics.FrameCollisionPlan$Phase> orderedPhases()
 METHOD com.openggf.physics.FrameCollisionPlan public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.physics.FrameCollisionPlan public,final  int hashCode()
 METHOD com.openggf.physics.FrameCollisionPlan public,final  java.lang.String toString()
-METHOD com.openggf.physics.FrameCollisionPlan public,static  com.openggf.physics.FrameCollisionPlan objectResolutionOnly()
 METHOD com.openggf.physics.FrameCollisionPlan public,static  com.openggf.physics.FrameCollisionPlan playableFrame()
 METHOD com.openggf.physics.FrameCollisionPlan public,static  com.openggf.physics.FrameCollisionPlan terrainOnly()
 METHOD com.openggf.physics.FrameCollisionPlan$Phase public,static  com.openggf.physics.FrameCollisionPlan$Phase valueOf(java.lang.String)
@@ -18300,7 +18291,6 @@ RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitEndsActive
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitHalvesBounceVelocity boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitNegatesGroundSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules duckTouchBoxMappingFrame int
-RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules objectsExecuteAfterPlayerPhysics boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules permanentRespawnTableLatch boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules sidekickDespawnUsesInteractCodeWordChange boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules sidekickDespawnUsesObjectIdMismatch boolean
@@ -19779,7 +19769,6 @@ RECORD-COMPONENT com.openggf.physics.CollisionEvent x int
 RECORD-COMPONENT com.openggf.physics.CollisionEvent y int
 RECORD-COMPONENT com.openggf.physics.FrameCollisionPlan recordsTrace boolean
 RECORD-COMPONENT com.openggf.physics.FrameCollisionPlan runsPostResolutionGroundMode boolean
-RECORD-COMPONENT com.openggf.physics.FrameCollisionPlan runsSolidObjectResolution boolean
 RECORD-COMPONENT com.openggf.physics.FrameCollisionPlan runsTerrainProbes boolean
 RECORD-COMPONENT com.openggf.sprites.SensorConfiguration direction com.openggf.physics.Direction
 RECORD-COMPONENT com.openggf.sprites.SensorConfiguration vertical boolean

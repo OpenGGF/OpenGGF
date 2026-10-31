@@ -11,7 +11,6 @@ public record ObjectInteractionRules(
         boolean sidekickDespawnUsesInteractCodeWordChange,
         boolean sidekickNormalCpuSkipsHurtRoutine,
         boolean permanentRespawnTableLatch,
-        boolean objectsExecuteAfterPlayerPhysics,
         boolean touchResponseUsesRenderFlagYGate,
         boolean touchResponseUsesPreviousCollisionResponseList,
         boolean animalObjectPreservesObjectMoveXSubpixel,

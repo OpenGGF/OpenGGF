@@ -768,12 +768,6 @@ public final class ObjectSolidContactController {
     // since the player's position already reflects their velocity.
     private boolean postMovement;
 
-    // When true, this is a pre-movement pass for a game that will have a post-movement
-    // pass (S1 UNIFIED). Side collision effects (speed zeroing, position correction)
-    // should be deferred to the post-movement pass, because in the ROM, objects check
-    // Sonic's position AFTER he has moved (his slot runs first in ExecuteObjects).
-    // Standing/riding contacts still apply in pre-movement for platform delta tracking.
-    private boolean deferSideToPostMovement;
 
     // ROM Obj70 (MTZ Cog) allocates one SST slot per tooth and runs each slot's
     // SolidObject independently in ascending allocation order (s2.asm:55039-55078,
@@ -799,10 +793,6 @@ public final class ObjectSolidContactController {
 
     ObjectSolidContactController(ObjectManager objectManager) {
         this.objectManager = objectManager;
-    }
-
-    void setDeferSideToPostMovement(boolean deferSideToPostMovement) {
-        this.deferSideToPostMovement = deferSideToPostMovement;
     }
 
     void reset() {
@@ -1614,14 +1604,6 @@ public final class ObjectSolidContactController {
             finalizeInlinePlayer(sidekick);
         }
         currentPlayer = null;
-    }
-
-    private boolean isCurrentlySupported(PlayableEntity player) {
-        if (player == null || player.getDead() || player.isDebugMode()) {
-            return false;
-        }
-        RidingState state = ridingStates.get(player);
-        return state != null && state.object != null;
     }
 
     private void finalizeInlinePlayer(PlayableEntity player) {
@@ -3000,508 +2982,6 @@ public final class ObjectSolidContactController {
         }
     }
 
-    // KNOWN ARCHITECTURAL DIFFERENCE: The ROM processes solid object contacts inline
-    // during each object's update routine, so each subsequent object sees the player's
-    // position as updated by earlier solid contacts within the same frame. This engine
-    // instead batches all solid contacts in a single pass after object updates, meaning
-    // every object sees the player's position from the START of the pass. This can cause
-    // differences with adjacent or sandwiching solid objects and with crush detection
-    // timing, since the cumulative position adjustments don't propagate between objects
-    // within the same frame. The sticky buffer and subpixel workarounds partially
-    // compensate for this, but a full fix would require per-object inline resolution
-    // integrated into the object update loop.
-    void update(PlayableEntity player, boolean postMovement) {
-        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
-        this.postMovement = postMovement;
-        frameCounter++;
-        // objectStandingBitSet intentionally not cleared per-frame: see
-        // beginInlineFrame note. ROM a0.d6 persists across frames.
-        objectStandingBitSnapshot.clear();
-        standingBitEstablishedThisFrame.clear();
-        controllerAirborneReleaseSupports.clear();
-        multiPieceEarlierPiecesResolvedUpTo = -1;
-        multiPieceEarlierPiecesInstance = null;
-        multiPieceEarlierPiecesPushing = false;
-        if (player == null || objectManager == null) {
-            return;
-        }
-        if (player.getDead()) {
-            RidingState state = ridingStates.get(player);
-            if (state != null && state.object != null) {
-                clearDeadPlayerStaleStandingBit(player, state.object);
-            }
-            ridingStates.remove(player);
-            return;
-        }
-
-        if (player.isDebugMode()) {
-            ridingStates.remove(player);
-            return;
-        }
-
-        if (!isCurrentlySupported(player)) {
-            latestStandingSnapshots.remove(player);
-        }
-
-        // Set currentPlayer so internal resolveContact/resolveSlopedContact can check
-        // this player's riding state via isRidingCurrentPlayerObject()
-        currentPlayer = player;
-
-        // Snapshot pre-contact state before any resolveContact can modify the player.
-        preContactXSpeed = player.getXSpeed();
-        preContactYSpeed = player.getYSpeed();
-        preContactYRadius = player.getYRadius();
-        preContactRolling = player.getRolling();
-
-        // Note: Do NOT clear pushing here. Terrain collision handles pushing for terrain walls,
-        // and solid object collision sets pushing when appropriate. Clearing here would
-        // override the pushing flag set by terrain collision earlier in the same frame.
-
-        Collection<ObjectInstance> solidObjects = objectManager.getSolidProviderObjects();
-
-        // Extract this player's riding state
-        RidingState state = ridingStates.get(player);
-        ObjectInstance ridingObject = state != null ? state.object : null;
-        ObjectInstance continuedRideCheckpointObject = ridingObject;
-        int ridingX = state != null ? state.x : 0;
-        int ridingY = state != null ? state.y : 0;
-        int ridingPieceIndex = state != null ? state.pieceIndex : -1;
-        ObjectInstance dropOnFloorExclude = null;
-        ObjectInstance offscreenSkippedAirborneRidingObject = null;
-        boolean preserveAirborneRideForEarlierPieces =
-                shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
-                        player, ridingObject, ridingPieceIndex);
-
-        // Legacy object-order modules execute dynamic objects before Sonic even
-        // though their native SST slots run after him. A stale earlier platform
-        // may therefore clear Status_OnObj while Sonic is still grounded; the
-        // subsequent player step derives InAir from that premature clear. Undo
-        // only that derived zero-speed air state here so the later ridden slot
-        // gets its native checkpoint. A real jump/hurt/fall carries velocity and
-        // remains airborne, as does a clear that observed Sonic already in air.
-        Integer clearingSlot = groundedOnObjectClearedBeforePhysics.get(player);
-        boolean groundedStatusClearBeforePhysics = clearingSlot != null
-                && checkpointRunsAfterClear(ridingObject, clearingSlot);
-        if (groundedStatusClearBeforePhysics && ridingObject != null
-                && player.getAir() && player.getYSpeed() == 0) {
-            groundedOnObjectClearedBeforePhysics.remove(player);
-            player.setAir(false);
-            player.setOnObject(true);
-        } else if (groundedStatusClearBeforePhysics && postMovement) {
-            groundedOnObjectClearedBeforePhysics.remove(player);
-        }
-
-        // ROM: Sonic_Jump does "bclr #sta_onObj,obStatus(a0)" before any
-        // platform's SolidObject routine runs.  If the player is airborne,
-        // they must not be repositioned by a stale riding record. S3K
-        // SolidObjectFull gates offscreen Player_2 before SolidObjectFull_1P,
-        // so that gate also precedes the Status_InAir riding unseat branch
-        // (docs/skdisasm/sonic3k.asm:41046-41050 before 41021-41034).
-        if (ridingObject != null && player.getAir()
-                && !preserveAirborneRideForEarlierPieces
-                && !suppressesSolidPassThisFrame(ridingObject, player)
-                && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
-                && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, ridingObject)
-                        && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))) {
-            SolidObjectProvider rideExitProvider = ridingObject instanceof SolidObjectProvider solid
-                    ? solid
-                    : null;
-            clearObjectStandingBitOnContinuedRideExit(player, ridingObject, ridingPieceIndex, rideExitProvider);
-            ridingStates.remove(player);
-            ridingObject = null;
-            ridingPieceIndex = -1;
-            player.setOnObject(false);
-        }
-        if (ridingObject != null && ridingObject instanceof SolidObjectProvider provider) {
-            SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
-            // ROM: S3K SolidObjectFull tests Player_2 render_flags before
-            // entering SolidObjectFull_1P (sonic3k.asm:41061-41065), so an
-            // offscreen CPU sidekick does not run the standing-bounds unseat
-            // branch at 41021-41034. Keep the existing ride latched.
-            if (!shouldSkipOffscreenSidekickFullSolid(player, ridingObject, solidProfile)) {
-                int currentX;
-                int currentY;
-                SolidObjectParams params;
-
-                if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
-                    currentX = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceX(ridingPieceIndex));
-                    currentY = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceY(ridingPieceIndex));
-                    params = InitialObjectDispatchController.afterCallback(initialDispatch, multiPiece.getPieceParams(ridingPieceIndex));
-                } else {
-                    currentX = InitialObjectDispatchController.afterCallback(initialDispatch, ridingObject.getX());
-                    currentY = InitialObjectDispatchController.afterCallback(initialDispatch, ridingObject.getY());
-                    params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
-                }
-
-                if (ridingPieceIndex > 0
-                        && ridingObject instanceof MultiPieceSolidProvider earlyMulti
-                        && shouldResolveEarlierMultiPieceSiblingsBeforeRidingPiece(
-                                player, ridingObject, ridingPieceIndex)
-                        && InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))
-                        && !blocksSolidContacts(player, ridingObject)
-                        && !InitialObjectDispatchController.afterCallback(initialDispatch, ridingObject.isSkipSolidContactThisFrame())) {
-                    multiPieceEarlierPiecesPushing = resolveEarlierMultiPieceSiblings(
-                            player, earlyMulti, ridingObject, ridingPieceIndex,
-                            frameCounter, solidProfile.stickyContactBuffer());
-                    multiPieceEarlierPiecesInstance = ridingObject;
-                    multiPieceEarlierPiecesResolvedUpTo = ridingPieceIndex;
-                }
-
-                if (preserveAirborneRideForEarlierPieces && player.getAir()) {
-                    // Folded ROM-slot solids such as S2 Obj70 run lower-index
-                    // sibling slots before the ridden slot's stale standing-bit
-                    // branch clears Status_OnObj and returns d4=0. The pre-pass
-                    // above mirrors those earlier slots; from here onward, treat
-                    // the ridden piece as airborne-unseated so processMultiPieceCollision
-                    // can clear only that piece's standing bit and skip its
-                    // SolidObject_cont path.
-                    clearObjectStandingBitOnContinuedRideExit(player, ridingObject, ridingPieceIndex, provider);
-                    ridingStates.remove(player);
-                    ridingObject = null;
-                    ridingPieceIndex = -1;
-                    player.setOnObject(false);
-                    player.setAir(true);
-                }
-
-                if (ridingObject != null) {
-                    int halfWidth = params.halfWidth();
-                // ROM: continued riding uses ExitPlatform / ExitPlatform2 semantics,
-                // which check the full collision width. Narrow top widths only apply
-                // to new Solid_Landed-style landings.
-                int ridingHalfWidth = halfWidth;
-
-                // ROM: Bounds check uses collision-offset X (anchorX = obX + offsetX),
-                // while delta tracking uses raw object X for movement following.
-                int boundsX = currentX + params.offsetX();
-                int relX = player.getCentreX() - boundsX + ridingHalfWidth;
-                // ROM: ExitPlatform / SolidObject riding checks use exact bounds
-                // (relX in [0, width*2)). Sticky margins belong to the engine's
-                // new-contact jitter compensation, not continued ride support.
-                int stickyX = 0;
-                int minRelX = -stickyX;
-                int maxRelXExclusive = (ridingHalfWidth * 2) + stickyX;
-                boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
-                // ROM: s2.asm:35387 — skip repositioning if obj_control bit 7 set
-                if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.suppressSlopeSampleThisFrame(player))) {
-                    ridingX = currentX;
-                    ridingY = currentY;
-                    putRidingState(player, ridingObject, ridingX, ridingY, ridingPieceIndex);
-                    setObjectStandingBit(player, ridingObject, ridingPieceIndex);
-                    clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
-                    preserveRidingPushStatusIfNeeded(player, ridingObject, provider);
-                } else if (inBounds && InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player)) && !blocksSolidContacts(player, ridingObject)) {
-                    // ROM: s2.asm:35377-35401 — X uses delta tracking, Y uses absolute positioning
-                    int deltaX = currentX - ridingX;
-                    if (deltaX != 0) {
-                        player.shiftX(deltaX);
-                    }
-                    // ROM: Sloped objects use SlopeObject2 for riding updates,
-                    // which re-samples the slope heightmap at the player's X each
-                    // frame: surfaceY = obY - slopeSample; playerY = surfaceY - yRadius.
-                    // Flat objects use MvSonicOnPtfm: y = obY - d3 - yRadius.
-                    // d3 is the GROUND half-height (walking), NOT d2 (air/jumping).
-                    // ROM: MvSonicOnPtfm uses d3 which was set by the caller before
-                    // SolidObject was called. For spikes d3=$11, push blocks d3=$11,
-                    // platforms d3=$10, etc.
-                    int surfaceOffset;
-                    if (ridingObject instanceof SlopedSolidProvider sloped) {
-                        int slopeAnchorX = currentX + params.offsetX();
-                        int slopeY = sampleSlopeY(player, slopeAnchorX, params.halfWidth(), sloped);
-                        surfaceOffset = (slopeY != Integer.MIN_VALUE) ? slopeY : params.groundHalfHeight();
-                    } else {
-                        surfaceOffset = params.groundHalfHeight();
-                    }
-                    // ROM MvSonicOnPtfm (sonic3k.asm:41688-41693, :41730-41742): upright it
-                    // computes `d0 = y_pos(a0) - d3` and writes `y_pos(a1) = d0 - y_radius(a1)`;
-                    // under Reverse_gravity_flag it branches to loc_1E1AA, computes
-                    // `d0 = y_pos(a0) + d3` and writes `y_pos(a1) = d0 + y_radius(a1)`
-                    // (loc_1E1F4). The rider hangs under the platform, both terms mirrored.
-                    // The unused S1 leftover at :41701 (the ±9 branch) is unreachable.
-                    int surfaceReach = surfaceOffset + player.getYRadius();
-                    int newCentreY = isReverseGravityActive(player)
-                            ? currentY + params.offsetY() + surfaceReach
-                            : currentY + params.offsetY() - surfaceReach;
-                    int newY = newCentreY - (player.getHeight() / 2);
-                    player.setY((short) newY);
-                    ridingX = currentX;
-                    ridingY = currentY;
-                    // Update state with new tracking position
-                    putRidingState(player, ridingObject, ridingX, ridingY, ridingPieceIndex);
-                    setObjectStandingBit(player, ridingObject, ridingPieceIndex);
-                    clearGroundWallSuppressionForNormalSolidSupport(player, ridingObject);
-
-                    // ROM: DropOnFloor (s2.asm:36114) — after repositioning the player
-                    // on a platform, check if terrain is at or above the player's feet.
-                    // If so, detach the player so terrain collision takes over next frame.
-                    if (solidProfile.dropOnFloor()) {
-                        TerrainCheckResult floorCheck = ObjectTerrainUtils.checkFloorDist(
-                                player.getCentreX(), player.getCentreY(), player.getYRadius());
-                        if (floorCheck.distance() <= 0) {
-                            dropOnFloorExclude = ridingObject;
-                            ridingStates.remove(player);
-                            clearObjectStandingBitOnContinuedRideExit(
-                                    player, ridingObject, ridingPieceIndex, provider);
-                            ridingObject = null;
-                            ridingPieceIndex = -1;
-                            player.setOnObject(false);
-                            player.setAir(true);
-                        }
-                    }
-                } else {
-                    if (!inBounds) {
-                        if (InitialObjectDispatchController.afterCallback(initialDispatch, provider.sampleSlopeOnRideExit(player))
-                                && ridingObject instanceof SlopedSolidProvider sloped) {
-                            int slopeAnchorX = currentX + params.offsetX();
-                            int slopeY = sampleSlopeY(player, slopeAnchorX, params.halfWidth(), sloped);
-                            if (slopeY != Integer.MIN_VALUE) {
-                                int newCentreY = currentY + params.offsetY() - slopeY - player.getYRadius();
-                                int newY = newCentreY - (player.getHeight() / 2);
-                                player.setY((short) newY);
-                            }
-                        }
-                        // ROM standing-object paths clear Status_OnObj and set
-                        // Status_InAir as soon as the rider leaves the object's
-                        // ride bounds: SolidObjectFull_1P loc_1DC98
-                        // (sonic3k.asm:41070-41074) and SolidObjectTop_1P
-                        // loc_1E2E0 (sonic3k.asm:41847-41852). The interact
-                        // latch can remain non-zero; it is not itself support.
-                        player.setOnObject(false);
-                        if (solidProfile.forceAirOnRideExit()) {
-                            player.setAir(true);
-                        }
-                    }
-                    clearObjectStandingBitOnContinuedRideExit(player, ridingObject, ridingPieceIndex, provider);
-                    ridingStates.remove(player);
-                    ridingObject = null;
-                    ridingPieceIndex = -1;
-                }
-                }
-            } else if (player.getAir()
-                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.airborneStaleStandingBitReturnsNoContact(player))) {
-                // S2 SolidObject returns before the offscreen Player_2 pass
-                // (docs/s2disasm/s2.asm:35022-35025). The ride/standing bit
-                // survives for object-local code such as Obj69, but no
-                // SolidObject_cont/RideObject_SetRide support contact is
-                // produced this frame.
-                offscreenSkippedAirborneRidingObject = ridingObject;
-            }
-        }
-
-        // ROM parity: the riding section above is the ExitPlatform equivalent.
-        // In the ROM, SolidObject runs ExitPlatform first and returns BEFORE
-        // Solid_ChkEnter — the two paths are mutually exclusive. If we don't
-        // skip the riding object here, the collision loop re-evaluates it with
-        // different math (airHalfHeight vs groundHalfHeight, different vertical
-        // offsets) causing the riding state to be spuriously removed and re-added
-        // on alternating frames. This is most visible on monitors where
-        // groundHalfHeight > airHalfHeight — the player jitters vertically.
-        ObjectInstance ridingMaintained =
-                offscreenSkippedAirborneRidingObject != null ? null : ridingObject;
-        ObjectInstance collisionDropOnFloorExclude = dropOnFloorExclude;
-        ObjectInstance collisionOffscreenSkippedRider = offscreenSkippedAirborneRidingObject;
-        ObjectInstance collisionRidingObject = ridingObject;
-        int collisionRidingPieceIndex = ridingPieceIndex;
-        ObjectInstance collisionContinuedRideCheckpointObject = continuedRideCheckpointObject;
-        NextRidingState nextRiding = new NextRidingState();
-        for (ObjectInstance instance : solidObjects) {
-            objectManager.runObjectCallback(instance, () -> processGlobalSolidInstance(
-                    player, instance, collisionDropOnFloorExclude, collisionOffscreenSkippedRider,
-                    ridingMaintained, collisionRidingObject, collisionRidingPieceIndex,
-                    collisionContinuedRideCheckpointObject, nextRiding));
-        }
-
-        if (nextRiding.object != null) {
-            putRidingState(player, nextRiding.object, nextRiding.x, nextRiding.y, nextRiding.pieceIndex);
-            setObjectStandingBit(player, nextRiding.object, nextRiding.pieceIndex);
-            clearGroundWallSuppressionForNormalSolidSupport(player, nextRiding.object);
-        } else if (offscreenSkippedAirborneRidingObject != null) {
-            putRidingState(player, offscreenSkippedAirborneRidingObject,
-                    ridingX, ridingY, ridingPieceIndex);
-            setObjectStandingBit(player, offscreenSkippedAirborneRidingObject, ridingPieceIndex);
-        } else {
-            ridingStates.remove(player);
-        }
-
-        // ROM: bclr #status.player.on_object when not standing on any object
-        // Also clear when player becomes airborne (jumping/falling off) - s2.asm has many instances
-        // of this paired with bset #status.player.in_air
-        if (nextRiding.object == null
-                && offscreenSkippedAirborneRidingObject == null
-                && (!(player instanceof AbstractPlayableSprite aps) || !aps.isObjectControlled())) {
-            player.setOnObject(false);
-        }
-
-        boolean standingSnapshot = nextRiding.object != null;
-        cacheStandingSnapshot(player, new PlayerStandingState(
-                standingSnapshot ? ContactKind.TOP : ContactKind.NONE,
-                standingSnapshot,
-                currentPushingState(player)));
-        cacheHeadroomSnapshot(player, player.getAngle(), getHeadroomDistance(player, player.getAngle()));
-
-        currentPlayer = null;
-    }
-
-    private static final class NextRidingState {
-        ObjectInstance object;
-        int x;
-        int y;
-        int pieceIndex = -1;
-
-        void set(ObjectInstance object, int x, int y, int pieceIndex) {
-            this.object = object;
-            this.x = x;
-            this.y = y;
-            this.pieceIndex = pieceIndex;
-        }
-    }
-
-    private void processGlobalSolidInstance(PlayableEntity player, ObjectInstance instance,
-            ObjectInstance dropOnFloorExclude, ObjectInstance offscreenSkippedAirborneRidingObject,
-            ObjectInstance ridingMaintained, ObjectInstance ridingObject, int ridingPieceIndex,
-            ObjectInstance continuedRideCheckpointObject,
-            NextRidingState nextRiding) {
-        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
-        if (instance == dropOnFloorExclude || instance == offscreenSkippedAirborneRidingObject) {
-            return;
-        }
-        // A ROM object that entered its standing/ExitPlatform routine has already
-        // consumed this slot's solid checkpoint for the frame. If ExitPlatform
-        // cleared the ride (including because Sonic's own update set
-        // Status_InAir), execution continues through the object's
-        // move-with-platform tail and returns; it cannot fall back into
-        // PlatformObject/Solid_ChkEnter and re-land on the same slot. Multi-piece
-        // providers fold distinct ROM slots together and need their sibling-piece
-        // pass below, so retain their explicit ordering model rather than
-        // suppressing the whole logical instance.
-        if (instance == continuedRideCheckpointObject
-                && instance != ridingMaintained
-                && !(instance instanceof MultiPieceSolidProvider)) {
-            return;
-        }
-        if (instance == ridingMaintained && !(instance instanceof MultiPieceSolidProvider)) {
-            nextRiding.set(instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), ridingPieceIndex);
-            if (instance instanceof SolidObjectListener listener) {
-                listener.onSolidContact(player, SolidContact.STANDING, frameCounter);
-                InitialObjectDispatchController.requireCurrent(initialDispatch);
-            }
-            return;
-        }
-        SolidObjectProvider provider = (SolidObjectProvider) instance;
-        if (!InitialObjectDispatchController.afterCallback(initialDispatch, provider.isSolidFor(player))) {
-            return;
-        }
-        SolidRoutineProfile solidProfile = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidRoutineProfile());
-        if (blocksSolidContacts(player, instance)) {
-            clearPushAfterSignedControlRejection(player, instance, provider);
-            return;
-        }
-        if (InitialObjectDispatchController.afterCallback(initialDispatch, instance.isSkipSolidContactThisFrame()) && instance != ridingObject) {
-            return;
-        }
-        if (provider instanceof MultiPieceSolidProvider multiPiece) {
-            MultiPieceContactResult result = processMultiPieceCollision(
-                    player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
-            boolean earlierSlotPushing =
-                    instance == multiPieceEarlierPiecesInstance && multiPieceEarlierPiecesPushing;
-            boolean preservedRidingPush = player instanceof AbstractPlayableSprite sprite
-                    && sprite.getPushing()
-                    && result.standing()
-                    && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesRidingPushStatus(player));
-            if (result.pushing() || earlierSlotPushing || preservedRidingPush) {
-                player.setPushing(true);
-                setObjectPushingBit(player, instance);
-                {
-                    provider.setPlayerPushing(player, true);
-                    InitialObjectDispatchController.requireCurrent(initialDispatch);
-                }
-            } else if (clearObjectPushingBit(player, instance)) {
-                if (result.aggregateContact() == null) {
-                    publishSolidPushReleaseAnimationWord(player, instance);
-                }
-                player.setPushing(false);
-                {
-                    provider.setPlayerPushing(player, false);
-                    InitialObjectDispatchController.requireCurrent(initialDispatch);
-                }
-            }
-            if (result.standing()) {
-                nextRiding.set(instance, result.ridingX(), result.ridingY(), result.pieceIndex());
-                preserveRidingPushStatusIfNeeded(player, instance, provider);
-            }
-            if (result.aggregateContact() != null && instance instanceof SolidObjectListener listener) {
-                listener.onSolidContact(player, result.aggregateContact(), frameCounter);
-                InitialObjectDispatchController.requireCurrent(initialDispatch);
-            }
-            return;
-        }
-
-        SolidObjectParams params = InitialObjectDispatchController.afterCallback(initialDispatch, provider.getSolidParams());
-        int anchorX = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()) + params.offsetX();
-        int anchorY = InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()) + params.offsetY();
-        boolean useStickyBuffer = solidProfile.stickyContactBuffer();
-        boolean wasAirborne = player.getAir();
-        boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
-        SlopedSolidRoutineAdapter slopedAdapter = null;
-        byte[] slopeData = null;
-        if (instance instanceof SlopedSolidProvider sloped) {
-            slopedAdapter = InitialObjectDispatchController.afterCallback(initialDispatch, SlopedSolidRoutineProfile.adapt(sloped));
-            slopeData = InitialObjectDispatchController.afterCallback(initialDispatch, slopedAdapter.getSlopeData());
-        }
-        SolidContact contact;
-        if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
-            if (instance == ridingObject) {
-                nextRiding.set(instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), -1);
-                if (instance instanceof SolidObjectListener listener) {
-                    listener.onSolidContact(player, SolidContact.STANDING, frameCounter);
-                    InitialObjectDispatchController.requireCurrent(initialDispatch);
-                }
-                return;
-            }
-            contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
-                    params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
-                    instance, true, slopedAdapter);
-        } else {
-            contact = resolveContact(player, anchorX, anchorY, params.halfWidth(),
-                    params.airHalfHeight(), solidProfile, useStickyBuffer, instance, true);
-        }
-        if (contact == null) {
-            if (instance instanceof SolidObjectListener listener) {
-                listener.onSolidContactCleared(player, frameCounter);
-                InitialObjectDispatchController.requireCurrent(initialDispatch);
-            }
-            return;
-        }
-        applyNonUnifiedTopSolidLandingHeightOverride(
-                player, contact, instance, solidProfile, wasAirborne, wasRidingObject, anchorY, params);
-        if ((contact.standing() || contact.touchTop())
-                && InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()) != null
-                && player instanceof AbstractPlayableSprite sprite) {
-            sprite.setLatchedSolidObject(InitialObjectDispatchController.afterCallback(initialDispatch, instance.getSpawn()).objectId(), instance);
-        }
-        if (contact.pushing()) {
-            player.setPushing(true);
-            setObjectPushingBit(player, instance);
-            {
-                provider.setPlayerPushing(player, true);
-                InitialObjectDispatchController.requireCurrent(initialDispatch);
-            }
-        } else if (contact.touchSide()) {
-            clearObjectPushingBit(player, instance);
-            player.setPushing(false);
-            {
-                provider.setPlayerPushing(player, false);
-                InitialObjectDispatchController.requireCurrent(initialDispatch);
-            }
-        }
-        if (contact.standing()) {
-            nextRiding.set(instance, InitialObjectDispatchController.afterCallback(initialDispatch, instance.getX()), InitialObjectDispatchController.afterCallback(initialDispatch, instance.getY()), -1);
-        }
-        if (instance instanceof SolidObjectListener listener) {
-            listener.onSolidContact(player, contact, frameCounter);
-            InitialObjectDispatchController.requireCurrent(initialDispatch);
-        }
-    }
-
     private record MultiPieceContactResult(
             boolean standing,
             boolean pushing,
@@ -4335,8 +3815,7 @@ public final class ObjectSolidContactController {
         boolean movingInto = leftSide ? player.getXSpeed() >= 0 : player.getXSpeed() < 0;
         boolean exactEdgeOverlap = absDistX == 0;
         boolean pushing = !player.getAir();
-        boolean skipMonitorSide = deferSideToPostMovement && player.getAir();
-        if (apply && movingInto && !exactEdgeOverlap && !skipMonitorSide) {
+        if (apply && movingInto && !exactEdgeOverlap) {
             player.setXSpeed((short) 0);
             player.setGSpeed((short) 0);
             int pushDist = leftSide ? -absDistX : absDistX;
@@ -4779,11 +4258,6 @@ public final class ObjectSolidContactController {
             // and obVelX, then falls through to Solid_Centre (position correction).
             // When d0!=0 AND NOT movingInto, ROM goes to Solid_Centre directly
             // (position correction only, no speed zeroing).
-            // deferSideToPostMovement: only defer when player is airborne.
-            // Airborne side collision is handled more accurately by post-movement pass
-            // (ROM processes objects after Sonic moves). Ground side collision keeps
-            // pre-movement behavior for wall alignment consistency.
-            boolean skipSideEffects = deferSideToPostMovement && player.getAir();
             boolean preserveMovingSideVelocity = instance instanceof SolidObjectProvider solidProvider
                     && InitialObjectDispatchController.afterCallback(initialDispatch, solidProvider.preservesMovingSideContactVelocity(player));
             if (instance instanceof SolidObjectProvider solidProvider
@@ -4794,7 +4268,7 @@ public final class ObjectSolidContactController {
                     && isSignedObjectControlSideContactRejected(player, instance)) {
                 return null;
             }
-            if (apply && !skipSideEffects) {
+            if (apply) {
                 if (postMovement) {
                     // Post-movement pass (S1 UNIFIED): ROM-accurate behavior.
                     // ROM: Solid_Left zeros speed BEFORE the airborne check.
@@ -5055,8 +4529,7 @@ public final class ObjectSolidContactController {
                 boolean groundedSquashEdgePush = instance instanceof SolidObjectProvider provider
                         && InitialObjectDispatchController.afterCallback(initialDispatch, provider.groundedSquashEdgeSideContactSetsPush());
                 boolean pushing = !player.getAir() && (movingInto || groundedSquashEdgePush);
-                boolean skipSquashSide = deferSideToPostMovement && player.getAir();
-                if (apply && !skipSquashSide) {
+                if (apply) {
                     if (postMovement) {
                         if (distX != 0 && movingInto) {
                             player.setXSpeed((short) 0);

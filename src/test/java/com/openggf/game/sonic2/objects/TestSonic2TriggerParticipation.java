@@ -727,7 +727,7 @@ class TestSonic2TriggerParticipation {
                         "OOZPoppingPlatform"));
         platform.snapshotPreUpdatePosition();
 
-        objectManager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(objectManager, tails);
 
         assertFalse(tails.isOnObject(),
                 "Obj33 must branch to SolidObject_TestClearPush for obj_control=$81 "

@@ -98,7 +98,6 @@ public class TestPlayableSpriteMovement {
 	@Test
 	void s2DeadRoutineDoesNotRunWaterInteractionAfterCrossingSurface() throws Exception {
 		LevelManager levelManager = mock(LevelManager.class);
-		when(levelManager.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
 		Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
 		setGameRulesForTest(sonic, GameRules.SONIC_2);
 		sonic.setInWater(true);

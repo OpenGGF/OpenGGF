@@ -52,7 +52,6 @@ class TestRingNativeSlotDispatch {
         level = mock(LevelManager.class);
         when(level.getLevelGamestate()).thenReturn(ledger);
         when(level.getFrameCounter()).thenAnswer(ignored -> levelClock.get());
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         Camera camera = mock(Camera.class);
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);
@@ -182,28 +181,6 @@ class TestRingNativeSlotDispatch {
                         layer -> layer != SpritePresentation.Layer.RINGS));
         assertEquals(2, noObjects.tiles().size(), "attracted art is independent of object visibility");
         assertTrue(noRings.tiles().isEmpty(), "ring visibility owns the actual queued attracted art");
-    }
-
-    @Test void newlyAllocatedLaterSlotExecutesButPastSlotWaitsWithoutLateRescue() {
-        for (boolean later : List.of(false, true)) {
-            objects.reset(0);
-            rings.reset(0);
-            if (later) for (int slot = 4; slot < 10; slot++) add(slot, () -> { });
-            add(10, () -> rings.attractStageRings(player));
-            step();
-            var created = rings.capture().attractedRings()[0];
-            assertEquals(later ? 11 : 4, created.objectSlotIndex());
-            assertEquals(later ? -0xC0 : 0, created.xVel());
-            assertEquals(later ? List.of(new Admission(11, 2)) : List.of(), admissions(objects));
-            rings.update(0, player, 101, false);
-            assertEquals(created, rings.capture().attractedRings()[0]);
-            if (!later) {
-                nextClock(); step();
-                assertEquals(-0xC0, rings.capture().attractedRings()[0].xVel());
-                assertEquals(List.of(new Admission(4, 2)), admissions(objects));
-                levelClock.set(100);
-            }
-        }
     }
 
     @Test void shortenedAndEmptyWalksNeverAdvanceUnvisitedRingsInLateFallback() {

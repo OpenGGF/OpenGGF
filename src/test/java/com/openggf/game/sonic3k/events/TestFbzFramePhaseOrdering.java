@@ -22,10 +22,9 @@ class TestFbzFramePhaseOrdering {
         var level = mock(com.openggf.level.LevelManager.class);
         var camera = mock(com.openggf.camera.Camera.class);
         LevelEventProvider events = mock(LevelEventProvider.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         doAnswer(i -> { log.add("anpal-fixed-pre"); return null; })
                 .when(events).updateFixedInLevelObjectsBeforeDynamicObjects();
-        doAnswer(i -> { log.add("objects"); return null; }).when(level).updateObjectPositionsWithoutTouches(false);
+        doAnswer(i -> { log.add("objects"); return null; }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(any(), eq(false));
         doAnswer(i -> { log.add("camera"); return null; }).when(camera).updatePosition();
         doAnswer(i -> { log.add("event"); return null; }).when(events).update();
         doAnswer(i -> { log.add("flush"); return null; }).when(level).flushQueuedLayoutMutations();
@@ -44,13 +43,12 @@ class TestFbzFramePhaseOrdering {
         workspace.init(0);
         var level = mock(com.openggf.level.LevelManager.class);
         var camera = mock(com.openggf.camera.Camera.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         LevelEventProvider provider = mock(LevelEventProvider.class);
         doAnswer(i -> { workspace.advanceMagneticPhase(0x100); return null; })
                 .when(provider).updateFixedInLevelObjectsBeforeDynamicObjects();
         List<Sonic3kFBZEvents.MagneticPolarity> observed = new ArrayList<>();
         doAnswer(i -> { observed.add(workspace.getMagneticPolarity()); return null; })
-                .when(level).updateObjectPositionsWithoutTouches(false);
+                .when(level).updateObjectPositionsPostPhysicsWithoutTouches(any(), eq(false));
 
         LevelFrameTestStep.execute(context(provider), level, camera, () -> { });
 
@@ -64,7 +62,6 @@ class TestFbzFramePhaseOrdering {
         FbzZoneRuntimeState state = new FbzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, events);
         var level = mock(com.openggf.level.LevelManager.class);
         var camera = mock(com.openggf.camera.Camera.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         LevelEventProvider provider = mock(LevelEventProvider.class);
         doAnswer(i -> {
             events.setCollisionMode(Sonic3kFBZEvents.CollisionMode.FOREGROUND_AND_BACKGROUND, 11, 12);

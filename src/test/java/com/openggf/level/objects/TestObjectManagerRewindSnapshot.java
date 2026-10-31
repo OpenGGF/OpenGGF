@@ -440,7 +440,7 @@ class TestObjectManagerRewindSnapshot {
         player.setAir(true);
         player.setYSpeed((short) 0x100);
 
-        manager.updateSolidContacts(player);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         assertTrue(manager.isRidingObject(player), "precondition: player should be riding before capture");
         assertSame(original, manager.getRidingObject(player));
 
@@ -477,7 +477,7 @@ class TestObjectManagerRewindSnapshot {
         player.setCentreY((short) (100 - 4 - maxTop + 8));
         player.setAir(true);
         player.setYSpeed((short) 0x100);
-        manager.updateSolidContacts(player);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         assertTrue(manager.isRidingObject(player, original));
 
         RewindSnapshottable<ObjectManagerSnapshot> adapter = manager.rewindSnapshottable();
@@ -595,7 +595,7 @@ class TestObjectManagerRewindSnapshot {
         player.setCentreY((short) (solid.getY() - 4 - maxTop + 8));
         player.setAir(true);
         player.setYSpeed((short) 0x100);
-        manager.updateSolidContacts(player);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         assertTrue(manager.isRidingObject(player, solid), "precondition: player landed on the solid");
         return player;
     }
@@ -745,8 +745,8 @@ class TestObjectManagerRewindSnapshot {
     }
 
     private static void forwardContacts(ObjectManager manager, Sonic p1, Sonic p2) {
-        manager.updateSolidContacts(p1);
-        manager.updateSolidContacts(p2);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, p1);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, p2);
     }
 
     private static Sonic contactPlayer(String code) {

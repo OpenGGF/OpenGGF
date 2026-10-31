@@ -112,12 +112,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
-     * Compatibility wrapper for older callers that expect the legacy full
-     * playable-frame pass. New callers should choose a named
+     * Compatibility wrapper for older callers that expect the full
+     * playable-frame terrain pass. New callers should choose a named
      * {@link FrameCollisionPlan} and invoke {@link #run(FrameCollisionPlan,
-     * AbstractPlayableSprite, Sensor[], Sensor[])} or
-     * {@link #runSolidObjectResolution(FrameCollisionPlan, AbstractPlayableSprite,
-     * boolean, boolean)}.
+     * AbstractPlayableSprite, Sensor[], Sensor[])}. Solid objects resolve in
+     * their own object slots, never from a player collision pass.
      */
     @Deprecated(since = "0.6.prerelease", forRemoval = false)
     public void step(AbstractPlayableSprite sprite, Sensor[] groundSensors, Sensor[] ceilingSensors) {
@@ -127,8 +126,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     /**
      * Execute the collision phases requested by {@code plan} for a playable
      * sprite. The plan documents whether this frame is doing terrain probes,
-     * batched solid-object resolution, trace recording, or a future
-     * post-resolution ground-mode phase.
+     * trace recording, or a future post-resolution ground-mode phase.
      *
      * @param plan explicit phase plan for this frame
      * @param sprite playable sprite to process
@@ -157,10 +155,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             if (effectivePlan.recordsTrace()) {
                 trace.onTerrainProbesComplete(sprite.getCentreX(), sprite.getCentreY(), sprite.getAngle());
             }
-        }
-
-        if (effectivePlan.runsSolidObjectResolution()) {
-            runSolidObjectResolution(effectivePlan, sprite, false, false);
         }
     }
 
@@ -218,37 +212,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         publishPrimaryAngleIfBackedByTile(right);
         if (left != null && left.tileId() != 0) {
             applySecondaryAngleWrites(left);
-        }
-    }
-
-    /**
-     * Phase 2: Resolve solid object contacts for the legacy batched path.
-     * Inline-order modules resolve object solids during object execution instead.
-     */
-    public void resolveSolidContacts(AbstractPlayableSprite sprite) {
-        runSolidObjectResolution(FrameCollisionPlan.objectResolutionOnly(), sprite, false, false);
-    }
-
-    public void runSolidObjectResolution(FrameCollisionPlan plan, AbstractPlayableSprite sprite,
-                                         boolean postMovement, boolean deferSideToPostMovement) {
-        FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
-        if (!effectivePlan.runsSolidObjectResolution() || sprite == null || sprite.getDead()
-                || sprite.isDebugMode()) {
-            return;
-        }
-        if (effectivePlan.recordsTrace()) {
-            trace.onSolidContactsStart(sprite.getCentreX(), sprite.getCentreY());
-        }
-
-        if (objectManager != null) {
-            objectManager.updateSolidContacts(sprite, postMovement, deferSideToPostMovement);
-        }
-
-        if (effectivePlan.recordsTrace()) {
-            trace.onSolidContactsComplete(
-                objectManager != null && objectManager.isRidingObject(sprite),
-                sprite.getCentreX(), sprite.getCentreY()
-            );
         }
     }
 
@@ -1082,7 +1045,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     private static void requireTerrainOnlyPlan(FrameCollisionPlan plan, String operation) {
         FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
         if (!effectivePlan.runsTerrainProbes()
-                || effectivePlan.runsSolidObjectResolution()
                 || effectivePlan.runsPostResolutionGroundMode()) {
             throw new IllegalArgumentException(operation + " requires a terrain-only FrameCollisionPlan");
         }
