@@ -1,22 +1,25 @@
 # OpenGGF agent guidance
 
-Keep `AGENTS.md`/`CLAUDE.md` byte-identical and `.agents/skills/`/`.claude/skills/` mirrored.
+Keep `AGENTS.md` and `CLAUDE.md` byte-identical. Skills are mirrored between `.agents/skills/` and `.claude/skills/`.
 
 ## Project and scope
 
-Alpha Java 25 Sonic 1/2/3&K reimplementation for research/preservation; user-supplied ROMs, no Sega affiliation. Editor experimental; unpublished development-branch Mod API outside 0.6.
-Reproduce shipped ROMs, not fixtures; explain differences with disassembly. Prioritize S3K routes/AIZ → HCZ stability, then blockers/frontiers. Cleanup serves the task or active risk.
-Implement game algorithms/state/output, not CPU instruction/cycle simulation, virtual VDP/beam timing or hardware bus/register protocols. Translate hardware-facing routines to engine semantics; document unsupported behavior. Only sound-chip synthesis permits emulation, excluding surrounding CPU/video/system bus. External emulators remain references; trace/timing restrictions remain. See [boundary](docs/architecture/engine-map.md#reimplementation-boundary).
-Finish authorized verification/delivery; use relevant skills/references without routine approval ceremonies. User instructions override skills.
+OpenGGF is an alpha Java 25 reimplementation of Sonic 1, 2 and 3&K for research and preservation. Runtime assets come from user-supplied ROMs; it has no Sega affiliation. The editor is experimental, and the unpublished Mod API on the development branches is outside the 0.6 release.
+
+Accuracy means reproducing the shipped ROMs, never tuning to make a fixture pass. Explain differences with the disassembly. Prioritise S3K playable routes and keep AIZ → HCZ stable; pick later work by route blockers and trace frontiers. Cleanup must serve the task or remove an active risk.
+
+Reimplement game algorithms, state and output. Do not add CPU instruction or cycle simulation, virtual VDP or beam timing, or hardware bus and register protocols. Translate hardware-facing routines into engine semantics and document what is unsupported. Sound-chip synthesis is the only emulation allowed, and it does not extend to the CPU, video or bus around it. See the [reimplementation boundary](docs/architecture/engine-map.md#reimplementation-boundary).
+
+Carry authorised work through verification and delivery. User instructions override skill defaults.
 
 ## Coordination and progress
 
-- Delegate independent bounded outcomes/files/worktrees/checks/stopping conditions; no duplicate observers/reviews.
-- One lead plans delivery validation; workers run focused checks.
-- Reuse only matching source/inputs/selection/environment and policy-permitted coverage.
-- One session/observer per job; poll ≥30–60s, keep queued jobs alive, cancel only unneeded owned jobs.
-- Checkpoint outcome, current/tested SHA, edits/owners, checks/limits/jobs, blocker/next action in existing status; no caches/receipts/archives.
-- Separate queue/execution/user-wait/unknown time; overlapping durations are not elapsed time. Follow [coordination rules](tools/testing/README.md#coordination-and-progress).
+- Give each delegate a bounded outcome, its own files or worktree, focused checks and a stopping condition. Do not add workers that only watch or repeat a review.
+- One lead owns the delivery's validation plan. Workers run focused checks on their own changes.
+- Before launching costly validation, reuse an existing job only when its source, inputs, selection and environment match.
+- Keep one session and one observer per job. Poll no faster than every 30–60 seconds, and keep queued jobs alive.
+- At each handoff, record the outcome, tested SHA, owners, checks and their limits, live jobs, blocker and next action in the existing task status.
+- Report queue wait, execution, user wait and unknown time separately. Details: [coordination rules](tools/testing/README.md#coordination-and-progress).
 
 ## Build and verification
 
@@ -31,19 +34,19 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B # public release ONLY
 ```
 
-- Queue test-running/uncertain Maven; categories queue automatically. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
+- Run every test-running Maven command through `maven_queue.py`; category runs queue themselves. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
 - Maven output belongs in the current worktree's `target/` directory. Do not share or
   copy build trees.
-- Smoke is routine; full-suite is public-release-only. Manual `exhaustive-audit` requires explicit request.
-- Bounded impact: focused checks. Shared/uncertain: change-based smoke against pre-task destination SHA plus semantic dependencies. Docs: syntax/links/mirrors/policy/scenarios. ROM/trace/domain checks stay separate.
-- Broad local: `--workers 2`; state count/cost/stopping rule. Repeat only for edits, failures, repaired prerequisites or unresolved risk.
-- Match baseline/current failure identities/assertions/skips; new/worsened failures block. Report unattributed failures/incomplete coverage.
-- Never delete queue lock files or edit/build the tree during category runs.
-- Inspect results/skips, then `python3 tools/testing/run_categories.py --acknowledge <run-id>`; do not archive diagnostics.
-- Java 25, JUnit 5/Jupiter, `-Dmse=off`; actual-environment preflight; guards need Lua 5.4/PowerShell.
-- GL: `-Dopenggf.headless.gl=surfaceless-egl` (category `--headless-gl surfaceless-egl`); preserve flags. Headless/offscreen only; window diagnostics need isolated displays, never shared-desktop/ambient fallback.
-- `--lean`: prepared small classes, bounded memory, exact selectors, no profiles/custom overrides; report OOM and rerun `--normal`.
-- Read [measurement hazards](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output); report command/commit/outcomes/skips/limits. Follow [testing procedures](tools/testing/README.md); bounded passes are not full-suite.
+- Smoke is the routine selection. The full suite is for public releases only, and `exhaustive-audit` runs only on explicit request.
+- Choose checks from the change. Bounded impact gets focused tests. Shared or uncertain changes get the change-based smoke run against the pre-task destination SHA. Docs-only changes get syntax, link, mirror and policy checks. ROM, trace and domain checks are separate.
+- For broad local runs use `--workers 2`, and state the class count, cost and stopping rule first. Rerun only after edits, failures or repaired prerequisites.
+- Attribute a failure by running the same tests on the baseline and comparing identities, assertions and skips. New or worse failures block delivery.
+- Never delete queue lock files, and never edit or build the tree during a category run.
+- Read the results and skips, then delete diagnostics with `run_categories.py --acknowledge <run-id>`.
+- Use Java 25, JUnit 5 and `-Dmse=off`. Guards need Lua 5.4 and PowerShell; run the preflight in the real environment.
+- GL tests need `-Dopenggf.headless.gl=surfaceless-egl`. Render headless or offscreen only; window diagnostics need an isolated display, never the shared desktop.
+- `--lean` (1 GiB) suits small, already-compiled classes. It runs out of memory when tests must be recompiled; rerun with `--normal`.
+- Report the command, commit, outcome, skips and limits, and read the [measurement hazards](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output). A bounded pass is never a full-suite pass. Full procedures: [testing guide](tools/testing/README.md).
 
 ## Enforced correction contracts
 
@@ -57,11 +60,11 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B # public rel
 
 ## Level test coverage
 
-New zones/acts follow the [route/rewind standard](docs/guide/contributing/level-test-standard.md) and link matrices from the [backlog](docs/status/level-test-coverage.md); update affected obligations/inherited gaps. Loading is not certification; enforcement remains planned.
+New zones and acts follow the [zone and act testing standard](docs/guide/contributing/level-test-standard.md) and link their route matrix from the [coverage backlog](docs/status/level-test-coverage.md). Changes to existing levels update the affected obligations and record inherited gaps. Loading a level is not certification.
 
 ## ROM and reference setup
 
-Discover root `.gen` files; pass absolute ROM paths. Missing/wrong paths silently skip `@RequiresRom`; never rename/copy/delete/link ROMs for examples. Verify identity when relevant:
+Find the root `.gen` files and pass absolute paths. A missing or wrong path silently skips `@RequiresRom` tests. Never rename, copy, delete or link ROMs. Verify identity when it matters:
 
 | ROM | Test property | CRC32 | SHA-1 |
 |---|---|---|---|
@@ -69,9 +72,9 @@ Discover root `.gen` files; pass absolute ROM paths. Missing/wrong paths silentl
 | S2 World REV01 | `-Dsonic2.rom.path=` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | S3&K locked-on | `-Ds3k.rom.path=` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-`docs/s1disasm`, `docs/s2disasm`, `docs/skdisasm`: optional development references; builds, tests, and runtime do not require them. Opt in: `git submodule update --init`.
-Cite labels/lines (`loc_390FA (s2.asm:77149-77163)`); run `python3 tools/disasm/disasm_citations.py check`; pin moves require `disasm_citations.py remap <name> <old> <new> --write`.
-Traces: optional pinned `tools/tracechaser/` submodule; `git submodule update --init --recursive tools/tracechaser`. Follow its guide/BizHawk 2.11 requirement; use `tools/tracechaser/...` paths.
+The disassemblies in `docs/s1disasm`, `docs/s2disasm` and `docs/skdisasm` are optional development references; builds, tests, and runtime do not require them (`git submodule update --init`).
+Cite a label beside its lines, e.g. `loc_390FA (s2.asm:77149-77163)`. `python3 tools/disasm/disasm_citations.py check` verifies citations against the pins, and the pre-commit hook rejects new stale ones. A commit that moves a pin also runs `disasm_citations.py remap <name> <old> <new> --write`.
+Trace production lives in the optional pinned `tools/tracechaser/` submodule (`git submodule update --init --recursive tools/tracechaser`); follow its guide and BizHawk 2.11 requirement.
 
 ## Runtime invariants
 
@@ -96,16 +99,17 @@ Traces: optional pinned `tools/tracechaser/` submodule; `git submodule update --
 
 ## Delivery and documentation
 
-Follow user integration flow. Never switch main-workspace branches; base isolated `.worktrees/` branches `feature/ai-*`/`bugfix/ai-*` on its current branch. Preserve unrelated work/dirty submodules.
-Install/obey hooks: `tools/testing/install-hooks.sh` (PowerShell `tools/testing/install-hooks.ps1`); never `--no-verify`.
-Non-master/non-merge trailers: `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`; values start `updated`/`n/a` and match staged files. Source `feat`/`fix`/`perf`: changelog or inline skip reason.
-Use the [staging checklist](docs/agent-workflow/documentation-obligation-checklist.md) for frontier/artifact/version/ref/alias obligations. Develop/next prose: `CHANGELOG.0.7.prerelease.md`; earlier themes: `CHANGELOG.0.7.md`; root `CHANGELOG.md`: index/development pointer and exact-path trailer. Fold unreleased fixes into existing entries. [Rollover](docs/project/release-rollover.md) owns promotion/splits.
-Merges into `develop` update README release themes only if themes change; no hook requires it.
-Non-deletion `master` pushes publish, PRs/manual dispatch do not; never pre-tag/reuse versions. Use `release-publishing`/[guide](docs/project/release-publishing.md) for atlas/pilot qualification; confirm release/downloads.
+Follow the user's integration flow. Never switch the main workspace's branch. New branches use isolated `.worktrees/` checkouts named `feature/ai-*` or `bugfix/ai-*`, based on the current main branch. Preserve unrelated work and dirty submodules.
+
+Install the hooks with `tools/testing/install-hooks.sh` (PowerShell: `tools/testing/install-hooks.ps1`) and never use `--no-verify`. Non-master, non-merge commits carry seven trailers, `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs` and `Skills`, each starting `updated` or `n/a` and matching the staged files. A source `feat`, `fix` or `perf` needs a changelog entry or an inline reason.
+
+Development prose goes in `CHANGELOG.0.7.prerelease.md`; the `Changelog: updated` trailer maps only to root `CHANGELOG.md`, the release index. Fold fixes to unreleased features into their existing entry. Use the [staging checklist](docs/agent-workflow/documentation-obligation-checklist.md) for frontier-log, artifact, version and branch obligations, and [release rollover](docs/project/release-rollover.md) for promotions. The README release section changes only when a merge adds or changes a version theme.
+
+Any non-deletion push to `master` publishes a release; PRs and manual dispatch do not. Never tag first or reuse a version. Use the `release-publishing` skill and [guide](docs/project/release-publishing.md), and confirm the release and downloads.
 
 ## Preserving how the work was done
 
-[Preserve methods](docs/agent-workflow/README.md#preserving-how-the-work-was-done): promote recurring/>1-hour probes with purpose/inputs/origin and index entry; catalogue lessons; record rejected approaches/kill evidence/commits in dated task artifacts. Narrative: milestones only; no new document types or raw/regenerable outputs.
+Promote a probe that answered a recurring question or took over an hour to get right, with a header (purpose, inputs, origin) and an index entry. Put lessons in the existing catalogues, and record rejected approaches with their evidence and commits in the dated task artifact. Create no new document types and keep no raw or regenerable output. Details: [preserving methods](docs/agent-workflow/README.md#preserving-how-the-work-was-done).
 
 ## Find the owning reference
 
