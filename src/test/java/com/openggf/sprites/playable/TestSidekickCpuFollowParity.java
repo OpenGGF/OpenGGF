@@ -695,7 +695,10 @@ class TestSidekickCpuFollowParity {
         byte[] statusHistory = new byte[64];
         Arrays.fill(xHistory, (short) 0x1976);
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
-        sonic.setOnObject(true);
+        // The leader still points interact at the object it left, but the
+        // object's own helper already cleared Status_OnObj (loc_1DC98).
+        sonic.setLatchedSolidObject(0x2A, org.mockito.Mockito.mock(com.openggf.level.objects.ObjectInstance.class));
+        sonic.setOnObject(false);
         sonic.setAir(true);
         sonic.setGSpeed((short) 0);
 
