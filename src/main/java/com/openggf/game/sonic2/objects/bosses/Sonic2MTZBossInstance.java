@@ -230,8 +230,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     /**
      * ROM Obj54's first execution frame dispatches Obj54_Init (boss_subtype 0),
      * which sets up state, spawns the laser shooter and the Obj53 orb spawner,
-     * and ends with rts — no Boss_MoveObject, no CheckHit (s2.asm:32298-323B8,
-     * Obj54_Init ends `rts` before Obj54_Main). The engine performs that setup
+     * and ends with rts — no Boss_MoveObject, no CheckHit (Obj54_Init,
+     * s2.asm:67340-67399, ends `rts` before Obj54_Main). The engine performs that setup
      * in the constructor, so its first updateBossLogic dispatch must be consumed
      * as the init routine or the boss floats one frame ahead of ROM for the
      * whole fight. Children DO update on the init frame (ROM's freshly allocated
@@ -452,7 +452,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      * ROM Obj54_AnimateFace's hit branch runs AFTER the current routine's
      * Boss_MoveObject within the same Obj54 pass (round-92 PC-probe dispatch
      * order: Obj54_Main -> Boss_MoveObject -> Obj54_AnimateFace -> Obj54_CheckHit
-     * -> Obj53 dispatch; s2.asm:32690-326A5). Touch_Enemy reaches onHitTaken()
+     * -> Obj53 dispatch; Obj54_Main s2.asm:67402, Obj54_AnimateFace s2.asm:67755). Touch_Enemy reaches onHitTaken()
      * before Obj54's own update in the engine's player-slot-first order, so the
      * whole reaction (orb-break flag, angry face, SubA entry, velocity writes)
      * is latched there and applied here, after this frame's old-routine movement
@@ -1064,9 +1064,18 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     // Rendering
     // =========================================================================
 
+    /**
+     * Shipped branch ({@code fixBugs = 0}) of the Obj54_MainSub* display tail
+     * (s2.asm:67442-67451 and repeats): {@code JmpTo40_DisplaySprite} reads the
+     * {@code priority} word, which Obj54_AlignSprites has overwritten with
+     * {@code sub3_y_pos} = {@code y_pos}. DisplaySprite takes bits 8-10 of that
+     * word as the display list, so the boss draws on list 3 only while
+     * {@code y_pos} is in $300-$3FF and on list 4 once it descends to its $4A0
+     * pacing height. The fixed branch would always use list 3.
+     */
     @Override
     public int getPriorityBucket() {
-        return 3;
+        return (state.y >> 8) & 7;
     }
 
     @Override

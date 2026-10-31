@@ -77,6 +77,16 @@ class TestS2MTZBossGraphRewind {
     }
 
     @Test
+    void mtzBossDisplayListFollowsItsHeightLikeTheShippedGame() {
+        Harness harness = Harness.create();
+        Sonic2MTZBossInstance boss = MtzGraph.spawn(harness.objectManager(), BOSS_SPAWN).boss();
+        assertEquals(3, boss.getPriorityBucket(), "y_pos $380 selects display list 3");
+        boss.getState().y = 0x04A0;
+        assertEquals(4, boss.getPriorityBucket(),
+                "y_pos $4A0 selects display list 4; a fixed list 3 is the fixBugs branch");
+    }
+
+    @Test
     void mtzBossFamilyUsesRewindRecreatableWithoutExplicitDynamicCodecs() {
         for (Class<?> type : List.of(
                 Sonic2MTZBossInstance.class,

@@ -5,6 +5,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Metropolis Zone boss draw layer:** The boss now takes its display layer from
+  its height as the shipped game does, so it moves from layer 3 to layer 4 once it
+  descends to its pacing height. It previously stayed on layer 3, which is the
+  disassembly's `fixBugs` behaviour.
+
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an
