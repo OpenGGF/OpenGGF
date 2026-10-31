@@ -96,6 +96,12 @@ the unmodified base in a matched run: `TestMasterTitleScreenLayout` (2),
 (3) and `TestPrivateLobbyScreenRendering`. They are present on develop and are not
 attributable to this branch.
 
+Promo scouting found that AIZ/LRZ/EMZ rocks were targeted but never broke: their
+side break needs a grounded push (`Obj_AIZLRZEMZRock_PushBreakMain`), so Sonic just
+bounced off. A strike now counts as that push, with the roll-animation and speed gates
+unchanged. `aStrikeBreaksAnAizRockAsIfSpindashedIntoIt` covers this and fails when the
+change is removed.
+
 ## Boss audit (hidden priorities and exclusions)
 
 An Explore pass checked every engine boss against the disassemblies. Using the

@@ -322,6 +322,28 @@ class TestHomingAttackMutator {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void aStrikeBreaksAnAizRockAsIfSpindashedIntoIt() {
+        var s3k = new com.openggf.game.sonic3k.Sonic3kGameModule();
+        var world = open(MutatorPolicy.HomingMode.HOMING, s3k, s3k);
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).withSkippedZoneIntro().build();
+        var sonic = fixture.sprite();
+        // Positioned beside the placed AIZ1 rocks and monitor at x 8704..8748 (layout order).
+        sonic.setCentreXPreserveSubpixel((short) 8640);
+        sonic.setCentreYPreserveSubpixel((short) 850);
+        // The camera scrolls over from the act start at its native speed before objects load.
+        fixture.stepIdleFrames(300);
+        assertFalse(sonic.getAir(), "Settled on the ground before the jump");
+        var rock = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.AizLrzRockObjectInstance.class::isInstance)
+                .filter(object -> Math.abs(object.getCollisionX() - 8704) < 24).findFirst().orElseThrow();
+        jumpAndRepress(fixture);
+        assertEquals(HomingAttackRuntime.Phase.HOMING, runtime(world).phase(), "The rock ahead is the target");
+        for (int frame = 0; frame < 40 && !rock.isDestroyed(); frame++) fixture.stepFrame(false, false, false, false, false);
+        assertTrue(rock.isDestroyed(), "A homing strike breaks the rock like a grounded roll");
+    }
+
+    @Test
     void hiddenPriorityThenFacingThenKindThenDistanceSelectTheTarget() {
         var boss = new HomingTarget(HomingTargetKind.BOSS, 0, 0, 0);
         var badnik = new HomingTarget(HomingTargetKind.BADNIK, 0, 0, 0);

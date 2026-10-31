@@ -108,7 +108,8 @@ hidden progress priority, then whether they are ahead of the player, then kind (
 badnik, breakable wall, grab point, breakable) and then distance; the line to them must
 clear solid terrain. The player stays in the native roll, so native touch, solid and
 defeat code decides each hit. A strike counts as a spindash where the native code
-distinguishes ground from air: breakable walls and the Death Egg Act 2 spike cars.
+distinguishes ground from air: breakable walls, Angel Island's rocks and the Death
+Egg Act 2 spike cars.
 Hits refresh the air action, so attacks chain, and bosses bounce the player off.
 A reticle marks the target a re-press would take, launches lag the camera like
 the Sonic 3 & Knuckles fire-shield dash, and a faint blue glow and echoes trail the strike.

@@ -296,7 +296,8 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         if (player.getShieldType() == ShieldType.FIRE) {
             return true;
         }
-        return pushingNow;
+        // Homing-attack mutator: the strike arrives as if spindashed in, so it is a ground push.
+        return pushingNow || com.openggf.game.mutators.HomingAttackRuntime.striking(services().worldSession(), player);
     }
 
     private void breakFromSide(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
