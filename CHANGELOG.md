@@ -26,7 +26,9 @@ display-locked pacing on matching refresh rates with a drift-regulated speaker,
 with region-cadence viewport recording, redraw-independent native object state,
 and row-owned trace-ghost animation whose
 seeks preserve observed historical context. The level editor menu now opens on a
-short front page with Exit to title.
+short front page with Exit to title. Creator tooling now includes task recipes,
+local build/test/run configuration for all seven starter purposes, read-only
+preflight and actionable SDK reports.
 
 ## Release files
 

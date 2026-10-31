@@ -85,7 +85,8 @@ def export_examples(root):
         for tree in ("src/main", "src/test", "tools"):
             for file in sorted((project / tree).rglob("*")):
                 relative = file.relative_to(project)
-                if file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc":
+                if (file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc"
+                        and file.name != "ggfmod.local.json"):
                     entries["examples/" + name + "/" + relative.as_posix()] = file.read_bytes()
         # Controller recipes are creator inputs; rendered captures, ROMs and
         # runtime state are not. Never follow a linked walkthrough source.
@@ -156,6 +157,12 @@ required game/donor paths using `--s1`, `--s2` or `--s3k` as needed:
 python3 ../../tools/build_project.py . --run --{game} /absolute/own-{game}.gen
 ```
 
+Use `--doctor --format json` for read-only prerequisite checks; add `--test` to
+check test prerequisites. Optional project-local `ggfmod.local.json` (schemaVersion 1)
+can store engine/sdk/testkit and s1/s2/s3k paths relative to that file; CLI flags
+override them. See `../../handbook/getting-started.md` for the strict schema.
+Keep this personal file out of version control. It never enters exported resources.
+
 The launcher keeps generated runtime configuration and saves under `target/play`.
 ROMs are read from your explicit paths and are not included in the exported project.
 
@@ -167,6 +174,7 @@ there refer to the pinned source tree; use the creator-kit commands above here.
 '''
         entries[f"examples/{name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
         entries[f"examples/{name}/pom.xml"] = project_pom(name, generator.is_file())
+        entries[f"examples/{name}/.gitignore"] = b"/target/\nggfmod.local.json\n"
     return entries
 
 
@@ -298,7 +306,7 @@ def collect(root, commit, allow_dirty=False, source_dirty=False):
     relocate_markdown_links(root, entries, commit)
     entries["ggfmod"] = b'#!/bin/sh\nset -eu\nkit=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "${JAVA_HOME:+$JAVA_HOME/bin/}java" --enable-native-access=ALL-UNNAMED -cp "$kit/engine.jar:$kit/sdk.jar" com.openggf.tools.modsdk.GgfModCli "$@"\n'
     entries["ggfmod.ps1"] = b'param([Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs)\n$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME "bin/java" } else { "java" }\n& $javaExe --enable-native-access=ALL-UNNAMED -cp "$PSScriptRoot/engine.jar$([IO.Path]::PathSeparator)$PSScriptRoot/sdk.jar" com.openggf.tools.modsdk.GgfModCli @CommandArgs\nexit $LASTEXITCODE\n'
-    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 25 and Maven 3.8+; Python 3 for portable examples. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Build generated starters with matching absolute engine.jar and sdk.jar properties. Use tools/build_project.py for exported examples. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
+    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 25 and Python 3 for portable builds; Maven 3.8+ for uncached test dependencies or advanced builds. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Use `python3 tools/build_project.py /absolute/project --doctor` then the same command without `--doctor` to build starters or exported examples. Add `--test --testkit /absolute/kit/mod-testkit.jar` for tests or `--run` with the required supplied ROM paths to play. Matching engine.jar and sdk.jar default to this kit; optional local paths are documented in the handbook. The Maven workflow remains available. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
     entries["creator-kit.json"] = json.dumps({"formatVersion": 1, "engineVersion": release, "apiVersion": policy["currentApi"], "apiStatus": policy["currentStatus"], "sourceCommit": commit, "sourceDirty": dirty, "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(entries.items())}}, indent=2, sort_keys=True).encode() + b"\n"
     return entries
 

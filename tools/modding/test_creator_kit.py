@@ -70,7 +70,8 @@ class CreatorKitTest(unittest.TestCase):
         for relative in ("src/test/java/demo/ModelTest.java", "src/test/resources/fixture.txt",
                          "tools/generate_maps.py", "generate_resources.py"):
             self.assertEqual((project / relative).read_bytes(), entries["examples/model-demo/" + relative])
-        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name for name in entries))
+        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name
+                             or "ggfmod.local.json" in name for name in entries))
         readme = entries["examples/model-demo/README.md"].decode()
         self.assertIn("--test", readme)
         pom = ET.fromstring(entries["examples/model-demo/pom.xml"])
