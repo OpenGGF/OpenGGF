@@ -116,6 +116,13 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
         var mainRide = nativeRideStates[PLAYER_SLOT_MAIN];
         updatePlayer(player, mainRide, PLAYER_SLOT_MAIN, true);
         updateExitLookout(player);
+        // AIZHollowTree_CheckPlayers (sonic3k.asm:43693-43707): the shipped
+        // FixBugs = 0 branch derives Player 2's standing bit with
+        // `addq.b #p2_standing_bit-p1_standing_bit,d6`, so while Player 1 rides,
+        // d6 is whatever Perform_Player_DPLC left in it and Player 2 tests an
+        // arbitrary status bit. That is register leakage, not object state, and
+        // is not modelled: Player 2 always uses its own bit, as the FixBugs = 1
+        // branch does. Tracked in s3k-known-bugs.md.
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         bindNativeP2(sidekick);
         if (sidekick != null) {

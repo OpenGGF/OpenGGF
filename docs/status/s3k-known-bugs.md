@@ -8,6 +8,17 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## AIZ hollow tree Player 2 standing-bit leak is not modelled — 2026-10-31
+
+`AIZHollowTree_CheckPlayers` (sonic3k.asm:43693-43707) ships with
+`addq.b #p2_standing_bit-p1_standing_bit,d6`. While Player 1 rides the tree, d6
+still holds whatever `Perform_Player_DPLC` left behind, so Player 2 tests an
+unrelated status bit and can grab or release the tree erratically.
+`AizHollowTreeObjectInstance` always uses Player 2's own bit, which is the
+`FixBugs` branch. Removal condition: derive the residual d6 value from the
+player DPLC routines as a semantic rule (not register emulation) and apply it
+to Player 2's ride test, or record a user-authorised exception.
+
 ## DEZ original-input ring frontier at the second staircase — 2026-10-30
 
 The [fresh continuation](trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)

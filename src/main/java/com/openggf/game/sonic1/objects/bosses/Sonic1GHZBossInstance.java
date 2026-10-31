@@ -11,13 +11,15 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * Object 0x3D — Green Hill Zone Boss (Eggman with swinging ball on chain).
- * ROM: _incObj/3D Boss - Green Hill (part 1).asm, (part 2).asm
+ * ROM: _incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm
  *
  * State machine (BGHZ_ShipIndex, routineSecondary):
  *   0: DESCENT      — Enter from top, oscillate Y via sine, stop at Y = boss_ghz_y + 0x38
  *   2: APPROACH     — Move left to boss_ghz_x + 0xA0, spawn ball, timer = 0x77
- *   4: COMBAT_MOVE  — Move sideways with timer 0x77 or 0x7F per direction
- *   6: COMBAT_REVERSE — Pause at direction change, toggle direction, timer 0x3F, back to 4
+ *   4: HOLD         — BGHZ_ShipMove: stay put until the timer (0x77 first, then 0x3F)
+ *                     expires, then pick the next sweep velocity and go to 6
+ *   6: SWEEP        — BGHZ_ChgDir: BossMove for 0x3F frames (0x7F at slow speed from
+ *                     the approach point), then flip facing, stop, back to 4
  *   8: DEFEAT_WAIT  — Timer 0xB3 countdown with explosions
  *  10: ASCENT       — Multi-stage upward movement, play zone music at timer = 0x30
  *  12: ESCAPE       — X vel 0x400, Y vel -0x40, extend camera right, delete when off-screen
@@ -29,8 +31,8 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
     // State machine constants (routineSecondary values, matching ROM's even-numbered index)
     private static final int STATE_DESCENT = 0;
     private static final int STATE_APPROACH = 2;
-    private static final int STATE_COMBAT_MOVE = 4;
-    private static final int STATE_COMBAT_REVERSE = 6;
+    private static final int STATE_HOLD = 4;
+    private static final int STATE_SWEEP = 6;
     private static final int STATE_DEFEAT_WAIT = 8;
     private static final int STATE_ASCENT = 10;
     private static final int STATE_ESCAPE = 12;
@@ -151,8 +153,8 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
         switch (state.routineSecondary) {
             case STATE_DESCENT -> updateDescent();
             case STATE_APPROACH -> updateApproach();
-            case STATE_COMBAT_MOVE -> updateCombatMove();
-            case STATE_COMBAT_REVERSE -> updateCombatReverse();
+            case STATE_HOLD -> updateHold();
+            case STATE_SWEEP -> updateSweep();
             case STATE_DEFEAT_WAIT -> updateDefeatWait(vIntRunCount);
             case STATE_ASCENT -> updateAscent();
             case STATE_ESCAPE -> updateEscape();
@@ -187,7 +189,7 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
             state.xFixed = APPROACH_TARGET_X << 16;
             state.xVel = 0;
             state.yVel = 0;
-            state.routineSecondary = STATE_COMBAT_MOVE;
+            state.routineSecondary = STATE_HOLD;
 
             // Spawn wrecking ball
             spawnWreckingBall();
@@ -196,13 +198,13 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
         }
     }
 
-    // === State 4: COMBAT_MOVE ===
+    // === State 4: HOLD ===
     // ROM: BGHZ_ShipMove
-    private void updateCombatMove() {
+    private void updateHold() {
         timer--;
         if (timer < 0) {
-            // Timer expired — advance to reverse state
-            state.routineSecondary = STATE_COMBAT_REVERSE;
+            // Timer expired — advance to the sweep state
+            state.routineSecondary = STATE_SWEEP;
             timer = COMBAT_TIMER_NORMAL; // $3F
 
             // Set velocity for next movement direction
@@ -221,15 +223,15 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
         }
     }
 
-    // === State 6: COMBAT_REVERSE ===
-    // ROM: loc_17954
-    private void updateCombatReverse() {
+    // === State 6: SWEEP ===
+    // ROM: BGHZ_ChgDir (loc_17954)
+    private void updateSweep() {
         timer--;
         if (timer < 0) {
             // Toggle direction
             state.renderFlags ^= 1; // bchg #0,obStatus
             timer = COMBAT_TIMER_NORMAL; // $3F
-            state.routineSecondary = STATE_COMBAT_MOVE;
+            state.routineSecondary = STATE_HOLD;
             state.xVel = 0;
         } else {
             bossMove();
@@ -342,7 +344,7 @@ public class Sonic1GHZBossInstance extends AbstractS1EggmanBossInstance implemen
         }
 
         // Default: normal face (speed 1 during approach, varies)
-        if (state.routineSecondary == STATE_COMBAT_MOVE &&
+        if (state.routineSecondary == STATE_HOLD &&
                 (state.xFixed >> 16) == APPROACH_TARGET_X) {
             faceAnim = Sonic1BossAnimations.ANIM_FACE_LAUGH;
         } else {

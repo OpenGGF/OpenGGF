@@ -3876,10 +3876,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setGSpeed((short) 0);
 		}
 
-		// ROM fixBugs: Use max of current maxY and target to prevent premature death
-		// while camera boundary is still easing down. Without this fix, falling
-		// faster than the camera can adjust its maxY limit causes death.
-		// See s2.asm:36913-36922 (Sonic_Boundary_CheckBottom)
+		// maxY above is max(live, target): the FixBugs = 1 branch of
+		// Sonic_Boundary_CheckBottom (s2.asm:37254-37270), not the shipped one.
+		// Shipped S2 and S3K Player_Boundary_CheckBottom (sonic3k.asm:23223-23231)
+		// read the live Camera_Max_Y_pos alone. The engine keeps the fixed branch
+		// because removing it regresses TestS2SczLevelSelectTraceReplay; see
+		// known-bugs.md#bottom-kill-plane-runs-the-fixbugs-branch--2026-10-31.
 		// ROM: When Level_started_flag is clear, boundary death is suppressed
 		// (camera boundaries may not reflect actual level extents during intro).
 		if (camera.isLevelStarted()) {
@@ -3900,8 +3902,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// compare y_pos(a0)/obY(a0), which maps to engine centre-Y.
 			//
 			// CPU sidekicks always use centre-Y to match ROM Tails_LevelBound
-			// behavior regardless of game: MCZ1 F398 (S2 level-select trace, recorded
-			// at lua_script_version 9.2-s2) records Tails crossing the kill plane at
+			// behavior regardless of game: MCZ1 F398 (S2 level-select trace) records
+			// Tails crossing the kill plane at
 			// centre-Y=0x0807 with maxY+screen_height=0x0800, triggering
 			// JmpTo2_KillCharacter (s2.asm:39929-39939). Using top-left (Y=0x07F9) misses
 			// the kill by 8 pixels and Tails keeps falling instead of dying.

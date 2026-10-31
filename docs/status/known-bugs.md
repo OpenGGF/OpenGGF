@@ -17,6 +17,24 @@ Entries should include:
 
 ---
 
+## Bottom kill plane runs the FixBugs branch — 2026-10-31
+
+- **Location:** `PlayableSpriteMovement.doLevelBoundary` and
+  `applyHurtStopBottomKill`, which compute `max(camera maxY, maxY target)`.
+- **Symptom:** shipped S2 `Sonic_Boundary_CheckBottom` (s2.asm:37254-37270) and
+  S3K `Player_Boundary_CheckBottom` (sonic3k.asm:23223-23231) read the live
+  `Camera_Max_Y_pos` alone. Taking the target as well is the S2 `if fixBugs`
+  block, so a player who outruns a lowering boundary survives where the
+  shipped game kills them. The S1 hurt-stop test also differs: it should read
+  only the target (`v_limitbtm2`).
+- **Suspected cause:** removing the expression regresses
+  `TestS2SczLevelSelectTraceReplay`. That suggests the engine's eased
+  `Camera_Max_Y_pos` lags or leads the ROM's somewhere on that route, and the
+  fixed branch hides it. Not yet measured.
+- **Removal condition:** the shipped branch is restored at both kill planes
+  together, with the SCZ trace green because the camera easing that feeds it
+  matches the ROM.
+
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
 **Resolved representative mechanism (2026-10-28):** the first successful native
