@@ -242,6 +242,29 @@ Two independent candidates (Opus, Sol) converged on exclusive wall/display caden
    `isSpeakerRateRegulated()`. Proof: fake-device skew at ±0.2% ±200 ppm with service jitter over two
    simulated hours (no underruns or drops, settled backlog), unity passthrough, reset cases, cursor
    monotonicity, unchanged capture bytes.
+
+   **Implementation notes (unit 2).** The private queue-depth controller measures FIFO frames plus
+   remaining OpenAL source frames before refill. Priming retains 4096 combined frames. A one-second
+   exponential low-pass feeds PI gains derived from a ten-second unfiltered critically damped
+   response. Conditional integration accounts for both the ±0.5% clamp and the 500 ppm/s slew
+   limit. Unprimed/stopped output, flush, reverse, pause/resume and retirement reset the controller;
+   saturation excursions remain diagnostic history. Queue telemetry subtracts `AL_SAMPLE_OFFSET`
+   from unreclaimed source-buffer lengths. The loopback test checks source-frame offsets and
+   retirement at both pitch limits with deterministic native mixing. At 48 kHz and 100 ms latency,
+   the running slew's worst-case current-ratio latency approximation error is 0.12 frames, so no
+   history ring is needed. The slew traverses the full trim in one response time; a slower
+   100 ppm/s policy could not correct a startup skew before exhausting the three-buffer runway.
+   A single monotone cursor observation also prevents the pause-time unity reset from moving
+   the latency estimate backward; flush still starts a new source coordinate. Tests independently
+   schedule packets, device consumption and pumps with ±20% interval jitter for two simulated hours
+   per skew.
+   At 48 kHz, three queued buffers guarantee just over two buffers of runway (42.7 ms);
+   the 30 Hz witness stays within it at 40 ms. ±30% jitter exceeded that budget (43.3 ms)
+   and correctly produced stopped-source transitions, so it does not qualify as drift-only load.
+   Ratio, last serviced combined backlog, saturation and underrun counts are available on the sink. `AudioManager.isSpeakerRateRegulated()` admits only
+   a rate-capable live sink or silent/no-device output. Its additive query is pinned in the mutable
+   unpublished 0.7 API surface; candidate version and status stay unchanged.
+
 3. **Display cadence.** `DisplayCadencePolicy`, `Probing`/`Locked`, `display.pacing`, `DisplayOutput`.
    Proof: synthetic swap sequences (59.94/60.02/50/119.88 lock; 75/144 refuse; immediate returns
    demote before the next service; jitter stays locked; one missed vblank is one slow interval; stalls

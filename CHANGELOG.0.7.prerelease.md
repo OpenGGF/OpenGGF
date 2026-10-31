@@ -54,6 +54,9 @@ Unreleased. The earlier development themes remain in
   presentation checkpoints in constant time, preserving historical tunnel context
   and isolating live player timers and landing callbacks; unobserved history stays
   hidden until replay establishes it.
+  Speaker playback gently trims its output rate to hold a bounded source backlog,
+  absorbing host/device clock drift without changing producer, history or recording
+  PCM. Pause, reverse and output replacement reset the trim.
   Optional interpolation and VRR qualification remain future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM
