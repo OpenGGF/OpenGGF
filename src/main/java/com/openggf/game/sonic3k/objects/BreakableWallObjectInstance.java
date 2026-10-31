@@ -43,7 +43,7 @@ import java.util.logging.Logger;
  * Object 0x0D - Breakable Wall (Sonic 3 & Knuckles).
  */
 public class BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -321,9 +321,12 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         // Obj_BreakableWall branches around the wall's pushing-bit test for
         // Super Sonic/Knuckles and for status_secondary's fire-shield bit.
         // The roll-animation and speed gates still apply to the shield case.
+        // The homing-attack mutator's strike arrives as if spindashed in: like a grounded push,
+        // the roll-animation and speed gates still decide the break.
         return player.isSuperSonic()
                 || isKnuckles()
-                || player.hasShield() && player.getShieldType() == ShieldType.FIRE;
+                || player.hasShield() && player.getShieldType() == ShieldType.FIRE
+                || com.openggf.game.mutators.HomingAttackRuntime.striking(services().worldSession(), player);
     }
 
     /**
@@ -726,5 +729,10 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         public boolean isPersistent() {
             return !isDestroyed();
         }
+    }
+    /** Homing: intact walls this player can break natively; Knuckles-only walls stay his. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        if (broken || config.breakMode == BreakMode.KNUCKLES_ONLY && !com.openggf.level.objects.HomingTargets.knuckles(player)) return null;
+        return com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE_WALL);
     }
 }

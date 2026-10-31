@@ -68,7 +68,10 @@ import java.util.List;
  */
 public final class SszMtzBossOrbChild extends AbstractObjectInstance
         implements RewindRecreatable, TouchResponseProvider, TouchResponseListener,
-        PoweredScreenAttackSpecial {
+        PoweredScreenAttackSpecial, com.openggf.level.objects.homing.HomingTargetSource {
+
+    /** Homing: never a target. Struck orbs only pop (sub_7B0C2); the ship is the boss. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) { return null; }
 
     /** {@code moveq #7-1,d3}. */
     public static final int ORB_COUNT = 7;

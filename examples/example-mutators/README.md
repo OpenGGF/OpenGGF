@@ -1,6 +1,6 @@
 # Mutator Lab
 
-A maintained JVM mod with one common settings screen and eleven independently
+A maintained JVM mod with one common settings screen and twelve independently
 configurable effects for Sonic 1, Sonic 2 and Sonic 3 & Knuckles. Play uses native
 ROM levels, sprites, music and sound effects. Every mutator starts off; the jar
 contains creator code and declarations, never commercial assets.
@@ -51,13 +51,14 @@ Compiled creator code is unavailable in the engine's standard native image; see 
 | No Special Stages | Refuse new emerald-stage entry | Resume |
 | No Bonus Stages | Refuse new Sonic 3 & Knuckles bonus-stage entry | Resume |
 | Violent Explosions | Native badnik rebound at 150–300%; vertical speed cap | Resume |
+| Homing Attack | Homing or Instagib; Sonic, Tails and Knuckles as leader | Resume |
 
 Each toggle and option declares its own lifecycle. The screen displays requested
 values, admitted values and pending boundaries separately. Resume applies LIVE
 edits; a full restart, death reload or qualifying full stage return applies LOAD
 edits. Loading a preview, restoring a checkpoint or a seamless handoff does not.
 The host also supports LAUNCH-scoped authoring, which requires a new game session;
-these eleven examples do not invent a launch-only setting.
+these twelve examples do not invent a launch-only setting.
 
 No Powerups, No Checkpoints and No Rings leave the existing world intact while an
 edit is pending. Native placement order, stable layout indices and object slots
@@ -98,6 +99,30 @@ Violent Explosions amplifies the badnik defeat's resolved native vertical reboun
 then applies the selected cap. Horizontal velocity, ground/air flags and ordinary
 hazard damage remain native. This example does not create a new radial blast,
 modify bosses or apply the rebound twice.
+
+Homing Attack turns the leader's jump re-press into a strike at the best target in
+range, if there is one, and the native double-jump move otherwise: Sonic's
+insta-shield or shield moves in Sonic 3 & Knuckles, Tails' flight or Knuckles' glide.
+Without a target or a native move, Sonic dashes forward instead. Targets must be on screen. They rank by a
+hidden progress priority, then whether they are ahead of the player, then kind (boss,
+badnik, breakable wall, grab point, breakable) and then distance; the line to them must
+clear solid terrain. The player stays in the native roll, so native touch, solid and
+defeat code decides each hit. A strike counts as a spindash where the native code
+distinguishes ground from air: breakable walls, Angel Island's rocks and the Death
+Egg Act 2 spike cars.
+Hits refresh the air action, so attacks chain, and bosses bounce the player off.
+A reticle marks the target a re-press would take, launches lag the camera like
+the Sonic 3 & Knuckles fire-shield dash, and a faint blue glow and echoes trail the strike.
+Knuckles-only walls and rocks remain his. Multi-part bosses carry a hidden priority
+on the part that must be struck, and parts that only hurt or pop are never targets.
+Instagib builds a bow of friction heat in front of the player, sheds embers and
+hue-shifted afterimages, and makes the leader invulnerable for the strike and 32
+ticks after it. The next hit on any boss is its defeating one; the native defeat
+sequence still runs. Each defeated enemy bursts into 32 shards carrying the strike's
+momentum. Shards are gameplay: they live in rewind history and defeat any badnik they
+pass through, which can chain. Bosses never take shard hits. Each shard is drawn with one of the enemy's own
+on-screen tiles, so parts repeat; a world that never rendered draws sparks instead.
+The heat, embers, afterimages and reticle are presentation only.
 
 ## Presentation and support limits
 

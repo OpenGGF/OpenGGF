@@ -32,6 +32,21 @@ class TestLanguagePickerScreen {
     }
 
     @Test
+    void wheelMovesTheChoiceOnlyWhileThePointerIsOverThePicker() {
+        var selected = new ArrayList<String>();
+        var picker = new LanguagePickerScreen("auto", selected::add);
+        var input = new InputHandler();
+        picker.update(input, new com.openggf.control.MenuInput.Pointer(-1, -1, false, false, false, -1));
+        picker.update(input, new com.openggf.control.MenuInput.Pointer(100, 100, true, false, false, 1));
+        picker.choose();
+        assertEquals("auto", selected.removeFirst(), "outside the picker and past the top change nothing");
+        picker = new LanguagePickerScreen("auto", selected::add);
+        picker.update(input, new com.openggf.control.MenuInput.Pointer(100, 100, true, false, false, -1));
+        picker.choose();
+        assertEquals(UiMessages.languages().getFirst().tag(), selected.removeFirst());
+    }
+
+    @Test
     void backClosesWithoutCallingTheSaveBoundary() {
         var calls = new AtomicInteger();
         var picker = new LanguagePickerScreen("auto", tag -> calls.incrementAndGet());

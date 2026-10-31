@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 public class MonitorObjectInstance extends AbstractMonitorObjectInstance implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     // Obj26 owns the monitor shell, rising reward icon and explosion; none has horizontal facing.
 
     private static final Logger LOGGER = Logger.getLogger(MonitorObjectInstance.class.getName());
@@ -787,5 +787,9 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             }
             return STATIC;
         }
+    }
+    /** Homing: an intact monitor; the native roll contact breaks it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }

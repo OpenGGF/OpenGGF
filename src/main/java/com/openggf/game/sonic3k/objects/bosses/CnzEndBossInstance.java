@@ -49,7 +49,7 @@ import java.io.IOException;
  * attraction curve is the exact {@code dword_6EC7E} table.
  */
 public final class CnzEndBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The native target/turn routine owns facingRight independently of the selected mapping frame.
         return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
@@ -890,4 +890,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             magnetChild = null;
         }
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hitCount > 1) hitCount = 1; }
 }

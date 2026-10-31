@@ -125,7 +125,9 @@ plan before slot allocation (`Ringfall(percent, hardCap, true)` lifts the native
 are slotless Obj37 continuations rather than claimed SST slots); the monitor/ring/checkpoint filters decide admission
 without reindexing native placements; stage-entry permits retain an already
 captured transition; Game Speed schedules complete presentation-loop ticks; and
-Violent Explosions amplifies only the resolved native badnik rebound. Big Head
+Violent Explosions amplifies only the resolved native badnik rebound;
+`HomingAttack(mode, characters)` steers the admitted leader's native roll at a live
+target, leaving contact, breakage and defeat to the native owners. Big Head
 composes reviewed anatomical masks after native SAT admission, with native
 fallbacks for ball, fully obscured, donor/custom and unreviewed poses. Do not scale the
 entire player quad or use `setHidden` to fake an appearance-only effect.

@@ -44,7 +44,7 @@ import java.util.List;
  */
 public final class LbzMinibossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
-        MultiBucketRenderable, ObjectVisualFacing.Source {
+        MultiBucketRenderable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The fixed frontal cylinder and independently moving panels have no logical horizontal facing.
         return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
@@ -1140,4 +1140,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
     private record PanelAnchor(int x, int y, int xSub, int ySub) {
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hitCount > 1) hitCount = 1; }
 }

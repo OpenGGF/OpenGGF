@@ -304,6 +304,11 @@ The [detailed 0.8 roadmap](docs/project/v0.8-roadmap.md) owns these workstreams:
   lock-on input tiers; S3K character donation alone does not prove KiS2 parity.
 - Continue observed SMPS/chip-parity and listening work with explicit scope and
   evidence. Optional creator/editor expansion remains demand-driven.
+- [Optional modern-era enhancements](docs/project/v0.8-roadmap.md#optional-workstream--modern-era-enhancements):
+  clean FM output, DAC sample improvements, high-resolution special stages (Blue Sphere first),
+  sub-pixel scrolling, art packs, opt-in bug-fix selection, later-game moves as
+  mutators, latency measurement and save anywhere. Native stays the default;
+  gameplay additions prefer mutator/mod classification.
 
 ## v0.8 Tooling Ask: Actworks (historical, outside OpenGGF releases)
 

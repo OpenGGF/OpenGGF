@@ -135,11 +135,11 @@ class TestMenuFullTextAccess {
         Draw back = font.draws.stream().filter(d -> d.text().equals("Back")).findFirst().orElseThrow();
         try (var pointers = mockStatic(com.openggf.control.MenuInput.class, CALLS_REAL_METHODS)) {
             pointers.when(() -> com.openggf.control.MenuInput.pointer(input, 800, 224))
-                    .thenReturn(new com.openggf.control.MenuInput.Pointer(back.x(), back.y(), true, true, false));
+                    .thenReturn(new com.openggf.control.MenuInput.Pointer(back.x(), back.y(), true, true, false, 0));
             editor.update(input);
             assertSame(details, get(browser, "details"));
             pointers.when(() -> com.openggf.control.MenuInput.pointer(input, 800, 224))
-                    .thenReturn(new com.openggf.control.MenuInput.Pointer(back.x() + 200, back.y(), true, true, false));
+                    .thenReturn(new com.openggf.control.MenuInput.Pointer(back.x() + 200, back.y(), true, true, false, 0));
             editor.update(input);
             assertNull(get(browser, "details"));
             assertSame(browser, get(editor, "browser"));
