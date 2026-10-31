@@ -448,7 +448,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance", "sidekickLockOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance", "extensionLockedPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionPendingHorizontalLaunch"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionFreshOrderedCarry"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionHorizontalPushingThisFrame"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "mainHorizontalStateOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "sidekickHorizontalStateOwner"), RewindFieldPolicy.CAPTURED),
