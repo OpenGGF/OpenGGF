@@ -1557,7 +1557,9 @@ its original drawing priority.
   display OS IME composition, focused clauses and a shaped caret before commit.
   Creator scene and course text capture receive a host composition strip. Native
   composition has been checked with an isolated Linux X11/IBus session; other OS
-  IMEs still need platform verification.
+  IMEs still need platform verification. Empty native composition updates, which
+  Wayland sends with ordinary keys even without an IME, no longer hide Backspace,
+  Enter or Escape once typing starts.
 
 ## Maintenance and release preparation
 
