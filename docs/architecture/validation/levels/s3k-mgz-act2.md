@@ -145,3 +145,13 @@ ROM timing oracle or a complete MGZ route qualification. The scheduler's bounded
 native route evidence uses AIZ/EHZ; MGZ scene pixels, encounter breadth and the
 inherited route obligations above remain separate. Focused results belong in
 [the scheduling record](../../designs/2026-09-14-independent-render-frame-rate-design.md#live-region-scheduling-candidate--2026-10-30).
+
+## Draw ownership follow-up (2026-10-31)
+
+`TestStageplayNativeCapturePurity#mgzDefeatFlickerIsUpdateOwnedAndRewindRestoresTheNextPhase`
+binds the Knuckles defeat-fragment redraw obligation. It checks the first hidden
+ROM phase, a V-int gap without extra object executions, repeated ordinary draws,
+and captured/restored flicker followed by the next update. Capsule animal mapping
+selection is now draw-local. These are constructed object checks, not cold boss
+completion or a new viewport/donor/team route qualification. The existing route
+and native-pixel gaps remain open.

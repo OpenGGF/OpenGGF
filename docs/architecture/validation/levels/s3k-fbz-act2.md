@@ -398,3 +398,11 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## Draw ownership follow-up (2026-10-31)
+
+`TestFbzBossCloudIdentity#renderRefreshesOnlyDrawCoordinatesAfterParallaxRunsLaterThanObjectUpdate`
+binds the late-parallax redraw case. One and three further draws use the current
+screen projection while preserving native coordinates and the dynamic spawn.
+The update and S3K publication phases are unchanged. This constructed renderer
+check does not close the existing cold-route, viewport, donor, team or native-pixel gaps.

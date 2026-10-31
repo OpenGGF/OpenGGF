@@ -44,6 +44,10 @@ public enum SonicConfiguration {
 	 */
 	FPS,
 	/**
+	 * Live window cadence: AUTO locks services to a qualified display refresh; EXACT keeps host time.
+	 */
+	DISPLAY_PACING,
+	/**
 	 * Normal-play simulation policy for ROM-backed load queues.
 	 */
 	LOAD_TIME_SIMULATION,

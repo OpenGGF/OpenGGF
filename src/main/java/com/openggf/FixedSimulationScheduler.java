@@ -71,8 +71,7 @@ final class FixedSimulationScheduler {
         long remainder = tickUnits % SECOND;
         long untilTick = pendingTicks > 0 ? 0 : ceilingDivide(SECOND - remainder, simulationHz);
         long untilRender = ceilingDivide(SECOND - renderUnits, renderHz);
-        return new Batch(ticks, render, pendingTicks, remainder, discardedNanos,
-                Math.min(untilTick, untilRender));
+        return new Batch(ticks, render, pendingTicks, remainder, discardedNanos, untilTick, untilRender);
     }
 
     /**
@@ -100,9 +99,11 @@ final class FixedSimulationScheduler {
      * {@code tickRemainderUnits / 1e9} is fractional tick phase, excluding whole debt;
      * it is not a valid interpolation fraction while {@code pendingTicks > 0}.
      * Discarded wall nanoseconds are per call, not a lifetime total.
-     * The relative sleep deadline starts at the supplied elapsed-time observation,
-     * before executing this batch; account for subsequent work before sleeping.
+     * Both relative deadlines start at the supplied elapsed-time observation, before
+     * executing this batch; account for subsequent work before sleeping. The live caller
+     * wakes on ticks and treats {@code render} as a thinning gate; the render deadline and
+     * tick remainder stay available for presentation-time interpolation.
      */
     record Batch(int ticks, boolean render, long pendingTicks, long tickRemainderUnits,
-                 long discardedWallNanos, long nanosUntilNextIteration) { }
+                 long discardedWallNanos, long nanosUntilTick, long nanosUntilRender) { }
 }

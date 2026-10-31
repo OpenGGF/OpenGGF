@@ -96,6 +96,9 @@ public final class ConfigCatalog {
         put(DISPLAY_COLOR_PROFILE_TOGGLE_KEY, of("display", "colorProfileToggleKey", KEY,
                 "Runtime key to cycle the display color profile"));
         put(FPS, of("display", "fps", INT, "Window rendering limit; gameplay and audio use the region cadence"));
+        put(DISPLAY_PACING, ofEnum("display", "pacing",
+                "Live cadence: AUTO locks to a display refresh near the region rate, EXACT keeps nominal speed",
+                Set.of("AUTO", "EXACT")));
 
         // ui: presentation language never changes persisted keys or game text.
         put(UI_LANGUAGE, of("ui", "language", STRING,
