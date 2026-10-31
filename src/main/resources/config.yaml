@@ -22,6 +22,7 @@ display:
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
   fps: 60   # Frames per second to render (changes game speed)
+  pacing: "AUTO"   # AUTO locks to a display refresh near the region rate; EXACT keeps nominal game speed
 
 # ── Interface ──
 ui:

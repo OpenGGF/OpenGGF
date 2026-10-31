@@ -40,6 +40,9 @@ class TestLiveFrameRuntime {
     private FadeManager fade;
     private int pictures, swaps;
     private long now;
+    private com.openggf.configuration.SonicConfigurationService config;
+    private DisplayOutput output = DisplayOutput.UNKNOWN;
+    private boolean regulated;
     private final List<Integer> intervals = new ArrayList<>();
 
     @AfterEach void close() {
@@ -51,7 +54,7 @@ class TestLiveFrameRuntime {
     private LiveFrameRuntime open(int hz, int fps) throws Exception {
         TestEnvironment.resetEngineOnly();
         var original = EngineServices.current();
-        var config = original.configuration();
+        config = original.configuration();
         config.setConfigValue(SonicConfiguration.REGION, hz == 50 ? "PAL" : "NTSC");
         config.setConfigValue(SonicConfiguration.FPS, fps);
         config.setConfigValue(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
@@ -78,7 +81,8 @@ class TestLiveFrameRuntime {
     }
 
     private LiveFrameRuntime runtime(java.util.function.Consumer<Boolean> render, Runnable swap) {
-        return engine.createLiveFrameRuntime(render, swap, intervals::add, () -> now);
+        return engine.createLiveFrameRuntime(new Engine.LiveEndpoints(render, swap, intervals::add, () -> output,
+                () -> regulated, () -> now));
     }
 
     /** Advances the fake monotonic clock by the host interval since the previous iteration. */
@@ -96,6 +100,38 @@ class TestLiveFrameRuntime {
             iterations.add(last);
         }
         return iterations;
+    }
+
+    /** Blocking swap at the display's vblank lattice, honouring the requested swap interval. */
+    private final class FakeVsync {
+        final double period;
+        int interval = 1;
+        long lastVblank = Long.MIN_VALUE;
+        FakeVsync(double displayHz) { period = SECOND / displayHz; }
+        void swap() {
+            long next = (long) Math.floor(now / period) + 1;
+            if (lastVblank != Long.MIN_VALUE) next = Math.max(next, lastVblank + interval);
+            lastVblank = next;
+            now = Math.round(next * period);
+            swaps++;
+        }
+    }
+
+    private LiveFrameRuntime paced(FakeVsync vsync, java.util.function.Consumer<Boolean> render) {
+        output = new DisplayOutput(1, (int) Math.round(SECOND / vsync.period));
+        regulated = true;
+        return engine.createLiveFrameRuntime(new Engine.LiveEndpoints(render, vsync::swap,
+                interval -> { intervals.add(interval); vsync.interval = interval; }, () -> output,
+                () -> regulated, () -> now));
+    }
+
+    private LiveFrameRuntime.Iteration runUntilLocked(LiveFrameRuntime runtime, LiveFrameRuntime.Iteration last) {
+        for (int iteration = 0; !"LOCKED".equals(runtime.statistics().cadence()); iteration++) {
+            assertTrue(iteration < 600, () -> "never locked: " + runtime.statistics());
+            now = Math.max(now, last.wakeAtNanos());
+            last = runtime.iterate();
+        }
+        return last;
     }
 
     private static LiveFrameRuntime.HostState host(int hz, int fps, Object boundary) {
@@ -307,6 +343,134 @@ class TestLiveFrameRuntime {
         assertEquals(1, iterate(runtime, 16_666_667).services());
     }
 
+    @Test void blockingNearRegionDisplayLocksWithIdenticalPerServiceStateAnd800FramesPerService() throws Exception {
+        open(60, 60);
+        var vsync = new FakeVsync(60_000.0 / 1001);
+        var runtime = paced(vsync, capture -> pictures++);
+        screen.after = () -> input.setLogicalOverride(sample(screen.samples.size() % 7));
+        input.setLogicalOverride(sample(0));
+        try (var tap = audio.beginLiveCaptureAudio(60)) {
+            short[] packet = new short[2 * tap.maxStereoFramesPerPacket()];
+            int drained = 0;
+            var last = runtime.iterate();
+            int swapsAtLock = 0, picturesAtLock = 0, locked = 0;
+            long servicesAtLock = 0;
+            while (locked < 600) {
+                for (; drained < screen.samples.size(); drained++) {
+                    assertEquals(800, tap.drainPresentationFrame(packet), "region PCM per service, not per display period");
+                }
+                if (!"LOCKED".equals(runtime.statistics().cadence())) {
+                    assertTrue(now < 3 * SECOND, "two good windows lock in about two seconds");
+                } else if (locked++ == 0) {
+                    swapsAtLock = swaps;
+                    picturesAtLock = pictures;
+                    servicesAtLock = runtime.statistics().services();
+                } else {
+                    assertEquals(1, last.services());
+                    assertTrue(last.presented());
+                }
+                now = Math.max(now, last.wakeAtNanos());
+                last = runtime.iterate();
+            }
+            for (; drained < screen.samples.size(); drained++) assertEquals(800, tap.drainPresentationFrame(packet));
+            assertEquals(List.of(1), intervals, "interval 1 is written once; the probe needs no other value");
+            assertEquals("LOCKED", runtime.statistics().cadence());
+            assertEquals("NONE", runtime.statistics().reason());
+            assertEquals(600, swaps - swapsAtLock, "exactly one swap per locked service");
+            assertEquals(600, pictures - picturesAtLock, "exactly one picture per locked service");
+            assertEquals(600, runtime.statistics().services() - servicesAtLock);
+            assertEquals(60_000.0 / 1001, runtime.statistics().measuredPresentHz(), 0.01);
+            var expected = new ArrayList<Long>();
+            long state = 0;
+            for (int tick = 0; tick < screen.states.size(); tick++) {
+                state = state * 17 + tick % 7;
+                expected.add(state);
+            }
+            assertEquals(expected, screen.states, "tick-indexed state matches the exact schedule's recurrence");
+            int services = screen.samples.size();
+            assertEquals(services, AudioManagerTestDiagnostics.shadowParitySnapshot(audio).presentedFrames());
+            assertEquals(800L * services, tap.totalStereoFrames());
+        }
+    }
+
+    @Test void exactPacingAndUnregulatedSpeakerNeverProbe() throws Exception {
+        open(60, 60);
+        var runtime = paced(new FakeVsync(60), capture -> pictures++);
+        config.setConfigValue(SonicConfiguration.DISPLAY_PACING, "EXACT");
+        runUntil(runtime, runtime.iterate(), 3 * SECOND);
+        assertEquals("EXACT", runtime.statistics().cadence());
+        assertEquals("PACING_EXACT", runtime.statistics().reason());
+        config.setConfigValue(SonicConfiguration.DISPLAY_PACING, "AUTO");
+        regulated = false;
+        runUntil(runtime, runtime.iterate(), 6 * SECOND);
+        assertEquals("EXACT", runtime.statistics().cadence());
+        assertEquals("SPEAKER_UNREGULATED", runtime.statistics().reason());
+        assertEquals(List.of(1), intervals);
+    }
+
+    @Test void nonBlockingSwapRefusesTheProbeWithoutBusyLoopingAndStaysExact() throws Exception {
+        open(60, 60);
+        output = new DisplayOutput(1, 60);
+        regulated = true;
+        var runtime = runtime(capture -> pictures++, () -> swaps++);
+        var iterations = runUntil(runtime, runtime.iterate(), 2 * SECOND);
+        assertEquals("EXACT", runtime.statistics().cadence());
+        assertEquals("NOT_BLOCKING", runtime.statistics().reason());
+        assertTrue(iterations.size() <= 2 * 60 + 2, "a refused probe returns to service-deadline wakes");
+        assertEquals(120, screen.samples.size(), "the refused probe neither added nor dropped services");
+    }
+
+    @Test void focusLossWhileLockedWaitsInExactAndRegainReprobes() throws Exception {
+        open(60, 60);
+        var runtime = paced(new FakeVsync(60), capture -> pictures++);
+        runUntilLocked(runtime, runtime.iterate());
+        int services = screen.samples.size();
+        field("paused", true);
+        var unfocused = runtime.iterate();
+        assertEquals(0, unfocused.services());
+        assertFalse(unfocused.presented());
+        assertEquals(now + LiveFrameRuntime.UNFOCUSED_WAIT_NANOS, unfocused.wakeAtNanos());
+        assertEquals("EXACT", runtime.statistics().cadence());
+        now += 10 * SECOND;
+        field("paused", false);
+        var regained = runtime.iterate();
+        assertEquals(0, regained.services(), "regaining focus rebases without forward admission");
+        assertEquals(services, screen.samples.size());
+        assertEquals("PROBING", runtime.statistics().cadence());
+        runUntilLocked(runtime, regained);
+    }
+
+    @Test void forcedPictureWhileLockedIsShownWithItsServiceAndKeepsTheLock() throws Exception {
+        open(60, 60);
+        var capture = mock(GameLoopSuspension.CaptureEffects.class);
+        when(capture.captureViewportThumbnail()).thenReturn(new com.openggf.graphics.RgbaImage(1, 1, new int[]{0xFFFFFFFF}));
+        when(capture.thumbnailWidth()).thenReturn(1);
+        when(capture.thumbnailHeight()).thenReturn(1);
+        var owner = engine.getGameLoop().suspension;
+        var runtime = paced(new FakeVsync(60), output -> {
+            pictures++;
+            owner.afterScene(capture);
+        });
+        var last = runUntilLocked(runtime, runtime.iterate());
+        var request = GameLoopSuspension.class.getDeclaredField("suspendThumbnailRequested");
+        request.setAccessible(true);
+        screen.after = () -> {
+            try { request.setBoolean(owner, true); }
+            catch (IllegalAccessException failure) { throw new AssertionError(failure); }
+        };
+        int before = swaps, picturesBefore = pictures;
+        now = Math.max(now, last.wakeAtNanos());
+        last = runtime.iterate();
+        screen.after = () -> { };
+        assertEquals(1, last.services());
+        assertFalse(owner.requiresScenePicture(), "the real after-scene owner consumes its request");
+        assertEquals(before + 1, swaps, "the picture is shown with its service");
+        assertEquals(picturesBefore + 1, pictures, "the forced picture is the window picture");
+        now = Math.max(now, last.wakeAtNanos());
+        assertEquals(1, runtime.iterate().services(), "the next paced swap carries one service");
+        assertEquals("LOCKED", runtime.statistics().cadence(), "a boundary change resets the window, not the lock");
+    }
+
     @Test void deviceOnlyServiceCannotRetireAudioCommandsOrProduceHistory() throws Exception {
         open(60, 144);
         long frame = audio.commandTimeline().currentFrame();
@@ -346,17 +510,13 @@ class TestLiveFrameRuntime {
         assertEquals(1, pictures, "the initial picture only: host UI service does not require a swap");
     }
 
-    @ParameterizedTest @CsvSource({"50,30,false", "50,144,true", "60,30,true", "60,144,false"})
-    void actualScheduledCaptureKeepsOutputTimestampsPicturesAndPcmIndependentOfSwaps(int hz, int fps, boolean deferred)
-            throws Exception {
+    /** A zero display rate keeps the exact cadence; otherwise a blocking fake vsync locks first. */
+    @ParameterizedTest @CsvSource({"50,30,false,0", "50,144,true,0", "60,30,true,0", "60,144,false,0",
+            "50,144,true,50", "60,60,false,59.94005994", "60,144,true,59.94005994"})
+    void actualScheduledCaptureKeepsOutputTimestampsPicturesAndPcmIndependentOfSwaps(int hz, int fps, boolean deferred,
+            double displayHz) throws Exception {
         open(hz, fps);
         int[] sourceSample = {0};
-        audio.setScenePcmSource((target, frames) -> {
-            for (int i = 0; i < frames; i++) {
-                short value = (short) (sourceSample[0]++ % 30_000);
-                target[2 * i] = value; target[2 * i + 1] = (short) -value;
-            }
-        });
         var encoder = new CollectingEncoder();
         var finalizer = java.util.concurrent.Executors.newSingleThreadExecutor();
         var viewport = new com.openggf.capture.CaptureViewport(0, 0, 1, 1);
@@ -380,10 +540,31 @@ class TestLiveFrameRuntime {
             field("liveCaptureController", controller);
             field("liveCaptureFrameRate", hz);
             var presentation = new com.openggf.capture.LiveCapturePresentationCoordinator(controller);
-            var runtime = runtime(capture -> presentation.present(viewport, capture, () -> { }, () -> { }),
-                    () -> swaps++);
+            java.util.function.Consumer<Boolean> render = capture -> presentation.present(viewport, capture, () -> { }, () -> { });
+            boolean paced = displayHz > 0;
+            var runtime = paced ? paced(new FakeVsync(displayHz), render) : runtime(render, () -> swaps++);
+            var last = runtime.iterate();
+            if (paced) last = runUntilLocked(runtime, last);
+            int base = screen.samples.size();
+            int swapsBefore = swaps;
+            long picturesBefore = runtime.statistics().pictures();
+            audio.setScenePcmSource((target, frames) -> {
+                for (int i = 0; i < frames; i++) {
+                    short value = (short) (sourceSample[0]++ % 30_000);
+                    target[2 * i] = value; target[2 * i + 1] = (short) -value;
+                }
+            });
             controller.start(viewport, hz);
-            runUntil(runtime, runtime.iterate(), SECOND);
+            if (paced) {
+                for (int service = 0; service < hz; service++) {
+                    now = Math.max(now, last.wakeAtNanos());
+                    last = runtime.iterate();
+                    assertEquals(1, last.services(), "one locked service per paced swap");
+                }
+                assertEquals("LOCKED", runtime.statistics().cadence());
+            } else {
+                runUntil(runtime, last, SECOND);
+            }
             controller.requestStop(com.openggf.capture.LiveCaptureController.StopReason.USER);
             finalizer.submit(() -> { }).get(5, java.util.concurrent.TimeUnit.SECONDS);
             assertEquals(com.openggf.capture.LiveCaptureController.State.INACTIVE, controller.state());
@@ -394,7 +575,7 @@ class TestLiveFrameRuntime {
             for (int index = 0; index < hz; index++) {
                 var frame = encoder.frames.get(index);
                 assertEquals(index, frame.frameIndex(), "CFR timestamp is ordinal / region output Hz");
-                assertEquals(index + 1, java.nio.ByteBuffer.wrap(frame.rgba()).getInt(), "capture's current semantic picture");
+                assertEquals(base + index + 1, java.nio.ByteBuffer.wrap(frame.rgba()).getInt(), "capture's current semantic picture");
                 for (int sample = 0; sample < frame.sampleCount(); sample++) {
                     short value = (short) (pcmIndex++ % 30_000);
                     assertEquals(value, frame.pcm()[2 * sample]);
@@ -403,8 +584,8 @@ class TestLiveFrameRuntime {
             }
             assertEquals(48_000, pcmIndex, "video end time and PCM duration both span exactly one second");
             assertEquals(48_000, sourceSample[0], "capture/presentation repeats cannot synthesize audio");
-            assertEquals(1 + Math.min(fps, hz), swaps, "capture draws cannot silently raise the window swap rate");
-            assertEquals(1 + hz, runtime.statistics().pictures(),
+            assertEquals(Math.min(fps, hz), swaps - swapsBefore, "capture draws cannot silently raise the window swap rate");
+            assertEquals(hz, runtime.statistics().pictures() - picturesBefore,
                     "a coincident window present reuses the capture draw; no capture-only redraws");
         }
     }

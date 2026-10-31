@@ -10,9 +10,11 @@ import java.util.function.LongSupplier;
  * they are not native gameplay frame identities. Pictures and swaps never admit that operation.
  * Deliberate mutator/movie/trace pacing remains inside the tick owner.
  *
- * <p>The runtime owns its monotonic wall anchor. A window picture follows a completed
- * service; the picture cap only thins those pictures. Capture and forced pictures remain
- * explicit per-service exceptions.
+ * <p>The runtime owns its monotonic wall anchor and one service cadence. {@code Exact}
+ * admits services on host time and shows each completed service, thinned by the picture
+ * cap. {@code Probing} keeps exact services while it measures every swap at the nominated
+ * interval. {@code Locked} runs one service per paced swap. Capture and forced pictures
+ * remain explicit per-service exceptions in every cadence.
  */
 final class LiveFrameRuntime {
     // Four services bound the interval before the host polls again. A quarter-second
@@ -22,6 +24,7 @@ final class LiveFrameRuntime {
     // An unfocused window only watches for focus; about 30 polls a second is enough.
     static final long UNFOCUSED_WAIT_NANOS = 33_000_000L;
     private static final long SECOND = 1_000_000_000L;
+    private static final long NO_REANCHOR = -1;
 
     /** One host observation; sampled before the batch and again after every tick and swap. */
     record HostState(int regionHz, int pictureCap, boolean focused, boolean hostPaused,
@@ -38,8 +41,16 @@ final class LiveFrameRuntime {
         void serviceDevice();
     }
 
+    private sealed interface Cadence permits Exact, Probing, Locked { }
+    private record Exact() implements Cadence { }
+    private record Probing(int interval, DisplayCadencePolicy.Request request) implements Cadence { }
+    private record Locked(int interval, DisplayCadencePolicy.Request request) implements Cadence { }
+    private static final Exact EXACT = new Exact();
+
     private final Owner owner;
     private final LongSupplier clock;
+    private final DisplayCadencePolicy policy = new DisplayCadencePolicy();
+    private Cadence cadence = EXACT;
     private FixedSimulationScheduler scheduler;
     private Object boundary;
     private boolean suspended;
@@ -62,10 +73,13 @@ final class LiveFrameRuntime {
         } finally {
             owner.serviceDevice();
         }
+        if (step.reanchorDelay() == NO_REANCHOR) {
+            return new Iteration(step.services(), step.presented(), step.wakeAtNanos());
+        }
         // Transition work is excluded from the new boundary; ordinary work and swap time
         // remain part of the following interval.
-        if (step.reanchor()) anchor = clock.getAsLong();
-        return new Iteration(step.services(), step.presented(), anchor + step.delayNanos());
+        anchor = clock.getAsLong();
+        return new Iteration(step.services(), step.presented(), anchor + step.reanchorDelay());
     }
 
     private Step run() {
@@ -77,11 +91,31 @@ final class LiveFrameRuntime {
         anchor = now;
         if (swapInterval == 0) applySwapInterval(1);
         if (!host.focused()) {
+            toExact();
             scheduler.reset();
             suspended = true;
             pendingTicks = 0;
-            return new Step(0, false, UNFOCUSED_WAIT_NANOS, false);
+            return new Step(0, false, now + UNFOCUSED_WAIT_NANOS, NO_REANCHOR);
         }
+        var request = new DisplayCadencePolicy.Request(host.pacing(), host.speakerRegulated(),
+                host.pictureCap(), host.regionHz(), host.output());
+        switch (cadence) {
+            case Probing probing when changed || !probing.request().equals(request) -> toExact();
+            case Locked locked when changed || !locked.request().equals(request) -> toExact();
+            default -> { }
+        }
+        if (cadence instanceof Exact) {
+            int interval = policy.nominate(request);
+            if (interval > 0) {
+                policy.probe(request, interval);
+                applySwapInterval(interval);
+                cadence = new Probing(interval, request);
+            }
+        }
+        return cadence instanceof Locked ? runLocked(host) : runExact(host, elapsed, changed);
+    }
+
+    private Step runExact(HostState host, long elapsed, boolean changed) {
         if (suspended || elapsed < 0 || boundary != null && !boundary.equals(host.boundary())) {
             scheduler.reset();
             elapsed = 0;
@@ -101,7 +135,7 @@ final class LiveFrameRuntime {
         int completed = 0;
         boolean drawn = false;
         boolean forcedPicture = false;
-        boolean reanchor = false;
+        long reanchorDelay = NO_REANCHOR;
         for (int i = 0; i < allowances; i++) {
             if (!owner.tick()) return aborted(completed);
             services++;
@@ -121,25 +155,84 @@ final class LiveFrameRuntime {
                     || host.pictureCap() != pictureCap || !host.focused()) {
                 scheduler.reset();
                 changed = true;
-                reanchor = true;
+                reanchorDelay = ceilingPeriod(regionHz);
                 break;
             }
         }
+        if (changed) policy.boundaryChanged();
+        boolean probing = cadence instanceof Probing;
         // The cap is a thinning gate over completed services, never a reason to redraw.
-        boolean present = changed || forcedPicture || batch.render() && unpresented;
-        if (present) {
-            if (!drawn && !owner.draw(false)) return aborted(completed);
-            if (!drawn) pictures++;
-            owner.swap();
-            swaps++;
-            unpresented = false;
-            host = owner.hostState();
-            // The picture consumed any forced request; compare later samples with this state.
-            if (changed) boundary = host.boundary();
-        }
+        // A probe measures every swap, so it presents on each paced return.
+        boolean present = probing || changed || forcedPicture || batch.render() && unpresented;
         pendingTicks = changed || paused ? 0 : batch.pendingTicks();
-        long delay = changed ? ceilingPeriod(regionHz) : batch.nanosUntilTick();
-        return new Step(completed, present, delay, reanchor);
+        long wake = anchor + (changed ? ceilingPeriod(regionHz) : batch.nanosUntilTick());
+        if (!present) return new Step(completed, false, wake, reanchorDelay);
+        if (!drawn && !owner.draw(false)) return aborted(completed);
+        if (!drawn) pictures++;
+        long returned = swap();
+        // The picture consumed any forced request; compare later samples with this state.
+        if (changed) boundary = owner.hostState().boundary();
+        switch (policy.observeSwap(returned)) {
+            case LOCK -> {
+                // Mode switches never spend old debt.
+                scheduler.reset();
+                pendingTicks = 0;
+                cadence = new Locked(((Probing) cadence).interval(), ((Probing) cadence).request());
+                return new Step(completed, true, returned, NO_REANCHOR);
+            }
+            case EXACT -> {
+                return rebaseExact(completed, returned);
+            }
+            default -> { }
+        }
+        if (!probing) return new Step(completed, true, wake, reanchorDelay);
+        // A probe wakes on the paced return; a transition still starts the new boundary there.
+        if (reanchorDelay != NO_REANCHOR) anchor = returned;
+        return new Step(completed, true, returned, NO_REANCHOR);
+    }
+
+    /** One service per paced swap; a missed vblank is one slow interval, never a catch-up burst. */
+    private Step runLocked(HostState host) {
+        if (suspended || boundary != null && !boundary.equals(host.boundary())) policy.boundaryChanged();
+        suspended = false;
+        boundary = host.boundary();
+        if (!owner.tick()) return aborted(0);
+        services++;
+        host = owner.hostState();
+        if (host.forcedPicture() || !boundary.equals(host.boundary())) policy.boundaryChanged();
+        if (!owner.draw(host.captureActive())) return aborted(1);
+        pictures++;
+        long returned = swap();
+        boundary = owner.hostState().boundary();
+        pendingTicks = 0;
+        if (policy.observeSwap(returned) == DisplayCadencePolicy.Verdict.EXACT) return rebaseExact(1, returned);
+        return new Step(1, true, returned, NO_REANCHOR);
+    }
+
+    private long swap() {
+        owner.swap();
+        swaps++;
+        unpresented = false;
+        return clock.getAsLong();
+    }
+
+    /** A demoting swap starts the exact clock; the swap that refused grants no service. */
+    private Step rebaseExact(int completed, long returned) {
+        cadence = EXACT;
+        applySwapInterval(1);
+        scheduler.reset();
+        pendingTicks = 0;
+        anchor = returned;
+        return new Step(completed, true, returned + ceilingPeriod(regionHz), NO_REANCHOR);
+    }
+
+    private void toExact() {
+        if (cadence instanceof Exact) return;
+        cadence = EXACT;
+        policy.release();
+        applySwapInterval(1);
+        scheduler.reset();
+        pendingTicks = 0;
     }
 
     private boolean configure(HostState host) {
@@ -152,29 +245,38 @@ final class LiveFrameRuntime {
     }
 
     private void applySwapInterval(int interval) {
+        if (interval == swapInterval) return;
         owner.swapInterval(interval);
         swapInterval = interval;
     }
 
     private Step aborted(int completed) {
+        toExact();
         scheduler.reset();
         boundary = null;
         suspended = true;
         pendingTicks = 0;
-        return new Step(completed, false, ceilingPeriod(regionHz), true);
+        return new Step(completed, false, 0, ceilingPeriod(regionHz));
     }
 
     Statistics statistics() {
-        return new Statistics(regionHz, pictureCap, services, pictures, swaps,
-                pendingTicks, discardedWallNanos);
+        String name = switch (cadence) {
+            case Exact exact -> "EXACT";
+            case Probing probing -> "PROBING";
+            case Locked locked -> "LOCKED";
+        };
+        return new Statistics(regionHz, pictureCap, name, policy.reason().name(), policy.measuredHz(),
+                swapInterval, services, pictures, swaps, pendingTicks, discardedWallNanos);
     }
 
     private static long ceilingPeriod(int hz) { return (SECOND + hz - 1) / hz; }
     private static long saturatedAdd(long a, long b) { return a > Long.MAX_VALUE - b ? Long.MAX_VALUE : a + b; }
 
-    private record Step(int services, boolean presented, long delayNanos, boolean reanchor) { }
+    /** Either an absolute wake, or a delay from the completion clock after a transition. */
+    private record Step(int services, boolean presented, long wakeAtNanos, long reanchorDelay) { }
 
     record Iteration(int services, boolean presented, long wakeAtNanos) { }
-    record Statistics(int regionHz, int pictureCap, long services, long pictures, long swaps,
+    record Statistics(int regionHz, int pictureCap, String cadence, String reason, double measuredPresentHz,
+                      int swapInterval, long services, long pictures, long swaps,
                       long pendingTicks, long discardedWallNanos) { }
 }

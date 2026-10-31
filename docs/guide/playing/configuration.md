@@ -337,6 +337,8 @@ audio:
 
 PAL selects 50 Hz simulation and audio service; NTSC selects 60 Hz.
 `display.fps` limits window rendering independently and applies immediately.
+`display.pacing: "AUTO"` (the default) locks those services to a display that refreshes
+at a whole multiple of the region rate; `"EXACT"` keeps them on the system clock.
 The logical display height stays 224 pixels.
 This setting does not select a different ROM revision or establish complete PAL parity.
 

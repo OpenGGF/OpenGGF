@@ -260,3 +260,33 @@ Two independent candidates (Opus, Sol) converged on exclusive wall/display caden
   deadline goes through the same 2 ms polling slices, replacing the separate sleep.
 - Removing the init `glfwSwapInterval(1)` lowers the `Engine#init` dispatcher ratchet from
   159 to 156 lines. The source guard pins one `glfwSwapInterval` reference in `Engine`.
+
+### Implementation notes: unit 3
+
+- The lock band is relative to the nominated vblank `1 / (n × regionHz)`; a swap at interval
+  `n` spans `n` vblanks, so the locked service period is `1 / regionHz` within ±0.2%. The
+  "±0.2% of n/regionHz" wording above would halve the service rate at `n = 2`.
+- An immediate return generalises to `Δ < (n − ½)` vblanks, which equals `P/2` at `n = 1` and
+  also rejects an interval-2 request the driver honours as interval 1 (119.88 Hz returning every
+  8.3 ms). A slow interval is `round(Δ / vblank) > n`.
+- The probe uses the plain per-window mean, as designed. The locked check cannot: that mean
+  telescopes to its endpoints, so ±2 ms return jitter is ±0.4% per one-second window, twice the
+  band. Locked windows therefore roll over eight one-second marks (probe marks carry into the
+  lock) and allow `2 × RETURN_JITTER_NANOS / span` on top of the band; a 5% rate shift still
+  demotes at the next window close. With ±2 ms jitter on a 59.94 Hz panel the probe itself can
+  refuse `OUT_OF_BAND`; that fails safe to `Exact` and is a device-qualification question.
+- `MAX_MISSES_PER_SECOND = 2`, counted per window and checked as each miss arrives.
+- `Locked` ticks on every iteration, including the first after a boundary change: it holds no
+  wall debt, so it does not insert the zero-service picture `Exact` shows at a boundary. Boundary
+  changes, forced pictures and stalls only restart the policy window.
+- `Probing` and `Locked` record the nomination request (pacing, speaker, cap, region, output);
+  any change returns to `Exact` without a refusal and re-nominates in the same iteration.
+- `DisplayWindowController.apply` samples the window's monitor each loop and bumps the output
+  epoch on a mode change or a changed monitor handle/refresh. Wayland reports the primary
+  monitor while windowed, so a windowed move between Wayland outputs is not observed.
+- `SonicConfiguration.DISPLAY_PACING` is a public enum constant, so the 0.7 candidate signature
+  pin gains its line. Only the English `settings.arb` strings are added; locale catalogues fall
+  back to English until the translation pass.
+- The production-path tests drive `Engine.LiveEndpoints` (render, swap, swap interval, output,
+  speaker regulation, clock) with a blocking fake vsync; `TestScheduledNativeGameplay` adds one
+  S2 locked restore/replay case on the same seam.

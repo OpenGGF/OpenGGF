@@ -89,13 +89,18 @@ class TestScheduledNativeGameplay {
     }
 
     private LiveFrameRuntime scheduler() {
-        return engine.createLiveFrameRuntime(capture -> {
+        return scheduler(() -> { }, DisplayOutput.UNKNOWN);
+    }
+
+    /** A known output nominates the display cadence; the speaker counts as regulated. */
+    private LiveFrameRuntime scheduler(Runnable swap, DisplayOutput output) {
+        return engine.createLiveFrameRuntime(new Engine.LiveEndpoints(capture -> {
             var before = state();
             try { render.invoke(engine, capture); }
             catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
             assertEquals(before, state(), "real Engine drawing cannot advance native movement/counters");
             pictures++;
-        }, () -> { }, interval -> { }, () -> clock);
+        }, swap, interval -> { }, () -> output, () -> output.advertisedRefreshHz() > 0, () -> clock));
     }
 
     /** Advances the fake monotonic clock by the host interval since the previous iteration. */
@@ -164,6 +169,50 @@ class TestScheduledNativeGameplay {
         var image = ScreenshotCapture.captureFramebuffer(320, 224);
         assertTrue(Arrays.stream(image.pixels()).anyMatch(p -> (p & 0xFFFFFF) != 0), "native scene replaces black");
         assertTrue(Arrays.stream(image.pixels()).anyMatch(p -> p != image.pixels()[0]), "terrain/player scene has varied pixels");
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void originalS2MovementAndRestoreMatchUnderTheDisplayLockedCadence() throws Exception {
+        open(RomTestUtils.ensureSonic2RomAvailable().toPath(), 60, 60, false);
+        double period = SECOND * 1001.0 / 60_000; // blocking 59.94 Hz vsync
+        long[] vblank = {0};
+        var runtime = scheduler(() -> {
+            vblank[0] = Math.max((long) Math.floor(clock / period) + 1, vblank[0] + 1);
+            clock = Math.round(vblank[0] * period);
+        }, new DisplayOutput(1, 60));
+        var last = runtime.iterate();
+        for (int iteration = 0; !"LOCKED".equals(runtime.statistics().cadence()); iteration++) {
+            assertTrue(iteration < 600, () -> "never locked: " + runtime.statistics());
+            clock = Math.max(clock, last.wakeAtNanos());
+            last = runtime.iterate();
+        }
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        var savedAudio = GameServices.audio().captureLogicalSnapshot();
+        List<State> expected = new ArrayList<>();
+        for (int tick = 0; tick < 60; tick++) {
+            input.setLogicalOverride(routeInput(tick));
+            engine.advanceFrame();
+            expected.add(state());
+        }
+        assertNotEquals(expected.getFirst().x, expected.getLast().x, "real movement is required");
+        registry.restore(saved);
+        GameServices.audio().restoreLogicalSnapshot(savedAudio);
+        List<State> observed = new ArrayList<>();
+        engine.getGameLoop().setAudioPresentationProbe(mode -> {
+            observed.add(state());
+            input.setLogicalOverride(routeInput(observed.size()));
+        });
+        input.setLogicalOverride(routeInput(0));
+        long services = runtime.statistics().services();
+        for (int swap = 0; swap < 60; swap++) {
+            clock = Math.max(clock, last.wakeAtNanos());
+            last = runtime.iterate();
+            assertEquals(1, last.services(), "one service per paced swap, including the restore boundary");
+        }
+        assertEquals(expected, observed, "locked services replay the same native states as direct admission");
+        assertEquals(60, runtime.statistics().services() - services);
+        assertEquals("LOCKED", runtime.statistics().cadence(), "a restore boundary resets the window, not the lock");
     }
 
     @Test @RequiresRom(SonicGame.SONIC_2)

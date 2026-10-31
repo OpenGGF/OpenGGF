@@ -573,9 +573,10 @@ class TestArchitecturalSourceGuard {
                 "liveCapturePresentation.present(");
         assertOrdered(source, "handleLiveCaptureShortcut();",
                 "updateDisplayShaderInput()");
-        assertTrue(source.contains("createLiveFrameRuntime(this::renderScheduledFrame, () -> glfwSwapBuffers(window),"));
+        assertTrue(source.contains("createLiveFrameRuntime(new LiveEndpoints(this::renderScheduledFrame, () -> glfwSwapBuffers(window),"));
         // Engine.loop polls, iterates and waits; the runtime owns its clock and the swap interval.
-        assertTrue(source.contains("org.lwjgl.glfw.GLFW::glfwSwapInterval, System::nanoTime);"));
+        assertTrue(source.contains("org.lwjgl.glfw.GLFW::glfwSwapInterval, displayWindowController::output,"));
+        assertTrue(source.contains("audioManager::isSpeakerRateRegulated, System::nanoTime));"));
         assertTrue(source.contains("waitForFrameDeadline(liveFrames.iterate().wakeAtNanos());"));
         assertEquals(1, source.split("glfwSwapInterval", -1).length - 1,
                 "LiveFrameRuntime is the sole live swap-interval writer");

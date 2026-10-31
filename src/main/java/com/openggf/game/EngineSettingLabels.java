@@ -48,7 +48,8 @@ final class EngineSettingLabels {
         }
         if (category != com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED) return null;
         String section = meta.section();
-        if (section.equals("display")) return key == SonicConfiguration.FPS ? "RENDERING AND LOADING" : "SHADERS";
+        if (section.equals("display")) return key == SonicConfiguration.FPS || key == SonicConfiguration.DISPLAY_PACING
+                ? "RENDERING AND LOADING" : "SHADERS";
         if (section.equals("gameplay")) return "RENDERING AND LOADING";
         if (section.equals("characters") || section.equals("crossGame")) return "DIRECT LAUNCH";
         if (section.equals("rewind")) return "REWIND";
