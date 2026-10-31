@@ -87,7 +87,10 @@ public final class TextInputSession {
 
     public void preedit(Composition next) {
         Objects.requireNonNull(next);
-        if (owner != null) touchComposition();
+        // Wayland text-input sends an empty update with ordinary key events even without an IME.
+        // Only a composition that starts, changes, ends or acknowledges a reset hides that frame's keys.
+        if (owner != null && (!next.isEmpty() || !composition.isEmpty() || phase == Phase.DRAINING))
+            touchComposition();
         if (phase == Phase.DRAINING) {
             acknowledged = next.isEmpty();
             return;

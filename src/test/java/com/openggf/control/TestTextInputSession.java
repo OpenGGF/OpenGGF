@@ -304,6 +304,25 @@ class TestTextInputSession {
         org.mockito.Mockito.verify(chrome).character('新');
     }
 
+    @Test void emptyPreeditWithoutACompositionLeavesOrdinaryEditingKeysVisible() {
+        // Wayland text-input reports an empty preedit alongside plain key events with no IME.
+        var input = new InputHandler(); var session = InputHandlerInternalAccess.textInput(input);
+        var adapter = adapter(input, new ArrayList<>());
+        for (int key : new int[] {GLFW_KEY_BACKSPACE, GLFW_KEY_ENTER, GLFW_KEY_ESCAPE}) {
+            session.claim(this);
+            adapter.key(key, GLFW_PRESS, 0); adapter.preedit(Composition.EMPTY); adapter.endEvents();
+            assertFalse(session.suppressCommands());
+            assertTrue(MenuInput.textKeyPressed(input, key), "key " + key);
+            input.update();
+            adapter.key(key, GLFW_RELEASE, 0); adapter.preedit(Composition.EMPTY); adapter.endEvents(); input.update();
+        }
+        session.claim(this);
+        adapter.preedit(preedit("日本")); adapter.endEvents(); input.update();
+        session.claim(this);
+        adapter.key(GLFW_KEY_ENTER, GLFW_PRESS, 0); adapter.preedit(Composition.EMPTY); adapter.endEvents();
+        assertFalse(MenuInput.textKeyPressed(input, GLFW_KEY_ENTER), "The key that ends a real composition stays hidden");
+    }
+
     private static GlfwTextInputAdapter adapter(InputHandler input, List<Integer> chrome) {
         return new GlfwTextInputAdapter(input, new GlfwTextInputAdapter.Filters() {
             public boolean key(int key, int action, int mods) { chrome.add(key); return true; }
