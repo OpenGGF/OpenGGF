@@ -749,8 +749,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// walk vs idle animation (ROM: Sonic_MoveLeft/MoveRight set walk anim when called).
 		sprite.setMovementInputActive(inputLeft || inputRight);
 
-		clearStaleCpuPushVelocityBeforeGroundMove();
-
 		if (sprite.getSpringing()) {
 			jumpPressed = false;
 		}
@@ -4909,37 +4907,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// collision can set Status_Push. S1 leaves the animation clear behind a
 		// FixBugs guard, so PlayerAnimationRules.animationChangeClearsPush() gates it.
 		sprite.setPushing(false);
-	}
-
-	private void clearStaleCpuPushVelocityBeforeGroundMove() {
-		if (!sprite.isCpuControlled()
-				|| sprite.getAir()
-				|| !sprite.getPushing()
-				|| sprite.getGSpeed() == 0
-				|| inputLeft
-				|| inputRight) {
-			return;
-		}
-		CollisionRules rules = collisionRulesOrNull();
-		if (rules == null || !rules.sidekickClearsStalePushVelocityBeforeGroundMove()) {
-			return;
-		}
-		SidekickCpuController cpu = sprite.getCpuController();
-		if (cpu == null || !cpu.usedObjectOrderGracePushBypassThisFrame()) {
-			return;
-		}
-		// S3K loc_13DD0's live Status_Push bypass preserves the already-loaded
-		// Ctrl_2 sample, and Tails_InputAcceleration_Path then decelerates and
-		// projects ground_vel before any push-collision clear
-		// (sonic3k.asm:26742-26745,26815-26825,27987-28057). Do not pre-clear
-		// that ROM-visible current-push path or the same MGZ grace continuation:
-		// MGZ1 F1466-F1470 needs no-input deceleration from $00E4 through $00A4
-		// instead of an immediate zero. This clear is only for provider-approved
-		// object-order bridges after the live push bit has locally dropped, where
-		// there is no direct ROM branch and stale inertia would otherwise advance
-		// before the blocking pass catches up.
-		sprite.setXSpeed((short) 0);
-		sprite.setGSpeed((short) 0);
 	}
 
 	private void handleSkid() {

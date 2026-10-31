@@ -555,7 +555,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 sprite.setGSpeed((short) 0);
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
-                    sprite.markPushFromGroundWallCollision();
                 }
             }
             case 0x80 -> sprite.setYSpeed((short) (sprite.getYSpeed() - velocityAdjustment));
@@ -564,7 +563,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 sprite.setGSpeed((short) 0);
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
-                    sprite.markPushFromGroundWallCollision();
                 }
             }
             default -> {

@@ -27,7 +27,7 @@ final class SidekickNormalStepDiagnosticRecorder {
         return new SidekickCpuController.NormalStepDiagnostics(
                 frameCounter, state, branch,
                 status, objectControl, xVel, yVel, groundVel, x, xSubpixel, angle,
-                -1, -1, 0, 0, 0, -1, -1, 0, 0,
+                -1, -1, 0, 0, -1, -1, 0, 0,
                 status, objectControl, xVel, yVel, groundVel, x, xSubpixel, angle,
                 0, false,
                 0, 0, (short) 0, (short) 0, (short) 0, (short) 0, (short) 0, (byte) 0,
@@ -41,7 +41,6 @@ final class SidekickNormalStepDiagnosticRecorder {
             int followHistorySlot,
             int recordedInput,
             int recordedStatus,
-            int pushBypassStatus,
             int dx,
             int dy,
             int generatedInput,
@@ -59,7 +58,7 @@ final class SidekickNormalStepDiagnosticRecorder {
             boolean skipFollowSteering) {
         return base.withCpuResult(
                 branch, followDelayFrames, followHistorySlot, recordedInput, recordedStatus,
-                pushBypassStatus, dx, dy, generatedInput, generatedPressedInput,
+                dx, dy, generatedInput, generatedPressedInput,
                 postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuYVel, postCpuGroundVel,
                 postCpuX, postCpuXSubpixel, postCpuAngle, appliedFollowNudge, inputJumpPress,
                 skipFollowSteering);
@@ -82,18 +81,18 @@ final class SidekickNormalStepDiagnosticRecorder {
         return current.withPostPhysics(status, objectControl, xVel, yVel, groundVel, x, xSubpixel, angle);
     }
 
-    static String format(SidekickCpuController.NormalStepDiagnostics d, int normalPushingGraceFrames) {
+    static String format(SidekickCpuController.NormalStepDiagnostics d) {
         if (d == null) {
             return "eng-tails-cpu none";
         }
         return String.format(
-                "eng-tails-cpu f=%d state=%s branch=%s hist=%d/%02d in=%04X stat=%02X push=%02X "
+                "eng-tails-cpu f=%d state=%s branch=%s hist=%d/%02d in=%04X stat=%02X "
                         + "pre=obj%02X st%02X x=%04X.%04X xv%04X yv%04X gv%04X a=%02X "
                         + "gen=%04X jp=%s postCpu=obj%02X st%02X xv%04X yv%04X gv%04X "
                         + "x=%04X.%04X a=%02X nudge=%d postPhys=%s obj%02X st%02X "
-                        + "xv%04X yv%04X gv%04X x=%04X.%04X a=%02X dx=%04X dy=%04X skip=%s grace=%d",
+                        + "xv%04X yv%04X gv%04X x=%04X.%04X a=%02X dx=%04X dy=%04X skip=%s",
                 d.frameCounter(), d.state(), d.followBranch(), d.followDelayFrames(), d.followHistorySlot(),
-                d.recordedInput() & 0xFFFF, d.recordedStatus() & 0xFF, d.pushBypassStatus() & 0xFF,
+                d.recordedInput() & 0xFFFF, d.recordedStatus() & 0xFF,
                 d.preObjectControl() & 0xFF, d.preStatus() & 0xFF, d.preCpuX() & 0xFFFF,
                 d.preCpuXSubpixel() & 0xFFFF, d.preXVel() & 0xFFFF, d.preYVel() & 0xFFFF,
                 d.preGroundVel() & 0xFFFF, d.preAngle() & 0xFF, d.generatedInput() & 0xFFFF,
@@ -105,6 +104,6 @@ final class SidekickNormalStepDiagnosticRecorder {
                 d.postPhysicsXVel() & 0xFFFF, d.postPhysicsYVel() & 0xFFFF,
                 d.postPhysicsGroundVel() & 0xFFFF, d.postPhysicsX() & 0xFFFF,
                 d.postPhysicsXSubpixel() & 0xFFFF, d.postPhysicsAngle() & 0xFF,
-                d.dx() & 0xFFFF, d.dy() & 0xFFFF, d.skipFollowSteering(), normalPushingGraceFrames);
+                d.dx() & 0xFFFF, d.dy() & 0xFFFF, d.skipFollowSteering());
     }
 }

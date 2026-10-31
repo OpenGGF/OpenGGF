@@ -7,7 +7,6 @@ import com.openggf.game.LevelEventRewindResolver;
 import com.openggf.game.rewind.RewindAdapterOwnership;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.level.objects.ObjectInstance;
 
 import java.util.List;
 import java.util.Map;
@@ -100,15 +99,6 @@ final class ModZoneEventProvider implements LevelEventProvider, LevelEventRewind
     @Override public boolean ownsFixedDrowningBubbleCadence() { return query(LevelEventProvider::ownsFixedDrowningBubbleCadence); }
     @Override public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
         return query(provider -> provider.ownsFixedDrowningBubbleCadence(player));
-    }
-    @Override public boolean isSidekickObjectOrderFollowSteeringContext(AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite leader) { return query(provider -> provider.isSidekickObjectOrderFollowSteeringContext(sidekick, leader)); }
-    @Override public boolean isSidekickObjectOrderFollowNudgeContext(AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite leader) { return query(provider -> provider.isSidekickObjectOrderFollowNudgeContext(sidekick, leader)); }
-    @Override public boolean isSidekickDoorSupportGraceFollowSteeringContext(AbstractPlayableSprite sidekick,
-            ObjectInstance object) { return query(provider -> provider.isSidekickDoorSupportGraceFollowSteeringContext(sidekick, object)); }
-    @Override public boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(AbstractPlayableSprite sidekick) {
-        return query(provider -> provider.usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(sidekick));
     }
     @Override public boolean shouldEnterSidekickDormantMarker(AbstractPlayableSprite sidekick) {
         return query(provider -> provider.shouldEnterSidekickDormantMarker(sidekick));

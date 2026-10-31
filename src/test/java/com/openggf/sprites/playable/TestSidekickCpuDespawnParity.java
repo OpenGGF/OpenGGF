@@ -1081,29 +1081,6 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s3kEstablishedFollowerHandoffPreservesDiagnosticInteractWord() {
-        TestableSprite sonic = new TestableSprite("sonic");
-        TestableSprite tails = new TestableSprite("tails_p2");
-        tails.useGameRules(GameRules.SONIC_3K);
-
-        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0, 0x0004, false, 0x2FC5, 0x037A);
-        controller.forceStateForTest(SidekickCpuController.State.INIT, 0);
-        controller.captureLevelStartLeaderAnchor(0x00D1, 0x02FD);
-        controller.setEnteredFromSeedCompareFrame0(true);
-        tails.setCentreX((short) 0x00B1);
-        tails.setCentreY((short) 0x0301);
-        tails.setOnObject(false);
-
-        controller.update(0);
-
-        assertEquals(0x0004, controller.getDiagnosticInteractId(),
-                "A mid-run established-follower handoff does not run SpawnLevelMainSprites; "
-                        + "S3K Tails_CPU_interact survives the AIZ1->AIZ2 reload even after "
-                        + "Tails leaves the transition floor (sonic3k.asm:8359-8369,26816-26843)");
-    }
-
-    @Test
     void s3kDiagnosticInteractPreservesWordWhenStaleRideHasNoRomPointer() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -1537,7 +1514,6 @@ class TestSidekickCpuDespawnParity {
                 objectRules.bossHitNegatesGroundSpeed(),
                 objectRules.bossHitHalvesBounceVelocity(),
                 false,
-                objectRules.sidekickNormalDespawnDelaysFreshRenderEntry(),
                 objectRules.sidekickDespawnUsesRidingInstanceLoss(),
                 objectRules.sidekickDespawnUsesInteractCodeWordChange(),
                 objectRules.sidekickNormalCpuSkipsHurtRoutine(),

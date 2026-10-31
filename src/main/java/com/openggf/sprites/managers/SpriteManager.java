@@ -946,7 +946,6 @@ public class SpriteManager implements PlayableSstDispatcher {
                     }
 
 					boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
-					boolean skipCpuPhysicsThisFrame = false;
 					SidekickCpuController cpuControllerForDiagnostics = null;
 
 					if (scriptedActorInputs == null && context.runCpuControllers()
@@ -957,7 +956,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 						cpuControllerForDiagnostics = cpuController;
 						playable.capturePreCpuControlSnapshot();
 						cpuController.update(cadence);
-						skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
 						boolean aiUp = cpuController.getInputUp();
 						boolean aiDown = cpuController.getInputDown();
@@ -987,14 +985,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// If approaching (respawn in progress) and the strategy handles movement
 						// directly (Tails fly-in, Knuckles glide), skip normal physics.
 						// Strategies that need physics (Sonic walk/spindash) fall through.
-						if (skipCpuPhysicsThisFrame) {
-							applyScreenYWrapValueAfterControl(playable);
-							playable.getAnimationManager().update(cadence);
-							tickDisplayPhaseTimers(playable);
-							playable.tickStatus();
-							playable.endOfTick();
-							continue;
-						}
 						if (cpuController.isApproaching()
 								&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 							applyScreenYWrapValueAfterControl(playable);
@@ -1494,7 +1484,6 @@ public class SpriteManager implements PlayableSstDispatcher {
                             }
                             var cpuController = playable.getCpuController();
 							cpuController.update(frameCounter);
-							boolean skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
 							boolean aiUp = cpuController.getInputUp();
 							boolean aiDown = cpuController.getInputDown();
@@ -1518,13 +1507,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 									aiUp, aiDown, aiLeft, aiRight, aiJump, aiJumpPress,
 									effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
 									true, aiJumpPress);
-							if (skipCpuPhysicsThisFrame) {
-								playable.getAnimationManager().update(frameCounter);
-								tickDisplayPhaseTimers(playable);
-								playable.tickStatus();
-								playable.endOfTick();
-								continue;
-							}
 							if (cpuController.isApproaching()
 									&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 								playable.getAnimationManager().update(frameCounter);
