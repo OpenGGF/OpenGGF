@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.control.MouseWheel;
 import com.openggf.game.session.EngineServices;
 import com.openggf.graphics.LogicalMouse;
 
@@ -19,6 +20,7 @@ public final class MenuPointerRuntime {
         var point = LogicalMouse.map(glfwGetCurrentContext(), graphics,
                 input.getMouseX(), input.getMouseY(), width, height);
         return point == null ? MenuInput.Pointer.none() : new MenuInput.Pointer(point[0], point[1], point[2] != 0,
-                input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT), input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT));
+                input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT), input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT),
+                MouseWheel.of(input).notches());
     }
 }

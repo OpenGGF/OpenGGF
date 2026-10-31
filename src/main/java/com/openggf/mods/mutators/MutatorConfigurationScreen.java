@@ -203,6 +203,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (MenuInput.accept(input)) activate(selected);
         // Pointer uses the same native grid and the same actions as keyboard/controller controls.
         var pointer = MenuInput.pointer(input, width(), 224);
+        if (pointer.inside() && pointer.wheel() != 0) {
+            int target = Math.clamp(row - pointer.wheel(), 0, choices.size() - 1);
+            if (target != row) { row = target; notice = ""; sound(Cue.NAVIGATE); }
+        }
         int top = rowsTop(), first = firstVisibleRow(), count = visibleCount(choices,first);
         if (pointer.leftPressed()) for (int i=0;i<count;i++) {
             if (pointer.over(rowLeft(),rowY(choices, first, first+i, top),rowWidth(),rowHeight(choices.get(first+i)))) {

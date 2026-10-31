@@ -52,21 +52,21 @@ public final class GolfMenuChecks {
     public static void mouseMenu() throws Exception {
         var f = new Fixture();
         // This is the logical pointer that the shared engine viewport mapper supplies.
-        f.menu.updatePointer(new MenuInput.Pointer(35, 146, true, true, false));
+        f.menu.updatePointer(new MenuInput.Pointer(35, 146, true, true, false, 0));
         same(GolfMenu.Field.PLAYER_ONE, f.menu.focusedField(), "click chooses Local and opens setup");
         // Local setup: P1, P2, viewport, hole/turn rewinds, ready, back.
-        f.menu.updatePointer(new MenuInput.Pointer(40, 124, true, true, false));
-        f.menu.updatePointer(new MenuInput.Pointer(40, 169, false, true, false));
+        f.menu.updatePointer(new MenuInput.Pointer(40, 124, true, true, false, 0));
+        f.menu.updatePointer(new MenuInput.Pointer(40, 169, false, true, false, 0));
         same(0, f.launches.size(), "letterbox clicks cannot launch");
-        f.menu.updatePointer(new MenuInput.Pointer(40, 169, true, true, false));
+        f.menu.updatePointer(new MenuInput.Pointer(40, 169, true, true, false, 0));
         same(1, f.launches.size(), "one left click launches exactly once");
         same(GolfMenu.Mode.LOCAL, f.launches.getFirst().mode(), "clicked Local match");
         same(GolfMenu.CharacterChoice.TAILS, f.launches.getFirst().playerOne(), "click cycles a setting");
-        f.menu.updatePointer(new MenuInput.Pointer(40, 169, true, true, false));
+        f.menu.updatePointer(new MenuInput.Pointer(40, 169, true, true, false, 0));
         same(1, f.launches.size(), "an exiting menu ignores more clicks");
         f.menu.initialize();
-        f.menu.updatePointer(new MenuInput.Pointer(35, 129, true, true, false));
-        f.menu.updatePointer(new MenuInput.Pointer(35, 124, true, false, true));
+        f.menu.updatePointer(new MenuInput.Pointer(35, 129, true, true, false, 0));
+        f.menu.updatePointer(new MenuInput.Pointer(35, 124, true, false, true, 0));
         same(GolfMenu.Field.MODE, f.menu.focusedField(), "right click returns to mode picker");
     }
 
