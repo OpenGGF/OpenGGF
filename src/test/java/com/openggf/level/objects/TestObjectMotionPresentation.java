@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.LevelMotionOwners;
+
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -39,7 +41,7 @@ class TestObjectMotionPresentation {
                 assertNull(owner);
                 assertTrue(capture.motion().screen(capture.frame().tiles().getFirst()));
             } else {
-                assertEquals(new MotionPacket.ObjectKey(id), owner.key());
+                assertEquals(new LevelMotionOwners.ObjectKey(id), owner.key());
                 assertEquals(120, owner.x()); assertEquals(230, owner.y());
                 assertEquals(MotionPacket.Anchoring.FOLLOW, owner.anchoring());
             }

@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestLevelMotionPair {
-    private static final MotionPacket.Key KEY = new MotionPacket.ObjectKey(ObjectRefId.dynamic(3, 0, 7));
+    private static final Object KEY = new LevelMotionOwners.ObjectKey(ObjectRefId.dynamic(3, 0, 7));
     private record Picture(LevelMotionPair.Sample sample, SpritePresentation.Tile tile) { }
     private static LevelScrollPresentation scroll(int x, int y, int bg, int period, short[] lines, short[] columns) {
         return new LevelScrollPresentation(new LevelScrollPresentation.Registers(x, y, x + 3,
@@ -90,7 +90,7 @@ class TestLevelMotionPair {
                 meta(now, 320, 224, false, Set.of(MotionCut.CAMERA))})
             assertNull(LevelMotionPair.between(old.sample(), current));
         assertNull(LevelMotionPair.between(meta(old, 320, 224, true, Set.of()), now.sample()));
-        var cut = MotionCut.object(((MotionPacket.ObjectKey) KEY).id());
+        var cut = MotionCut.object(((LevelMotionOwners.ObjectKey) KEY).id());
         var blend = LevelMotionPair.between(old.sample(), meta(now, 320, 224, false, Set.of(cut))).at(phase(.5));
         assertEquals(new SpriteMotionProjection.Offset(-1, -1), blend.camera());
         assertEquals(SpriteMotionProjection.Offset.ZERO, blend.sprites().offset(now.tile()));
@@ -104,7 +104,7 @@ class TestLevelMotionPair {
                 LevelMotionPair.between(old.sample(), now.sample()).at(phase(0)).sprites().offset(now.tile()));
         var first = new Object(); var second = new Object();
         var id = com.openggf.game.rewind.identity.PlayerRefId.mainPlayer();
-        var firstKey = new MotionPacket.PlayerKey(id, first); var secondKey = new MotionPacket.PlayerKey(id, second);
+        var firstKey = new LevelMotionOwners.PlayerKey(id, first); var secondKey = new LevelMotionOwners.PlayerKey(id, second);
         assertFalse(MotionCut.player(first).matches(secondKey));
         assertTrue(MotionCut.player(first).matches(firstKey));
         var oldOwner = new MotionPacket.Owner(firstKey, 100, 100, MotionPacket.Anchoring.FOLLOW);

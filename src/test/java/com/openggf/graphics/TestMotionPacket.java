@@ -1,5 +1,7 @@
 package com.openggf.graphics;
 
+import com.openggf.level.LevelMotionOwners;
+
 import com.openggf.game.rewind.identity.*;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -21,7 +23,7 @@ class TestMotionPacket {
     }
     @AfterEach void cleanup() { SessionManager.clear(); GraphicsManager.destroyForReinit(); }
     private MotionPacket.Owner owner(int ordinal) {
-        return new MotionPacket.Owner(new MotionPacket.ObjectKey(ObjectRefId.dynamic(3, 0, ordinal)),
+        return new MotionPacket.Owner(new LevelMotionOwners.ObjectKey(ObjectRefId.dynamic(3, 0, ordinal)),
                 125, 240, MotionPacket.Anchoring.FOLLOW);
     }
     @Test void frozenSidecarRetainsExactCollectionOriginAndUsesTileIdentity() {
@@ -95,8 +97,8 @@ class TestMotionPacket {
                     return SpritePresentation.Frame.empty();
                 }));
         assertNull(graphics.spriteMotionCollection); assertNull(graphics.spriteMotionOwner);
-        assertNotEquals(new MotionPacket.PlayerKey(PlayerRefId.mainPlayer(), new Object()),
-                new MotionPacket.PlayerKey(PlayerRefId.mainPlayer(), new Object()));
+        assertNotEquals(new LevelMotionOwners.PlayerKey(PlayerRefId.mainPlayer(), new Object()),
+                new LevelMotionOwners.PlayerKey(PlayerRefId.mainPlayer(), new Object()));
         assertNotEquals(owner(1).key(), owner(2).key(), "Slot reuse has a new creation ordinal");
     }
     @Test void centralHeadCompositionCarriesTheOwnerToEveryReplacementFragment() {

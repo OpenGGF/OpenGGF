@@ -9,7 +9,7 @@ public final class SpriteMotionInternalAccess {
     private SpriteMotionInternalAccess() { }
     static final class Collection {
         final IdentityHashMap<SpritePresentation.Tile, MotionPacket.Binding> owners = new IdentityHashMap<>();
-        final java.util.Map<MotionPacket.Key, MotionPacket.Owner> anchors = new java.util.HashMap<>();
+        final java.util.Map<Object, MotionPacket.Owner> anchors = new java.util.HashMap<>();
     }
     private static void engineCaller() {
         if (com.openggf.util.EngineCallerAccess.callerOutside(SpriteMotionInternalAccess.class).getClassLoader()
@@ -57,14 +57,6 @@ public final class SpriteMotionInternalAccess {
             graphics.spriteMotionCollection = null;
             graphics.spriteMotionOwner = null;
         }
-    }
-    public static MotionPacket.Owner playerOwner(com.openggf.sprites.managers.SpriteManager sprites,
-                                                  com.openggf.game.PlayableEntity player) {
-        int index = sprites.getRegisteredSidekicks().indexOf(player);
-        var id = index < 0 ? com.openggf.game.rewind.identity.PlayerRefId.mainPlayer()
-                : com.openggf.game.rewind.identity.PlayerRefId.sidekick(index);
-        return new MotionPacket.Owner(new MotionPacket.PlayerKey(id, player),
-                player.getCentreX(), player.getCentreY(), MotionPacket.Anchoring.FOLLOW);
     }
     public static boolean collecting(GraphicsManager graphics) {
         return graphics != null && graphics.spriteMotionCollection != null;

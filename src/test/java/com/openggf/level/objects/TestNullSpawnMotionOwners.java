@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.LevelMotionOwners;
+
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.PlayerRefId;
@@ -78,7 +80,7 @@ class TestNullSpawnMotionOwners {
         if (relative != null && relative.value() == CameraRelativeDraw.Use.SCREEN_POSITION) {
             assertSame(MotionPacket.Screen.INSTANCE, resolved, type.getName());
         } else if (spatial) {
-            assertEquals(new MotionPacket.Owner(new MotionPacket.ObjectKey(id), 321, 654,
+            assertEquals(new MotionPacket.Owner(new LevelMotionOwners.ObjectKey(id), 321, 654,
                     MotionPacket.Anchoring.FOLLOW), resolved, type.getName());
         } else {
             assertNull(resolved, type.getName());
@@ -88,11 +90,11 @@ class TestNullSpawnMotionOwners {
             var player = mock(AbstractPlayableSprite.class);
             when(player.getCentreX()).thenReturn((short) 123); when(player.getCentreY()).thenReturn((short) 456);
             doReturn(player).when(effect).boundPlayer();
-            var expected = SpriteMotionInternalAccess.playerOwner(sprites, player);
-            assertEquals(new MotionPacket.PlayerKey(PlayerRefId.mainPlayer(), player), expected.key());
+            var expected = LevelMotionOwners.playerOwner(sprites, player);
+            assertEquals(new LevelMotionOwners.PlayerKey(PlayerRefId.mainPlayer(), player), expected.key());
             assertEquals(expected, ObjectMotionPresentation.resolve(object, services), type.getName());
             when(sprites.getRegisteredSidekicks()).thenReturn(List.of(player));
-            assertEquals(new MotionPacket.PlayerKey(PlayerRefId.sidekick(0), player),
+            assertEquals(new LevelMotionOwners.PlayerKey(PlayerRefId.sidekick(0), player),
                     ((MotionPacket.Owner) ObjectMotionPresentation.resolve(object, services)).key(), type.getName());
         }
     }

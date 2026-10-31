@@ -7,7 +7,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelMotionHistory {
-    private static final MotionPacket.Key KEY = new MotionPacket.ObjectKey(ObjectRefId.dynamic(3, 0, 8));
+    private static final Object KEY = new LevelMotionOwners.ObjectKey(ObjectRefId.dynamic(3, 0, 8));
     private static LevelMotionPackets.Picture picture(int camera, Map<MotionCut, Long> cuts) {
         var owned = MotionPacketFixture.owned(KEY, 100 + camera, 100, camera, 0);
         var registers = new LevelScrollPresentation.Registers(camera, 0, camera, (short) 0, (short) 0,
@@ -57,7 +57,7 @@ class TestLevelMotionHistory {
         var history = new LevelMotionHistory(); var packets = new LevelMotionPackets();
         var first = picture(0, Map.of()); var second = picture(4, Map.of());
         history.observe(first); history.observe(second);
-        var cut = MotionCut.object(((MotionPacket.ObjectKey) KEY).id());
+        var cut = MotionCut.object(((LevelMotionOwners.ObjectKey) KEY).id());
         var abandoned = picture(8, Map.of(cut, 1L)); var replacement = picture(10, Map.of(cut, 1L));
         packets.prepared(second, first.frame());
         packets.prepared(abandoned, second.frame());

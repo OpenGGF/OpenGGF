@@ -1,5 +1,7 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.level.LevelMotionOwners;
+
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
@@ -1895,7 +1897,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				if (SpriteMotionInternalAccess.collecting(gfx)
                         && sprite.getClass().getClassLoader() == SpriteManager.class.getClassLoader()) {
                     SpriteMotionInternalAccess.withOwner(gfx,
-                            SpriteMotionInternalAccess.playerOwner(this, sprite), sprite::draw);
+                            LevelMotionOwners.playerOwner(this, sprite), sprite::draw);
                 } else sprite.draw();
 				// SAT order is front to back (earlier entries win), so the same layering puts the
 				// hook's entries straight after that layer's last player sprite.
