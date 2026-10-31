@@ -136,7 +136,7 @@ public final class MasterTitleCaptureTool {
                 new Scene("26-paused-setup-character", List.of(down, right, enter, down), 20),
                 new Scene("27-paused-settings", List.of(up, right, enter), 20),
                 new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20),
-                new Scene("29-settings-restart-row", advancedSettingKeys(SonicConfiguration.FPS), 20),
+                new Scene("29-settings-restart-row", advancedSettingKeys(SonicConfiguration.DISPLAY_PACING), 20),
                 new Scene("30-hub-restart-pending", List.of(), 40),
                 new Scene("31-settings-restart-pending", List.of(up, right, enter, up), 20),
                 new Scene("32-paused-zoom-start", List.of(), 0),

@@ -31,7 +31,7 @@ final class LiveFrameRuntime {
     record HostState(int regionHz, int pictureCap, boolean focused, boolean hostPaused,
                      Object boundary, boolean captureActive, boolean forcedPicture,
                      DisplayPacing pacing, DisplayOutput output, boolean speakerRegulated,
-                     boolean interpolation, boolean screenshotPending) { }
+                     boolean interpolation, boolean screenshotPending, boolean automaticPictureCap) { }
 
     interface Owner {
         HostState hostState();
@@ -260,6 +260,9 @@ final class LiveFrameRuntime {
     /** The first host reason the window cannot blend, or null when it may. */
     private static InterpolationStatus inactiveStatus(HostState host) {
         if (!host.interpolation()) return InterpolationStatus.OFF;
+        if (!host.automaticPictureCap() && host.pictureCap() <= host.regionHz()) return InterpolationStatus.FPS_LIMIT;
+        if (host.output().advertisedRefreshHz() > 0 && host.output().advertisedRefreshHz() <= host.regionHz())
+            return InterpolationStatus.PANEL_RATE;
         if (host.pictureCap() <= host.regionHz()) return InterpolationStatus.FPS_LIMIT;
         if (host.hostPaused()) return InterpolationStatus.PAUSED;
         if (host.captureActive()) return InterpolationStatus.RECORDING;
@@ -365,7 +368,7 @@ final class LiveFrameRuntime {
 
     /** Why window pictures are or are not blended; diagnostics only, never a scheduling input. */
     enum InterpolationStatus {
-        OFF, FPS_LIMIT, UNFOCUSED, PAUSED, RECORDING, STEPPING, DISPLAY_LOCKED, BOUNDARY,
+        OFF, FPS_LIMIT, PANEL_RATE, UNFOCUSED, PAUSED, RECORDING, STEPPING, DISPLAY_LOCKED, BOUNDARY,
         EXACT_PICTURE, BEHIND, BLENDING
     }
 }

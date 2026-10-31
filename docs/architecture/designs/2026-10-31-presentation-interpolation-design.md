@@ -34,7 +34,9 @@ Constraints found in grounding:
 
 ## Usage (caller's view)
 
-**Player.** Display → Interpolation: On, plus an FPS limit at or above the panel rate. On 60 Hz
+**Player.** Display → Picture → Interpolation: On. The adjacent Rendering limit defaults to
+Auto (display refresh), falling back to the region rate when refresh is unknown. Positive numeric
+limits remain supported. On 60 Hz
 panels (`Locked`, interval 1) nothing changes. On 75/144/165 Hz, and on 120/240 Hz where the lock
 interval would be 2 or more, the runtime uses `Exact` at interval 1 and blends. The picture trails
 the newest service by `(1 - alpha)` of a tick. Recording and F12 screenshots always show exact

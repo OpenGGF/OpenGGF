@@ -21,8 +21,8 @@ display:
   spriteScanlineLimit: false  # Enable native per-row count/pixel budgets for ROM image comparisons
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
-  fps: 60   # Frames per second to render (changes game speed)
-  interpolation: false # Needs FPS >= panel rate; up to one tick of visual latency; recordings/screenshots stay exact
+  fps: AUTO # Display refresh (region rate if unknown), or a positive rendering limit; gameplay/audio stay at 50/60 Hz
+  interpolation: false # Smooths motion above the region rate; up to one tick of visual latency; recordings/screenshots stay exact
   pacing: "AUTO"   # AUTO locks to a display refresh near the region rate; EXACT keeps nominal game speed
 
 # ── Interface ──

@@ -13,6 +13,42 @@ class FrameRateResolverTest {
     Path tempDir;
 
     @Test
+    void autoDefaultResolvesLiveAndDisplayFreeRates() {
+        var config = SonicConfigurationService.createStandalone(tempDir);
+        assertEquals("AUTO", config.getString(SonicConfiguration.FPS));
+        assertEquals(60, config.getInt(SonicConfiguration.FPS));
+        assertEquals(60, FrameRateResolver.presentation(config));
+        assertEquals(144, FrameRateResolver.presentation(config, 144));
+        config.setConfigValue(SonicConfiguration.REGION, "PAL");
+        assertEquals(50, FrameRateResolver.presentation(config, 0));
+        config.setSessionOverride(SonicConfiguration.FPS, 60);
+        assertEquals(60, FrameRateResolver.presentation(config, 240));
+    }
+
+    @Test
+    void autoYamlAndCustomNumberRoundTrip() throws Exception {
+        Files.writeString(tempDir.resolve("config.yaml"), "display:\n  fps: aUtO\n");
+        var config = SonicConfigurationService.createStandalone(tempDir);
+        assertEquals(165, FrameRateResolver.presentation(config, 165));
+        var draft = new EngineSettingsDraft(config);
+        draft.set(SonicConfiguration.FPS, "137");
+        draft.apply();
+        config = SonicConfigurationService.createStandalone(tempDir);
+        assertEquals(137, FrameRateResolver.presentation(config, 240));
+        draft = new EngineSettingsDraft(config);
+        draft.set(SonicConfiguration.FPS, "auto");
+        draft.apply();
+        assertEquals(240, FrameRateResolver.presentation(SonicConfigurationService.createStandalone(tempDir), 240));
+    }
+
+    @Test
+    void malformedValueRetainsNumericFallback() {
+        var config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.FPS, "garbage");
+        assertEquals(60, FrameRateResolver.presentation(config, 240));
+    }
+
+    @Test
     void palResolvesToFiftyEvenWhenConfiguredFpsIsSixty() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         config.setConfigValue(SonicConfiguration.REGION, "PAL");
