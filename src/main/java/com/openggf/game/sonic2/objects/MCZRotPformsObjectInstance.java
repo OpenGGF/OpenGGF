@@ -289,19 +289,6 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean preservesSidekickCpuPushGraceWhileRiding(PlayableEntity player) {
-        // TailsCPU_Normal reads Status_Push before the later Obj6A
-        // SolidObject pass can clear or refresh the object's live status byte
-        // (s2.asm:39297-39300, Obj6A solid call at s2.asm:54301).
-        return player != null && player.isCpuControlled();
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesWhileRiding(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceWhileRiding(player) ? 8 : Integer.MAX_VALUE;
-    }
-
-    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         ensureInitialized();
         // ROM parity: the MCZ subtype-0x18 #$18 check

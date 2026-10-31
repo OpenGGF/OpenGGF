@@ -431,7 +431,7 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void arzBossPillarReleasedSidePushKeepsTailsCpuAutoJumpGateVisible() {
+    void arzBossPillarUsesStandardSolidObjectRightEdge() {
         ARZBossPillar pillar = new ARZBossPillar(
                 new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
                 null);
@@ -440,76 +440,6 @@ class TestSonic2ObjectBugFixes {
                 "Obj89's standard SolidObject BHI gate accepts relX == 2*d1");
         assertTrue(pillar.preservesEdgeSubpixelMotion(),
                 "Obj89's exact-edge d0=0 correction preserves the native x_sub low word");
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A73);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setAir(false);
-        tails.setOnObject(false);
-        tails.setRolling(false);
-
-        assertTrue(pillar.preservesSidekickCpuPushGraceAfterRideClears(tails),
-                "Obj89_Pillar_SolidObject writes Tails' Status_Push before TailsCPU_Normal reads "
-                        + "the push-bypass auto-jump gate; the engine may have cleared the local "
-                        + "push by the CPU read, so the object exposes a narrow side-edge grace "
-                        + "(docs/s2disasm/s2.asm:39287-39300,65330-65339,65531-65539).");
-
-        tails.setCentreX((short) 0x2A70);
-        assertFalse(pillar.preservesSidekickCpuPushGraceAfterRideClears(tails));
-    }
-
-    @Test
-    void arzBossArrowReleasedRideKeepsTailsCpuAutoJumpGateVisible() throws Exception {
-        ARZBossArrow arrow = new ARZBossArrow(
-                new ObjectSpawn(0x2AFF, 0x0481, Sonic2ObjectIds.ARZ_BOSS, 0x06, 0, false, 0),
-                null, null, true);
-        arrow.setSlotIndex(0x14);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A73);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setAir(false);
-        tails.setOnObject(false);
-        tails.setRolling(false);
-        tails.setInteractSlotIndex(0x14);
-
-        assertTrue(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(tails),
-                "At ARZ2 f6364 the local grace counter has already reached zero, but Tails' "
-                        + "interact slot still dereferences the Obj89 arrow status byte for the "
-                        + "same push-bypass CPU read (docs/s2disasm/s2.asm:39297-39300,65689-65704).");
-        assertTrue(arrow.publishesSidekickCpuPushFromInteractSlot(tails),
-                "TailsCPU_Normal must publish Obj89's retained Status_Push into the same-frame "
-                        + "movement/animation dispatch (docs/s2disasm/s2.asm:39297-39300,"
-                        + "40484-40491,65689-65704).");
-        assertFalse(arrow.preservesSidekickCpuPushGraceAfterRideClears(tails),
-                "The ARZ arrow only needs the zero-grace interact-slot bridge; the broader released-ride "
-                        + "window would keep Status_Push visible after Tails has reattached to the arrow.");
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setGameRulesForTest(GameRules.SONIC_2);
-        sonic.setWidth(18);
-        sonic.setHeight(18);
-        sonic.setCentreX((short) 0x2A73);
-        sonic.setCentreY((short) 0x04C0);
-        sonic.setCpuControlled(false);
-        sonic.setAir(false);
-        sonic.setOnObject(false);
-        sonic.setRolling(false);
-        sonic.setInteractSlotIndex(0x14);
-
-        assertFalse(arrow.preservesSidekickCpuPushGraceAfterRideClears(sonic),
-                "The push-grace bridge is only for CPU sidekick reads of TailsCPU_Normal.");
-        assertFalse(arrow.preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(sonic),
-                "The zero-grace interact bridge is only for CPU sidekick reads of TailsCPU_Normal.");
-        assertFalse(arrow.publishesSidekickCpuPushFromInteractSlot(sonic),
-                "The interact-slot push publication is only for CPU sidekick reads of TailsCPU_Normal.");
     }
 
     @Test
@@ -742,11 +672,6 @@ class TestSonic2ObjectBugFixes {
                         + "(docs/s2disasm/s2.asm:54276,54301,35344-35354)");
         assertTrue(platform.usesInstanceSolidStateLatchKey(),
                 "Obj6A rewrites dynamic spawn coordinates while ROM keeps standing/pushing bits in the live SST slot");
-        assertFalse(platform.preservesSidekickCpuPushGraceWhileRiding(sonic));
-        assertTrue(platform.preservesSidekickCpuPushGraceWhileRiding(tails),
-                "TailsCPU_Normal reads Status_Push before the next Obj6A SolidObject pass clears it");
-        assertEquals(8, platform.sidekickCpuPushGraceMinimumFramesWhileRiding(tails),
-                "MCZ2 f4485 keeps the post-Obj6A push bit visible to the Tails CPU slot with eight grace frames");
         assertEquals(0x20, platform.getBalanceWidthPixels(),
                 "Obj6A balancing consumes the native MTZ width_pixels field");
     }
@@ -759,34 +684,6 @@ class TestSonic2ObjectBugFixes {
 
         assertEquals(0x40, spikes.getBalanceWidthPixels(),
                 "Obj76 balancing uses its $40 width_pixels rather than rendered bounds");
-    }
-
-    @Test
-    void htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay() {
-        RisingLavaObjectInstance lowerRoutePlatform = new RisingLavaObjectInstance(
-                new ObjectSpawn(0x1760, 0x07D4, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
-                "RisingLava");
-        RisingLavaObjectInstance slopedPlatform = new RisingLavaObjectInstance(
-                new ObjectSpawn(0x1760, 0x07D4, Sonic2ObjectIds.RISING_LAVA, 0x08, 0, false, 0),
-                "RisingLavaSlope");
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x170A, (short) 0x074D);
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x170A, (short) 0x074D);
-        tails.setCpuControlled(true);
-
-        assertTrue(lowerRoutePlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
-                "HTZ2 f3322 reaches Obj30 subtype 6's SolidObject_Always/DropOnFloor ordering with "
-                        + "Tails' current Status_Push still visible but the adjacent delayed input already flipped");
-        assertFalse(lowerRoutePlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(sonic),
-                "The bridge is only for CPU sidekick Ctrl_2 sampling");
-        assertFalse(slopedPlatform.usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
-                "Subtype 8 uses SlopedSolid and is not part of the HTZ2 lower-route Obj30 ordering window");
-        tails.setCentreX((short) 0x19BA);
-        assertFalse(new RisingLavaObjectInstance(
-                        new ObjectSpawn(0x1920, 0x06B9, Sonic2ObjectIds.RISING_LAVA, 0x06, 0, false, 0),
-                        "RisingLavaRightSide")
-                        .usesSidekickCpuCurrentPushObjectOrderInputDelay(tails),
-                "HTZ2 f4442 rides subtype 6 on the right side; ROM keeps the normal d1 history word "
-                        + "already loaded at s2.asm:39291-39300 instead of the adjacent older input");
     }
 
     @Test
@@ -808,12 +705,6 @@ class TestSonic2ObjectBugFixes {
                         + "so TailsCPU_Normal must still consume the +1 FollowRight nudge");
 
         tails.setDirection(Direction.LEFT);
-        assertFalse(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
-                "Obj78 CPU-only grace models child-slot side-push visibility; it must not apply when "
-                        + "Tails is centered on a stair piece with no adjacent side overlap");
-        assertTrue(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
-                "Obj78 child SolidObject slots can keep the delayed Sonic_Stat_Record_Buf push visible "
-                        + "while CPU Tails rides the folded staircase (docs/s2disasm/s2.asm:55967-56021)");
 
         tails.setDirection(Direction.RIGHT);
         tails.setCentreX((short) (staircase.getPieceX(3) - staircase.getPieceParams(3).halfWidth()));
@@ -829,8 +720,6 @@ class TestSonic2ObjectBugFixes {
 
         TestablePlayableSprite sonic = new TestablePlayableSprite(
                 "sonic", (short) staircase.getPieceX(2), (short) staircase.getPieceY(2));
-        assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(sonic),
-                "The delayed leader push bridge is only for CPU sidekick follow control");
     }
 
     @Test
@@ -854,7 +743,7 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void cpzStaircaseKeepsCpuTailsCurrentPushWhenFacingHigherAdjacentStep() {
+    void cpzStaircaseKeepsCurrentPushWhenFacingHigherAdjacentStep() {
         CPZStaircaseObjectInstance staircase = new CPZStaircaseObjectInstance(
                 new ObjectSpawn(0x1510, 0x0702, Sonic2ObjectIds.CPZ_STAIRCASE, 0x01, 1, false, 0),
                 "CPZStaircase");
@@ -871,15 +760,6 @@ class TestSonic2ObjectBugFixes {
                 "CPZ2 f5285 has Tails on the lower Obj78 child facing the higher child slot; "
                         + "the ROM child SolidObject pass leaves Tails' current Status_Push visible "
                         + "for TailsCPU_Normal's push bypass");
-        assertFalse(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
-                "When Obj78 already preserves Tails' current Status_Push, the delayed leader sample "
-                        + "must not also be forced to pushing or TailsCPU_Normal misses the auto-jump path");
-        assertTrue(staircase.preservesSidekickCpuPushGraceWhileRiding(tails),
-                "The same child-slot side contact supplies the ROM-visible current push grace when "
-                        + "the folded engine status was already cleared before TailsCPU_Normal");
-        assertTrue(staircase.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
-                "TailsCPU_Normal must compare that current push against Obj78's object-order leader "
-                        + "status sample, not the final-frame status column");
 
         TestablePlayableSprite sonic = new TestablePlayableSprite(
                 "sonic", (short) (staircase.getPieceX(1) - 5), (short) staircase.getPieceY(1));
@@ -889,12 +769,6 @@ class TestSonic2ObjectBugFixes {
                         + "also pressed into the higher Obj78 child slot, as at CPZ2 f5221");
 
         tails.setCentreX((short) (staircase.getPieceX(3) - 5));
-        assertTrue(staircase.preservesSidekickDelayedLeaderPushWhileRiding(tails),
-                "Later Obj78 child-slot contact still preserves the delayed leader push window that "
-                        + "keeps CPZ2 f5221 on the normal follow-steering path");
-        assertFalse(staircase.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
-                "The f5221 later-child window must keep the final delayed leader push sample; only "
-                        + "the first-child f5285 handoff uses the object-order status byte");
     }
 
     @Test
@@ -999,24 +873,6 @@ class TestSonic2ObjectBugFixes {
 
         assertTrue(spikes.airborneStaleStandingBitReturnsNoContact(null),
                 "Obj36 calls the shared SolidObject path; an airborne stale standing bit returns before new contact");
-    }
-
-    @Test
-    void s2SpikesDoNotClaimPushGraceFromUnrelatedSolid() {
-        SpikeObjectInstance spikes = new SpikeObjectInstance(
-                new ObjectSpawn(0x0CF0, 0x0594, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
-                "Spikes");
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0CE3, (short) 0x0574);
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0CE3, (short) 0x0574);
-        tails.setCpuControlled(true);
-
-        assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(sonic));
-        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(sonic));
-        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(sonic));
-        assertFalse(spikes.preservesSidekickCpuPushGraceWhileRiding(tails),
-                "Obj36 must not reinterpret push grace produced by a distinct solid as its own riding state");
-        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMinimumFramesWhileRiding(tails));
-        assertEquals(Integer.MAX_VALUE, spikes.sidekickCpuPushGraceMaximumFramesWhileRiding(tails));
     }
 
     @Test

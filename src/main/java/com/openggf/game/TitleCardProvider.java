@@ -108,11 +108,6 @@ public interface TitleCardProvider {
         return false;
     }
 
-    /** Whether retained fixed-object cadence follows the playable history ring. */
-    default boolean projectsRetainedResultsSpriteCadence() {
-        return false;
-    }
-
     /**
      * Hands the title card off to its gameplay-phase object lifetime when the
      * locked presentation itself was omitted.

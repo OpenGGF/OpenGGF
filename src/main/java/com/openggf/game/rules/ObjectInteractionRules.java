@@ -7,7 +7,6 @@ public record ObjectInteractionRules(
         boolean bossHitNegatesGroundSpeed,
         boolean bossHitHalvesBounceVelocity,
         boolean sidekickDespawnUsesObjectIdMismatch,
-        boolean sidekickNormalDespawnDelaysFreshRenderEntry,
         boolean sidekickDespawnUsesRidingInstanceLoss,
         boolean sidekickDespawnUsesInteractCodeWordChange,
         boolean sidekickNormalCpuSkipsHurtRoutine,

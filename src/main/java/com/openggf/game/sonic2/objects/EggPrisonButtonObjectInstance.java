@@ -158,33 +158,6 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         return true;
     }
 
-    @Override
-    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
-        // The button is Obj3E's routine-4 child and owns a normal SolidObject
-        // status byte when TailsCPU_Normal samples interact(a0).
-        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
-    }
-
-    @Override
-    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
-        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
-    }
-
-    @Override
-    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
-        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MIN_VALUE;
-    }
-
     private boolean isGroundedCpuSidekickAtCapsuleBodyEdge(PlayableEntity player) {
         if (player == null || !player.isCpuControlled() || player.getAir()) {
             return false;

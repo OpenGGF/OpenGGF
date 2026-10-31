@@ -68,7 +68,6 @@ public final class Kis2Rules {
                 interaction.bossHitNegatesGroundSpeed(),
                 interaction.bossHitHalvesBounceVelocity(),
                 interaction.sidekickDespawnUsesObjectIdMismatch(),
-                interaction.sidekickNormalDespawnDelaysFreshRenderEntry(),
                 interaction.sidekickDespawnUsesRidingInstanceLoss(),
                 interaction.sidekickDespawnUsesInteractCodeWordChange(),
                 interaction.sidekickNormalCpuSkipsHurtRoutine(),
@@ -90,8 +89,7 @@ public final class Kis2Rules {
                 new AirCollisionRules(true, true, c.air().rightWallHitContinuesIntoCeilingSeparation(),
                         c.air().leftWallHitContinuesIntoCeilingSeparation(), c.air().probesResetStaleGroundMode()),
                 c.fullSolidBottomOverlapUsesCurrentYRadiusOnly(), c.solidObjectOffscreenGate(),
-                c.solidObjectRequiresSidekickOnScreen(), c.sidekickPushBypassUsesGraceStatus(),
-                c.sidekickSuppressesFastLeaderTinyFollowNudge(), c.sidekickClearsStalePushVelocityBeforeGroundMove(),
+                c.solidObjectRequiresSidekickOnScreen(),
                 c.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(), c.rightWallDeepProbePreservesPenetration(),
                 false, c.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
                 c.advanceWaterLevelBeforePlayerPhysics(), c.defaultCollisionLayoutYMask(), c.layoutYMaskAppliesToAllLookups());

@@ -91,11 +91,6 @@ class TestKis2PhysicsProvider {
         assertEquals(stockCollision.solidObjectOffscreenGate(), collision.solidObjectOffscreenGate());
         assertEquals(stockCollision.solidObjectRequiresSidekickOnScreen(),
                 collision.solidObjectRequiresSidekickOnScreen());
-        assertEquals(stockCollision.sidekickPushBypassUsesGraceStatus(), collision.sidekickPushBypassUsesGraceStatus());
-        assertEquals(stockCollision.sidekickSuppressesFastLeaderTinyFollowNudge(),
-                collision.sidekickSuppressesFastLeaderTinyFollowNudge());
-        assertEquals(stockCollision.sidekickClearsStalePushVelocityBeforeGroundMove(),
-                collision.sidekickClearsStalePushVelocityBeforeGroundMove());
         assertEquals(stockCollision.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
                 collision.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity());
         assertEquals(stockCollision.rightWallDeepProbePreservesPenetration(),

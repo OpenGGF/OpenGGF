@@ -82,6 +82,15 @@ Unreleased. The earlier development themes remain in
 - **Sonic 2 sidekick visibility:** Tails resets his off-screen respawn counter
   directly from the native on-screen flag, removing an extra entry delay.
 
+- **Sidekick CPU follow routine:** The CPU sidekick's ground-follow routine is
+  now a direct translation of S2 `TailsCPU_Normal` and S3K Tails CPU routine 6.
+  Push-grace windows, object-order and interact-slot push bridges, fast-leader,
+  sliding-leader and underwater push heuristics, deferred follow nudges,
+  frame-counter projections and trace-bootstrap entry branches that had been
+  tuned to individual trace fixtures are removed, with the object, level-event,
+  title-card and rule hooks that fed them. Affected trace frontiers are recorded
+  in the [audit](docs/architecture/audits/2026-10-31-sidekick-cpu-fitted-logic-removal.md).
+
 - **Sonic 2 object-slot timing:** Defeated objects with folded children release
   those children as the object walk reaches their slots. This preserves native
   allocation and lost-ring bounce timing in Chemical Plant.

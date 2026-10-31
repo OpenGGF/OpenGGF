@@ -728,12 +728,6 @@ public class Sonic3kTitleCardManager
     }
 
     @Override
-    public boolean projectsRetainedResultsSpriteCadence() {
-        return inLevelMode
-                && retainedResultsHeldLevelCounterOwned;
-    }
-
-    @Override
     public boolean ownsInLevelPlayerControlLock() {
         return inLevelPlayerControlLockOwned;
     }

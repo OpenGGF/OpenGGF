@@ -1638,7 +1638,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
         if (zoneFeatureProvider != null && level != null && playable != null) {
-            playable.capturePreZoneFeatureSnapshot();
             zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
         }
     }
