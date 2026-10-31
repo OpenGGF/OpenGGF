@@ -18,6 +18,7 @@ public final class ModApiVersion {
      * plus native MHZ wind, LRZ echo-jet, FBZ extra-beat and SOZ light/ghost recipes.
      * Native HPZ feints, an SSZ Metropolis extra pair, DEZ alert guards and a
      * Doomsday delayed tail missile are finite unactivated campaign ingredients.
+     * The opt-in DISPLAY_INTERPOLATION preference extends this unpublished candidate.
      * The 0.7 candidate also includes
      * live window mode and display scaling preferences, configurable widescreen HUD anchoring,
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,

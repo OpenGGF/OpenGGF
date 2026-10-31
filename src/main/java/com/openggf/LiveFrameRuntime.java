@@ -29,12 +29,15 @@ final class LiveFrameRuntime {
     /** One host observation; sampled before the batch and again after every tick and swap. */
     record HostState(int regionHz, int pictureCap, boolean focused, boolean hostPaused,
                      Object boundary, boolean captureActive, boolean forcedPicture,
-                     DisplayPacing pacing, DisplayOutput output, boolean speakerRegulated) { }
+                     DisplayPacing pacing, DisplayOutput output, boolean speakerRegulated,
+                     boolean interpolation, boolean screenshotPending) { }
 
     interface Owner {
         HostState hostState();
-        boolean tick();
-        boolean draw(boolean capture);
+        /** Called once per admitted service. The iteration's decision tells the owner whether
+         * to retain interpolation history after advancing; false drops old history. */
+        boolean tick(boolean interpolationActive);
+        boolean draw(LivePictureRequest picture);
         void swap();
         /** Sole live writer of the window swap interval. */
         void swapInterval(int interval);
@@ -55,6 +58,7 @@ final class LiveFrameRuntime {
     private Object boundary;
     private boolean suspended;
     private boolean unpresented;
+    private boolean latestBarrier;
     private int regionHz, pictureCap, swapInterval;
     private long anchor;
     private long services, pictures, swaps, discardedWallNanos;
@@ -97,6 +101,9 @@ final class LiveFrameRuntime {
             pendingTicks = 0;
             return new Step(0, false, now + UNFOCUSED_WAIT_NANOS, NO_REANCHOR);
         }
+        boolean usable = usable(host);
+        if (usable && (cadence instanceof Locked locked && locked.interval() != 1
+                || cadence instanceof Probing probing && probing.interval() != 1)) toExact();
         var request = new DisplayCadencePolicy.Request(host.pacing(), host.speakerRegulated(),
                 host.pictureCap(), host.regionHz(), host.output());
         switch (cadence) {
@@ -106,7 +113,7 @@ final class LiveFrameRuntime {
         }
         if (cadence instanceof Exact) {
             int interval = policy.nominate(request);
-            if (interval > 0) {
+            if (interval > 0 && (!usable || interval == 1)) {
                 policy.probe(request, interval);
                 applySwapInterval(interval);
                 cadence = new Probing(interval, request);
@@ -132,22 +139,25 @@ final class LiveFrameRuntime {
             discardedWallNanos = saturatedAdd(discardedWallNanos,
                     (batch.ticks() - allowances + batch.pendingTicks()) * SECOND / regionHz);
         }
+        boolean active = usable(host) && !changed && cadence instanceof Exact;
         int completed = 0;
         boolean drawn = false;
         boolean forcedPicture = false;
         long reanchorDelay = NO_REANCHOR;
         for (int i = 0; i < allowances; i++) {
-            if (!owner.tick()) return aborted(completed);
+            if (!owner.tick(active)) return aborted(completed);
             services++;
             completed++;
             unpresented = true;
+            latestBarrier = false;
             drawn = false;
             host = owner.hostState();
             // Capture records each admitted output-time interval. It requires a current
             // post-FINAL picture even when no window swap is due, never another tick.
             forcedPicture |= host.forcedPicture();
             if (host.captureActive() || host.forcedPicture()) {
-                if (!owner.draw(host.captureActive())) return aborted(completed);
+                latestBarrier = true;
+                if (!owner.draw(exactPicture(host.captureActive()))) return aborted(completed);
                 pictures++;
                 drawn = true;
             }
@@ -161,13 +171,25 @@ final class LiveFrameRuntime {
         }
         if (changed) policy.boundaryChanged();
         boolean probing = cadence instanceof Probing;
-        // The cap is a thinning gate over completed services, never a reason to redraw.
+        // Exact pictures thin services; interpolation also uses render-only deadlines.
         // A probe measures every swap, so it presents on each paced return.
-        boolean present = probing || changed || forcedPicture || batch.render() && unpresented;
+        boolean present = probing || changed || forcedPicture || host.screenshotPending()
+                || batch.render() && (unpresented || active);
         pendingTicks = changed || paused ? 0 : batch.pendingTicks();
         long wake = anchor + (changed ? ceilingPeriod(regionHz) : batch.nanosUntilTick());
+        if (active) wake = Math.min(wake, anchor + batch.nanosUntilRender());
         if (!present) return new Step(completed, false, wake, reanchorDelay);
-        if (!drawn && !owner.draw(false)) return aborted(completed);
+        LivePictureRequest picture = exactPicture(false);
+        if (host.screenshotPending() || forcedPicture || changed) latestBarrier = true;
+        if (!drawn && active && usable(host) && !latestBarrier) {
+            var phase = scheduler.observePhase(clock.getAsLong() - anchor);
+            if (phase instanceof FixedSimulationScheduler.Available available) {
+                picture = new LivePictureRequest.Window(LivePictureRequest.Selection.between(available.alpha()));
+            } else {
+                wake = clock.getAsLong();
+            }
+        }
+        if (!drawn && !owner.draw(picture)) return aborted(completed);
         if (!drawn) pictures++;
         long returned = swap();
         // The picture consumed any forced request; compare later samples with this state.
@@ -196,17 +218,27 @@ final class LiveFrameRuntime {
         if (suspended || boundary != null && !boundary.equals(host.boundary())) policy.boundaryChanged();
         suspended = false;
         boundary = host.boundary();
-        if (!owner.tick()) return aborted(0);
+        if (!owner.tick(false)) return aborted(0);
         services++;
         host = owner.hostState();
         if (host.forcedPicture() || !boundary.equals(host.boundary())) policy.boundaryChanged();
-        if (!owner.draw(host.captureActive())) return aborted(1);
+        if (!owner.draw(exactPicture(host.captureActive()))) return aborted(1);
         pictures++;
         long returned = swap();
         boundary = owner.hostState().boundary();
         pendingTicks = 0;
         if (policy.observeSwap(returned) == DisplayCadencePolicy.Verdict.EXACT) return rebaseExact(1, returned);
         return new Step(1, true, returned, NO_REANCHOR);
+    }
+
+    private static boolean usable(HostState host) {
+        return host.interpolation() && host.pictureCap() > host.regionHz()
+                && !host.hostPaused() && !host.captureActive() && !host.forcedPicture();
+    }
+
+    private static LivePictureRequest exactPicture(boolean capture) {
+        return capture ? new LivePictureRequest.CaptureLatest()
+                : new LivePictureRequest.Window(LivePictureRequest.Selection.LATEST);
     }
 
     private long swap() {
@@ -253,6 +285,8 @@ final class LiveFrameRuntime {
     private Step aborted(int completed) {
         toExact();
         scheduler.reset();
+        scheduler.invalidatePhase();
+        latestBarrier = true;
         boundary = null;
         suspended = true;
         pendingTicks = 0;

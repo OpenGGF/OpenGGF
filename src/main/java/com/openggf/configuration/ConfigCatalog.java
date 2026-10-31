@@ -100,6 +100,10 @@ public final class ConfigCatalog {
                 "Live cadence: AUTO locks to a display refresh near the region rate, EXACT keeps nominal speed",
                 Set.of("AUTO", "EXACT")));
 
+        put(DISPLAY_INTERPOLATION, of("display", "interpolation", BOOL,
+                "Render-only motion interpolation; needs an FPS limit at or above the panel rate; "
+                + "adds up to one tick of visual latency; recordings and screenshots stay exact"));
+
         // ui: presentation language never changes persisted keys or game text.
         put(UI_LANGUAGE, of("ui", "language", STRING,
                 "Host interface language: auto follows the system, or use a BCP 47 language tag"));
