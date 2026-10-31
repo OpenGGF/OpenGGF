@@ -102,6 +102,11 @@ bounced off. A strike now counts as that push, with the roll-animation and speed
 unchanged. `aStrikeBreaksAnAizRockAsIfSpindashedIntoIt` covers this and fails when the
 change is removed.
 
+Promo staging in the EHZ2 boss arena showed homing locking onto the boss body while it was
+still beyond the arena's left boundary. The leader pinned against the boundary until the
+40-tick timeout, so the strike never landed. Targets must now have their aim point at least
+8 px inside the visible screen.
+
 ## Boss audit (hidden priorities and exclusions)
 
 An Explore pass checked every engine boss against the disassemblies. Using the

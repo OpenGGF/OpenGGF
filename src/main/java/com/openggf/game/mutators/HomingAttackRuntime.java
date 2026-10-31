@@ -51,6 +51,8 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
     static final int ARRIVAL_RADIUS = 32;
     static final int ATTACH_RELEASE_RADIUS = 8;
     static final int LOS_STEP = 8;
+    /** A target's aim point must sit this far inside the visible screen. */
+    static final int ON_SCREEN_MARGIN = 8;
     static final int LOS_TARGET_CLEARANCE = 20;
     static final int BADNIK_CHAIN_POP = -0x500;
     static final int BOSS_REBOUND_SPEED = 0x400;
@@ -408,12 +410,13 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
         if (level == null || level.getObjectManager() == null) return null;
         int px = sprite.getCentreX(), py = sprite.getCentreY();
         boolean right = sprite.getDirection() == Direction.RIGHT;
+        var camera = sprite.currentCamera();
         HomingTarget best = null;
         boolean bestForward = false;
         int bestDistance = 0;
         for (ObjectInstance object : level.getObjectManager().getActiveObjects()) {
             var target = HomingTargets.classify(object, sprite);
-            if (target == null) continue;
+            if (target == null || !onScreen(camera, target)) continue;
             int dx = target.x() - px, dy = target.y() - py;
             boolean forward = right ? dx >= 0 : dx <= 0;
             int distance = distance(px, py, target.x(), target.y());
@@ -425,6 +428,17 @@ public final class HomingAttackRuntime implements RewindSnapshottable<HomingAtta
             bestDistance = distance;
         }
         return best;
+    }
+
+    /**
+     * Only visible targets: an object still past the arena boundary (a boss driving in) cannot be
+     * reached, and the strike would pin the player against that boundary.
+     */
+    private static boolean onScreen(com.openggf.camera.Camera camera, HomingTarget target) {
+        if (camera == null) return true;
+        int x = target.x() - camera.getX(), y = target.y() - camera.getY();
+        return x >= ON_SCREEN_MARGIN && x < camera.getWidth() - ON_SCREEN_MARGIN
+                && y >= ON_SCREEN_MARGIN && y < camera.getHeight() - ON_SCREEN_MARGIN;
     }
 
     /** Hidden priority, then facing, then target kind, then distance. */

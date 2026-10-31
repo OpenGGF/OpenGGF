@@ -103,7 +103,7 @@ modify bosses or apply the rebound twice.
 Homing Attack turns the leader's jump re-press into a strike at the best target in
 range, if there is one, and the native double-jump move otherwise: Sonic's
 insta-shield or shield moves in Sonic 3 & Knuckles, Tails' flight or Knuckles' glide.
-Without a target or a native move, Sonic dashes forward instead. Targets rank by a
+Without a target or a native move, Sonic dashes forward instead. Targets must be on screen. They rank by a
 hidden progress priority, then whether they are ahead of the player, then kind (boss,
 badnik, breakable wall, grab point, breakable) and then distance; the line to them must
 clear solid terrain. The player stays in the native roll, so native touch, solid and
