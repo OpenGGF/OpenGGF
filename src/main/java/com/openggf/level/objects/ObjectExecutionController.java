@@ -115,7 +115,7 @@ final class ObjectExecutionController {
             if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE
                     && !objects.callObjectCallback(instance, instance::isDestroyed)) {
                 var checkpoint = objects.processCompatibilitySolidCheckpoint(
-                        instance, player, sidekicks, solidPostMovement, entryRegisters);
+                        instance, player, sidekicks, solidPostMovement, entryRegisters.forTailCall());
                 InitialObjectDispatchController.requireCurrent(original);
                 registry.publishCheckpoint(checkpoint);
             }

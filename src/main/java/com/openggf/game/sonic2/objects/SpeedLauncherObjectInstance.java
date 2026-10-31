@@ -391,11 +391,11 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        // ObjC0_Main passes d4 = x_pos(a0) after the routine moved the launcher
+    public int tailCallD4(int routineEntryX) {
+        // ObjC0_Main loads d4 = x_pos(a0) after the routine moved the launcher
         // (s2.asm:80889-80896), so PlatformObject never carries the rider; the
         // routine's loc_3BFB4 writes the rider's x_pos itself.
-        return false;
+        return currentX;
     }
 
     @Override

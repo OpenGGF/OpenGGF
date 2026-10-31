@@ -14,6 +14,25 @@ public interface SolidObjectProvider {
         return SolidExecutionMode.AUTO_AFTER_UPDATE;
     }
 
+    /**
+     * {@code d4} of this routine's tail solid call under
+     * {@link SolidExecutionMode#AUTO_AFTER_UPDATE}: the x the standing branch
+     * carries the rider from ({@code x_pos(a1) -= d4 - x_pos(a0)}, see
+     * {@link com.openggf.game.solid.SolidCall}).
+     *
+     * <p>The default is the routine's entry x, the {@code move.w x_pos(a0),-(sp)}
+     * / {@code move.w (sp)+,d4} pair a routine uses around its own move. A
+     * routine that loads d4 another way returns that value: its post-move
+     * {@code x_pos} ({@code move.w x_pos(a0),d4}, no carry), or an x it saved
+     * itself, for example when an engine parent runs this routine before the
+     * object's own slot.
+     *
+     * @param routineEntryX the object's x when its slot's routine was entered
+     */
+    default int tailCallD4(int routineEntryX) {
+        return routineEntryX;
+    }
+
     default boolean isSolidFor(PlayableEntity player) {
         return true;
     }

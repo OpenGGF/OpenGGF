@@ -1300,12 +1300,17 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         private int xFixed;
         private int yFixed;
         private int baseY; // ROM: objoff_34 - Y reference for spring oscillation
+        // ObjC5_PlatformMakeSolid's stacked d4: x_pos before this routine's
+        // ObjectMove (move.w x_pos(a0),-(sp)). The boss parent runs this routine
+        // before the platform's own slot resolves its PlatformObject call.
+        private int routineEntryX;
         private WFZPlatformHurt hurtChild;
 
         WFZFloatingPlatform(Sonic2WFZBossInstance parent, int startX, int startY) {
             super(parent, "Floating Platform", 4, Sonic2ObjectIds.WFZ_BOSS);
             this.currentX = startX;
             this.currentY = startY;
+            this.routineEntryX = startX;
             this.xFixed = startX << 16;
             this.yFixed = startY << 16;
             this.phase = 0;
@@ -1361,6 +1366,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
                 setDestroyed(true);
                 return;
             }
+            routineEntryX = currentX;
 
             switch (phase) {
                 case 0 -> {
@@ -1442,9 +1448,15 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         // ROM: ObjC5_PlatformMakeSolid - PlatformObject with d1=$10, d2=8, d3=8
+        // and d4 = the x it pushed before moving: ObjC5_PlatformMakeSolid (s2.asm:81870-81877).
         // PlatformObject = top-solid only platform
         private static final SolidObjectParams PLATFORM_SOLID_PARAMS =
                 SolidObjectParams.of(0x10, 8, 8);
+
+        @Override
+        public int tailCallD4(int routineEntryX) {
+            return this.routineEntryX;
+        }
 
         @Override
         public SolidObjectParams getSolidParams() {

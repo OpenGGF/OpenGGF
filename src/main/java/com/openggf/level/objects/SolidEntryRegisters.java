@@ -55,6 +55,15 @@ record SolidEntryRegisters(
         return new SolidCall(params.halfWidth(), params.airHalfHeight(), params.groundHalfHeight(), entryX);
     }
 
+    /** The AUTO tail call's registers: the provider's declared tail d4 ({@link SolidObjectProvider#tailCallD4}). */
+    SolidEntryRegisters forTailCall() {
+        if (provider == null) {
+            return this;
+        }
+        int d4 = objects.callObjectCallback(instance, () -> provider.tailCallD4(entryX));
+        return d4 == entryX ? this : new SolidEntryRegisters(objects, instance, provider, d4, pieceEntryX, explicitCall);
+    }
+
     SolidEntryRegisters withCall(SolidCall call) {
         return call == null || call == explicitCall
                 ? this
