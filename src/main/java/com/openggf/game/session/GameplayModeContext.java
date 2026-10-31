@@ -260,7 +260,7 @@ public final class GameplayModeContext implements ModeContext {
             acquiredHandoffs = seamlessTransitionResourceHandoffs;
             this.dynamicArtLifecycle = new DynamicArtLifecycleService(
                     worldSession.getGameModule().getGameService(
-                            com.openggf.game.resources.PlayerArtSourceAddressProfile.class));
+                            com.openggf.game.resources.PlayerArtTransferPlan.class));
             acquiredDynamicArt = dynamicArtLifecycle;
             var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
             if (worldPlc != null) {

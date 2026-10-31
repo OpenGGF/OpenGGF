@@ -5,7 +5,6 @@ import com.openggf.data.RomByteReader;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.PlaybackSessionScope;
-import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
@@ -85,8 +84,8 @@ class TestSonic1LevelLoadPlayerArtReadiness {
         long nextEdge = service.capture().nextEdgeOrdinal();
         stageOldGeneration(service);
         var old = service.capture();
-        assertEquals(0x32, old.s1Preparation().mappingFrame());
-        assertEquals(0x31, old.s1PreparationAfterPreMainLoopTail().mappingFrame());
+        assertEquals(0x32, old.stagedPreparation().mappingFrame());
+        assertEquals(0x31, old.stagedPreparationAfterPreMainLoopTail().mappingFrame());
         assertEquals(0x30, old.initialLoadPreparation().mappingFrame());
 
         level.requestZoneAndAct(0, 1, true);
@@ -125,8 +124,8 @@ class TestSonic1LevelLoadPlayerArtReadiness {
                     assertEquals(1, fixture.sprite().getMappingFrame(), "actual native Wait release mapping");
                     assertEquals(0, level.getFrameCounter(), "release precedes ordinary level execution");
                     assertEquals(1, level.getObjectManager().getFrameCounter(), "real release object pass");
-                    assertNotNull(service.capture().s1Preparation());
-                    assertEquals(1, service.capture().s1Preparation().mappingFrame());
+                    assertNotNull(service.capture().stagedPreparation());
+                    assertEquals(1, service.capture().stagedPreparation().mappingFrame());
                     break;
                 }
             }
@@ -174,7 +173,7 @@ class TestSonic1LevelLoadPlayerArtReadiness {
         claim(coordinator, PlcLifecyclePhase.LEVEL_TITLE_CARD);
         assertEquals(history, service.gapEdges(), "a clear cannot leave a later upload armed");
 
-        service.observePlayerDplc(GameId.S1, "sonic", 0x35, art.get(0x35));
+        service.observePlayerDplc("sonic", 0x35, art.get(0x35));
         claim(coordinator, PlcLifecyclePhase.ORDINARY_LEVEL);
         assertNotEquals(history, service.gapEdges(), "restaging destroys both pending and journal state");
         registry.restore(rewind); // the actual session's already registered production adapter
@@ -195,10 +194,11 @@ class TestSonic1LevelLoadPlayerArtReadiness {
 
     @Test
     void levelReadinessClearPreservesSubmittedSonic2WorkAndItsIdentity() {
-        var service = new DynamicArtLifecycleService();
+        var service = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic2.Sonic2GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         service.beginRun();
         var coordinator = coordinator(service, DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
-        var update = service.observePlayerDplc(GameId.S2, "sonic", 7,
+        var update = service.observePlayerDplc("sonic", 7,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(20, 2))));
         assertTrue(update.submitted());
         var queued = service.capture();
@@ -208,7 +208,7 @@ class TestSonic1LevelLoadPlayerArtReadiness {
         service.clearPlayerDplcDedupRegistersForLevelLoad();
 
         assertEquals(queued.ledger(), service.capture().ledger());
-        assertEquals(queued.pendingS2TransferIds(), service.capture().pendingS2TransferIds());
+        assertEquals(queued.vblankQueuedTransferIds(), service.capture().vblankQueuedTransferIds());
         assertEquals(queued.nextTransferId(), service.capture().nextTransferId());
         assertEquals(submittedHistory, service.gapEdges());
         claim(coordinator, PlcLifecyclePhase.ORDINARY_LEVEL);
@@ -219,16 +219,16 @@ class TestSonic1LevelLoadPlayerArtReadiness {
     }
 
     private void stageOldGeneration(DynamicArtLifecycleService service) {
-        service.primePlayerDplc(GameId.S1, "sonic", 0x30, art.get(0x30));
-        service.observePlayerDplc(GameId.S1, "sonic", 0x32, art.get(0x32));
+        service.primePlayerDplc("sonic", 0x30, art.get(0x30));
+        service.observePlayerDplc("sonic", 0x32, art.get(0x32));
         service.holdPendingPlayerPreparationForPreMainLoopTail(26); // native Level_Delay4 + PalFadeIn22
-        service.observePlayerDplc(GameId.S1, "sonic", 0x31, art.get(0x31));
+        service.observePlayerDplc("sonic", 0x31, art.get(0x31));
     }
 
     private static void assertOldGenerationAbsentAfterLoad(DynamicArtLifecycleService service) {
         var loaded = service.capture();
-        for (var preparation : java.util.Arrays.asList(loaded.s1Preparation(),
-                loaded.s1PreparationAfterPreMainLoopTail(), loaded.initialLoadPreparation())) {
+        for (var preparation : java.util.Arrays.asList(loaded.stagedPreparation(),
+                loaded.stagedPreparationAfterPreMainLoopTail(), loaded.initialLoadPreparation())) {
             if (preparation != null) {
                 assertFalse(isOldMapping(preparation.mappingFrame()),
                         "fresh priming may exist, but old-generation staging must be gone");
@@ -247,8 +247,8 @@ class TestSonic1LevelLoadPlayerArtReadiness {
 
     private static void assertReadinessCleared(DynamicArtLifecycleService service) {
         var cleared = service.capture();
-        assertNull(cleared.s1Preparation());
-        assertNull(cleared.s1PreparationAfterPreMainLoopTail());
+        assertNull(cleared.stagedPreparation());
+        assertNull(cleared.stagedPreparationAfterPreMainLoopTail());
         assertNull(cleared.initialLoadPreparation());
         assertEquals(-1, cleared.preMainLoopTailRows());
         assertTrue(cleared.lastMappingFrames().isEmpty());
@@ -256,8 +256,8 @@ class TestSonic1LevelLoadPlayerArtReadiness {
 
     private static void assertReadinessEquals(DynamicArtLifecycleService.RewindState expected,
                                               DynamicArtLifecycleService.RewindState actual) {
-        assertEquals(expected.s1Preparation(), actual.s1Preparation());
-        assertEquals(expected.s1PreparationAfterPreMainLoopTail(), actual.s1PreparationAfterPreMainLoopTail());
+        assertEquals(expected.stagedPreparation(), actual.stagedPreparation());
+        assertEquals(expected.stagedPreparationAfterPreMainLoopTail(), actual.stagedPreparationAfterPreMainLoopTail());
         assertEquals(expected.initialLoadPreparation(), actual.initialLoadPreparation());
         assertEquals(expected.preMainLoopTailRows(), actual.preMainLoopTailRows());
         assertEquals(expected.lastMappingFrames(), actual.lastMappingFrames());

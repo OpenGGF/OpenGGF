@@ -891,17 +891,14 @@ final class LevelPlayableArtInitializer {
             return null;
         }
         String normalizedOwner = owner.toLowerCase(java.util.Locale.ROOT);
-        var convertedBank = module instanceof com.openggf.game.resources.PlayerArtTransferProfile profile
-                ? profile.convertedPlayerArtBank(normalizedOwner) : null;
-        boolean supportedOwner = convertedBank != null || "sonic".equals(normalizedOwner)
-                || "tails".equals(normalizedOwner)
-                || "tails-tails".equals(normalizedOwner);
+        var plan = module.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class);
+        boolean supportedOwner = plan != null && plan.bank(normalizedOwner) != null;
         if (!supportedOwner || !module.getRules().dynamicArtDmaService()
                 .supportsPlayerDynamicArtAudit()) {
             return null;
         }
         return new DynamicArtDecisionOwner(
-                lifecycle, module.getGameId(), normalizedOwner, renderer, convertedBank);
+                lifecycle, normalizedOwner, renderer);
     }
 
     private static int checkedBankEnd(int cursor, int bankSize) {

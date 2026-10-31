@@ -4,7 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
-import com.openggf.game.GameId;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelGamestate;
 import com.openggf.game.LevelLoadCause;
@@ -104,8 +103,8 @@ class TestNativeCompetitionTitlePlayablePass {
         assertSame(held, SpriteManagerInternalAccess.publishedInput(f.sprites));
         for (var actor : List.of(f.p1, f.p2)) {
             for (int frame : List.of(7, 8)) {
-                verify(art).observePlayerDplc(GameId.S2, actor.getCode(), frame, null,
-                        DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, null);
+                verify(art).observePlayerDplc(actor.getCode(), frame, null,
+                        DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT);
             }
         }
         verify(f.p1.getSpindashDustController(), never()).update();
@@ -209,7 +208,7 @@ class TestNativeCompetitionTitlePlayablePass {
 
     private static void installArtOwner(Actor actor, DynamicArtLifecycleService lifecycle) {
         actor.getAnimationManager().setDynamicArtDecisionOwner(new DynamicArtDecisionOwner(
-                lifecycle, GameId.S2, actor.getCode(), mock(PlayerSpriteRenderer.class)));
+                lifecycle, actor.getCode(), mock(PlayerSpriteRenderer.class)));
     }
 
     private static Fixture fixture() {
