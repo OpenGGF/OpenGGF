@@ -100,7 +100,7 @@ class TestSonic2PlcService {
         }
         assertTrue(service.isBusy());
 
-        assertThrows(IllegalStateException.class, () -> service.append(oneEntryPlcId),
+        assertThrows(Sonic2PlcService.QueueCapacityException.class, () -> service.append(oneEntryPlcId),
                 "Task 1 pins slot 16 as a retail-retained sentinel, not usable capacity");
     }
 
@@ -114,7 +114,7 @@ class TestSonic2PlcService {
         }
         var before = queue.capture();
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(Sonic2PlcService.QueueCapacityException.class,
                 () -> service.prepareAppendBatch(oneEntryPlcId, oneEntryPlcId));
 
         assertEquals(before, queue.capture(),

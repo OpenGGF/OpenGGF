@@ -1,5 +1,19 @@
 # Shared implementation pitfalls
 
+**Do not catch engine-service failures to continue with substitute gameplay.**
+Supply camera, level-clock and audio owners in isolated fixtures; headless boot
+installs its no-device audio backend even with synthesis disabled. V-int is not a
+fallback for `Level_frame_counter`. Retry only an explicit recoverable rejection
+(such as S2 PLC queue capacity), and let ROM reads, renderer failures and programming
+errors escape to their owner. `TestBroadCatchSwallowingGuard` scans all main Java
+sources with the JDK parser and pins non-propagating broad catches in
+[`broad-catch-legacy.tsv`](../../src/test/resources/architecture/broad-catch-legacy.tsv).
+It runs in `-Pguards` by the `Test*Guard*` naming convention. The conservative
+inventory includes reported recovery boundaries as well as unresolved fallback;
+review each owner rather than deleting catches indiscriminately. Remove retired
+rows; do not add new engine catch-and-fallback allowances.
+
+
 **A handler capture is not proof of a stored world checkpoint.** Cold headless
 loading can leave parallax's active selection uninitialized even when a zone
 handler is available directly. Initialize through the ordinary production entry

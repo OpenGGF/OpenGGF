@@ -26,7 +26,8 @@ with region-cadence viewport recording and row-owned trace-ghost animation whose
 seeks preserve observed historical context. The level editor menu now opens on a
 short front page with Exit to title. Creator tooling now includes task recipes,
 local build/test/run configuration for all seven starter purposes, read-only
-preflight and actionable SDK reports.
+preflight and actionable SDK reports. Object-service failures now remain visible,
+with a source guard preventing new broad catch-and-fallback handlers.
 
 ## Release files
 
