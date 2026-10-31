@@ -50,6 +50,7 @@ import java.util.logging.Logger;
  * loop with orbiting rockets, the suction phase, custom palette flashing, and
  * a signpost-style defeat handoff.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.CULL_ONLY)
 public class HczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // setFacingLeft writes this bit from storedHorizontalVelocity < 0; its polarity differs from the Eggman ship bosses.

@@ -16,7 +16,7 @@ public final class SpritePresentationRenderer {
     public static SpritePresentation.HeadSatReplay headSatReplay() { return HEAD_SAT_REPLAY; }
 
     public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer) {
-        return PlayerHeadPresentation.compose(SpritePresentation.prepare(graphics, cameraX, cameraY, producer, descriptor -> {
+        return PlayerHeadPresentation.compose(graphics, SpritePresentation.prepare(graphics, cameraX, cameraY, producer, descriptor -> {
             PatternDesc desc = (PatternDesc) descriptor;
             return new Attributes(desc.getPaletteIndex(), desc.getHFlip(), desc.getVFlip(), desc.getPriority());
         }), cameraX, cameraY);

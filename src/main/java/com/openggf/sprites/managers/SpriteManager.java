@@ -25,6 +25,9 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.MotionPacket;
+import com.openggf.graphics.SpriteMotionInternalAccess;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.SpritePriorityLayerHook;
 import com.openggf.level.LevelManager;
@@ -1890,7 +1893,17 @@ public class SpriteManager implements PlayableSstDispatcher {
 					gfx.setCurrentSpriteHighPriority(high);
 					gfx.beginPatternBatch();
 				}
-				sprite.draw();
+				if (SpriteMotionInternalAccess.collecting(gfx)
+                        && sprite.getClass().getClassLoader() == SpriteManager.class.getClassLoader()) {
+                    int sidekickIndex = sidekicks.indexOf(sprite);
+                    var id = sidekickIndex < 0 ? PlayerRefId.mainPlayer()
+                            : PlayerRefId.sidekick(sidekickIndex);
+                    SpriteMotionInternalAccess.withOwner(gfx,
+                            new MotionPacket.Owner(
+                                    new MotionPacket.PlayerKey(id, sprite),
+                                    sprite.getCentreX(), sprite.getCentreY(),
+                                    MotionPacket.Anchoring.FOLLOW), sprite::draw);
+                } else sprite.draw();
 				// SAT order is front to back (earlier entries win), so the same layering puts the
 				// hook's entries straight after that layer's last player sprite.
 				if (collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)

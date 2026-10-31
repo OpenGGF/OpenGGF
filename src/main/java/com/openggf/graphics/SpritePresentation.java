@@ -204,6 +204,7 @@ public final class SpritePresentation {
                     graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), 0, 8,
                     graphics.spritePresentationSubject, graphics.isGhostRenderColourPreserved(),
                     graphics.currentSpritePixelOperation));
+            SpriteMotionInternalAccess.emitted(graphics, tiles.getLast());
             if (graphics.currentSpritePixelOperation == SpriteSatEntry.PixelOperation.SHADOW_15)
                 bindPatternVersion(graphics, id, graphics.scenePatternSample(id));
         }
@@ -216,6 +217,7 @@ public final class SpritePresentation {
                     graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), rowStart, rowEnd,
                     graphics.spritePresentationSubject, graphics.isGhostRenderColourPreserved(),
                     graphics.currentSpritePixelOperation));
+            SpriteMotionInternalAccess.emitted(graphics, tiles.getLast());
             if (graphics.currentSpritePixelOperation == SpriteSatEntry.PixelOperation.SHADOW_15)
                 bindPatternVersion(graphics, id, graphics.scenePatternSample(id));
         }

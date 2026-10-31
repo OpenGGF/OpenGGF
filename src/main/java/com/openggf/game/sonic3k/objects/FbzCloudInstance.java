@@ -13,6 +13,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /** Screen-space {@code Obj_FBZCloud}; its position is authored by CloudDeform. */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class FbzCloudInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private final int selector;
     private final int addressSlot;

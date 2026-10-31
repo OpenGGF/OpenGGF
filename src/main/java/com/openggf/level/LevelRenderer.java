@@ -921,6 +921,7 @@ public final class LevelRenderer {
     }
 
     final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
+    final LevelMotionPackets motionPackets = new LevelMotionPackets();
     final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private SpritePresentation.Frame liveSpriteFrame;
@@ -1192,10 +1193,21 @@ public final class LevelRenderer {
             resolveAdvancedRenderFrameState(lm.frameCounter);
             var scroll = lm.parallaxManager == null ? null
                     : LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
-            spriteTables.prepare(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
-                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
-                        renderSpriteObjectPass(sprites, false);
-                    }), scroll);
+            SpritePresentation.Frame frame;
+            if (motionPackets.active) {
+                var capture = com.openggf.graphics.SpriteMotionInternalAccess.collect(lm.graphicsManager,
+                        lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                        () -> com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
+                                lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                                () -> renderSpriteObjectPass(sprites, false)));
+                motionPackets.prepared(capture, spriteTables.published());
+                frame = capture.frame();
+            } else {
+                frame = com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
+                        lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                        () -> renderSpriteObjectPass(sprites, false));
+            }
+            spriteTables.prepare(frame, scroll);
         } finally {
             preparingSpritePresentation = false;
         }

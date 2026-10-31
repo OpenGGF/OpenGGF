@@ -23,6 +23,7 @@ import java.util.List;
  * dynamic SST, but {@code AirCountdown_MakeItem} allocates these children via
  * the normal dynamic {@code AllocateObject} scan (sonic3k.asm:33631-33650).
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
         implements NullableSpawnCoordinateZeroScalarArgsRewindRecreatable {
     // AirCountdown_Index (sonic3k.asm:33346-33355).

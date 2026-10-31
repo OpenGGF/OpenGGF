@@ -11,6 +11,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import java.util.List;
 
 /** loc_591D6/59208: eight opaque child squares, not an X=0 hardware sprite mask. */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class SszEndingIslandMask extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private int screenY = 0xF0;
     private int backgroundFraction;

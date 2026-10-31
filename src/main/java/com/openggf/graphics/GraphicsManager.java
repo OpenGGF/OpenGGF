@@ -177,6 +177,8 @@ public class GraphicsManager {
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
 	SpritePresentation.Subject spritePresentationSubject = SpritePresentation.Subject.WORLD;
+    SpriteMotionInternalAccess.Collection spriteMotionCollection;
+    MotionPacket.Owner spriteMotionOwner;
 
 	/**
 	 * When true, the batch renderer will use the underwater palette texture
@@ -2000,6 +2002,7 @@ public class GraphicsManager {
 		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
 			entry = entry.withPresentationSubject(spritePresentationSubject);
 		}
+		if (spriteMotionOwner != null) entry = entry.withMotionOwner(spriteMotionOwner);
 		if (ghostRenderEffectActive) {
 			// The SAT replay runs after the ghost renderer has ended its effect; carry it.
 			entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
@@ -2228,8 +2231,14 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
-        withSpritePixelOperation(entry.pixelOperation(),
-                () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+        if (spriteMotionCollection == null) {
+            withSpritePixelOperation(entry.pixelOperation(),
+                    () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+        } else {
+            withSpritePixelOperation(entry.pixelOperation(),
+                    () -> withSatEntryGhost(entry, () -> SpriteMotionInternalAccess.withOwner(this, entry.motionOwner(),
+                            () -> appendBatchedReplayTiles(entry, paletteTextureId))));
+        }
 	}
 
 	/**
