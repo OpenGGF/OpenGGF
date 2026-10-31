@@ -52,9 +52,11 @@ an unpublished `0.7.0` candidate with no published baseline; see the
 
 ## Tools and artifacts
 
-Install a Java **25 JDK** and Maven **3.8 or newer**. Check `java -version`,
-`javac -version` and `mvn -v`; Maven must run on Java 25. The starters pin their
-compiler plugin instead of depending on a Maven installation's default.
+Install a Java **25 JDK** and Python 3 for the portable launcher below. Maven
+**3.8 or newer** is needed for the advanced Maven workflow and for resolving
+JUnit when testing with an uncached console jar. Maven must run on Java 25.
+In an engine checkout, use `python3 tools/testing/maven_queue.py -v` for a
+leased version probe. The starters pin their compiler plugin.
 Music/reskin projects need no Java authoring. Tiled is optional for map editing;
 Python 3 is used by the checkout's example launcher and creator-kit builder.
 
@@ -108,8 +110,73 @@ Without `--kind`, the backwards-compatible starter contains an object and Sonic 
 zone. The object/zone starter also includes an inactive character source stub;
 finish its art and sensors before registering it for gameplay.
 
-The generated README states the chosen scope and build output. For any starter,
-build with the two matching absolute artifact paths:
+Use the existing portable launcher for the shortest build/test/run loop. It works
+for generated starters and exported projects; replace the absolute paths below.
+From any directory:
+
+```sh
+python3 /absolute/path/creator-kit/tools/build_project.py /absolute/path/my-mod --doctor
+python3 /absolute/path/creator-kit/tools/build_project.py /absolute/path/my-mod
+python3 /absolute/path/creator-kit/tools/build_project.py /absolute/path/my-mod --run --s2 /absolute/path/own-sonic2.gen
+```
+
+The scene starter uses Sonic 2. For another game/donor supply `--s1`, `--s2`
+or `--s3k` as needed. A standalone starter needs no ROM. The output is
+`/absolute/path/my-mod/target/my-mod-mod.jar` (the project directory names the
+portable output). The launcher copies main resources, runs an optional trusted
+`generate_resources.py`, and converts the SDK starter's `src/main/mod/sample.png`
+with `sample-sheet.yaml` and `level-source/` when present. Custom Maven plugin
+workflows still use Maven. Test/run are opt-in; build needs neither ROMs nor testkit.
+
+### Optional local paths
+
+To avoid repeating artifact and ROM flags, create `ggfmod.local.json` at the
+project root yourself. The launcher never creates or overwrites it. This strict
+schema accepts only `schemaVersion`, `engine`, `sdk`, `testkit`, `s1`, `s2`, `s3k`;
+path fields are optional nonempty strings, and duplicate/unknown keys fail:
+
+```json
+{
+  "schemaVersion": 1,
+  "engine": "../creator-kit/engine.jar",
+  "sdk": "../creator-kit/sdk.jar",
+  "testkit": "../creator-kit/mod-testkit.jar",
+  "s2": "/absolute/path/own-sonic2.gen"
+}
+```
+
+Every relative path in this file resolves against the **config file's directory**.
+Explicit CLI paths override config and resolve against the current working
+directory. Without either, engine/SDK default to the launcher's kit directory;
+testkit and ROMs have no default. Missing default config is fine; an explicit
+`--config /path/to/local.json` must exist and satisfy the schema. Even an overridden
+config field must be valid. No environment expansion or secret copying occurs.
+Keep personal paths out of version control and shared source archives. The
+portable resource copier and creator-kit exporter exclude `ggfmod.local.json`;
+store it at project root so Maven also keeps it outside resources. If choosing a
+custom config filename, keep that file outside all source/resource/export trees.
+
+Check before building or testing:
+
+```sh
+python3 /absolute/path/creator-kit/tools/build_project.py /absolute/path/my-mod --doctor --test --format json
+python3 /absolute/path/creator-kit/tools/build_project.py /absolute/path/my-mod --test
+```
+
+Doctor exits nonzero for missing JDK 25 tools, artifact mismatch, missing/empty
+manifest, invalid local config, unavailable supplied ROMs or requested test
+prerequisites. It never compiles, launches, installs, downloads or writes files;
+its only subprocesses are bounded JDK version probes. It does not require optional
+ROMs/testkit for ordinary builds. JSON reports have `formatVersion: 1`,
+`command: "doctor"`, `result: "pass"|"fail"`, `findings` and `limitations`.
+Each finding has stable `code`, `severity`, `message`, `path` (possibly null) and
+`guidance` fields. Passing checks availability and candidate identity, not full
+manifest semantics, ROM identity, dependency downloads or gameplay correctness.
+Run `ggfmod validate` and exercise the mod too.
+
+### Advanced Maven workflow
+
+The generated README and POM retain Maven builds with matching absolute artifacts:
 
 ```sh
 mvn -f /absolute/path/my-mod/pom.xml package -Dopenggf.engine.jar=/absolute/path/creator-kit/engine.jar -Dopenggf.sdk.jar=/absolute/path/creator-kit/sdk.jar
@@ -132,34 +199,13 @@ portable README and the [two-act campaign guide](guides/two-act-campaign.md).
 Compile/package without a ROM; playing requires your own Sonic 2 World REV01 ROM.
 This maintained example complements the seven starter purposes.
 
-Launch the project's exploded `target/classes` with `ggfmod run`. Use a separate
-working directory for this project's runtime configuration and saves:
-
-```sh
-mkdir -p /absolute/path/my-mod/target/play
-cd /absolute/path/my-mod/target/play
-```
-
-The scene starter targets Sonic 2. Save the following as `config.yaml` in that
-working directory, replacing the path with your own ROM:
-
-```yaml
-configFormat: 2
-roms:
-  sonic2: "/absolute/path/own-sonic2.gen"
-```
-
-Then launch from that directory with the unpacked kit:
-
-```sh
-sh /absolute/path/creator-kit/ggfmod run /absolute/path/my-mod/target/classes
-```
-
-This snapshots and trusts only that development mod for that launch;
-edit/build/restart to iterate. It does not overwrite installed-mod settings.
-See [ROM file configuration](../../CONFIGURATION.md#rom-files) for other games
-and image identity. The portable example launcher accepts explicit `--s1`, `--s2`
-and `--s3k` paths. A standalone starter needs no ROM.
+The portable `--run` command uses only this project's exploded `target/classes`
+and generated `target/play/config.yaml`; saves remain under `target/play` too.
+It snapshots and trusts only that development mod for that launch. Edit, rebuild
+and restart to iterate without changing installed-mod settings. For manual
+launches, `ggfmod run /absolute/path/my-mod/target/classes` uses the current working
+directory's configuration; choose a dedicated directory and configure your ROMs
+there. See [ROM file configuration](../../CONFIGURATION.md#rom-files).
 
 ## Verify and share
 
