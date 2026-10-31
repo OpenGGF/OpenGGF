@@ -260,20 +260,24 @@ class TestOOZPlacedObjectGaps {
                 PreContactState.ZERO,
                 PostContactState.ZERO,
                 1);
+        ScriptedSolidRegistry registry = new ScriptedSolidRegistry(
+                spring,
+                Map.of(sonic, sonicPush),
+                Map.of(tails, new PlayerStandingState(ContactKind.TOP, true, false)));
         ((AbstractObjectInstance) spring).setServices(new TestObjectServices()
                 .withSidekicks(List.of(tails))
-                .withSolidExecutionRegistry(new ScriptedSolidRegistry(
-                        spring,
-                        Map.of(sonic, sonicPush),
-                        Map.of(tails, new PlayerStandingState(ContactKind.TOP, true, false))))
+                .withSolidExecutionRegistry(registry)
                 .withIsolatedObjectManager());
 
         spring.update(0, sonic);
 
         assertEquals(0x04B5, spring.getX(), "Obj45 flipped horizontal spring compresses one pixel right");
-        assertEquals(0x04A1, tails.getCentreX() & 0xFFFF,
-                "ROM Obj45_Horizontal restores routine-entry d4 before the Sidekick SolidObject call, "
-                        + "so an existing sidekick rider is carried by Sonic's compression delta");
+        assertEquals(0x04B4, registry.callsByPlayer.get(tails).d4CarryX(),
+                "ROM Obj45_Horizontal restores routine-entry d4 before the Sidekick SolidObject call "
+                        + "(s2.asm:50399-50430), so the helper carries an existing sidekick rider "
+                        + "by Sonic's compression delta");
+        assertEquals(registry.callsByPlayer.get(sonic), registry.callsByPlayer.get(tails),
+                "both characters receive the same saved registers");
     }
 
     @Test
@@ -610,16 +614,33 @@ class TestOOZPlacedObjectGaps {
     private static final class ScriptedSolidRegistry implements SolidExecutionRegistry {
         private final ObjectSolidExecutionContext context;
         private final Map<PlayableEntity, PlayerStandingState> previousStanding;
+        private final Map<PlayableEntity, com.openggf.game.solid.SolidCall> callsByPlayer = new java.util.IdentityHashMap<>();
 
         private ScriptedSolidRegistry(
                 ObjectInstance object,
                 Map<PlayableEntity, PlayerSolidContactResult> checkpoint,
                 Map<PlayableEntity, PlayerStandingState> previousStanding) {
             this.previousStanding = previousStanding;
-            this.context = new ObjectSolidExecutionContext(
-                    this,
-                    object,
-                    call -> new SolidCheckpointBatch(object, checkpoint));
+            // The routine's entry x: the d4 its solid calls receive by default.
+            int entryX = object.getX();
+            this.context = new ObjectSolidExecutionContext(this, object, new ObjectSolidExecutionContext.Resolver() {
+                @Override
+                public SolidCheckpointBatch resolve(com.openggf.game.solid.SolidCall call) {
+                    return new SolidCheckpointBatch(object, checkpoint);
+                }
+
+                @Override
+                public SolidCheckpointBatch resolvePlayer(PlayableEntity player, com.openggf.game.solid.SolidCall call) {
+                    callsByPlayer.put(player, call);
+                    PlayerSolidContactResult result = checkpoint.get(player);
+                    return new SolidCheckpointBatch(object, result == null ? Map.of() : Map.of(player, result));
+                }
+
+                @Override
+                public com.openggf.game.solid.SolidCall entryCall() {
+                    return new com.openggf.game.solid.SolidCall(31, 12, 13, entryX);
+                }
+            });
         }
 
         @Override public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {}
