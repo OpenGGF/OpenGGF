@@ -49,6 +49,7 @@ import com.openggf.debug.DebugRenderer;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.DebugState;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelMotionAccess;
 import com.openggf.level.Level;
 import com.openggf.level.MutableLevel;
 import com.openggf.game.session.EditorCursorState;
@@ -2915,6 +2916,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						pendingRegionWorkNanos += System.nanoTime() - started;
 					}
 					graphicsManager.runPendingRenderThreadTasks();
+					observeLiveMotion(interpolationActive);
 				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
 			}
 			public boolean draw(LivePictureRequest picture) {
@@ -3029,6 +3031,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		renderScheduledFrame(new LivePictureRequest.CaptureLatest());
 	}
 
+	/** The live window's only interpolation-history writer; offline drivers never retain history. */
+	private void observeLiveMotion(boolean interpolationActive) {
+		LevelMotionAccess.observeService(levelManager, spriteManager, interpolationActive);
+	}
+
 	private boolean beginPictureProfiling() {
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
@@ -3043,7 +3050,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		return performanceOverlayEnabled;
 	}
 
-	/** Window selections draw Latest here until the level lane wires Between. */
 	private void renderScheduledFrame(LivePictureRequest picture) {
 		boolean performanceOverlayEnabled = beginPictureProfiling();
 
@@ -3071,7 +3077,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		FrameAdvance frame = liveFrame != null ? liveFrame
 				: new FrameAdvance(graphicsManager.getUiRenderPipeline(), false, false);
-		renderAdvancedFrame(frame, performanceOverlayEnabled, picture.capture());
+		LevelMotionAccess.present(levelManager, picture.selection(), () -> renderAdvancedFrame(frame, performanceOverlayEnabled, picture.capture()));
 
 		profiler.endFrame();
 		overlayStateReady = false;

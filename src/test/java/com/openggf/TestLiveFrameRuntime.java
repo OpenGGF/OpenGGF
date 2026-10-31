@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.level.PictureSelection;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.NullAudioBackend;
@@ -641,9 +642,9 @@ class TestLiveFrameRuntime {
         assertTrue(host.requests.size() > hz, "render deadlines redraw between services");
         assertEquals("EXACT", runtime.statistics().cadence());
         assertTrue(host.retained.stream().allMatch(Boolean::booleanValue));
-        assertTrue(host.requests.stream().anyMatch(p -> p.selection() instanceof LivePictureRequest.Selection.Between));
+        assertTrue(host.requests.stream().anyMatch(p -> p.selection() instanceof PictureSelection.Between));
         host.requests.forEach(p -> {
-            if (p.selection() instanceof LivePictureRequest.Selection.Between between) {
+            if (p.selection() instanceof PictureSelection.Between between) {
                 assertTrue(between.alpha() >= 0 && between.alpha() < 1);
             }
         });
@@ -654,7 +655,7 @@ class TestLiveFrameRuntime {
         runtime = new LiveFrameRuntime(host, () -> now);
         runUntil(runtime, runtime.iterate(), SECOND);
         assertEquals(hz, host.ticks);
-        assertTrue(host.requests.stream().allMatch(p -> p.selection() instanceof LivePictureRequest.Selection.Latest));
+        assertTrue(host.requests.stream().allMatch(p -> p.selection() instanceof PictureSelection.Latest));
     }
 
     @Test void screenshotBarrierNeverMovesBackwardWithinAServiceInterval() {
@@ -664,15 +665,15 @@ class TestLiveFrameRuntime {
         iterate(runtime, 16_666_667);
         host.requests.clear();
         iterate(runtime, 2_000_000);
-        var first = (LivePictureRequest.Selection.Between) host.requests.getLast().selection();
+        var first = (PictureSelection.Between) host.requests.getLast().selection();
         iterate(runtime, 6_000_000);
-        var second = (LivePictureRequest.Selection.Between) host.requests.getLast().selection();
+        var second = (PictureSelection.Between) host.requests.getLast().selection();
         assertTrue(second.alpha() > first.alpha());
         host.screenshot = true;
         runtime.iterate();
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, host.requests.getLast().selection());
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
         iterate(runtime, 6_000_000);
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, host.requests.getLast().selection());
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
     }
 
     @Test void exactBarriersAndOverdueWorkNeverBlend() {
@@ -685,18 +686,18 @@ class TestLiveFrameRuntime {
         host.capture = false;
         host.forced = true;
         iterate(runtime, 16_666_667);
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, host.requests.getLast().selection());
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
         host.forced = false;
         host.paused = true;
         iterate(runtime, 16_666_667);
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, host.requests.getLast().selection());
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
         host.paused = false;
         host.boundary = "new";
         iterate(runtime, 16_666_667);
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, host.requests.getLast().selection());
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
         host.work = 20_000_000;
         var result = iterate(runtime, 16_666_667);
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, host.requests.getLast().selection());
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
         assertTrue(result.wakeAtNanos() <= now, "overdue service work wakes immediately");
     }
 
@@ -708,19 +709,19 @@ class TestLiveFrameRuntime {
         runUntil(runtime, runtime.iterate(), 3 * SECOND);
         assertEquals("EXACT", runtime.statistics().cadence());
         assertEquals(List.of(1), intervals);
-        assertTrue(requests.stream().anyMatch(p -> p.selection() instanceof LivePictureRequest.Selection.Between));
+        assertTrue(requests.stream().anyMatch(p -> p.selection() instanceof PictureSelection.Between));
         requests.clear();
         runtime = paced(new FakeVsync(60), requests::add);
         runUntilLocked(runtime, runtime.iterate());
-        assertTrue(requests.stream().allMatch(p -> p.selection() instanceof LivePictureRequest.Selection.Latest));
+        assertTrue(requests.stream().allMatch(p -> p.selection() instanceof PictureSelection.Latest));
         assertEquals(1, runtime.statistics().swapInterval());
     }
 
     @Test void pictureSelectionRejectsInvalidFractions() {
-        assertInstanceOf(LivePictureRequest.Selection.Latest.class, LivePictureRequest.Selection.between(1));
-        assertThrows(IllegalArgumentException.class, () -> LivePictureRequest.Selection.between(-0.1));
-        assertThrows(IllegalArgumentException.class, () -> LivePictureRequest.Selection.between(Double.NaN));
-        assertThrows(IllegalArgumentException.class, () -> new LivePictureRequest.Selection.Between(1));
+        assertInstanceOf(PictureSelection.Latest.class, PictureSelection.between(1));
+        assertThrows(IllegalArgumentException.class, () -> PictureSelection.between(-0.1));
+        assertThrows(IllegalArgumentException.class, () -> PictureSelection.between(Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> new PictureSelection.Between(1));
         assertTrue(new LivePictureRequest.CaptureLatest().capture());
     }
 

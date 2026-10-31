@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.configuration.DisplayPacing;
+import com.openggf.level.PictureSelection;
 
 import java.util.Objects;
 import java.util.function.LongSupplier;
@@ -184,7 +185,7 @@ final class LiveFrameRuntime {
         if (!drawn && active && usable(host) && !latestBarrier) {
             var phase = scheduler.observePhase(clock.getAsLong() - anchor);
             if (phase instanceof FixedSimulationScheduler.Available available) {
-                picture = new LivePictureRequest.Window(LivePictureRequest.Selection.between(available.alpha()));
+                picture = new LivePictureRequest.Window(PictureSelection.between(available.alpha()));
             } else {
                 wake = clock.getAsLong();
             }
@@ -238,7 +239,7 @@ final class LiveFrameRuntime {
 
     private static LivePictureRequest exactPicture(boolean capture) {
         return capture ? new LivePictureRequest.CaptureLatest()
-                : new LivePictureRequest.Window(LivePictureRequest.Selection.LATEST);
+                : new LivePictureRequest.Window(PictureSelection.LATEST);
     }
 
     private long swap() {

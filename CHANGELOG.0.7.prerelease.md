@@ -73,7 +73,17 @@ Unreleased. The earlier development themes remain in
   Speaker playback gently trims its output rate to hold a bounded source backlog,
   absorbing host/device clock drift without changing producer, history or recording
   PCM. Pause, reverse and output replacement reset the trim.
-  Optional interpolation and VRR qualification remain future work.
+  Opt-in `display.interpolation` (default off) blends camera and scroll, players and
+  ordinary objects between the two latest displayed level pictures at every refresh
+  above the region rate, so 75/144/165 Hz panels and 120/240 Hz panels move once per
+  refresh. Blending is render-only and whole-pixel: art, animation, palette,
+  visibility and priority come from the newest picture, S3K's native one-tick display
+  lag and lag frames are kept, and the view trails the newest tick by up to one tick.
+  Recordings, screenshots, traces and offline tools stay exact. Rewind, loads, act
+  reloads, Tails respawns, the CNZ teleporter and camera jumps beyond the native scroll
+  cap snap;
+  special stages, competition, bonus stages, Stageplay and the editor stay exact. It
+  needs an FPS limit at or above the panel rate. VRR qualification remains future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM
   across producer packets and video drains, preserving sample order and unused
