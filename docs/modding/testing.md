@@ -171,3 +171,21 @@ successful level load alone does not certify a gameplay route.
 Keep domain rules in ordinary small Jupiter tests. Use production-backed tests
 for registration, assets, dependencies, services, callbacks, save/load and rewind
 boundaries, and use route/capture tests for complete playable behavior.
+
+## Maintaining SDK starters
+
+When changing `ggfmod init`, its templates or starter inputs, include the checked
+sample's integration consumers alongside the scaffolder unit tests:
+
+```sh
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dtest=TestPhase2SampleModIntegration,TestSampleModsPackage,TestProjectScaffolder,TestPurposeStarters test
+```
+
+`TestPhase2SampleModIntegration` compares the complete generated starter inventory
+and file bytes against `src/test/resources/mods/sample-mod-src/project` before
+building it. Keep that reference synchronized, including dotfiles and README
+changes; retain the strict comparison. `TestSampleModsPackage` checks the maintained
+gallery's actual packaging. Add an absolute `-Dsonic2.rom.path=...` to execute the
+integration class's ROM-backed load/rewind/save check, and inspect skips when the
+ROM is unavailable. Passing scaffolder tests or newly generated starters alone
+does not establish that the checked reference still matches.
