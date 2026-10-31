@@ -3,7 +3,7 @@ package com.openggf.game.session;
 import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.internal.PatternModuleQueueOwner;
 import com.openggf.game.patch.DelegatingGameModule;
-import com.openggf.game.resources.PlayerArtSourceAddressProfile;
+import com.openggf.game.resources.PlayerArtTransferPlan;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
@@ -33,7 +33,7 @@ class TestGameplayModeContextConstructionCleanup {
 
     @ParameterizedTest
     @EnumSource(value = FailureStage.class,
-            names = {"QUEUE_BIND", "SOURCE_LOOKUP", "SOURCE_ADDRESS", "RULES"})
+            names = {"QUEUE_BIND", "PLAN_LOOKUP", "PLAN_RESOLUTION", "RULES"})
     void constructorFailureReleasesTheAcquiredArtOwnerExactlyOnce(FailureStage stage) {
         var primary = new IllegalStateException("gameplay construction failed");
         var module = new ConstructionModule(stage, primary, null);
@@ -44,9 +44,9 @@ class TestGameplayModeContextConstructionCleanup {
 
         assertEquals(1, module.acquisitions);
         assertEquals(1, module.art.queueBindings);
-        if (stage == FailureStage.SOURCE_ADDRESS || stage == FailureStage.RULES) {
-            assertTrue(module.sourceAddressReads > 0,
-                    "The supplied source-address profile must run during construction");
+        if (stage == FailureStage.PLAN_RESOLUTION || stage == FailureStage.RULES) {
+            assertTrue(module.planResolutions > 0,
+                    "The supplied transfer plan must resolve during construction");
         }
         assertEquals(1, module.art.resets,
                 "A constructor that did not return must release its acquired art owner");
@@ -55,15 +55,15 @@ class TestGameplayModeContextConstructionCleanup {
 
     @Test
     void cleanupFailureIsSuppressedOnTheOriginalConstructorError() {
-        var primary = new AssertionError("source-address resolution failed");
+        var primary = new AssertionError("transfer plan resolution failed");
         var cleanupFailure = new IllegalStateException("art cleanup failed");
-        var module = new ConstructionModule(FailureStage.SOURCE_ADDRESS, primary, cleanupFailure);
+        var module = new ConstructionModule(FailureStage.PLAN_RESOLUTION, primary, cleanupFailure);
         var world = new WorldSession(module);
 
         assertSame(primary, assertThrows(AssertionError.class,
                 () -> new GameplayModeContext(world, HardwareReadinessAdmissionPolicy.RECORDED)));
 
-        assertTrue(module.sourceAddressReads > 0);
+        assertTrue(module.planResolutions > 0);
         assertEquals(1, module.art.resets);
         assertArrayEquals(new Throwable[]{cleanupFailure}, primary.getSuppressed());
     }
@@ -77,7 +77,7 @@ class TestGameplayModeContextConstructionCleanup {
             assertSame(module.art, context.runtimeArtCoordinator());
             assertEquals(1, module.acquisitions);
             assertEquals(1, module.art.queueBindings);
-            assertTrue(module.sourceAddressReads > 0);
+            assertTrue(module.planResolutions > 0);
             assertEquals(0, module.art.resets);
         } finally {
             context.tearDownManagers();
@@ -87,8 +87,8 @@ class TestGameplayModeContextConstructionCleanup {
 
     private enum FailureStage {
         QUEUE_BIND,
-        SOURCE_LOOKUP,
-        SOURCE_ADDRESS,
+        PLAN_LOOKUP,
+        PLAN_RESOLUTION,
         RULES,
         NONE
     }
@@ -98,7 +98,7 @@ class TestGameplayModeContextConstructionCleanup {
         private final Throwable primaryFailure;
         private final ArtOwner art;
         private int acquisitions;
-        private int sourceAddressReads;
+        private int planResolutions;
 
         private ConstructionModule(FailureStage failureStage, Throwable primaryFailure,
                                    RuntimeException cleanupFailure) {
@@ -116,13 +116,11 @@ class TestGameplayModeContextConstructionCleanup {
 
         @Override
         public <T> T getGameService(Class<T> type) {
-            if (type == PlayerArtSourceAddressProfile.class && acquisitions != 0) {
-                failAt(FailureStage.SOURCE_LOOKUP);
-                return type.cast((PlayerArtSourceAddressProfile) (game, owner, canonicalAddress) -> {
-                    sourceAddressReads++;
-                    failAt(FailureStage.SOURCE_ADDRESS);
-                    return canonicalAddress;
-                });
+            if (type == PlayerArtTransferPlan.class && acquisitions != 0) {
+                failAt(FailureStage.PLAN_LOOKUP);
+                planResolutions++;
+                failAt(FailureStage.PLAN_RESOLUTION);
+                return super.getGameService(type);
             }
             return super.getGameService(type);
         }

@@ -2329,8 +2329,7 @@ public class Sonic2SpecialStageManager implements com.openggf.game.internal.Nati
             List<com.openggf.level.render.TileLoadRequest> requests,
             int vramDestination) {
         lifecycle.observeRamDplc(
-                com.openggf.game.GameId.S2,
-                owner, mappingFrame, requests, 0xFF0000, vramDestination);
+                        owner, mappingFrame, requests, 0xFF0000, vramDestination);
     }
 
     private void enterAlignmentTestMode() {

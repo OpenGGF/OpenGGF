@@ -411,10 +411,14 @@ public class Sonic1GameModule implements com.openggf.game.internal.RetailRomAwar
             return getClass() == Sonic1GameModule.class && retailRomRevision.belongsTo(com.openggf.data.RomIdentity.S1)
                     ? (T) com.openggf.game.internal.ScoreAdditionPolicy.RETAIL_CAPPED : null;
         }
-        if (type == com.openggf.game.resources.PlayerArtSourceAddressProfile.class) {
-            return (T) (com.openggf.game.resources.PlayerArtSourceAddressProfile) (gameId, owner, canonical) ->
-                    gameId == GameId.S1 && retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV00
-                            ? Sonic1RomProfile.revision00Address(canonical) : canonical;
+        if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
+            int artBase = retailRomRevision == com.openggf.data.RetailRomRevision.S1_REV00
+                    ? Sonic1RomProfile.revision00Address(Sonic1Constants.ART_UNC_SONIC_ADDR)
+                    : Sonic1Constants.ART_UNC_SONIC_ADDR;
+            return type.cast(new com.openggf.game.resources.PlayerArtTransferPlan(
+                    java.util.Map.of("sonic", new com.openggf.game.resources.PlayerArtBank(
+                            artBase, 0xF000, 0xC800, 0x2E0, -1)),
+                    com.openggf.game.resources.PlayerArtTransferPlan.TransferModel.STAGED_FOR_VINT));
         }
         if (type == com.openggf.game.internal.NativeFixedLevelObjectPass.class) {
             // ExecuteObjects walks reserved v_endcard (SST23) before the

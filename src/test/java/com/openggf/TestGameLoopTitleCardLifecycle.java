@@ -1,6 +1,5 @@
 package com.openggf;
 
-import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelInitProfile;
@@ -84,7 +83,8 @@ class TestGameLoopTitleCardLifecycle {
     }
 
     private static DynamicArtLifecycleService releasePrelude(int tailRows) {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic1.Sonic1GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         service.beginRun();
         service.setMovieLogicalFrame(900);
         GameModule module = mock(GameModule.class);
@@ -103,7 +103,7 @@ class TestGameLoopTitleCardLifecycle {
         when(title.shouldRunPlayerPreludeAtRelease()).thenReturn(true);
         LevelManager level = mock(LevelManager.class);
         SpriteManager sprites = mock(SpriteManager.class);
-        Runnable prelude = () -> service.observePlayerDplc(GameId.S1, "sonic", 1,
+        Runnable prelude = () -> service.observePlayerDplc("sonic", 1,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(0, 3))));
 
         var host = mock(GameLoopTitleCardLifecycle.Host.class);

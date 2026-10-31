@@ -2,7 +2,6 @@ package com.openggf;
 
 import com.openggf.control.InputHandler;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.SessionManager;
@@ -56,9 +55,9 @@ class TestSonic1SpecialStageEntryPlcBoundary {
         var art = new Sonic1PlayerArt(RomByteReader.fromRom(TestEnvironment.currentRom()))
                 .loadSonic().dplcFrames();
         var dynamicArt = mode.dynamicArtLifecycle();
-        dynamicArt.observePlayerDplc(GameId.S1, "sonic", 0x32, art.get(0x32));
+        dynamicArt.observePlayerDplc("sonic", 0x32, art.get(0x32));
         var prepared = dynamicArt.capture();
-        var pending = prepared.s1Preparation();
+        var pending = prepared.stagedPreparation();
         assertNotNull(pending);
         var journal = List.copyOf(dynamicArt.gapEdges());
         int sourceObjectPasses = level.getObjectManager().getFrameCounter();
@@ -72,7 +71,7 @@ class TestSonic1SpecialStageEntryPlcBoundary {
             loop.step();
             assertEquals(sourceObjectPasses, level.getObjectManager().getFrameCounter(),
                     "entry fades do not execute the parked level's objects");
-            if (!pending.equals(dynamicArt.capture().s1Preparation())) changedPreparations.add(vblank);
+            if (!pending.equals(dynamicArt.capture().stagedPreparation())) changedPreparations.add(vblank);
             if (vblank == 21) {
                 assertFalse(provider.isEntryFadeToWhiteActive());
                 assertTrue(provider.isEntryPresentationReady());
