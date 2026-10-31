@@ -306,5 +306,13 @@ tests proving services are identical with interpolation on or off.
    Tests: ROM-free math and propagation tests; ROM-backed EGL pixel tests in S1 GHZ1, S2 EHZ1, S3K
    AIZ1 (alpha-1 anchor, followed player fixed, repeated draws pure, restore/reload/load snap, lag
    hold, unsupported scenes exact).
+
+   #### Implementation notes (level)
+
+   `LevelScrollPresentation.forCinematicCamera` normally rebuilds arena-mask geometry from raw
+   bounds. Motion uses its mask-taking overload with the current tick's opacity sample, projected
+   with the camera, so interpolation cannot advance or discard the native mask fade. Zero motion
+   returns the current scroll presentation directly.
+
 3. **Integration** (lead): Engine wiring of `observeService` and `present`, exact-consumer guard,
    docs and changelog, cost measurement, change-based smoke.
