@@ -13,6 +13,12 @@ launch-only teams, deterministic input filters, and row-only HUD profiles; the
 defines their ordering, replay, persistence, width, stock-default, and owner-fault
 contracts.
 
+For a specific behavior change, use the [task decision guide](task-recipes.md):
+stock-act badniks, scoped movement, gameplay menus, persistent upgrades, native
+enemy recipes, and original campaigns. Agents can use the repository
+[mod-authoring skill](../../.agents/skills/mod-authoring/SKILL.md) to read only the
+relevant recipe and owning source.
+
 ## Native builds vs. the JVM jar
 
 Native packages and the JVM jar load code mods (objects, characters, zones,
