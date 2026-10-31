@@ -122582,3 +122582,49 @@ fixture-only normalized camera witness supplies no new engine parity rows.
 Physical-frame, whole-act, campaign, full-route rewind and parent broad-smoke
 qualification remain unclaimed. The branch is retained locally for the lead;
 only owned diagnostic logs/reports are removed after inspection.
+
+## 2026-10-31 — Sidekick CPU fitted-logic removal: trace impact
+
+Branch `bugfix/ai-sidekick-rom-cpu` (worktree `t3-c88d942e`), base
+`1f37638cc` (`feature/ai-weakness-pass`), measured commit `e97436afa`.
+`SidekickCpuController`'s follow routine is now a direct translation of S2
+`TailsCPU_Normal` / S3K CPU routine 6; every trace-fitted bridge, grace window
+and heuristic was deleted with no replacement. Inventory and provenance:
+[audit](../architecture/audits/2026-10-31-sidekick-cpu-fitted-logic-removal.md).
+
+Both sides ran in separate checkouts of their own commit (baseline in a
+copy-on-write worktree at `1f37638cc`) with this script, Java 25, surfaceless
+EGL, `DISPLAY`/`WAYLAND_DISPLAY`/`LD_LIBRARY_PATH` unset, and the three
+original ROMs:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off <S1/S2/S3K ROM paths> \
+  -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical -Dsurefire.failIfNoSpecifiedTests=false \
+  '-Dtest=TestS2*LevelSelectTraceReplay,TestS2*CompleteEmeraldsSegmentTraceReplay,TestS2Ehz1TraceReplay,TestS2Ehz1Seg2HalfpipeSegmentTraceReplay,TestS2Ehz1*Regression,TestS2HtzLiftPlatformSurfaceRegression,TestS2ReplayBootstrapTailsFrame0,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2EhzHalfpipeRoundTripChain,TestS3kAizTraceReplay,TestS3kCnzTraceReplay,TestS3kMgzTraceReplay,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSozCompleteRunTraceReplay,TestS3kFbzCompleteRunTraceReplay' test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off <ROM paths> \
+  -Ptrace-segments -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical test -B
+
+Execution: A 7m17s before / 7m45s after; B 4m37s / 4m38s; queue waits under
+90 s. A: 111 tests both sides (before 8 failures + 1 error, after 9 + 1); B: 70
+tests both sides (48 failures + 8 errors); no skips. Per-class result (111
+classes): 48 green→green, 1 green→red, 60 red→red with identical reports
+(full failure messages, worktree paths normalised), 2 red→red with the same
+first error and fewer total errors, 0 red→green.
+
+| Trace | Before | After |
+| --- | --- | --- |
+| `TestS2OozLevelSelectTraceReplay` (`s2_ooz1`) | green, 11,019 frames | **red**: 1 error, f447–f468 `tails_status_byte` expected `$02`, actual `$0A` |
+| `TestS3kSonicTailsCnzSegmentTraceReplay` | 9,069 errors, first f2695 `tails_y_speed` `-$530`/`$0000` | 9,002 errors, same first error |
+| `TestS3kSonicTailsLrzSegmentTraceReplay` | 8,897 errors, first f208 `tails_y_speed` `$07BD`/`$0000` | 8,870 errors, same first error |
+
+The OOZ frontier is the one `0e63bb546` recorded before it added the deleted
+dead-Tails screen-window `Status_OnObj` clear: Tails dies on Obj07 oil at f395
+and ROM clears `Status_OnObj` at f447 while he is still in routine 6. The writer
+is not Obj07's `PlatformObject_SingleCharacter` (s2.asm:35737-35762,35980-35981)
+or `Obj02_Dead` (s2.asm:41131-41137); next step is a native write-watch on
+`Sidekick+status` at f447. Unchanged reds keep their frontiers, e.g. S3K CNZ
+f17322 `camera_x`, MGZ f13939 `camera_x`, SOZ complete run f32951 `tails_y`,
+S2 complete-emerald chain segment 19 f5084 `sidekick_y`. `TestS3kAizTraceReplay`
+stays green. Full per-class table in the audit.
