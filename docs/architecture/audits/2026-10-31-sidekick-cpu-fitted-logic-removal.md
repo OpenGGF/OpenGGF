@@ -214,19 +214,21 @@ must come from that owner, not from a screen-window rule in the CPU controller.
 
 Tests that asserted only the removed behaviour:
 
-- `TestSidekickCpuFollowParity`: 68 tests and helpers (grace, bridge,
+- `TestSidekickCpuFollowParity`: 65 tests (109 → 44 annotated; grace, bridge,
   object-order, fast-leader, underwater pulse/pre-clear, sliding leader,
   level-event suppression, seed-entry, history-edge and Obj30/Egg Prison
-  interact tests), plus `withDelayedJumpPressHistoryEdge`. Two tests that test
+  interact tests) and the helpers `sonic3kWithSidekickContext`,
+  `setNormalPushingGraceFrames`, `setReleasedUnderwaterPushConsumed` and
+  `withDelayedJumpPressHistoryEdge`. Two tests that test
   ROM behaviour kept their assertions and lost only the grace setup:
   `s3kFollowSteeringReadsCurrentPushBit` (was `...RatherThanAgedLocalGrace`)
   and `s3kClearedPushFallsThroughToFollowLeftNudge` (was
   `s3kLateTerrainPushGraceFallsThroughToFollowLeft`).
-- `TestSidekickCpuControllerLevelStart`: nine S2 Obj36 "OOZ" riding-grace tests,
+- `TestSidekickCpuControllerLevelStart` (16 → 6): nine S2 Obj36 "OOZ" riding-grace tests,
   `deadSidekickClearsStaleOnObjectAfterLeavingVisibleWindowAgain` and the
   `DummyRidingObject` stub.
 - `TestSidekickCpuDespawnParity.s3kEstablishedFollowerHandoffPreservesDiagnosticInteractWord`.
-- `TestSonic3kSidekickFollowContext` (whole class).
+- `TestSonic3kSidekickFollowContext` (whole class, 2 tests).
 - `TestSonic2ObjectBugFixes`: `arzBossArrowReleasedRideKeepsTailsCpuAutoJumpGateVisible`,
   `htzRisingLavaSubtypeSixUsesCpuSidekickObjectOrderInputDelay`,
   `s2SpikesDoNotClaimPushGraceFromUnrelatedSolid`; CPU-grace assertions removed
@@ -398,3 +400,24 @@ without them.
 | B | `TestS3kSonicTailsZone0cSegmentTraceReplay` | 1/1 | 674 err; first f0 y 0x00C0/0x0080 | same | red→red |
 | A | `TestS3kSozCompleteRunTraceReplay` | 1/1 | 3155 err; first f32951 tails_y 0x06AF/0x06B1 | same | red→red |
 
+## Smoke and guards
+
+`run_categories.py --base 1f37638cc --workers 2 --headless-gl surfaceless-egl
+--rom-directory <ROM dir> --max-minutes 60 --run` on `822e79eb0` (code identical
+to `e97436afa`): 4,367 candidate classes in 89 batches. Ordinary lane 36,188
+tests, 8 failures, 48 skips, 26m31s execution; guards 820 tests, 1 failure,
+2m25s. The skips are opt-in diagnostics, captures and performance probes gated
+on system properties or explicit refresh flags.
+
+- Guard failure (caused here): `TestNoProvisionalModApiShims.collisionRulesRetainsOnlyCanonicalAndNestedAirConstructors`
+  pins the `CollisionRules` constructor list, which lost the three removed
+  components. Fixed in the follow-up commit; the class passes 4/4.
+- The 8 ordinary failures (`TestMasterTitleScreenLayout` ×2,
+  `TestSonic2InterlacePixels`, `TestNativeCompetitionViews`,
+  `TestNativeSpriteSatGameplay` ×3, `TestPrivateLobbyScreenRendering`) are not
+  caused by this change: the same five classes run on `1f37638cc` and on this
+  branch give the same 8 failures with byte-identical messages. They remain
+  unattributed pre-existing failures.
+
+The focused sidekick set (48 classes, 864 tests) and the S3K keep-green set
+passed with 0 failures and 0 skips before the smoke run.
