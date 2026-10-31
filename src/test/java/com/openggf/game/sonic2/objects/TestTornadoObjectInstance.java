@@ -468,7 +468,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> {
+        registry.beginObject(tornado, call -> {
             assertEquals(0x2EC4, tornado.getX(),
                     "ObjB2 Jump_to_plane should test the landing contact before advancing x_pos for the next frame");
             assertEquals(0x0600, tornado.getY(),
@@ -735,7 +735,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+        registry.beginObject(tornado, call -> new SolidCheckpointBatch(tornado, Map.of(
                 main, new PlayerSolidContactResult(
                         ContactKind.TOP,
                         true,
@@ -765,7 +765,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+        registry.beginObject(tornado, call -> new SolidCheckpointBatch(tornado, Map.of(
                 main, new PlayerSolidContactResult(
                         ContactKind.TOP,
                         true,
@@ -870,7 +870,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+        registry.beginObject(tornado, call -> new SolidCheckpointBatch(tornado, Map.of(
                 main, new PlayerSolidContactResult(
                         ContactKind.NONE,
                         false,
@@ -905,7 +905,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+        registry.beginObject(tornado, call -> new SolidCheckpointBatch(tornado, Map.of(
                 main, PlayerSolidContactResult.noContact(
                         PlayerStandingState.NONE,
                         PreContactState.ZERO,
@@ -941,7 +941,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+        registry.beginObject(tornado, call -> new SolidCheckpointBatch(tornado, Map.of(
                 main, PlayerSolidContactResult.noContact(
                         PlayerStandingState.NONE,
                         PreContactState.ZERO,
@@ -972,7 +972,7 @@ public class TestTornadoObjectInstance {
 
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         registry.beginFrame(1, List.of(main));
-        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+        registry.beginObject(tornado, call -> new SolidCheckpointBatch(tornado, Map.of(
                 main, PlayerSolidContactResult.noContact(
                         PlayerStandingState.NONE,
                         PreContactState.ZERO,

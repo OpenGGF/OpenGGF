@@ -73,10 +73,6 @@ public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProf
         return SolidRoutineProviderForwarding.getTopLandingHalfWidth(provider, player, collisionHalfWidth);
     }
 
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        return SolidRoutineProviderForwarding.seedsNewRideCarryFromPreUpdateX(provider);
-    }
-
     public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
         return SolidRoutineProviderForwarding.staleHorizontalLogicalInputFramesWhileRiding(provider, player, rideFrames);
     }

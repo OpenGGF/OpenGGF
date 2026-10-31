@@ -609,18 +609,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether a newly established ride should remember this frame's pre-update
-     * object X as the baseline for the next continued-riding carry.
-     * <p>
-     * S2 {@code PlatformObject} callers pass the object's saved pre-move
-     * {@code x_pos} in {@code d4} to the solid helper, so the first continued
-     * riding frame carries by {@code current_x - d4}.
-     */
-    default boolean seedsNewRideCarryFromPreUpdateX() {
-        return false;
-    }
-
-    /**
      * Whether new solid-contact geometry should use the object's pre-update
      * position instead of its current post-update position.
      * <p>
@@ -669,14 +657,6 @@ public interface SolidObjectProvider {
      * object's actual current position or side-contact cleanup.
      */
     default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether continued horizontal rider carry should use the object's
-     * pre-update X as this frame's platform position.
-     */
-    default boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
         return false;
     }
 

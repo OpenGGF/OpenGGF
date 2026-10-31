@@ -1399,7 +1399,7 @@ class TestSonic2TriggerParticipation {
 
         @Override
         public ObjectSolidExecutionContext currentObject() {
-            return new ObjectSolidExecutionContext(this, batch.object(), () -> batch);
+            return new ObjectSolidExecutionContext(this, batch.object(), call -> batch);
         }
 
         @Override

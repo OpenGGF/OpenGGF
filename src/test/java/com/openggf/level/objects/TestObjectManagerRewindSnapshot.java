@@ -765,8 +765,8 @@ class TestObjectManagerRewindSnapshot {
         var latches = List.of(new ObjectManagerSnapshot.SolidContactLatchEntry(p1, List.of(key)),
                 new ObjectManagerSnapshot.SolidContactLatchEntry(p2, List.of(key)));
         return new ObjectManagerSnapshot.SolidContactState(17,
-                List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(p1, spawn, slot, 100, 100, -1),
-                        new ObjectManagerSnapshot.SolidContactRidingEntry(p2, spawn, slot, 100, 100, -1)),
+                List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(p1, spawn, slot, -1),
+                        new ObjectManagerSnapshot.SolidContactRidingEntry(p2, spawn, slot, -1)),
                 List.of(p1, p2), List.of(p1, p2),
                 List.of(new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(p1, ContactKind.TOP, true, true),
                         new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(p2, ContactKind.TOP, true, true)),

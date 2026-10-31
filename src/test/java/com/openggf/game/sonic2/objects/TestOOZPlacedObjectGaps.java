@@ -619,7 +619,7 @@ class TestOOZPlacedObjectGaps {
             this.context = new ObjectSolidExecutionContext(
                     this,
                     object,
-                    () -> new SolidCheckpointBatch(object, checkpoint));
+                    call -> new SolidCheckpointBatch(object, checkpoint));
         }
 
         @Override public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {}

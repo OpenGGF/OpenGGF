@@ -992,18 +992,20 @@ public class ObjectManager {
             ObjectInstance instance,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
-            boolean solidPostMovement) {
+            boolean solidPostMovement,
+            SolidEntryRegisters registers) {
         return solidContacts.processManualCheckpoint(
-                instance, player, sidekicks, solidPostMovement);
+                instance, player, sidekicks, solidPostMovement, registers);
     }
 
     SolidCheckpointBatch processCompatibilitySolidCheckpoint(
             ObjectInstance instance,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
-            boolean solidPostMovement) {
+            boolean solidPostMovement,
+            SolidEntryRegisters registers) {
         return solidContacts.processCompatibilityCheckpoint(
-                instance, player, sidekicks, solidPostMovement);
+                instance, player, sidekicks, solidPostMovement, registers);
     }
 
     // Initial dispatch callers publish only after their native delete/range tail.
@@ -3208,15 +3210,14 @@ public class ObjectManager {
             return;
         }
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
-        solidContacts.processCompatibilityCheckpoint(object, player, activeSidekicks, true);
-    }
-
-    /**
-     * Refresh the ObjectSolidContactController riding tracking position for an object after it has moved itself.
-     * Prevents the delta from that movement being double-applied to riding players.
-     */
-    public void refreshRidingTrackingPosition(ObjectInstance object) {
-        solidContacts.refreshRidingTrackingPosition(object);
+        if (!(object instanceof SolidObjectProvider provider)) {
+            return;
+        }
+        // d4 is the object's current x: either it was allocated after the pass
+        // reached its slot, or it already carried its riders at its own call
+        // this frame and must not carry them again.
+        solidContacts.processCompatibilityCheckpoint(object, player, activeSidekicks, true,
+                SolidEntryRegisters.capture(this, object, provider));
     }
 
     /**

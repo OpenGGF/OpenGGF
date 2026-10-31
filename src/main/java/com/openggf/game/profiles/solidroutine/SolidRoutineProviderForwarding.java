@@ -26,7 +26,6 @@ public final class SolidRoutineProviderForwarding {
     public static int getContinuedRideSnapAdjustment(SolidObjectProvider provider, PlayableEntity player, int solidTopYRadius) { return provider.getContinuedRideSnapAdjustment(player, solidTopYRadius); }
     public static boolean skipsCpuSidekickWhenRenderFlagOffScreen(SolidObjectProvider provider) { return provider.skipsCpuSidekickWhenRenderFlagOffScreen(); }
     public static int getTopLandingHalfWidth(SolidObjectProvider provider, PlayableEntity player, int collisionHalfWidth) { return provider.getTopLandingHalfWidth(player, collisionHalfWidth); }
-    public static boolean seedsNewRideCarryFromPreUpdateX(SolidObjectProvider provider) { return provider.seedsNewRideCarryFromPreUpdateX(); }
     public static int staleHorizontalLogicalInputFramesWhileRiding(SolidObjectProvider provider, PlayableEntity player, int rideFrames) { return provider.staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames); }
     public static boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(SolidObjectProvider provider, PlayableEntity player) { return provider.fullSolidBottomOverlapUsesCurrentYRadiusOnly(player); }
     public static void setPlayerPushing(SolidObjectProvider provider, PlayableEntity player, boolean pushing) { provider.setPlayerPushing(player, pushing); }

@@ -147,7 +147,7 @@ class TestS3kIczTensionPlatformObject {
             this.batch = batch;
             this.objectManager = objectManager;
             this.context = new ObjectSolidExecutionContext(new NoopSolidExecutionRegistry(), instance,
-                    () -> this.batch != null ? this.batch : emptyBatch(instance));
+                    call -> this.batch != null ? this.batch : emptyBatch(instance));
         }
 
         @Override

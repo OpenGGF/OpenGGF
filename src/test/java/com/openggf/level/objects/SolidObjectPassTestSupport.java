@@ -19,6 +19,29 @@ public final class SolidObjectPassTestSupport {
     private SolidObjectPassTestSupport() {
     }
 
+    /**
+     * The tail checkpoint of an object routine a test drove itself with
+     * {@code snapshotPreUpdatePosition(); update(...)}: d4 is the snapshot x,
+     * as {@code ObjectExecutionController} captures it at routine entry.
+     */
+    public static com.openggf.game.solid.SolidCheckpointBatch routineCheckpoint(ObjectManager manager,
+            ObjectInstance object, PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
+        SolidObjectProvider provider = (SolidObjectProvider) object;
+        SolidEntryRegisters captured = SolidEntryRegisters.capture(manager, object, provider);
+        return manager.solidContacts().processCompatibilityCheckpoint(object, player, sidekicks, true,
+                new SolidEntryRegisters(manager, object, provider, object.getPreUpdateX(),
+                        captured.pieceEntryX(), null));
+    }
+
+    /** One participant's checkpoint for {@code object}, with its current x as d4. */
+    public static com.openggf.game.solid.SolidCheckpointBatch participantCheckpoint(ObjectManager manager,
+            ObjectInstance object, PlayableEntity player, boolean postMovement) {
+        SolidEntryRegisters registers = object instanceof SolidObjectProvider provider
+                ? SolidEntryRegisters.capture(manager, object, provider)
+                : new SolidEntryRegisters(manager, object, null, object.getX(), null, null);
+        return manager.solidContacts().processParticipantCheckpoint(object, player, postMovement, registers);
+    }
+
     public static void resolveSolidCheckpoints(ObjectManager manager, PlayableEntity player) {
         resolveSolidCheckpoints(manager, player, List.of(), false);
     }
@@ -34,10 +57,15 @@ public final class SolidObjectPassTestSupport {
         solid.beginInlineFrame(player, sidekicks, postMovement);
         try {
             for (ObjectInstance object : List.copyOf(manager.getSolidProviderObjects())) {
-                if (object.isDestroyed()) {
+                if (object.isDestroyed() || !(object instanceof SolidObjectProvider provider)) {
                     continue;
                 }
-                solid.processCompatibilityCheckpoint(object, player, sidekicks, postMovement);
+                // These tests move objects themselves between snapshotPreUpdatePosition()
+                // and the checkpoint, so the routine-entry d4 is the snapshot x.
+                SolidEntryRegisters captured = SolidEntryRegisters.capture(manager, object, provider);
+                SolidEntryRegisters registers = new SolidEntryRegisters(manager, object, provider,
+                        object.getPreUpdateX(), captured.pieceEntryX(), null);
+                solid.processCompatibilityCheckpoint(object, player, sidekicks, postMovement, registers);
             }
         } finally {
             solid.finishInlineFrame(player, sidekicks);

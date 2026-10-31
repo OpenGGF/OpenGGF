@@ -339,8 +339,6 @@ public record ObjectManagerSnapshot(
             PlayableEntity player,
             ObjectSpawn objectSpawn,
             int objectSlotIndex,
-            int x,
-            int y,
             int pieceIndex,
             PlayerRefId playerId
     ) {
@@ -349,8 +347,8 @@ public record ObjectManagerSnapshot(
         }
 
         public SolidContactRidingEntry(PlayableEntity player, ObjectSpawn objectSpawn,
-                int objectSlotIndex, int x, int y, int pieceIndex) {
-            this(player, objectSpawn, objectSlotIndex, x, y, pieceIndex, null);
+                int objectSlotIndex, int pieceIndex) {
+            this(player, objectSpawn, objectSlotIndex, pieceIndex, null);
         }
     }
 

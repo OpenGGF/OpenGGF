@@ -2749,7 +2749,7 @@ public class TestSolidObjectManager {
         org.mockito.Mockito.when(rom.read16BitAddr(0x104L)).thenReturn(0xFFFF);
         var context=org.mockito.Mockito.mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
         org.mockito.Mockito.when(context.resolveSolidNowAll()).thenAnswer(i -> {
-            manager.processImmediateInlineSolidCheckpoint(rock,rider,List.of(pusher));
+            SolidObjectPassTestSupport.routineCheckpoint(manager,rock,rider,List.of(pusher));
             return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
         });
         var level=org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
@@ -3286,7 +3286,7 @@ public class TestSolidObjectManager {
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            PlayerSolidContactResult result = services().solidExecution().resolveSolidNow(player);
+            PlayerSolidContactResult result = services().solidExecution().resolveSolidNowAll().perPlayer().get(player);
             standingSeenInsideUpdate = result.standingNow();
             manualCheckpointCount++;
         }
@@ -3358,7 +3358,7 @@ public class TestSolidObjectManager {
                 skipNextCheckpoint = false;
                 return;
             }
-            services().solidExecution().resolveSolidNow(player);
+            services().solidExecution().resolveSolidNowAll().perPlayer().get(player);
         }
 
         @Override

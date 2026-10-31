@@ -456,10 +456,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         // ROM: move.w x_pos(a0),x_pos(a1)
         player.setCentreXPreserveSubpixel((short) currentX);
         accelerationRiders.add(player);
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.refreshRidingTrackingPosition(this);
-        }
 
         // ROM: Set player facing direction
         // bclr #status.player.x_flip,status(a1) - clear flip

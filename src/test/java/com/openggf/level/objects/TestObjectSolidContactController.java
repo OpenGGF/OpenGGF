@@ -237,7 +237,7 @@ class TestObjectSolidContactController {
             List<ObjectManagerSnapshot.SolidContactLatchKey> cleared) {
         return new ObjectManagerSnapshot.SolidContactState(17,
                 List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(player, owner.getSpawn(),
-                        owner.getSlotIndex(), 100, 100, 0)),
+                        owner.getSlotIndex(), 0)),
                 List.of(), List.of(), List.of(), List.of(),
                 live.isEmpty() ? List.of() : List.of(new ObjectManagerSnapshot.SolidContactLatchEntry(player, live)),
                 List.of(),

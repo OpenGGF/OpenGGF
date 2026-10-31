@@ -318,14 +318,6 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // Obj9A passes pre-move x_pos in d4, but S2 PlatformObject consumes d4
-        // only for already-standing players. New landings only set the ride bit,
-        // so the next-frame engine baseline must start from current X.
-        return false;
-    }
-
-    @Override
     public int getPriorityBucket() {
         // ROM: priority = 5 (Obj9A_SubObjData)
         return RenderPriority.clamp(5);
