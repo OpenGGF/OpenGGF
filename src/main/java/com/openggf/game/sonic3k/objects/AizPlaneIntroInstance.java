@@ -48,6 +48,7 @@ import java.util.logging.Logger;
  *   0x18 - Monitor approach: wait until player.x>=0x1240, y_pos-=0x20
  *   0x1A - Explosion: wait until player.x>=0x13D0, release player, scatter emeralds, delete
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizPlaneIntroInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(AizPlaneIntroInstance.class.getName());

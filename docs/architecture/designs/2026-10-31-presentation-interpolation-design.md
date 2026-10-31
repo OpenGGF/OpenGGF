@@ -306,5 +306,21 @@ tests proving services are identical with interpolation on or off.
    Tests: ROM-free math and propagation tests; ROM-backed EGL pixel tests in S1 GHZ1, S2 EHZ1, S3K
    AIZ1 (alpha-1 anchor, followed player fixed, repeated draws pure, restore/reload/load snap, lag
    hold, unsupported scenes exact).
+
+   #### Implementation notes (level)
+
+   `LevelScrollPresentation.forCinematicCamera` normally rebuilds arena-mask geometry from raw
+   bounds. Motion uses its mask-taking overload with the current tick's opacity sample, projected
+   with the camera, so interpolation cannot advance or discard the native mask fade. Zero motion
+   returns the current scroll presentation directly.
+
+   Motion ownership is resolved centrally. A bound `PowerUpObject` shares its player's roster
+   identity, incarnation and centre anchor, including shields and stars with null spawns. Other
+   objects follow their native centre only with a non-null spawn or cached overrides of both
+   position getters. Nonspatial objects carry no identity or anchor and receive WORLD camera
+   compensation; `@CameraRelativeDraw(SCREEN_POSITION)` instead carries an anchor-free SCREEN tag.
+   No default position getter is called on a null spawn. The guard derives null-spawn classes and
+   concrete descendants from compiled constructor/source inventory, including insta-shield.
+
 3. **Integration** (lead): Engine wiring of `observeService` and `present`, exact-consumer guard,
    docs and changelog, cost measurement, change-based smoke.

@@ -23,6 +23,7 @@ import java.util.logging.Logger;
  * Each frame scrolls left by the parent's scroll speed and animates.
  * Self-deletes when X < 0x60.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizIntroWaveChild extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizIntroWaveChild.class.getName());
 

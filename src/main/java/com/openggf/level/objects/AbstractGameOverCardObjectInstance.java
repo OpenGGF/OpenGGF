@@ -39,6 +39,7 @@ import java.util.List;
  * engine keeps those VDP values and converts to world space at draw time the
  * way the results cards do.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public abstract class AbstractGameOverCardObjectInstance extends AbstractObjectInstance
         implements ZeroScalarArgsRewindRecreatable {
 

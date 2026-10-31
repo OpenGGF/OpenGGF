@@ -177,6 +177,10 @@ public class GraphicsManager {
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
 	SpritePresentation.Subject spritePresentationSubject = SpritePresentation.Subject.WORLD;
+    SpriteMotionInternalAccess.Collection spriteMotionCollection;
+    MotionPacket.Binding spriteMotionOwner;
+    SpriteMotionProjection spriteMotionProjection;
+    SpriteMotionProjection.Offset sceneMotionOffset;
 
 	/**
 	 * When true, the batch renderer will use the underwater palette texture
@@ -572,7 +576,9 @@ public class GraphicsManager {
 	public void flush() {
 		if (spritePresentationBuilder != null) return;
 		Camera cam = getCamera();
-		flushWithCamera(cam.getXWithShake(), cam.getYWithShake(), cam.getWidth(), cam.getHeight());
+        var offset = sceneMotionOffset;
+        flushScene(cam.getXWithShake() + (offset == null ? 0 : offset.x()),
+                cam.getYWithShake() + (offset == null ? 0 : offset.y()), cam.getWidth(), cam.getHeight());
 	}
 
 	/** Discards queued draw commands after an aborted frame without executing them. */
@@ -587,6 +593,10 @@ public class GraphicsManager {
 	 * Use this for screen-space rendering by passing (0, 0) for camera position.
 	 */
 	public void flushWithCamera(short cameraX, short cameraY, short cameraWidth, short cameraHeight) {
+        flushScene(cameraX, cameraY, cameraWidth, cameraHeight);
+    }
+
+    private void flushScene(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         // Never recycle companions still referenced by native SAT entries awaiting admission.
         boolean retireHeadBanks=!spriteSatCollectionActive && spriteSatEntries.isEmpty();
 		if (headlessMode || commands.isEmpty() || !glInitialized) {
@@ -2000,6 +2010,7 @@ public class GraphicsManager {
 		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
 			entry = entry.withPresentationSubject(spritePresentationSubject);
 		}
+		if (spriteMotionOwner != null) entry = entry.withMotionOwner(spriteMotionOwner);
 		if (ghostRenderEffectActive) {
 			// The SAT replay runs after the ghost renderer has ended its effect; carry it.
 			entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
@@ -2228,8 +2239,14 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
-        withSpritePixelOperation(entry.pixelOperation(),
-                () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+        if (spriteMotionCollection == null) {
+            withSpritePixelOperation(entry.pixelOperation(),
+                    () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+        } else {
+            withSpritePixelOperation(entry.pixelOperation(),
+                    () -> withSatEntryGhost(entry, () -> SpriteMotionInternalAccess.withOwner(this, entry.motionOwner(),
+                            () -> appendBatchedReplayTiles(entry, paletteTextureId))));
+        }
 	}
 
 	/**

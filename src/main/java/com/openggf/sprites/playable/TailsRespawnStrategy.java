@@ -49,6 +49,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         offscreenFlightFrames = 0;
         diagnosticTargetX = leader.getCentreX() & 0xFFFF;
         diagnosticTargetY = leader.getCentreY() & 0xFFFF;
+        com.openggf.level.LevelMotionAccess.cut(sidekick.currentLevelManagerIfAvailable(),
+                com.openggf.level.MotionCut.player(sidekick));
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
         // ROM Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26533-26539): the spawn Y is
         // `subi.w #$C0,d0` and then, under Reverse_gravity_flag, `addi.w #2*$C0,d0` — a net
@@ -327,6 +329,8 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setLatchedSolidObjectId(0);
         sidekick.setAir(true);
         sidekick.setDirection(Direction.RIGHT);
+        com.openggf.level.LevelMotionAccess.cut(sidekick.currentLevelManagerIfAvailable(),
+                com.openggf.level.MotionCut.player(sidekick));
         sidekick.setCentreXPreserveSubpixel((short) 0);
         sidekick.setCentreYPreserveSubpixel((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);

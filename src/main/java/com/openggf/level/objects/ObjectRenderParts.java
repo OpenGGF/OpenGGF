@@ -207,6 +207,10 @@ final class ObjectRenderParts {
                 ? null : services.objectManager().stageplayDirection;
         if (direction != null
                 && direction.drawReplacement(entry.instance(), bucket, entry.high(), entry.slot())) return;
-        ObjectHeadPresentation.draw(entry.instance(), services, () -> appendRenderCommands(entry, commands, bucket));
+        if (services != null && com.openggf.graphics.SpriteMotionInternalAccess.collecting(services.graphicsManager())) {
+            ObjectMotionPresentation.draw(entry.instance(), services,
+                    () -> ObjectHeadPresentation.draw(entry.instance(), services,
+                            () -> appendRenderCommands(entry, commands, bucket)));
+        } else ObjectHeadPresentation.draw(entry.instance(), services, () -> appendRenderCommands(entry, commands, bucket));
     }
 }

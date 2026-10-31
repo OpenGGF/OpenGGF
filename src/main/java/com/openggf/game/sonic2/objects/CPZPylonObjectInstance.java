@@ -36,6 +36,7 @@ import java.util.List;
  * This object is NOT loaded from level object data - it is created automatically
  * when CPZ loads and uses camera-relative positioning.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class CPZPylonObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj7C is foreground parallax scenery with no horizontal facing.
 

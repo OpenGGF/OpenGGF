@@ -183,6 +183,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			updateObserver.onUpdatePosition(force);
 		}
 		if (force) {
+            var motionLevel = focusedSprite.currentLevelManagerIfAvailable();
+            if (motionLevel != null) com.openggf.level.LevelMotionAccess.cut(motionLevel, com.openggf.level.MotionCut.CAMERA);
 			// Position camera using ROM's level-load formula:
 			//   v_screenposx = MainCharacter.x_pos - $A0  (subi.w #160,d1)
 			//   v_screenposy = MainCharacter.y_pos - $60  (subi.w  #96,d0)

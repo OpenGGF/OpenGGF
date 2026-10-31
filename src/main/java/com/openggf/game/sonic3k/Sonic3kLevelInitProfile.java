@@ -24,7 +24,7 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
  * </ul>
  */
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
-        implements com.openggf.game.internal.QueuedPatternDmaPublication,
+        implements com.openggf.game.internal.LevelMotionPresentation, com.openggf.game.internal.QueuedPatternDmaPublication,
         com.openggf.game.internal.SpriteTablePublication,
         com.openggf.game.internal.InitialLevelScrollPreparation {
     private final Sonic3kLevelEventManager levelEventManager;
