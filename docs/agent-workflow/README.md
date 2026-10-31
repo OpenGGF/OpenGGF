@@ -481,3 +481,69 @@ and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan
 - [Default native mod build](../../tools/native-image/README.md): generated API/service retention, pinned Community toolchains and native qualification commands.
 - [Native/JVM gameplay comparison](../../tools/native-image/GameplayBenchmark.java) and [sequential matrix driver](../../tools/performance/native_matrix.py): committed level-local BK2 input through the production GameLoop and completed offscreen rendering, process CPU/wall distributions, startup marker, JIT discard passes and trajectory/pixel controls; run only prebuilt artifacts under `run_isolated.py` (2026-10-27 native optimization study).
 - [Native gdb PC sampler](../../tools/performance/gdb_native_sample.py): runs a prebuilt native-image child under gdb, interrupts through an external timer process, and records each thread’s PC/symbol; use symbol-only sidecars and `run_isolated.py`. PC frequencies are wall-time evidence, not exact method CPU costs (2026-10-27 runtime-loading/retention ablation).
+
+## Preserving how the work was done
+
+OpenGGF is an early large-scale AI-agent reimplementation. The method is
+part of what the project preserves, for future contributors and for anyone
+studying how it was done. Keep the record light and put things where they
+already belong; do not create new document types.
+
+- **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
+  oracle, comparator, or sampler that answered a question likely to recur,
+  or that took more than an hour to get right, is promoted: engine-facing
+  tools to `com.openggf.tools`, analysis scripts to the matching `tools/`
+  subdirectory, trace production to TraceChaser. Give it a header stating
+  purpose, inputs, and the originating commit or task, and a one-line entry
+  in `docs/agent-workflow/README.md`.
+- **Methods and lessons.** A measurement protocol, hazard, or ROM pitfall
+  learned during a task goes into the existing catalogue it belongs to
+  (pitfall catalogue, measurement-hazard table, implementation pitfalls),
+  not a new file.
+- **Decisions and evidence.** Record what was tried and rejected as well as
+  what landed, with commit hashes, in the dated `docs/architecture/`
+  artifact for the task. A rejected approach with its kill evidence saves
+  the next agent from repeating it.
+- **Narrative.** `docs/project/ai-journey.md` grows only at milestones, not
+  per task.
+
+Test: keep it if a future agent would otherwise re-derive it; delete it if
+it can be regenerated from committed inputs in minutes. Raw logs, run
+directories, fitted constants, and rejected code on merged branches are
+never preserved.
+
+## Find the owning reference
+
+
+- Release publication/skipped jobs: `release-publishing` and
+  [publishing guide](../project/release-publishing.md).
+- Architecture/services: [engine map](../architecture/engine-map.md).
+- Objects/bosses: matching `s1-`, `s2-`, or `s3k-implement-*` skill and
+  [implementation reference](../architecture/object-implementation-reference.md).
+- Disassembly lookup: matching `s1disasm-guide`, `s2disasm-guide`, or
+  `s3k-disasm-guide` skill.
+- Trace failures: `trace-replay-bug-fixing`; multiple independent traces:
+  `trace-green-fleet`; video: `trace-capture`; recording: `bizhawk-headless-trace`.
+- Native BizHawk screenshots or state observations for ROM corroboration:
+  `bizhawk-native-reference-capture`.
+- Picture or movie of any gameplay section: `gameplay-capture`; scripted
+  controller input for it or for a probe: `bk2-input-authoring`.
+- Promo, trailer or mod-showcase creative direction: `promo-direction`, composed
+  with `tools/media/promo_kit.py`; evidence reels and archiving: `gameplay-highlights`.
+- PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
+- Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
+  whole-zone delivery: `s3k-zone-bring-up`.
+- Offscreen engine rendering for tests, captures and tools: `headless-rendering`.
+- Menus, dialogs and in-game overlays: `ui-design-language`.
+- Stageplay cutscene/animatic authoring: `stageplay-authoring`; [CLI reference](../guide/creating/stageplay-authoring.md).
+- Headless tests: [headless testing](../guide/contributing/headless-testing.md).
+- Current gaps: [general](../status/known-discrepancies.md),
+  [S3K](../S3K_KNOWN_DISCREPANCIES.md). Configuration: [CONFIGURATION.md](../../CONFIGURATION.md).
+
+- Mod authoring: [mod-authoring skill](../../.agents/skills/mod-authoring/SKILL.md)
+  and [task recipes](../modding/task-recipes.md) route creator work to supported
+  helpers, lifecycle contracts and focused verification.
+
+- Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
+  [creator handbook](../modding/index.md), and
+  [API compatibility](../architecture/mod-api-compatibility.md).
