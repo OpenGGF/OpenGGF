@@ -60,11 +60,11 @@ class TestLrzHazardRewindSpots {
                 LrzFireballLauncherObjectInstance.class);
         LrzFireballLauncherObjectInstance launcher = harness.object();
 
-        run(launcher, 1, 20);
+        harness.run(launcher, 1, 20);
         int capturedCountdown = launcher.countdown();
         CompositeSnapshot mid = harness.capture();
 
-        run(launcher, 21, 90);
+        harness.run(launcher, 21, 90);
         int uninterrupted = launcher.countdown();
         assertNotEquals(capturedCountdown, uninterrupted, "the diverging timeline moved on");
 
@@ -74,7 +74,7 @@ class TestLrzHazardRewindSpots {
         assertEquals(capturedCountdown, restored.countdown(), "$2E(a0) restores");
         assertEquals(launcher.period(), restored.period(), "$30(a0) restores");
 
-        run(restored, 21, 90);
+        harness.run(restored, 21, 90);
         assertEquals(uninterrupted, restored.countdown(), "forward replay lands on the same $2E");
     }
 
@@ -86,12 +86,12 @@ class TestLrzHazardRewindSpots {
                 LrzLavaFallObjectInstance.class);
         LrzLavaFallObjectInstance fall = harness.object();
 
-        run(fall, 1, 45);
+        harness.run(fall, 1, 45);
         int capturedDrop = fall.dropTimer();
         int capturedAlternator = fall.soundAlternator();
         CompositeSnapshot mid = harness.capture();
 
-        run(fall, 46, 200);
+        harness.run(fall, 46, 200);
         int uninterruptedDrop = fall.dropTimer();
         int uninterruptedAlternator = fall.soundAlternator();
 
@@ -101,7 +101,7 @@ class TestLrzHazardRewindSpots {
         assertEquals(capturedAlternator, restored.soundAlternator(), "the alternator restores");
         assertEquals(fall.clockThreshold(), restored.clockThreshold());
 
-        run(restored, 46, 200);
+        harness.run(restored, 46, 200);
         assertEquals(uninterruptedDrop, restored.dropTimer(), "forward replay matches");
         assertEquals(uninterruptedAlternator, restored.soundAlternator());
     }
@@ -117,13 +117,13 @@ class TestLrzHazardRewindSpots {
                 LrzSwingingSpikeBallObjectInstance.class);
         LrzSwingingSpikeBallObjectInstance ball = harness.object();
 
-        run(ball, 1, 37);
+        harness.run(ball, 1, 37);
         int capturedAngle = ball.angle();
         int capturedX = ball.getCentreX();
         int capturedY = ball.getCentreY();
         CompositeSnapshot mid = harness.capture();
 
-        run(ball, 38, 111);
+        harness.run(ball, 38, 111);
         int uninterruptedAngle = ball.angle();
         int uninterruptedX = ball.getCentreX();
         int uninterruptedY = ball.getCentreY();
@@ -134,7 +134,7 @@ class TestLrzHazardRewindSpots {
         assertEquals(ball.angleStep(), restored.angleStep(), "$36(a0) restores");
         // sub_43604 rebuilds the chain and the ball from the angle at the head of every update,
         // so the restored position appears on the next frame rather than in the blob itself.
-        run(restored, 38, 111);
+        harness.run(restored, 38, 111);
         assertEquals(uninterruptedAngle, restored.angle(), "forward replay lands on the same angle");
         assertEquals(uninterruptedX, restored.getCentreX());
         assertEquals(uninterruptedY, restored.getCentreY());
@@ -144,12 +144,6 @@ class TestLrzHazardRewindSpots {
 
     // ----- harness ------------------------------------------------------------------------------
 
-    private static void run(AbstractObjectInstance object, int first, int last) {
-        for (int frame = first; frame <= last; frame++) {
-            object.update(frame, null);
-        }
-    }
-
     private static ObjectSpawn spawn(int subtype) {
         return new ObjectSpawn(BASE_X, BASE_Y, 0, subtype, 0, false, 0);
     }
@@ -157,13 +151,18 @@ class TestLrzHazardRewindSpots {
     private record Harness<T extends AbstractObjectInstance>(ObjectManager objectManager,
                                                              RewindRegistry registry,
                                                              Supplier<T> factory,
-                                                             Class<T> type) {
+                                                             Class<T> type,
+                                                             java.util.concurrent.atomic.AtomicInteger clock) {
 
         static <T extends AbstractObjectInstance> Harness<T> create(Supplier<T> factory,
                                                                     Class<T> type) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
+            var clock = new java.util.concurrent.atomic.AtomicInteger();
+            var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+            org.mockito.Mockito.when(level.getFrameCounter()).thenAnswer(invocation -> clock.get());
             ObjectServices services = new StubObjectServices() {
+                @Override public com.openggf.level.LevelManager levelManager() { return level; }
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
@@ -176,7 +175,14 @@ class TestLrzHazardRewindSpots {
             objectManager.setRewindInPlaceRestoreEnabledForTest(false);
             RewindRegistry registry = new RewindRegistry();
             registry.register(objectManager.rewindSnapshottable());
-            return new Harness<>(objectManager, registry, factory, type);
+            return new Harness<>(objectManager, registry, factory, type, clock);
+        }
+
+        void run(AbstractObjectInstance object, int first, int last) {
+            for (int frame = first; frame <= last; frame++) {
+                clock.set(frame);
+                object.update(frame, null);
+            }
         }
 
         T object() {

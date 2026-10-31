@@ -210,19 +210,11 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         motion.xVel = armSpeed;
         runTimer = RUN_FRAMES;
         doublingTimer = DOUBLING_FRAMES;
-        try {
-            services().playSfx(Sonic3kSfx.FLOOR_LAUNCHER.id);
-        } catch (Exception ignored) {
-            // Headless replays can omit the audio backend; the launch still runs.
-        }
+        services().playSfx(Sonic3kSfx.FLOOR_LAUNCHER.id);
     }
 
     private PlayableEntity nativeP2OrNull() {
-        try {
-            return services().playerQuery().nativeP2OrNull();
-        } catch (IllegalStateException e) {
-            return null;
-        }
+        return services().playerQuery().nativeP2OrNull();
     }
 
     @Override

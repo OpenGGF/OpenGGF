@@ -1561,6 +1561,13 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Object service failures:** AIZ intro camera calls, Lava Reef lava-fall clocks
+  and launch/drop sound calls propagate service failures instead of silently
+  continuing. S2 object PLC submissions retry only queue-capacity rejection;
+  ROM, art and renderer failures remain visible. A ROM-free source guard ratchets
+  existing broad catch handlers across main Java sources, with explicit legacy
+  inventory and adversarial scanner controls.
+
 - **Mod authoring entry points:** Six task recipes and mirrored agent guidance
   route creator work to supported helpers while retaining expert overrides. The
   portable project launcher supports local artifact/ROM paths, CLI overrides and

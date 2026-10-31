@@ -21,6 +21,8 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -342,13 +344,9 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
      * (or a non-focused sprite) during object updates.
      */
     private AbstractPlayableSprite resolveTrackedPlayer(AbstractPlayableSprite candidate) {
-        try {
-            AbstractPlayableSprite focused = services().camera().getFocusedSprite();
-            if (focused != null) {
-                return focused;
-            }
-        } catch (Exception e) {
-            LOG.fine(() -> "AizPlaneIntroInstance.resolveTrackedPlayer: " + e.getMessage());
+        AbstractPlayableSprite focused = services().camera().getFocusedSprite();
+        if (focused != null) {
+            return focused;
         }
         return candidate;
     }
@@ -365,13 +363,9 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         // Convert that to our world-space render input.
         int renderX = currentX;
         int renderY = currentY;
-        try {
-            var camera = services().camera();
-            renderX += camera.getX() - 128;
-            renderY += camera.getY() - 128;
-        } catch (Exception e) {
-            LOG.fine(() -> "AizPlaneIntroInstance.appendRenderCommands: " + e.getMessage());
-        }
+        var camera = services().camera();
+        renderX += camera.getX() - 128;
+        renderY += camera.getY() - 128;
         renderer.drawFrame(mappingFrame, renderX, renderY, false, false);
     }
 
@@ -465,8 +459,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             sonicRenderer = new PlayerSpriteRenderer(art.loadSonic());
             superSonicRenderer = new PlayerSpriteRenderer(art.loadSuperSonicArtSet());
             renderersLoaded = true;
-        } catch (Exception e) {
-            LOG.fine("Could not load AIZ intro Sonic renderers: " + e.getMessage());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not load AIZ intro Sonic renderers", e);
         }
     }
 
@@ -605,20 +599,12 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
 
         // Load all intro art.
-        try {
-            AizIntroArtLoader.loadAllIntroArt(services());
-        } catch (Exception e) {
-            LOG.fine("Could not load intro art (test env?): " + e.getMessage());
-        }
+        AizIntroArtLoader.loadAllIntroArt(services());
 
         // ROM: SpawnLevelMainSprites clears Level_started_flag for AIZ1 intro.
         // This gates intro/HUD/start-state flow; camera scrolling still runs.
         // CutsceneKnucklesAiz1Instance sets the flag back to $91 on exit.
-        try {
-            services().camera().setLevelStarted(false);
-        } catch (Exception e) {
-            LOG.fine(() -> "AizPlaneIntroInstance.routine0Init: " + e.getMessage());
-        }
+        services().camera().setLevelStarted(false);
 
         // Do NOT spawn plane child here — that happens after the wait in routine 2.
         // Do NOT set velocity here — that happens after the wait in routine 2.
