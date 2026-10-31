@@ -88,3 +88,42 @@ Python checks pass 39/39. The same real character registration now passes with
 zero skips. No validator or runtime contract was weakened. Fresh matching artifacts
 and all seven purpose witnesses will qualify the repaired candidate; Java source
 is unchanged from the completed 85-test run.
+
+## Completed qualification
+
+Clean repaired producer `de16e54e0917fd7d7185cbf74dde0bb1ab549da0` rebuilt and
+verified universal engine, SDK, testkit and exact API Javadoc artifacts in 52.001s
+(build-only; tests explicitly skipped). Creator-kit assembly accepted matching
+identities and `sourceDirty=false`, with no dirty-source override. A fresh unpacked
+kit outside the checkout generated music, reskin, object, character, zone, scene
+and standalone projects under paths containing spaces. Every purpose passed:
+
+- read-only `--doctor --test --format json`, with unchanged project bytes;
+- portable `--test`, one real Jupiter registration test and zero skips;
+- strict SDK JSON validation with zero findings;
+- exclusion of local config, test classes and JUnit from its distributable jar.
+
+The scene project's actual Git ignore check excludes local config and generated
+saves. A real missing-JAR CLI call returns parseable failure JSON with actionable
+guidance. These are seven successful creator registration checks, not gameplay,
+ROM, pixel or complete campaign qualification. Temporary consumers and artifacts
+are owned task output and are discarded after recording these bounded results.
+
+Combined source checks (from the integration worktree, Java 25):
+
+```sh
+python3 -m unittest discover -s tools/modding -p 'test_*.py' -q
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Dtest=TestDiagnosticReports,TestCreatorFeedback,TestModJarValidator,TestGgfModCliCommands,TestJarPackager,TestProjectScaffolder,TestPurposeStarters,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestModApiJavadocTool,TestArtConverter,TestLevelConverter test
+python3 tools/testing/run_categories.py --base 599d46762bac0387d2ede55dab3b48741db9896a --preflight
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar verify
+```
+
+Results: 39 Python tests; 85 Java tests across 12 classes, zero failures/errors/skips;
+tool preflight passed; artifact verify passed. The Java source/resources are
+identical between the 85-test candidate and the final repaired producer; only
+portable Python and its regression/guidance changed afterward and received their
+own checks. No broad smoke, release full-suite or gameplay qualification is
+claimed. Queue wait for the combined focused invocation was 0s; end-to-end task
+wall time was not measured. Documentation-only evidence updates do not repeat
+unchanged executable checks. Delivery follows merge to the existing `develop`
+branch, push only that branch, and removal of fully accounted task trees/branches.
