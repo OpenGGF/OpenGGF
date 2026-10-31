@@ -4449,7 +4449,6 @@ METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioOutputActive
 METHOD com.openggf.audio.AudioManager public  boolean isReverseAudioPresentationActive()
 METHOD com.openggf.audio.AudioManager public  boolean isRewindReplaySuppressed()
 METHOD com.openggf.audio.AudioManager public  boolean isSoloed(com.openggf.audio.ChannelType,int)
-METHOD com.openggf.audio.AudioManager public  boolean isSpeakerRateRegulated()
 METHOD com.openggf.audio.AudioManager public  boolean playDonorMusic(java.lang.String,com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean playMusic(com.openggf.audio.GameMusic)
 METHOD com.openggf.audio.AudioManager public  boolean playNamespacedMusic(com.openggf.audio.StreamedMusicPort$TrackRef)

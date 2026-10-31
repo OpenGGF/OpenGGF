@@ -392,7 +392,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /** Whether live output can follow the producer clock without long-term speaker drift. */
-    public boolean isSpeakerRateRegulated() {
+    boolean isSpeakerRateRegulated() {
         AudioPresentationSink sink = presentationBinding.presentationSink;
         if (sink instanceof OpenAlPcmSink speaker) return speaker.isRateRegulated();
         return sink instanceof NoDeviceAudioSink

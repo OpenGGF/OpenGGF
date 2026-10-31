@@ -13,6 +13,11 @@ public final class AudioManagerInternalAccess {
         Objects.requireNonNull(manager, "manager").servicePresentationDevice();
     }
 
+    /** Whether live output can follow the service clock without long-term speaker drift. */
+    public static boolean speakerRateRegulated(AudioManager manager) {
+        return Objects.requireNonNull(manager, "manager").isSpeakerRateRegulated();
+    }
+
     /** One explicit replay/capture driver owns packet duration until teardown. */
     public static OfflineServiceCadence offlineServiceCadence(AudioManager manager, int hz) {
         return new OfflineServiceCadence(Objects.requireNonNull(manager), hz);

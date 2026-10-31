@@ -1,6 +1,7 @@
 package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
@@ -185,12 +186,12 @@ class TestSpeakerRateRegulation {
         var clock = new AtomicLong();
         var device = new ClockedDevice(clock, 0);
         try (var speaker = sink(device, clock)) {
-            assertTrue(manager(speaker).isSpeakerRateRegulated());
+            assertTrue(AudioManagerInternalAccess.speakerRateRegulated(manager(speaker)));
             device.supportsRate = false;
-            assertFalse(manager(speaker).isSpeakerRateRegulated());
+            assertFalse(AudioManagerInternalAccess.speakerRateRegulated(manager(speaker)));
         }
-        assertTrue(manager(new NoDeviceAudioSink(SAMPLE_RATE)).isSpeakerRateRegulated());
-        assertFalse(manager(new AudioPresentationSinkStub()).isSpeakerRateRegulated());
+        assertTrue(AudioManagerInternalAccess.speakerRateRegulated(manager(new NoDeviceAudioSink(SAMPLE_RATE))));
+        assertFalse(AudioManagerInternalAccess.speakerRateRegulated(manager(new AudioPresentationSinkStub())));
     }
 
     private static AudioManager manager(AudioPresentationSink sink) {
