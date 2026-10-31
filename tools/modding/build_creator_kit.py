@@ -85,7 +85,8 @@ def export_examples(root):
         for tree in ("src/main", "src/test", "tools"):
             for file in sorted((project / tree).rglob("*")):
                 relative = file.relative_to(project)
-                if file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc":
+                if (file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc"
+                        and file.name != "ggfmod.local.json"):
                     entries["examples/" + name + "/" + relative.as_posix()] = file.read_bytes()
         # Controller recipes are creator inputs; rendered captures, ROMs and
         # runtime state are not. Never follow a linked walkthrough source.
@@ -155,6 +156,12 @@ required game/donor paths using `--s1`, `--s2` or `--s3k` as needed:
 ```sh
 python3 ../../tools/build_project.py . --run --{game} /absolute/own-{game}.gen
 ```
+
+Use `--doctor --format json` for read-only prerequisite checks; add `--test` to
+check test prerequisites. Optional project-local `ggfmod.local.json` (schemaVersion 1)
+can store engine/sdk/testkit and s1/s2/s3k paths relative to that file; CLI flags
+override them. See `../../handbook/getting-started.md` for the strict schema.
+Keep this personal file out of version control. It never enters exported resources.
 
 The launcher keeps generated runtime configuration and saves under `target/play`.
 ROMs are read from your explicit paths and are not included in the exported project.

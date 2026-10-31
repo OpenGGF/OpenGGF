@@ -24,12 +24,31 @@ another Python 3 executable. Older `*Checks` and `*Probe` programs receive compi
 adapters in exported sources; the engine still discovers and reports actual tests.
 Projects without authored tests receive a packed-mod registration test.
 
-From an unpacked kit, run the portable test launcher:
+From an unpacked kit, use the same portable launcher for preflight and tests:
+
+```sh
+python3 tools/build_project.py examples/hello-scene --doctor --test --testkit mod-testkit.jar --format json
+```
+
+Doctor is read-only: it checks JDK 25 tools, matching artifacts, a nonempty mod
+manifest, test sources, supplied ROM availability, and whether Maven is available
+if the pinned console jar is not already cached. It does not resolve dependencies
+or invoke Maven, and it does not prove manifest semantics, ROM identity or gameplay
+correctness. Errors return nonzero with actionable findings; JSON stdout remains
+one report on failures too. See the [local config schema and report contract](getting-started.md#optional-local-paths).
+A normal build/doctor without `--test` needs no testkit or Maven. An explicitly
+supplied testkit is still identity-checked, preserving `--verify-only` behavior.
+
+Run tests:
 
 ```sh
 python3 tools/build_project.py examples/hello-scene --test --testkit mod-testkit.jar
 python3 tools/build_project.py examples/flappy-tails --test --testkit mod-testkit.jar
 ```
+
+Optionally put `testkit` and ROM paths alongside engine/SDK in the project-root
+`ggfmod.local.json`. CLI flags override those paths; config-relative paths resolve
+against the config file. No personal config is generated or included in the mod.
 
 The launcher verifies all three artifact identities before changing build output,
 resolves JUnit Platform Console 1.10.3 through Maven, compiles tests into a separate
@@ -47,6 +66,10 @@ python3 tools/build_project.py examples/hello-scene --testkit /absolute/kit/mod-
 mvn org.apache.maven.plugins:maven-install-plugin:3.1.4:install-file -Dfile=/absolute/kit/mod-testkit.jar -DgroupId=com.openggf -DartifactId=OpenGGF "-Dversion=$KIT_VERSION" -Dclassifier=mod-testkit -Dpackaging=jar -DgeneratePom=true
 mvn -f examples/hello-scene/pom.xml package -Pcreator-tests "-Dopenggf.testkit.version=$KIT_VERSION" -Dopenggf.engine.jar=/absolute/kit/engine.jar -Dopenggf.sdk.jar=/absolute/kit/sdk.jar
 ```
+
+In an OpenGGF checkout, route Maven commands through
+`python3 tools/testing/maven_queue.py` as in the getting-started guide. Doctor never
+uses an ad hoc Maven version probe.
 
 The version comes from the kit's metadata. This installs the supplied artifact in your local Maven cache; it
 does not publish an API or require an OpenGGF Maven repository. The exported POM
