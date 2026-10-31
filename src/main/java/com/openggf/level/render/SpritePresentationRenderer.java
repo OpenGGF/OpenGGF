@@ -216,6 +216,7 @@ public final class SpritePresentationRenderer {
                 com.openggf.graphics.PresentationGraphicsAccess.restoreFrozenPattern(graphics, entry.getValue(), entry.getKey());
         } finally { graphics.endPatternAtlasBatch(); }
         var viewport = com.openggf.graphics.PresentationGraphicsAccess.viewport(graphics);
+        var cameraMotion = com.openggf.graphics.SpriteMotionInternalAccess.cameraOffset(graphics);
         Tile previous = null;
         boolean previousPictureGeometry = false;
         var policies = runtime == null ? java.util.List.<com.openggf.game.mutators.TransientMutatorPolicySource.Entry>of()
@@ -248,15 +249,23 @@ public final class SpritePresentationRenderer {
                 boolean pictureGeometry = !transform.identity() || opacity != 1;
                 boolean shadow = tile.pixelOperation() == com.openggf.graphics.SpriteSatEntry.PixelOperation.SHADOW_15;
                 float[] quad = pictureGeometry || shadow ? transform.quad(tile, cameraX, cameraY) : null;
+                var motion = com.openggf.graphics.SpriteMotionInternalAccess.offset(graphics, tile);
+                if (quad != null && (motion.x() != 0 || motion.y() != 0)) {
+                    for (int vertex = 0; vertex < quad.length; vertex += 2) {
+                        quad[vertex] += motion.x(); quad[vertex + 1] += motion.y();
+                    }
+                }
                 if (viewport != null) {
                     boolean outside;
-                    if (pictureGeometry || shadow) outside = viewport.outside(quad, cameraX, cameraY);
+                    if (pictureGeometry || shadow) outside = viewport.outside(quad, cameraX + cameraMotion.x(), cameraY + cameraMotion.y());
                     else if (tile.rowClipped()) {
                         // The native row path emits integer-positioned 8-pixel strips.
-                        float left = (int) (tile.x() + cameraX) - cameraX;
-                        float top = (int) (tile.y() + cameraY) - cameraY;
+                        float left = (int) (tile.x() + cameraX + motion.x()) - cameraX - cameraMotion.x();
+                        float top = (int) (tile.y() + cameraY + motion.y()) - cameraY - cameraMotion.y();
                         outside = viewport.outside(left, top + tile.rowStart(), left + 8, top + tile.rowEnd());
-                    } else outside = viewport.outside(tile.x(), tile.y(), tile.x() + tile.width(), tile.y() + tile.height());
+                    } else outside = viewport.outside(tile.x() + motion.x() - cameraMotion.x(), tile.y() + motion.y() - cameraMotion.y(),
+                            tile.x() + motion.x() - cameraMotion.x() + tile.width(),
+                            tile.y() + motion.y() - cameraMotion.y() + tile.height());
                     if (outside) continue;
                 }
                 // Native high-priority tiles bypass terrain palettes. Only actual
@@ -285,7 +294,7 @@ public final class SpritePresentationRenderer {
                 desc.setHFlip(tile.hFlip());
                 desc.setVFlip(tile.vFlip());
                 desc.setPriority(tile.priority());
-                float x = tile.x() + cameraX, y = tile.y() + cameraY;
+                float x = tile.x() + cameraX + motion.x(), y = tile.y() + cameraY + motion.y();
                 SpritePresentation.withSubject(graphics,tile.subject(),()-> {
                 if (shadow) {
                     com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,

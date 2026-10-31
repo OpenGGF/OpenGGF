@@ -1211,6 +1211,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Our full-layout renderer must discard source-act scroll addresses,
         // but clearing SAT here erased sprites until two later publications.
         levelRenderer.spriteTables.invalidateScrollForActReload();
+        levelRenderer.invalidateMotion();
         resetZoneScopedRenderRegistries();
         applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
@@ -1220,6 +1221,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void resetZoneScopedRegistriesForLevelLoad() {
         levelRenderer.spriteTables.reset();
+        levelRenderer.invalidateMotion();
         resetZoneScopedRenderRegistries();
     }
 

@@ -14,7 +14,7 @@ public record SpriteSatEntry(
         int tileOcclusionPaletteMask,
         PixelOperation pixelOperation,
         Ghost ghost,
-        MotionPacket.Owner motionOwner) {
+        MotionPacket.Binding motionOwner) {
     public SpriteSatEntry(int priorityBucket, SpritePiece piece, int visibleTopY, int visibleBottomY,
             SpritePresentation.Subject presentationSubject, java.util.List<SpriteSatEntry> replayFragments,
             int tileOcclusionPaletteMask, PixelOperation pixelOperation, Ghost ghost) {
@@ -22,7 +22,7 @@ public record SpriteSatEntry(
                 tileOcclusionPaletteMask, pixelOperation, ghost, null);
     }
 
-    public SpriteSatEntry withMotionOwner(MotionPacket.Owner owner) {
+    public SpriteSatEntry withMotionOwner(MotionPacket.Binding owner) {
         return new SpriteSatEntry(priorityBucket, piece, visibleTopY, visibleBottomY, presentationSubject,
                 replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost, owner);
     }

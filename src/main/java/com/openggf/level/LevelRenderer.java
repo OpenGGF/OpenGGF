@@ -922,11 +922,114 @@ public final class LevelRenderer {
 
     final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
     final LevelMotionPackets motionPackets = new LevelMotionPackets();
+    final LevelMotionHistory motionHistory = new LevelMotionHistory();
+    final java.util.Map<MotionCut, Long> motionCuts = new java.util.HashMap<>();
+    long motionCutOrdinal;
+    LevelMotionHistory.Offer motionOffer;
+    boolean motionScope;
+    private boolean motionAdopted;
+    private int motionObservedFrame;
+    private com.openggf.graphics.SpriteMotionProjection motionSpriteProjection;
     final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private SpritePresentation.Frame liveSpriteFrame;
     private LevelScrollPresentation currentScrollPresentation;
     private LevelScrollPresentation nativeCompetitionScroll;
+
+    boolean supportsMotion() {
+        if (lm.level == null || lm.camera == null || lm.graphicsManager == null || lm.parallaxManager == null
+                || lm.gameModule == null || lm.authoringView || lm.hasContributedZoneRuntime()
+                || cinematicDraw || cinematicScroll != null || nativeCompetitionScroll != null) return false;
+        var profile = lm.gameModule.getLevelInitProfile();
+        if (!(profile instanceof com.openggf.game.internal.LevelMotionPresentation)
+                || profile.getClass().getClassLoader() != LevelRenderer.class.getClassLoader()) return false;
+        if (lm.gameModule.getBonusStageProvider().getActiveType() != com.openggf.game.BonusStageType.NONE
+                || lm.gameModule.getSpecialStageProvider().isInitialized()) return false;
+        var runtime = presentationRuntime();
+        return runtime == null || runtime.scenePolicies().isEmpty();
+    }
+
+    private LevelMotionPair.Metadata motionMetadata() {
+        var camera = lm.camera;
+        return new LevelMotionPair.Metadata(camera.getXCopy(), camera.getYCopy(), lm.cachedScreenWidth,
+                lm.cachedScreenHeight, camera.getFastScrollCap(), camera.didWrapLastFrame());
+    }
+    private java.util.Map<MotionCut, Long> motionCutSnapshot() {
+        return java.util.Map.copyOf(motionCuts);
+    }
+    private void retireMotionCuts(SpriteManager sprites, com.openggf.graphics.MotionPacket motion) {
+        motionCuts.keySet().removeIf(cut -> {
+            if (cut instanceof MotionCut.Camera || motion.owners().keySet().stream().anyMatch(cut::matches)) return false;
+            return switch (cut) {
+                case MotionCut.Camera ignored -> false;
+                case MotionCut.ObjectOwner owner -> lm.objectManager == null
+                        || lm.objectManager.objectQuery().resolve(owner.id()).isEmpty();
+                case MotionCut.Player player -> sprites == null || sprites.getMainPlayable() != player.incarnation()
+                        && sprites.getRegisteredSidekicks().stream().noneMatch(sprite -> sprite == player.incarnation());
+            };
+        });
+    }
+    void observeMotionService(SpriteManager sprites, boolean active) {
+        if (!active || !supportsMotion()) { invalidateMotion(); return; }
+        motionPackets.active = true;
+        LevelMotionPackets.Picture picture;
+        if (LevelSpritePresentation.enabled(lm)) {
+            picture = motionPackets.forFrame(spriteTables.published());
+            if (picture == null || picture.sample().scroll() != spriteTables.publishedScroll()) {
+                motionHistory.invalidate();
+                return;
+            }
+        } else {
+            currentTraceVisibility = TraceRenderVisibility.fromConfig(lm.configService);
+            resolveAdvancedRenderFrameState(lm.frameCounter);
+            var scroll = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+            var metadata = motionMetadata();
+            var cuts = motionCutSnapshot();
+            var capture = com.openggf.graphics.SpriteMotionInternalAccess.collect(lm.graphicsManager,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> captureSceneSpriteTable(sprites));
+            picture = new LevelMotionPackets.Picture(capture.frame(),
+                    new LevelMotionPair.Sample(capture.motion(), scroll, metadata, cuts));
+        }
+        motionHistory.observe(picture);
+        retireMotionCuts(sprites, picture.sample().motion());
+        motionObservedFrame = lm.frameCounter;
+    }
+    void invalidateMotion() {
+        motionHistory.invalidate();
+        motionPackets.active = false;
+        motionPackets.clear();
+        motionCuts.clear();
+        motionOffer = null;
+        clearMotionDraw();
+        if (lm.graphicsManager != null) com.openggf.graphics.SpriteMotionInternalAccess.clearProjection(lm.graphicsManager);
+    }
+    private void adoptMotion() {
+        if (motionOffer == null || !motionPackets.active || !supportsMotion() || motionObservedFrame != lm.frameCounter)
+            return;
+        if (LevelSpritePresentation.enabled(lm) && spriteTables.published() != motionOffer.frame()) return;
+        motionAdopted = true;
+        currentScrollPresentation = motionOffer.scroll();
+        liveSpriteFrame = motionOffer.frame();
+        motionSpriteProjection = motionOffer.sprites();
+        com.openggf.graphics.SpriteMotionInternalAccess.installCameraOffset(lm.graphicsManager,
+                motionSpriteProjection == null ? null : motionOffer.camera());
+    }
+    void clearMotionDraw() {
+        if (motionAdopted) { currentScrollPresentation = null; liveSpriteFrame = null; }
+        motionAdopted = false;
+        motionSpriteProjection = null;
+    }
+    private void drawPresentedSprites(SpritePresentation.Frame frame, int cameraX, int cameraY,
+                                      java.util.function.Predicate<SpritePresentation.Layer> visible) {
+        if (motionSpriteProjection == null) {
+            com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, frame,
+                    cameraX, cameraY, visible, presentationRuntime());
+        } else {
+            com.openggf.graphics.SpriteMotionInternalAccess.withProjection(lm.graphicsManager, motionSpriteProjection,
+                    () -> com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, frame,
+                            cameraX, cameraY, visible, presentationRuntime()));
+        }
+    }
 
     void withNativeCompetitionView(NativeCompetitionRenderer.View view, Runnable draw) {
         if (nativeCompetitionScroll != null) throw new IllegalStateException("Nested native competition view");
@@ -1200,7 +1303,9 @@ public final class LevelRenderer {
                         () -> com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                                 lm.camera.getXWithShake(), lm.camera.getYWithShake(),
                                 () -> renderSpriteObjectPass(sprites, false)));
-                motionPackets.prepared(capture, spriteTables.published());
+                motionPackets.prepared(new LevelMotionPackets.Picture(capture.frame(),
+                        new LevelMotionPair.Sample(capture.motion(), scroll, motionMetadata(), motionCutSnapshot())),
+                        spriteTables.published());
                 frame = capture.frame();
             } else {
                 frame = com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
@@ -1226,13 +1331,13 @@ public final class LevelRenderer {
     }
 
     private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
-        com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, spriteTables.published(),
-                lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible, presentationRuntime());
+        drawPresentedSprites(spriteTables.published(), lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible);
     }
 
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
         spriteTables.reset();
+        invalidateMotion();
         liveSpriteFrame = null;
         if (lm != null && lm.graphicsManager != null && lm.graphicsManager.isGlInitialized()) {
             scenePresentationPass.cleanup();
@@ -1403,6 +1508,7 @@ public final class LevelRenderer {
         liveSpriteFrame = null;
         resolvePendingPaletteOwnershipWrites();
         currentScrollPresentation = scrollForDraw();
+        adoptMotion();
         if (currentScrollPresentation == null) resolveAdvancedRenderFrameState(lm.frameCounter);
         else currentAdvancedRenderFrameState = currentScrollPresentation.renderMode();
 
@@ -1447,15 +1553,12 @@ public final class LevelRenderer {
             if (LevelSpritePresentation.enabled(lm)) {
                 drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
                 if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
-                    com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, spriteTables.counters(),
-                            camera.getXWithShake(), camera.getYWithShake(),
-                            layer -> layer == SpritePresentation.Layer.HUD_COUNTERS, presentationRuntime());
+                    drawPresentedSprites(spriteTables.counters(), camera.getXWithShake(), camera.getYWithShake(),
+                            layer -> layer == SpritePresentation.Layer.HUD_COUNTERS);
                 }
             } else {
                 if (liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
-                com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
-                        camera.getXWithShake(), camera.getYWithShake(), SpritePresentation.Layer::isHud,
-                        presentationRuntime());
+                drawPresentedSprites(liveSpriteFrame, camera.getXWithShake(), camera.getYWithShake(), SpritePresentation.Layer::isHud);
             }
         }
         profiler.endSection("render.hud");
@@ -1901,9 +2004,8 @@ public final class LevelRenderer {
         } else if (preparingSpritePresentation) {
             prepareOrDrawLiveSprites(spriteManager);
         } else {
-            liveSpriteFrame = captureSceneSpriteTable(spriteManager);
-            com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
-                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud(), presentationRuntime());
+            if (!motionAdopted || liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            drawPresentedSprites(liveSpriteFrame, lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud());
         }
         if (preparingSpritePresentation) return;
         GraphicsManager graphicsManager = lm.graphicsManager;
@@ -2055,14 +2157,13 @@ public final class LevelRenderer {
                 case HUD, HUD_COUNTERS -> false;
             });
         } else {
-            liveSpriteFrame = captureSceneSpriteTable(spriteManager);
-            com.openggf.level.render.SpritePresentationRenderer.drawNative(graphicsManager, liveSpriteFrame,
-                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> switch (layer) {
+            if (!motionAdopted || liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            drawPresentedSprites(liveSpriteFrame, lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> switch (layer) {
                         case PLAYER -> options.includePlayerSprites();
                         case OBJECT -> options.includeObjectSprites();
                         case RINGS -> options.includeRings();
                         case HUD, HUD_COUNTERS -> false;
-                    }, presentationRuntime());
+                    });
         }
         graphicsManager.flushPatternBatch();
         graphicsManager.setUseSpritePriorityShader(false);

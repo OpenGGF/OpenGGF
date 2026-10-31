@@ -23,7 +23,7 @@ public final class SpriteMotionProjection {
         this.camera = camera;
     }
     public Offset offset(SpritePresentation.Tile tile) {
-        if (tile.layer().isHud()) return camera;
+        if (tile.layer().isHud() || packet.screen(tile)) return camera;
         var owner = packet.owner(tile);
         if (owner == null || tile.ghost()) return Offset.ZERO;
         return switch (owner.anchoring()) {

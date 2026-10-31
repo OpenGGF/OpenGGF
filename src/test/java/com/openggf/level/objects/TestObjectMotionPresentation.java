@@ -35,10 +35,14 @@ class TestObjectMotionPresentation {
                             () -> ObjectMotionPresentation.draw(object, services,
                                     () -> graphics.renderPatternWithId(3, new PatternDesc(), 120, 230))));
             var owner = capture.motion().owner(capture.frame().tiles().getFirst());
-            assertEquals(new MotionPacket.ObjectKey(id), owner.key());
-            assertEquals(120, owner.x()); assertEquals(230, owner.y());
-            assertEquals(object instanceof Screen ? MotionPacket.Anchoring.SCREEN : MotionPacket.Anchoring.FOLLOW,
-                    owner.anchoring());
+            if (object instanceof Screen) {
+                assertNull(owner);
+                assertTrue(capture.motion().screen(capture.frame().tiles().getFirst()));
+            } else {
+                assertEquals(new MotionPacket.ObjectKey(id), owner.key());
+                assertEquals(120, owner.x()); assertEquals(230, owner.y());
+                assertEquals(MotionPacket.Anchoring.FOLLOW, owner.anchoring());
+            }
         }
     }
     private static class Ordinary implements ObjectInstance {

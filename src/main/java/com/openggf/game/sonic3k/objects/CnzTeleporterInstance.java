@@ -177,6 +177,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
         // Obj_CNZTeleporter: only actual airborne overshoot is snapped.
         // The event's earlier route admission never widens this native gate.
         if (player.getAir() && (player.getCentreX() & 0xFFFF) > TELEPORT_X) {
+            com.openggf.level.LevelMotionAccess.cut(services().levelManager(), com.openggf.level.MotionCut.player(player));
             com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, TELEPORT_X);
         }
 
@@ -292,6 +293,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
             return;
         }
         if (!playerHidden) {
+            com.openggf.level.LevelMotionAccess.cut(services().levelManager(), com.openggf.level.MotionCut.player(player));
             playerHidden = true;
             // loc_5238E writes object_control=3: bit0 holds movement, bit1
             // skips native animation. P1 disappears by Y-word zero, not by a

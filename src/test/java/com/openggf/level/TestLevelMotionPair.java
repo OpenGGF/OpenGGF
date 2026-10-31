@@ -28,12 +28,12 @@ class TestLevelMotionPair {
         when(motion.owners()).thenReturn(Map.of(KEY, owner));
         when(motion.owner(tile)).thenReturn(owner);
         return new Picture(new LevelMotionPair.Sample(motion, scroll(cameraX, cameraY, 0, 512, null, null),
-                new LevelMotionPair.Metadata(cameraX, cameraY, 320, 224, cap, false), Set.of()), tile);
+                new LevelMotionPair.Metadata(cameraX, cameraY, 320, 224, cap, false), Map.of()), tile);
     }
     private static LevelMotionPair.Sample meta(Picture picture, int width, int height, boolean wrap, Set<MotionCut> cuts) {
         var sample = picture.sample(); var old = sample.metadata();
         return new LevelMotionPair.Sample(sample.motion(), sample.scroll(),
-                new LevelMotionPair.Metadata(old.cameraBaseX(), old.cameraBaseY(), width, height, old.fastScrollCap(), wrap), cuts);
+                new LevelMotionPair.Metadata(old.cameraBaseX(), old.cameraBaseY(), width, height, old.fastScrollCap(), wrap), cuts.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(cut -> cut, cut -> 1L)));
     }
     private static PictureSelection.Between phase(double alpha) { return (PictureSelection.Between) PictureSelection.between(alpha); }
 

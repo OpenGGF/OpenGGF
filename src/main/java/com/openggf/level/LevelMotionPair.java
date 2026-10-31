@@ -5,13 +5,13 @@ import com.openggf.graphics.SpriteMotionProjection;
 import com.openggf.graphics.SpriteMotionProjection.Offset;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 
 /** Matches native picture generations once. Drawing evaluates only the requested weight. */
 final class LevelMotionPair {
     record Metadata(int cameraBaseX, int cameraBaseY, int width, int height, int fastScrollCap, boolean wrapped) { }
-    record Sample(MotionPacket motion, LevelScrollPresentation scroll, Metadata metadata, Set<MotionCut> cuts) {
-        Sample { cuts = Set.copyOf(cuts); }
+    record Sample(MotionPacket motion, LevelScrollPresentation scroll, Metadata metadata, Map<MotionCut, Long> cuts) {
+        Sample { cuts = Map.copyOf(cuts); }
     }
     record Projection(LevelScrollPresentation scroll, SpriteMotionProjection sprites, Offset camera) { }
     private final Sample current;
@@ -28,14 +28,17 @@ final class LevelMotionPair {
     }
     static LevelMotionPair between(Sample previous, Sample current) {
         var old = previous.metadata(); var now = current.metadata();
+        var cuts = current.cuts().entrySet().stream()
+                .filter(entry -> !Objects.equals(previous.cuts().get(entry.getKey()), entry.getValue()))
+                .map(Map.Entry::getKey).toList();
         if (old.width() != now.width() || old.height() != now.height() || old.wrapped() || now.wrapped()
-                || current.cuts().stream().anyMatch(cut -> cut instanceof MotionCut.Camera)) return null;
+                || cuts.stream().anyMatch(cut -> cut instanceof MotionCut.Camera)) return null;
         var camera = step(old.cameraBaseX(), old.cameraBaseY(), now.cameraBaseX(), now.cameraBaseY());
         if (beyond(camera, now.fastScrollCap())) return null;
         var steps = new HashMap<MotionPacket.Key, Offset>();
         for (var owner : current.motion().owners().values()) {
             if (owner.anchoring() != MotionPacket.Anchoring.FOLLOW
-                    || current.cuts().stream().anyMatch(cut -> cut.matches(owner.key()))) continue;
+                    || cuts.stream().anyMatch(cut -> cut.matches(owner.key()))) continue;
             var prior = previous.motion().owners().get(owner.key());
             if (prior == null || prior.anchoring() != owner.anchoring()) continue;
             var step = step(prior.x(), prior.y(), owner.x(), owner.y());

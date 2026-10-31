@@ -1,19 +1,18 @@
 package com.openggf.level;
 
-import com.openggf.graphics.MotionPacket;
-import com.openggf.graphics.SpriteMotionInternalAccess;
 import com.openggf.graphics.SpritePresentation;
 import java.util.IdentityHashMap;
 
 /** Non-rewind sidecars follow their exact frame references across native SAT publication. */
 final class LevelMotionPackets {
-    private final IdentityHashMap<SpritePresentation.Frame, MotionPacket> packets = new IdentityHashMap<>();
+    record Picture(SpritePresentation.Frame frame, LevelMotionPair.Sample sample) { }
+    private final IdentityHashMap<SpritePresentation.Frame, Picture> packets = new IdentityHashMap<>();
     boolean active;
 
-    void prepared(SpriteMotionInternalAccess.Capture capture, SpritePresentation.Frame published) {
+    void prepared(Picture picture, SpritePresentation.Frame published) {
         packets.keySet().removeIf(frame -> frame != published);
-        packets.put(capture.frame(), capture.motion());
+        packets.put(picture.frame(), picture);
     }
-    MotionPacket forFrame(SpritePresentation.Frame frame) { return packets.get(frame); }
+    Picture forFrame(SpritePresentation.Frame frame) { return packets.get(frame); }
     void clear() { packets.clear(); }
 }

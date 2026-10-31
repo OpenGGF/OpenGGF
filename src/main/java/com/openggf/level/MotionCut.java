@@ -9,6 +9,8 @@ public sealed interface MotionCut {
     record Camera() implements MotionCut { }
     record Player(Object incarnation) implements MotionCut {
         public Player { Objects.requireNonNull(incarnation); }
+        @Override public boolean equals(Object other) { return other instanceof Player player && incarnation == player.incarnation; }
+        @Override public int hashCode() { return System.identityHashCode(incarnation); }
     }
     record ObjectOwner(ObjectRefId id) implements MotionCut {
         public ObjectOwner { Objects.requireNonNull(id); }

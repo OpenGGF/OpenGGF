@@ -63,6 +63,26 @@ class TestMotionPacket {
         assertEquals(1, capture.frame().tiles().size());
         assertSame(owner, capture.motion().owner(capture.frame().tiles().getFirst()));
     }
+    @Test void anchorFreeScreenTagsSurviveSatReplay() {
+        var capture = SpriteMotionInternalAccess.collect(graphics, 10, 20,
+                () -> SpritePresentationRenderer.prepare(graphics, 10, 20, () -> {
+                    graphics.beginSpriteSatCollection();
+                    SpriteMotionInternalAccess.withOwner(graphics, MotionPacket.Screen.INSTANCE,
+                            () -> graphics.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                                    20, 30, 1, 1, 3, 3, 0, false, false, false, false,
+                                    SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, "screen")));
+                    graphics.endSpriteSatCollectionAndReplay();
+                }));
+        var tile = capture.frame().tiles().getFirst();
+        assertTrue(capture.motion().screen(tile));
+        assertNull(capture.motion().owner(tile));
+        assertTrue(capture.motion().owners().isEmpty(), "Screen positioning invents no world anchor");
+        var camera = new SpriteMotionProjection.Offset(-4, 2);
+        var projection = new SpriteMotionProjection(capture.motion(), java.util.Map.of(), .5, camera);
+        assertEquals(camera, projection.offset(tile));
+        assertThrows(AssertionError.class, () -> assertEquals(SpriteMotionProjection.Offset.ZERO,
+                projection.offset(tile)), "A dropped SCREEN tag must fail the projection comparison");
+    }
     @Test void failedCollectionAndNestedOwnerScopesCannotLeakMetadata() {
         var outer = owner(1); var inner = owner(2);
         assertThrows(IllegalArgumentException.class, () -> SpriteMotionInternalAccess.collect(graphics, 0, 0,
