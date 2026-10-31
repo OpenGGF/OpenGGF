@@ -11,11 +11,11 @@ public final class SpriteMotionProjection {
         }
     }
     private final MotionPacket packet;
-    private final Map<MotionPacket.Key, Offset> steps;
+    private final Map<Object, Offset> steps;
     private final double weight;
     private final Offset camera;
 
-    public SpriteMotionProjection(MotionPacket packet, Map<MotionPacket.Key, Offset> steps,
+    public SpriteMotionProjection(MotionPacket packet, Map<Object, Offset> steps,
                                   double weight, Offset camera) {
         this.packet = packet;
         this.steps = Map.copyOf(steps);

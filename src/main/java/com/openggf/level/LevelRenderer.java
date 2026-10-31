@@ -952,7 +952,8 @@ public final class LevelRenderer {
     private LevelMotionPair.Metadata motionMetadata() {
         var camera = lm.camera;
         return new LevelMotionPair.Metadata(camera.getXCopy(), camera.getYCopy(), lm.cachedScreenWidth,
-                lm.cachedScreenHeight, camera.getFastScrollCap(), camera.didWrapLastFrame());
+                lm.cachedScreenHeight, camera.getFastScrollCap(), camera.didWrapLastFrame(),
+                com.openggf.camera.CameraMotionInternalAccess.forcedRecentreSerial(camera));
     }
     private java.util.Map<MotionCut, Long> motionCutSnapshot() {
         return java.util.Map.copyOf(motionCuts);
@@ -1001,7 +1002,7 @@ public final class LevelRenderer {
         motionCuts.clear();
         motionOffer = null;
         clearMotionDraw();
-        if (lm.graphicsManager != null) com.openggf.graphics.SpriteMotionInternalAccess.clearProjection(lm.graphicsManager);
+        if (lm != null && lm.graphicsManager != null) com.openggf.graphics.SpriteMotionInternalAccess.clearProjection(lm.graphicsManager);
     }
     private void adoptMotion() {
         if (motionOffer == null || !motionPackets.active || !supportsMotion() || motionObservedFrame != lm.frameCounter)
@@ -1302,7 +1303,7 @@ public final class LevelRenderer {
                         lm.camera.getXWithShake(), lm.camera.getYWithShake(),
                         () -> com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                                 lm.camera.getXWithShake(), lm.camera.getYWithShake(),
-                                () -> renderSpriteObjectPass(sprites, false)));
+                                () -> { renderSpriteObjectPass(sprites, false); }));
                 motionPackets.prepared(new LevelMotionPackets.Picture(capture.frame(),
                         new LevelMotionPair.Sample(capture.motion(), scroll, motionMetadata(), motionCutSnapshot())),
                         spriteTables.published());
@@ -1310,7 +1311,7 @@ public final class LevelRenderer {
             } else {
                 frame = com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                         lm.camera.getXWithShake(), lm.camera.getYWithShake(),
-                        () -> renderSpriteObjectPass(sprites, false));
+                        () -> { renderSpriteObjectPass(sprites, false); });
             }
             spriteTables.prepare(frame, scroll);
         } finally {

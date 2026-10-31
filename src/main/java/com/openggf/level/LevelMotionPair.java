@@ -9,17 +9,22 @@ import java.util.Objects;
 
 /** Matches native picture generations once. Drawing evaluates only the requested weight. */
 final class LevelMotionPair {
-    record Metadata(int cameraBaseX, int cameraBaseY, int width, int height, int fastScrollCap, boolean wrapped) { }
+    record Metadata(int cameraBaseX, int cameraBaseY, int width, int height, int fastScrollCap, boolean wrapped,
+                    long forcedRecentreSerial) {
+        Metadata(int cameraBaseX, int cameraBaseY, int width, int height, int fastScrollCap, boolean wrapped) {
+            this(cameraBaseX, cameraBaseY, width, height, fastScrollCap, wrapped, 0);
+        }
+    }
     record Sample(MotionPacket motion, LevelScrollPresentation scroll, Metadata metadata, Map<MotionCut, Long> cuts) {
         Sample { cuts = Map.copyOf(cuts); }
     }
     record Projection(LevelScrollPresentation scroll, SpriteMotionProjection sprites, Offset camera) { }
     private final Sample current;
     private final Offset cameraStep;
-    private final Map<MotionPacket.Key, Offset> ownerSteps;
+    private final Map<Object, Offset> ownerSteps;
     private final LevelScrollPresentation.BackgroundMotion background;
 
-    private LevelMotionPair(Sample current, Offset cameraStep, Map<MotionPacket.Key, Offset> ownerSteps,
+    private LevelMotionPair(Sample current, Offset cameraStep, Map<Object, Offset> ownerSteps,
                             LevelScrollPresentation.BackgroundMotion background) {
         this.current = current;
         this.cameraStep = cameraStep;
@@ -31,11 +36,12 @@ final class LevelMotionPair {
         var cuts = current.cuts().entrySet().stream()
                 .filter(entry -> !Objects.equals(previous.cuts().get(entry.getKey()), entry.getValue()))
                 .map(Map.Entry::getKey).toList();
-        if (old.width() != now.width() || old.height() != now.height() || old.wrapped() || now.wrapped()
+        if (old.forcedRecentreSerial() != now.forcedRecentreSerial()
+                || old.width() != now.width() || old.height() != now.height() || old.wrapped() || now.wrapped()
                 || cuts.stream().anyMatch(cut -> cut instanceof MotionCut.Camera)) return null;
         var camera = step(old.cameraBaseX(), old.cameraBaseY(), now.cameraBaseX(), now.cameraBaseY());
         if (beyond(camera, now.fastScrollCap())) return null;
-        var steps = new HashMap<MotionPacket.Key, Offset>();
+        var steps = new HashMap<Object, Offset>();
         for (var owner : current.motion().owners().values()) {
             if (owner.anchoring() != MotionPacket.Anchoring.FOLLOW
                     || cuts.stream().anyMatch(cut -> cut.matches(owner.key()))) continue;

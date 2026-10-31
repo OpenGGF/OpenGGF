@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.LevelMotionOwners;
+
 import com.openggf.game.PowerUpObject;
 import com.openggf.graphics.MotionPacket;
 import com.openggf.graphics.SpriteMotionInternalAccess;
@@ -24,14 +26,14 @@ final class ObjectMotionPresentation {
         var policy = POLICY.get(object.getClass());
         if (!policy.engine()) return null;
         if (object instanceof PowerUpObject effect && effect.boundPlayer() != null) {
-            return SpriteMotionInternalAccess.playerOwner(services.spriteManager(), effect.boundPlayer());
+            return LevelMotionOwners.playerOwner(services.spriteManager(), effect.boundPlayer());
         }
         if (policy.screen()) return MotionPacket.Screen.INSTANCE;
         if (object.getSpawn() == null && !policy.spatial()) return null;
         var manager = services.objectManager();
         if (manager == null) return null;
         return manager.objectQuery().identityOf(object)
-                .map(id -> new MotionPacket.Owner(new MotionPacket.ObjectKey(id), object.getX(), object.getY(),
+                .map(id -> new MotionPacket.Owner(new LevelMotionOwners.ObjectKey(id), object.getX(), object.getY(),
                         MotionPacket.Anchoring.FOLLOW)).orElse(null);
     }
     static void draw(ObjectInstance object, ObjectServices services, Runnable draw) {

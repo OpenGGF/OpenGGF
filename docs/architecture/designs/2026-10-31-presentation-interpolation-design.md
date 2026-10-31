@@ -322,5 +322,10 @@ tests proving services are identical with interpolation on or off.
    No default position getter is called on a null spawn. The guard derives null-spawn classes and
    concrete descendants from compiled constructor/source inventory, including insta-shield.
 
+   Graphics carries opaque owner keys; `LevelMotionOwners` resolves object and player identities.
+   Forced camera centering increments a camera-local presentation serial, sampled into each
+   picture's metadata at collection. A changed serial rejects pairing at publication without a
+   camera-to-level dependency or an added `Camera` mod API member.
+
 3. **Integration** (lead): Engine wiring of `observeService` and `present`, exact-consumer guard,
    docs and changelog, cost measurement, change-based smoke.

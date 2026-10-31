@@ -92,6 +92,19 @@ class TestLevelMotionPixels {
                 assertSame(heldFrame, LevelSpritePresentation.published(level));
                 samePixels(held, between(session, 0, true), "S3K lag retains the published picture");
             }
+            prime(level);
+            NativePositionOps.writeXPosPreserveSubpixel(player, camera.getX() + 0xA0 + 4);
+            NativePositionOps.writeYPosPreserveSubpixel(player, camera.getY() + 0x60);
+            int beforeRecentreX = camera.getX();
+            camera.updatePosition(true);
+            assertEquals(beforeRecentreX + 4, camera.getX(), "Use a recenter below the ordinary camera snap bound");
+            publishObservation(level);
+            assertNull(renderer.motionHistory.offer(PictureSelection.between(.5)).sprites(),
+                    "Forced centering cuts the picture when its generation publishes");
+            samePixels(session.render(), between(session, .5, true), "forced-centering latest");
+            publishObservation(level);
+            assertNotNull(renderer.motionHistory.offer(PictureSelection.between(.5)).sprites(),
+                    "An unchanged recenter serial allows the next generation to pair");
             SessionManager.getCurrentGameplayMode().getRewindRegistry().restore(beforeMovement);
             assertNull(renderer.motionHistory.offer(PictureSelection.between(.5)), "Own restore callback drops history");
             samePixels(session.render(), between(session, .5, false), "post-restore latest");
@@ -156,7 +169,7 @@ class TestLevelMotionPixels {
                 () -> level.spritePresentationRenderer().captureSceneSpriteTable(GameServices.sprites()));
         var tiles = capture.frame().tiles().stream().filter(tile -> {
             var owner = capture.motion().owner(tile);
-            return owner != null && owner.key() instanceof MotionPacket.PlayerKey key && key.incarnation() == session.player();
+            return owner != null && owner.key() instanceof LevelMotionOwners.PlayerKey key && key.incarnation() == session.player();
         }).toList();
         assertFalse(tiles.isEmpty(), "Native focused player owns admitted tiles");
         glClearColor(0, 0, 0, 0); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
