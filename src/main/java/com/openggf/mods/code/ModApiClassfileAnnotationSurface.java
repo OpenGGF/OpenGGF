@@ -28,7 +28,7 @@ final class ModApiClassfileAnnotationSurface {
         try (InputStream input = type.getResourceAsStream(resource)) {
             if (input == null) throw new IllegalStateException("Missing classfile " + resource);
             TreeSet<String> lines = new TreeSet<>();
-            new ClassReader(input).accept(visitor(type.getName(), lines),
+            new ClassReader(input).accept(visitor(type.getName(), lines, excludedMembers(type)),
                     ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
             return lines;
         } catch (IOException exception) {
@@ -41,7 +41,7 @@ final class ModApiClassfileAnnotationSurface {
         try (InputStream input = type.getResourceAsStream(resource)) {
             if (input == null) throw new IllegalStateException("Missing classfile " + resource);
             TreeSet<String> references = new TreeSet<>();
-            new ClassReader(input).accept(referenceVisitor(references),
+            new ClassReader(input).accept(referenceVisitor(references, excludedMembers(type)),
                     ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
             return references;
         } catch (IOException exception) {
@@ -49,7 +49,18 @@ final class ModApiClassfileAnnotationSurface {
         }
     }
 
-    private static ClassVisitor referenceVisitor(TreeSet<String> references) {
+    private static java.util.Set<String> excludedMembers(Class<?> type) {
+        var result = new java.util.HashSet<String>();
+        for (var m : type.getDeclaredMethods())
+            if (m.isAnnotationPresent(com.openggf.game.EngineOnly.class)) result.add(m.getName() + Type.getMethodDescriptor(m));
+        for (var c : type.getDeclaredConstructors())
+            if (c.isAnnotationPresent(com.openggf.game.EngineOnly.class)) result.add("<init>" + Type.getConstructorDescriptor(c));
+        for (var f : type.getDeclaredFields())
+            if (f.isAnnotationPresent(com.openggf.game.EngineOnly.class)) result.add(f.getName() + Type.getDescriptor(f.getType()));
+        return result;
+    }
+
+    private static ClassVisitor referenceVisitor(TreeSet<String> references, java.util.Set<String> excluded) {
         return new ClassVisitor(Opcodes.ASM9) {
             @Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 return referenceAnnotation(desc, references);
@@ -72,7 +83,7 @@ final class ModApiClassfileAnnotationSurface {
             }
             @Override public FieldVisitor visitField(
                     int access, String name, String descriptor, String signature, Object value) {
-                if (!supported(access)) return null;
+                if (!supported(access) || excluded.contains(name + descriptor)) return null;
                 return new FieldVisitor(Opcodes.ASM9) {
                     @Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                         return referenceAnnotation(desc, references);
@@ -85,7 +96,7 @@ final class ModApiClassfileAnnotationSurface {
             }
             @Override public MethodVisitor visitMethod(int access, String name, String descriptor,
                     String signature, String[] exceptions) {
-                if (!supported(access)) return null;
+                if (!supported(access) || excluded.contains(name + descriptor)) return null;
                 return new MethodVisitor(Opcodes.ASM9) {
                     @Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                         return referenceAnnotation(desc, references);
@@ -134,7 +145,7 @@ final class ModApiClassfileAnnotationSurface {
         if (type.getSort() == Type.OBJECT) references.add(type.getClassName());
     }
 
-    private static ClassVisitor visitor(String owner, TreeSet<String> lines) {
+    private static ClassVisitor visitor(String owner, TreeSet<String> lines, java.util.Set<String> excluded) {
         return new ClassVisitor(Opcodes.ASM9) {
             @Override
             public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
@@ -166,7 +177,7 @@ final class ModApiClassfileAnnotationSurface {
             @Override
             public FieldVisitor visitField(int access, String name, String descriptor,
                     String signature, Object value) {
-                if (!supported(access)) return null;
+                if (!supported(access) || excluded.contains(name + descriptor)) return null;
                 String target = "FIELD " + owner + " " + name + " " + descriptor;
                 return new FieldVisitor(Opcodes.ASM9) {
                     @Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
@@ -182,7 +193,7 @@ final class ModApiClassfileAnnotationSurface {
             @Override
             public MethodVisitor visitMethod(int access, String name, String descriptor,
                     String signature, String[] exceptions) {
-                if (!supported(access)) return null;
+                if (!supported(access) || excluded.contains(name + descriptor)) return null;
                 String target = "METHOD " + owner + " " + name + descriptor;
                 return new MethodVisitor(Opcodes.ASM9) {
                     @Override public AnnotationVisitor visitAnnotation(String desc, boolean visible) {

@@ -71,6 +71,7 @@ public class MemoryStats {
         }
     }
 
+    @com.openggf.game.EngineOnly
     public static MemoryStats getInstance() {
         return INSTANCE;
     }

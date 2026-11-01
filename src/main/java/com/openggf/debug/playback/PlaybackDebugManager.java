@@ -129,6 +129,7 @@ public final class PlaybackDebugManager {
         return GameServices.configuration();
     }
 
+    @com.openggf.game.EngineOnly
     public static PlaybackDebugManager getInstance() {
         return INSTANCE;
     }

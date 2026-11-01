@@ -1628,6 +1628,10 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- Supported mod builds now check attributed Java source and compiled payloads against
+  the reachable Mod API member contract. Engine-only singleton accessors are excluded
+  from the candidate promise; the portable builder offers an explicit expert legacy lane.
+
 - **Mod licensing:** Mods can use any licence. The OpenGGF Mod Exception, a
   GPL-3 section 7 permission, covers mods that use the engine only through the
   Mod API. `ggfmod init` adds no licence and its output is MIT-0. The example

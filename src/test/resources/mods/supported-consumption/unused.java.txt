@@ -1,0 +1,2 @@
+// expected: com.openggf.control.InputActionMasks
+import com.openggf.control.InputActionMasks; class Probe {}

@@ -11,7 +11,7 @@ Current changes are recorded in
 [CHANGELOG.0.7.md](CHANGELOG.0.7.md). The [0.8 roadmap](docs/project/v0.8-roadmap.md)
 remains future scope; `next` has no separate 0.8 implementation line yet.
 
-Recent maintenance includes protected movie and trace controls, codec-backed rewind
+Recent maintenance includes supported mod-consumption checks, protected movie and trace controls, codec-backed rewind
 snapshot equality, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility

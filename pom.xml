@@ -1489,6 +1489,8 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                 <version>3.11.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
+                    <!-- Do not load our SDK plugin service while compiling its provider. -->
+                    <compilerArgs><arg>-processorpath</arg><arg>${project.build.directory}/compiler-processors</arg></compilerArgs>
                 </configuration>
             </plugin>
 

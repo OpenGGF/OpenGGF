@@ -17,6 +17,7 @@ public class RenderOrderRecorder {
     private int orderCounter = 0;
     private boolean enabled = false;
 
+    @com.openggf.game.EngineOnly
     public static synchronized RenderOrderRecorder getInstance() {
         if (instance == null) {
             instance = new RenderOrderRecorder();

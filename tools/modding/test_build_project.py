@@ -66,6 +66,18 @@ class BuildProjectTest(unittest.TestCase):
         self.assertEqual(self.testkit, kwargs["testkit"])
         self.assertTrue(kwargs["run"])
 
+    def test_supported_default_and_expert_opt_out(self):
+        source = self.project / "src/main/java/Probe.java"
+        source.parent.mkdir(parents=True)
+        source.write_text("class Probe {}")
+        for expert in (False, True):
+            with self.subTest(expert=expert), patch.object(launcher.subprocess, "run") as run:
+                launcher.build(self.project, self.engine, self.sdk, expert_legacy=expert)
+                commands = [call.args[0] for call in run.call_args_list]
+                javac = next(cmd for cmd in commands if Path(cmd[0]).stem == "javac")
+                self.assertEqual(not expert, "-Xplugin:OpenGGFSupported" in javac)
+                self.assertEqual(not expert, any("com.openggf.tools.modsdk.SupportedSourceCheckCli" in cmd for cmd in commands))
+
     def test_external_config_paths_use_config_directory(self):
         self.settings()
         external = Path(self.temp.name) / "settings.json"

@@ -233,3 +233,9 @@ Share the validated jar, supported engine version/commit, required game/ROM,
 dependency versions, license/provenance, short install instructions and a changelog.
 Do not distribute generated engine trust/settings or your personal saves. Point
 recipients to [installing and updating mods](installing-mods.md).
+
+The portable `build_project.py` build checks supported Mod API consumption by
+default, both in attributed Java source and compiled classes. Unsupported engine
+symbols fail with a source location and a facade hint. Advanced third-party authors
+can explicitly choose `--expert-legacy` to retain the previous warning-based
+validation. That expert option gives no compatibility promise for engine internals.

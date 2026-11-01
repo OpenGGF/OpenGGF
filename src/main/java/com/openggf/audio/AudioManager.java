@@ -245,6 +245,7 @@ public class AudioManager implements MusicRestoreSink {
         return manager;
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized AudioManager getInstance() {
         if (instance == null) {
             instance = new AudioManager();
