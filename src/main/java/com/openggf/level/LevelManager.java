@@ -3372,6 +3372,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 sidekick.setLrbSolidBit(leaderPaths.getLrbSolidBit());
             }
             if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setCarryTrigger(activeGameModule().getSidekickCarryTrigger());
                 applySidekickLevelBounds(sidekick);
                 // Capture the spawn centre for the deferred CPU placement. ROM
                 // SpawnLevelMainSprites_SpawnPlayers places the sidekick and fills

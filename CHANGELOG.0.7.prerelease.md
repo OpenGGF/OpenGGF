@@ -8,6 +8,10 @@ Unreleased. The earlier development themes remain in
 - **Upside-down S3K capsules:** Use seven normal explosion effects and their
   break sound instead of the long boss-explosion sequence.
 
+- **MGZ2 to CNZ1:** Tails carries Sonic into Carnival Night after the Marble
+  Garden rescue instead of leaving Sonic to fall alone. Fresh level assembly
+  restores the normal carry policy on configured sidekicks.
+
 - **Sprite limits disabled:** Also remove the total 80/64-entry sprite-table cap,
   so later sprites survive crowded scenes and results screens. Explicit level
   masks remain active; enabling limits retains native table and line budgets.
