@@ -1,0 +1,895 @@
+/*
+ * Phase B contract sketch. NOT an engine implementation or a proposed single production file.
+ * Each nested declaration represents a public type in the package stated by its section.
+ * ExistingApiDeltas shows additions/replacements to existing types, not duplicate production APIs.
+ * All proposed public engine types, including nested enums/records, receive the real @ModApi.
+ * Existing supported types are imported by their real names. Private implementations are absent.
+ * Bodies intentionally fail; TODOs define engine obligations. No native terminal crosses a signature.
+ */
+import com.openggf.game.ModApi;
+import com.openggf.game.CanonicalAnimation;
+import com.openggf.physics.Direction;
+import com.openggf.game.patch.LogicalRom;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PowerUpRules;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ModRewindRecreatable;
+import com.openggf.level.objects.ObjectFactory;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.mods.scene.SceneArt;
+import com.openggf.mods.scene.SceneAudio;
+import com.openggf.mods.scene.SceneBackground;
+import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneRomArt;
+import com.openggf.mods.scene.SceneSpriteSet;
+import com.openggf.mods.scene.RomSpriteRequest;
+import com.openggf.sprites.animation.SpriteAnimationProfile;
+import java.util.List;
+import java.util.Optional;
+import java.util.OptionalInt;
+
+public final class Sketch {
+    private Sketch() { throw new UnsupportedOperationException("not implemented"); }
+
+    // ---------------- com.openggf.mods.host: callback capabilities ----------------
+
+    /** Shared safe services; this wrapper AND borrowed child services expire with the callback.
+     * Engine-issued, same thread/verified owner only. Detached decoded values can be retained.
+     * No global current(), manager getters, mutable config service, or raw ROM manager.
+     */
+    @ModApi public static final class ModHost {
+        private ModHost() { throw new UnsupportedOperationException("not implemented"); }
+        public Viewport viewport() { throw new UnsupportedOperationException("not implemented"); }
+        public SessionFacts sessionFacts() { throw new UnsupportedOperationException("not implemented"); }
+        public SceneAudio audio() {
+            // TODO bind operations to callback epoch, owner audio namespace and current session.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public SceneArt art() { throw new UnsupportedOperationException("not implemented"); }
+        /** Opens only declared/available logical ROMs. Reads use the same bounded ROM pipeline.
+         * Retaining this service cannot retain read authority past the callback.
+         */
+        public SceneRomArt rom(LogicalRom source) { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    @ModApi public record Viewport(int width, int height) {
+        public Viewport { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Detached configuration observations needed by these examples; no arbitrary config keys. */
+    @ModApi public record SessionFacts(String gameId, String mainCharacter, String sidekickCharacter,
+                                       boolean skipsActIntros, String engineVersion, String apiVersion) {
+        public SessionFacts { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    /** Update/factory authority for one title visit, never an active level authority. */
+    @ModApi public static final class TitleControl {
+        private TitleControl() { throw new UnsupportedOperationException("not implemented"); }
+        public ModHost host() { throw new UnsupportedOperationException("not implemented"); }
+        public NativeTitle openNativeTitle(NativeTitleRecipe recipe) {
+            // TODO owner/session resource table; independent ROM reader; fault-bounded cleanup.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        /** Session launch edit is validated/committed once at title exit, never persistent settings. */
+        public void launchSelection(TitleLaunch selection) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Draw-only authority. SceneCanvas is callback-scoped and no draw call advances native state. */
+    @ModApi public static final class TitleDraw {
+        private TitleDraw() { throw new UnsupportedOperationException("not implemented"); }
+        public SceneCanvas canvas() { throw new UnsupportedOperationException("not implemented"); }
+        public Viewport viewport() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record TitleLaunch(NativeAct act, String mainCharacter, String sidekickCharacter,
+                                      String displayProfile) {
+        public TitleLaunch { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record NativeAct(int zone, int act) {
+        public NativeAct { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    /** Gameplay draw callback, used by the native render owner, including held/cinematic tiles.
+     * Per-owner submissions are merged at the native bucket read boundary. No gameplay mutation.
+     */
+    @ModApi public static final class CourseDraw {
+        private CourseDraw() { throw new UnsupportedOperationException("not implemented"); }
+        public WorldSprites sprites() { throw new UnsupportedOperationException("not implemented"); }
+        public SceneCanvas overlay() { throw new UnsupportedOperationException("not implemented"); }
+        public Viewport viewport() { throw new UnsupportedOperationException("not implemented"); }
+        /** All view drawing runs here, including existing SceneViewPresenter.draw operations.
+         * Its owner-bound wrapper checks this draw epoch rather than exporting graphics state.
+         */
+    }
+
+    // ---------------- com.openggf.level.objects.mod: owned auxiliary construction ----------------
+
+    /** Nonforgeable registration handle, minted only by the canonical ModContext transaction.
+     * Type parameter enforces both supported object base and projected rewind recreation.
+     */
+    @ModApi public static final class AuxiliaryKey<T extends AbstractObjectInstance & ModRewindRecreatable> {
+        private AuxiliaryKey() { throw new UnsupportedOperationException("not implemented"); }
+        public String namespacedKey() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public interface AuxiliaryFactory<T extends AbstractObjectInstance & ModRewindRecreatable> {
+        T create(AuxiliaryCreation creation);
+    }
+    /** Read-only construction projection; hides probe/restore/adoption machinery.
+     * Returned ObjectServices is injected, owner-attributed and construction-scoped.
+     */
+    @ModApi public static final class AuxiliaryCreation {
+        private AuxiliaryCreation() { throw new UnsupportedOperationException("not implemented"); }
+        public ObjectSpawn spawn() { throw new UnsupportedOperationException("not implemented"); }
+        public SpawnArguments arguments() { throw new UnsupportedOperationException("not implemented"); }
+        public ObjectServices services() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Persistent bounded scalar arguments, not Map<String,Object>, reflection, or Java serialization.
+     * Max 64 keys, names <=64 chars, text values <=256 chars; other quotas can only shrink per owner.
+     * Canonical key order and concrete value kinds make capture/replay deterministic.
+     */
+    @ModApi public static final class SpawnArguments {
+        private SpawnArguments() { throw new UnsupportedOperationException("not implemented"); }
+        public static SpawnArguments empty() { throw new UnsupportedOperationException("not implemented"); }
+        public SpawnArguments withInt(String key, int value) { throw new UnsupportedOperationException("not implemented"); }
+        public SpawnArguments withBoolean(String key, boolean value) { throw new UnsupportedOperationException("not implemented"); }
+        public SpawnArguments withText(String key, String value) { throw new UnsupportedOperationException("not implemented"); }
+        public int requireInt(String key) { throw new UnsupportedOperationException("not implemented"); }
+        public boolean requireBoolean(String key) { throw new UnsupportedOperationException("not implemented"); }
+        public String requireText(String key) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Position is native centre coordinates. No owner, slot, native object ID or lifetime flag. */
+    @ModApi public record AuxiliarySpawn(int centreX, int centreY, int subtype, SpawnArguments arguments) {
+        public AuxiliarySpawn { throw new UnsupportedOperationException("not implemented"); }
+        public static AuxiliarySpawn at(int centreX, int centreY) { throw new UnsupportedOperationException("not implemented"); }
+        public AuxiliarySpawn withSubtype(int subtype) { throw new UnsupportedOperationException("not implemented"); }
+        public AuxiliarySpawn withArguments(SpawnArguments arguments) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public sealed interface SpawnResult permits SpawnAdmitted, SpawnRefused { }
+    @ModApi public record SpawnAdmitted(ObjectRefId identity) implements SpawnResult {
+        public SpawnAdmitted { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record SpawnRefused(SpawnRefusal reason) implements SpawnResult {
+        public SpawnRefused { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum SpawnRefusal { OWNER_QUOTA, WORLD_CAPACITY }
+    /** Injected capability. Rewindable/non-SST is intrinsic to this path, not a caller flag. */
+    @ModApi public static final class Auxiliaries {
+        private Auxiliaries() { throw new UnsupportedOperationException("not implemented"); }
+        public <T extends AbstractObjectInstance & ModRewindRecreatable>
+        SpawnResult spawn(AuxiliaryKey<T> key, AuxiliarySpawn request) {
+            // TODO verify owner and visit; budget before construction; canonical ObjectSpawn.
+            // TODO construction scope + private probe suppression; rollback children on failure.
+            // TODO validate shell eligibility; insert atomically; capture key+args+scalar+refs.
+            // TODO two-phase recreate uses registry key; never re-publishes constructor effects.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+
+    // ---------------- com.openggf.mods.world: detached art and immutable draw data ----------------
+
+    /** Validated supported resource ID. Catalogue owns native aliases, ROM profile and recipes.
+     * Not a JVM class name and not an arbitrary native provider key. No runtime ROM bytes here.
+     */
+    @ModApi public static final class StockArtKey {
+        private StockArtKey() { throw new UnsupportedOperationException("not implemented"); }
+        public static StockArtKey of(LogicalRom game, String catalogueId) {
+            // TODO resolve against one catalogue also used by stock scene/world art.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    @ModApi public record WorldRect(int left, int top, int width, int height) {
+        public WorldRect { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum PaletteSelection { NATIVE, LINE_0, LINE_1, LINE_2, LINE_3 }
+    /** The union is source-domain knowledge, not a re-export of PLC/DMA wire types. */
+    @ModApi public sealed interface WorldArtSource permits StockArtSource, RomArtSource, ForegroundArtSource { }
+    @ModApi public record StockArtSource(StockArtKey key) implements WorldArtSource {
+        public StockArtSource { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record RomArtSource(LogicalRom rom, RomSpriteRequest request) implements WorldArtSource {
+        public RomArtSource { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Each bounded crop becomes a frame. Preserve native per-tile palette/priority and flips.
+     * Source is the captured decoded foreground of this visit, never an imported pixel file.
+     */
+    @ModApi public record ForegroundArtSource(List<WorldRect> frameCrops) implements WorldArtSource {
+        public ForegroundArtSource { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Required frames distinguish intentionally empty frames from missing/malformed art. */
+    @ModApi public record FrameRequirement(int frame, boolean allowTransparent) {
+        public FrameRequirement { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Immutable request. Alias is owner-local display data, not authority or an engine key. */
+    @ModApi public record WorldArtSpec(String alias, WorldArtSource source,
+                                      PaletteSelection palette, List<FrameRequirement> requiredFrames) {
+        public WorldArtSpec { throw new UnsupportedOperationException("not implemented"); }
+        public static WorldArtSpec stock(String alias, StockArtKey key, int... requiredFrames) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public WorldArtSpec withPalette(PaletteSelection palette) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Callback-scoped preparation authority, all-or-nothing; graphics context unnecessary. */
+    @ModApi public static final class WorldArt {
+        private WorldArt() { throw new UnsupportedOperationException("not implemented"); }
+        public WorldArtBank prepare(List<WorldArtSpec> requests) {
+            // TODO aggregate quotas; declared logical ROM; decode cold archives, not live DMA windows.
+            // TODO frame mappings/piece/tile bounds; validate nonempty required pixels.
+            // TODO no production PLC/DMA submission or native global module/art mutation.
+            // TODO adopt immutable CPU data into canonical owner resource table only on success.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Private immutable CPU sheets plus lazily acquired owner-only GPU residency.
+     * Methods validate current resource generation; close is idempotent, fault/unload closes it.
+     * Renderer never receives a public mutable sheet, renderer, atlas slot or GL handle.
+     */
+    @ModApi public static final class WorldArtBank implements OwnedWorldResource {
+        private WorldArtBank() { throw new UnsupportedOperationException("not implemented"); }
+        @Override public ResourceKey<WorldArtBank> key() { throw new UnsupportedOperationException("not implemented"); }
+        public WorldArtFrame frame(String alias, int frame) { throw new UnsupportedOperationException("not implemented"); }
+        public List<AnimalFrameGroup> animalFrames() { throw new UnsupportedOperationException("not implemented"); }
+        @Override public void close() {
+            // TODO remove only this owner's GPU lease; keep snapshot-referenced CPU recipes bounded.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Native animal selection projected as validated frames, not AnimalType enum ordinals. */
+    @ModApi public record AnimalFrameGroup(int variant, List<WorldArtFrame> poses) {
+        public AnimalFrameGroup { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Immutable reference to a validated frame and optional bounded piece subset.
+     * Opaque resource identity prevents using another bank/generation by inventing indices.
+     */
+    @ModApi public static final class WorldArtFrame {
+        private WorldArtFrame() { throw new UnsupportedOperationException("not implemented"); }
+        public WorldArtFrame onlyPieces(List<Integer> pieceIndices) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Authored sprite image pose. Finite coordinates, positive bounded scale; no animation clock. */
+    @ModApi public record SpritePose(double centreX, double centreY, boolean flipX, boolean flipY,
+                                     double scale, PaletteSelection palette) {
+        public SpritePose { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Native bucket index (0 front..7 back) and owner high-bit are distinct from mapping-piece bits.
+     * Stable submission order breaks ties. No public priority-pass or palette-mask switches.
+     */
+    @ModApi public record SpriteOrder(int nativeBucket, boolean ownerHighPriority) {
+        public SpriteOrder { throw new UnsupportedOperationException("not implemented"); }
+        public static SpriteOrder nativeBucket(int index) { throw new UnsupportedOperationException("not implemented"); }
+        public SpriteOrder withHighPriority(boolean high) { throw new UnsupportedOperationException("not implemented"); }
+        /** Compatibility with existing supported ObjectInstance.getPriorityBucket(): validated 0..7. */
+        public int bucketIndex() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Per-draw, per-owner write-only submission buffer. Repeating a draw repeats only the picture. */
+    @ModApi public static final class WorldSprites {
+        private WorldSprites() { throw new UnsupportedOperationException("not implemented"); }
+        public void submit(WorldArtFrame frame, SpritePose pose, SpriteOrder order) {
+            // TODO resolve resource+context generation; lazy residency; reserve bounded piece budget.
+            // TODO merge owner buffers into native buckets; preserve owner/piece priority+tile occlusion.
+            // TODO scale native pieces in the same pipeline, restore graphics state in finally.
+            // TODO callback failure discards just this owner's uncommitted submissions.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+
+    /** Engine-owned resource family. Capture keys, never these mutable/revocable wrappers.
+     * One stable owner/session rewind adapter snapshots private resource state; restores may create
+     * fresh wrappers, reconciles absent resources and reactivates only captured logical identities.
+     */
+    @ModApi public sealed interface OwnedWorldResource extends AutoCloseable
+            permits WorldArtBank, HeldWorld, TerrainRehearsal {
+        ResourceKey<? extends OwnedWorldResource> key();
+        @Override void close();
+    }
+    /** Opaque bounded value with a registered rewind value codec. No public constructor, owner ID,
+     * raw numeric ID, or Class<T> parameter. Engine mints and validates resource-kind binding.
+     */
+    @ModApi public static final class ResourceKey<T extends OwnedWorldResource> {
+        private ResourceKey() { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    // ---------------- com.openggf.mods.world: held-world lifecycle ----------------
+
+    @ModApi public enum NativeActorRole { CARRIER, FLIGHT_DIRECTOR, LOST_RING }
+    @ModApi public enum NativeActorPhase { STARTING, ESTABLISHED, LEAVING }
+    /** Membership is a detached observation. Re-resolve identity after rewind; never cast to native class. */
+    @ModApi public record NativeActorObservation(ObjectRefId identity, NativeActorRole role,
+                                                 NativeActorPhase phase, int centreX, int centreY,
+                                                 boolean standingMainPlayer) {
+        public NativeActorObservation { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record PlayerCustody(Optional<ObjectRefId> support, boolean nativeRideEstablished,
+                                        boolean nativeFlightEstablished) {
+        public PlayerCustody { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Mutually exclusive admissible entry recipes; do not accept arbitrary boolean policy bags. */
+    @ModApi public sealed interface HoldSpec permits FreeMainPlayer, ExistingCustody {
+        static HoldSpec freeMainPlayer() { throw new UnsupportedOperationException("not implemented"); }
+        static HoldSpec existingCustody(NativeActorRole role) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record FreeMainPlayer() implements HoldSpec {
+        public FreeMainPlayer { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record ExistingCustody(NativeActorRole role) implements HoldSpec {
+        public ExistingCustody { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum HoldRefusal { ENTRY_PRESENTATION, PLAYER_UNAVAILABLE, UNSUPPORTED_CUSTODY, ANOTHER_OWNER }
+    @ModApi public record HoldReadiness(boolean ready, Optional<HoldRefusal> refusal) {
+        public HoldReadiness { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Finite view; validated using existing Stageplay source-side/source-pixel bounds. */
+    @ModApi public record HeldView(double cameraX, double cameraY, double zoom, int width, int height) {
+        public HeldView { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Authored player presentation request. Facing accepts only native LEFT/RIGHT directions.
+     * Centres are finite native coordinates; animation time is explicit and draw never advances it.
+     * Native owner chooses sprite orientation, accessories and mapping, not a caller pixel flip.
+     */
+    @ModApi public record DirectedPose(double centreX, double centreY, Direction facing,
+                                       CanonicalAnimation animation, long animationTicks, boolean visible) {
+        public DirectedPose { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum HoldFinish { RESTORE_ENTRY, RELEASE_AT_FINAL_POSE }
+    /** Engine-produced detached native pose. Only native rehearsal or supported animation sampling mints it.
+     * Captures centre/subpixel, logical facing, animation/mapping/angle, radii and render orientation.
+     * The private provenance includes donor, character, terrain/rules and source identity, not trace rows.
+     */
+    @ModApi public static final class NativePlayerPose {
+        private NativePlayerPose() { throw new UnsupportedOperationException("not implemented"); }
+        public double centreX() { throw new UnsupportedOperationException("not implemented"); }
+        public double centreY() { throw new UnsupportedOperationException("not implemented"); }
+        public boolean airborne() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Engine-issued exclusive held-world lease. Native frame admission cannot advance while active.
+     * All mutations require a current CourseControl from the same owner/session/visit.
+     * No hidden global current context. Host owns entry/scroll/palette/sprite composition coherently.
+     */
+    @ModApi public static final class HeldWorld implements OwnedWorldResource {
+        private HeldWorld() { throw new UnsupportedOperationException("not implemented"); }
+        @Override public ResourceKey<HeldWorld> key() { throw new UnsupportedOperationException("not implemented"); }
+        /** Resolve authored policy into the held native player's own art and facing conventions. */
+        public NativePlayerPose pose(ExistingApiDeltas.CourseControl course, DirectedPose request) {
+            // TODO canonical animation/frame sampling through native presentation owner, no player tick.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        /** Sample captured native entry/custody pose without altering or detaching the actor. */
+        public NativePlayerPose entryPose(ExistingApiDeltas.CourseControl course) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void present(ExistingApiDeltas.CourseControl course, NativePlayerPose pose, HeldView view) {
+            // TODO validate active scope, provenance and custody. Apply native position/sensor owner.
+            // TODO preserve established carrier/flight relationships; never invent support.
+            // TODO publish immutable directed view; native renderer owns tiling and palette arbitration.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        /** Advances selected presentation state, not native physics/objects/world clocks. */
+        public void advancePresentation(ExistingApiDeltas.CourseControl course) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public HeldCheckpoint capture(ExistingApiDeltas.CourseControl course) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void restore(ExistingApiDeltas.CourseControl course, HeldCheckpoint checkpoint) {
+            // TODO checkpoint identities are visit/resource-bound; no stale player/manager references.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void finish(ExistingApiDeltas.CourseControl course, HoldFinish finish) {
+            // TODO coherent native release or exact entry restore; clear pending gameplay input.
+            // TODO idempotent completion; conflicting second finish is a misuse diagnostic.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        @Override public void close() {
+            // TODO restore entry iff same visit and unfinished; otherwise release owned resources only.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Detached opaque state; CPU mechanics only. Private fields are intentionally not API. */
+    @ModApi public static final class HeldCheckpoint {
+        private HeldCheckpoint() { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    // ---------------- com.openggf.mods.world.rehearsal: isolated native terrain mechanics ----------------
+
+    /** Requested aggregate ceilings; engine clamps/rejects against fixed host and per-owner maxima.
+     * CPU work, allocation and checkpoint limits also apply; public requests cannot relax them.
+     */
+    @ModApi public record RehearsalBudget(int nativeRows, int sensorQueries, int rasterPixels) {
+        public RehearsalBudget { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Current player's captured native profile and immutable terrain; no arbitrary native module input. */
+    @ModApi public static final class RehearsalSpec {
+        private RehearsalSpec() { throw new UnsupportedOperationException("not implemented"); }
+        public static RehearsalSpec currentPlayer(RehearsalBudget budget) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Captured static floor proposals; engine supplies immutable sample lists, not mutable raster arrays. */
+    @ModApi public record FloorStrip(int left, int top, int width, List<Integer> surfaceY) {
+        public FloorStrip { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Native placement result bound to one rehearsal/profile. The mod cannot invent a support token. */
+    @ModApi public static final class NativeSupport {
+        private NativeSupport() { throw new UnsupportedOperationException("not implemented"); }
+        public int centreX() { throw new UnsupportedOperationException("not implemented"); }
+        public int centreY() { throw new UnsupportedOperationException("not implemented"); }
+        public int surfaceY() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Fixed native units: positions in pixels incl. subpixels, speeds signed 8.8, angle 0..255. */
+    @ModApi public record RehearsalObservation(long nativeRows, double centreX, double centreY,
+                                              int xSpeed, int ySpeed, int groundSpeed,
+                                              boolean onGround, int angle, int yRadius,
+                                              NativePlayerPose pose) {
+        public RehearsalObservation { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum TravelSpeed { WALK, RUN }
+    @ModApi public enum TravelEnding { STOP, PASS_THROUGH }
+    @ModApi public record SteeringGoal(int centreX, int tolerance, TravelSpeed speed, TravelEnding ending) {
+        public SteeringGoal { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** No public mutable native snapshot fields. Restore requires exact resource identity. */
+    @ModApi public static final class RehearsalCheckpoint {
+        private RehearsalCheckpoint() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum WorkAllowance { AVAILABLE, WORK_SLICE_COMPLETE, AGGREGATE_EXHAUSTED }
+    /** One private collision world/player; all methods require an active owner update callback.
+     * It never joins live ObjectManager, audio, events, palette or PLC work queues.
+     * World/profile/character snapshots are private; no live services or sprites are exported.
+     */
+    @ModApi public static final class TerrainRehearsal implements OwnedWorldResource {
+        private TerrainRehearsal() { throw new UnsupportedOperationException("not implemented"); }
+        @Override public ResourceKey<TerrainRehearsal> key() { throw new UnsupportedOperationException("not implemented"); }
+        public WorkAllowance allowance() { throw new UnsupportedOperationException("not implemented"); }
+        public List<FloorStrip> floorStrips(WorldRect search, int minimumWidth, int stride, int maxResults) {
+            // TODO charge scan/sample/allocated bytes, cap each result count, immutable samples.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public Optional<NativeSupport> supportNear(int centreX, int centreY, int maximumVerticalDistance) {
+            // TODO native placement/sensors/radii; missing support is a value, faults propagate.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public boolean foregroundClear(WorldRect view) {
+            // TODO charge raster pixels, combine both priorities, inspect captured native foreground.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void place(NativeSupport support) { throw new UnsupportedOperationException("not implemented"); }
+        public RehearsalObservation observe() { throw new UnsupportedOperationException("not implemented"); }
+        /** Computes ordinary native direction input using the owning steering algorithm; never steps. */
+        public PlayerInputState steer(SteeringGoal goal) { throw new UnsupportedOperationException("not implemented"); }
+        public RehearsalObservation step(PlayerInputState input) {
+            // TODO consume deterministic work allowance; native player input/physics/animation only.
+            // TODO no live clocks, production timing input, object construction, sound or transitions.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public RehearsalCheckpoint capture() { throw new UnsupportedOperationException("not implemented"); }
+        public void restore(RehearsalCheckpoint checkpoint) {
+            // TODO restore private player and local simulation clock, NEVER remaining work budget.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        @Override public void close() {
+            // TODO idempotent; release private collision/art references and checkpoint ownership.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+
+    // ---------------- com.openggf.mods.title: independent native title composition ----------------
+
+    /** Stock current-donor title; fixed recipe rather than creator assembly of native providers. */
+    @ModApi public record NativeTitleRecipe(int backgroundFadeTicks) {
+        public NativeTitleRecipe { throw new UnsupportedOperationException("not implemented"); }
+        public static NativeTitleRecipe stock(int backgroundFadeTicks) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Camera recipe samples the act's native start and isolated native scrolling profile.
+     * Per-tick camera speed is authored policy; level decoding/scroll semantics stay private.
+     */
+    @ModApi public record BackgroundCamera(int horizontalPixelsPerTick, int verticalOffsetFromStart) {
+        public BackgroundCamera { throw new UnsupportedOperationException("not implemented"); }
+        public static BackgroundCamera atActStart(int horizontalPixelsPerTick, int verticalOffset) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    @ModApi public sealed interface TitleBackground permits StockTitleBackground, ActTitleBackground {
+        static TitleBackground stock() { throw new UnsupportedOperationException("not implemented"); }
+        static TitleBackground level(NativeAct act, BackgroundCamera camera) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    @ModApi public record StockTitleBackground() implements TitleBackground {
+        public StockTitleBackground { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record ActTitleBackground(NativeAct act, BackgroundCamera camera) implements TitleBackground {
+        public ActTitleBackground { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum TitlePart { EMBLEM_BACK, EMBLEM_FRONT, HERO, HERO_FOREGROUND, TAILS, SPARKLES }
+    /** Detached title asset parts; same ROM decoder as NativeTitle. No atlas/mapping/VRAM protocol.
+     * Existing SceneSpriteSet supplies frames; native decoder projects semantic layers and palettes.
+     * HERO_FOREGROUND is the native foreground-only mapping subset; frame numbers stay native.
+     * This supports Golf's layered emblem and priority-only hero without exposing mapping pieces.
+     */
+    @ModApi public static final class NativeTitleArt {
+        private NativeTitleArt() { throw new UnsupportedOperationException("not implemented"); }
+        public SceneBackground background() { throw new UnsupportedOperationException("not implemented"); }
+        public Optional<SceneSpriteSet> part(TitlePart part) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Stock title driver plus safe composition. Owner/session-bound, fixed resource quotas.
+     * Title state, palette fades, music and independent background service have one engine owner.
+     */
+    @ModApi public static final class NativeTitle implements AutoCloseable {
+        private NativeTitle() { throw new UnsupportedOperationException("not implemented"); }
+        public void background(TitleControl control, TitleBackground selection) {
+            // TODO idempotent recipe equality; bounded independent decode; atomic transition.
+            // TODO no createGame side effects, live PLC replacement or global palette writes.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void update(TitleControl control, LogicalInputSnapshot input) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void draw(TitleDraw draw) {
+            // TODO compose selected background under native foreground, one authoritative fade.
+            // TODO draw is repeatable, state-safe, no update/decode; backdrop is host-owned.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public com.openggf.game.TitleScreenProvider.State state() { throw new UnsupportedOperationException("not implemented"); }
+        public boolean isExiting() { throw new UnsupportedOperationException("not implemented"); }
+        public com.openggf.game.TitleScreenProvider.TitleScreenAction consumeExitAction() {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public void reset(TitleControl control) { throw new UnsupportedOperationException("not implemented"); }
+        @Override public void close() { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    // ---------------- com.openggf.level.objects.mod: synchronous typed touch boundary ----------------
+
+    /** Snapshot at exactly the native pre-dispatch boundary, after the native eligibility gates.
+     * Eligibility booleans come from the native owner, not guessed from an animation after the step.
+     */
+    @ModApi public record TouchPlayerFacts(int playerIndex, int centreX, int centreY, int rings,
+                                          int recoveryFrames, boolean shield, boolean airborne,
+                                          boolean attacking, boolean cpu, boolean debug,
+                                          boolean dead, boolean superForm, boolean harmfulHitEligible,
+                                          boolean specialPickupEligible) {
+        public TouchPlayerFacts { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record TouchContact(TouchPlayerFacts player, TouchResponseResult response, int vIntRunCount) {
+        public TouchContact { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum ShieldChange { KEEP, REMOVE, GRANT_STANDARD }
+    @ModApi public enum HitDisposition { SURVIVE, DIE }
+    @ModApi public enum HitKnockback { NONE, NATIVE }
+    /** Atomic validated replacement of a harmful touch, not arbitrary native state mutation.
+     * Recovery/rings have native bounded ranges. DIE must use native death mechanics.
+     * Policy chooses toll/revive; the engine applies the edit before skipping native hurt dispatch.
+     */
+    @ModApi public record PlayerHitEdit(HitDisposition disposition, int ringsAfter,
+                                        ShieldChange shield, int recoveryFrames, HitKnockback knockback) {
+        public PlayerHitEdit { throw new UnsupportedOperationException("not implemented"); }
+        public static PlayerHitEdit survive(int ringsAfter, ShieldChange shield, int recoveryFrames) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        public static PlayerHitEdit lethal() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Apply through the normal ring/life/shield owner, preserving ROM ring-cap and award semantics. */
+    @ModApi public record PickupReward(int addRings, ShieldChange shield) {
+        public PickupReward { throw new UnsupportedOperationException("not implemented"); }
+        public static PickupReward rings(int count) { throw new UnsupportedOperationException("not implemented"); }
+        public static PickupReward standardShield() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public sealed interface TouchResolution permits NativeTouch, ReplacedHit, SpecialPickup {
+        static TouchResolution nativeDispatch() { throw new UnsupportedOperationException("not implemented"); }
+        static TouchResolution replaceHit(PlayerHitEdit edit, boolean consumeObject) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+        static TouchResolution pickup(PickupReward reward, boolean consumeObject) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    @ModApi public record NativeTouch() implements TouchResolution {
+        public NativeTouch { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record ReplacedHit(PlayerHitEdit edit, boolean consumeObject) implements TouchResolution {
+        public ReplacedHit { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public record SpecialPickup(PickupReward reward, boolean consumeObject) implements TouchResolution {
+        public SpecialPickup { throw new UnsupportedOperationException("not implemented"); }
+    }
+    @ModApi public enum TouchEffect { NATIVE, REPLACED_HIT, PICKUP, SUPPRESSED }
+    @ModApi public record TouchOutcome(TouchContact contact, TouchEffect effect,
+                                       TouchPlayerFacts playerAfter, boolean objectConsumed) {
+        public TouchOutcome { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Implement only on an owner-registered object. Legacy engine listeners stay private.
+     * resolve executes before native hurt/attack/special dispatch, not as a later event.
+     * Native decisions preserve current native attack callbacks and first-overlap termination.
+     * A resolution is applied once per invocation; rewind/replay invokes the policy again.
+     */
+    @ModApi public interface ModTouchPolicy {
+        TouchResolution resolve(TouchContact contact);
+        /** Update mod score/state, spawn drops or start sparkle animation AFTER committed resolution.
+         * A consumed object is still callback-addressable here but no longer a touch candidate.
+         */
+        default void resolved(TouchOutcome outcome) { throw new UnsupportedOperationException("not implemented"); }
+        // TODO native owner validates category/eligibility and owner before applying returned edits.
+        // TODO existing object fault boundaries cover both callbacks; do not redispatch native listeners.
+        // TODO preserve sidekick/special/attack order and continuous callback behavior, no event queue.
+    }
+
+    // ---------------- com.openggf.level.objects.mod: native spring recipe ----------------
+
+    @ModApi public enum SpringSideEntry { NATIVE_ONLY, ROLLING_APPROACH_PRESERVE_MOMENTUM }
+    /** Native donor up-spring mechanics. Side-entry behavior is a named supported variation,
+     * not a virtual method exposing partial solid-contact/native spring execution.
+     */
+    @ModApi public record NativeSpringRecipe(SpringSideEntry sideEntry) {
+        public NativeSpringRecipe { throw new UnsupportedOperationException("not implemented"); }
+        public static NativeSpringRecipe up(SpringSideEntry sideEntry) {
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    @ModApi public static final class NativeSprings {
+        private NativeSprings() { throw new UnsupportedOperationException("not implemented"); }
+        public static ObjectFactory factory(NativeSpringRecipe recipe) {
+            // TODO active donor profile chooses ROM art/bounce constants; reject unsupported recipe.
+            // TODO rolling/inward side approach: retain separation, recover pre-contact momentum,
+            //      detach current contact, omit top-landing +8px correction, impulse only once.
+            // TODO rising repeat side contact preserves forward momentum without another impulse.
+            // TODO internal side-entry latch participates in native object recreation/scalar rewind.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+
+    // ---------------- Small supported additions at existing semantic owners ----------------
+
+    @ModApi public enum ActionButton { A, B, C }
+    /** Exact native lookup arithmetic: unsigned angle 0..255, signed integer native amplitude.
+     * Table/rounding matches the ROM lookup; no Math.sin approximation.
+     */
+    @ModApi public static final class NativeTrig {
+        private NativeTrig() { throw new UnsupportedOperationException("not implemented"); }
+        public static int sinHex(int angle) { throw new UnsupportedOperationException("not implemented"); }
+        public static int cosHex(int angle) { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Finite threshold edit in native signed 8.8 speed units; no native implementation downcast. */
+    @ModApi public record VelocityAnimationEdit(int runSpeedThreshold) {
+        public VelocityAnimationEdit { throw new UnsupportedOperationException("not implemented"); }
+    }
+    /** Requested per-owner camera policy, merged by the owner at read time; no direct Camera writes. */
+    @ModApi public record CameraEdit(OptionalInt originX, OptionalInt originY, Optional<Boolean> frozen) {
+        public CameraEdit { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    /** EXCERPTS ONLY. These declarations stand for edits to existing classes/interfaces.
+     * No real production class named ExistingApiDeltas will be added.
+     */
+    public static final class ExistingApiDeltas {
+        private ExistingApiDeltas() { throw new UnsupportedOperationException("not implemented"); }
+
+        // com.openggf.mods.code.ModContext (existing final owner transaction)
+        public static final class ModContext {
+            private ModContext() { throw new UnsupportedOperationException("not implemented"); }
+            public <T extends AbstractObjectInstance & ModRewindRecreatable>
+            AuxiliaryKey<T> registerAuxiliary(String localKey, AuxiliaryFactory<T> factory) {
+                // TODO same object registry/canonical owner/freeze transaction; reject native SST claims.
+                // TODO normalize namespace once; factory identity recorded for runtime and rewind.
+                throw new UnsupportedOperationException("not implemented");
+            }
+        }
+        // com.openggf.level.objects.ObjectServices (existing injected interface)
+        public interface ObjectServicesDelta {
+            Auxiliaries auxiliaries();
+            /** Supported key vocabulary through existing native object render path. */
+            String stockArtKey(StockArtKey key);
+        }
+        // com.openggf.game.mode.CourseControl (existing engine-issued callback capability)
+        public static final class CourseControl {
+            private CourseControl() { throw new UnsupportedOperationException("not implemented"); }
+            public ModHost host() { throw new UnsupportedOperationException("not implemented"); }
+            public WorldArt worldArt() { throw new UnsupportedOperationException("not implemented"); }
+            /** Reacquire after rewind. Empty when the resource was absent at the restored checkpoint.
+             * Reject foreign owner/session keys; do not silently resolve a recycled numeric identity.
+             */
+            public <T extends OwnedWorldResource> Optional<T> resolveResource(ResourceKey<T> key) {
+                throw new UnsupportedOperationException("not implemented");
+            }
+            public com.openggf.game.presentation.SceneViewPresenter createScenePresenter() {
+                // TODO existing presenter, bound to this owner/visit, update accepts and draw-only draws.
+                throw new UnsupportedOperationException("not implemented");
+            }
+            public TerrainRehearsal rehearse(RehearsalSpec spec) {
+                // TODO resource table + stable owner rewind adapter; copy immutable terrain/profile.
+                throw new UnsupportedOperationException("not implemented");
+            }
+            public HoldReadiness holdReadiness(HoldSpec spec) { throw new UnsupportedOperationException("not implemented"); }
+            public HeldWorld holdWorld(HoldSpec spec) {
+                // TODO exclusive reservation + entry capture atomically; checked before native admission.
+                throw new UnsupportedOperationException("not implemented");
+            }
+            public void requestCamera(CameraEdit edit) { throw new UnsupportedOperationException("not implemented"); }
+            public void requestHudVisible(boolean visible) { throw new UnsupportedOperationException("not implemented"); }
+            public PlayerCustody playerCustody() { throw new UnsupportedOperationException("not implemented"); }
+            public com.openggf.game.presentation.ScenePresentationFrame captureScene(long revision,
+                    com.openggf.game.presentation.PlayerPresentationPose pose, int marginX, int marginY) {
+                // TODO reuse bounded native scene capture, injected session and owner, no manager export.
+                throw new UnsupportedOperationException("not implemented");
+            }
+            // Existing objectServices(), playerState(), loadLevel(), launchRolling(), settle(),
+            // finishInitialPresentation(), advanceEntryPresentation(), presentationReady(), etc. stay.
+            // Existing direct-player operations are implemented via the same held-world owner;
+            // captureDirectedPlayer/isDirectedPlayerCurrent/directPlayer/releaseDirectedPlayer and
+            // DirectedPlayerState are removed from the creator protocol at atomic cutover.
+        }
+        // com.openggf.game.mode.GameplayFrameController, replacing context-free draw methods
+        public interface GameplayFrameControllerDelta {
+            default void drawWorldSprites(CourseDraw draw) { throw new UnsupportedOperationException("not implemented"); }
+            default boolean drawScene(CourseDraw draw) { throw new UnsupportedOperationException("not implemented"); }
+            default void drawOverlay(CourseDraw draw) { throw new UnsupportedOperationException("not implemented"); }
+        }
+        // com.openggf.game.GameModule creator title factory replaces no-argument getter at cutover
+        public interface GameModuleDelta {
+            com.openggf.game.TitleScreenProvider createTitleScreen(TitleControl control);
+        }
+        // com.openggf.game.TitleScreenProvider, contextual replacements; keep existing state/exit queries
+        public interface TitleScreenProviderDelta {
+            void initialize(TitleControl control);
+            void update(TitleControl control, LogicalInputSnapshot input);
+            void draw(TitleDraw draw);
+            void reset(TitleControl control);
+            // Clear color/native backdrop is host-owned; remove setClearColor from creator protocol.
+            // Frozen level-select draw also receives TitleDraw; scene canvas replaces raw graphics.
+        }
+        // com.openggf.control.PlayerInputState (existing record, no invented SceneButtons bit equivalence)
+        public interface PlayerInputStateDelta {
+            boolean actionHeld(ActionButton button);
+            boolean actionPressed(ActionButton button);
+            /** Returns an immutable copy with direction/start fields retained and coherent action bits. */
+            PlayerInputState withAction(ActionButton button, boolean held, boolean pressed);
+        }
+        // com.openggf.level.objects.ObjectQuery: native providers own classification, not class-name tables
+        public interface ObjectQueryDelta {
+            List<NativeActorObservation> nativeActors(NativeActorRole role);
+        }
+        // com.openggf.game.rules.GameRules: preserve hidden DMA service and EVERY untouched component
+        public interface GameRulesDelta {
+            GameRules withPowerUp(PowerUpRules powerUp);
+        }
+        // com.openggf.sprites.animation.SpriteAnimationProfile: no downcast to scripted implementation
+        public interface SpriteAnimationProfileDelta {
+            /** Explicit unsupported feature is empty, not a catch-and-fallback around engine failure. */
+            Optional<SpriteAnimationProfile> withVelocityAnimation(VelocityAnimationEdit edit);
+        }
+        // com.openggf.mods.scene.SceneRomArt: same decoder powers title driver and detached scene parts
+        public interface SceneRomArtDelta {
+            NativeTitleArt titleArtwork();
+        }
+        // com.openggf.audio.GameMusic: add BOSS, FINAL_BOSS, ENDING; keep existing semantic cues.
+        // Native donor audio resolver maps cues; absent cues yield explicit unsupported diagnostics.
+        // Any contextual mod LevelEventProvider adapter gets CourseControl for init/update callbacks.
+    }
+
+    // ---------------- INTERNAL resource data ownership; not in the public Mod API ----------------
+
+    enum ResourceKind { WORLD_ART, TERRAIN_REHEARSAL, HELD_WORLD }
+    /** Canonical engine identities, never decoded from creator text. Incarnations are not reused
+     * on a different timeline branch; restored keys refer only to captured definitions.
+     */
+    record ResourceIdentity(long sessionNonce, long ownerOrdinal, long incarnation, ResourceKind kind) { }
+    /** One table per verified owner/session. It IS the resource state, not a cache of another writer.
+     * Lookup is key -> entry; no scene/player/graphics global lookup is needed at a call site.
+     * One stable rewind adapter owns this table's capture/restore for the whole session.
+     */
+    static final class OwnerWorldResources {
+        private final java.util.LinkedHashMap<ResourceIdentity, ResourceEntry> resources;
+        private long wrapperEpoch;
+        private OwnerWorldResources() { throw new UnsupportedOperationException("not implemented"); }
+        <T extends OwnedWorldResource> Optional<T> resolve(ResourceKey<T> key) {
+            // TODO validate canonical owner/kind, find active entry, mint wrapper with wrapperEpoch.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        OwnerResourceSnapshot capture() {
+            // TODO ordered detached resource state and bounded immutable definition references.
+            // TODO no wrapper/proxy, GPU lease, renderer, live manager or callback scope in snapshot.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        void restore(OwnerResourceSnapshot snapshot) {
+            // TODO revoke wrappers by epoch; release entries absent from snapshot.
+            // TODO recreate private CPU machinery, then restore its state; lazy GPU residency only.
+            // TODO reconcile the held key with the world's sole native-admission lease arbiter.
+            // TODO restore before creator callbacks; key value codec points to canonical definitions.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    sealed interface ResourceEntry permits ArtEntry, RehearsalEntry, HoldEntry { }
+    static final class ArtEntry implements ResourceEntry {
+        // Immutable canonical requests and detached private CPU sheets; GPU lease is ephemeral.
+        private final List<WorldArtSpec> recipes;
+        private final java.util.Map<String, com.openggf.level.objects.ObjectSpriteSheet> sheets;
+        private ArtEntry() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    static final class RehearsalEntry implements ResourceEntry {
+        // Owns the captured terrain/profile and native player's private machine, no live world.
+        // Snapshot stores detached native state; work/accounting counters remain monotone.
+        private final com.openggf.sprites.playable.PlayablePuppet player;
+        private long chargedNativeRows;
+        private long chargedSensorQueries;
+        private long chargedRasterPixels;
+        private RehearsalEntry() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    static final class HoldEntry implements ResourceEntry {
+        // Sole owner of entry/current player presentation and directed world composition state.
+        // World admission arbiter holds this entry's canonical identity, not a second hold flag.
+        private final HoldSpec specification;
+        private HeldView view;
+        private HoldEntry() { throw new UnsupportedOperationException("not implemented"); }
+    }
+    static final class OwnerResourceSnapshot {
+        // Immutable logical definitions and per-entry capture values, with retained-byte bounds.
+        // Implementation supplies a sealed per-kind state union, not arbitrary Java serialization.
+        private OwnerResourceSnapshot() { throw new UnsupportedOperationException("not implemented"); }
+    }
+
+    // ---------------- INTERNAL enforcement sketches: never annotated/promised to mods ----------------
+
+    /** One immutable model from actual engine classfiles plus existing surface inventory/classification.
+     * Must equal normalized pins at guard time. Build-generated index is a derivative, not authority.
+     */
+    static final class SupportedModContract {
+        private SupportedModContract() { throw new UnsupportedOperationException("not implemented"); }
+        boolean supportedType(String binaryName) { throw new UnsupportedOperationException("not implemented"); }
+        boolean consumableMember(MemberSymbol use) {
+            // TODO resolve inheritance to declaration; require supported declaration/member in pin model.
+            // TODO recursively reject terminal in actual signature, including generic bounds/throws.
+            // TODO implicit inheritance of concrete terminal bridge is okay; use/override is not.
+            throw new UnsupportedOperationException("not implemented");
+        }
+        void checkOperation(MemberSymbol use) {
+            // TODO supported-mode forbidden reflection/lookup/defineClass/Unsafe/JNI/resource backdoors.
+            // TODO allow compiler-generated lambda/switch bootstrap operations with validated targets.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    record MemberSymbol(String owner, String name, String descriptor) { }
+    enum ValidationMode { SUPPORTED_ONLY, EXPERT_LEGACY }
+    /** Compiler plugin uses javax.tools/com.sun.source public APIs; no engine/mod class initialization. */
+    static final class SupportedSourceCheck {
+        void analyze(com.sun.source.util.JavacTask task, SupportedModContract contract) {
+            // TODO ANALYZE listener before lowering; Trees resolved symbols/types, explicit imports.
+            // TODO visit constant owner BEFORE constant folding and inferred var/expression types.
+            // TODO overrides, annotations, class literals, lambdas/member refs, generics and FQNs.
+            // TODO generated Java receives same analysis; no processors outside the checked pipeline.
+            // TODO hard diagnostic with example path/source span and suggested capability group.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Extends existing ASM validator; this is not a second validation implementation. */
+    static final class ModValidatorDelta {
+        void validateSupported(byte[] jar, SupportedModContract contract) {
+            // TODO all payload/dependency classes, declarations, member refs, handles, indy/condy.
+            // TODO resolve inherited owners; terminal-bearing members are errors even with erased result.
+            // TODO BUILTIN_API ignored; mod-supplied annotations cannot establish trust.
+            // TODO reject author engine namespace, unknown contract identity, expert dependencies.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Discovery derives from existing project manifests; no manually synchronized official list. */
+    static final class OfficialModsSupportedGuard {
+        void checkAllOfficialProjects(java.nio.file.Path checkout, SupportedModContract contract) {
+            // TODO discover examples/*, bundled descriptors, racing/time-attack, starters/templates.
+            // TODO same compiler harness, separate classpaths/outputs per project, no nested Maven.
+            // TODO production source check+compile, strict ASM; tests use explicit testkit-only contract.
+            // TODO ROM-free, no skipped absent compiler/project; temp output target/test-tmp only.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+    /** Loader admission applies to parent-first and direct dependency resolution, unlike findClass alone. */
+    static final class SupportedLoaderPolicy {
+        void beforeCreatorEngineResolution(String binaryName, SupportedModContract contract) {
+            // TODO fail engine internal names before parent delegation, including dependency path.
+            // TODO engine parent's own implementation loads are unaffected.
+            // TODO complements validator; cannot filter methods or recover inlined constant provenance.
+            throw new UnsupportedOperationException("not implemented");
+        }
+    }
+}
