@@ -39,7 +39,6 @@ class TestStageplayObjectDirection {
                 .execute(child, null, List.of(), false, false);
         fixture.objects.snapshotTouchResponseState();
         fixture.objects.refreshPostCameraRenderState();
-        fixture.objects.runPostPlayerHooks(null, 100);
         assertTrue(fixture.objects.getSolidProviderObjects().isEmpty());
         assertTrue(fixture.objects.getTouchResponseObjects().isEmpty());
         assertTrue(

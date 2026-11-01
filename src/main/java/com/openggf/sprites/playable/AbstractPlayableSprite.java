@@ -2391,12 +2391,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return prePhysicsCentreY;
         }
 
-        /** Captures CPU-sidekick state before {@code SidekickCpuController.update}. */
-        public void capturePreCpuControlSnapshot() { groundWallResponse.capturePreControlGSpeed(this.gSpeed); }
-
-        /** Ground speed captured before the CPU controller ran this frame. */
-        public short getPreCpuControlGSpeed() { return groundWallResponse.preControlGSpeed(); }
-
         public void deferGroundWallVelocityResponse(int mode, int distance) { groundWallResponse.defer(mode, distance); }
 
         public boolean hasDeferredGroundWallVelocityResponse() { return groundWallResponse.hasDeferred(); }

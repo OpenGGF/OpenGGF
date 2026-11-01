@@ -362,13 +362,12 @@ class TestS2Ehz1BridgeTailsStandingRegression {
 
         private String describeGoalPlate(SignpostObjectInstance signpost) {
             int slot = signpost instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1;
-            return String.format("slot=%d@0x%04X,0x%04X state=%s spawned=%s walkFrame=%s",
+            return String.format("slot=%d@0x%04X,0x%04X state=%s spawned=%s",
                     slot,
                     signpost.getCenterX() & 0xFFFF,
                     signpost.getCenterY() & 0xFFFF,
                     reflectField(signpost, "routineState"),
-                    reflectField(signpost, "resultsSpawned"),
-                    reflectField(signpost, "walkOffEnteredVIntRunCount"));
+                    reflectField(signpost, "resultsSpawned"));
         }
 
         private String resultsDescription() {

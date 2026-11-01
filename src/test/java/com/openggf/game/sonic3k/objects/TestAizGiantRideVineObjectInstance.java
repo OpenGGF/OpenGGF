@@ -303,7 +303,6 @@ class TestAizGiantRideVineObjectInstance {
 
         player.setJumpInputPressed(true);
         vine.update(2, player);
-        vine.updatePostPlayer(2, player);
         player.setJumpInputPressed(false);
         vine.update(3, player);
 

@@ -951,7 +951,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// CPU-controlled sprite: run AI to generate virtual input
 						var cpuController = playable.getCpuController();
 						cpuControllerForDiagnostics = cpuController;
-						playable.capturePreCpuControlSnapshot();
 						cpuController.update(cadence);
 
 						boolean aiUp = cpuController.getInputUp();

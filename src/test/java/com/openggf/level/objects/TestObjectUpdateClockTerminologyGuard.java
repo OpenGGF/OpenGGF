@@ -86,8 +86,6 @@ class TestObjectUpdateClockTerminologyGuard {
                     "lastVIntRunCount", "lastFrameCounter"),
             new FieldSeed("com.openggf.game.sonic2.objects.RisingLavaObjectInstance",
                     "lastVIntRunCount", "lastFrameCounter"),
-            new FieldSeed("com.openggf.game.sonic2.objects.SignpostObjectInstance",
-                    "walkOffEnteredVIntRunCount", "walkOffEnteredFrame"),
             new FieldSeed("com.openggf.game.sonic2.objects.bosses.CNZBossElectricBall",
                     "lastVIntRunCount", "lastFrameCounter"),
             new FieldSeed("com.openggf.game.sonic2.objects.bosses.Sonic2CNZBossInstance",
