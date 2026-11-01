@@ -19,6 +19,13 @@ enemy recipes, and original campaigns. Agents can use the repository
 [mod-authoring skill](../../.agents/skills/mod-authoring/SKILL.md) to read only the
 relevant recipe and owning source.
 
+Your mod's licence is your choice. The engine is GPL-3, but the
+[OpenGGF Mod Exception](../../LICENSES/OpenGGF-Mod-Exception.txt) lets a mod that
+uses it only through the Mod API be released under any terms, and `ggfmod init`
+adds no licence (its output is [MIT-0](../../LICENSES/MIT-0.txt)). Copying engine
+code into a mod is not covered by the exception. The example mods are MIT: copy one
+as a starting point and keep its `LICENSE` notice with the parts you reuse.
+
 ## Native builds vs. the JVM jar
 
 Native packages and the JVM jar load code mods (objects, characters, zones,

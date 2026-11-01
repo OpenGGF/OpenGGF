@@ -1,0 +1,37 @@
+OpenGGF Mod Exception
+
+Additional permission under section 7 of the GNU General Public License,
+version 3 (the "GPL"), granted by the copyright holders of OpenGGF.
+
+1. Definitions
+
+"OpenGGF" means the program that this exception accompanies, and any version
+of it that keeps this exception.
+
+"Mod API" means the classes and interfaces of OpenGGF that are marked with the
+annotation com.openggf.game.ModApi, the public classes of the OpenGGF mod SDK
+and mod test kit, and the documented mod manifest and resource formats.
+
+"Mod" means a work that is loaded, or is intended to be loaded, by OpenGGF's
+mod loader and that uses OpenGGF only through the Mod API. A Mod may include
+material taken from OpenGGF only where that material is licensed to you under
+other terms that allow it, such as the MIT-0 mod starter material or the MIT
+example mods. A work that otherwise copies or adapts OpenGGF code is not a Mod.
+
+2. Permission
+
+You may create, copy, modify and convey a Mod, in source or object form, under
+terms of your choice, and you may combine OpenGGF with Mods and convey the
+combination, without the GPL applying to the Mods. OpenGGF itself remains under
+the GPL, including when it is conveyed together with Mods, and each Mod remains
+under its own terms, which you must follow.
+
+3. Scope
+
+This permission is granted for the code whose copyright the OpenGGF
+contributors hold. Third-party components listed in NOTICE.md keep their own
+licences; none of them is part of the Mod API.
+
+If you modify OpenGGF, you may extend this exception to your version, but you
+are not obliged to. If you do not wish to do so, delete this exception from
+your version, as GPL section 7 allows.

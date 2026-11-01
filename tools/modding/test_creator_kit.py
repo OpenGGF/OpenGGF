@@ -89,6 +89,9 @@ class CreatorKitTest(unittest.TestCase):
                 if file.is_file():
                     self.assertEqual(file.read_bytes(), entries["examples/" + name + "/" + file.relative_to(project).as_posix()])
         self.assertIn("examples/three-islands/tools/generate_maps.py", entries)
+        for name, project in kit.exported_projects(root).items():
+            self.assertIn("MIT License", (project / "LICENSE").read_text(), name)
+            self.assertEqual((project / "LICENSE").read_bytes(), entries["examples/" + name + "/LICENSE"])
 
     def test_archive_preserves_authored_walkthroughs_without_runtime_outputs(self):
         project = self.root / "examples/walkthrough-demo"

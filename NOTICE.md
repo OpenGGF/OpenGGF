@@ -5,6 +5,26 @@ OpenGGF is distributed under the GNU General Public License, version 3
 licence terms and notices, which must accompany every copy of OpenGGF,
 including the executable JAR (`META-INF/openggf/`) and the release archives.
 
+## OpenGGF Mod Exception
+
+The OpenGGF contributors add a permission under GPL-3 section 7, the
+[OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt): a mod that uses
+OpenGGF only through the Mod API (the `@ModApi` types, the mod SDK and test kit,
+and the documented manifest and resource formats) may be conveyed under any
+terms, alone or with OpenGGF. OpenGGF itself stays under GPL-3.
+
+## Mod starter and example material
+
+- What `ggfmod init` writes into a new project, and the material it is made from
+  (`src/main/resources/META-INF/openggf-mod-sdk/templates/`, and the starter
+  projects in `src/test/resources/mods/sample-character-src/project/` and
+  `src/test/resources/mods/sample-standalone-src/project/`), is under
+  [MIT No Attribution](LICENSES/MIT-0.txt) (`MIT-0`). A new project carries no
+  licence until its creator chooses one.
+- The example mods in `examples/`, the bundled Time Attack mod in
+  `racing/time-attack/` and the creator kit's sample campaign are under the MIT
+  License; each carries its own `LICENSE` file.
+
 ## Nuked OPN2
 
 The FM sound core in `src/main/java/com/openggf/audio/synth/nuked/` is a Java
