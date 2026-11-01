@@ -282,7 +282,7 @@ jobs:
       # The upstream test job owns suite execution; packaging need not compile tests again.
       - name: Prepare native image
         shell: bash
-        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B
+        run: mvn -Dmse=off package -Pnative -Dmaven.test.skip=true -Dnative.python=python -Dnative.stage=prepare -Dnative.macos.package.skip=true -B -Dopenggf.multiplayer.channel=master
 
       - name: Build native image
         shell: bash
@@ -293,12 +293,15 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/native-mod-check"
           cd "$RUNNER_TEMP/native-mod-check"
+          # --check-master-discovery: JNDI SRV lookup through the platform resolver (DNS only).
           if [[ "${{ matrix.platform }}" == "windows" ]]; then
             "$GITHUB_WORKSPACE/target/OpenGGF.exe" --audit
             "$GITHUB_WORKSPACE/target/OpenGGF.exe" --check-engine time-attack
+            "$GITHUB_WORKSPACE/target/OpenGGF.exe" --check-master-discovery multi.openggf.com
           else
             "$GITHUB_WORKSPACE/target/OpenGGF" --audit
             "$GITHUB_WORKSPACE/target/OpenGGF" --check-engine time-attack
+            "$GITHUB_WORKSPACE/target/OpenGGF" --check-master-discovery multi.openggf.com
           fi
 
       - name: Package (Windows)
@@ -519,7 +522,7 @@ jobs:
 
       - name: Build universal JVM jar
         shell: bash
-        run: mvn -Dmse=off package -Puniversal-jar -DskipTests -B
+        run: mvn -Dmse=off package -Puniversal-jar -DskipTests -B -Dopenggf.multiplayer.channel=master
 
       - name: Smoke validate universal JVM jar
         shell: bash

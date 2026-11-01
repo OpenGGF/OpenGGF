@@ -107,7 +107,7 @@ jobs:
       - name: Run smoke suite (push)
         if: github.event_name == 'push'
         shell: bash
-        run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
+        run: mvn -Dmse=off -Psmoke test -B -DmodApi.destinationBranch="${{ github.ref_name }}" -Dopenggf.multiplayer.channel="${{ github.ref_name }}"
 
       - name: Assert smoke coverage
         shell: bash
@@ -143,10 +143,12 @@ jobs:
   # Multiplayer testbed: after smoke passes on a develop/next push, publish the
   # branch's multiplayer master as a rolling prerelease and redeploy its AMP
   # instance (multi-dev.openggf.com:27910 for develop, multi-next.openggf.com:27920
-  # for next). Each branch's GitHub environment (multiplayer-dev, multiplayer-next)
-  # admits only that branch and holds AMP_INSTANCE_ID, MULTI_ENDPOINT and
-  # RELEASE_TAG variables plus the AMP_PASSWORD secret; AMP_URL and AMP_USERNAME
-  # are repository variables. The instances use the openggf-multi template from
+  # for next). The endpoint comes from racing/deploy/master-channels.properties,
+  # the list player builds also read; the job first requires the published
+  # _openggf._tcp SRV record to match it and fails on drift without editing DNS.
+  # Each branch's GitHub environment (multiplayer-dev, multiplayer-next) admits
+  # only that branch and holds AMP_INSTANCE_ID and RELEASE_TAG variables plus the
+  # AMP_PASSWORD secret; AMP_URL and AMP_USERNAME are repository variables. The instances use the openggf-multi template from
   # github.com/OpenGGF/openggf-amp-templates. See racing/deploy/README.md.
   deploy-multiplayer:
     if: github.event_name == 'push'
@@ -161,6 +163,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check the published master SRV record against the channel catalogue
+        run: python3 racing/deploy/master_channels.py check-srv "$GITHUB_REF_NAME"
 
       - name: Set up Java 25
         uses: actions/setup-java@v4
@@ -195,7 +200,9 @@ jobs:
           AMP_URL: ${{ vars.AMP_URL }}
           AMP_USERNAME: ${{ vars.AMP_USERNAME }}
           AMP_PASSWORD: ${{ secrets.AMP_PASSWORD }}
-        run: python3 racing/deploy/amp_deploy.py --instance-id "${{ vars.AMP_INSTANCE_ID }}" --endpoint "${{ vars.MULTI_ENDPOINT }}"
+        run: |
+          endpoint="$(python3 racing/deploy/master_channels.py endpoint "$GITHUB_REF_NAME")"
+          python3 racing/deploy/amp_deploy.py --instance-id "${{ vars.AMP_INSTANCE_ID }}" --endpoint "$endpoint"
 
   # Structural guards: the invariants no trace fixture can prove. PR/manual CI only
   # (non-draft pull requests and manual dispatch); release.yml runs them again
@@ -266,7 +273,9 @@ jobs:
       - name: Run tests (pull request)
         if: github.event_name == 'pull_request'
         shell: bash
-        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}"
+        # The multiplayer channel (each build's default master) follows the base branch;
+        # bases other than master/develop/next use develop's, like local builds.
+        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.base_ref }}" -Dopenggf.multiplayer.channel="${{ contains(fromJSON('["master","develop","next"]'), github.base_ref) && github.base_ref || 'develop' }}"
 
       - name: Run tests (manual)
         if: github.event_name == 'workflow_dispatch'

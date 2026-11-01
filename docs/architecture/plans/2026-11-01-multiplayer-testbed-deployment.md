@@ -89,11 +89,56 @@ Operator details are in [racing/deploy/README.md](../../../racing/deploy/README.
 
 ## Open items
 
-- Client default master URL per branch (currently blank in Time Attack settings).
-  It lives in the bundled Time Attack mod, which sees only `@ModApi` types, so a
-  build-time value needs either a Mod API addition or packager support.
+- ~~Client default master URL per branch.~~ Resolved by hostname-only endpoints below.
 - Prod (`multi-latest`, port 27900) once master carries multiplayer; deploy from the
   Release workflow rather than raw pushes.
 - Certificate pickup on instances that are rarely redeployed (a weekly AMP restart
   or a renewal-hook restart). The current certificate expires 2027-01-30.
 - Verifiers, if ROMs on the host are acceptable.
+
+## Hostname-only endpoints (2026-11-01)
+
+Players type `multi-dev.openggf.com`, not `wss://multi-dev.openggf.com:27910/master`,
+and each build defaults to its own branch's master. Landed on
+`feature/ai-multiplayer-srv-endpoints` (stacked on this branch): `ee6c94db7` (engine
+discovery, Time Attack settings and upload origin), `2156cbb38` (native DNS provider and
+witness), `795caf622` (per-channel packaged default), then the CI/docs commit.
+
+**Decision: DNS SRV for the port, resolved by the engine.** `MasterClient.connect(String
+address, ...)` replaces `connect(URI, ...)` (a user-authorized `@ModApi` change) and owns
+parsing, SRV lookup, RFC 2782 ordering, candidate dials and admission; `endpoint()`
+returns the admitted URI, which Time Attack's coordinator and recording uploads use. The
+published `_openggf._tcp` records name the service host itself (a CNAME to the AMP host),
+so the client keeps the typed name for SNI and certificate checking and DNS changes only
+the port; other targets are rejected. Discovery fails closed with no fallback port.
+`racing/deploy/master-channels.properties` is the one channel list for player builds
+(`openggf.multiplayer.channel`) and the deploy job, whose drift check fails on a published
+record that disagrees.
+
+**DNS adapter: JDK JNDI (`jdk.naming.dns`), chosen by a spike.** A standalone
+`InitialDirContext` probe (factory `com.sun.jndi.dns.DnsContextFactory`, provider `dns:`)
+on GraalVM Community 25.4.4.1.1+1.1 (Linux) returned the correct SRV answers for
+multi-dev and multi-next, `NameNotFoundException` for NXDOMAIN and no `SRV` attribute
+for a name without SRV, on the JVM and in a native image built with no extra flags.
+The real recipe still adds the module and a factory reflection entry because it uses
+`-H:Preserve` and computed modules. The first cold lookup through systemd-resolved failed
+with `timeout.initial=750`, `retries=2` (about 5.25 s) and succeeded on every retry, so
+the adapter uses 1000 ms / 2 retries (worst case about 7 s per resolver) inside a 25 s
+connect deadline. Windows and macOS are qualified by the release workflow's
+`--check-master-discovery` step. The fallback, not needed, was pinned dnsjava (plus JNA
+for Windows resolver discovery) behind the same `SrvLookup` seam.
+
+**Rejected:**
+- TLS-terminating reverse proxy on 443: the master reads the real TCP peer for per-IP
+  admission, room caps, password/invite budgets and DIRECT room addresses, and binds
+  login to its own TLS leaf. A proxy collapses all clients onto one address and breaks
+  every transcript binding.
+- SNI passthrough with the PROXY protocol on 443: keeps TLS at the master but takes over
+  port 443 on the shared nginx and adds a pre-TLS trust boundary in the master. Revisit
+  only if port-blocked players become a real problem.
+- Mod-side JNDI connector (no API change): validator-compatible, but splits retry and
+  transport policy between the mod and the engine.
+- A static host-to-port table in clients: a hand-synced list; moving a port needs a client
+  release.
+- A 27900 fallback when no record exists, and a `.` record for the absent production
+  master: both hide DNS mistakes; a refused connection is the honest state.
