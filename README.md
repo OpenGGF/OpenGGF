@@ -244,6 +244,11 @@ The [development timeline](docs/project/development-timeline.md) tells the same 
 in pictures. It shows real builds, bugs and all, from a 2015 prototype with white
 boxes for graphics to today, including the sound slowly getting less garbled.
 
+### What licence is OpenGGF under? Do mods have to be GPL?
+
+OpenGGF is under GPL-3. Mods don't have to be: the [OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt)
+lets a mod that uses only the Mod API take any licence, or none. See [Licence](#licence).
+
 ### How can I contribute?
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md). Then check the issue tracker,
