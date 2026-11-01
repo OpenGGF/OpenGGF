@@ -2376,3 +2376,5 @@ MGZ2 powered rescue follow-up (2026-11-01): the
 records runtime art-refresh ownership, Super/Hyper palette-clock continuation
 and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
 the matrix's broader route, donor/team and rewind obligations open.
+
+LBZ1 fresh-entry follow-up (2026-11-01): the [act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records the ICZ2 fade/load/title-to-ground-launch regression witness. Sonic-alone emergence and control release are bounded coverage; broader roster/viewport/donor and transition rewind obligations remain open.

@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **ICZ2 to LBZ1:** Arm the ground-launch intro during fresh zone assembly so
+  Sonic springs out of the snow and regains control.
+
 - **Upside-down S3K capsules:** Use seven normal explosion effects and their
   break sound instead of the long boss-explosion sequence.
 

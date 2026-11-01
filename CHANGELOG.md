@@ -10,6 +10,8 @@ upside-down S3K capsules, crowded-scene sprite retention with sprite limits
 disabled, and Tails carrying Sonic into CNZ1 after the MGZ2 rescue. See the
 development changelog below.
 
+ICZ2 → LBZ1 now launches Sonic out of the snow after the zone handoff.
+
 MGZ2 rescue-Tails art refresh also preserves Super/Hyper palette cycling and
 boss-defeat detransformation.
 
