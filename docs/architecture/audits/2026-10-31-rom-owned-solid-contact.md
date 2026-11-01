@@ -360,3 +360,18 @@ the replay completes with 2,091 errors, first error unchanged at f30582
   step.
 - `-Pguards`: 820 tests, 0 failures at `c7d6a81b1`, `b6669b030`, `64e49c0f5`,
   `84b48e6d8` and `f8214016b`.
+- Change-based smoke at `ba98725c2`, run with
+  `run_categories.py --base c81ffaf7c --workers 2 --run`, surfaceless EGL (run
+  `20261101T022042Z-3b8a1c9d`, 4,366 classes in 88 batches): ordinary lane
+  36,169 tests, 12 failures, 0 errors, 49 skips, 1,484 s; guards 820 tests,
+  0 failures, 137 s. Eight failures are the pre-existing set
+  (`TestMasterTitleScreenLayout` x2, `TestSonic2InterlacePixels`,
+  `TestNativeCompetitionViews`, `TestNativeSpriteSatGameplay` x3,
+  `TestPrivateLobbyScreenRendering`); two are the SSZ1 routes above; two were
+  fixtures that only answered the routine-entry call
+  (`TestSonic1SpikeObjectInstance#updateAppliesCheckpointContactToPlayersFromObjectPlayerQuery`,
+  `TestSolidObjectManager#sozPushToFallDoesNotCarryThePreviousPushButTrackMotionCarries`),
+  fixed in `1ea6b5874` and re-run (119 tests, 0 failures). The 49 skips are the
+  same gated set as the step-3 smoke (system properties, captures, perf and
+  native-GPU checks, and `TestCPZObjectBugs#testSpinTubeForcesRolling`'s
+  runtime assumption).
