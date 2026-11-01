@@ -74,16 +74,27 @@ public final class TimeAttackScene implements ModScene {
     private Object lobbyCoordinator;
     /** Hints name controller buttons after a pad press, keyboard keys after a key press. */
     private MenuPage.Keys keys = MenuPage.Keys.keyboard();
+    private final String buildDefaultMaster;
 
-    /** The scene as the title entry opens it: ghosts and identity in the working directory. */
-    public TimeAttackScene() {
-        this(Path.of("ghosts"), Path.of("identity"));
+    /**
+     * The scene as the title entry opens it: ghosts and identity in the working directory.
+     *
+     * @param buildDefaultMaster this build's default master address, read once at registration
+     *                           (empty when the build has none)
+     */
+    public TimeAttackScene(String buildDefaultMaster) {
+        this(Path.of("ghosts"), Path.of("identity"), buildDefaultMaster);
     }
 
     TimeAttackScene(Path ghostsRoot, Path identityDir) {
+        this(ghostsRoot, identityDir, "");
+    }
+
+    TimeAttackScene(Path ghostsRoot, Path identityDir, String buildDefaultMaster) {
         this.ghostStore = new GhostStore(ghostsRoot);
         this.identityDir = identityDir;
         this.legacyConfigDirectory = ghostsRoot.toAbsolutePath().getParent();
+        this.buildDefaultMaster = java.util.Objects.requireNonNull(buildDefaultMaster, "buildDefaultMaster");
     }
 
     @Override
@@ -97,6 +108,7 @@ public final class TimeAttackScene implements ModScene {
             status = "Previous settings could not be imported";
             settings = TimeAttackSettings.load(storage);
         }
+        settings.setBuildDefaultMaster(buildDefaultMaster);
         joinInvite = "";
         session = new RaceSession(identityDir, ghostStore, settings, storage,
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);

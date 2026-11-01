@@ -378,9 +378,9 @@ class TestMasterClientTimeoutRecovery {
     }
 
     static MasterClient admittedClient(SilentSocket socket) throws Exception {
-        var constructor = MasterClient.class.getDeclaredConstructor(PlayerIdentity.class, String.class, String.class);
+        var constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        MasterClient client = constructor.newInstance(null, "TEST", "test");
+        MasterClient client = constructor.newInstance(java.net.URI.create("wss://master.test/master"), null, "TEST", "test");
         for (var entry : Map.<String,Object>of("webSocket", socket, "joinAccepted",
                 new ControlMessage.JoinAccepted("token", -1, null, null), "open", true).entrySet()) {
             Field field = MasterClient.class.getDeclaredField(entry.getKey());

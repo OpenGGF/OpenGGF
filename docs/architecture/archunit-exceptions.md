@@ -376,7 +376,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 155 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 156 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -393,7 +393,9 @@ internationalisation retains three presentation pairs: `editor -> i18n`,
 `control -> util`. The merged editor renderer no longer needs `editor -> util`,
 and retiring the separate trace picker removes `testmode -> i18n`; both stale
 permissions were pruned. IME composition and editor HUD fitting keep the same
-segmentation boundaries through their presentation owners. The current set has 156 permissions. The three
+segmentation boundaries through their presentation owners. The bundled-mod packager's
+network-defaults overlay reuses the master address parser, restoring `tools -> net`.
+The current set has 156 permissions. The three
 matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the

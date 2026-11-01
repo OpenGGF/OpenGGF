@@ -626,7 +626,7 @@ class TestTimeAttackScene {
                 openggf.racing.server.master.TestMasterServer.testConfig(), temp.resolve("browser-master"))) {
             fingerprint = Optional.of(FP);
             open(List.of("s2"));
-            scene.settings().setMasterUrl("ws://127.0.0.1:" + master.port() + "/master");
+            scene.settings().setMasterSelection(new MasterSelection.Custom("ws://127.0.0.1:" + master.port() + "/master"));
             chooseMode(3);
             for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);

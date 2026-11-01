@@ -342,6 +342,10 @@ class TestArchUnitRules {
             "tools -> io",
             "tools -> level",
             "tools -> mods",
+            // The bundled-mod packager checks each build's default master address with the
+            // engine's own parser (MasterDiscoveryCheck), so build and runtime cannot disagree;
+            // net has no back-edge to tools and does not join the cycle cluster.
+            "tools -> net",
             "tools -> sprites",
             "tools -> trace",
             // Offline capture provenance consumes the leaf build-identity package;

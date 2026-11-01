@@ -176,7 +176,7 @@ class TestPrivateRoomTransports {
     }
 
     private MasterClient connect(PlayerIdentity identity, String name) throws Exception {
-        MasterClient master = MasterClient.connect(URI.create("ws://127.0.0.1:" + server.port() + "/master"),
+        MasterClient master = MasterClient.connect("ws://127.0.0.1:" + server.port() + "/master",
                 identity, name, BUILD, null).get(15, TimeUnit.SECONDS);
         masters.add(master);
         return master;

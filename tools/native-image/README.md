@@ -77,6 +77,10 @@ scene host and launcher; their hosted gameplay runs are outside this bounded che
 On Linux unset DISPLAY/WAYLAND_DISPLAY and pass
 `-Dopenggf.headless.gl=surfaceless-egl` for display-free rendering.
 `--audit /path/to/contract.tsv` adds an audit for deliberate missing-member controls.
+`--check-master-discovery host [dns://resolver:port]` runs the engine's master discovery
+(JNDI SRV lookup and the same-host candidate policy) and prints the dial order or the
+fail-closed reason; it sends only DNS queries. The recipe adds `jdk.naming.dns` and a
+`com.sun.jndi.dns.DnsContextFactory` reflection entry for it, and refuses to build without them.
 
 ```bash
 python3 -m unittest discover -s tools/native-image -p 'test_*.py' -v

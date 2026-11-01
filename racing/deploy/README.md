@@ -251,18 +251,68 @@ The project's own testbed runs the master (no verifier) as
 Routing is by port: the master terminates TLS itself and enforces per-IP limits, so
 an SNI or HTTP reverse proxy in front of it would hide client addresses.
 
-| Branch | Player URL | AMP instance | Rolling prerelease |
-|---|---|---|---|
-| master | `wss://multi.openggf.com:27900/master` | not yet created | `multi-latest` |
-| develop | `wss://multi-dev.openggf.com:27910/master` | OpenGGF Multi-Dev | `multi-dev-latest` |
-| next | `wss://multi-next.openggf.com:27920/master` | OpenGGF Multi-Next | `multi-next-latest` |
+| Branch | Player address | Endpoint (from SRV) | AMP instance | Rolling prerelease |
+|---|---|---|---|---|
+| master | `multi.openggf.com` | `wss://multi.openggf.com:27900/master` | not yet created | `multi-latest` |
+| develop | `multi-dev.openggf.com` | `wss://multi-dev.openggf.com:27910/master` | OpenGGF Multi-Dev | `multi-dev-latest` |
+| next | `multi-next.openggf.com` | `wss://multi-next.openggf.com:27920/master` | OpenGGF Multi-Next | `multi-next-latest` |
 
 All three names share one Let's Encrypt certificate; a certbot deploy hook on the host
 copies it into each instance's `openggf-multi/tls/`, and a master loads it at its
 next start. Each instance reserves Master Port + 1 for the loopback-only admin
 listener.
 
-After smoke passes on a develop or next push, CI's `deploy-multiplayer` job builds
+### Hostname discovery (SRV records)
+
+Players type only the host name; each build defaults to its own branch's master
+(Time Attack's **Build default**). The client looks up the port in DNS:
+
+```dns
+_openggf._tcp.multi.openggf.com.       SRV 0 0 27900 multi.openggf.com.
+_openggf._tcp.multi-dev.openggf.com.   SRV 0 0 27910 multi-dev.openggf.com.
+_openggf._tcp.multi-next.openggf.com.  SRV 0 0 27920 multi-next.openggf.com.
+```
+
+The service hosts stay CNAMEs to the AMP host. Each record's target must be the
+service host itself: the client keeps the typed name for TLS (SNI and certificate
+checking), so DNS can change only the port. A record naming any other target is
+rejected, not followed. CNAME targets are a deliberate deviation from RFC 2782.
+Discovery fails closed (no record, a `.` target or a lookup failure is an error; there
+is no fallback port) and nothing is cached in the client, so a moved port takes
+effect after the resolver's TTL. Lower the TTL before moving a port. The master still
+terminates TLS itself, so per-IP limits, DIRECT room addresses and certificate-bound
+login are unchanged. SRV does not help players whose networks block these ports.
+
+`racing/deploy/master-channels.properties` is the single channel list, identical on
+every branch:
+
+```properties
+master=multi.openggf.com:27900
+develop=multi-dev.openggf.com:27910
+next=multi-next.openggf.com:27920
+```
+
+Player builds read it through the Maven property `openggf.multiplayer.channel` (CI
+passes the branch, release builds pass `master`, local builds default to `develop`;
+see [CONFIGURATION.md](../../CONFIGURATION.md#build-properties-for-bundled-mods)).
+CI's deploy job reads its endpoint from the same file:
+
+```bash
+python3 racing/deploy/master_channels.py endpoint develop   # wss://multi-dev.openggf.com:27910/master
+python3 racing/deploy/master_channels.py check-srv develop  # published SRV must match the file
+```
+
+`check-srv` is the drift check: it runs before every deploy, requires every published
+record for the branch to name its host and catalogue port, and fails the job on any
+mismatch or lookup failure. CI never edits DNS; fix the record or the catalogue. Moving
+a port means changing the AMP instance, the SRV record and this file together. Native
+release builds also run `OpenGGF --check-master-discovery multi.openggf.com`, the
+packaged JNDI DNS witness, on each platform.
+
+### Deploying
+
+After smoke passes on a develop or next push, CI's `deploy-multiplayer` job first runs
+the SRV drift check, then builds
 `target/racing-server/dist`, replaces the branch's rolling prerelease asset
 `openggf-racing-server.zip` (moving its tag to the tested commit), and runs:
 
@@ -279,7 +329,8 @@ The CI account belongs to an ADS role limited to Manage/Start/Stop/Restart on th
 OpenGGF instances and, inside each instance, a role limited to application
 start/stop/restart/update and console reading. The branch's GitHub environment
 (`multiplayer-dev`, `multiplayer-next`) admits only that branch and holds
-`AMP_INSTANCE_ID`, `MULTI_ENDPOINT`, `RELEASE_TAG` and the `AMP_PASSWORD` secret.
+`AMP_INSTANCE_ID`, `RELEASE_TAG` and the `AMP_PASSWORD` secret. The endpoint comes from
+the catalogue; an old `MULTI_ENDPOINT` environment variable is no longer read.
 Every deploy restarts the master, which disconnects rooms (see below).
 
 ## Operation and updates

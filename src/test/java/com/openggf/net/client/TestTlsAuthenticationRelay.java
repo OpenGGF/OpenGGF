@@ -68,8 +68,8 @@ class TestTlsAuthenticationRelay {
                          new RoomHostConfig("Room", "s3k", 0, 0, "OPEN", null, 8, "build"), hostIdentity,
                          TrackValidationProfileSource.none())) {
                 URI uri = URI.create("wss://localhost:" + master.port() + "/master");
-                try (var host = MasterClient.connect(uri, hostIdentity, "Host", "build", ssl).get(5, TimeUnit.SECONDS);
-                     var guest = MasterClient.connect(uri, guestIdentity, "Guest", "build", ssl).get(5, TimeUnit.SECONDS)) {
+                try (var host = MasterClient.connect(uri.toString(), hostIdentity, "Host", "build", ssl).get(5, TimeUnit.SECONDS);
+                     var guest = MasterClient.connect(uri.toString(), guestIdentity, "Guest", "build", ssl).get(5, TimeUnit.SECONDS)) {
                     var established = new CountDownLatch(1);
                     master.execute(() -> { master.establishForTest(hostIdentity.fingerprint()); established.countDown(); });
                     assertTrue(established.await(2, TimeUnit.SECONDS));
