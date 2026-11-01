@@ -41,8 +41,9 @@ MvSonicOnPtfm.asm:18-42).
 | `e40c4a3a9`, `ef9d43171` | 3 (follow-ups) | Objects that release a rider now clear its `Status_OnObj` where their ROM routine does: S2 Obj40 springboard (`loc_264BC`, s2.asm:52398-52400), S2 Obj32 breakable block (`Obj32_BouncePlayer`, s2.asm:49405-49416), S1 Obj51 smash block (_incObj/51 MZ Smashable Green Block.asm:52-67), S1 Obj6C vanishing platform (_incObj/6C SBZ Vanishing Platforms.asm:110-118), S1 elevator, platform, spin conveyor and spin platform releases. The ARZ boss arrow starts its decay timer after both characters' PlatformObject call (FixBugs=0 `Obj89_Arrow_Platform`, s2.asm:65816-65833). |
 | `d716b0f59` | 3 | The CPU reads the leader's live `Status_OnObj` (loc_13DA6, sonic3k.asm:26730-26734); the kill path no longer ORs the frame-start bit back in (`Kill_Character`, sonic3k.asm:21172-21193). |
 
-Size: `ObjectSolidContactController` 5,702 → 4,553 lines (−1,149). Whole
-branch: 142 files, +935 / −2,957 (main sources +496 / −2,164).
+Size: `ObjectSolidContactController` 5,702 → 4,553 lines (−1,149). Main
+sources: 76 files, +514 / −2,171 (unchanged since `ef9d43171`). The whole branch
+including tests and docs is 149 files, +1,330 / −2,987.
 
 ## Deviations from the synthesis
 
@@ -93,6 +94,16 @@ branch: 142 files, +935 / −2,957 (main sources +496 / −2,164).
   object's walk-off clear); the deleted grounded-clear restore pair masked the
   late second clear. Fixing it needs the ROM's per-frame s54 flag/timer state,
   not a frame-keyed gate. Steps 4-6 were not started.
+- **SSZ1 engine-authored cold routes stay red.** Both native320 controller
+  routes go off their recorded path at input 1366, where P1 jumps from the
+  `$77` cutscene bridge inside a `$14` updraft's band. The updraft zeroes
+  `y_vel` (`sub_3FBC4`, sonic3k.asm:84482-84533). At base the bridge's own
+  solid call then landed P1 again in the same call. On this branch the bridge
+  still holds its standing bit, so it takes the airborne release (`loc_1E2E0`,
+  sonic3k.asm:41852-41857) and returns, which is the ROM's order. The inputs
+  were authored against the old re-landing. Re-authoring them would be a
+  re-fit, so this lane did not do it. Recorded in the
+  [SSZ1 matrix](../validation/levels/s3k-ssz-act1.md#rom-owned-solid-contact-opening-bridge-jump-2026-10-31).
 
 ## Measurement
 
@@ -198,3 +209,31 @@ paths, surfaceless EGL):
 - Mod API candidate pin regenerated at steps 1, 2, 3 and the tail-d4 commit
   (removals of the deleted members; additions `SolidCall`, `solid`, `solidFor`,
   `entryCall`, `tailCallD4`, `placeOnTerrain`).
+
+Change-based smoke at `771e02403`, run with
+`run_categories.py --base 36aaddb37 --workers 2 --run`, surfaceless EGL (run
+`20261031T232437Z-6bbd419d`, 4,366 classes in 88 batches):
+
+- Ordinary lane: 36,166 tests, 12 failures, 0 errors, 49 skips, 1,471 s.
+- Guards: 820 tests, 0 failures, 139 s.
+- Eight failures also fail at base: `TestMasterTitleScreenLayout` (2),
+  `TestSonic2InterlacePixels`, `TestNativeCompetitionViews`,
+  `TestNativeSpriteSatGameplay` (3) and `TestPrivateLobbyScreenRendering`.
+- The other four come from this branch. The four classes run at both commits
+  give 56 tests and 0 failures at `36aaddb37`, and exactly these four failures
+  at `771e02403`:
+  - `TestS1Ghz1Headless#testStandingOnObjectDoesNotTriggerSlopeRepel` and
+    `TestS3kIcz2StaleObjectGrounding` asserted deleted compensations: the
+    slope-repel object-support fallback and the AnglePos stale clear.
+    `7d29ab35a` rewrites them to the ROM routines. S1 `Sonic_SlopeRepel` has no
+    `Status_OnObj` test. A rider's angle stays 0 because SolidObject's landing
+    clears it and `Sonic_AnglePos` returns on the bit. Re-run: 31/0 and 1/0.
+    The ICZ2 test no longer guards the original screenshot bug, and the object
+    that left that stale bit is still unidentified.
+  - `TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`
+    and `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`
+    replay the SSZ1 controller routes and stay red (see *Rejected or stopped*).
+- Skips: all 49 are gated by a system property, `exhaustive-audit`, a perf or
+  native-GPU check, or a capture tag. The exception is
+  `TestCPZObjectBugs#testSpinTubeForcesRolling`, a runtime assumption that
+  skips the same way at `36aaddb37`.
