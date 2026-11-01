@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K Act 1 results defer Act 2 music to the in-level title-card wait gate,
+  preventing a duplicate start during AIZ, HCZ, MGZ and other act transitions.
+
 - **Upside-down S3K capsules:** Use seven normal explosion effects and their
   break sound instead of the long boss-explosion sequence.
 

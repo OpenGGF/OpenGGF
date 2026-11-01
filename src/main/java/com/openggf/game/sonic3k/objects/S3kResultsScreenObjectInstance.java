@@ -926,12 +926,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
             // The level data continues seamlessly (S3K acts share the same level).
 
-            // Play act 2 music
-            var zoneRegistry = services().gameModule().getZoneRegistry();
-            int act2MusicId = zoneRegistry.getMusicId(zone, 1);
-            if (act2MusicId >= 0 && !fbzCarriedTitleOwner) {
-                try { services().playMusic(act2MusicId); } catch (Exception e) { /* ignore */ }
-            }
+            // loc_2DD06 only hands this owner to Obj_TitleCard; it does not
+            // request music (sonic3k.asm:62713-62729). Obj_TitleCardWait
+            // restores level music at its display/reset gate (loc_2D810,
+            // sonic3k.asm:62227-62241), through the carried owner or title
+            // manager. Starting it here would restart it again at that gate.
 
             // Show act 2 title card (except SOZ zone $8, DEZ zone $B, and zones
             // with seamless transitions like HCZ — the seamless transition will
