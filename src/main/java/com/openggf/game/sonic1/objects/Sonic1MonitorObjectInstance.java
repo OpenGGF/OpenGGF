@@ -45,7 +45,7 @@ import java.util.logging.Logger;
  */
 public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        SolidObjectProvider, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
 // Monitor frames and the rising icon/explosion children have no native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic1MonitorObjectInstance.class.getName());
@@ -501,5 +501,9 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
             }
             return STATIC;
         }
+    }
+    /** Homing: an intact monitor; the native roll contact breaks it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE);
     }
 }

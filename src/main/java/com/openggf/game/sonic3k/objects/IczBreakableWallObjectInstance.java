@@ -44,7 +44,7 @@ import java.util.List;
  * trigger box from {@code word_8A2FC}.
  */
 public class IczBreakableWallObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -367,4 +367,9 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
             {      0, -0x200},
             {-0x400, -0x300}
     };
+    /** Homing: Knuckles-only (Obj_ICZBreakableWall side contact), so only Knuckles targets it. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken || !com.openggf.level.objects.HomingTargets.knuckles(player) ? null
+                : com.openggf.level.objects.HomingTargets.at(this, com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE_WALL);
+    }
 }

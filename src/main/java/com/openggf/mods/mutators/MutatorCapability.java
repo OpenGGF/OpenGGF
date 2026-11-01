@@ -14,6 +14,7 @@ public enum MutatorCapability {
     NO_SPECIAL_STAGES(MutatorScope.LIVE),
     NO_BONUS_STAGES(MutatorScope.LIVE),
     DEFEAT_KNOCKBACK(MutatorScope.LIVE),
+    HOMING_ATTACK(MutatorScope.LIVE),
     SCENE_PRESENTATION(MutatorScope.LIVE), SPRITE_PRESENTATION(MutatorScope.LIVE),
     HUD_PRESENTATION(MutatorScope.LIVE), AUDIO_EFFECT(MutatorScope.LIVE),
     OVERLAY_CONTENT(MutatorScope.LIVE), GAMEPLAY_HOLD(MutatorScope.LIVE),

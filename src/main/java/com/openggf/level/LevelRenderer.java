@@ -1213,6 +1213,24 @@ public final class LevelRenderer {
                 }));
     }
 
+    /** Homing-attack mutator presentation: sampled from, and drawn behind, the displayed sprite table. */
+    private void drawHomingAttackEffects(SpritePresentation.Frame frame) {
+        var homing = com.openggf.game.session.WorldSessionPolicyAccess.getService(lm.getWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        if (homing == null || lm.graphicsManager == null || lm.camera == null) return;
+        int cameraX = lm.camera.getXWithShake(), cameraY = lm.camera.getYWithShake();
+        homing.observeFrame(frame, cameraX, cameraY);
+        homing.drawEffects(lm.graphicsManager, cameraX, cameraY);
+    }
+
+    /** Homing reticle and Instagib heat, drawn over the displayed sprite table. */
+    private void drawHomingAttackOverlay() {
+        var homing = com.openggf.game.session.WorldSessionPolicyAccess.getService(lm.getWorldSession(),
+                com.openggf.game.mutators.HomingAttackRuntime.class);
+        if (homing == null || lm.graphicsManager == null || lm.camera == null) return;
+        homing.drawOverlay(lm.graphicsManager, lm.camera.getXWithShake(), lm.camera.getYWithShake());
+    }
+
     private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
         com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, spriteTables.published(),
                 lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible, presentationRuntime());
@@ -1885,13 +1903,17 @@ public final class LevelRenderer {
      */
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
         if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm) && !cinematicDraw) {
+            drawHomingAttackEffects(spriteTables.published());
             drawPublishedSprites(layer -> !layer.isHud());
+            drawHomingAttackOverlay();
         } else if (preparingSpritePresentation) {
             prepareOrDrawLiveSprites(spriteManager);
         } else {
             liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            drawHomingAttackEffects(liveSpriteFrame);
             com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
                     lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud(), presentationRuntime());
+            drawHomingAttackOverlay();
         }
         if (preparingSpritePresentation) return;
         GraphicsManager graphicsManager = lm.graphicsManager;

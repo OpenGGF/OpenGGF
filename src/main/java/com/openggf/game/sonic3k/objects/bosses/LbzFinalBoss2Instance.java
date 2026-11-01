@@ -55,7 +55,7 @@ import java.util.logging.Logger;
  * palette-line, and priority selections.</p>
  */
 public final class LbzFinalBoss2Instance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The native side selector mirrors the left-facing encounter basis toward the player on the other side.
         return renderXFlip ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
@@ -2825,4 +2825,6 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
             return explosionController;
         }
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hitCount > 1) hitCount = 1; }
 }

@@ -29,7 +29,7 @@ import java.util.List;
  * Obj_AIZGiantRideVine (sonic3k.asm:46789-47003).
  */
 public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
-        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
@@ -354,5 +354,9 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         int sin = TrigLookupTable.sinHex(byteAngle);
         int cos = TrigLookupTable.cosHex(byteAngle);
         return new int[]{(-sin + 8) >> 4, (cos + 8) >> 4};
+    }
+    /** Homing: the free vine handle, aimed where the native grab holds the player (sub_220C2). */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return AizVineHandleLogic.anyGrabbed(handle) ? null : AizVineHandleLogic.homingTarget(handle);
     }
 }

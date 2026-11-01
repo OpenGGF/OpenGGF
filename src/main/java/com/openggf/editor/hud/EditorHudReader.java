@@ -2,6 +2,7 @@ package com.openggf.editor.hud;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
+import com.openggf.control.MouseWheel;
 import com.openggf.graphics.text.HostText;
 import com.openggf.graphics.text.HostTextContext;
 import com.openggf.graphics.text.TextFace;
@@ -34,7 +35,8 @@ final class EditorHudReader {
             pad.consumeHeld();
             return;
         }
-        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
+        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0)
+                - MouseWheel.of(input).notches();
         int page = pad.navX() + (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
         if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) page--;
         if (pad.repeated(RB) || input.isKeyPressed(GLFW_KEY_PAGE_DOWN)) page++;

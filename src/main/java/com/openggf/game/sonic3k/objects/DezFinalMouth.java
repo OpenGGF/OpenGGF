@@ -60,7 +60,8 @@ final class DezFinalMouth extends DezFinalBossSprite implements RewindRecreatabl
     }
 
     /** loc_80590: invisible collision button, not a solid/pushable sprite. */
-    static final class Button extends DezFinalBossSprite implements RewindRecreatable,TouchResponseProvider,TouchResponseAttackable {
+    static final class Button extends DezFinalBossSprite implements RewindRecreatable,TouchResponseProvider,TouchResponseAttackable,
+            com.openggf.level.objects.homing.HomingTargetSource {
         private DezFinalBossSprite parent;
         private int routine;
         private int collision;
@@ -94,6 +95,10 @@ final class DezFinalMouth extends DezFinalBossSprite implements RewindRecreatabl
             savedCollision=collision; collision=0; collisionProperty=(collisionProperty-1)&0xFF;
         }
         @Override public int getCollisionFlags() { return touchPublished?collision:0; }
+        /** Homing priority 1: the invisible button opens the mouth that exposes the core (loc_80590). */
+        @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+            return com.openggf.level.objects.HomingTargets.bossPart(this,1);
+        }
         @Override public int getCollisionProperty() { return collisionProperty; }
         @Override public boolean publishesTouchResponseListEntryThisFrame() { return touchPublished; }
         @Override public boolean requiresRenderFlagForTouch() { return false; }

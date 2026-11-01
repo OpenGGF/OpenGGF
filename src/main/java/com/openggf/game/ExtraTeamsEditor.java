@@ -106,6 +106,7 @@ final class ExtraTeamsEditor {
         int before = selected;
         if (MenuInput.up(input)) selected = Math.floorMod(selected - 1, rows.size());
         if (MenuInput.down(input)) selected = (selected + 1) % rows.size();
+        if (pointer.inside()) selected = Math.clamp(selected - pointer.wheel(), 0, rows.size() - 1);
         if (before != selected) MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE);
         boolean clicked = false;
         int pitch = SidekickTeamEditor.rowPitch();
@@ -130,6 +131,7 @@ final class ExtraTeamsEditor {
         int before = actionChoice;
         if (MenuInput.up(input)) actionChoice = Math.floorMod(actionChoice - 1, actions.size());
         if (MenuInput.down(input)) actionChoice = (actionChoice + 1) % actions.size();
+        if (pointer.inside()) actionChoice = Math.clamp(actionChoice - pointer.wheel(), 0, actions.size() - 1);
         if (before != actionChoice) MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE);
         boolean clicked = false;
         int pitch = SidekickTeamEditor.rowPitch();

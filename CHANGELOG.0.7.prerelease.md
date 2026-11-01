@@ -11,6 +11,19 @@ Unreleased. The earlier development themes remain in
   through diagnostic counters. FBZ cloud draws and MGZ capsule animal art selection
   also keep their temporary presentation values out of native object state.
 
+- **Homing Attack mutator:** Mutator Lab adds Homing Attack for Sonic 1, Sonic 2
+  and Sonic 3 & Knuckles. Jumping again in the air homes the leader in on the best
+  target in range: a boss part with a hidden priority first, then targets ahead,
+  then bosses, badniks, breakable walls, grab points and breakables. The leader
+  stays in the native roll, so hits, breakage and grabs follow the original rules.
+  With no target, the native double-jump move runs; failing that, Sonic dashes
+  forward. A reticle marks the target, launches lag the camera like the fire-shield
+  dash, a faint blue glow trails each strike, strikes chain and bosses bounce the
+  player off. Sonic, Tails and Knuckles
+  can each be enabled. Instagib mode builds friction heat in front of the player,
+  makes the strike invulnerable, ends bosses in one hit and bursts defeated enemies
+  into shards that defeat other badniks they hit; bosses are immune to shards.
+
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an
@@ -1576,7 +1589,18 @@ its original drawing priority.
   display OS IME composition, focused clauses and a shaped caret before commit.
   Creator scene and course text capture receive a host composition strip. Native
   composition has been checked with an isolated Linux X11/IBus session; other OS
-  IMEs still need platform verification.
+  IMEs still need platform verification. Empty native composition updates, which
+  Wayland sends with ordinary keys even without an IME, no longer hide Backspace,
+  Enter or Escape once typing starts.
+
+- **Mouse wheel in menus:** the wheel now moves through Engine Settings (including its
+  value and key-binding choices, language picker and team editors), Game Setup and its
+  change summary, the display shader picker, mutator configuration, content import, the
+  editor project menu and the editor's library, menu, settings, properties and Details
+  sheets; Details pages scroll with it wherever they open. Every menu reading the mouse
+  in a frame sees the same notches, and notches scrolled during gameplay are dropped
+  instead of jumping the next menu or zooming the editor canvas. Creator menus read the
+  notches from `MenuInput.Pointer.wheel()`.
 
 ## Maintenance and release preparation
 
