@@ -5,7 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-The current presentation fixes include crowded-scene sprite retention with
+The current presentation fixes include the normal explosion effect and break
+sound for upside-down S3K capsules, plus crowded-scene sprite retention with
 sprite limits disabled; see the development changelog below.
 
 Both development branches currently share the same commit and release line.

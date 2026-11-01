@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+Floating S3K capsule effects (2026-11-01): the focused
+`TestStageplayCapsuleControlRelease` regression checks subtype-$08 completion,
+seven normal explosion children, sprite priority and child-owned break sound.
+This shared AIZ2/MGZ2 owner correction does not certify route completion;
+pixel/audio captures, allocation exhaustion and broader route/lifecycle coverage
+remain inherited gaps.
+
 DEZ original-input bumper slot order (2026-10-30): the [Act1 handoff](../architecture/validation/levels/s3k-dez-act1.md#original-input-bumper-slot-order-boundary--2026-10-30)
 records native bumper slot13 after turbine12 versus engine bumper11 before
 movement. Strict engine parity ends at row13730; row13731 stays red. This leaf

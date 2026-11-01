@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Upside-down S3K capsules:** Use seven normal explosion effects and their
+  break sound instead of the long boss-explosion sequence.
+
 - **Sprite limits disabled:** Also remove the total 80/64-entry sprite-table cap,
   so later sprites survive crowded scenes and results screens. Explicit level
   masks remain active; enabling limits retains native table and line budgets.
