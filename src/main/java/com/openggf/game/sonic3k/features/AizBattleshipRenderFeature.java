@@ -30,7 +30,7 @@ import java.util.logging.Logger;
  * ({@link AizBattleshipPropellerInstance}); the overlay only draws them on top
  * of the strip from their ROM animation and translated position.
  */
-public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
+public final class AizBattleshipRenderFeature implements SpecialRenderEffect, com.openggf.game.render.SpecialRenderMotionPolicy {
     private static final Logger LOG =
             Logger.getLogger(AizBattleshipRenderFeature.class.getName());
 
@@ -75,6 +75,11 @@ public final class AizBattleshipRenderFeature implements SpecialRenderEffect {
     @Override
     public SpecialRenderEffectStage stage() {
         return SpecialRenderEffectStage.AFTER_SPRITES;
+    }
+
+    @Override
+    public boolean permitsMotion(SpecialRenderEffectContext context) {
+        return findActiveBattleship(context.levelManager()) == null;
     }
 
     @Override

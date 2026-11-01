@@ -36,6 +36,168 @@ class TestLevelMotionPixels {
     void aiz1BlendsOnlyPublishedPresentationAndHoldsLag() throws Exception {
         check(RomTestUtils.ensureSonic3kRomAvailable().toPath(), true);
     }
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void runningBubbleShieldFollowsThePlayerAtBothRefreshPhases() throws Exception {
+        var settings = settings();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            for (int frame = 0; frame < 120; frame++) session.step(null);
+            var level = GameServices.level(); var camera = GameServices.camera();
+            camera.setX((short) 0x1300); camera.setY((short) 0x380);
+            NativePositionOps.writeXPosPreserveSubpixel(session.player(), 0x13a0);
+            NativePositionOps.writeYPosPreserveSubpixel(session.player(), 0x3d0);
+            session.player().setXSpeed((short) 0x800);
+            session.player().setGSpeed((short) 0x800);
+            session.player().giveShield(com.openggf.game.ShieldType.BUBBLE);
+            var shield = level.getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance.class::isInstance)
+                    .map(com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance.class::cast)
+                    .findFirst().orElseThrow();
+            shield.update(level.getFrameCounter(), session.player());
+            GameServices.sprites().refreshPlayableRenderFlags(camera);
+            level.parallaxManager.update(0, 0, camera, level.frameCounter);
+            prime(level);
+            move(level, session, 8); publishObservation(level);
+            var offer = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.between(.25));
+            assertNotNull(offer.sprites());
+            shield.setVisible(false);
+            var without = level.spritePresentationRenderer().captureSceneSpriteTable(GameServices.sprites());
+            shield.setVisible(true);
+            var tiles = offer.frame().tiles().stream().filter(tile -> !without.tiles().contains(tile)).toList();
+            assertFalse(tiles.isEmpty(), "The real running shield must contribute admitted ROM tiles");
+            var frame = new SpritePresentation.Frame(tiles, List.of(), offer.frame().patternVersions());
+            session.render();
+            var latest = isolatedSprites(frame, null, SpriteMotionProjection.Offset.ZERO);
+            long shieldPixels = Arrays.stream(latest.pixels()).filter(pixel -> (pixel >>> 24) != 0).count();
+            assertTrue(shieldPixels > 24 && shieldPixels < 1500,
+                    "Read actual opaque shield pixels against transparent space, count=" + shieldPixels);
+            for (double alpha : new double[]{.25, .75}) {
+                var picture = level.spritePresentationRenderer().motionHistory.offer(PictureSelection.between(alpha));
+                samePixels(latest, isolatedSprites(frame, picture.sprites(), picture.camera()),
+                        "Shield stays with its camera-followed player at alpha=" + alpha);
+            }
+            assertThrows(AssertionError.class, () -> samePixels(latest,
+                    isolatedSprites(frame, null, offer.camera()), "camera-only negative control"));
+            checkPlayerDrawBridges(session);
+            var exactScene = session.render();
+            var registry = GameServices.specialRenderEffectRegistry();
+            var registered = registry.capture();
+            registry.register(new com.openggf.game.render.SpecialRenderEffect() {
+                public com.openggf.game.render.SpecialRenderEffectStage stage() {
+                    return com.openggf.game.render.SpecialRenderEffectStage.AFTER_BACKGROUND;
+                }
+                public void render(com.openggf.game.render.SpecialRenderEffectContext context) { }
+            });
+            try {
+                samePixels(exactScene, between(session, .25, false),
+                        "An undeclared effect appearing after observation prevents adoption of an existing pair");
+                LevelMotionAccess.observeService(level, GameServices.sprites(), true);
+                assertNull(level.spritePresentationRenderer().motionHistory.offer(PictureSelection.between(.25)),
+                        "Observing an exact scene drops its old motion history");
+            } finally { registry.restore(registered); }
+            prime(level);
+            assertNotNull(level.spritePresentationRenderer().motionHistory.offer(PictureSelection.between(.25)).sprites(),
+                    "Leaving the exact scene primes fresh history");
+
+        }
+    }
+    private static void checkPlayerDrawBridges(GameplayCaptureSession session) {
+        var graphics = GameServices.graphics(); var camera = GameServices.camera();
+        for (var part : List.of(SpritePresentation.Part.BODY, SpritePresentation.Part.APPENDAGE,
+                SpritePresentation.Part.ATTACHED_EFFECT)) {
+            for (boolean commands : new boolean[]{false, true}) {
+                Runnable producer = () -> graphics.renderPatternWithId(3, new PatternDesc(),
+                        session.player().getCentreX(), session.player().getCentreY());
+                var capture = SpriteMotionInternalAccess.collect(graphics, camera.getXWithShake(), camera.getYWithShake(),
+                        () -> SpritePresentationRenderer.prepare(graphics, camera.getXWithShake(), camera.getYWithShake(),
+                                () -> SpriteMotionInternalAccess.withOwner(graphics,
+                                        new MotionPacket.Owner("outer object", 0, 0, MotionPacket.Anchoring.FOLLOW), () -> {
+                                    if (commands) com.openggf.sprites.playable.PlayableMutatorPresentation.drawCommands(
+                                            session.player(), part, new java.util.ArrayList<>(), ignored -> producer.run());
+                                    else com.openggf.sprites.playable.PlayableMutatorPresentation.draw(session.player(), part, producer);
+                                })));
+                assertFalse(capture.frame().tiles().isEmpty());
+                for (var tile : capture.frame().tiles()) assertEquals(
+                        LevelMotionOwners.playerOwner(GameServices.sprites(), session.player()), capture.motion().owner(tile),
+                        "The semantic player overrides an outer object owner for " + part + " commands=" + commands);
+            }
+        }
+    }
+    private static RgbaImage isolatedSprites(SpritePresentation.Frame frame, SpriteMotionProjection projection,
+                                              SpriteMotionProjection.Offset cameraOffset) {
+        var graphics = GameServices.graphics(); var camera = GameServices.camera();
+        glClearColor(0, 0, 0, 0); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        SpriteMotionInternalAccess.installCameraOffset(graphics, cameraOffset);
+        try {
+            SpriteMotionInternalAccess.withProjection(graphics, projection, () ->
+                    SpritePresentationRenderer.drawNative(graphics, frame,
+                            camera.getXWithShake(), camera.getYWithShake(), layer -> true));
+            graphics.flush(); glFinish();
+            return ScreenshotCapture.captureFramebuffer(320, 224);
+        } finally { SpriteMotionInternalAccess.clearProjection(graphics); }
+    }
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void battleshipOverlayKeepsItsSecondaryCameraSpaceAtBothRefreshPhases() throws Exception {
+        var settings = settings();
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 1, settings);
+            for (int frame = 0; frame < 120; frame++) session.step(null);
+            var level = GameServices.level(); var camera = GameServices.camera();
+            camera.setX((short) 0x4160); camera.setY((short) 0x110);
+            camera.setFrozen(true);
+            NativePositionOps.writeXPosPreserveSubpixel(session.player(), 0x4200);
+            NativePositionOps.writeYPosPreserveSubpixel(session.player(), 0x170);
+            var events = ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                    GameServices.module().getLevelEventProvider()).getAizEvents();
+            events.setEventsFg4Raw(true);
+            for (int frame = 0; frame < 180 && (!events.isBattleshipSpawned()
+                    || !events.isBattleshipTerrainLoaded()); frame++) session.step(null);
+            assertTrue(events.isBattleshipSpawned(), "Reach the real AIZ2 ship sequence");
+            assertTrue(events.isBattleshipTerrainLoaded(), "Load actual ship strip ROM art");
+            for (int frame = 0; frame < 8; frame++) session.step(null);
+            var objects = level.getObjectManager();
+            var ship = objects.getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.objects.AizBattleshipInstance.class::isInstance)
+                    .map(com.openggf.game.sonic3k.objects.AizBattleshipInstance.class::cast).findFirst().orElseThrow();
+            for (int tick = 0; tick < 430 && objects.getActiveObjects().stream()
+                    .noneMatch(object -> object instanceof com.openggf.game.sonic3k.objects.AizShipBombInstance bomb
+                            && bomb.shouldRenderBehindBattleship()); tick++) {
+                ship.update(tick, session.player());
+            }
+            assertTrue(objects.getActiveObjects().stream().anyMatch(object ->
+                    object instanceof com.openggf.game.sonic3k.objects.AizShipBombInstance bomb
+                            && bomb.shouldRenderBehindBattleship()), "An attached bomb shares the overlay draw path");
+            for (var object : objects.getActiveObjects()) {
+                if (object instanceof com.openggf.game.sonic3k.objects.AizBattleshipPropellerInstance
+                        || object instanceof com.openggf.game.sonic3k.objects.AizShipBombInstance)
+                    object.update(level.getFrameCounter(), session.player());
+            }
+            prime(level);
+            move(level, session, 8); publishObservation(level);
+            var latest = session.render(); nonblank(latest);
+            var overlay = specialEffectsImage();
+            long overlayPixels = Arrays.stream(overlay.pixels()).filter(pixel -> (pixel >>> 24) != 0).count();
+            assertTrue(overlayPixels > 100, "The real ship overlay must draw visible ROM pixels");
+            for (double alpha : new double[]{.25, .75}) {
+                samePixels(latest, between(session, alpha, false),
+                        "An unsupported secondary-camera overlay keeps the whole scene exact, alpha=" + alpha);
+                var projected = new AtomicReference<RgbaImage>();
+                LevelMotionAccess.present(level, PictureSelection.between(alpha), () -> {
+                    session.render(); projected.set(specialEffectsImage());
+                });
+                samePixels(overlay, projected.get(), "Hull, propellers and attached bombs retain secondary-camera space");
+            }
+        }
+    }
+    private static RgbaImage specialEffectsImage() {
+        glClearColor(0, 0, 0, 0); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        var level = GameServices.level();
+        GameServices.specialRenderEffectRegistry().dispatch(com.openggf.game.render.SpecialRenderEffectStage.AFTER_SPRITES,
+                new com.openggf.game.render.SpecialRenderEffectContext(GameServices.camera(), level.getFrameCounter(),
+                        level, GameServices.graphics()));
+        GameServices.graphics().flush(); glFinish();
+        return ScreenshotCapture.captureFramebuffer(320, 224);
+    }
     private static GameplayCaptureSession.Settings settings() {
         return new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, 0x400, 128,
                 null, false, false, null, null, true, null, false);

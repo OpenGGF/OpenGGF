@@ -950,6 +950,9 @@ public final class LevelRenderer {
                 || profile.getClass().getClassLoader() != LevelRenderer.class.getClassLoader()) return false;
         if (lm.gameModule.getBonusStageProvider().getActiveType() != com.openggf.game.BonusStageType.NONE
                 || lm.gameModule.getSpecialStageProvider().isInitialized()) return false;
+        if (!com.openggf.game.render.SpecialRenderMotionPolicy.permitsScene(
+                GameServices.specialRenderEffectRegistryOrNull(),
+                new SpecialRenderEffectContext(lm.camera, lm.frameCounter, lm, lm.graphicsManager))) return false;
         var runtime = presentationRuntime();
         return runtime == null || runtime.scenePolicies().isEmpty();
     }

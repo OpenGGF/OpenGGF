@@ -79,6 +79,17 @@ public final class SpecialRenderEffectRegistry
         }
     }
 
+    boolean permitsMotion(SpecialRenderEffectContext context) {
+        for (var effects : effectsByStage.values()) {
+            for (var effect : effects) {
+                if (effect.getClass().getClassLoader() != SpecialRenderEffectRegistry.class.getClassLoader()
+                        || !(effect instanceof SpecialRenderMotionPolicy policy)
+                        || !policy.permitsMotion(context)) return false;
+            }
+        }
+        return true;
+    }
+
     // ── RewindSnapshottable ───────────────────────────────────────────────
 
     @Override

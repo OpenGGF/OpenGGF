@@ -24,7 +24,7 @@ import com.openggf.level.LevelManager;
  * - post-burn foreground heat haze gating
  * - post-sprite fire curtain draw during the AIZ1 miniboss fake-out transition
  */
-public final class AizTransitionRenderFeature implements SpecialRenderEffect, AdvancedRenderMode {
+public final class AizTransitionRenderFeature implements SpecialRenderEffect, AdvancedRenderMode, com.openggf.game.render.SpecialRenderMotionPolicy {
     private static final java.util.logging.Logger LOG =
             java.util.logging.Logger.getLogger(AizTransitionRenderFeature.class.getName());
 
@@ -74,6 +74,13 @@ public final class AizTransitionRenderFeature implements SpecialRenderEffect, Ad
     @Override
     public SpecialRenderEffectStage stage() {
         return SpecialRenderEffectStage.AFTER_SPRITES;
+    }
+
+    @Override
+    public boolean permitsMotion(SpecialRenderEffectContext context) {
+        var state = getAizState();
+        int height = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+        return state == null || !state.getFireCurtainRenderState(height).active();
     }
 
     @Override

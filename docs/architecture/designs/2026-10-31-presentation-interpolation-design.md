@@ -329,5 +329,20 @@ tests proving services are identical with interpolation on or off.
    picture's metadata at collection. A changed serial rejects pairing at publication without a
    camera-to-level dependency or an added `Camera` mod API member.
 
+   Player attachment draw bridges also stamp the player owner during collection, including the
+   no-mutator `drawCommands` fast path. A shield can inherit the null `boundPlayer()` default;
+   ownership must follow the semantic player supplied to its actual draw bridge, not depend on
+   a mocked resolver binding or the outer object dispatcher. Body, appendage, shields,
+   insta-shield, invincibility and super/hyper effects use the same player anchor on those paths.
+
+   Special effects run outside the collected SAT and may use physical or secondary cameras.
+   `SpecialRenderMotionPolicy` is an engine-internal, read-only declaration checked both when
+   observing a service and when adopting a picture. Undeclared effects require an exact scene.
+   An effect may permit blending only when its draw is inactive or its projection is compatible.
+   AIZ's curtain and battleship permit it only while their overlays are inactive. The active
+   battleship keeps the entire scene exact, including the strip, overlay-owned propellers and
+   attached bombs, until a secondary-camera presentation model exists. Leaving an exact scene
+   primes fresh history. The default cannot silently apply world-camera motion to a new effect.
+
 3. **Integration** (lead): Engine wiring of `observeService` and `present`, exact-consumer guard,
    docs and changelog, cost measurement, change-based smoke.
