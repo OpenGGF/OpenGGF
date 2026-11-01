@@ -14,6 +14,25 @@ public interface SolidObjectProvider {
         return SolidExecutionMode.AUTO_AFTER_UPDATE;
     }
 
+    /**
+     * {@code d4} of this routine's tail solid call under
+     * {@link SolidExecutionMode#AUTO_AFTER_UPDATE}: the x the standing branch
+     * carries the rider from ({@code x_pos(a1) -= d4 - x_pos(a0)}, see
+     * {@link com.openggf.game.solid.SolidCall}).
+     *
+     * <p>The default is the routine's entry x, the {@code move.w x_pos(a0),-(sp)}
+     * / {@code move.w (sp)+,d4} pair a routine uses around its own move. A
+     * routine that loads d4 another way returns that value: its post-move
+     * {@code x_pos} ({@code move.w x_pos(a0),d4}, no carry), or an x it saved
+     * itself, for example when an engine parent runs this routine before the
+     * object's own slot.
+     *
+     * @param routineEntryX the object's x when its slot's routine was entered
+     */
+    default int tailCallD4(int routineEntryX) {
+        return routineEntryX;
+    }
+
     default boolean isSolidFor(PlayableEntity player) {
         return true;
     }
@@ -115,20 +134,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether this solid can keep a grounded player attached during the
-     * pre-movement terrain attachment check used by S2/S3K inline solid
-     * resolution.
-     * <p>
-     * Normal solids rely on the previous frame's standing snapshot. ROM helper
-     * objects spawned immediately before their first {@code SolidObjectTop}
-     * call do not have a previous snapshot yet, but can still support the
-     * player in the same frame.
-     */
-    default boolean providesPreMovementGroundAttachmentSupport() {
-        return false;
-    }
-
-    /**
      * Whether this solid should still be evaluated while the player is in an
      * object-controlled state. Most scripted object-control states suppress
      * generic solid contacts; a few ROM routines still call SolidObject and only
@@ -217,33 +222,6 @@ public interface SolidObjectProvider {
      * as CNZ cylinders, are not forced through plain full-solid semantics.
      */
     default boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether an airborne rider must retain this object's riding record until
-     * this same object's inline solid checkpoint consumes its standing bit.
-     *
-     * <p>Use this for native routines whose post-{@code SolidObjectFull}
-     * behavior depends on the per-object {@code a0.d6} result. An earlier
-     * object's solid checkpoint must not consume that state on its behalf.
-     */
-    default boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether a stale riding record that would be consumed by this object's
-     * airborne standing-bit branch is also ineligible for pre-movement
-     * ground-recovery support.
-     * <p>
-     * Most objects that opt into {@link #airborneStaleStandingBitReturnsNoContact}
-     * still use the engine riding record as the best available live-support
-     * signal before their own solid pass runs. Obj69-style callers can opt in
-     * when the ROM object tail reaches standard {@code SolidObject} late enough
-     * that the stale airborne branch must be visible to player movement first.
-     */
-    default boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
         return false;
     }
 
@@ -609,18 +587,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether a newly established ride should remember this frame's pre-update
-     * object X as the baseline for the next continued-riding carry.
-     * <p>
-     * S2 {@code PlatformObject} callers pass the object's saved pre-move
-     * {@code x_pos} in {@code d4} to the solid helper, so the first continued
-     * riding frame carries by {@code current_x - d4}.
-     */
-    default boolean seedsNewRideCarryFromPreUpdateX() {
-        return false;
-    }
-
-    /**
      * Whether new solid-contact geometry should use the object's pre-update
      * position instead of its current post-update position.
      * <p>
@@ -669,14 +635,6 @@ public interface SolidObjectProvider {
      * object's actual current position or side-contact cleanup.
      */
     default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether continued horizontal rider carry should use the object's
-     * pre-update X as this frame's platform position.
-     */
-    default boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
         return false;
     }
 

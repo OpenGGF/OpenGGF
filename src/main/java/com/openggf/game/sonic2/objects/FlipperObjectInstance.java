@@ -592,7 +592,12 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        return services().solidExecution().resolveSolidNow(player);
+        // Only a participant the all-player batch above did not cover reaches
+        // here; SolidObject made no contact for it this frame.
+        return PlayerSolidContactResult.noContact(
+                services().solidExecutionRegistry().previousStanding(this, player),
+                com.openggf.game.solid.PreContactState.ZERO,
+                com.openggf.game.solid.PostContactState.ZERO);
     }
 
     /**

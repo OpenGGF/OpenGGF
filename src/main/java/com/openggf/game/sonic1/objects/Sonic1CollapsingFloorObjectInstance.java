@@ -339,10 +339,6 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
                 // one-frame airborne state before he can land again.
                 if (player != null && exitsPlatform(
                         player.getAir(), player.getCentreX(), x)) {
-                    if (!player.getAir() && player.isOnObject()) {
-                        objectManager.solidContacts()
-                                .noteGroundedOnObjectClearedBeforePhysics(player, this);
-                    }
                     player.setOnObject(false);
                 }
                 // loc_842E: Player walked off - clear flag, stay in routine 6
@@ -364,10 +360,6 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
                 // ground check finds no support. Setting it here made him airborne a
                 // frame early once the collapse timing itself was corrected -- the
                 // immediate set was compensating for a fragmentation that ran late.
-                if (!player.getAir() && player.isOnObject()) {
-                    objectManager.solidContacts()
-                            .noteGroundedOnObjectClearedBeforePhysics(player, this);
-                }
                 player.setOnObject(false);
                 // move.b #id_Run,obPrevAni(a1) - restart Sonic's animation
                 // loc_842E: clear flag

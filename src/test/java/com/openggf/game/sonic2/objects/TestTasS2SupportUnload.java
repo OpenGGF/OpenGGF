@@ -45,14 +45,14 @@ class TestTasS2SupportUnload {
             };
             var collision = new CollisionSystem(terrain);
             collision.setObjectManager(objects);
-            collision.resolveGroundAttachment(player, 14, () -> collision.hasObjectSupport(player));
+            collision.resolveGroundAttachment(player, 14);
             assertFalse(player.getAir(), "live-support control must bypass the empty terrain column");
             objects.removeDynamicObject(monitor);
             assertFalse(objects.isActiveObjectInstance(monitor), "support must actually be retired");
-            collision.resolveGroundAttachment(player, 14, () -> collision.hasObjectSupport(player));
+            collision.resolveGroundAttachment(player, 14);
             assertFalse(player.getAir(), "the pending removal marker preserves the first player slot");
             objects.update(0, player, List.of(), 1, false, true, true);
-            collision.resolveGroundAttachment(player, 14, () -> collision.hasObjectSupport(player));
+            collision.resolveGroundAttachment(player, 14);
             com.openggf.tests.reel.S2ComponentTestReel.frame(player, objects.getActiveObjects(), 0, 0, "post-removal frame1; empty terrain");
             assertFalse(player.getAir(), "native stale Status_OnObj must survive later slots and keep running in air");
             assertTrue(player.isOnObject());

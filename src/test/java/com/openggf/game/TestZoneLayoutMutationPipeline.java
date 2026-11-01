@@ -225,7 +225,6 @@ class TestZoneLayoutMutationPipeline {
         StringBuilder log = new StringBuilder();
         AtomicInteger eventCalls = new AtomicInteger();
 
-        when(levelManager.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         when(levelManager.getCurrentLevel()).thenReturn(new TestLevel());
         doCallRealMethod().when(levelManager).flushQueuedLayoutMutations();
         // The real applyMutationEffects delegates to the package-private

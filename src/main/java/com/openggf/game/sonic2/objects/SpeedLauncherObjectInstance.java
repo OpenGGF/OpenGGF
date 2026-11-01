@@ -8,7 +8,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -392,6 +391,14 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int tailCallD4(int routineEntryX) {
+        // ObjC0_Main loads d4 = x_pos(a0) after the routine moved the launcher
+        // (s2.asm:80889-80896), so PlatformObject never carries the rider; the
+        // routine's loc_3BFB4 writes the rider's x_pos itself.
+        return currentX;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!contact.standing()) {
@@ -456,10 +463,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         // ROM: move.w x_pos(a0),x_pos(a1)
         player.setCentreXPreserveSubpixel((short) currentX);
         accelerationRiders.add(player);
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.refreshRidingTrackingPosition(this);
-        }
 
         // ROM: Set player facing direction
         // bclr #status.player.x_flip,status(a1) - clear flip

@@ -209,8 +209,10 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         // When hitting from below or side, player maintains their momentum
 
         // Set player state to in-air
-        // From disassembly: bset #status.player.in_air, bclr #status.player.on_object
+        // Obj32_BouncePlayer: bset #status.player.in_air, bclr #status.player.on_object
+        // (s2.asm:49405-49416). The block clears the rider's bit itself.
         player.setAir(true);
+        player.setOnObject(false);
 
         // Spawn fragment objects
         spawnFragments();

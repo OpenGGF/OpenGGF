@@ -119,11 +119,6 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public boolean providesPreMovementGroundAttachmentSupport() {
-        return true;
-    }
-
-    @Override
     public boolean isSkipSolidContactThisFrame() {
         // Obj_AIZTransitionFloor sets status bit 7 before calling SolidObjectTop,
         // so it is solid on its first execution frame.

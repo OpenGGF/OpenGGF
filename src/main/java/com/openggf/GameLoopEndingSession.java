@@ -238,13 +238,8 @@ final class GameLoopEndingSession {
         if (host.level().advanceWaterLevelBeforePlayerPhysics()) {
             host.level().advanceDynamicWaterLevel();
         }
-        if (host.level().objectsExecuteAfterPlayerPhysics()) {
-            host.sprites().update(host.input());
-            host.level().updateObjectPositionsPostPhysicsWithoutTouches();
-        } else {
-            host.level().updateObjectPositions();
-            host.sprites().update(host.input());
-        }
+        host.sprites().update(host.input());
+        host.level().updateObjectPositionsPostPhysicsWithoutTouches();
         // Camera/scroll in ROM order (DeformLayers (REV01).asm:16-18): the camera
         // move/clamp (ScrollVertical) runs BEFORE the zone event handler, and the
         // boundary easing (DynamicLevelEvents tail) runs AFTER it. Mirrors

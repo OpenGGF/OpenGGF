@@ -1355,14 +1355,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                         + (orientation.playerIsRight() ? -PLAYER_HORIZONTAL_CLAMP : PLAYER_HORIZONTAL_CLAMP);
                 currentX = targetX;
                 syncFixedXFromPosition();
-
-                // Refresh SolidContacts tracking position so the follow delta isn't
-                // double-applied as a riding delta. In the ROM, SolidObject runs inline
-                // before the horizontal follow, so it never sees this delta.
-                ObjectManager objectManager = services().objectManager();
-                if (objectManager != null) {
-                    objectManager.refreshRidingTrackingPosition(this);
-                }
+                // The follow runs after this routine's SolidObject call, so the
+                // next routine's d4 (its entry x) already includes it.
             }
         }
         if (playerOnObjectNow) {
@@ -1644,7 +1638,15 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        PlayerSolidContactResult contact = services().solidExecution().resolveSolidNow(player);
+        // ObjB2 calls SolidObject, which resolves both characters in this slot.
+        var solid = services().solidExecution();
+        PlayerSolidContactResult contact = solid.resolveSolidNowAll().perPlayer().get(player);
+        if (contact == null) {
+            contact = PlayerSolidContactResult.noContact(
+                    services().solidExecutionRegistry().previousStanding(this, player),
+                    com.openggf.game.solid.PreContactState.ZERO,
+                    com.openggf.game.solid.PostContactState.ZERO);
+        }
         // ObjB2's inline SolidObject calls leave p1_standing in status(a0):
         // RideObject_SetRide sets the bit on a top landing, and SolidObject's
         // standing path clears it on release (s2.asm:35014-35044, 35986-36045).

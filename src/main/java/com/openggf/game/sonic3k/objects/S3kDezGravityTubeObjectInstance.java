@@ -374,10 +374,6 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
      * called by {@code sub_49090} (:95429-95430).
      */
     private void setRide(AbstractPlayableSprite player) {
-        ObjectServices objectServices = tryServices();
-        if (objectServices != null && objectServices.objectManager() != null) {
-            objectServices.objectManager().markObjectSupportThisFrame(player);
-        }
         // Both helpers first replace interact. The live non-solid latch also keeps
         // Player_AnglePos out of terrain walk-off while Status_OnObj is set.
         player.setLatchedSolidObject(spawn.objectId(), this);

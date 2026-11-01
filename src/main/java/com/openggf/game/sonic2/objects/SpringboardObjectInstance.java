@@ -243,8 +243,11 @@ public class SpringboardObjectInstance extends BoxObjectInstance
             player.setXSpeed((short) (xVel - (boost << 8)));
         }
 
-        // ROM: loc_264BC - Set player to airborne state
+        // ROM: loc_264BC - bset in_air / bclr on_object (s2.asm:52398-52400).
+        // The springboard's own launch clears the rider's Status_OnObj; no
+        // later pass does.
         player.setAir(true);
+        player.setOnObject(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
         // ROM: move.b #0,spindash_flag(a1) - Clear spindash flag

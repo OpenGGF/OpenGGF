@@ -184,7 +184,7 @@ class TestS3kIczCrushingColumnObject {
             player.setYSpeed((short) 0x0100);
             player.setAir(true);
 
-            manager.updateSolidContacts(player);
+            com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
             column.update(0, player);
             column.update(1, player);
 

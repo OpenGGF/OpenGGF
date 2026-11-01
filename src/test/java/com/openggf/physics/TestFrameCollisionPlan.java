@@ -1,6 +1,5 @@
 package com.openggf.physics;
 
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -20,17 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestFrameCollisionPlan {
 
     @Test
-    void playableFrameNamesTerrainThenSolidsWithTraceRecording() {
+    void playableFrameNamesOnlyTerrainProbesWithTraceRecording() {
         FrameCollisionPlan plan = FrameCollisionPlan.playableFrame();
 
         assertTrue(plan.runsTerrainProbes());
-        assertTrue(plan.runsSolidObjectResolution());
         assertFalse(plan.runsPostResolutionGroundMode());
         assertTrue(plan.recordsTrace());
-        assertEquals(List.of(
-                        FrameCollisionPlan.Phase.TERRAIN_PROBES,
-                        FrameCollisionPlan.Phase.SOLID_OBJECT_RESOLUTION),
-                plan.orderedPhases());
+        assertEquals(List.of(FrameCollisionPlan.Phase.TERRAIN_PROBES), plan.orderedPhases());
     }
 
     @Test
@@ -38,34 +33,9 @@ class TestFrameCollisionPlan {
         FrameCollisionPlan plan = FrameCollisionPlan.terrainOnly();
 
         assertTrue(plan.runsTerrainProbes());
-        assertFalse(plan.runsSolidObjectResolution());
         assertFalse(plan.runsPostResolutionGroundMode());
         assertFalse(plan.recordsTrace());
         assertEquals(List.of(FrameCollisionPlan.Phase.TERRAIN_PROBES), plan.orderedPhases());
-    }
-
-    @Test
-    void objectResolutionOnlyNamesOnlySolidObjectResolution() {
-        FrameCollisionPlan plan = FrameCollisionPlan.objectResolutionOnly();
-
-        assertFalse(plan.runsTerrainProbes());
-        assertTrue(plan.runsSolidObjectResolution());
-        assertFalse(plan.runsPostResolutionGroundMode());
-        assertFalse(plan.recordsTrace());
-        assertEquals(List.of(FrameCollisionPlan.Phase.SOLID_OBJECT_RESOLUTION), plan.orderedPhases());
-    }
-
-    @Test
-    void objectResolutionPlanDelegatesToObjectManagerWithMovementFlags() {
-        CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
-        ObjectManager objectManager = Mockito.mock(ObjectManager.class);
-        AbstractPlayableSprite sprite = newTestSprite();
-
-        collisionSystem.setObjectManager(objectManager);
-        collisionSystem.runSolidObjectResolution(
-                FrameCollisionPlan.objectResolutionOnly(), sprite, true, true);
-
-        Mockito.verify(objectManager).updateSolidContacts(sprite, true, true);
     }
 
     @Test
@@ -90,7 +60,7 @@ class TestFrameCollisionPlan {
     void terrainPlayableApisExposePlanAwareOverloads() {
         assertPlanAwareCollisionMethod("resolveGroundWallCollision", AbstractPlayableSprite.class);
         assertPlanAwareCollisionMethod("resolveGroundAttachment",
-                AbstractPlayableSprite.class, int.class, BooleanSupplier.class);
+                AbstractPlayableSprite.class, int.class);
         assertPlanAwareCollisionMethod("resolveAirCollision",
                 AbstractPlayableSprite.class, Consumer.class);
         assertPlanAwareCollisionMethod("resolveAirCollision",
@@ -98,18 +68,17 @@ class TestFrameCollisionPlan {
     }
 
     @Test
-    void terrainPlayableApisRejectObjectResolutionOnlyPlans() {
+    void terrainPlayableApisRejectPlansWithoutTerrainProbes() {
         CollisionSystem collisionSystem = new CollisionSystem(new EmptyTerrainCollisionManager());
         AbstractPlayableSprite sprite = newTestSprite();
+        FrameCollisionPlan noTerrain = new FrameCollisionPlan(false, false, false);
 
         assertThrows(IllegalArgumentException.class,
-                () -> collisionSystem.resolveGroundWallCollision(FrameCollisionPlan.objectResolutionOnly(), sprite));
+                () -> collisionSystem.resolveGroundWallCollision(noTerrain, sprite));
         assertThrows(IllegalArgumentException.class,
-                () -> collisionSystem.resolveGroundAttachment(
-                        FrameCollisionPlan.objectResolutionOnly(), sprite, 14, () -> false));
+                () -> collisionSystem.resolveGroundAttachment(noTerrain, sprite, 14));
         assertThrows(IllegalArgumentException.class,
-                () -> collisionSystem.resolveAirCollision(
-                        FrameCollisionPlan.objectResolutionOnly(), sprite, ignored -> { }));
+                () -> collisionSystem.resolveAirCollision(noTerrain, sprite, ignored -> { }));
     }
 
     @Test
@@ -123,9 +92,7 @@ class TestFrameCollisionPlan {
 
         assertEquals(List.of(
                         CollisionEvent.EventType.TERRAIN_PROBES_START,
-                        CollisionEvent.EventType.TERRAIN_PROBES_COMPLETE,
-                        CollisionEvent.EventType.SOLID_CONTACTS_START,
-                        CollisionEvent.EventType.SOLID_CONTACTS_COMPLETE),
+                        CollisionEvent.EventType.TERRAIN_PROBES_COMPLETE),
                 trace.getEvents().stream().map(CollisionEvent::type).toList());
     }
 

@@ -122628,3 +122628,45 @@ or `Obj02_Dead` (s2.asm:41131-41137); next step is a native write-watch on
 f17322 `camera_x`, MGZ f13939 `camera_x`, SOZ complete run f32951 `tails_y`,
 S2 complete-emerald chain segment 19 f5084 `sidekick_y`. `TestS3kAizTraceReplay`
 stays green. Full per-class table in the audit.
+
+## 2026-10-31 — ROM-owned solid contact: trace impact
+
+Branch `bugfix/ai-rom-owned-solid-contact` (worktree `t3-9117511a`), base
+`36aaddb37` (`feature/ai-weakness-pass`), measured head `ef9d43171`. The legacy
+player-side solid sweep and its rule flag are gone; every solid helper call
+carries the ROM d4 (routine-entry x unless the object declares otherwise); only
+object solid calls write `Status_OnObj` / `Status_InAir` (post-object finaliser,
+player-slot grounding recovery, AnglePos stale clear and cross-object unseat
+deleted). Inventory and per-class table:
+[audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md).
+
+Same commands and environment as the 2026-10-31 sidekick entry, plus an S1
+invocation (`-Ptrace-replay`, `TestS1Credits*TraceReplay`,
+`TestS1*CompleteRunTraceReplay`, `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+`TestS1GhzMazeRoundTripChain`, `TestS1CompleteEmeraldRunChain`,
+`TestS1CompleteEmeraldRunPrefix`); each commit measured in a separate
+baseline worktree with classes deleted first. 143 classes per measurement.
+
+| Measured commit | green→green | green→red | identical red | changed red | red→green |
+| --- | --- | --- | --- | --- | --- |
+| `79e0f8a8b` (sweep + flag deleted) | 79 | 0 | 64 | 0 | 0 |
+| `2c9deefcc` (d4) | 76 | 3 | 63 | 1 | 0 |
+| `b441879db` (per-object d4) | 78 | 1 | 63 | 1 | 0 |
+| `df93f7c13` (ROM-owned OnObj/InAir) | 66 | 13 | 56 | 8 | 0 |
+| `e40c4a3a9` (object release bclr) | 76 | 3 | 57 | 7 | 0 |
+| `ef9d43171` (head) | 77 | 2 | 57 | 7 | 0 |
+
+New reds at head: `TestS1Slz1CompleteRunTraceReplay` f4055 `air` expected 0,
+actual 1 (2747 errors) and `TestS1Slz2CompleteRunTraceReplay` f4510 `air` 0/1
+(1744 errors): S1 collapsing floor (Obj53) hand-off. The ROM keeps
+`Status_OnObj` while Sonic moves from floor s54 to s63 (stand-on `$36`→`$3F` at
+f4052); the engine's s54 `.delayCollapse` walk-off clear fires two frames after
+s63 landed him, and the deleted grounded-clear restore pair had masked it. Not
+fixed; next step is the native s54 flag/timer per frame around f4050.
+`TestS1CompleteEmeraldRunChain` keeps its failing segments (12, 15, 26, 32;
+segment 15 grows after the same first frame). `TestS3kLbzZoneSliceTraceReplay`
+keeps its f30582 `tails_y` frontier but the post-frontier trajectory now ends in
+an `Invalid rewind reference closure` at f42015 (LBZ final boss laser children).
+Five S3K Sonic+Tails reds change only their error totals after unchanged first
+errors (MGZ slice, AIZ5, HPZ, HPZ2, LRZ). `TestS3kAizTraceReplay` stays green;
+S2 OOZ1 f447 unchanged.

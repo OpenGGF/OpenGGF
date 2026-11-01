@@ -245,9 +245,6 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
         clearPreviousSpiralOwnership(player, objectManager);
 
         ridingPlayers.add(player);
-        if (objectManager != null) {
-            objectManager.markObjectSupportThisFrame(player);
-        }
         player.setOnObject(true);
         player.setLatchedSolidObject(Sonic2ObjectIds.SPIRAL, this);
         player.setAngle((byte) 0);
@@ -340,10 +337,6 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
     }
 
     private void updateMovement(AbstractPlayableSprite player, int vIntRunCount, int tableIndex) {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markObjectSupportThisFrame(player);
-        }
         int targetCenterY = spawn.y() + SPIRAL_Y_OFFSETS[tableIndex];
         targetCenterY -= player.getYRadius() - 0x13;
         player.setCentreYPreserveSubpixel((short) targetCenterY);
@@ -384,10 +377,6 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
             return;
         }
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markObjectSupportThisFrame(player);
-        }
 
         int cosine = TrigLookupTable.cosHex(angle);
         int yOffset = (cosine * 0x2800) >> 16;

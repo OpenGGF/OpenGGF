@@ -1571,14 +1571,6 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
-    public boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
-        // Parent slot 5 moves before child slot $1C calls SolidObjectFull.
-        // The engine's folded solid pass runs after the parent update, so its
-        // saved pre-update X is the native child's carry reference for this pass.
-        return true;
-    }
-
-    @Override
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
         return true;
     }

@@ -756,24 +756,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			jumpPressed = false;
 		}
 
-		// Recover transient desync where a concrete standing/riding solid contact
-		// exists but air flag is stale. Do not treat a latched Status_OnObj owner
-		// alone as grounding support: S3K Tails_Control dispatches from status
-		// bits after only the object_control bit-0 gate (docs/skdisasm/sonic3k.asm:
-		// 26210-26229), so CNZ cylinder release frames with both Status_InAir and
-		// Status_OnObj set still run airborne movement before Obj_CNZCylinder's
-		// Player_2 sub_324C0 pass (docs/skdisasm/sonic3k.asm:67696-67707).
-		// Grounding those latch-only frames skips the ROM's air acceleration and
-		// misses the x_sub boundary crossing seen at CNZ1 F4508.
-		// S1 (UNIFIED): skip this recovery. The pre-movement solid pass is skipped for
-		// S1, so riding state from the previous frame hasn't been cleaned up yet.
-		// hasGroundingObjectSupport() would return true from stale riding data, incorrectly
-		// forcing Sonic to ground mode. The post-movement solid pass (step 4) handles
-		// the cleanup correctly for S1.
-		if (!isUnifiedCollision() && sprite.getAir() && hasGroundingObjectSupport() && sprite.getYSpeed() >= 0) {
-			sprite.setAir(false);
-			sprite.setOnObject(true);
-		}
+		// The control routine dispatches on the status bits the previous frame's
+		// objects left (S3K Tails_Control, docs/skdisasm/sonic3k.asm:26210-26229);
+		// player code never derives Status_OnObj / Status_InAir from object support.
 
 		// ROM: Knuckles_Glide dispatch — intercepts normal mode when in glide states
 		int glideState = sprite.getDoubleJumpFlag();
@@ -4081,7 +4066,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// when a live object support path still owns the player. Stale latches must
 		// fall through to terrain walk-off so the player cannot stand in mid-air.
 		collisionSystem().resolveGroundAttachment(
-				FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold, this::hasObjectSupport);
+				FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold);
 	}
 
 	/** Sonic_SlopeRepel: Slip/fall check (s2.asm:37781) */
@@ -4099,13 +4084,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setMoveLockTimer(activeMoveLock - 1);
 			return;
 		}
-		// Engine object-support aggregation can leave a non-flat terrain angle while
-		// an object owns ground contact. Preserve the existing guard against arming
-		// a fresh slope slip from that stale terrain angle; the ROM move_lock
+		// A rider's slope slip is gated on Status_OnObj alone; the ROM move_lock
 		// countdown has already run above.
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		boolean checksOnObject = (movementRules == null || movementRules.slopeRepelChecksOnObject());
-		if (checksOnObject && (sprite.isOnObject() || collisionSystem().hasObjectSupport(sprite))) return;
+		if (checksOnObject && sprite.isOnObject()) return;
 
 		int angle = sprite.getAngle() & 0xFF;
 		boolean s3kSlipKick = movementRules != null && movementRules.slopeRepelUsesS3kSlipKick();
@@ -5383,19 +5366,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private boolean hasEnoughHeadroom(int hexAngle) {
 		return collisionSystem().hasEnoughHeadroom(sprite, hexAngle);
-	}
-
-	private boolean isUnifiedCollision() {
-		CollisionRules rules = collisionRulesOrNull();
-		return rules != null && rules.collisionModel() == com.openggf.game.CollisionModel.UNIFIED;
-	}
-
-	private boolean hasObjectSupport() {
-		return collisionSystem().hasObjectSupport(sprite);
-	}
-
-	private boolean hasGroundingObjectSupport() {
-		return collisionSystem().hasGroundingObjectSupport(sprite);
 	}
 
 	private void clearRidingObject() {

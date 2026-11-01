@@ -146,7 +146,6 @@ class TestNativeCompetitionIteration {
         var context = new LevelFrameContext(module, null, null, null, null,
                 null, null, null, null, new HardwareTimingService(), boundary -> calls.add(boundary.name()));
         var level = mock(LevelManager.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         doAnswer(ignored -> { calls.add("objects"); return null; })
                 .when(level).updateObjectPositionsPostPhysicsWithoutTouches(any(Runnable.class), eq(false));
 

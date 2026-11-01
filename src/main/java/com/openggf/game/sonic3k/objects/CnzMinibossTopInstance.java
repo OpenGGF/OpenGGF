@@ -935,13 +935,6 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // Obj_CNZMinibossTopMain saves x_pos before MoveSprite2 and passes the
-        // saved value in d4 to SolidObjectFull (sonic3k.asm:145122-145128).
-        return true;
-    }
-
-    @Override
     public boolean groundedSquashEdgeSideContactSetsPush() {
         // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145122-145128).
         // Its lower-half squash escape branches to loc_1E042 when |d0| < $10,

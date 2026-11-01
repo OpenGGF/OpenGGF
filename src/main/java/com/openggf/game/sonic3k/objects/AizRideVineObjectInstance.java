@@ -351,9 +351,7 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         AizVineHandleLogic.positionFromParent(handle, lastSegment.x, lastSegment.y, lastSegment.angle);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, lastSegment.angle);
-        if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
-            AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
-        }
+        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     private void updateStillSprite() {

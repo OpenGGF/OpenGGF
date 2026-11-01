@@ -665,11 +665,13 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         }
         if (player != null && objectManager.getRidingObject(player) == this) {
             objectManager.clearRidingObject(player);
+            player.setOnObject(false);
         }
         for (PlayableEntity sidekick : services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (sidekick != player && objectManager.getRidingObject(sidekick) == this) {
                 objectManager.clearRidingObject(sidekick);
+                sidekick.setOnObject(false);
             }
         }
     }

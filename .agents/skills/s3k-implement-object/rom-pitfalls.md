@@ -1511,8 +1511,8 @@ DEZ's vertical conveyor independently reproduces this at original cold row
 3268: `loc_47A14 (sonic3k.asm:93712-93733)` moves Y before
 `loc_47A58 (sonic3k.asm:93735-93749)` calls the full-solid helper. Preserve
 its live instance key and keep the riding record until its own checkpoint
-(`airborneRiderUnseatRequiresOwnCheckpoint`); an earlier solid's generic
-cleanup must not consume this owner's return. Native `loc_1DC98 (sonic3k.asm:41075-41081)` clears support without changing the correct jump Y.
+(only the ridden object's own helper releases an airborne rider); an earlier
+solid's call must not consume this owner's return. Native `loc_1DC98 (sonic3k.asm:41075-41081)` clears support without changing the correct jump Y.
 Check both participants, moving metadata, replacement-slot allocation and real
 recreation/forward replay, as in `TestS3kDezConveyorPadSolidOwnership`.
 

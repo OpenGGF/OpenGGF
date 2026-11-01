@@ -66,6 +66,10 @@ public class ARZBossArrow extends AbstractObjectInstance
     private int xVel;
     private int yVel;
     private int arrowTimer;
+    // Obj89_Arrow_Platform tests p1_standing only after PlatformObject has
+    // resolved both characters (s2.asm:65816-65833, FixBugs=0); the engine learns of the
+    // P1 landing inside that call, so the timer start waits for its end.
+    private boolean timerStartPending;
     private boolean timerExpiredThisFrame;
     private boolean dropPlayersProcessed;
     private boolean dropPushClearProcessed;
@@ -229,6 +233,11 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     private void updateArrowPlatform() {
+        if (timerStartPending) {
+            // The previous call's #$1F write and its same-call decay decrement.
+            timerStartPending = false;
+            arrowTimer = 0x1E;
+        }
         if (arrowTimer == 0) {
             return;
         }
@@ -429,14 +438,16 @@ public class ARZBossArrow extends AbstractObjectInstance
         }
         if (arrowTimer == 0) {
             // The ROM writes #$1F and immediately falls through to
-            // Obj89_Arrow_Platform_Decay in the same object call. This
-            // callback runs after object update, so store the already
-            // decremented post-call value. CPU Tails does not start the timer
-            // in the shipped ROM: the p2-standing timer write lives under the
-            // disabled fixBugs block, while p1-standing still writes #$1F.
-            // docs/s2disasm/s2.asm:65658-65683
+            // Obj89_Arrow_Platform_Decay in the same object call, after
+            // PlatformObject has resolved both characters: the Sidekick's
+            // airborne release still runs with the timer clear. The write is
+            // applied at the start of the next call as the already
+            // decremented $1E. CPU Tails does not start the timer in the
+            // shipped ROM: the p2-standing timer write lives under the disabled
+            // fixBugs block, while p1-standing still writes #$1F.
+            // docs/s2disasm/s2.asm:65816-65833 (Obj89_Arrow_Platform, FixBugs=0)
             if (!playerEntity.isCpuControlled()) {
-                arrowTimer = 0x1E;
+                timerStartPending = true;
             }
         }
     }

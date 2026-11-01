@@ -235,13 +235,6 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
-        // Player slots run before this later object slot. Preserve the airborne
-        // movement pass until SolidObjectFull consumes the stale standing bit.
-        return true;
-    }
-
-    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         // Obj_MGZTriggerPlatform loads d4 from the already-updated x_pos before
         // calling SolidObjectFull, so MvSonicOnPtfm sees no horizontal delta.

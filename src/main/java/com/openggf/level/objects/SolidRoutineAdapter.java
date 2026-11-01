@@ -45,10 +45,6 @@ public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProf
         SolidRoutineProviderForwarding.onRejectedZeroDistanceTopSolidLanding(provider, player);
     }
 
-    public boolean providesPreMovementGroundAttachmentSupport() {
-        return SolidRoutineProviderForwarding.providesPreMovementGroundAttachmentSupport(provider);
-    }
-
     public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
         return SolidRoutineProviderForwarding.preservesObjectManagedRideWhileNotSolidFor(provider, player);
     }
@@ -71,10 +67,6 @@ public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProf
 
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
         return SolidRoutineProviderForwarding.getTopLandingHalfWidth(provider, player, collisionHalfWidth);
-    }
-
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        return SolidRoutineProviderForwarding.seedsNewRideCarryFromPreUpdateX(provider);
     }
 
     public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {

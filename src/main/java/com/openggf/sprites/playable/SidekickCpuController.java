@@ -1704,14 +1704,12 @@ public class SidekickCpuController {
 
         // S3K loc_13DA6: subi.w #$20,d2 unless the leader has Status_OnObj or
         // ground_vel >= $400 (sonic3k.asm:26730-26734). S2 has no bias
-        // (sidekickFollowLeadOffset = 0). Status_OnObj is read as the leader's
-        // value before this frame's object pass: neither game's Sonic_Jump
-        // clears it (s2.asm:37374-37375, sonic3k.asm:23363-23364) and only
-        // object code running after both players writes it, which the engine's
-        // frame-start snapshot represents.
+        // (sidekickFollowLeadOffset = 0). The CPU reads the leader's live bit:
+        // only object solid calls write it, and they run after both player
+        // slots, so it still holds the previous frame's objects' value.
         SidekickCpuRules sidekickRules = sidekickCpuRulesOrNull();
         int leadOffset = sidekickRules != null ? sidekickRules.sidekickFollowLeadOffset() : 0;
-        boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
+        boolean leaderStatusOnObject = effectiveLeader.isOnObject();
         boolean leaderFast = effectiveLeader.getGSpeed() >= 0x400;
         if (leadOffset > 0 && !leaderStatusOnObject && !leaderFast) {
             targetX -= leadOffset;

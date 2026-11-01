@@ -3179,7 +3179,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 PlayableHurtRadiusTransition.applyDeath(this);
                 setCrouching(false);
                 setPushing(false);
-                setAir(true); setOnObject(onObject || controller.isOnObjectAtFrameStart());
+                // Kill_Character sets Status_InAir and leaves Status_OnObj alone
+                // (sonic3k.asm:21172-21193; Player_TouchFloor clears no OnObj either).
+                setAir(true);
                 setGSpeed((short) 0);
                 setXSpeed((short) 0);
                 setYSpeed((short) -0x700);

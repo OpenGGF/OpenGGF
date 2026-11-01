@@ -843,9 +843,8 @@ public class ObjectManager {
             }
             flushPostExecDynamicSpawns();
         } finally {
-            if (inlineSolidResolution) {
-                solidContacts.finishInlineFrame(player, activeSidekicks);
-            }
+            // No solid pass runs after the objects: each helper already wrote
+            // Status_OnObj / Status_InAir at its own call site.
             solidExecutionRegistry.finishFrame();
         }
 
@@ -992,18 +991,20 @@ public class ObjectManager {
             ObjectInstance instance,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
-            boolean solidPostMovement) {
+            boolean solidPostMovement,
+            SolidEntryRegisters registers) {
         return solidContacts.processManualCheckpoint(
-                instance, player, sidekicks, solidPostMovement);
+                instance, player, sidekicks, solidPostMovement, registers);
     }
 
     SolidCheckpointBatch processCompatibilitySolidCheckpoint(
             ObjectInstance instance,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
-            boolean solidPostMovement) {
+            boolean solidPostMovement,
+            SolidEntryRegisters registers) {
         return solidContacts.processCompatibilityCheckpoint(
-                instance, player, sidekicks, solidPostMovement);
+                instance, player, sidekicks, solidPostMovement, registers);
     }
 
     // Initial dispatch callers publish only after their native delete/range tail.
@@ -3129,25 +3130,7 @@ public class ObjectManager {
         solidContacts.clearRidingObjectForJump(player);
     }
 
-    public void forceAirOnStaleObjectSupportLoss(PlayableEntity player) {
-        solidContacts.forceAirOnStaleObjectSupportLoss(player);
-    }
-
-    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) { return solidContacts.hasPendingStaleObjectSupportLoss(player); }
-
     public ObjectSolidContactController solidContacts() { return solidContacts; }
-
-    /**
-     * Preserves a non-solid object's ownership of the player's on-object state for the
-     * current inline ExecuteObjects pass.
-     * <p>
-     * Some ROM objects (for example S2 Obj06 spiral) set {@code status.player.on_object}
-     * without going through SolidObject. Inline solid cleanup must not clear that state at
-     * frame end, so these objects can mark the player as supported for the current pass.
-     */
-    public void markObjectSupportThisFrame(PlayableEntity player) {
-        solidContacts.markObjectSupportThisFrame(player);
-    }
 
     /**
      * Get the object that this player is currently standing on (riding).
@@ -3168,57 +3151,9 @@ public class ObjectManager {
         return solidContacts.getRidingPieceIndex(player);
     }
 
-    public boolean hasStandingContact(PlayableEntity player) {
-        return solidContacts.hasStandingContact(player);
-    }
-
-    public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
-        return solidContacts.getHeadroomDistance(player, hexAngle);
-    }
-
     /** Player y-radius captured before the currently executing solid checkpoint. */
     public int getPreContactYRadius() {
         return solidContacts.getPreContactYRadius();
-    }
-
-    public boolean latestStandingSnapshot(PlayableEntity player) {
-        return solidContacts.latestStandingSnapshot(player);
-    }
-
-    public boolean hasGroundingObjectSupport(PlayableEntity player) {
-        return solidContacts.hasGroundingObjectSupport(player);
-    }
-
-    public int latestHeadroomSnapshot(PlayableEntity player, int hexAngle) {
-        return solidContacts.latestHeadroomSnapshot(player, hexAngle);
-    }
-
-    /**
-     * Run solid contacts resolution for a player sprite.
-     * This is called by the CollisionSystem as part of the unified collision pipeline.
-     */
-    public void updateSolidContacts(PlayableEntity player) {
-        solidContacts.setDeferSideToPostMovement(false);
-        solidContacts.update(player, false);
-    }
-
-    /**
-     * Update solid contacts with an explicit post-movement flag. When {@code postMovement}
-     * is true, the velocity classification adjustment is skipped because the player's
-     * position already reflects their velocity (movement has already happened).
-     * <p>Used by the S1 UNIFIED model where solid objects run AFTER Sonic's movement,
-     * unlike S2/S3K where solid contacts run before movement.
-     *
-     * @param deferSideToPostMovement when true, side collision effects (speed zeroing,
-     *     position correction) are skipped in this pass because a post-movement pass will
-     *     handle them. This is used for the pre-movement pass in S1 UNIFIED, where the ROM
-     *     processes solid objects AFTER Sonic's movement — side collisions at the pre-movement
-     *     position are spurious.
-     */
-    public void updateSolidContacts(PlayableEntity player, boolean postMovement,
-                                     boolean deferSideToPostMovement) {
-        solidContacts.setDeferSideToPostMovement(deferSideToPostMovement);
-        solidContacts.update(player, postMovement);
     }
 
     /**
@@ -3236,15 +3171,14 @@ public class ObjectManager {
             return;
         }
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
-        solidContacts.processCompatibilityCheckpoint(object, player, activeSidekicks, true);
-    }
-
-    /**
-     * Refresh the ObjectSolidContactController riding tracking position for an object after it has moved itself.
-     * Prevents the delta from that movement being double-applied to riding players.
-     */
-    public void refreshRidingTrackingPosition(ObjectInstance object) {
-        solidContacts.refreshRidingTrackingPosition(object);
+        if (!(object instanceof SolidObjectProvider provider)) {
+            return;
+        }
+        // d4 is the object's current x: either it was allocated after the pass
+        // reached its slot, or it already carried its riders at its own call
+        // this frame and must not carry them again.
+        solidContacts.processCompatibilityCheckpoint(object, player, activeSidekicks, true,
+                SolidEntryRegisters.capture(this, object, provider));
     }
 
     /**

@@ -195,8 +195,10 @@ class TestSpiralObjectInstance {
         sonic.setOnObject(true);
         sonic.setLatchedSolidObject(Sonic2ObjectIds.SPIRAL, spiral);
 
-        assertTrue(GameServices.collision().hasObjectSupport(sonic),
-                "AnglePos support should honor active non-solid controller latches");
+        sonic.setAir(false);
+        GameServices.collision().resolveGroundAttachment(sonic, 14);
+        assertFalse(sonic.getAir(), "AnglePos returns on the Status_OnObj the non-solid spiral owns");
+        assertTrue(sonic.isOnObject());
     }
 
     @Test
