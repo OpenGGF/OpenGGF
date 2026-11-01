@@ -758,3 +758,20 @@ pins the foreground-overlay and sprite-mask stages.
 `TestRewindFixS3KIczBigSnowPileCodec` retains the live-event-owner recreation
 obligation. These bindings do not close the existing route, viewport, donor,
 team or native-pixel coverage gaps.
+
+## Miniboss attack and destruction correction — 2026-11-01
+
+The local miniboss checks cover the normal/red/yellow `word_71AE6` palette
+sequence, shard movement before the `Obj_Wait` terminal dispatch, the 64th
+post-hit body dispatch entering sign control while explosions continue, and
+fresh-object restore/forward replay through falling ice retirement. The body
+stops drawing at that handoff; existing orb/shard priority and palette classes
+carry into gravity-driven flickering debris. Four body quarters use
+`loc_7168A`; explosion Y scatter uses the RNG high word (`sub_83E84`).
+
+These are bounded component and managed-graph obligations. The fourteen existing
+inline child slots remain folded under their parent until their debris tail
+retires; individual native SST release/allocation pressure is not certified.
+Full-route completion, viewport/donor/team breadth, Knuckles-specific post-boss
+palette omission, and matched native pixels remain inherited gaps. A positioned
+engine picture does not close those obligations.

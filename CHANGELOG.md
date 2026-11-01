@@ -5,7 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-Current fixes include the normal explosion effect and break sound for
+Current fixes include the IceCap Act 1 miniboss charge flashes and falling-ice
+destruction/signpost handoff, the normal explosion effect and break sound for
 upside-down S3K capsules, crowded-scene sprite retention with sprite limits
 disabled, and Tails carrying Sonic into CNZ1 after the MGZ2 rescue. See the
 development changelog below.

@@ -2370,3 +2370,9 @@ and [CNZ1 matrix](../architecture/validation/levels/s3k-cnz-act1.md#mgz2-to-cnz1
 record the solo/configured-Tails rescue-to-entry regression and its bounded
 pickup, landing, control-release and destination replay scope. Automatic
 exit-route composition, donor/viewport breadth and cross-load rewind remain open.
+
+ICZ1 miniboss attack/destruction follow-up (2026-11-01): the
+[bounded obligation update](../architecture/validation/levels/s3k-icz-act1.md#miniboss-attack-and-destruction-correction--2026-11-01)
+tracks palette flashing, shard wait ordering, independent sign/explosion
+lifetimes and rewind of the falling-ice tail. Native pixel, complete-route and
+configuration breadth remain open, as does individual folded-child slot release.

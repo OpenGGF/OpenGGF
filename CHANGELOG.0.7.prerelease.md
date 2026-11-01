@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **IceCap Act 1 miniboss:** Restore the accelerating ice-charge flashes,
+  native ice-piece spread timing, falling/flickering destruction debris and
+  independent palette/signpost handoff while explosions finish.
+
 - **Upside-down S3K capsules:** Use seven normal explosion effects and their
   break sound instead of the long boss-explosion sequence.
 
