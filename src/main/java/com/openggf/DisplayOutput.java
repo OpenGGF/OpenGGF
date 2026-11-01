@@ -2,8 +2,10 @@ package com.openggf;
 
 /**
  * Window output observation. The epoch changes when the monitor, window mode or context
- * changes; an advertised refresh of zero is unknown. It makes no variable-refresh claim.
+ * changes. A window refresh of zero is unknown; the presentation ceiling is only an
+ * Auto rendering cap and may cover several possible outputs. Neither claims VRR.
  */
-record DisplayOutput(long epoch, int advertisedRefreshHz) {
-    static final DisplayOutput UNKNOWN = new DisplayOutput(0, 0);
+record DisplayOutput(long epoch, int windowRefreshHz, int presentationCeilingHz) {
+    DisplayOutput(long epoch, int knownRefreshHz) { this(epoch, knownRefreshHz, knownRefreshHz); }
+    static final DisplayOutput UNKNOWN = new DisplayOutput(0, 0, 0);
 }

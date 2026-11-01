@@ -22,10 +22,10 @@ public final class FrameRateResolver {
         return "AUTO".equalsIgnoreCase(config.getString(SonicConfiguration.FPS));
     }
 
-    /** Auto follows the live panel; display-free callers retain a concrete region rate. */
-    public static int presentation(SonicConfigurationService config, int advertisedRefreshHz) {
+    /** Auto uses the live presentation ceiling; display-free callers retain the region rate. */
+    public static int presentation(SonicConfigurationService config, int presentationCeilingHz) {
         if (automaticPresentation(config)) {
-            return advertisedRefreshHz > 0 ? advertisedRefreshHz : simulation(config);
+            return presentationCeilingHz > 0 ? presentationCeilingHz : simulation(config);
         }
         return Math.clamp(config.getInt(SonicConfiguration.FPS), 1,
                 SonicConfigurationService.MAX_PRESENTATION_FPS);

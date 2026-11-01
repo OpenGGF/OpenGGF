@@ -106,7 +106,7 @@ final class LiveFrameRuntime {
         boolean measurementChanged = !host.equals(measurementHost) || changed || suspended
                 || boundary != null && !boundary.equals(host.boundary()) || elapsed < 0;
         if (measurementChanged) {
-            swapPacing = new SwapPacingPolicy(host.regionHz(), host.output().advertisedRefreshHz());
+            swapPacing = new SwapPacingPolicy(host.regionHz(), host.output().windowRefreshHz());
             pendingPresent = null;
             restartRates(now);
             measurementHost = host;
@@ -119,9 +119,9 @@ final class LiveFrameRuntime {
             }
             pendingPresent = null;
             if (now < pending.nextTickDeadline()) {
-                long returned = swap();
-                policy.observeSwap(returned);
-                swapPacing.observeSwap(returned);
+                var swapped = swap();
+                policy.observeSwap(swapped.atNanos());
+                swapPacing.observeSwap(swapped.atNanos(), swapped.blockedNanos());
                 return new Step(0, true, pending.nextTickDeadline(), NO_REANCHOR);
             }
             // The host woke late. Service due input/audio before replacing the stale picture.
@@ -258,8 +258,9 @@ final class LiveFrameRuntime {
                 return new Step(completed, false, deadline, NO_REANCHOR);
             }
         } else swapPacing.reset();
-        long returned = swap();
-        if (measure) swapPacing.observeSwap(returned);
+        var swapped = swap();
+        long returned = swapped.atNanos();
+        if (measure) swapPacing.observeSwap(returned, swapped.blockedNanos());
         // The picture consumed any forced request; compare later samples with this state.
         if (changed) boundary = owner.hostState().boundary();
         switch (policy.observeSwap(returned)) {
@@ -296,7 +297,7 @@ final class LiveFrameRuntime {
         }
         if (!owner.draw(exactPicture(host.captureActive()))) return aborted(1);
         pictures++;
-        long returned = swap();
+        long returned = swap().atNanos();
         boundary = owner.hostState().boundary();
         pendingTicks = 0;
         if (policy.observeSwap(returned) == DisplayCadencePolicy.Verdict.EXACT) return rebaseExact(1, returned);
@@ -311,7 +312,7 @@ final class LiveFrameRuntime {
     private static InterpolationStatus inactiveStatus(HostState host) {
         if (!host.interpolation()) return InterpolationStatus.OFF;
         if (!host.automaticPictureCap() && host.pictureCap() <= host.regionHz()) return InterpolationStatus.FPS_LIMIT;
-        if (host.output().advertisedRefreshHz() > 0 && host.output().advertisedRefreshHz() <= host.regionHz())
+        if (host.output().windowRefreshHz() > 0 && host.output().windowRefreshHz() <= host.regionHz())
             return InterpolationStatus.PANEL_RATE;
         if (host.pictureCap() <= host.regionHz()) return InterpolationStatus.FPS_LIMIT;
         if (host.hostPaused()) return InterpolationStatus.PAUSED;
@@ -346,11 +347,15 @@ final class LiveFrameRuntime {
                 : new LivePictureRequest.Window(PictureSelection.LATEST);
     }
 
-    private long swap() {
+    private record SwapReturn(long atNanos, long blockedNanos) { }
+
+    private SwapReturn swap() {
+        long started = clock.getAsLong();
         owner.swap();
+        long returned = clock.getAsLong();
         swaps++;
         unpresented = false;
-        return clock.getAsLong();
+        return new SwapReturn(returned, returned - started);
     }
 
     /** A demoting swap starts the exact clock; the swap that refused grants no service. */
@@ -410,8 +415,7 @@ final class LiveFrameRuntime {
         return new Statistics(regionHz, pictureCap, name, policy.reason().name(), policy.measuredHz(),
                 swapInterval, services, pictures, swaps, pendingTicks, discardedWallNanos,
                 interpolationStatus, servicesPerSecond, picturesPerSecond, blendedPerSecond, lastAlpha,
-                swapPacing == null ? new SwapPacingPolicy.Measurement(Double.NaN, Double.NaN,
-                        SwapPacingPolicy.VrrEngagement.UNKNOWN) : swapPacing.measurement());
+                swapPacing == null ? SwapPacingPolicy.Measurement.UNKNOWN : swapPacing.measurement());
     }
 
     private static long ceilingPeriod(int hz) { return (SECOND + hz - 1) / hz; }
@@ -433,7 +437,10 @@ final class LiveFrameRuntime {
                                     ? "swap %.1f+/-%.1fms" : "swap %.0f+/-%.0fms",
                             swapPacing.meanNanos() / 1e6, swapPacing.spreadNanos() / 1e6);
         }
-        String vrrLine() { return "vrr " + swapPacing.vrr(); }
+        String vrrLine() {
+            return "vrr " + swapPacing.vrr()
+                    + (swapPacing.reason() == SwapPacingPolicy.Reason.NO_SWAP_WAIT ? " NOWAIT" : "");
+        }
     }
 
     /** Why window pictures are or are not blended; diagnostics only, never a scheduling input. */

@@ -146,7 +146,7 @@ class TestPerformancePanelRenderer {
     void swapAndVrrDiagnosticLinesFitTheRightColumn() {
         var font = new PixelFont();
         for (String line : List.of("swap 99.9+/-99.9ms", "swap 250+/-125ms", "swap unknown",
-                "vrr ACTIVE", "vrr NOT_DETECTED", "vrr UNKNOWN")) {
+                "vrr ACTIVE", "vrr NOT_DETECTED", "vrr UNKNOWN", "vrr UNKNOWN NOWAIT")) {
             assertTrue(font.measureWidth(line, PerformancePanelRenderer.PERFORMANCE_TEXT_SCALE) <= 85, line);
         }
     }

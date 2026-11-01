@@ -100,7 +100,7 @@ class TestScheduledNativeGameplay {
             catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
             assertEquals(before, state(), "real Engine drawing cannot advance native movement/counters");
             pictures++;
-        }, swap, interval -> { }, () -> output, () -> output.advertisedRefreshHz() > 0, () -> clock));
+        }, swap, interval -> { }, () -> output, () -> output.windowRefreshHz() > 0, () -> clock));
     }
 
     /** Advances the fake monotonic clock by the host interval since the previous iteration. */

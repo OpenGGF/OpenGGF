@@ -2899,7 +2899,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public LiveFrameRuntime.HostState hostState() {
 				DisplayOutput output = endpoints.output().get();
 				return new LiveFrameRuntime.HostState(FrameRateResolver.simulation(configService),
-						FrameRateResolver.presentation(configService, output.advertisedRefreshHz()), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
+						FrameRateResolver.presentation(configService, output.presentationCeilingHz()), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
 						liveCaptureController.state() == LiveCaptureController.State.ACTIVE,
 						suspension.requiresScenePicture() || liveStepPicturePending,
 						FrameRateResolver.pacing(configService), output,

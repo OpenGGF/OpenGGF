@@ -77,7 +77,7 @@ final class DisplayCadencePolicy {
     }
 
     private int multiple(Request request) {
-        int hz = request.regionHz(), refresh = request.output().advertisedRefreshHz();
+        int hz = request.regionHz(), refresh = request.output().windowRefreshHz();
         if (request.pacing() == DisplayPacing.EXACT) return refuseStatically(Reason.PACING_EXACT);
         if (!request.speakerRegulated()) return refuseStatically(Reason.SPEAKER_UNREGULATED);
         if (request.pictureCap() < hz) return refuseStatically(Reason.CAP_BELOW_REGION);
