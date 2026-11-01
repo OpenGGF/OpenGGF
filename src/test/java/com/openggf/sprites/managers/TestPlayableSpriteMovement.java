@@ -3290,7 +3290,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void s3kMoveLockDownKeepsWalkWhenPlayerSlotEnteredOnObject() throws Exception {
+        public void s3kMoveLockDownKeepsWalkWhileStandingOnObject() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
@@ -3298,8 +3298,6 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setCrouching(false);
                 mockSprite.setOnObject(true);
-                mockSprite.captureOnObjectAtFrameStart();
-                mockSprite.setOnObject(false);
                 mockSprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
                 setInputState(false, false, true, false, false);
 
@@ -3309,7 +3307,7 @@ public class TestPlayableSpriteMovement {
                 crouchMethod.invoke(manager, false);
 
                 assertFalse(mockSprite.getCrouching(),
-                                "SonicKnux_Roll must see the player-slot Status_OnObj bit and skip Duck");
+                                "SonicKnux_Roll tests the live Status_OnObj bit and skips Duck");
         }
 
         @Test
