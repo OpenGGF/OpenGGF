@@ -16,6 +16,7 @@
       { "pattern": "presentation/heads/.*\\.txt" },
       { "pattern": "presentation/heads/profiles\\.list" },
       { "pattern": "\\QMETA-INF/services/com.openggf.level.resources.AuthoredLevelDecoder\\E" },
+      { "pattern": "\\QMETA-INF/services/com.sun.source.util.Plugin\\E" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/templates/\\E.*" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/starters/\\E.*" },
       { "pattern": "\\QMETA-INF/services/com.openggf.level.resources.AuthoredLevelDecoder\\E" },
