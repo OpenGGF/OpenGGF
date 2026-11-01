@@ -36,9 +36,15 @@ import java.util.stream.Stream;
  * written as {@code <id>-<version>.jar}; the manifest records id, version, file, SHA-256 and
  * size, and is always written (possibly empty) so a stale list never survives a rebuild.
  *
+ * <p>An optional generated-resource overlay directory is copied into every bundled mod after its
+ * own resources and before {@code ggfmod package} validates, packs and hashes it. It is generic
+ * build output (for example {@code network-defaults.properties} from {@link BundledNetworkDefaults});
+ * a generated entry that collides with a project resource fails the build, so a committed copy
+ * can never shadow the build's value.
+ *
  * <p>Usage: {@code BundledModPackager <basedir> <jar-output-dir> <manifest-output>
- * [<project>[,<project>...]]}, project paths relative to {@code basedir}. Maven runs it at
- * {@code prepare-package} with the {@code openggf.bundled.mods} property.
+ * [<project>[,<project>...]] [--overlay=<directory>]}, project paths relative to {@code basedir}.
+ * Maven runs it at {@code prepare-package} with the {@code openggf.bundled.mods} property.
  *
  * <p>Origin: Time Attack bundled-mod extraction, lane B (2026-10-08).
  */
@@ -47,16 +53,24 @@ public final class BundledModPackager {
 
     private BundledModPackager() { }
 
+    private static final String OVERLAY_OPTION = "--overlay=";
+
     public static void main(String[] args) throws Exception {
-        if (args.length < 3 || args.length > 4) {
+        List<String> positional = new ArrayList<>();
+        Path overlay = null;
+        for (String arg : args) {
+            if (arg.startsWith(OVERLAY_OPTION)) overlay = Path.of(arg.substring(OVERLAY_OPTION.length()));
+            else positional.add(arg);
+        }
+        if (positional.size() < 3 || positional.size() > 4) {
             System.err.println("Usage: BundledModPackager <basedir> <jar-output-dir> <manifest-output> "
-                    + "[<project>[,<project>...]]");
+                    + "[<project>[,<project>...]] [--overlay=<directory>]");
             System.exit(2);
         }
         try {
-            BundledModManifest manifest = packageProjects(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]),
-                    projects(args.length == 4 ? args[3] : ""), System.getProperty("java.class.path"),
-                    System.out);
+            BundledModManifest manifest = packageProjects(Path.of(positional.get(0)), Path.of(positional.get(1)),
+                    Path.of(positional.get(2)), projects(positional.size() == 4 ? positional.get(3) : ""), overlay,
+                    System.getProperty("java.class.path"), System.out);
             System.out.println("Bundled mods: " + manifest.mods().size());
         } catch (IOException | IllegalArgumentException | IllegalStateException failure) {
             System.err.println("Bundled mod packaging failed: " + failure.getMessage());
@@ -73,6 +87,16 @@ public final class BundledModPackager {
     public static BundledModManifest packageProjects(Path basedir, Path jarOutput, Path manifestOutput,
                                                      List<String> projects, String classpath,
                                                      PrintStream log) throws IOException {
+        return packageProjects(basedir, jarOutput, manifestOutput, projects, null, classpath, log);
+    }
+
+    /** @param overlay generated resources added to every mod after its own, or null for none */
+    public static BundledModManifest packageProjects(Path basedir, Path jarOutput, Path manifestOutput,
+                                                     List<String> projects, Path overlay, String classpath,
+                                                     PrintStream log) throws IOException {
+        if (overlay != null && !Files.isDirectory(overlay, LinkOption.NOFOLLOW_LINKS)) {
+            throw new IllegalArgumentException("Generated resource overlay is not a directory: " + overlay);
+        }
         Path base = basedir.toAbsolutePath().normalize();
         Path output = jarOutput.toAbsolutePath().normalize();
         Path work = output.resolveSibling(output.getFileName() + "-work");
@@ -91,6 +115,7 @@ public final class BundledModPackager {
             Path classes = Files.createDirectories(work.resolve(root.getFileName().toString()).resolve("classes"));
             compile(root.resolve("src/main/java"), classes, classpath);
             copyTree(resources, classes);
+            if (overlay != null) applyOverlay(overlay, classes);
             ModManifest manifest;
             try {
                 manifest = new ModManifestParser(ModInputLimits.production())
@@ -141,6 +166,27 @@ public final class BundledModPackager {
                 Path destination = target.resolve(source.relativize(path).toString());
                 if (Files.isDirectory(path)) Files.createDirectories(destination);
                 else Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+    }
+
+    /** Adds generated files; an entry already present from the project's resources is an error. */
+    static void applyOverlay(Path overlay, Path classes) throws IOException {
+        try (Stream<Path> walk = Files.walk(overlay)) {
+            for (Path path : walk.sorted().toList()) {
+                if (Files.isSymbolicLink(path)) {
+                    throw new IllegalArgumentException("Generated resources must not contain links: " + path);
+                }
+                if (path.equals(overlay)) continue;
+                Path destination = classes.resolve(overlay.relativize(path).toString());
+                if (Files.isDirectory(path)) {
+                    Files.createDirectories(destination);
+                } else if (Files.exists(destination, LinkOption.NOFOLLOW_LINKS)) {
+                    throw new IllegalArgumentException("Generated resource collides with a project resource: "
+                            + overlay.relativize(path));
+                } else {
+                    Files.copy(path, destination);
+                }
             }
         }
     }

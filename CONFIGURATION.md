@@ -1349,6 +1349,16 @@ stored in `config.yaml`.
 | --- | --- | --- |
 | `openggf.installDir` | Directory holding the engine jar or native executable (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
 
+### Build properties for bundled mods
+
+These Maven properties (`mvn ... -D<name>=<value>`) shape a build's bundled mods. They are
+read at packaging time, not at run time.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `openggf.multiplayer.channel` | `develop` | Selects the build's default Time Attack master from `racing/deploy/master-channels.properties` (`master` → `multi.openggf.com`, `develop` → `multi-dev.openggf.com`, `next` → `multi-next.openggf.com`). It is written into each bundled mod as `network-defaults.properties` before the mod is validated and hashed. CI passes the branch (pull requests pass their base branch); release builds pass `master`. Local builds of any branch default to develop's master unless the channel is passed. An unknown channel fails the build. |
+| `openggf.multiplayer.defaultMaster` | empty | Replaces the channel's host for a private build: a bare host name or a `wss://` URL, checked with the engine's master-address parser (no network I/O). Invalid text fails the build. |
+
 Bundled mods are listed, with their exact SHA-256, in a manifest inside the engine
 artifact; only jars matching it are trusted by default (see
 [trust](docs/modding/concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).

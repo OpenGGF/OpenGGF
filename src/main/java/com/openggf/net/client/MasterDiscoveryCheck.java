@@ -19,6 +19,28 @@ public final class MasterDiscoveryCheck {
     private MasterDiscoveryCheck() { }
 
     /**
+     * Build-time syntax check of a master address, with the same parser {@code connect} uses and
+     * no network I/O.
+     *
+     * @return the normalized form: the ASCII host name, or the admitted URL
+     * @throws IllegalArgumentException when the text is not a usable master address
+     */
+    public static String requireAddress(String address) {
+        return switch (MasterAddressResolver.parse(address)) {
+            case MasterAddressResolver.Named named -> named.asciiHost();
+            case MasterAddressResolver.Explicit explicit -> explicit.endpoint().toString();
+        };
+    }
+
+    /** As {@link #requireAddress}, but only a bare multi-label DNS host name is accepted. */
+    public static String requireHostName(String hostName) {
+        if (!(MasterAddressResolver.parse(hostName) instanceof MasterAddressResolver.Named named)) {
+            throw new IllegalArgumentException("Expected a bare DNS host name, not a URL: " + hostName);
+        }
+        return named.asciiHost();
+    }
+
+    /**
      * Resolves {@code hostName} to its dial order.
      *
      * @param providerUrlOrNull {@code dns://host:port} for a specific resolver, or null for the
@@ -27,9 +49,7 @@ public final class MasterDiscoveryCheck {
      * @throws IllegalArgumentException when {@code hostName} is not a bare multi-label DNS name
      */
     public static List<URI> resolve(String hostName, String providerUrlOrNull) throws IOException {
-        if (!(MasterAddressResolver.parse(hostName) instanceof MasterAddressResolver.Named named)) {
-            throw new IllegalArgumentException("Expected a bare DNS host name, not a URL");
-        }
+        MasterAddressResolver.Named named = new MasterAddressResolver.Named(requireHostName(hostName));
         JndiSrvLookup lookup = providerUrlOrNull == null ? JndiSrvLookup.system() : new JndiSrvLookup(providerUrlOrNull);
         List<MasterAddressResolver.Srv> answer;
         try {
