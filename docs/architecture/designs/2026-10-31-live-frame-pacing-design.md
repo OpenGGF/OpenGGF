@@ -375,3 +375,49 @@ off the Mod API surface in `0e296306d`), runtime cadence `545d23b96` + `76dd927c
 - Not run: any real window, real OpenAL device, VRR panel, Wayland/macOS swap interval 2, or
   trace replay sweep. `AUTO` locking on real hardware is unqualified; the probe falls back to
   `Exact` when a display does not qualify.
+
+
+### Implementation notes: VRR measurement and even presents
+
+`SwapPacingPolicy` owns a rolling two-second interval window, with at least one
+second of samples before a verdict. It receives timestamps and measured work only.
+The performance panel and Ctrl+P report the mean swap-return interval, population
+standard deviation, and `ACTIVE`, `NOT_DETECTED`, or `UNKNOWN`.
+
+For service period P and advertised vblank period T, let q = floor(P/T) and
+f = P/T - q. Tick-gated fixed-refresh swaps alternate q*T and (q+1)*T, with
+weights 1-f and f. Both models have mean P. Fixed refresh predicts variance
+Q = f*(1-f)*T*T, while service-following swaps predict zero. The nearest-variance
+model changes at Q/2. The mean error must also fit within that half-separation
+budget. `NOT_DETECTED` additionally requires a fixed-lattice residual below Q/2.
+Variable work can cross extra vblanks and increase the fixed-refresh variance above Q,
+so the lattice fit remains valid without an upper variance bound. Unknown refresh, refresh at or below the service rate, integer ratios, insufficient
+data, stalls, and ambiguous noisy intervals report `UNKNOWN`. The rule has no device-fitted
+threshold. Measurement restarts on host boundary, focus, configuration, cadence,
+and picture-mode changes. Only ordinary `Exact` pictures with one completed
+service and no pending debt contribute. Paused, thinned, captured, forced,
+screenshot, probing, locked, and blended pictures do not contribute.
+
+When that evidence reports `ACTIVE`, a prepared tick-gated window picture may
+wait until its rational service deadline plus the largest tick-and-draw work
+sample from the last second. This empirical 100th percentile covers every recently
+observed cost. The runtime returns the hold deadline to the existing polling loop.
+Input polling and device service continue. The next iteration swaps without
+reserving another service. A deadline at or beyond the next tick is never held,
+and a late wake services due input and audio before replacing the stale picture.
+Focus, capture, interpolation, screenshots, configuration, and boundary changes
+cancel a pending hold. Capture draws and recording are never held. Interpolation
+keeps its existing behavior and is never disabled automatically.
+
+Rate windows restart at focus loss, regain, and boundary changes, including
+changes observed during a service. Unfocused time contributes no rate samples.
+
+These verdicts infer a swap-return model, not physical scan-out engagement.
+A compositor that returns at service cadence can look like VRR without the panel
+following it. Advertised refresh can also be stale or identify the wrong Wayland
+output. Missed deadlines, irregular work, and low-framerate compensation can make
+the models ambiguous. Real-panel qualification still requires the independent
+render-rate design's device matrix and an external engagement indicator. No real
+display, driver, compositor policy, or desktop setting was changed or qualified.
+ROM-free seeded tests cover 50 and 60 Hz services on 75, 120, 144, and 165 Hz
+swap models. This does not qualify the user's KDE Wayland displays.

@@ -800,4 +800,171 @@ class TestLiveFrameRuntime {
         }
         @Override public boolean isDismissed() { return false; }
     }
+    private final class MeasuredHost implements LiveFrameRuntime.Owner {
+        final int hz, refresh;
+        final boolean fixed;
+        int ticks, deviceServices;
+        boolean focused = true, interpolation, capture;
+        long extraWork;
+        Object boundary = "start";
+        final List<Long> returns = new ArrayList<>();
+        final List<Long> ticksAt = new ArrayList<>();
+        final List<LivePictureRequest> requests = new ArrayList<>();
+
+        MeasuredHost(int hz, int refresh, boolean fixed) {
+            this.hz = hz;
+            this.refresh = refresh;
+            this.fixed = fixed;
+        }
+        public LiveFrameRuntime.HostState hostState() {
+            return new LiveFrameRuntime.HostState(hz, refresh, focused, false, boundary, capture, false,
+                    com.openggf.configuration.DisplayPacing.EXACT, new DisplayOutput(1, refresh), true,
+                    interpolation, false, false);
+        }
+        public boolean tick(boolean active) {
+            ticksAt.add(now);
+            ticks++;
+            now += extraWork + (ticks % 2 == 0 ? 2_000_000 : 500_000);
+            return true;
+        }
+        public boolean draw(LivePictureRequest picture) {
+            now += 300_000;
+            requests.add(picture);
+            return true;
+        }
+        public void swap() {
+            if (fixed) now = Math.round((Math.floor(now * (double) refresh / SECOND) + 1) * SECOND / refresh);
+            returns.add(now);
+        }
+        public void swapInterval(int interval) { assertEquals(1, interval); }
+        public void serviceDevice() { deviceServices++; }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"50,75", "50,120", "50,144", "50,165", "60,75", "60,120", "60,144", "60,165"})
+    void fakeSwapModelsReportTheirEvidenceAndKeepExactServiceCounts(int hz, int refresh) {
+        for (boolean fixed : new boolean[] {false, true}) {
+            now = 0;
+            var host = new MeasuredHost(hz, refresh, fixed);
+            var runtime = new LiveFrameRuntime(host, () -> now);
+            runUntil(runtime, runtime.iterate(), 5 * SECOND);
+            var expected = refresh % hz == 0 ? SwapPacingPolicy.VrrEngagement.UNKNOWN
+                    : fixed ? SwapPacingPolicy.VrrEngagement.NOT_DETECTED : SwapPacingPolicy.VrrEngagement.ACTIVE;
+            assertEquals(expected, runtime.statistics().swapPacing().vrr(), () -> runtime.statistics().toString());
+            assertEquals(5 * hz, host.ticks);
+            assertEquals(hz, runtime.statistics().servicesPerSecond(), 1);
+            assertEquals(hz, runtime.statistics().measuredPresentHz(), 1,
+                    "held swaps also feed the cadence diagnostics");
+            assertTrue(host.requests.stream().allMatch(r -> r.selection() instanceof PictureSelection.Latest));
+            if (!fixed && refresh % hz != 0) {
+                double immediate = intervalSpread(host.returns.subList(5, hz));
+                double held = intervalSpread(host.returns.subList(host.returns.size() - hz, host.returns.size()));
+                assertTrue(held < immediate / 10, "held " + held + ", immediate " + immediate);
+                // Work and presentation holds never move the scheduler's rational service deadlines.
+                for (int i = 0; i < host.ticksAt.size(); i++) {
+                    assertEquals((long) Math.ceil((i + 1) * (double) SECOND / hz), host.ticksAt.get(i));
+                }
+                assertTrue(host.deviceServices > host.ticks, "holds return to the input/audio polling loop");
+            }
+        }
+    }
+
+    private static double intervalSpread(List<Long> timestamps) {
+        double mean = (timestamps.getLast() - timestamps.getFirst()) / (double) (timestamps.size() - 1);
+        double sum = 0;
+        for (int i = 1; i < timestamps.size(); i++) {
+            double residual = timestamps.get(i) - timestamps.get(i - 1) - mean;
+            sum += residual * residual;
+        }
+        return Math.sqrt(sum / (timestamps.size() - 1));
+    }
+
+    @Test void vrrHoldsAreCancelledForInterpolationCaptureFocusAndBoundaries() {
+        for (String change : List.of("blend", "capture", "focus", "boundary", "late", "slow")) {
+            now = 0;
+            var host = new MeasuredHost(50, 120, false);
+            var runtime = new LiveFrameRuntime(host, () -> now);
+            var last = runtime.iterate();
+            // A held picture has been drawn, but has no swap yet.
+            for (int i = 0; i < 500; i++) {
+                now = Math.max(now, last.wakeAtNanos());
+                last = runtime.iterate();
+                if (runtime.statistics().swapPacing().vrr() == SwapPacingPolicy.VrrEngagement.ACTIVE
+                        && last.services() == 1 && !last.presented()) break;
+                assertTrue(i < 499, "no hold");
+            }
+            int before = host.returns.size(), ticks = host.ticks;
+            switch (change) {
+                case "blend" -> host.interpolation = true;
+                case "capture" -> host.capture = true;
+                case "focus" -> host.focused = false;
+                case "boundary" -> host.boundary = "changed";
+                case "late" -> now += 40_000_000;
+                case "slow" -> {
+                    now += 20_000_000;
+                    host.extraWork = 30_000_000;
+                }
+            }
+            last = runtime.iterate();
+            if (change.equals("focus")) assertEquals(before, host.returns.size());
+            else if (change.equals("slow")) {
+                assertTrue(last.presented());
+                assertTrue(last.wakeAtNanos() <= now, "slow tick/draw work cannot hold a swap");
+            } else if (change.equals("late")) {
+                assertTrue(last.services() >= 2, "late wake services debt before any swap");
+                assertTrue(host.ticks > ticks);
+                assertTrue(last.presented());
+            }
+            if (!change.equals("slow")) {
+                assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, runtime.statistics().swapPacing().vrr());
+            }
+            if (change.equals("blend") || change.equals("capture")) {
+                runUntil(runtime, last, now + 3 * SECOND);
+                assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, runtime.statistics().swapPacing().vrr());
+                assertTrue(host.requests.stream().anyMatch(r -> change.equals("capture")
+                        ? r.capture() : r.selection() instanceof PictureSelection.Between));
+            }
+        }
+    }
+
+    @Test void rateWindowsExcludeFocusLossRegainAndBoundaryChanges() {
+        var host = new MeasuredHost(50, 120, false);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        var last = runtime.iterate();
+        runUntil(runtime, last, 3 * SECOND);
+        assertEquals(50, runtime.statistics().servicesPerSecond(), 1);
+        host.focused = false;
+        runtime.iterate();
+        now += 20 * SECOND;
+        runtime.iterate();
+        assertEquals(0, runtime.statistics().servicesPerSecond());
+        host.focused = true;
+        last = runtime.iterate();
+        assertEquals(0, runtime.statistics().servicesPerSecond());
+        last = runUntil(runtime, last, now + 3 * SECOND).getLast();
+        assertEquals(50, runtime.statistics().servicesPerSecond(), 1);
+        host.boundary = "resumed";
+        runtime.iterate();
+        assertEquals(0, runtime.statistics().servicesPerSecond());
+        assertEquals(0, runtime.statistics().picturesPerSecond());
+        assertEquals(0, runtime.statistics().blendedPerSecond());
+    }
+
+    @Test void measuredSwapLinesReachThePanelAndClipboardWithBoundedWidth() throws Exception {
+        var runtime = open(50, 120);
+        output = new DisplayOutput(1, 120);
+        config.setConfigValue(SonicConfiguration.DISPLAY_PACING, "EXACT");
+        field("liveFrames", runtime);
+        runUntil(runtime, runtime.iterate(), 3 * SECOND);
+        var lines = Engine.livePresentationPanelLines();
+        assertEquals("swap 20.0+/-0.0ms", lines.get(lines.size() - 2));
+        assertEquals("vrr ACTIVE", lines.getLast());
+        var font = new com.openggf.graphics.PixelFont();
+        assertTrue(font.measureWidth(lines.get(lines.size() - 2),
+                0.5f) <= 85);
+        String clipboard = Engine.liveSchedulingDiagnostics();
+        assertTrue(clipboard.contains("swap 20.0+/-0.0ms"));
+        assertTrue(clipboard.contains("vrr ACTIVE (swap-return inference)"));
+    }
+
 }

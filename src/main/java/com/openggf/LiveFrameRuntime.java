@@ -69,6 +69,11 @@ final class LiveFrameRuntime {
     private long rateStart, servicesAtRateStart, picturesAtRateStart, blendedAtRateStart;
     private double servicesPerSecond, picturesPerSecond, blendedPerSecond;
     private long pendingTicks;
+    private SwapPacingPolicy swapPacing;
+    private HostState measurementHost;
+    private PendingPresent pendingPresent;
+
+    private record PendingPresent(long deadline, long nextTickDeadline) { }
 
     LiveFrameRuntime(Owner owner, LongSupplier monotonicNanos) {
         this.owner = Objects.requireNonNull(owner);
@@ -98,8 +103,30 @@ final class LiveFrameRuntime {
         boolean first = scheduler == null;
         boolean changed = configure(host);
         long elapsed = first || changed ? 0 : now - anchor;
+        boolean measurementChanged = !host.equals(measurementHost) || changed || suspended
+                || boundary != null && !boundary.equals(host.boundary()) || elapsed < 0;
+        if (measurementChanged) {
+            swapPacing = new SwapPacingPolicy(host.regionHz(), host.output().advertisedRefreshHz());
+            pendingPresent = null;
+            restartRates(now);
+            measurementHost = host;
+        }
+        if (host.focused()) sampleRates(now);
+        if (pendingPresent != null) {
+            var pending = pendingPresent;
+            if (now < pending.deadline()) {
+                return new Step(0, false, pending.deadline(), NO_REANCHOR);
+            }
+            pendingPresent = null;
+            if (now < pending.nextTickDeadline()) {
+                long returned = swap();
+                policy.observeSwap(returned);
+                swapPacing.observeSwap(returned);
+                return new Step(0, true, pending.nextTickDeadline(), NO_REANCHOR);
+            }
+            // The host woke late. Service due input/audio before replacing the stale picture.
+        }
         anchor = now;
-        sampleRates(now);
         if (swapInterval == 0) applySwapInterval(1);
         if (!host.focused()) {
             interpolationStatus = InterpolationStatus.UNFOCUSED;
@@ -181,7 +208,11 @@ final class LiveFrameRuntime {
                 break;
             }
         }
-        if (changed) policy.boundaryChanged();
+        if (changed) {
+            policy.boundaryChanged();
+            swapPacing.reset();
+            restartRates(clock.getAsLong());
+        }
         boolean probing = cadence instanceof Probing;
         // Exact pictures thin services; interpolation also uses render-only deadlines.
         // A probe measures every swap, so it presents on each paced return.
@@ -213,7 +244,22 @@ final class LiveFrameRuntime {
         }
         if (!drawn && !owner.draw(picture)) return aborted(completed);
         if (!drawn) pictures++;
+        boolean measure = !probing && !active && !changed && completed == 1 && pendingTicks == 0
+                && !host.hostPaused() && !host.captureActive() && !host.screenshotPending()
+                && !forcedPicture && pictureCap >= regionHz;
+        if (measure) {
+            long ready = clock.getAsLong();
+            swapPacing.observeWork(ready - anchor);
+            long nextTick = anchor + batch.nanosUntilTick();
+            long tickDeadline = nextTick - ceilingPeriod(regionHz);
+            long deadline = swapPacing.presentDeadline(tickDeadline, nextTick, ready);
+            if (deadline > ready) {
+                pendingPresent = new PendingPresent(deadline, nextTick);
+                return new Step(completed, false, deadline, NO_REANCHOR);
+            }
+        } else swapPacing.reset();
         long returned = swap();
+        if (measure) swapPacing.observeSwap(returned);
         // The picture consumed any forced request; compare later samples with this state.
         if (changed) boundary = owner.hostState().boundary();
         switch (policy.observeSwap(returned)) {
@@ -242,8 +288,12 @@ final class LiveFrameRuntime {
         boundary = host.boundary();
         if (!owner.tick(false)) return aborted(0);
         services++;
+        swapPacing.reset();
         host = owner.hostState();
-        if (host.forcedPicture() || !boundary.equals(host.boundary())) policy.boundaryChanged();
+        if (host.forcedPicture() || !boundary.equals(host.boundary()) || !host.focused()) {
+            policy.boundaryChanged();
+            restartRates(clock.getAsLong());
+        }
         if (!owner.draw(exactPicture(host.captureActive()))) return aborted(1);
         pictures++;
         long returned = swap();
@@ -274,15 +324,21 @@ final class LiveFrameRuntime {
     private void sampleRates(long now) {
         long span = now - rateStart;
         if (span < SECOND) return;
-        if (rateStart != 0) {
-            servicesPerSecond = (services - servicesAtRateStart) * (double) SECOND / span;
-            picturesPerSecond = (pictures - picturesAtRateStart) * (double) SECOND / span;
-            blendedPerSecond = (blendedPictures - blendedAtRateStart) * (double) SECOND / span;
-        }
+        servicesPerSecond = (services - servicesAtRateStart) * (double) SECOND / span;
+        picturesPerSecond = (pictures - picturesAtRateStart) * (double) SECOND / span;
+        blendedPerSecond = (blendedPictures - blendedAtRateStart) * (double) SECOND / span;
         rateStart = now;
         servicesAtRateStart = services;
         picturesAtRateStart = pictures;
         blendedAtRateStart = blendedPictures;
+    }
+
+    private void restartRates(long now) {
+        rateStart = now;
+        servicesAtRateStart = services;
+        picturesAtRateStart = pictures;
+        blendedAtRateStart = blendedPictures;
+        servicesPerSecond = picturesPerSecond = blendedPerSecond = 0;
     }
 
     private static LivePictureRequest exactPicture(boolean capture) {
@@ -333,6 +389,9 @@ final class LiveFrameRuntime {
 
     private Step aborted(int completed) {
         toExact();
+        swapPacing.reset();
+        pendingPresent = null;
+        restartRates(clock.getAsLong());
         scheduler.reset();
         scheduler.invalidatePhase();
         latestBarrier = true;
@@ -350,7 +409,9 @@ final class LiveFrameRuntime {
         };
         return new Statistics(regionHz, pictureCap, name, policy.reason().name(), policy.measuredHz(),
                 swapInterval, services, pictures, swaps, pendingTicks, discardedWallNanos,
-                interpolationStatus, servicesPerSecond, picturesPerSecond, blendedPerSecond, lastAlpha);
+                interpolationStatus, servicesPerSecond, picturesPerSecond, blendedPerSecond, lastAlpha,
+                swapPacing == null ? new SwapPacingPolicy.Measurement(Double.NaN, Double.NaN,
+                        SwapPacingPolicy.VrrEngagement.UNKNOWN) : swapPacing.measurement());
     }
 
     private static long ceilingPeriod(int hz) { return (SECOND + hz - 1) / hz; }
@@ -364,7 +425,16 @@ final class LiveFrameRuntime {
                       int swapInterval, long services, long pictures, long swaps,
                       long pendingTicks, long discardedWallNanos, InterpolationStatus interpolation,
                       double servicesPerSecond, double picturesPerSecond, double blendedPerSecond,
-                      double lastAlpha) { }
+                      double lastAlpha, SwapPacingPolicy.Measurement swapPacing) {
+        String swapIntervalLine() {
+            return Double.isNaN(swapPacing.meanNanos()) ? "swap unknown"
+                    : String.format(java.util.Locale.ROOT,
+                            swapPacing.meanNanos() < 100e6 && swapPacing.spreadNanos() < 100e6
+                                    ? "swap %.1f+/-%.1fms" : "swap %.0f+/-%.0fms",
+                            swapPacing.meanNanos() / 1e6, swapPacing.spreadNanos() / 1e6);
+        }
+        String vrrLine() { return "vrr " + swapPacing.vrr(); }
+    }
 
     /** Why window pictures are or are not blended; diagnostics only, never a scheduling input. */
     enum InterpolationStatus {

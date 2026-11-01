@@ -235,4 +235,62 @@ class TestDisplayCadencePolicy {
         assertEquals(Verdict.LOCK, verdict);
         assertTrue(lastSwap - restarted >= 2 * SECOND, "both windows follow the boundary");
     }
+    @ParameterizedTest
+    @CsvSource({"50,75", "50,120", "50,144", "50,165", "60,75", "60,120", "60,144", "60,165"})
+    void swapModelsSeparateVrrFromFixedRefreshWithSeededJitter(int hz, int refresh) {
+        for (boolean fixed : new boolean[] {false, true}) {
+            var pacing = new SwapPacingPolicy(hz, refresh);
+            var random = new SplittableRandom(0x565252);
+            double period = (double) SECOND / hz, vblank = (double) SECOND / refresh;
+            for (int tick = 0; tick <= 10 * hz; tick++) {
+                double submitted = tick * period + 1_000_000;
+                long returned = Math.round(fixed ? Math.ceil(submitted / vblank) * vblank : submitted);
+                pacing.observeSwap(returned + random.nextLong(-100_000, 100_001));
+                var expected = refresh % hz == 0 ? SwapPacingPolicy.VrrEngagement.UNKNOWN
+                        : fixed ? SwapPacingPolicy.VrrEngagement.NOT_DETECTED : SwapPacingPolicy.VrrEngagement.ACTIVE;
+                assertEquals(tick < hz ? SwapPacingPolicy.VrrEngagement.UNKNOWN : expected,
+                        pacing.measurement().vrr(), "tick " + tick + ", fixed " + fixed);
+            }
+            assertEquals(period, pacing.measurement().meanNanos(), vblank / hz);
+            if (fixed && refresh % hz != 0) assertTrue(pacing.measurement().spreadNanos() > 1_000_000);
+            else assertTrue(pacing.measurement().spreadNanos() < 200_000);
+        }
+    }
+
+    @Test
+    void vrrEvidenceRequiresKnownRefreshEnoughSamplesAndUnambiguousCadence() {
+        for (int refresh : new int[] {0, 50, 120, 180}) {
+            var pacing = new SwapPacingPolicy(60, refresh);
+            for (int i = 0; i <= 180; i++) pacing.observeSwap(Math.round(i * SECOND / 60.0));
+            assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
+        }
+        var pacing = new SwapPacingPolicy(50, 120);
+        for (int i = 0; i <= 150; i++) pacing.observeSwap(i * 20_000_000L);
+        assertEquals(20_000_000, pacing.measurement().meanNanos());
+        assertEquals(0, pacing.measurement().spreadNanos());
+        assertEquals(SwapPacingPolicy.VrrEngagement.ACTIVE, pacing.measurement().vrr());
+        pacing.reset();
+        assertTrue(Double.isNaN(pacing.measurement().meanNanos()));
+        pacing.observeSwap(0);
+        pacing.observeSwap(SECOND);
+        assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
+        // A cap/overload at half the service rate is neither of the competing models.
+        for (int i = 1; i <= 150; i++) pacing.observeSwap(SECOND + i * 40_000_000L);
+        assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
+    }
+
+    @Test
+    void measuredWorkDeadlineNeverCrossesTheNextServiceOrWaitsWhenLate() {
+        var pacing = new SwapPacingPolicy(50, 120);
+        pacing.observeWork(3_000_000);
+        assertEquals(1_000_000, pacing.presentDeadline(0, 20_000_000, 1_000_000));
+        for (int i = 0; i <= 100; i++) pacing.observeSwap(i * 20_000_000L);
+        assertEquals(3_000_000, pacing.presentDeadline(0, 20_000_000, 1_000_000));
+        assertEquals(4_000_000, pacing.presentDeadline(0, 20_000_000, 4_000_000));
+        pacing.observeWork(25_000_000);
+        assertEquals(1_000_000, pacing.presentDeadline(0, 20_000_000, 1_000_000));
+        for (int i = 0; i < 50; i++) pacing.observeWork(2_000_000);
+        assertEquals(2_000_000, pacing.presentDeadline(0, 20_000_000, 1_000_000));
+    }
+
 }

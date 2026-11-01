@@ -590,6 +590,15 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void swapPacingPolicyKeepsHostEffectsOutsideItsMeasurements() throws IOException {
+        String policy = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve("com/openggf/SwapPacingPolicy.java")));
+        for (String forbidden : List.of("System.nanoTime", "System.currentTimeMillis", "Thread.sleep",
+                "LockSupport", "org.lwjgl", "LongSupplier", "LiveFrameRuntime.Owner")) {
+            assertFalse(policy.contains(forbidden), forbidden);
+        }
+    }
+
+    @Test
     void suppressedLevelMusicPreservesTheActiveAudioSource() throws IOException {
         SourceFile source = SourceFile.read(SRC_MAIN.resolve("com/openggf/level/LevelManager.java"));
         MethodSpan span = source.methodNamed("initAudio");
