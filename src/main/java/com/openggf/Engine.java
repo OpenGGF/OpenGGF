@@ -773,11 +773,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		}
 
-		// Make the OpenGL context current
+		// Make the OpenGL context current. LiveFrameRuntime is the sole live swap-interval writer.
 		glfwMakeContextCurrent(window);
-
-		// Enable v-sync
-		glfwSwapInterval(1);
 
 		// Apply the saved desktop mode before showing the window.
 		displayWindowController = new DisplayWindowController(window);
@@ -2865,8 +2862,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void loop() {
-		liveFrames = createLiveFrameRuntime(this::renderScheduledFrame, () -> glfwSwapBuffers(window));
-		long previousTime = System.nanoTime();
+		liveFrames = createLiveFrameRuntime(new LiveEndpoints(this::renderScheduledFrame, () -> glfwSwapBuffers(window),
+				org.lwjgl.glfw.GLFW::glfwSwapInterval, displayWindowController::output,
+				() -> com.openggf.audio.AudioManagerInternalAccess.speakerRateRegulated(audioManager), System::nanoTime));
 		while (!glfwWindowShouldClose(window)) {
 			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
@@ -2879,28 +2877,30 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				windowWidth = framebuffer.width(); windowHeight = framebuffer.height();
 				reshape(windowWidth, windowHeight);
 			}
-			long observed = System.nanoTime();
-			var iteration = liveFrames.iterate(observed - previousTime);
-			previousTime = iteration.wallAnchor(observed, System.nanoTime());
-			if (paused) {
-				try { Thread.sleep(33); }
-				catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
-			} else {
-				// Work, capture backpressure and swap time count against this absolute deadline.
-				waitForFrameDeadline(previousTime + iteration.nanosUntilNextIteration());
-			}
+			// Work, capture backpressure and swap time count against this absolute deadline.
+			waitForFrameDeadline(liveFrames.iterate().wakeAtNanos());
 		}
 		if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
 	}
 
+	/** Window, device and clock endpoints the live runtime drives; tests substitute fakes. */
+	record LiveEndpoints(java.util.function.Consumer<Boolean> render, Runnable swap,
+			java.util.function.IntConsumer swapInterval, java.util.function.Supplier<DisplayOutput> output,
+			java.util.function.BooleanSupplier speakerRegulated, java.util.function.LongSupplier clock) { }
+
 	/** Same live coordinator for the window host and isolated production-path tests. */
-	LiveFrameRuntime createLiveFrameRuntime(java.util.function.Consumer<Boolean> render, Runnable swap) {
+	LiveFrameRuntime createLiveFrameRuntime(LiveEndpoints endpoints) {
+		var render = endpoints.render();
+		var swap = endpoints.swap();
 		return new LiveFrameRuntime(new LiveFrameRuntime.Owner() {
-			public int simulationHz() { return FrameRateResolver.simulation(configService); }
-			public int presentationHz() { return resolveTargetFps(configService); }
-			public boolean focused() { return !paused; }
-			public boolean hostPaused() { return gameLoop.isPaused(); }
-			public Object boundary() { return liveSchedulingBoundary(); }
+			public LiveFrameRuntime.HostState hostState() {
+				return new LiveFrameRuntime.HostState(FrameRateResolver.simulation(configService),
+						resolveTargetFps(configService), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
+						liveCaptureController.state() == LiveCaptureController.State.ACTIVE,
+						suspension.requiresScenePicture() || liveStepPicturePending,
+						FrameRateResolver.pacing(configService), endpoints.output().get(),
+						endpoints.speakerRegulated().getAsBoolean());
+			}
 			public boolean tick() {
 				return runFrameWithModAbort(() -> {
 					suspension.betweenFrames(suspensionEffects);
@@ -2916,8 +2916,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					graphicsManager.runPendingRenderThreadTasks();
 				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
 			}
-			public boolean captureActive() { return liveCaptureController.state() == LiveCaptureController.State.ACTIVE; }
-			public boolean requiresPicture() { return suspension.requiresScenePicture() || liveStepPicturePending; }
 			public boolean draw(boolean capture) {
 				liveSceneSubmissionsBefore = gameLoop.modSceneHost.renderedSubmissions();
 				return runFrameWithModAbort(() -> {
@@ -2929,16 +2927,19 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void swap() {
 				sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions());
 			}
+			public void swapInterval(int interval) { endpoints.swapInterval().accept(interval); }
 			public void serviceDevice() { com.openggf.audio.AudioManagerInternalAccess.serviceDevice(audioManager); }
-		});
+		}, endpoints.clock());
 	}
 
 	/** Host diagnostics; no gameplay or scheduler state is exposed through the Mod API. */
 	public static String liveSchedulingDiagnostics() {
 		if (instance == null || instance.liveFrames == null) return "Live scheduler: inactive\n";
 		var stats = instance.liveFrames.statistics();
-		return "Region services: " + stats.simulationHz() + " Hz; display limit: " + stats.presentationHz()
-				+ " FPS\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
+		return "Region services: " + stats.regionHz() + " Hz; display limit: " + stats.pictureCap()
+				+ " FPS\nCadence: " + stats.cadence() + " (interval " + stats.swapInterval() + ", reason "
+				+ stats.reason() + "); measured presents: " + String.format(java.util.Locale.ROOT, "%.3f", stats.measuredPresentHz())
+				+ " Hz\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
 				+ "; swaps: " + stats.swaps() + "\nPending services: " + stats.pendingTicks()
 				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n";
 	}
@@ -2989,9 +2990,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * can reach a scene. All GLFW calls stay on the window thread. This is an observation
 	 * cadence, not a hardware timestamp guarantee: rendering and OS scheduling can delay
 	 * a poll. Only the final quarter-millisecond retains the existing precision spin.
+	 * An unfocused window waits here too, on the runtime's longer deadline.
 	 */
 	private void waitForFrameDeadline(long deadlineNanos) {
-		while (!paused && !glfwWindowShouldClose(window)) {
+		while (!glfwWindowShouldClose(window)) {
 			long remainingNanos = deadlineNanos - System.nanoTime();
 			if (remainingNanos <= 0) return;
 			if (remainingNanos <= 250_000) {

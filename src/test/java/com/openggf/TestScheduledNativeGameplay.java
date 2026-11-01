@@ -39,6 +39,7 @@ class TestScheduledNativeGameplay {
     private InputHandler input;
     private int pictures;
     private Method render;
+    private long clock;
 
     @AfterEach void close() {
         try {
@@ -88,13 +89,24 @@ class TestScheduledNativeGameplay {
     }
 
     private LiveFrameRuntime scheduler() {
-        return engine.createLiveFrameRuntime(capture -> {
+        return scheduler(() -> { }, DisplayOutput.UNKNOWN);
+    }
+
+    /** A known output nominates the display cadence; the speaker counts as regulated. */
+    private LiveFrameRuntime scheduler(Runnable swap, DisplayOutput output) {
+        return engine.createLiveFrameRuntime(new Engine.LiveEndpoints(capture -> {
             var before = state();
             try { render.invoke(engine, capture); }
             catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
             assertEquals(before, state(), "real Engine drawing cannot advance native movement/counters");
             pictures++;
-        }, () -> { });
+        }, swap, interval -> { }, () -> output, () -> output.advertisedRefreshHz() > 0, () -> clock));
+    }
+
+    /** Advances the fake monotonic clock by the host interval since the previous iteration. */
+    private LiveFrameRuntime.Iteration iterate(LiveFrameRuntime runtime, long elapsedNanos) {
+        clock += elapsedNanos;
+        return runtime.iterate();
     }
 
     @ParameterizedTest @RequiresRom(SonicGame.SONIC_2)
@@ -113,7 +125,7 @@ class TestScheduledNativeGameplay {
 
     private void compareRestoredRoute(int hz, int fps, boolean jitter) throws Exception {
         var runtime = scheduler();
-        runtime.iterate(0); // register the actual scheduler restore invalidation, then capture.
+        iterate(runtime, 0); // register the actual scheduler restore invalidation, then capture.
         var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
         var saved = registry.capture();
         var savedAudio = GameServices.audio().captureLogicalSnapshot();
@@ -134,7 +146,7 @@ class TestScheduledNativeGameplay {
         });
         input.setLogicalOverride(routeInput(0));
         int frame = GameServices.sprites().getFrameCounter();
-        runtime.iterate(SECOND); // restoration must invalidate this wall interval without a forward tick.
+        iterate(runtime, SECOND); // restoration must invalidate this wall interval without a forward tick.
         assertEquals(frame, GameServices.sprites().getFrameCounter());
         long previous = 0;
         if (jitter) {
@@ -142,13 +154,13 @@ class TestScheduledNativeGameplay {
             int index = 0;
             while (previous < SECOND) {
                 long delta = Math.min(intervals[index++ % intervals.length], SECOND - previous);
-                runtime.iterate(delta); previous += delta;
-                while (runtime.statistics().pendingTicks() > 0) runtime.iterate(0);
+                iterate(runtime, delta); previous += delta;
+                while (runtime.statistics().pendingTicks() > 0) iterate(runtime, 0);
             }
         } else {
             for (int picture = 1; picture <= fps; picture++) {
                 long now = (picture * SECOND + fps - 1) / fps;
-                runtime.iterate(now - previous); previous = now;
+                iterate(runtime, now - previous); previous = now;
             }
         }
         assertEquals(expected, observed, "every authoritative state after full registered restoration and forward replay");
@@ -160,28 +172,72 @@ class TestScheduledNativeGameplay {
     }
 
     @Test @RequiresRom(SonicGame.SONIC_2)
+    void originalS2MovementAndRestoreMatchUnderTheDisplayLockedCadence() throws Exception {
+        open(RomTestUtils.ensureSonic2RomAvailable().toPath(), 60, 60, false);
+        double period = SECOND * 1001.0 / 60_000; // blocking 59.94 Hz vsync
+        long[] vblank = {0};
+        var runtime = scheduler(() -> {
+            vblank[0] = Math.max((long) Math.floor(clock / period) + 1, vblank[0] + 1);
+            clock = Math.round(vblank[0] * period);
+        }, new DisplayOutput(1, 60));
+        var last = runtime.iterate();
+        for (int iteration = 0; !"LOCKED".equals(runtime.statistics().cadence()); iteration++) {
+            assertTrue(iteration < 600, () -> "never locked: " + runtime.statistics());
+            clock = Math.max(clock, last.wakeAtNanos());
+            last = runtime.iterate();
+        }
+        var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        var savedAudio = GameServices.audio().captureLogicalSnapshot();
+        List<State> expected = new ArrayList<>();
+        for (int tick = 0; tick < 60; tick++) {
+            input.setLogicalOverride(routeInput(tick));
+            engine.advanceFrame();
+            expected.add(state());
+        }
+        assertNotEquals(expected.getFirst().x, expected.getLast().x, "real movement is required");
+        registry.restore(saved);
+        GameServices.audio().restoreLogicalSnapshot(savedAudio);
+        List<State> observed = new ArrayList<>();
+        engine.getGameLoop().setAudioPresentationProbe(mode -> {
+            observed.add(state());
+            input.setLogicalOverride(routeInput(observed.size()));
+        });
+        input.setLogicalOverride(routeInput(0));
+        long services = runtime.statistics().services();
+        for (int swap = 0; swap < 60; swap++) {
+            clock = Math.max(clock, last.wakeAtNanos());
+            last = runtime.iterate();
+            assertEquals(1, last.services(), "one service per paced swap, including the restore boundary");
+        }
+        assertEquals(expected, observed, "locked services replay the same native states as direct admission");
+        assertEquals(60, runtime.statistics().services() - services);
+        assertEquals("LOCKED", runtime.statistics().cadence(), "a restore boundary resets the window, not the lock");
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
     void actualPausedFrameStepAdmitsOneNativeFrameForcesAPictureAndRetiresReleasedTaps() throws Exception {
         open(RomTestUtils.ensureSonic2RomAvailable().toPath(), 60, 30, false);
-        var runtime = scheduler(); runtime.iterate(0);
+        var runtime = scheduler(); iterate(runtime, 0);
         int frame = GameServices.sprites().getFrameCounter();
         input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
-        assertEquals(1, runtime.iterate(100_000_000).services());
+        assertEquals(1, iterate(runtime, 100_000_000).services());
         assertTrue(engine.getGameLoop().isUserPaused());
         assertEquals(frame, GameServices.sprites().getFrameCounter());
         input.handleKeyEvent(GLFW_KEY_F9, GLFW_RELEASE);
-        runtime.iterate(16_666_667);
+        iterate(runtime, 16_666_667);
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
         input.handleKeyEvent(GLFW_KEY_SPACE, GLFW_RELEASE);
         input.handleKeyEvent(GLFW_KEY_F8, GLFW_PRESS);
         int beforePictures = pictures;
-        runtime.iterate(16_666_667);
+        iterate(runtime, 16_666_667);
         assertEquals(frame + 1, GameServices.sprites().getFrameCounter());
         assertTrue(pictures > beforePictures, "a single-step picture does not wait for the 30 FPS window deadline");
-        for (int picture = 0; picture < 4; picture++) runtime.iterate(16_666_667);
+        for (int picture = 0; picture < 4; picture++) iterate(runtime, 16_666_667);
         assertEquals(frame + 1, GameServices.sprites().getFrameCounter(), "held step is acknowledged once");
         input.handleKeyEvent(GLFW_KEY_F8, GLFW_RELEASE);
         input.handleKeyEvent(GLFW_KEY_F9, GLFW_PRESS);
-        runtime.iterate(16_666_667);
+        iterate(runtime, 16_666_667);
         assertFalse(engine.getGameLoop().isUserPaused());
         assertEquals(frame + 2, GameServices.sprites().getFrameCounter());
         assertEquals(0, input.logical().player1().actionPressedMask(), "resume retires paused taps");
@@ -191,12 +247,12 @@ class TestScheduledNativeGameplay {
     void actualRomSynthesisProducesOneSecondWithNoDeviceAt144Pictures() throws Exception {
         open(RomTestUtils.ensureSonic2RomAvailable().toPath(), 60, 144, true);
         assertInstanceOf(com.openggf.audio.HeadlessSmpsAudioBackend.class, GameServices.audio().getBackend());
-        var runtime = scheduler(); runtime.iterate(0);
+        var runtime = scheduler(); iterate(runtime, 0);
         try (var tap = GameServices.audio().beginLiveCaptureAudio(60)) {
             long previous = 0;
             for (int picture = 1; picture <= 144; picture++) {
                 long now = (picture * SECOND + 143) / 144;
-                runtime.iterate(now - previous); previous = now;
+                iterate(runtime, now - previous); previous = now;
             }
             short[] packet = new short[tap.maxStereoFramesPerPacket() * 2];
             int nonzero = 0;
@@ -219,16 +275,16 @@ class TestScheduledNativeGameplay {
         var launcher = engine.getGameLoop().userRecordingSessionLauncher;
         var active = launcher.getClass().getDeclaredField("activeRecordingSession");
         active.setAccessible(true); active.set(launcher, recording);
-        var runtime = scheduler(); runtime.iterate(0);
+        var runtime = scheduler(); iterate(runtime, 0);
         int frame = GameServices.sprites().getFrameCounter();
         for (int picture = 1; picture <= 144; picture++) {
             long now = (picture * SECOND + 143) / 144;
             long before = ((picture - 1L) * SECOND + 143) / 144;
-            runtime.iterate(now - before);
+            iterate(runtime, now - before);
             assertEquals(GameServices.sprites().getFrameCounter() - frame, recording.hudState().frame());
         }
         assertEquals(60, recording.hudState().frame());
-        runtime.iterate(0);
+        iterate(runtime, 0);
         assertEquals(60, recording.hudState().frame(), "a picture-only interval cannot duplicate a movie row");
         recording.requestStop(com.openggf.game.recording.UserRecordingStopReason.USER_STOPPED);
         assertFalse(recording.hudState().redWarning());
@@ -240,16 +296,16 @@ class TestScheduledNativeGameplay {
     void realHeldRewindKeepsRegionServiceCadenceWithoutForwardRowsAndRebasesOnRelease(int hz, int fps)
             throws Exception {
         open(RomTestUtils.ensureSonic2RomAvailable().toPath(), hz, fps, false, true);
-        var runtime = scheduler(); runtime.iterate(0);
+        var runtime = scheduler(); iterate(runtime, 0);
         int right = GameServices.configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(right, GLFW_PRESS);
-        for (int tick = 0; tick < 2 * hz; tick++) runtime.iterate((SECOND + hz - 1) / hz);
+        for (int tick = 0; tick < 2 * hz; tick++) iterate(runtime, (SECOND + hz - 1) / hz);
         var history = SessionManager.getCurrentGameplayMode().getRewindController();
         assertNotNull(history, "the actual live owner must install native history");
         assertTrue(history.currentFrame() >= hz, "collect genuine forward history before holding rewind");
         int forward = history.currentFrame();
         input.handleKeyEvent(GLFW_KEY_F10, GLFW_PRESS);
-        runtime.iterate((SECOND + hz - 1) / hz);
+        iterate(runtime, (SECOND + hz - 1) / hz);
         assertTrue(GameServices.audio().isReverseAudioOutputActive());
         assertTrue(history.currentFrame() < forward, "the production held-key owner must select an earlier native state");
         long services = runtime.statistics().services();
@@ -260,7 +316,7 @@ class TestScheduledNativeGameplay {
             for (int picture = 1; picture <= fps; picture++) {
                 long now = (picture * SECOND + fps - 1) / fps;
                 int before = history.currentFrame();
-                runtime.iterate(now - previous); previous = now;
+                iterate(runtime, now - previous); previous = now;
                 assertTrue(history.currentFrame() <= before, "zero/multiple selected reverse states cannot admit a forward row");
             }
             assertEquals(hz, runtime.statistics().services() - services,
@@ -271,10 +327,10 @@ class TestScheduledNativeGameplay {
             assertEquals(audio.outputSampleRate(), tap.totalStereoFrames());
         }
         input.handleKeyEvent(GLFW_KEY_F10, GLFW_RELEASE);
-        runtime.iterate((SECOND + hz - 1) / hz);
+        iterate(runtime, (SECOND + hz - 1) / hz);
         assertFalse(audio.isReverseAudioOutputActive(), "the existing release owner commits the selected sound state");
         int afterRelease = history.currentFrame();
-        runtime.iterate(0);
+        iterate(runtime, 0);
         assertEquals(afterRelease, history.currentFrame(), "old reverse debt cannot become an extra forward row");
     }
 

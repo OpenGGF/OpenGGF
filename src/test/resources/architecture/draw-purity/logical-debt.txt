@@ -1,0 +1,32 @@
+# Logical draw-write debt at baef84ca8, triaged by unit 4. Shrink only; never add fields or counts.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#activated # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+1 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#initialized # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+1 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#isMtz # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#isParent # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#moveTable # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#phaseDuration # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#phaseIndex # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#xVel # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#yRadius # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+2 com.openggf.game.sonic2.objects.MCZRotPformsObjectInstance#yVel # Lazy native platform initialization also writes movement state; move only with pre-update solid-query coverage.
+1 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childFrames # Lazy allocation backs temporal child sprite state; initialize at the owning native update boundary.
+1 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childXs # Lazy allocation backs temporal child sprite state; initialize at the owning native update boundary.
+1 com.openggf.game.sonic2.objects.bosses.Sonic2OOZBossInstance#childYs # Lazy allocation backs temporal child sprite state; initialize at the owning native update boundary.
+1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#messagePresentation # Lazy result-message creation also establishes a timeline consumed by update; move to results entry.
+1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#presentationData # Lazy result-message creation also establishes a timeline consumed by update; move to results entry.
+1 com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen#presentationResolved # Lazy result-message creation also establishes a timeline consumed by update; move to results entry.
+1 com.openggf.game.sonic3k.objects.HczMinibossInstance#rockets # Lazy rocket allocation backs live rocket phases; requires creation and rewind graph coverage.
+2 com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance#heightPixels # Lazy ROM parameter resolution writes collision dimensions and mapping phase; align init and solid queries.
+2 com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance#mappingFrame # Lazy ROM parameter resolution writes collision dimensions and mapping phase; align init and solid queries.
+1 com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance#paramsResolved # Lazy ROM parameter resolution writes collision dimensions and mapping phase; align init and solid queries.
+2 com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance#widthPixels # Lazy ROM parameter resolution writes collision dimensions and mapping phase; align init and solid queries.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#baseY # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#driftPerFrame # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#mappingFrame # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#oscillatingY # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#rowLoaded # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#worldX # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#worldY # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance#xFixed # Draw resolves ROM row and screen-event coordinates into object state; needs screen-event publication ownership.
+1 com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn#sprayAnimIndex # Spray animation ticks in draw; move to the independently executed spray child with init/release phase coverage.
+2 com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn#sprayAnimTimer # Spray animation ticks in draw; move to the independently executed spray child with init/release phase coverage.

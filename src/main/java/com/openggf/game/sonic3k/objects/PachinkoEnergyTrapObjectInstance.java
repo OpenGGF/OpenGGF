@@ -70,7 +70,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
     private int currentY;
     private int updateCount;
     private int lastUpdateVIntRunCount = -1;
-    private int renderCount;
     private int beamSpawnCount;
 
     public PachinkoEnergyTrapObjectInstance(ObjectSpawn spawn) {
@@ -118,7 +117,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(currentX, currentY);
 
         maybePlayTransporterSfx(vIntRunCount, playerEntity);
-        // ROM loc_49FD6 (docs/skdisasm/sonic3k.asm:96680-96683) runs sub_49FE4 once for
+        // ROM loc_49FD6 (docs/skdisasm/sonic3k.asm:96684-96688) runs sub_49FE4 once for
         // Player_1 and once for Player_2, so the sidekick is captured by exactly the same
         // subroutine. Only the tail after `cmpa.w #Player_1,a1` is main-player-only.
         AbstractPlayableSprite mainPlayer =
@@ -176,16 +175,12 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         return lastUpdateVIntRunCount;
     }
 
-    public int getRenderCount() {
-        return renderCount;
-    }
-
     public int getBeamSpawnCount() {
         return beamSpawnCount;
     }
 
     /**
-     * Port of ROM {@code sub_49FE4} (docs/skdisasm/sonic3k.asm:96686-96724), run once per
+     * Port of ROM {@code sub_49FE4} (docs/skdisasm/sonic3k.asm:96693-96736), run once per
      * player from {@code loc_49FD6}.
      *
      * <p>The subroutine writes exactly three player fields — {@code move.w y_pos(a0),y_pos(a1)}
@@ -200,13 +195,13 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
     private void runCaptureSubroutine(AbstractPlayableSprite player, boolean isMainPlayer,
                                       int vIntRunCount) {
         if (player.isDebugMode()) {
-            // ROM `tst.w (Debug_placement_mode).w / bne.s locret_4A078` (:96704-96705).
+            // loc_49FFC (sonic3k.asm:96703-96709) returns when debug placement is active.
             return;
         }
 
         int playerCenterY = player.getCentreY();
         if (playerCenterY < PLAYER_ESCAPED_Y) {
-            // ROM head (:96687-96694): a player above -$20 skips the band test entirely.
+            // sub_49FE4 (sonic3k.asm:96693-96700): a player above -$20 skips the band test entirely.
             // Only the main player zeroes the exit countdown before falling through.
             if (isMainPlayer) {
                 exitDelayFrames = 0;
@@ -214,7 +209,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         } else {
             int relativeY = playerCenterY - currentY;
             if (relativeY < CAPTURE_TOP || relativeY >= CAPTURE_BOTTOM_EXCLUSIVE) {
-                // ROM `addi.w #$C,d0 / cmpi.w #$18,d0 / bhs.s locret_4A078` (:96699-96701).
+                // loc_49FFC (sonic3k.asm:96703-96707) rejects players outside the band.
                 return;
             }
             if (isMainPlayer) {
@@ -223,19 +218,19 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             releaseCompetingMagnetOrbs(player, vIntRunCount);
             NativePositionOps.writeYPosPreserveSubpixel(player, currentY);
             if (!player.isObjectControlled()) {
-                // ROM `tst.b $2E(a1) / bne.s loc_4A024` then sfx_Bouncy (:96707-96710):
+                // loc_49FFC (sonic3k.asm:96703-96714) tests object control before sfx_Bouncy:
                 // the bounce plays on every frame the player enters with no object control.
                 playSfx(Sonic3kSfx.BOUNCY);
             }
         }
 
-        // loc_4A024 (:96711-96713).
+        // loc_4A024 (sonic3k.asm:96716-96718).
         ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAir(true);
         if (!isMainPlayer) {
             return;
         }
-        // ROM `move.b #1,subtype(a0)` (:96716) latches the rise off permanently, then
+        // loc_4A024 (sonic3k.asm:96716-96723) latches the rise off permanently, then
         // `subq.b #1,$24(a0) / bcc.s locret_4A078` restarts the level on borrow.
         exitArmed = true;
         if (!exitRequested && --exitDelayFrames < 0) {
@@ -329,9 +324,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
-            renderCount++;
-        }
+        // loc_49FD6 (sonic3k.asm:96684-96687) submits the current sprite; no draw clock.
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.PACHINKO_ENERGY_TRAP);
         if (renderer == null) {
             return;

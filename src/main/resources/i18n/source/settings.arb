@@ -144,6 +144,14 @@
   "@settings.key.fps.help": {
     "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
   },
+  "settings.key.display_pacing.label": "Display pacing",
+  "@settings.key.display_pacing.label": {
+    "description": "Settings label for stable configuration key DISPLAY_PACING (display.pacing)."
+  },
+  "settings.key.display_pacing.help": "Auto follows a 60 or 50 Hz display for smooth motion. Exact keeps the original speed on any display.",
+  "@settings.key.display_pacing.help": {
+    "description": "Settings help for stable configuration key DISPLAY_PACING. Technical YAML documentation remains separate."
+  },
   "settings.key.load_time_simulation.label": "ROM loading timing",
   "@settings.key.load_time_simulation.label": {
     "description": "Settings label for stable configuration key LOAD_TIME_SIMULATION (gameplay.loadTimeSimulation)."
@@ -1515,6 +1523,14 @@
   "settings.value.NATIVE_4_3": "Native 4:3",
   "@settings.value.NATIVE_4_3": {
     "description": "OpenGGF host UI: settings.value.NATIVE_4_3. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.AUTO": "Auto",
+  "@settings.value.AUTO": {
+    "description": "OpenGGF host UI: settings.value.AUTO. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.EXACT": "Exact",
+  "@settings.value.EXACT": {
+    "description": "OpenGGF host UI: settings.value.EXACT. Translate the complete message; preserve named arguments."
   },
   "settings.value.FAST": "Fast",
   "@settings.value.FAST": {

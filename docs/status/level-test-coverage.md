@@ -525,6 +525,15 @@ extends this component floor with ordinary orbit exhaustion/no-art and
 ring-loss-after-activation entry, all three bonus families and destructive
 restore/replay. The HCZ2 matrix retains its route and configuration gaps.
 
+Draw ownership follow-up (2026-10-31) adds bounded redraw/rewind obligations to the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#draw-ownership-follow-up-2026-10-31),
+[ICZ1 matrix](../architecture/validation/levels/s3k-icz-act1.md#draw-ownership-follow-up-2026-10-31), and
+[FBZ2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#draw-ownership-follow-up-2026-10-31).
+The three-frame GHZ1/EHZ1/AIZ1 rendering smoke witness compares registered state
+before and after repeated pictures. These checks do not certify routes or cover
+the frozen logical draw-write debt listed in the
+[live frame pacing design](../architecture/designs/2026-10-31-live-frame-pacing-design.md#implementation-units).
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated

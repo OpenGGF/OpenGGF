@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Repeated picture draws:** MGZ Knuckles boss fragments advance their defeat
+  flicker only when the object executes, preserving the ROM's first hidden phase.
+  Redrawing ICZ snow overlays and Pachinko traps no longer changes rewind state
+  through diagnostic counters. FBZ cloud draws and MGZ capsule animal art selection
+  also keep their temporary presentation values out of native object state.
+
 - **Homing Attack mutator:** Mutator Lab adds Homing Attack for Sonic 1, Sonic 2
   and Sonic 3 & Knuckles. Jumping again in the air homes the leader in on the best
   target in range: a boss part with a hidden priority first, then targets ahead,
@@ -60,13 +66,26 @@ Unreleased. The earlier development themes remain in
   Live simulation and audio now use 60 Hz NTSC / 50 Hz PAL independently of the
   window FPS limit. Catch-up is bounded; pause, frame-step, focus, restore and
   session changes retain their semantic owners. Repeated pictures acknowledge no
-  input and produce no audio. Native menu/background and MGZ blink clocks advance
+  input and produce no audio. Window pictures follow completed services: a service
+  is shown in the iteration that ran it, a limit below the region rate only thins
+  those pictures, and unchanged state is not redrawn; a recording's picture doubles
+  as the window picture.
+  With `display.pacing: AUTO` (default), a display refreshing at a whole multiple of
+  the region rate is probed for two seconds and then paces one service per swap,
+  removing the periodic repeated or doubled picture on 59.94/60.02 Hz panels. Locked
+  play runs at the measured display speed and returns to host time on repeated missed
+  vblanks, non-blocking swaps or an out-of-band rate; `EXACT` keeps nominal speed.
+  The lock needs a rate-regulated or silent speaker; an unregulated backend keeps host time.
+  Native menu/background and MGZ blink clocks advance
   with updates. Trace ghosts advance their private animation on admitted replay
   rows, including pictures omitted during fast-forward; repeated pictures and
   layer/visibility filtering preserve the pose. Seeks restore observed private
   presentation checkpoints in constant time, preserving historical tunnel context
   and isolating live player timers and landing callbacks; unobserved history stays
   hidden until replay establishes it.
+  Speaker playback gently trims its output rate to hold a bounded source backlog,
+  absorbing host/device clock drift without changing producer, history or recording
+  PCM. Pause, reverse and output replacement reset the trim.
   Optional interpolation and VRR qualification remain future work.
 
 - **Recording audio buffering:** Capture retains a bounded stream of final PCM

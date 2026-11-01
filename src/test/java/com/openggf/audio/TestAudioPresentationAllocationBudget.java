@@ -816,9 +816,9 @@ class TestAudioPresentationAllocationBudget {
         }
 
         @Override
-        public int update() {
+        public QueueState update() {
             updateCalls++;
-            return queuedBuffers;
+            return new QueueState(queuedBuffers, (long) queuedBuffers * 1_024, queuedBuffers > 0);
         }
 
         @Override

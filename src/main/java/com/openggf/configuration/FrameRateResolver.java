@@ -18,4 +18,9 @@ public final class FrameRateResolver {
         return Math.clamp(config.getInt(SonicConfiguration.FPS), 1,
                 SonicConfigurationService.MAX_PRESENTATION_FPS);
     }
+
+    /** Live cadence preference; tick-indexed gameplay, recordings and traces never read it. */
+    public static DisplayPacing pacing(SonicConfigurationService config) {
+        return DisplayPacing.parse(config.getString(SonicConfiguration.DISPLAY_PACING));
+    }
 }

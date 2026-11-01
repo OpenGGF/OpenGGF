@@ -22,7 +22,9 @@ final emerald-reveal countdown, Death Egg lift and staircase rider-release
 boundaries, gravity-puzzle landings and walk-offs, turbine floor responses and hurt
 control, ordered physical gameplay and native-menu short-tap admission, and live
 PAL50/NTSC60 simulation/audio scheduling independent of the window rendering limit,
-with region-cadence viewport recording and row-owned trace-ghost animation whose
+display-locked pacing on matching refresh rates with a drift-regulated speaker,
+with region-cadence viewport recording, redraw-independent native object state,
+and row-owned trace-ghost animation whose
 seeks preserve observed historical context. The level editor menu now opens on a
 short front page with Exit to title. Creator tooling now includes task recipes,
 local build/test/run configuration for all seven starter purposes, read-only

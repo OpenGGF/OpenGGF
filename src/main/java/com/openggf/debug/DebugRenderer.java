@@ -981,7 +981,6 @@ public class DebugRenderer {
                         pb.setLength(0);
                         pb.append("Upd: cnt ").append(trap.getUpdateCount())
                                 .append(" last ").append(trap.getLastUpdateFrameCounter())
-                                .append(" rnd ").append(trap.getRenderCount())
                                 .append(" beam+ ").append(trap.getBeamSpawnCount());
                         lines.add(pb.toString());
 

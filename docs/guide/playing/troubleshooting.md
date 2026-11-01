@@ -49,6 +49,11 @@ cannot handle. Set it to `false` (the default).
 **FPS setting.** `display.fps` limits window rendering. Lower or higher settings
 leave gameplay and audio at the region cadence; VSync may limit actual window FPS.
 
+**Display pacing.** With `display.pacing: "AUTO"` (the default) on a 59.94 Hz display,
+the game follows the display and runs 0.1% slow so motion stays even. Set
+`display.pacing: "EXACT"` to keep nominal 60 Hz or 50 Hz speed; a picture may then
+repeat or be skipped every few seconds.
+
 **Region setting.** PAL mode (`audio.region: "PAL"`) runs at 50 Hz, which makes the game
 at a lower update rate than the default NTSC setting. Simulation and audio stay at 50 Hz
 even if `display.fps` is different. Region support is not a claim of complete

@@ -37,18 +37,18 @@ final class MgzEndBossKnuxDefeatPart extends AbstractObjectInstance
         CameraBounds bounds = cameraBounds();
         if (getX() < bounds.left || getX() > bounds.right || getY() < bounds.top || getY() > bounds.bottom) {
             ObjectLifetimeOps.expireDynamic(this);
+            return;
         }
+        // Obj_FlickerMove (sonic3k.asm:179086-179101) toggles after movement/culling.
+        // LevelLoop (sonic3k.asm:7916-7926) executes objects, unlike lag-only
+        // VInt_0_Level (sonic3k.asm:606-671). Keep the phase on executed updates.
+        flicker++;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Capture observes loc_6CFBE (docs/skdisasm/sonic3k.asm:143833) without a draw tick.
-        // ChildObjDat_6D822 (docs/skdisasm/sonic3k.asm:144695) owns these native parts.
-        int phase = flicker;
-        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
-            flicker++;
-        }
-        if ((phase & 1) == 0) return;
+        // bchg tests the old bit: the first executed update does not draw.
+        if (flicker == 0 || (flicker & 1) != 0) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
         if (renderer != null && renderer.isReady())
             renderer.drawFrameIndex(frame, getX(), getY(), false, false);

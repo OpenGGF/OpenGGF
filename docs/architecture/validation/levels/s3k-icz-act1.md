@@ -746,3 +746,15 @@ camera-word components into ordinary ICZ traversal or qualify later act/boss,
 roster/donor/width, checkpoint/respawn or native timing/pixel gaps. Exact scope
 and the still-red delivery selection are in the
 [Root composition record](../../plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).
+
+## Draw ownership follow-up (2026-10-31)
+
+`TestS3kIcz1SnowboardIntroHeadless#bigSnowPileRendersLockOnBackgroundSnowTiles`
+now checks graphics submissions through both the sprite-mask and foreground
+dispatches, plus the tile count returned by an overlay traversal. No draw
+diagnostic is retained in the pile's captured temporal state. The separate
+`TestS3kSpecialRenderEffectRegistration#iczAct1RegistersBigSnowPileOverlayAndPriorityMask`
+pins the foreground-overlay and sprite-mask stages.
+`TestRewindFixS3KIczBigSnowPileCodec` retains the live-event-owner recreation
+obligation. These bindings do not close the existing route, viewport, donor,
+team or native-pixel coverage gaps.
