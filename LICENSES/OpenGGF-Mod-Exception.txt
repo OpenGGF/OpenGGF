@@ -1,7 +1,8 @@
 OpenGGF Mod Exception
 
 Additional permission under section 7 of the GNU General Public License,
-version 3 (the "GPL"), granted by the copyright holders of OpenGGF.
+version 3 (the "GPL"), granted by the copyright holders of OpenGGF. OpenGGF
+is licensed under version 3 of the GPL only (GPL-3.0-only).
 
 1. Definitions
 
@@ -12,11 +13,20 @@ of it that keeps this exception.
 annotation com.openggf.game.ModApi, the public classes of the OpenGGF mod SDK
 and mod test kit, and the documented mod manifest and resource formats.
 
+"Mod Interface" means the Mod API together with any other classes,
+interfaces and members of OpenGGF that a mod calls, implements, extends or
+overrides. The Mod API marks the part that carries a compatibility promise;
+using other parts does not stop a work from being a Mod.
+
 "Mod" means a work that is loaded, or is intended to be loaded, by OpenGGF's
-mod loader and that uses OpenGGF only through the Mod API. A Mod may include
+mod loader and that uses OpenGGF only through the Mod Interface. Apart from what
+compiling against the Mod Interface necessarily incorporates (such as type,
+member and annotation references and constant values), a Mod may include
 material taken from OpenGGF only where that material is licensed to you under
 other terms that allow it, such as the MIT-0 mod starter material or the MIT
-example mods. A work that otherwise copies or adapts OpenGGF code is not a Mod.
+example mods. A work that otherwise copies or adapts OpenGGF code is not a Mod,
+and packaging, renaming or loading copied or modified OpenGGF code as a mod
+does not make it one.
 
 2. Permission
 
@@ -30,7 +40,10 @@ under its own terms, which you must follow.
 
 This permission is granted for the code whose copyright the OpenGGF
 contributors hold. Third-party components listed in NOTICE.md keep their own
-licences; none of them is part of the Mod API.
+licences and are not covered by it. The components NOTICE.md lists under the
+GNU Lesser General Public License are conveyed under that licence, not
+converted to the GPL; a combination that includes them must also meet its
+conditions.
 
 If you modify OpenGGF, you may extend this exception to your version, but you
 are not obliged to. If you do not wish to do so, delete this exception from

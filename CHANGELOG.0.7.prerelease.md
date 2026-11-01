@@ -1629,11 +1629,13 @@ its original drawing priority.
 ## Maintenance and release preparation
 
 - **Mod licensing:** Mods can use any licence. The OpenGGF Mod Exception, a
-  GPL-3 section 7 permission, covers mods that use the engine only through the
-  Mod API. `ggfmod init` adds no licence and its output is MIT-0. The example
+  GPL-3 section 7 permission, covers mods that call, implement or extend engine
+  types, including those outside the `@ModApi` set, without copying engine code.
+  The Nuked OPN2 and blip_buf ports are conveyed under their LGPL rather than
+  converted to the GPL, so mods under other licences can ship with them. `ggfmod init` adds no licence and its output is MIT-0. The example
   mods, the bundled Time Attack mod and the creator kit's sample campaign are
   MIT; each carries a `LICENSE` file that the creator kit exports with it. The
-  engine itself remains GPL-3.
+  engine itself remains GPL-3.0-only.
 
 - **Mod authoring entry points:** Six task recipes and mirrored agent guidance
   route creator work to supported helpers while retaining expert overrides. The
