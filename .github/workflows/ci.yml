@@ -165,7 +165,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check the published master SRV record against the channel catalogue
-        run: python3 racing/deploy/master_channels.py check-srv "$GITHUB_REF_NAME"
+        run: |
+          command -v dig >/dev/null || { sudo apt-get update && sudo apt-get install --yes dnsutils; }
+          python3 racing/deploy/master_channels.py check-srv "$GITHUB_REF_NAME"
 
       - name: Set up Java 25
         uses: actions/setup-java@v4
