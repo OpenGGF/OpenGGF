@@ -43,7 +43,7 @@ class TestMasterClient {
     }
 
     private MasterClient connect(Path identityDir, String name) throws Exception {
-        return MasterClient.connect(URI.create("ws://127.0.0.1:" + server.port() + "/master"),
+        return MasterClient.connect("ws://127.0.0.1:" + server.port() + "/master",
                 PlayerIdentity.loadOrCreate(identityDir), name, FP, null)
                 .get(15, TimeUnit.SECONDS);
     }
@@ -295,7 +295,7 @@ class TestMasterClient {
         server = MasterServer.start(TestMasterServer.testConfig(), dir);
         PlayerIdentity hostIdentity = PlayerIdentity.loadOrCreate(dir.resolve("host"));
         try (MasterClient host = MasterClient.connect(
-                URI.create("ws://[::1]:" + server.port() + "/master"),
+                "ws://[::1]:" + server.port() + "/master",
                 hostIdentity, "HOST", FP, null).get(15, TimeUnit.SECONDS)) {
             establish(dir.resolve("host"));
             ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(

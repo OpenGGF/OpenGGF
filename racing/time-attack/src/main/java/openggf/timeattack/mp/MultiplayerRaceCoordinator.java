@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -56,7 +57,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final LongSupplier clockMillis;
     private final AttemptRecordingVault recordingVault;
     private final RecordingUploader recordingUploader;
-    private final String configuredMasterUrl;
+    /** The admitted master endpoint (upload origin), or null when the room has no master. */
+    private final URI masterEndpoint;
     private final GhostStore ghostStore;
 
     private TimeAttackRuntime runtime;
@@ -90,25 +92,25 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     static final int SPECTATE_PAN_SPEED_PX = 8;
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session) {
-        this(transport, session, System::currentTimeMillis, "", false,
+        this(transport, session, System::currentTimeMillis, null, false,
                 new GhostStore(Path.of("ghosts")));
     }
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
                                       LongSupplier clockMillis) {
-        this(transport, session, clockMillis, "", false,
+        this(transport, session, clockMillis, null, false,
                 new GhostStore(Path.of("ghosts")));
     }
 
     public MultiplayerRaceCoordinator(RaceTransport transport, ClientRaceSession session,
-                                      LongSupplier clockMillis, String configuredMasterUrl,
+                                      LongSupplier clockMillis, URI masterEndpoint,
                                       boolean trustInsecure, GhostStore ghostStore) {
         this.transport = Objects.requireNonNull(transport, "transport");
         this.session = Objects.requireNonNull(session, "session");
         session.setQuickChatFormatter(TimeAttackQuickChat::format);
         this.clockMillis = Objects.requireNonNull(clockMillis, "clockMillis");
         this.recordingVault = new AttemptRecordingVault(clockMillis);
-        this.configuredMasterUrl = configuredMasterUrl == null ? "" : configuredMasterUrl;
+        this.masterEndpoint = masterEndpoint;
         this.ghostStore = Objects.requireNonNull(ghostStore, "ghostStore");
         String token = transport.sessionToken();
         this.recordingUploader = token == null || token.isBlank()
@@ -722,7 +724,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         }
         try {
             String url = RecordingUploader.resolveUploadUrl(
-                    request.uploadUrl(), configuredMasterUrl);
+                    request.uploadUrl(), masterEndpoint);
             RecordingUploader.Admission admission = recordingUploader.upload(url, recording, success -> {
                 if (!success) {
                     LOGGER.warning("Attempt recording upload failed: "

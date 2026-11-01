@@ -128,7 +128,7 @@ class TestMasterEndToEnd {
 
     private MasterClient connect(PlayerIdentity identity, String name) throws Exception {
         MasterClient client = MasterClient.connect(
-                        URI.create("ws://127.0.0.1:" + server.port() + "/master"),
+                        "ws://127.0.0.1:" + server.port() + "/master",
                         identity, name, FP, null)
                 .get(15, TimeUnit.SECONDS);
         clients.add(client);

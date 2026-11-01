@@ -88,7 +88,7 @@ public final class TimeAttackCapacityVideoTool {
         peers.fill();
         Path settings = this.out.resolve("profile/saves/mods/time-attack/settings.txt");
         Files.createDirectories(settings.getParent());
-        Files.writeString(settings, "displayName=Capture Player\nmasterUrl=" + peers.endpoint()
+        Files.writeString(settings, "displayName=Capture Player\nmasterMode=custom\nmasterCustom=" + peers.endpoint()
                 + "\nmasterTrustInsecure=false\nminimap=true\n");
         movie = new Bk2MovieLoader().load(root.resolve("src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2"));
         capture = new TimeAttackVideoCaptureTool(this.out, root, 320, 224);

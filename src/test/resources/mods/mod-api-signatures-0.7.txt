@@ -1023,6 +1023,8 @@ CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher$BinarySender visi
 CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher$BinarySender visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.client.LobbyPosePublisher visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.MasterClient visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.MasterDiscoveryException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.MasterDiscoveryException$Reason visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Control visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Disconnected visible @com.openggf.game.ModApi
@@ -3714,7 +3716,11 @@ FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.ope
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase RUNNING
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase VOTE
 FIELD com.openggf.net.client.MasterClient public,static,final int MAX_PENDING_REQUESTS
+FIELD com.openggf.net.client.MasterClient public,static,final long CONNECT_DEADLINE_MILLIS
 FIELD com.openggf.net.client.MasterClient public,static,final long MASTER_REPLY_TIMEOUT_MILLIS
+FIELD com.openggf.net.client.MasterDiscoveryException$Reason public,static,final com.openggf.net.client.MasterDiscoveryException$Reason FOREIGN_TARGET
+FIELD com.openggf.net.client.MasterDiscoveryException$Reason public,static,final com.openggf.net.client.MasterDiscoveryException$Reason LOOKUP_FAILED
+FIELD com.openggf.net.client.MasterDiscoveryException$Reason public,static,final com.openggf.net.client.MasterDiscoveryException$Reason NOT_PUBLISHED
 FIELD com.openggf.net.client.RaceClient public,static,final long JOIN_TIMEOUT_MILLIS
 FIELD com.openggf.net.client.RemoteGhostPlayback public,static,final int CATCHUP_SLACK_FRAMES
 FIELD com.openggf.net.client.RemoteGhostPlayback public,static,final int DELAY_GROW_FRAMES
@@ -13506,6 +13512,7 @@ METHOD com.openggf.net.client.LobbyPosePublisher public  void onFrame(com.opengg
 METHOD com.openggf.net.client.MasterClient public  boolean isOpen()
 METHOD com.openggf.net.client.MasterClient public  com.openggf.net.hub.RoomInviteService inviteService(java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.lang.String masterSessionToken()
+METHOD com.openggf.net.client.MasterClient public  java.net.URI endpoint()
 METHOD com.openggf.net.client.MasterClient public  java.util.List<com.openggf.net.client.RaceClient$InboundEvent> drainInbound()
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinInvite(java.lang.String,com.openggf.net.protocol.ControlMessage$RoomJoinResult,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.protocol.RoomPassword)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinResolved(com.openggf.net.protocol.ControlMessage$RoomJoinResult,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.client.RoomJoinOptions)
@@ -13523,8 +13530,11 @@ METHOD com.openggf.net.client.MasterClient public  void leaveRoom(java.lang.Stri
 METHOD com.openggf.net.client.MasterClient public  void sendBinary(byte[])
 METHOD com.openggf.net.client.MasterClient public  void sendControl(com.openggf.net.protocol.ControlMessage)
 METHOD com.openggf.net.client.MasterClient public,static  boolean allowsRelayFallback(java.lang.Throwable)
-METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.MasterClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,javax.net.ssl.SSLContext)
+METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.MasterClient> connect(java.lang.String,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,javax.net.ssl.SSLContext)
 METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> completeRoomHandshake(com.openggf.net.client.RaceConnection,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
+METHOD com.openggf.net.client.MasterDiscoveryException public  com.openggf.net.client.MasterDiscoveryException$Reason reason()
+METHOD com.openggf.net.client.MasterDiscoveryException$Reason public,static  com.openggf.net.client.MasterDiscoveryException$Reason valueOf(java.lang.String)
+METHOD com.openggf.net.client.MasterDiscoveryException$Reason public,static  com.openggf.net.client.MasterDiscoveryException$Reason[] values()
 METHOD com.openggf.net.client.RaceClient public  boolean isOpen()
 METHOD com.openggf.net.client.RaceClient public  com.openggf.net.protocol.ControlMessage$JoinAccepted joinAccepted()
 METHOD com.openggf.net.client.RaceClient public  int playerSlot()
@@ -17143,6 +17153,7 @@ NESTED com.openggf.mods.ui.TextLayout com.openggf.mods.ui.TextLayout$Alignment
 NESTED com.openggf.mods.ui.TextLayout com.openggf.mods.ui.TextLayout$Metrics
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.client.GhostStreamPublisher com.openggf.net.client.GhostStreamPublisher$BinarySender
+NESTED com.openggf.net.client.MasterDiscoveryException com.openggf.net.client.MasterDiscoveryException$Reason
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$Control
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$Disconnected
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$GhostData
@@ -21010,6 +21021,7 @@ TYPE class public,final com.openggf.net.client.DirectRoomRegistration SUPER java
 TYPE class public,final com.openggf.net.client.GhostStreamPublisher SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.LobbyPosePublisher SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
+TYPE class public,final com.openggf.net.client.MasterDiscoveryException SUPER java.io.IOException
 TYPE class public,final com.openggf.net.client.RaceClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostPlayback SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostRegistry SUPER java.lang.Object
@@ -21277,6 +21289,7 @@ TYPE enum public,static,final com.openggf.mods.ui.AtlasFont$GlyphCase SUPER java
 TYPE enum public,static,final com.openggf.mods.ui.FocusRegions$Direction SUPER java.lang.Enum<com.openggf.mods.ui.FocusRegions$Direction>
 TYPE enum public,static,final com.openggf.mods.ui.TextLayout$Alignment SUPER java.lang.Enum<com.openggf.mods.ui.TextLayout$Alignment>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
+TYPE enum public,static,final com.openggf.net.client.MasterDiscoveryException$Reason SUPER java.lang.Enum<com.openggf.net.client.MasterDiscoveryException$Reason>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
 TYPE enum public,static,final com.openggf.net.hub.RoomHost$ListenerAdmission SUPER java.lang.Enum<com.openggf.net.hub.RoomHost$ListenerAdmission>
 TYPE enum public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation SUPER java.lang.Enum<com.openggf.net.protocol.ControlMessage$InviteOperation>
@@ -23095,6 +23108,8 @@ TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher$BinarySender @com.op
 TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher$BinarySender @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.client.LobbyPosePublisher @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.MasterClient @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.MasterDiscoveryException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.MasterDiscoveryException$Reason @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$Control @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$Disconnected @com.openggf.game.ModApi

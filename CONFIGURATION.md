@@ -861,7 +861,7 @@ does not change the private password or remove admitted players. Direct joins
 reveal the host's endpoint to the joining peer; relay routing protects it from
 that peer. The trusted master still processes routing metadata.
 
-Short codes use the selected `masterUrl` for remote and player-hosted games.
+Short codes use the selected master server for remote and player-hosted games.
 Without a configured or available master, manual LAN joining retains the longer
 pinned invite, such as `HOST_IP:27888#<share-code>`. Replace `HOST_IP` with the
 host's reachable LAN IP or name before sharing. Join LAN requires the complete
@@ -870,7 +870,15 @@ password. Plain addresses and `ws://` room connections are rejected. Invitations
 are no longer automatically logged, written to `lan-invite.txt` or saved as a
 last join address. Existing user-authored exports are left untouched.
 
-Invite, password, chat, display-name and URL fields use keyboard text entry.
+A host-name master is looked up on every Browse or Host: the SRV records must name
+that same host (they may point at a CNAME), so DNS chooses only the port and the
+certificate is still checked against the typed name. A missing record, a lookup
+failure and a record naming another host each show their own message ("No master
+server is published at ...", "Could not look up ...", "... points to another host");
+there is no fallback port. Recording uploads use the port the connection was
+admitted on.
+
+Invite, password, chat, display-name and master-server fields use keyboard text entry.
 Enter accepts and Escape cancels. Global display/capture shortcuts stay quiet
 while an editor is open. Invite and password fields are masked while typing.
 
@@ -884,8 +892,9 @@ folder. Edit them from the **Settings** row of the Time Attack menu; changes sav
 | `retryKey` | `82` (`R`) | Keyboard key that retries the act. The settings page captures a key; the file accepts GLFW key codes or names such as `F6`. |
 | `hostPort` | `27888` | Port for player-hosted rooms (manual LAN and master-listed direct rooms), served as a pinned TLS WebSocket. |
 | `displayName` | `""` | Multiplayer display name; blank uses the identity prefix. |
-| `masterUrl` | `""` | Master-server `wss://` URL for browsing and short invite codes, including player-hosted rooms; blank leaves manual LAN joining available. Plaintext `ws://` is allowed only with a literal loopback IPv4/IPv6 address, not `localhost` or other hostnames. |
-| `masterTrustInsecure` | `false` | Local development only: trust master-server and recording-upload TLS certificates at literal loopback addresses. Insecure upload mode rejects remote endpoints before taking custody of a recording; remote masters/uploads require normal certificate validation. |
+| `masterMode` | `default` | Master server for browsing and short invite codes, including player-hosted rooms. `default` follows the running build's master (the Settings row shows, for example, **Build default (multi-dev.openggf.com)**); the host name is never written here, so a profile moved between builds follows the new build. `custom` uses `masterCustom`. `off` disables browsing and listing; manual LAN joining still works. Left/Right on the Settings row cycles the modes. |
+| `masterCustom` | `""` | The custom master: a bare host name such as `multi-next.openggf.com`, whose port comes from its `_openggf._tcp` DNS SRV record, or a full `wss://host:port/master` URL (IPv6 literals in brackets). A host name must have at least two labels; IP literals, single-label names and `localhost` need a URL. Plaintext `ws://` is allowed only with a literal loopback IPv4/IPv6 address. Kept while another mode is selected. Editing the row with empty text selects `default`. A pre-release `masterUrl` key is ignored; an old engine `TIME_ATTACK_NET_MASTER_URL` imports as `custom`. |
+| `masterTrustInsecure` | `false` | Local development only: trust master-server and recording-upload TLS certificates at literal loopback addresses. It applies only to a `wss://` URL with a literal loopback address, never to a host name, whatever DNS returns. Insecure upload mode rejects remote endpoints before taking custody of a recording; remote masters/uploads require normal certificate validation. |
 | `minimap` | `true` | Show the multiplayer minimap progress strip. |
 | `chatMode` | `FULL_CHAT` | Requested communication for rooms this player creates: `FULL_CHAT` (typed and quick), `QUICK_CHAT` (quick only), or `OFF`. Public relay hosts may impose a stricter maximum. Personal censorship and chat hiding use the global `multiplayer.*` keys above. |
 

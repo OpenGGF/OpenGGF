@@ -366,6 +366,18 @@ Unreleased. The earlier development themes remain in
   Restarting a recording releases the retired audio reader before replacing the
   ROM, while a live audio capture continues on the reopened source.
 
+- **Time Attack master servers by host name:** Settings > Master server starts on
+  **Build default**, which follows the running build's own master
+  (`multi-dev.openggf.com` for develop, `multi-next.openggf.com` for next,
+  `multi.openggf.com` for releases) and is never saved into the profile. **Custom**
+  accepts a bare host name or a full `wss://` URL (now including bracketed IPv6), and
+  **Off** keeps LAN play only. A host name's port comes from its `_openggf._tcp` DNS
+  SRV record; the record must name the same host, so certificate checks are unchanged
+  and there is no guessed fallback port. A missing record, a failed lookup and a
+  record naming another host each give their own message. Recording uploads use the
+  port the master connection was admitted on. Native packages include the JDK DNS
+  provider this needs.
+
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS
   certificate. Remote browser, join and recording endpoints require TLS;

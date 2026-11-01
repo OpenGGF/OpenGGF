@@ -371,6 +371,16 @@ the claim-owner reads, `GameplayFrameController.capturesKeyboardText`,
 captureKeyboardText`. All are additive defaults; the descriptor/runtime version
 remains unpublished 0.7.0 and the normalized signature pin is regenerated in place.
 
+Hostname-only multiplayer endpoints (2026-11-01, user-authorized) replace
+`MasterClient.connect(URI, ...)` with `connect(String address, ...)`: the address is a
+bare DNS host name, whose port comes from `_openggf._tcp` SRV records naming that same
+host, or an explicit `ws(s)` URL. `MasterClient.endpoint()` returns the admitted URI,
+`CONNECT_DEADLINE_MILLIS` bounds the whole operation, and `MasterDiscoveryException`
+(with its `Reason`) reports fail-closed discovery. Every caller was migrated; no URI
+overload is retained. DNS types stay package-private. This changes the unpublished 0.7
+candidate; the normalized pin is regenerated in place and the descriptor/runtime
+version remains 0.7.0.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.

@@ -16,13 +16,13 @@ class TestRacingFullTextAccess {
         TimeAttackSettings settings = new TimeAttackSettings();
         settings.setDisplayName("日本語".repeat(8));
         String address = "https://example.test/" + "long-path/".repeat(13) + "ADDRESS_TAIL";
-        settings.setMasterUrl(address);
+        settings.setMasterSelection(new MasterSelection.Custom(address));
         AtomicInteger changes = new AtomicInteger();
         FakeViewInput input = new FakeViewInput();
         SettingsView view = new SettingsView(settings, changes::incrementAndGet, cue -> { }, "s2", "tails");
         input.tapKey(view::update, SceneKeys.F1);
         String read = FullTextReaderProbe.readAll(input, view::update, view::draw, view::detailsVisibleLines, view::detailsFirstLine);
-        assertTrue(read.contains(settings.masterUrl()));
+        assertTrue(read.contains(settings.customMasterText()));
         assertTrue(read.contains("ADDRESS_TAIL"));
         assertTrue(read.contains(settings.displayName()));
         input.tapEnter(view::update);

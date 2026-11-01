@@ -170,22 +170,37 @@ class TestRecordingUploader {
     void resolvesPathOnlyUploadUrlsAgainstConfiguredMasterUrl() {
         assertEquals("https://m.example:27900/recordings/ab",
                 RecordingUploader.resolveUploadUrl(
-                        "/recordings/ab", "wss://m.example:27900/master"));
+                        "/recordings/ab", java.net.URI.create("wss://m.example:27900/master")));
         assertEquals("http://127.0.0.1:1234/recordings/ab",
                 RecordingUploader.resolveUploadUrl(
-                        "/recordings/ab", "ws://127.0.0.1:1234/master"));
+                        "/recordings/ab", java.net.URI.create("ws://127.0.0.1:1234/master")));
         assertEquals("https://m.example/recordings/ab",
                 RecordingUploader.resolveUploadUrl(
-                        "https://m.example/recordings/ab", "wss://m.example/master"));
+                        "https://m.example/recordings/ab", java.net.URI.create("wss://m.example/master")));
         assertThrows(IllegalArgumentException.class, () ->
                 RecordingUploader.resolveUploadUrl(
-                        "https://cdn.example/recordings/ab", "wss://m.example/master"));
+                        "https://cdn.example/recordings/ab", java.net.URI.create("wss://m.example/master")));
         assertThrows(IllegalArgumentException.class, () ->
                 RecordingUploader.resolveUploadUrl(
-                        "http://127.0.0.1/recordings/ab", "wss://m.example/master"));
+                        "http://127.0.0.1/recordings/ab", java.net.URI.create("wss://m.example/master")));
         assertThrows(IllegalArgumentException.class, () ->
-                RecordingUploader.resolveUploadUrl("/recordings/ab", ""));
+                RecordingUploader.resolveUploadUrl("/recordings/ab", null));
         assertThrows(IllegalArgumentException.class, () ->
-                RecordingUploader.resolveUploadUrl("/admin", "wss://m.example/master"));
+                RecordingUploader.resolveUploadUrl("/admin", java.net.URI.create("wss://m.example/master")));
+    }
+
+    @Test
+    void uploadsUseTheAdmittedEndpointsDiscoveredPort() {
+        // The player typed a bare host; DNS supplied 27910, and the admitted endpoint carries it.
+        java.net.URI admitted = java.net.URI.create("wss://multi-dev.openggf.com:27910/master");
+        assertEquals("https://multi-dev.openggf.com:27910/recordings/ab",
+                RecordingUploader.resolveUploadUrl("/recordings/ab", admitted));
+        assertEquals("https://multi-dev.openggf.com:27910/recordings/ab",
+                RecordingUploader.resolveUploadUrl("https://multi-dev.openggf.com:27910/recordings/ab", admitted));
+        // Broken case: the settings-text origin (portless, so 443) is not the admitted origin.
+        assertThrows(IllegalArgumentException.class, () -> RecordingUploader.resolveUploadUrl(
+                "https://multi-dev.openggf.com/recordings/ab", admitted));
+        assertThrows(IllegalArgumentException.class, () -> RecordingUploader.resolveUploadUrl(
+                "https://multi-dev.openggf.com:27920/recordings/ab", admitted));
     }
 }

@@ -46,6 +46,15 @@ import java.util.concurrent.FutureTask;
 @com.openggf.game.ModApi
 public final class MasterClient implements AutoCloseable {
     public static final long MASTER_REPLY_TIMEOUT_MILLIS = 20_000;
+    /**
+     * Upper bound for {@link #connect(String, PlayerIdentity, String, String, SSLContext)}: DNS
+     * discovery (JNDI worst case about 7 s for one resolver) plus candidate dials and admission.
+     */
+    public static final long CONNECT_DEADLINE_MILLIS = 25_000;
+    /** DNS stage cap; JNDI's 1 s initial timeout with two doubling retries needs about 7 s. */
+    static final long DNS_STAGE_MILLIS = 8_000;
+    /** TCP connect timeout for one discovered candidate. */
+    static final long DIAL_MILLIS = 5_000;
     public static final int MAX_PENDING_REQUESTS = 128;
     private static final long CANCELED_CREATE_RETENTION_MILLIS = 60_000;
 
@@ -78,8 +87,10 @@ public final class MasterClient implements AutoCloseable {
     private volatile ControlMessage.JoinAccepted joinAccepted;
     private final AtomicReference<HostMasterLink> hostLink = new AtomicReference<>();
     private volatile boolean open;
-    private MasterClient(PlayerIdentity identity, String displayName,
+    private final URI endpoint;
+    private MasterClient(URI endpoint, PlayerIdentity identity, String displayName,
                          String determinismFingerprint) {
+        this.endpoint = endpoint;
         this.identity = identity;
         handshake = new ClientHandshake(identity, displayName, determinismFingerprint, null,
                 AuthenticationTranscript.Role.MASTER, () -> transportBinding.get());
@@ -87,16 +98,160 @@ public final class MasterClient implements AutoCloseable {
                 () -> webSocket, () -> retire("master outbound limit exceeded"));
     }
 
+    /**
+     * Connects and is admitted to a master server.
+     *
+     * <p>{@code address} is a bare DNS host name (for example {@code multi-dev.openggf.com}) or an
+     * explicit {@code wss://host[:port][/master]} URL ({@code ws://} only to a literal loopback
+     * address). A host name's port comes from its {@code _openggf._tcp} SRV records; every record
+     * must name the typed host itself, so the certificate is still checked against that name.
+     * Candidates are tried in RFC 2782 order, each with a fresh connection and TLS observation;
+     * only a failure to reach a candidate before the WebSocket upgrade moves on to the next.
+     * Certificate, protocol and admission failures end the attempt. Discovery fails closed with a
+     * {@link MasterDiscoveryException}; there is no fallback port and no cache, so each call
+     * looks the name up again. Invalid address text fails with {@link IllegalArgumentException}.
+     * The whole operation completes within {@link #CONNECT_DEADLINE_MILLIS}.
+     *
+     * @param sslContextOrNull the trust to use for {@code wss}, or null for the default trust store;
+     *                         callers decide any relaxed trust from the address text, never from DNS
+     */
     public static CompletableFuture<MasterClient> connect(
-            URI uri, PlayerIdentity identity, String displayName,
+            String address, PlayerIdentity identity, String displayName,
             String determinismFingerprint, SSLContext sslContextOrNull) {
+        return connect(address, identity, displayName, determinismFingerprint, sslContextOrNull,
+                JndiSrvLookup.system(), java.util.concurrent.ThreadLocalRandom.current(),
+                java.util.function.UnaryOperator.identity());
+    }
+
+    /** The admitted endpoint this client is connected to, including a discovered port. */
+    public URI endpoint() {
+        return endpoint;
+    }
+
+    /**
+     * Test seam: the same operation with an injected DNS lookup and weight randomness. {@code route}
+     * maps each discovered candidate to the URI actually dialled; production uses the identity
+     * (tests route a multi-label test name to their loopback listeners).
+     */
+    static CompletableFuture<MasterClient> connect(
+            String address, PlayerIdentity identity, String displayName,
+            String determinismFingerprint, SSLContext sslContextOrNull,
+            MasterAddressResolver.SrvLookup lookup, java.util.random.RandomGenerator random,
+            java.util.function.UnaryOperator<URI> route) {
+        MasterAddressResolver.Address parsed;
+        try {
+            parsed = MasterAddressResolver.parse(address);
+        } catch (IllegalArgumentException invalid) {
+            return CompletableFuture.failedFuture(invalid);
+        }
+        return switch (parsed) {
+            case MasterAddressResolver.Explicit explicit -> dial(explicit.endpoint(), identity, displayName,
+                    determinismFingerprint, sslContextOrNull, MASTER_REPLY_TIMEOUT_MILLIS,
+                    MASTER_REPLY_TIMEOUT_MILLIS, null);
+            case MasterAddressResolver.Named named -> discover(named, identity, displayName,
+                    determinismFingerprint, sslContextOrNull, lookup, random, route);
+        };
+    }
+
+    private static CompletableFuture<MasterClient> discover(
+            MasterAddressResolver.Named named, PlayerIdentity identity, String displayName,
+            String determinismFingerprint, SSLContext sslContextOrNull,
+            MasterAddressResolver.SrvLookup lookup, java.util.random.RandomGenerator random,
+            java.util.function.UnaryOperator<URI> route) {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(CONNECT_DEADLINE_MILLIS);
+        CompletableFuture<MasterClient> result = new CompletableFuture<>();
+        AtomicReference<CompletableFuture<MasterClient>> current = new AtomicReference<>();
+        result.whenComplete((client, failure) -> {
+            CompletableFuture<MasterClient> attempt = current.get();
+            if (failure != null && attempt != null) attempt.cancel(true);
+        });
+        Thread.ofVirtual().name("master-discovery").start(() -> {
+            try {
+                List<MasterAddressResolver.Srv> answer;
+                try {
+                    answer = lookup.query(named.srvOwner(),
+                            Duration.ofMillis(Math.min(DNS_STAGE_MILLIS, remainingMillis(deadline))));
+                } catch (java.io.IOException failed) {
+                    throw new MasterDiscoveryException(MasterDiscoveryException.Reason.LOOKUP_FAILED,
+                            named.asciiHost(), failed);
+                }
+                Throwable unreachable = null;
+                for (URI candidate : MasterAddressResolver.candidates(named, answer, random)) {
+                    long remaining = remainingMillis(deadline);
+                    if (result.isDone() || remaining <= 0) break;
+                    AtomicBoolean upgraded = new AtomicBoolean();
+                    CompletableFuture<MasterClient> attempt = dial(route.apply(candidate), identity, displayName,
+                            determinismFingerprint, sslContextOrNull, Math.min(DIAL_MILLIS, remaining),
+                            remaining, upgraded);
+                    current.set(attempt);
+                    if (result.isDone()) {
+                        attempt.cancel(true);
+                        return;
+                    }
+                    try {
+                        MasterClient admitted = attempt.get();
+                        if (!result.complete(admitted)) admitted.close();
+                        return;
+                    } catch (java.util.concurrent.ExecutionException | java.util.concurrent.CancellationException e) {
+                        Throwable cause = e instanceof java.util.concurrent.ExecutionException ? e.getCause() : e;
+                        if (upgraded.get() || !unreachableBeforeUpgrade(cause)) {
+                            result.completeExceptionally(cause);
+                            return;
+                        }
+                        unreachable = cause;
+                    }
+                }
+                result.completeExceptionally(unreachable != null ? unreachable
+                        : new TimeoutException("master connection deadline passed"));
+            } catch (Throwable failure) {
+                result.completeExceptionally(failure);
+            }
+        });
+        result.orTimeout(CONNECT_DEADLINE_MILLIS, TimeUnit.MILLISECONDS);
+        return result;
+    }
+
+    private static long remainingMillis(long deadlineNanos) {
+        return TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
+    }
+
+    /**
+     * Whether a candidate failed only to be reached: TCP refusal, no route or a connect timeout,
+     * before any TLS or HTTP exchange. TLS (including certificate) and protocol failures are not
+     * reachability failures, so they never move on to another candidate.
+     */
+    static boolean unreachableBeforeUpgrade(Throwable failure) {
+        boolean reachability = false;
+        for (Throwable cause = failure; cause != null; cause = cause.getCause() == cause ? null : cause.getCause()) {
+            if (cause instanceof javax.net.ssl.SSLException
+                    || cause instanceof java.security.GeneralSecurityException
+                    || cause instanceof java.net.http.WebSocketHandshakeException
+                    || cause instanceof RaceClient.JoinRejectedException
+                    || cause instanceof ProtocolViolationException) {
+                return false;
+            }
+            if (cause instanceof java.net.ConnectException
+                    || cause instanceof java.net.http.HttpConnectTimeoutException
+                    || cause instanceof java.net.NoRouteToHostException
+                    || cause instanceof java.net.PortUnreachableException) {
+                reachability = true;
+            }
+        }
+        return reachability;
+    }
+
+    /** One fresh client, HTTP client and TLS observer for one endpoint; never reused. */
+    private static CompletableFuture<MasterClient> dial(
+            URI uri, PlayerIdentity identity, String displayName, String determinismFingerprint,
+            SSLContext sslContextOrNull, long connectTimeoutMillis, long admissionTimeoutMillis,
+            AtomicBoolean upgraded) {
         try { NetworkEndpointPolicy.requireWebSocket(uri); }
         catch (IllegalArgumentException invalid) { return CompletableFuture.failedFuture(invalid); }
-        MasterClient client = new MasterClient(identity, displayName, determinismFingerprint);
+        MasterClient client = new MasterClient(uri, identity, displayName, determinismFingerprint);
         CompletableFuture<MasterClient> admitted = new CompletableFuture<>();
         WebSocket.Listener listener = client.listener(admitted);
         HttpClient.Builder http = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(MASTER_REPLY_TIMEOUT_MILLIS));
+                .connectTimeout(Duration.ofMillis(Math.max(1, connectTimeoutMillis)));
         if ("wss".equalsIgnoreCase(uri.getScheme())) {
             try {
                 ObservedTlsContext observed = new ObservedTlsContext(
@@ -114,6 +269,7 @@ public final class MasterClient implements AutoCloseable {
                         admitted.completeExceptionally(error);
                         return;
                     }
+                    if (upgraded != null) upgraded.set(true);
                     client.webSocket = socket;
                     if (admitted.isDone()) {
                         socket.abort();
@@ -121,7 +277,7 @@ public final class MasterClient implements AutoCloseable {
                     }
                     client.sendRawControl(null, client.handshake.hello());
                 });
-        admitted.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+        admitted.orTimeout(Math.max(1, admissionTimeoutMillis), TimeUnit.MILLISECONDS)
                 .whenComplete((ignored, error) -> {
                     if (error != null) {
                         client.retire("master admission failed");
