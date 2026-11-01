@@ -339,9 +339,9 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // d4 = x_pos(a0) (sonic3k.asm:88512); the platform only ever moves vertically.
-        return false;
+        return getX();
     }
 
     /** ROM x_pos/y_pos are object centres. */

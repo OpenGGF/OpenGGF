@@ -835,7 +835,7 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0x08, block.getBalanceWidthPixels());
         assertEquals(0, block.getSolidParams().offsetX());
         assertEquals(0, block.getSolidParams().offsetY());
-        assertFalse(block.carriesRiderOnHorizontalMove(null));
+        assertEquals(block.getX(), block.tailCallD4(block.getX() + 8));
         assertEquals(0x1380, block.getOutOfRangeReferenceX(),
                 "ObjD2 unloads against objoff_30 rather than its moving x_pos");
         assertFalse(block.suppressesObjectEdgeBalance());
@@ -936,7 +936,7 @@ class TestSonic2ObjectBugFixes {
         assertEquals(SolidRoutineKind.FULL_SOLID, longProfile.kind());
         assertEquals(longPlatform.isTopSolidOnly(), longProfile.topSolidOnly());
         assertEquals(longPlatform.usesStickyContactBuffer(), longProfile.stickyContactBuffer());
-        assertEquals(longPlatform.carriesRiderOnHorizontalMove(null),
+        assertEquals(longPlatform.tailCallD4(0x1234) == 0x1234,
                 longProfile.carriesAirborneRiderAfterExitPlatform());
     }
 

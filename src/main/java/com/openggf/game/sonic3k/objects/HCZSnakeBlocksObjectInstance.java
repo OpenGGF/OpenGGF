@@ -229,13 +229,13 @@ public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // loc_25724 moves the block first, then loads the updated x_pos into
         // d4 immediately before SolidObjectFull. The continued-ride path copies
         // d4 to d2, and MvSonicOnPtfm subtracts that same current x_pos, so the
         // horizontal carry delta is zero (sonic3k.asm:50933-50950,
         // 41016-41042,41642-41679).
-        return false;
+        return getX();
     }
 
     @Override

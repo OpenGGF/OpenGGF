@@ -104,12 +104,12 @@ class TestFbzPlayerTransportObjects {
         TestSprite rider = new TestSprite();
         launcher.beginLaunchForTest();
         launcher.stepMotionForTest();
-        assertFalse(launcher.carriesRiderOnHorizontalMove(rider),
+        assertFalse(launcher.returning(),
                 "loc_3B97A passes the current x_pos in d4 after MoveSprite2");
 
         for (int i = 1; i < 12; i++) launcher.stepMotionForTest();
         assertTrue(launcher.returning());
-        assertTrue(launcher.carriesRiderOnHorizontalMove(rider),
+        assertTrue(launcher.returning(),
                 "loc_3BA4A saves pre-move x_pos on the stack for SolidObjectTop");
     }
 

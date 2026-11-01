@@ -53,7 +53,7 @@ class TestS3kMgzTriggerPlatformObject {
                 "SolidObjectFull retains the exact d1*2 right edge");
         assertTrue(instance.airborneStaleStandingBitReturnsNoContact(null),
                 "SolidObjectFull must return before new contact for an airborne stale rider");
-        assertFalse(instance.carriesRiderOnHorizontalMove(null),
+        assertEquals(instance.getX(), instance.tailCallD4(instance.getX() + 8),
                 "SolidObjectFull receives the trigger platform's post-move X as d4");
         assertEquals(0x0003, instance.romObjectCodePointerHighWord());
         assertEquals(5, instance.getPriorityBucket());

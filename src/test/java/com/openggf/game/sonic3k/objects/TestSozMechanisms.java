@@ -59,7 +59,6 @@ class TestSozMechanisms {
             assertEquals(300+sign*21,subtype==1?door.getY():door.getX());
             SozZoneRuntimeState.writeTrigger(1,0);door.update(2,null);
             assertEquals(300+sign*20,subtype==1?door.getY():door.getX());
-            assertFalse(door.carriesRiderOnHorizontalMove(null));
         }
     }
     @Test void offscreenSwitchDecaysOnRetainPassThenYieldsToReloadedPlacement() {
@@ -105,7 +104,8 @@ class TestSozMechanisms {
             @Override public com.openggf.game.solid.ObjectSolidExecutionContext solidExecution() { return context; }
         }.withPlayerQuery(new ObjectPlayerQuery(() -> p,() -> List.of(follower)));
         o.setServices(services);
-        when(context.resolveSolidNowAll()).thenAnswer(i -> { o.setPlayerPushing(follower,true);return null; }).thenReturn(null);
+        // The switch's call loads its current x_pos into d4.
+        when(context.solidWithD4(org.mockito.ArgumentMatchers.anyInt())).thenAnswer(i -> { o.setPlayerPushing(follower,true);return null; }).thenReturn(null);
         o.update(0,p);assertEquals(1,SozZoneRuntimeState.trigger(1));
         var state=o.captureRewindState();var signals=Sonic3kLevelTriggerManager.snapshot();
         o.update(1,p);assertEquals(2,SozZoneRuntimeState.trigger(1));

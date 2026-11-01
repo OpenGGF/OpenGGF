@@ -55,7 +55,7 @@ class TestS3kHczSnakeBlocksObject {
     void continuedRideUsesPostMoveXAsItsZeroDeltaCarryReference() {
         HCZSnakeBlocksObjectInstance instance = createInstance(0x00, 0x00);
 
-        assertFalse(instance.carriesRiderOnHorizontalMove(null),
+        assertEquals(instance.getX(), instance.tailCallD4(instance.getX() + 8),
                 "Obj67 loads its post-movement x_pos into d4 before SolidObjectFull");
     }
 

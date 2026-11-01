@@ -1394,6 +1394,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return services().solidExecution().resolveSolidNowAll();
     }
 
+    /** {@link #checkpointAll()} with the {@code d4} the call site loads itself. */
+    protected SolidCheckpointBatch checkpointAll(int d4) {
+        return services().solidExecution().solidWithD4(d4);
+    }
+
     protected boolean hasStandingContact(SolidCheckpointBatch batch) {
         for (PlayerSolidContactResult result : batch.perPlayer().values()) {
             if (result != null && result.standingNow()) {

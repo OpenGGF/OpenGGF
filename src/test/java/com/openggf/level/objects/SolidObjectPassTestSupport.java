@@ -30,7 +30,7 @@ public final class SolidObjectPassTestSupport {
         SolidEntryRegisters captured = SolidEntryRegisters.capture(manager, object, provider);
         return manager.solidContacts().processCompatibilityCheckpoint(object, player, sidekicks, true,
                 new SolidEntryRegisters(manager, object, provider, object.getPreUpdateX(),
-                        captured.pieceEntryX(), null));
+                        captured.pieceEntryX(), null).forTailCall());
     }
 
     /** One participant's checkpoint for {@code object}, with its current x as d4. */

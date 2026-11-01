@@ -202,9 +202,9 @@ class TestFbzPlaneTransition {
         assertTrue(manager.isRidingObject(player, controller));
         var snapshot = controller.captureRewindState();
         controller.update(2, player);
-        assertTrue(controller.carriesRiderOnHorizontalMove(player), "ordinary d4 sampling resumes next dispatch");
+        assertEquals(0x1234, controller.tailCallD4(0x1234), "ordinary d4 sampling resumes next dispatch");
         controller.restoreRewindState(snapshot);
-        assertFalse(controller.carriesRiderOnHorizontalMove(player), "rewind retains the native zero-delta dispatch");
+        assertEquals(controller.getX(), controller.tailCallD4(0x1234), "rewind retains the native zero-delta dispatch");
     }
 
     @Test
