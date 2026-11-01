@@ -2662,6 +2662,11 @@ public class TestSolidObjectManager {
             SolidObjectPassTestSupport.routineCheckpoint(manager,rock,rider,List.of(pusher));
             return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
         });
+        // A rock that is not carrying loads its current x_pos into d4.
+        org.mockito.Mockito.when(context.solidWithD4(org.mockito.ArgumentMatchers.anyInt())).thenAnswer(i -> {
+            SolidObjectPassTestSupport.routineCheckpoint(manager,rock,rider,List.of(pusher),i.getArgument(0));
+            return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
+        });
         var level=org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
         org.mockito.Mockito.when(level.getFrameCounter()).thenReturn(1);
         rock.setServices(new StubObjectServices() {

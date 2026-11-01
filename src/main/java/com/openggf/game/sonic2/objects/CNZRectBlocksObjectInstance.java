@@ -216,10 +216,10 @@ public class CNZRectBlocksObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // ObjD2 stores the current x_pos in d4 immediately before SolidObject,
         // so MvSonicOnPtfm observes zero object delta for this routine.
-        return false;
+        return getX();
     }
 
     @Override

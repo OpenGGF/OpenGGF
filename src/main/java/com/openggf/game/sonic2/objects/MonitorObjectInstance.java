@@ -521,31 +521,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
-    public boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
-        // Obj26 calls SolidObject_Monitor for Sonic and Tails from Obj26_Main
-        // after the player slots have already run for the frame
-        // (docs/s2disasm/s2.asm:25579-25605). The helper then branches to
-        // SolidObject_cont for a fresh side hit (docs/s2disasm/s2.asm:25617-25636),
-        // whose left-side path zeroes x_vel/inertia when the player has crossed
-        // into the monitor (docs/s2disasm/s2.asm:35424-35439). The engine's
-        // object pass runs before grounded player movement, so project that
-        // pending flat-ground X step only for Obj26's new side-entry check.
-        return true;
-    }
-
-    @Override
-    public boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
-        // Same execution-order compensation as the X hook above, but only for
-        // airborne top crossings. ROM Obj26_Main reaches
-        // SolidObject_Monitor_Sonic after Obj01 has already applied y_vel to
-        // y_pos (docs/s2disasm/s2.asm:25579-25623), then SolidObject_cont
-        // accepts the crossed top band via SolidObject_Landed
-        // (docs/s2disasm/s2.asm:35344-35500). In the pre-movement engine pass
-        // the monitor would otherwise see the player still just above the box.
-        return true;
-    }
-
-    @Override
     public boolean bypassesOffscreenSolidGate() {
         // Obj26's monitor wrappers branch directly to SolidObject_cont, not to
         // SolidObject_OnScreenTest (docs/s2disasm/s2.asm:25617-25636). Keep

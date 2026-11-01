@@ -90,6 +90,17 @@ public final class ObjectSolidExecutionContext {
     }
 
     /**
+     * {@link #solid(SolidCall)} with the provider's declared d1-d3 and the
+     * {@code d4} the call site loads itself, e.g. {@code move.w x_pos(a0),d4}
+     * after the routine has moved its body, which carries a rider by nothing.
+     */
+    public SolidCheckpointBatch solidWithD4(int d4) {
+        SolidCall entry = entryCall();
+        return solid(entry == null ? null : new SolidCall(
+                entry.d1HalfWidth(), entry.d2AirHalfHeight(), entry.d3GroundHalfHeight(), d4));
+    }
+
+    /**
      * Resolves only one participant with the routine-entry call and merges that
      * result into this object's current checkpoint.
      */

@@ -4975,7 +4975,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// + not left/right + not on object → enter duck animation.
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		short movingThreshold = (movementRules != null) ? movementRules.groundPose().movingCrouchThreshold() : 0;
-		boolean nativePlayerSlotOnObject = sprite.isOnObject() || sprite.getOnObjectAtFrameStart();
+		boolean nativePlayerSlotOnObject = sprite.isOnObject();
 		int movingCrouchSpeed = preRollGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
 				? preRollGroundSpeed
 				: sprite.getGSpeed();
@@ -4983,10 +4983,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
 				&& Math.abs(movingCrouchSpeed) < movingThreshold) {
 			// Sonic_Move branches past every animation write while move_lock is
-			// active. SonicKnux_Roll then tests the still-live Status_OnObj bit
-			// before writing Duck (sonic3k.asm:22494,23298-23300). The engine
-			// temporarily clears live object support for same-frame revalidation,
-			// so use the player-slot entry snapshot for that native read.
+			// active. SonicKnux_Roll then tests the live Status_OnObj bit before
+			// writing Duck (sonic3k.asm:22494,23298-23300); only object routines
+			// write that bit, so it is still the value the player slot entered with.
 			if (nativePlayerSlotOnObject
 					&& sprite.getAnimationManager().isGroundMovementAnimationSuppressed()) {
 				sprite.setCrouching(false);

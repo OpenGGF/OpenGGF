@@ -769,7 +769,6 @@ public final class ObjectSolidContactController {
 
 
     private record ProjectedPreMovementX(int centerX, int subpixel) {}
-    private record ProjectedPreMovementY(int centerY, int relY) {}
 
     ObjectSolidContactController(ObjectManager objectManager) {
         this.objectManager = objectManager;
@@ -2709,9 +2708,9 @@ public final class ObjectSolidContactController {
             // S3K SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
             // before RideObject_SetRide (sonic3k.asm:42037-42070); full-solid
             // callers can likewise model their concrete player-slot phase.
-            int historyFrames = Math.max(0, topSolidOnly
-                    ? InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopSolidPlayerPositionHistoryFrames(player))
-                    : InitialObjectDispatchController.afterCallback(initialDispatch, provider.getFullSolidPlayerPositionHistoryFrames(player)));
+            int historyFrames = topSolidOnly
+                    ? Math.max(0, InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopSolidPlayerPositionHistoryFrames(player)))
+                    : 0;
             if (historyFrames > 0) {
                 playerCenterX = player.getCentreX(historyFrames);
                 playerCenterY = player.getCentreY(historyFrames);
@@ -2788,15 +2787,6 @@ public final class ObjectSolidContactController {
         }
 
         int minRelY = ridingThisPiece ? -16 : 0;
-
-        if (relY < minRelY) {
-            ProjectedPreMovementY projectedPreMovementY = projectedPreMovementYForSolidContact(
-                    player, instance, anchorY, maxTop, minRelY);
-            if (projectedPreMovementY != null) {
-                playerCenterY = projectedPreMovementY.centerY();
-                relY = projectedPreMovementY.relY();
-            }
-        }
 
         if (relY < minRelY || relY >= totalHeight) {
             return null;
@@ -2968,29 +2958,6 @@ public final class ObjectSolidContactController {
             return;
         }
         sprite.setSubpixelRaw(projectedPreMovementX.subpixel(), sprite.getYSubpixelRaw());
-    }
-
-    private ProjectedPreMovementY projectedPreMovementYForSolidContact(PlayableEntity player,
-            ObjectInstance instance, int anchorY, int maxTop, int minRelY) {
-        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
-        if (postMovement
-                || !(instance instanceof SolidObjectProvider provider)
-                || !InitialObjectDispatchController.afterCallback(initialDispatch, provider.projectsPreMovementAirYForSolidContact(player))
-                || !(player instanceof AbstractPlayableSprite sprite)
-                || !player.getAir()
-                || player.getYSpeed() <= 0) {
-            return null;
-        }
-
-        int projectedFullY = ((int) sprite.getCentreY() << 16)
-                | (sprite.getYSubpixelRaw() & 0xFFFF);
-        projectedFullY += (int) player.getYSpeed() << 8;
-        int projectedCenterY = projectedFullY >> 16;
-        int projectedRelY = projectedCenterY - anchorY + 4 + maxTop;
-        if (projectedRelY < minRelY || projectedRelY >= 0x10) {
-            return null;
-        }
-        return new ProjectedPreMovementY(projectedCenterY, projectedRelY);
     }
 
     private int getSolidTopYRadius(PlayableEntity player) {

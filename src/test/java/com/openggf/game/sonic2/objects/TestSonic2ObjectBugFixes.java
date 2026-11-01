@@ -835,7 +835,7 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0x08, block.getBalanceWidthPixels());
         assertEquals(0, block.getSolidParams().offsetX());
         assertEquals(0, block.getSolidParams().offsetY());
-        assertFalse(block.carriesRiderOnHorizontalMove(null));
+        assertEquals(block.getX(), block.tailCallD4(block.getX() + 8));
         assertEquals(0x1380, block.getOutOfRangeReferenceX(),
                 "ObjD2 unloads against objoff_30 rather than its moving x_pos");
         assertFalse(block.suppressesObjectEdgeBalance());
@@ -936,7 +936,7 @@ class TestSonic2ObjectBugFixes {
         assertEquals(SolidRoutineKind.FULL_SOLID, longProfile.kind());
         assertEquals(longPlatform.isTopSolidOnly(), longProfile.topSolidOnly());
         assertEquals(longPlatform.usesStickyContactBuffer(), longProfile.stickyContactBuffer());
-        assertEquals(longPlatform.carriesRiderOnHorizontalMove(null),
+        assertEquals(longPlatform.tailCallD4(0x1234) == 0x1234,
                 longProfile.carriesAirborneRiderAfterExitPlatform());
     }
 
@@ -1268,9 +1268,10 @@ class TestSonic2ObjectBugFixes {
         sonic.setCentreX((short) 0x28F4);
         sonic.setCentreY((short) 0x0363);
         sonic.endOfTick();
-        sonic.setCentreY((short) 0x036A);
+        // Obj01 has applied this frame's y_vel ($690) before Obj26's slot.
+        sonic.setCentreY((short) 0x0370);
 
-        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic, true);
 
         assertFalse(sonic.getAir(),
                 "OOZ1 f7671: Obj26 runs after Sonic movement, so SolidObject_cont sees the top crossing "
@@ -1299,8 +1300,10 @@ class TestSonic2ObjectBugFixes {
 
         TestablePlayableSprite sonic = ooz1LauncherReleaseMonitorPlayer();
         sonic.setAnimationId(Sonic2AnimationIds.ROLL.id());
+        // Obj01 has applied this frame's y_vel ($690) before Obj26's slot.
+        sonic.setCentreY((short) 0x0370);
 
-        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, sonic, true);
 
         assertFalse(sonic.getAir(),
                 "OOZ1 f7671: Obj3D has just cleared obj_control/on_object without writing anim; "

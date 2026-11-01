@@ -11,7 +11,6 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
@@ -29,7 +28,7 @@ import java.util.List;
  * jump-release behavior; visual child segments use the MHZ misc PLC art.
  */
 public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
-        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native segment/handle deformation is vine geometry; captured players own their own facing.
     private static final int PRIORITY_BUCKET_LOW = 4; // priority $200
@@ -149,12 +148,6 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         if (camera != null) {
             camera.requestForcedScroll(spawn.x(), spawn.y());
         }
-    }
-
-    @Override
-    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
-        releasePending(p1);
-        releasePending(p2);
     }
 
     @Override

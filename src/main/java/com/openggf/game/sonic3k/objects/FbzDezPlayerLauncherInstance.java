@@ -230,8 +230,8 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        return carryRiderThisFrame;
+    public int tailCallD4(int routineEntryX) {
+        return carryRiderThisFrame ? routineEntryX : getX();
     }
 
     @Override

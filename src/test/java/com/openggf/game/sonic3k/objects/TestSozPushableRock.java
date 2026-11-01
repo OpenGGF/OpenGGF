@@ -46,6 +46,7 @@ class TestSozPushableRock {
         when(rom.read16BitAddr(anyLong())).thenAnswer(i -> track[((Long)i.getArgument(0)).intValue() / 2 - 0x80]);
         context = mock(ObjectSolidExecutionContext.class);
         when(context.resolveSolidNowAll()).thenReturn(new SolidCheckpointBatch(null, Map.of()));
+        when(context.solidWithD4(org.mockito.ArgumentMatchers.anyInt())).thenReturn(new SolidCheckpointBatch(null, Map.of()));
         services = new StubObjectServices() {
             @Override public Rom rom() { return rom; }
             @Override public boolean useSecondaryTerrainCollisionPath() { return true; }
@@ -79,7 +80,8 @@ class TestSozPushableRock {
     }
     @Test void newPushContactNeedsTheSavedPlayerStatusFromBeforeCollision() {
         var p = player(80); p.setPushing(false); var r = rock(9,p);
-        when(context.resolveSolidNowAll()).thenAnswer(i -> {
+        // A pushed rock is not carrying, so its call loads the current x_pos into d4.
+        when(context.solidWithD4(org.mockito.ArgumentMatchers.anyInt())).thenAnswer(i -> {
             r.setPlayerPushing(p,true); p.setPushing(true);
             return new SolidCheckpointBatch(r,Map.of());
         });
@@ -109,11 +111,11 @@ class TestSozPushableRock {
     }
     @Test void floorSnapIncludesFourteenButFifteenStartsFalling() {
         var p = player(80); var r = rock(9,p); r.setPlayerPushing(p,true); distance=14;
-        r.update(0,p); assertEquals(114,r.getY()); assertFalse(r.carriesRiderOnHorizontalMove(p));
+        r.update(0,p); assertEquals(114,r.getY()); assertFalse(r.carriesRiderThisPassForTest());
         var falling=rock(9,p); falling.setPlayerPushing(p,true); distance=15;
         falling.update(0,p); assertEquals(100,falling.getY());
         falling.update(1,p); assertEquals(100,falling.getY()); // first MoveSprite uses zero velocity
-        assertFalse(falling.carriesRiderOnHorizontalMove(p));
+        assertFalse(falling.carriesRiderThisPassForTest());
     }
     @Test void fallRideFallUsesRomTargetsAndRestoresItsTrackCursor() {
         var p=player(80); var r=rock(9,p); r.setPlayerPushing(p,true); distance=15;
@@ -129,7 +131,7 @@ class TestSozPushableRock {
         }
         assertEquals(108,r.getY());
         int stoppedX=r.getX(); r.update(100,p); assertEquals(stoppedX,r.getX());
-        assertFalse(r.carriesRiderOnHorizontalMove(p));
+        assertFalse(r.carriesRiderThisPassForTest());
     }
     @Test void fallEqualityWaitsForStrictOvershootAndSoundUsesLevelClock() throws Exception {
         when(rom.read16BitAddr(0x100L)).thenReturn(100);
@@ -159,6 +161,6 @@ class TestSozPushableRock {
         var p=player(80); var r=rock(9,p); r.setPlayerPushing(p,true); distance=15;
         r.update(0,p); when(camera.getMaxY()).thenReturn((short) -188); // +$120 == current Y
         r.update(1,p); assertEquals(0x7F00,r.getX());
-        assertFalse(r.carriesRiderOnHorizontalMove(p)); assertTrue(r.isCustomOutOfRange(0));
+        assertFalse(r.carriesRiderThisPassForTest()); assertTrue(r.isCustomOutOfRange(0));
     }
 }

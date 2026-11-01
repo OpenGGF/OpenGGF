@@ -120,10 +120,10 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
     return height;
   }
   @Override
-  public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+  public int tailCallD4(int routineEntryX) {
     // loc_3BCF2 reloads the door's current x_pos into d4 immediately before
     // SolidObjectFull, so MvSonicOnPtfm receives a zero horizontal delta.
-    return false;
+      return getX();
   }
   public int getOutOfRangeReferenceX() { return spawn.x(); }
   public void appendRenderCommands(List<GLCommand> c) {

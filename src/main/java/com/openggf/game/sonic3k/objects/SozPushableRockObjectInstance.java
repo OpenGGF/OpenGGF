@@ -94,7 +94,7 @@ public final class SozPushableRockObjectInstance extends AbstractObjectInstance
                 else { nextTrackWord += 2; target = next; phase = FALL; }
             }
         }
-        checkpointAll();
+        solidCheckpoint();
     }
 
     private int readTrackWord() {
@@ -120,7 +120,7 @@ public final class SozPushableRockObjectInstance extends AbstractObjectInstance
             participants.slot(player);
             wasPushing.put(player, player instanceof AbstractPlayableSprite p && p.getPushing());
         }
-        checkpointAll();
+        solidCheckpoint();
         // sub_406B4 processes P1 first; only a non-eligible P1 lets P2 act.
         // Extra followers extend P2's independent eligibility in query order.
         for (var player : players) {
@@ -154,7 +154,12 @@ public final class SozPushableRockObjectInstance extends AbstractObjectInstance
     @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 0xC, 0xD); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return carryThisPass; }
+    /** d4 is the saved routine-entry x while the rock carries, else its current x_pos. */
+    private void solidCheckpoint() {
+        if (carryThisPass) checkpointAll();
+        else checkpointAll(getX());
+    }
+    public boolean carriesRiderThisPassForTest() { return carryThisPass; }
     @Override public int romObjectCodePointerHighWord() { return 4; }
     @Override public int getX() { return xFixed >>> 16; }
     @Override public int getY() { return yFixed >>> 16; }

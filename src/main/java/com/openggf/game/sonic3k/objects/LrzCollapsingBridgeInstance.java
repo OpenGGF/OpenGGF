@@ -360,11 +360,11 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // d4 = x_pos(a0) (sonic3k.asm:77473, :77534). The slab never moves, so
-        // MvSonicOnPtfm's d4 - x_pos(a0) carry is zero either way; false states
-        // that plainly instead of relying on the engine default.
-        return false;
+        // MvSonicOnPtfm's d4 - x_pos(a0) carry is zero either way; returning x_pos
+        // states that plainly instead of relying on the routine-entry default.
+        return getX();
     }
 
     @Override

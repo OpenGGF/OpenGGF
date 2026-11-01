@@ -233,8 +233,8 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
      * rider stands still while the platform glides underneath.
      */
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        return moveSubtype == 5;
+    public int tailCallD4(int routineEntryX) {
+        return moveSubtype == 5 ? routineEntryX : getX();
     }
 
     @Override

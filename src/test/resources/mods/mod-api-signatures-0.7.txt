@@ -405,7 +405,6 @@ CF-ANNOTATION TYPE com.openggf.game.preview.TitlePreviewProvider visible @com.op
 CF-ANNOTATION TYPE com.openggf.game.preview.TitlePreviewProvider visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.preview.TitlePreviewProvider$Image visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.preview.TitlePreviewProvider$Sequence visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.game.profiles.solidroutine.SolidRoutineAdapter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.solidroutine.SolidRoutineKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.solidroutine.SolidRoutineProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.profiles.touchresponse.TouchActorContextPolicy visible @com.openggf.game.ModApi
@@ -729,7 +728,6 @@ CF-ANNOTATION TYPE com.openggf.level.objects.SolidContact visible @com.openggf.g
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidExecutionMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidObjectParams visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidObjectProvider visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.level.objects.SolidRoutineAdapter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidRoutineKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidRoutineProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SpringBounceHelper visible @com.openggf.game.ModApi
@@ -1556,7 +1554,6 @@ CONSTRUCTOR com.openggf.game.presentation.SceneReplay public  <init>()
 CONSTRUCTOR com.openggf.game.presentation.SceneReplay$Sample public  <init>(int,byte[])
 CONSTRUCTOR com.openggf.game.presentation.SceneReplay$State public  <init>(java.util.List<com.openggf.game.presentation.SceneReplay$Sample>,int,int,int,boolean)
 CONSTRUCTOR com.openggf.game.preview.TitlePreviewProvider$Image public  <init>(int,int,byte[])
-CONSTRUCTOR com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  <init>(com.openggf.level.objects.SolidObjectProvider,com.openggf.game.profiles.solidroutine.SolidRoutineProfile)
 CONSTRUCTOR com.openggf.game.profiles.solidroutine.SolidRoutineProfile public  <init>(com.openggf.game.profiles.solidroutine.SolidRoutineKind,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.profiles.touchresponse.TouchResponseProfile public  <init>(com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability,int,boolean,com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy,com.openggf.game.profiles.touchresponse.TouchActorContextPolicy,com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy)
 CONSTRUCTOR com.openggf.game.profiles.touchresponse.TouchResponseProfile public  <init>(com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability,int,com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy,com.openggf.game.profiles.touchresponse.TouchActorContextPolicy,com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy)
@@ -1804,7 +1801,6 @@ CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolea
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.SolidObjectParams public  <init>(int,int,int)
 CONSTRUCTOR com.openggf.level.objects.SolidObjectParams public  <init>(int,int,int,int,int)
-CONSTRUCTOR com.openggf.level.objects.SolidRoutineAdapter public  <init>(com.openggf.level.objects.SolidObjectProvider,com.openggf.level.objects.SolidRoutineProfile)
 CONSTRUCTOR com.openggf.level.objects.SolidRoutineProfile public  <init>(com.openggf.level.objects.SolidRoutineKind,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.SubpixelMotion$State public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.TerrainSurface public  <init>(boolean,int,int,int)
@@ -7807,33 +7803,6 @@ METHOD com.openggf.game.preview.TitlePreviewProvider$Sequence public,abstract  i
 METHOD com.openggf.game.preview.TitlePreviewProvider$Sequence public,abstract  int height()
 METHOD com.openggf.game.preview.TitlePreviewProvider$Sequence public,abstract  int stillTick()
 METHOD com.openggf.game.preview.TitlePreviewProvider$Sequence public,abstract  int width()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean allowsZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean carriesRiderOnHorizontalMove(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean gatesNewTopSolidLandingWithPreviousPosition()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean isSolidFor(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean preservesObjectManagedRideWhileNotSolidFor(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean rejectsZeroDistanceTopSolidLanding()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean rejectsZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean sampleSlopeOnRideExit(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean skipsCpuSidekickWhenRenderFlagOffScreen()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  boolean suppressSlopeSampleThisFrame(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  com.openggf.game.profiles.solidroutine.SolidRoutineProfile profile()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  com.openggf.level.objects.SolidExecutionMode solidExecutionMode()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  com.openggf.level.objects.SolidObjectParams getSolidParams()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  com.openggf.level.objects.SolidObjectProvider provider()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  int getContinuedRideSnapAdjustment(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  int getFullSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  int getTopLandingHalfWidth(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  int getTopLandingSnapAdjustment(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  int getTopSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  int staleHorizontalLogicalInputFramesWhileRiding(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  java.lang.Integer getObjectManagedRideCentreY(com.openggf.game.PlayableEntity,int,com.openggf.level.objects.SolidObjectParams)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  void onRejectedZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public  void setPlayerPushing(com.openggf.game.PlayableEntity,boolean)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public,final  int hashCode()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineAdapter public,final  java.lang.String toString()
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineKind public,static  com.openggf.game.profiles.solidroutine.SolidRoutineKind valueOf(java.lang.String)
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineKind public,static  com.openggf.game.profiles.solidroutine.SolidRoutineKind[] values()
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public  boolean allowsObjectControlledSolidContacts()
@@ -7854,7 +7823,6 @@ METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public  long s
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,final  int hashCode()
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,final  java.lang.String toString()
-METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,static  com.openggf.game.profiles.solidroutine.SolidRoutineAdapter adapt(com.openggf.level.objects.SolidObjectProvider)
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,static  com.openggf.game.profiles.solidroutine.SolidRoutineProfile fromProvider(com.openggf.level.objects.SolidObjectProvider)
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,static  com.openggf.game.profiles.solidroutine.SolidRoutineProfile fullSolid(boolean)
 METHOD com.openggf.game.profiles.solidroutine.SolidRoutineProfile public,static  com.openggf.game.profiles.solidroutine.SolidRoutineProfile fullSolid(boolean,boolean,boolean)
@@ -8601,6 +8569,7 @@ METHOD com.openggf.game.solid.ObjectSolidExecutionContext public  com.openggf.ga
 METHOD com.openggf.game.solid.ObjectSolidExecutionContext public  com.openggf.game.solid.SolidCheckpointBatch lastCheckpoint()
 METHOD com.openggf.game.solid.ObjectSolidExecutionContext public  com.openggf.game.solid.SolidCheckpointBatch resolveSolidNowAll()
 METHOD com.openggf.game.solid.ObjectSolidExecutionContext public  com.openggf.game.solid.SolidCheckpointBatch solid(com.openggf.game.solid.SolidCall)
+METHOD com.openggf.game.solid.ObjectSolidExecutionContext public  com.openggf.game.solid.SolidCheckpointBatch solidWithD4(int)
 METHOD com.openggf.game.solid.ObjectSolidExecutionContext public  com.openggf.level.objects.ObjectInstance object()
 METHOD com.openggf.game.solid.ObjectSolidExecutionContext public,static  com.openggf.game.solid.ObjectSolidExecutionContext inert()
 METHOD com.openggf.game.solid.ObjectSolidExecutionContext$Resolver public  com.openggf.game.solid.SolidCall entryCall()
@@ -9813,7 +9782,6 @@ METHOD com.openggf.level.LevelManager public  void updateObjectPositionsPostPhys
 METHOD com.openggf.level.LevelManager public  void updateObjectPositionsPostPhysicsWithoutTouches(java.lang.Runnable,boolean)
 METHOD com.openggf.level.LevelManager public  void updateObjectPositionsWithoutTouches()
 METHOD com.openggf.level.LevelManager public  void updateObjectPositionsWithoutTouches(boolean)
-METHOD com.openggf.level.LevelManager public  void updateObjectPostPlayerHooks()
 METHOD com.openggf.level.LevelManager public  void updatePalette(int,byte[])
 METHOD com.openggf.level.LevelManager public  void updatePlayableWaterStateForCurrentLevel(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.level.LevelManager public  void updatePlayableWaterStatesForCurrentLevel()
@@ -10364,6 +10332,7 @@ METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean usesC
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.configuration.SonicConfigurationService config()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.debug.DebugOverlayManager debugOverlay()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.game.solid.SolidCheckpointBatch checkpointAll()
+METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.game.solid.SolidCheckpointBatch checkpointAll(int)
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.level.objects.ObjectRenderManager getRenderManager()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.level.objects.ObjectServices services()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.level.objects.ObjectServices tryServices()
@@ -10771,7 +10740,6 @@ METHOD com.openggf.level.objects.ObjectManager public  void resetForSynchronousA
 METHOD com.openggf.level.objects.ObjectManager public  void resetInitialCollisionResponseBuild()
 METHOD com.openggf.level.objects.ObjectManager public  void restorePersistentRespawn(com.openggf.level.objects.PersistentRespawnState)
 METHOD com.openggf.level.objects.ObjectManager public  void resyncSpawnList(java.util.List<com.openggf.level.objects.ObjectSpawn>)
-METHOD com.openggf.level.objects.ObjectManager public  void runPostPlayerHooks(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.ObjectManager public  void runTouchResponsesForPlayer(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.ObjectManager public  void runTouchResponsesForPlayer(com.openggf.game.PlayableEntity,int,boolean)
 METHOD com.openggf.level.objects.ObjectManager public  void setRewindClassResolver(com.openggf.level.objects.RewindClassResolver)
@@ -11557,7 +11525,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesPo
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesRidingPushStatus(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesStaleHorizontalInputEdgeWhileMoving(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesZeroDistanceSideContactMotion()
-METHOD com.openggf.level.objects.SolidObjectProvider public  boolean projectsPreMovementAirYForSolidContact(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean projectsPreMovementGroundXForSolidContact(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean rejectsBit7ObjectControlNewSolidContact(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean rejectsBit7ObjectControlSideContact(com.openggf.game.PlayableEntity)
@@ -11580,7 +11547,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  boolean zeroXSpeedS
 METHOD com.openggf.level.objects.SolidObjectProvider public  com.openggf.level.objects.SolidExecutionMode solidExecutionMode()
 METHOD com.openggf.level.objects.SolidObjectProvider public  com.openggf.level.objects.SolidRoutineProfile getSolidRoutineProfile()
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getContinuedRideSnapAdjustment(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidObjectProvider public  int getFullSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getMonitorSolidObjectVerticalOffset()
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopLandingHalfWidth(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopLandingSnapAdjustment(com.openggf.game.PlayableEntity,int)
@@ -11592,33 +11558,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  java.lang.Integer g
 METHOD com.openggf.level.objects.SolidObjectProvider public  void onRejectedZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  void setPlayerPushing(com.openggf.game.PlayableEntity,boolean)
 METHOD com.openggf.level.objects.SolidObjectProvider public,abstract  com.openggf.level.objects.SolidObjectParams getSolidParams()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean allowsZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean carriesRiderOnHorizontalMove(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean gatesNewTopSolidLandingWithPreviousPosition()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean isSolidFor(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean preservesObjectManagedRideWhileNotSolidFor(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean rejectsZeroDistanceTopSolidLanding()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean rejectsZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean sampleSlopeOnRideExit(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean skipsCpuSidekickWhenRenderFlagOffScreen()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  boolean suppressSlopeSampleThisFrame(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  com.openggf.level.objects.SolidExecutionMode solidExecutionMode()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  com.openggf.level.objects.SolidObjectParams getSolidParams()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  com.openggf.level.objects.SolidObjectProvider provider()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  com.openggf.level.objects.SolidRoutineProfile profile()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  int getContinuedRideSnapAdjustment(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  int getFullSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  int getTopLandingHalfWidth(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  int getTopLandingSnapAdjustment(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  int getTopSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  int staleHorizontalLogicalInputFramesWhileRiding(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  java.lang.Integer getObjectManagedRideCentreY(com.openggf.game.PlayableEntity,int,com.openggf.level.objects.SolidObjectParams)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  void onRejectedZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public  void setPlayerPushing(com.openggf.game.PlayableEntity,boolean)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public,final  boolean equals(java.lang.Object)
-METHOD com.openggf.level.objects.SolidRoutineAdapter public,final  int hashCode()
-METHOD com.openggf.level.objects.SolidRoutineAdapter public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.SolidRoutineKind public  com.openggf.game.profiles.solidroutine.SolidRoutineKind toCanonical()
 METHOD com.openggf.level.objects.SolidRoutineKind public,static  com.openggf.level.objects.SolidRoutineKind fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineKind)
 METHOD com.openggf.level.objects.SolidRoutineKind public,static  com.openggf.level.objects.SolidRoutineKind valueOf(java.lang.String)
@@ -11641,7 +11580,6 @@ METHOD com.openggf.level.objects.SolidRoutineProfile public  int monitorVertical
 METHOD com.openggf.level.objects.SolidRoutineProfile public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.objects.SolidRoutineProfile public,final  int hashCode()
 METHOD com.openggf.level.objects.SolidRoutineProfile public,final  java.lang.String toString()
-METHOD com.openggf.level.objects.SolidRoutineProfile public,static  com.openggf.level.objects.SolidRoutineAdapter adapt(com.openggf.level.objects.SolidObjectProvider)
 METHOD com.openggf.level.objects.SolidRoutineProfile public,static  com.openggf.level.objects.SolidRoutineProfile fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile)
 METHOD com.openggf.level.objects.SolidRoutineProfile public,static  com.openggf.level.objects.SolidRoutineProfile fromProvider(com.openggf.level.objects.SolidObjectProvider)
 METHOD com.openggf.level.objects.SolidRoutineProfile public,static  com.openggf.level.objects.SolidRoutineProfile fullSolid(boolean)
@@ -14982,7 +14920,6 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getMax(
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getMaxRoll()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getMinRollSpeed()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getMinStartRollSpeed()
-METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getPreCpuControlGSpeed()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getPrePhysicsCentreX()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getPrePhysicsCentreY()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  short getPrePhysicsGSpeed()
@@ -15020,7 +14957,6 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void applyQue
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void applyRollingRadii(boolean)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void applyStandingRadii(boolean)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void captureOnObjectAtFrameStart()
-METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void capturePreCpuControlSnapshot()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void capturePrePhysicsSnapshot()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void clearAirForNativeControlRestore()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void clearDeferredGroundWallVelocityResponse()
@@ -18024,8 +17960,6 @@ RECORD-COMPONENT com.openggf.game.presentation.SceneReplay$State stride int
 RECORD-COMPONENT com.openggf.game.preview.TitlePreviewProvider$Image height int
 RECORD-COMPONENT com.openggf.game.preview.TitlePreviewProvider$Image rgba byte[]
 RECORD-COMPONENT com.openggf.game.preview.TitlePreviewProvider$Image width int
-RECORD-COMPONENT com.openggf.game.profiles.solidroutine.SolidRoutineAdapter profile com.openggf.game.profiles.solidroutine.SolidRoutineProfile
-RECORD-COMPONENT com.openggf.game.profiles.solidroutine.SolidRoutineAdapter provider com.openggf.level.objects.SolidObjectProvider
 RECORD-COMPONENT com.openggf.game.profiles.solidroutine.SolidRoutineProfile allowsObjectControlledSolidContacts boolean
 RECORD-COMPONENT com.openggf.game.profiles.solidroutine.SolidRoutineProfile bypassesOffscreenSolidGate boolean
 RECORD-COMPONENT com.openggf.game.profiles.solidroutine.SolidRoutineProfile carriesAirborneRiderAfterExitPlatform boolean
@@ -18925,8 +18859,6 @@ RECORD-COMPONENT com.openggf.level.objects.SolidObjectParams groundHalfHeight in
 RECORD-COMPONENT com.openggf.level.objects.SolidObjectParams halfWidth int
 RECORD-COMPONENT com.openggf.level.objects.SolidObjectParams offsetX int
 RECORD-COMPONENT com.openggf.level.objects.SolidObjectParams offsetY int
-RECORD-COMPONENT com.openggf.level.objects.SolidRoutineAdapter profile com.openggf.level.objects.SolidRoutineProfile
-RECORD-COMPONENT com.openggf.level.objects.SolidRoutineAdapter provider com.openggf.level.objects.SolidObjectProvider
 RECORD-COMPONENT com.openggf.level.objects.SolidRoutineProfile allowsObjectControlledSolidContacts boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidRoutineProfile bypassesOffscreenSolidGate boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidRoutineProfile carriesAirborneRiderAfterExitPlatform boolean
@@ -21436,7 +21368,6 @@ TYPE record public,final com.openggf.game.presentation.RewindPresentation SUPER 
 TYPE record public,final com.openggf.game.presentation.SceneImage SUPER java.lang.Record
 TYPE record public,final com.openggf.game.presentation.ScenePlayerPose SUPER java.lang.Record
 TYPE record public,final com.openggf.game.presentation.ScenePresentationFrame SUPER java.lang.Record
-TYPE record public,final com.openggf.game.profiles.solidroutine.SolidRoutineAdapter SUPER java.lang.Record
 TYPE record public,final com.openggf.game.profiles.solidroutine.SolidRoutineProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.profiles.touchresponse.TouchResponseProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.render.AdvancedRenderModeContext SUPER java.lang.Record
@@ -21509,7 +21440,6 @@ TYPE record public,final com.openggf.level.objects.PerObjectRewindSnapshot SUPER
 TYPE record public,final com.openggf.level.objects.PersistentRespawnState SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidContact SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidObjectParams SUPER java.lang.Record
-TYPE record public,final com.openggf.level.objects.SolidRoutineAdapter SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidRoutineProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.TerrainSurface SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.TouchResponseDebugHit SUPER java.lang.Record
@@ -22346,7 +22276,6 @@ TYPE-ANNOTATION com.openggf.game.preview.TitlePreviewProvider @com.openggf.game.
 TYPE-ANNOTATION com.openggf.game.preview.TitlePreviewProvider @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.preview.TitlePreviewProvider$Image @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.preview.TitlePreviewProvider$Sequence @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.game.profiles.solidroutine.SolidRoutineAdapter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.solidroutine.SolidRoutineKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.solidroutine.SolidRoutineProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.profiles.touchresponse.TouchActorContextPolicy @com.openggf.game.ModApi
@@ -22670,7 +22599,6 @@ TYPE-ANNOTATION com.openggf.level.objects.SolidContact @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidExecutionMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidObjectParams @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidObjectProvider @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.level.objects.SolidRoutineAdapter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidRoutineKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidRoutineProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SpringBounceHelper @com.openggf.game.ModApi

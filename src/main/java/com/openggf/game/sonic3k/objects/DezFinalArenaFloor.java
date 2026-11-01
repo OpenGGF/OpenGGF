@@ -73,7 +73,7 @@ public final class DezFinalArenaFloor extends AbstractObjectInstance
     }
     private void solid() {
         var execution = services().solidExecution();
-        if (execution != null && !execution.isInert()) execution.resolveSolidNowAll();
+        if (execution != null && !execution.isInert()) execution.solidWithD4(getX());
     }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public SolidObjectParams getSolidParams() {
@@ -84,7 +84,6 @@ public final class DezFinalArenaFloor extends AbstractObjectInstance
     // carries by zero X, even when the camera advances/retracts a $20 column.
     // The default platform carry would drag a grounded player with this
     // invisible support, making camera deadzone changes alter player movement.
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean usesCollisionHalfWidthForTopLanding() { return true; }
     @Override public boolean isSkipSolidContactThisFrame() { return false; }

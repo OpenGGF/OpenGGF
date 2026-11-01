@@ -88,7 +88,6 @@ public class ObjectManager {
     private final BitSet slotsFreedDuringObjectPass = new BitSet();
     private final List<PlayableEntity> activePlayersScratch = new ArrayList<>(4);
     private final List<ObjectSpawn> newSpawnsScratch = new ArrayList<>();
-    private final List<ObjectInstance> postPlayerHooksScratch = new ArrayList<>();
     // Cached spawn-order comparators (built lazily; placement is constructor-set).
     private Comparator<ObjectSpawn> forwardSpawnOrder;
     private Comparator<ObjectSpawn> backwardSpawnOrder;
@@ -323,8 +322,7 @@ public class ObjectManager {
                     activeObjectsCacheDirty = true;
                 });
         this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
-                slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
-                postPlayerHooksScratch);
+                slotAllocator, reservedChildSlots, activeObjects, dynamicObjects);
         this.childReservationLedger = new NativeChildReservationLedger(objectCallbacks, slotLayout,
                 reservedChildSlots, instanceToSpawn, activeObjects, dynamicObjects,
                 rewindObjectIds::containsKey, this::managedSpawn, this::allocateSlotAfter,
@@ -1778,14 +1776,6 @@ public class ObjectManager {
      */
     public List<TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition() {
         return populationView.snapshotAllLiveSstObjects();
-    }
-
-    /**
-     * Runs post-player hooks for legacy object-order modules after the main
-     * playable update has completed for the current frame.
-     */
-    public void runPostPlayerHooks(PlayableEntity player, int vIntRunCount) {
-        populationView.runPostPlayerHooks(stageplayActiveRoutineObjects(), player, vIntRunCount);
     }
 
     /**

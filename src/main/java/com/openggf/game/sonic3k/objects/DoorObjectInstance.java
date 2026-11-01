@@ -193,12 +193,12 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity playerEntity) {
+    public int tailCallD4(int routineEntryX) {
         // Obj_Door stores the post-slide x_pos in d4 immediately before
         // SolidObjectFull (docs/skdisasm/sonic3k.asm:66163-66177,
         // 66239-66258). MvSonicOnPtfm subtracts current x_pos from d4, so the
         // horizontal carry delta is zero even when the horizontal CNZ door moves.
-        return false;
+        return getX();
     }
 
     @Override

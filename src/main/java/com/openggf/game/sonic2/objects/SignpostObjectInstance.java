@@ -10,7 +10,6 @@ import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.CollisionModel;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
@@ -21,7 +20,6 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -46,7 +44,7 @@ import java.util.logging.Logger;
  * <li>Spawn results screen (Obj3A), play end-level jingle</li>
  * </ol>
  */
-public class SignpostObjectInstance extends BoxObjectInstance implements PostPlayerUpdateHook, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public class SignpostObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj0D owns a rotating sign and sparkles/results, not a horizontally facing body.
 
     public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
@@ -91,7 +89,6 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     private int spinTimer = 0;
     private int sparkleTimer = 0;
     private int sparkleIndex = 0;
-    private int walkOffEnteredVIntRunCount = Integer.MIN_VALUE;
 
     private boolean resultsSpawned = false;
     private boolean initialized;
@@ -179,14 +176,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
                 }
             }
             case STATE_SPINNING -> updateSpinning(vIntRunCount);
-            case STATE_WALK_OFF -> {
-                // Inline-order modules (S2/S3K collision-model path) already run
-                // ExecuteObjects after playable movement, so the regular object
-                // update sees Sonic's post-physics state directly.
-                if (usesInlineWalkOffUpdate(player)) {
-                    updateWalkOff(player);
-                }
-            }
+            // ExecuteObjects runs after the player slots, so this update already
+            // sees Sonic's post-movement state.
+            case STATE_WALK_OFF -> updateWalkOff(player);
             case STATE_DONE -> {
                 // ROM: Obj0D_Main_StateNull. The signpost remains visible but
                 // no longer drives control or spawns follow-up objects.
@@ -316,7 +308,6 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
             int nextAnimId = currentAnimId + 1;
             if (nextAnimId >= ANIM_FINAL_SONIC) {
                 routineState = STATE_WALK_OFF;
-                walkOffEnteredVIntRunCount = vIntRunCount;
                 setAnimationId(finalAnimId);
                 LOGGER.fine("Signpost spin complete, entering walk-off state");
             } else {
@@ -327,28 +318,6 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         // ROM continues into the sparkle countdown even on the frame that
         // routine_secondary advances out of State2.
         updateSparkleCountdown();
-    }
-
-    @Override
-    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
-        if (competitionSession() != null) return;
-        if (!(playerEntity instanceof AbstractPlayableSprite player)) {
-            return;
-        }
-        if (usesInlineWalkOffUpdate(player)) {
-            return;
-        }
-        if (routineState != STATE_WALK_OFF || frameCounter <= walkOffEnteredVIntRunCount) {
-            return;
-        }
-        updateWalkOff(player);
-    }
-
-    private boolean usesInlineWalkOffUpdate(AbstractPlayableSprite player) {
-        return player != null
-                && player.getGameRules() != null
-                && player.getGameRules().collision() != null
-                && player.getGameRules().collision().collisionModel() == CollisionModel.DUAL_PATH;
     }
 
     private void updateSparkleCountdown() {

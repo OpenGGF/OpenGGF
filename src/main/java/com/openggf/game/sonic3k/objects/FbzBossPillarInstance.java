@@ -79,7 +79,7 @@ public final class FbzBossPillarInstance extends AbstractObjectInstance
     // SolidObjectFull_1P consumes an airborne stale standing bit and returns d4=0.
     @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) { return true; }
     // The object reloads its current x_pos into d4 immediately before SolidObjectFull.
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
+    @Override public int tailCallD4(int routineEntryX) { return getX(); }
     @Override public int getOnScreenHalfWidth() { return 0x20; }
     @Override public int getOnScreenHalfHeight() { return 0xFF; }
     @Override public int getX() { return x; }

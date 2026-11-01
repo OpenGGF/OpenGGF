@@ -235,13 +235,13 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // Obj_MGZTriggerPlatform loads d4 from the already-updated x_pos before
         // calling SolidObjectFull, so MvSonicOnPtfm sees no horizontal delta.
         // This is observable while the horizontal variant retracts beneath a
         // rider: the platform moves, but the rider keeps their world X.
         // sonic3k.asm:71031-71045.
-        return false;
+        return getX();
     }
 
     @Override

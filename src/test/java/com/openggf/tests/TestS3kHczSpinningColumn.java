@@ -51,7 +51,7 @@ public class TestS3kHczSpinningColumn {
         assertEquals(0x1B, params.halfWidth());
         assertEquals(0x20, params.airHalfHeight());
         assertEquals(0x21, params.groundHalfHeight());
-        assertFalse(column.carriesRiderOnHorizontalMove(null),
+        assertEquals(column.getX(), column.tailCallD4(column.getX() + 8),
                 "Obj68 passes post-movement x_pos through d4, producing zero horizontal carry");
         assertTrue(column.usesInclusiveRightEdge(),
                 "SolidObjectFull keeps relX == d1*2 as an exact-edge side contact");

@@ -11,7 +11,6 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
@@ -30,7 +29,7 @@ import java.util.logging.Logger;
  * they traverse it.
  * Effectively creates a "wave" motion and sprite twisting effect.
  */
-public class SpiralObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public class SpiralObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj06 is an invisible path/rotation controller; the player owns its own facing.
 
     private static final Logger LOGGER = Logger.getLogger(SpiralObjectInstance.class.getName());
@@ -126,16 +125,6 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
             if (participant instanceof AbstractPlayableSprite player) {
                 processPlayer(vIntRunCount, player);
             }
-        }
-    }
-
-    @Override
-    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
-        if (!isCylinder() || !(playerEntity instanceof AbstractPlayableSprite player)) {
-            return;
-        }
-        if (!ridingPlayers.contains(player)) {
-            tryActivateCylinder(frameCounter, player);
         }
     }
 

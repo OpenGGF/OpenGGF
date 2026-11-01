@@ -12,7 +12,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -27,7 +26,7 @@ import java.util.List;
  * Obj_AIZRideVine / Obj_AIZRideVineHandle (sonic3k.asm:46138-46788).
  */
 public class AizRideVineObjectInstance extends AbstractObjectInstance
-        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
@@ -187,13 +186,6 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
                 com.openggf.level.objects.ObjectLifetimeOps.freeReservedChildSlot(services().objectManager(), spawn, i);
             }
         }
-    }
-
-    @Override
-    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     private void updateRootState() {
