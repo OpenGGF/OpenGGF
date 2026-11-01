@@ -269,11 +269,14 @@ goal is finishing and testing the three original games. See the
 
 OpenGGF is free software under the [GNU General Public License, version 3](LICENSE).
 
+Mods do not have to use the GPL. The [OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt)
+lets a mod that uses OpenGGF only through the Mod API be released under any terms,
+alone or with OpenGGF. `ggfmod init` adds no licence: what it writes is under
+[MIT No Attribution](LICENSES/MIT-0.txt), so a new project is yours to license or not.
 The example mods in `examples/`, the bundled Time Attack mod in `racing/time-attack/`
 and the creator kit's sample campaign are under the [MIT License](examples/hello-scene/LICENSE),
 so you can copy and extend their code freely. Each one carries its own `LICENSE`
-file, and the creator kit exports it with the source. This does not change the
-GPL-3 terms of the engine, Mod API and SDK that mods build against.
+file, and the creator kit exports it with the source.
 
 The YM2612 sound code in `src/main/java/com/openggf/audio/synth/nuked/` is a Java port
 of [Nuked OPN2](https://github.com/nukeykt/Nuked-OPN2) by Alexey Khokholov (Nuke.YKT).

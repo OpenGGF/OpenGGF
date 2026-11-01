@@ -408,7 +408,7 @@ jobs:
               part or "0" for part in macos_version_match.groups())
 
           # NOTICE.md: the GPL-3 / LGPL-2.1 texts and notices accompany every copy.
-          LICENCE_FILES = {"LICENSE", "LICENSES/LGPL-2.1.txt", "NOTICE.md", "CREDITS.md"}
+          LICENCE_FILES = {"LICENSE", "LICENSES/LGPL-2.1.txt", "LICENSES/OpenGGF-Mod-Exception.txt", "NOTICE.md", "CREDITS.md"}
           LICENCE_FILES_IN_JAR = {f"META-INF/openggf/{name}" for name in LICENCE_FILES}
 
           jar = artifact_root / f"OpenGGF-{version}-jar-with-dependencies.jar"
@@ -557,7 +557,7 @@ jobs:
                   fail(f"{jar} is missing META-INF/MANIFEST.MF")
           if "Main-Class: com.openggf.Engine" not in manifest:
               fail(f"{jar} manifest does not bootstrap com.openggf.Engine")
-          licence_files = {"LICENSE", "LICENSES/LGPL-2.1.txt", "NOTICE.md", "CREDITS.md"}
+          licence_files = {"LICENSE", "LICENSES/LGPL-2.1.txt", "LICENSES/OpenGGF-Mod-Exception.txt", "NOTICE.md", "CREDITS.md"}
           missing_notices = sorted(f"META-INF/openggf/{name}" for name in licence_files
                                    if f"META-INF/openggf/{name}" not in names)
           if missing_notices:
