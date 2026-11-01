@@ -45,8 +45,29 @@ public final class NativeEngine {
             NativeModRegistrationProbe.main(registration);
             return;
         }
+        if ((args.length == 2 || args.length == 3) && args[0].equals("--check-master-discovery")) {
+            checkMasterDiscovery(args[1], args.length == 3 ? args[2] : null);
+            return;
+        }
         if (args.length != 0) throw new IllegalArgumentException(
-                "Expected: [--audit | --check-mods [owner-id] | --check-engine owner-id | --check-gameplay ... | --benchmark-gameplay ...]");
+                "Expected: [--audit | --check-mods [owner-id] | --check-engine owner-id | --check-gameplay ..."
+                        + " | --benchmark-gameplay ... | --check-master-discovery host [dns://resolver:port]]");
         Engine.main(args);
+    }
+
+    /**
+     * Packaged qualification of master discovery: the engine's own parse, JNDI SRV lookup
+     * (platform resolvers, or the given {@code dns://} resolver) and candidate policy. Only DNS
+     * traffic; no master connection. Prints the dial order, or the fail-closed reason and exits 1.
+     */
+    private static void checkMasterDiscovery(String host, String resolverOrNull) {
+        try {
+            var order = com.openggf.net.client.MasterDiscoveryCheck.resolve(host, resolverOrNull);
+            System.out.println("master discovery " + host + ": " + order);
+        } catch (java.io.IOException | IllegalArgumentException failed) {
+            System.err.println("master discovery " + host + " failed: " + failed.getMessage()
+                    + (failed.getCause() == null ? "" : " (" + failed.getCause() + ")"));
+            System.exit(1);
+        }
     }
 }
