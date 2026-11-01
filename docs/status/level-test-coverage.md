@@ -2370,3 +2370,9 @@ and [CNZ1 matrix](../architecture/validation/levels/s3k-cnz-act1.md#mgz2-to-cnz1
 record the solo/configured-Tails rescue-to-entry regression and its bounded
 pickup, landing, control-release and destination replay scope. Automatic
 exit-route composition, donor/viewport breadth and cross-load rewind remain open.
+
+MGZ2 powered rescue follow-up (2026-11-01): the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#powered-rescue-art-refresh--2026-11-01)
+records runtime art-refresh ownership, Super/Hyper palette-clock continuation
+and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
+the matrix's broader route, donor/team and rewind obligations open.

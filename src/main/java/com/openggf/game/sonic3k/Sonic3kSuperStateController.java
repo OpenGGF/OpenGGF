@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  *   <li>2 = fading out (reverting) - timer 3, retreat 6 bytes, stop at 0</li>
  * </ul>
  */
-public class Sonic3kSuperStateController extends SuperStateController {
+public class Sonic3kSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSuperStateController.class.getName());
 
     /** Palette fade state: 0=off, 1=fading in, -1=cycling, 2=fading out. */
@@ -528,6 +528,28 @@ public class Sonic3kSuperStateController extends SuperStateController {
                         | (companionState << 24),
                 packPalette(savedNormalPalette),
                 packPalette(savedNormalUnderwaterPalette));
+    }
+
+    /**
+     * Rebinds rebuilt normal art without replacing the native form/palette clocks.
+     * The initializer has just installed normal resources; retain these for the
+     * eventual reversion and republish the active form's mapping presentation.
+     */
+    @Override
+    public void rebindAfterArtRefresh() {
+        normalRenderer = player.getSpriteRenderer();
+        normalAnimSet = player.getAnimationSet();
+        if (superArtSet != null) {
+            // Refresh rebuilt the team bank allocation and palette contexts too.
+            superRenderer = new PlayerSpriteRenderer(superArtSet);
+            superRenderer.setRenderContext(normalRenderer.getRenderContext());
+        }
+        // An ordinary art refresh owns no normal-form physics reset (for
+        // example a live speed-shoes profile). Powered forms need their
+        // animation profile and mappings republished after normal art setup.
+        if (getState() != SuperState.NORMAL || endingRescueRevertMappingsPending) {
+            reconcileRewindPresentation(getState());
+        }
     }
 
     @Override

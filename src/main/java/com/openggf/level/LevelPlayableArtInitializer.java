@@ -120,6 +120,17 @@ final class LevelPlayableArtInitializer {
         }
     }
 
+    private boolean runtimeRefresh;
+
+    void refresh() {
+        runtimeRefresh = true;
+        try {
+            initialize();
+        } finally {
+            runtimeRefresh = false;
+        }
+    }
+
     void initialize() {
         if (hasOnlyBuiltinPlayables()) {
             initializeBuiltinTeamLegacy();
@@ -917,6 +928,12 @@ final class LevelPlayableArtInitializer {
                                         PreparedTailArt tailArt, Integer tailShiftedBase) { }
 
     private void initSuperState(AbstractPlayableSprite playable) {
+        if (runtimeRefresh && playable.getSuperStateController() instanceof
+                com.openggf.game.internal.RuntimeArtRefreshParticipant existing) {
+            existing.rebindAfterArtRefresh();
+            return;
+        }
+
         GameModule gameModule = levelManager.gameModule;
         if (gameModule == null) {
             return;
