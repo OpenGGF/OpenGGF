@@ -2376,3 +2376,9 @@ ICZ1 miniboss attack/destruction follow-up (2026-11-01): the
 tracks palette flashing, shard wait ordering, independent sign/explosion
 lifetimes and rewind of the falling-ice tail. Native pixel, complete-route and
 configuration breadth remain open, as does individual folded-child slot release.
+
+MGZ2 powered rescue follow-up (2026-11-01): the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#powered-rescue-art-refresh--2026-11-01)
+records runtime art-refresh ownership, Super/Hyper palette-clock continuation
+and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
+the matrix's broader route, donor/team and rewind obligations open.

@@ -11,6 +11,9 @@ upside-down S3K capsules, crowded-scene sprite retention with sprite limits
 disabled, and Tails carrying Sonic into CNZ1 after the MGZ2 rescue. See the
 development changelog below.
 
+MGZ2 rescue-Tails art refresh also preserves Super/Hyper palette cycling and
+boss-defeat detransformation.
+
 Both development branches currently share the same commit and release line.
 Current changes are recorded in
 [CHANGELOG.0.7.prerelease.md](CHANGELOG.0.7.prerelease.md), with earlier themes in

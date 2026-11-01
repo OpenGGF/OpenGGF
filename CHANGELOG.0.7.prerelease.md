@@ -16,6 +16,11 @@ Unreleased. The earlier development themes remain in
   Garden rescue instead of leaving Sonic to fall alone. Fresh level assembly
   restores the normal carry policy on configured sidekicks.
 
+- **MGZ2 powered rescue:** Rebuilding art for rescue Tails retains Sonic's
+  Super/Hyper controller, keeping palette cycling and boss-defeat
+  detransformation active.
+
+
 - **Sprite limits disabled:** Also remove the total 80/64-entry sprite-table cap,
   so later sprites survive crowded scenes and results screens. Explicit level
   masks remain active; enabling limits retains native table and line budgets.
