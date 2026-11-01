@@ -212,6 +212,11 @@ public class TestSonic1SpikeObjectInstance {
         protected SolidCheckpointBatch checkpointAll() {
             return checkpointBatch;
         }
+
+        @Override
+        protected SolidCheckpointBatch checkpointAll(int d4) {
+            return checkpointBatch;
+        }
     }
 
     private static final class SpikeTestPlayableSprite extends TestPlayableSprite {

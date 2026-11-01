@@ -33,6 +33,15 @@ public final class SolidObjectPassTestSupport {
                         captured.pieceEntryX(), null).forTailCall());
     }
 
+    /** {@link #routineCheckpoint} for a call site that loads its own {@code d4}. */
+    public static com.openggf.game.solid.SolidCheckpointBatch routineCheckpoint(ObjectManager manager,
+            ObjectInstance object, PlayableEntity player, List<? extends PlayableEntity> sidekicks, int d4) {
+        SolidObjectProvider provider = (SolidObjectProvider) object;
+        SolidEntryRegisters captured = SolidEntryRegisters.capture(manager, object, provider);
+        return manager.solidContacts().processCompatibilityCheckpoint(object, player, sidekicks, true,
+                new SolidEntryRegisters(manager, object, provider, d4, captured.pieceEntryX(), null));
+    }
+
     /** One participant's checkpoint for {@code object}, with its current x as d4. */
     public static com.openggf.game.solid.SolidCheckpointBatch participantCheckpoint(ObjectManager manager,
             ObjectInstance object, PlayableEntity player, boolean postMovement) {
