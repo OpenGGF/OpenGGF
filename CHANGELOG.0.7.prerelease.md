@@ -97,7 +97,10 @@ Unreleased. The earlier development themes remain in
   Recordings, screenshots, traces and offline tools stay exact. Rewind, loads, act
   reloads, Tails respawns, the CNZ teleporter and camera jumps beyond the native scroll
   cap snap;
-  special stages, competition, bonus stages, Stageplay and the editor stay exact. It
+  special stages, competition, bonus stages, Stageplay and the editor stay exact.
+  Player attachments share the player's motion on every draw path. Camera-relative
+  special effects, including the active AIZ2 battleship, keep the scene exact unless
+  they declare a compatible presentation contract. It
   uses the default Auto rendering limit, which follows the display refresh. The limit
   sits beside Interpolation in Display → Picture; the rebindable `N` shortcut toggles and
   saves interpolation during play with brief On/Off feedback. VRR qualification remains future work.

@@ -19,7 +19,7 @@ public final class PlayableMutatorPresentation {
                                     java.util.function.Consumer<java.util.List<com.openggf.graphics.GLCommand>> producer) {
         if (!(owner instanceof AbstractPlayableSprite sprite)
                 || (!hasPresentation(PlayableSpriteInternalAccess.mutatorPolicy(sprite)) && !hasBodyPresentation(sprite))) {
-            producer.accept(commands);
+            withMotionOwner(owner, () -> producer.accept(commands));
             return;
         }
         draw(owner, part, () -> {
@@ -35,6 +35,24 @@ public final class PlayableMutatorPresentation {
     }
 
     public static void draw(PlayableEntity owner, SpritePresentation.Part part, Runnable producer) {
+        withMotionOwner(owner, () -> drawPresented(owner, part, producer));
+    }
+
+    private static void withMotionOwner(PlayableEntity owner, Runnable producer) {
+        if (owner instanceof AbstractPlayableSprite sprite
+                && sprite.getClass().getClassLoader() == PlayableMutatorPresentation.class.getClassLoader()) {
+            var graphics = SpriteGraphicsAccess.graphics(sprite);
+            if (com.openggf.graphics.SpriteMotionInternalAccess.collecting(graphics)) {
+                com.openggf.graphics.SpriteMotionInternalAccess.withOwner(graphics,
+                        com.openggf.level.LevelMotionOwners.playerOwner(com.openggf.game.GameServices.sprites(), owner),
+                        producer);
+                return;
+            }
+        }
+        producer.run();
+    }
+
+    private static void drawPresented(PlayableEntity owner, SpritePresentation.Part part, Runnable producer) {
         if (!(owner instanceof AbstractPlayableSprite sprite)) {
             producer.run();
             return;
