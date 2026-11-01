@@ -7,6 +7,7 @@ Knuckles that appears in it is the NPC cutscene, not a playable Knuckles.
 
 | Obligation | Evidence | Remaining scope |
 |---|---|---|
+| ICZ2 → LBZ1 fresh entry | `TestS3kLbz1GroundLaunchIntroHeadless#icz2FreshTransitionLaunchesSonicOutOfSnow`: real fade/load/title handoff, emergence above `$05C0`, input/object-control release and controller retirement. Existing direct-entry tests retain 30-frame timing. | Sonic alone, native viewport, donor off; broader rosters/viewports, checkpoint and transition rewind remain open. |
 | Cup side contact (P1 and CPU) | `TestLbzCupElevatorSolidDispatch`: real dispatch stops an airborne rolling player at the cup edge, then repeats after restore. | Other character geometry and donors |
 | Cup capture/hold control and animation bit | `TestLbzCupElevatorInstance` (native P1/P2, extension, rewind) and `TestS3kLbz1KnucklesSequenceHeadless` | Full-route rewind and load/death boundaries |
 | Rolling drum deletion | `TestLbzRollingDrumDeletion`: real capture and range unload, dead/extension cleanup, rewind | — |
