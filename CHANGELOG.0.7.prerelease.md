@@ -1616,6 +1616,11 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **MIT example mods:** The example mods, the bundled Time Attack mod and the
+  creator kit's sample campaign are now under the MIT License, so creators can
+  copy and extend their code freely. Each carries a `LICENSE` file that the
+  creator kit exports with it; the engine remains GPL-3.
+
 - **Mod authoring entry points:** Six task recipes and mirrored agent guidance
   route creator work to supported helpers while retaining expert overrides. The
   portable project launcher supports local artifact/ROM paths, CLI overrides and

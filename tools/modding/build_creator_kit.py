@@ -82,6 +82,10 @@ def export_examples(root):
         generator = project / "generate_resources.py"
         if generator.is_file():
             entries["examples/" + name + "/generate_resources.py"] = generator.read_bytes()
+        # Example mods are MIT, unlike the GPL-3 engine; the notice travels with each copy.
+        licence = project / "LICENSE"
+        if licence.is_file():
+            entries["examples/" + name + "/LICENSE"] = licence.read_bytes()
         for tree in ("src/main", "src/test", "tools"):
             for file in sorted((project / tree).rglob("*")):
                 relative = file.relative_to(project)

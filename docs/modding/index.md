@@ -19,6 +19,10 @@ enemy recipes, and original campaigns. Agents can use the repository
 [mod-authoring skill](../../.agents/skills/mod-authoring/SKILL.md) to read only the
 relevant recipe and owning source.
 
+The example mods are MIT-licensed, unlike the GPL-3 engine: copy one as a starting
+point and keep its `LICENSE` notice with the parts you reuse. The engine, Mod API
+and SDK your mod builds against stay under GPL-3.
+
 ## Native builds vs. the JVM jar
 
 Native packages and the JVM jar load code mods (objects, characters, zones,
