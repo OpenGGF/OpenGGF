@@ -119,11 +119,9 @@ class TestOutboundRetirement {
     @Test
     void masterGracefulCloseDrainsAcceptedPacketsInOrder(@TempDir Path dir)
             throws Exception {
-        Constructor<MasterClient> constructor = MasterClient.class.getDeclaredConstructor(
-                PlayerIdentity.class, String.class, String.class);
+        Constructor<MasterClient> constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        MasterClient client = constructor.newInstance(
-                PlayerIdentity.loadOrCreate(dir), "HOST", "build");
+        MasterClient client = constructor.newInstance(java.net.URI.create("wss://master.test/master"), PlayerIdentity.loadOrCreate(dir), "HOST", "build");
         WebSocket socket = mock(WebSocket.class);
         CompletableFuture<WebSocket> stalled = new CompletableFuture<>();
         AtomicInteger writes = new AtomicInteger();
@@ -144,11 +142,9 @@ class TestOutboundRetirement {
     @Test
     void masterFailureDiscardsQueuedPacketsAndLateWriteCannotRestartThem(@TempDir Path dir)
             throws Exception {
-        Constructor<MasterClient> constructor = MasterClient.class.getDeclaredConstructor(
-                PlayerIdentity.class, String.class, String.class);
+        Constructor<MasterClient> constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        MasterClient client = constructor.newInstance(
-                PlayerIdentity.loadOrCreate(dir), "HOST", "build");
+        MasterClient client = constructor.newInstance(java.net.URI.create("wss://master.test/master"), PlayerIdentity.loadOrCreate(dir), "HOST", "build");
         WebSocket socket = mock(WebSocket.class);
         CompletableFuture<WebSocket> stalled = new CompletableFuture<>();
         AtomicInteger writes = new AtomicInteger();
