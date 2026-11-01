@@ -5,8 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-The current presentation fixes include crowded-scene sprite retention with
-sprite limits disabled; see the development changelog below.
+Current fixes include crowded-scene sprite retention with sprite limits
+disabled and Tails carrying Sonic into CNZ1 after the MGZ2 rescue. See the
+development changelog below.
 
 Both development branches currently share the same commit and release line.
 Current changes are recorded in

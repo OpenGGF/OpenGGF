@@ -2356,3 +2356,10 @@ the main ring count first differs; the diagnostic15+10-field observation otherwi
 matches through16236. The shared ring owner is handed back without runtime or
 fixture-gate changes. Act2 row18670, whole-route rewind, configuration breadth and
 presentation/whole-act/campaign obligations remain open.
+
+MGZ2 to CNZ1 carry handoff (2026-11-01): the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#mgz2-to-cnz1-carry-handoff-regression-2026-11-01)
+and [CNZ1 matrix](../architecture/validation/levels/s3k-cnz-act1.md#mgz2-to-cnz1-carry-handoff-regression-2026-11-01)
+record the solo/configured-Tails rescue-to-entry regression and its bounded
+pickup, landing, control-release and destination replay scope. Automatic
+exit-route composition, donor/viewport breadth and cross-load rewind remain open.
