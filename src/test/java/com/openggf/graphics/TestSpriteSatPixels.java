@@ -85,6 +85,13 @@ class TestSpriteSatPixels {
                         submit(graphics, 220, 160, 1, 1, 2, false, false, false);
                     });
                     pixel(groups, 184, 160, 2); pixel(groups, 220, 160, 0);
+                    SpriteSatInternalAccess.bindLineLimitSource(graphics, () -> false);
+                    ByteBuffer unlimited = draw(graphics, () -> {
+                        for (int i = 0; i < 80; i++) submit(graphics, 8, 180, 1, 1, 1, false, false, false);
+                        submit(graphics, 240, 180, 1, 1, 2, false, false, false);
+                    });
+                    pixel(unlimited, 240, 180, 2);
+                    SpriteSatInternalAccess.bindLineLimitSource(graphics, () -> true);
                     assertEquals(GL_NO_ERROR, glGetError());
                 }
             } finally { graphics.cleanup(); RenderContext.reset(); }

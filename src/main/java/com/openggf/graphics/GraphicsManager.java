@@ -2077,7 +2077,7 @@ public class GraphicsManager {
 
 		boolean applyMask = spriteMaskRequested;
 
-		// Evaluation retains masks/table capacity even when line budgets are disabled.
+		// Evaluation retains explicit masks even when sprite budgets are disabled.
 		// Use logical display dimensions: a wide trace can retain a native-width camera.
 		// Results are thread-owned scratch, consumed synchronously before collection clears.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processLogicalReusable(

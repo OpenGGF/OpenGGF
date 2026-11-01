@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sprite limits disabled:** Also remove the total 80/64-entry sprite-table cap,
+  so later sprites survive crowded scenes and results screens. Explicit level
+  masks remain active; enabling limits retains native table and line budgets.
+
 - **Repeated picture draws:** MGZ Knuckles boss fragments advance their defeat
   flicker only when the object executes, preserving the ROM's first hidden phase.
   Redrawing ICZ snow overlays and Pachinko traps no longer changes rewind state

@@ -936,7 +936,8 @@ the layout spawn. Submitted offscreen pieces still consume native line width;
 discarding them in the shared evaluator would break partially visible objects.
 AIZ's unculled plants exhausted line width and erased Sonic's lower body even
 though the ROM culled those plants. Keep any user option to relax line limits
-separate from producer correctness; masks and table capacity are separate rules.
+separate from producer correctness. Disabling limits removes table capacity as well
+as line budgets; explicit masks remain active.
 Normal play defaults `display.spriteScanlineLimit` to false. TraceCaptureTool scopes
 it to true for native image comparisons and restores it even on failure. Other
 ROM image probes must enable it explicitly and restore their caller preference;
