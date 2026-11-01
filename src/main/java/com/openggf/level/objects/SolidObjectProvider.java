@@ -56,20 +56,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Number of position-history frames to use for this object's new
-     * {@code SolidObjectFull} geometry check.
-     * <p>
-     * This is the full-solid counterpart to
-     * {@link #getTopSolidPlayerPositionHistoryFrames(PlayableEntity)}. It is
-     * intended for ROM object slots that observe a particular player before
-     * that player's movement slot has executed, while the engine's shared
-     * player pass has already advanced the live position.
-     */
-    default int getFullSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        return 0;
-    }
-
-    /**
      * Whether this top-solid object rejects the exact surface boundary before landing.
      * <p>
      * Most shared top-solid callers keep the established engine/profile behavior.
@@ -608,20 +594,6 @@ public interface SolidObjectProvider {
      * trace evidence shows the object must see the post-player-move X position.
      */
     default boolean projectsPreMovementGroundXForSolidContact(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Whether this object should sample one pending airborne Y step for a
-     * pre-movement {@code SolidObject_cont} top-landing check.
-     * <p>
-     * Use only for object routines that the ROM executes after the player slot
-     * has already applied airborne movement, while the engine's object pass still
-     * sees the pre-move centre. The resolver limits this hook to falling,
-     * airborne players that cross into the normal {@code SolidObject_Landed}
-     * top band; side and bottom contacts are unchanged.
-     */
-    default boolean projectsPreMovementAirYForSolidContact(PlayableEntity player) {
         return false;
     }
 
