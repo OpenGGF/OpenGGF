@@ -4727,3 +4727,15 @@ stay open until the controllers are re-authored or native evidence settles
 `TestSszTailsColdRouteCapture`, `TestSszSoloColdRouteCapture` and the other SSZ
 cold-route captures were not run. Any that jump from the opening bridge at the
 same place would share this frame.
+
+2026-11-01 (`bugfix/ai-rom-owned-solid-contact-2`): the lead ruled the route
+inputs re-authorable. All 16 `ssz1-*.script` routes share P1's inputs through
+1366, so all of them meet this frame. Captured side by side at `36aaddb37` and on
+the branch, the base engine's swallowed jump costs exactly one 2 px bridge carry;
+the corrected order costs two (release and landing frames) and dropping the press
+costs none. No local edit restores the base path: every airborne frame on the
+bridge also costs the landing frame, and grounded motion moves Sonic in
+12-subpixel steps, so the 512-subpixel difference is unreachable before the
+spindash. The no-jump variant re-converges in the coarse capture state from 2648
+to 3528 and then drifts. The routes need re-authoring from 1366 to their ends;
+that was not done ([audit](../../audits/2026-10-31-rom-owned-solid-contact.md#continuation-items-a-d-2026-11-01)).

@@ -17,6 +17,25 @@ Entries should include:
 
 ---
 
+## S2 solid on-screen gate ignores the screen-shake camera offset — 2026-11-01
+
+- **Location** — `AbstractObjectInstance.isWithinSolidContactBounds`, used by the
+  S2 `SolidObject_OnScreenTest` gate in `ObjectSolidContactController`.
+- **Symptom** — with `ARZBossPillar`'s `Obj89_Pillar_SolidObject` call moved to its
+  ROM site (before the pillar rises, s2.asm:65451-65497), the rising right pillar
+  returns no contact at `TestS2Arz2LevelSelectTraceReplay` f4707; the ROM pushes
+  Sonic to the pillar's left edge (`x` `$2B4D`, `Status_Push`).
+- **Suspected cause** — `SolidObject_OnScreenTest` (s2.asm:35336-35341) reads the
+  `render_flags.on_screen` bit the previous `BuildSprites` set. Obj89 leaves
+  `explicit_height` clear, so `BuildSprites_ApproxYCheck` assumes a 32 px radius
+  (s2.asm:30603-30611): at y `$501` against camera y `$400` the bit is set only
+  with the pillar raise's screen-shake offset applied to the sprite camera. The
+  engine recomputes the bit from the unshaken camera. The pillar's current AUTO
+  call evaluates the post-raise y, one pixel higher, which hides the gap.
+- **Removal condition** — the gate uses the camera position `BuildSprites` used,
+  including the shake offset; then the pillar call can move to its ROM site
+  ([solid-contact audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#continuation-items-a-d-2026-11-01)).
+
 ## Bottom kill plane runs the FixBugs branch — 2026-10-31
 
 - **Location:** `PlayableSpriteMovement.doLevelBoundary` and

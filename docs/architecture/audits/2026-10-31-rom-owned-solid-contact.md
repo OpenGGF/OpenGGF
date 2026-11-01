@@ -237,3 +237,126 @@ Change-based smoke at `771e02403`, run with
   native-GPU check, or a capture tag. The exception is
   `TestCPZObjectBugs#testSpinTubeForcesRolling`, a runtime assumption that
   skips the same way at `36aaddb37`.
+
+## Continuation: items A-D (2026-11-01)
+
+Branch `bugfix/ai-rom-owned-solid-contact-2`, based on `feature/ai-weakness-pass`
+at `c81ffaf7c` (the merge of steps 1-3). Same measurement protocol and 143
+classes as above. Baseline and every measured commit ran in a separate
+copy-on-write worktree with `target/classes` and `target/test-classes` deleted
+first. The baseline at `c81ffaf7c` reproduces the step-3 head: 77 green, 66 red,
+215 tests, no skips.
+
+### What landed
+
+| Commit | Item | Change |
+| --- | --- | --- |
+| `1bee975c8` | A | S1 collapsing floor (Obj53) releases its rider where `ExitPlatform` does. Instrumented SLZ1 f4045-f4062: at f4052 floor s54 enters `CFlo_OnPlatform` with timer 1, decrements to 0, and `CFlo_WalkOff` releases Sonic at x `$1341` (band `[$1300,$1340)`), resetting the floor to routine 2 (_incObj/sub ExitPlatform.asm:21-34); s63 lands him in the same frame; at f4053 `CFlo_ChkTouch` sees the flag with a zero timer (_incObj/1A, 53 Collapsing Ledges and Floors.asm:176-180) and takes `Fragmentate_8x2Floor`, which clears the flag (_incObj/1A, 53 Collapsing Ledges and Floors.asm:278-279). The engine had two errors: `pendingNoResetFragment` also held the rider on the routine-4 frame whose timer had just reached zero (`df2d03d60` added that clause while the timer ran a frame late; `8b1120208` fixed the timer and left the clause), and the routine 4 -> 2 reset ran only for an airborne rider. The floor therefore fragmented with the flag kept, and its `.delayCollapse` port cleared the bit s63 had set two frames later. |
+| `d2678cf45` | B | LBZ final boss muzzle drops its head reference where `loc_7321A`'s routines stop reading parent3: a counting-down muzzle deletes itself when the head has bit 7 (`loc_73232` / `loc_7326A`); a blinking or charging muzzle holds the head's last position (the head's `Obj_FlickerMove` flight is not modelled, see [S3K known bugs](../../status/s3k-known-bugs.md)); the fired bolt (`loc_732BA` / `loc_732F6`) drops it. |
+| `c7d6a81b1` | D | Deleted `PostPlayerUpdateHook` (no production caller since the objects-first order went; the S2 cylinder, MHZ swing vine and both AIZ ride vines already did the hook's work in their update; the S2 signpost walk-off now runs in update for every collision model) and the unread `GroundWallResponseState.preControlGSpeed`. |
+| `b6669b030` | D | `carriesRiderOnHorizontalMove` folded into the call's d4 for 25 of 26 overrides: AUTO routines return their current x from `tailCallD4` (or the entry x when they carry), MANUAL routines pass their d4 through the new `ObjectSolidExecutionContext.solidWithD4` / `checkpointAll(int)`. |
+| `64e49c0f5` | D (step 4) | S1 collapsing floor is a MANUAL routine with the ROM's calls: `PlatformObject` in `CFlo_ChkTouch`, `CFlo_WalkOff` in `CFlo_OnPlatform` and `.delayCollapse`, no call on the `Fragmentate_8x2Floor_NoReset` frame. `.delayCollapse` applies `ExitPlatform`'s global `bclr` and tests Sonic's live `Status_OnObj` as the ROM does. Routine transitions read the checkpoint result for v_player (MANUAL checkpoints fire no `SolidObjectListener` callbacks). Deleted its `suppressSlopeSampleThisFrame` / `defersAirborneRiderUnseatThisFrame` hold, both listener methods and `pendingNoResetFragment`. |
+| `95d25ddd8`, `84b48e6d8` | D (step 6) | Deleted `projectsPreMovementAirYForSolidContact` (monitor only; it ran only for non-post-movement checkpoints, which AUTO routines never get), `getFullSolidPlayerPositionHistoryFrames` (no override), both `SolidRoutineAdapter`s, `SolidRoutineProviderForwarding` and both `SolidRoutineProfile.adapt` factories (test-only), and the S2 monitor's pending-x projection, whose premise was the deleted objects-first order (`Obj26_Main`, s2.asm:25579-25605). Two monitor tests that relied on the y projection now place Sonic at his post-move y in a post-movement checkpoint. |
+| `f8214016b` | D | The S3K crouch check reads the live `Status_OnObj` as `SonicKnux_Roll` does before writing Duck (sonic3k.asm:23258-23300) instead of also accepting the player-slot entry snapshot, which existed for a deleted mid-slot clear. |
+
+Size against `c81ffaf7c`: `ObjectSolidContactController` 4,553 -> 4,520
+lines (-33); `SolidObjectProvider` 871 -> 843. Main sources: 50 files,
++218 / -716. Whole branch: 78 files, +319 / -875. Hooks and types deleted:
+`PostPlayerUpdateHook`, `preservesMovingSideContactVelocity` (attempted, see
+below; not deleted), `projectsPreMovementAirYForSolidContact`,
+`getFullSolidPlayerPositionHistoryFrames`, `SolidRoutineAdapter` x2,
+`SolidRoutineProviderForwarding`, `SolidRoutineProfile.adapt` x2, 25
+`carriesRiderOnHorizontalMove` overrides, Obj53's two pass-hold overrides and
+its listener. The Mod API candidate pin was regenerated at `c7d6a81b1` (-4),
+`b6669b030` (+2: `solidWithD4`, `checkpointAll(int)`) and `95d25ddd8` (-70).
+
+### Bisect for B
+
+The LBZ boss classes are byte-identical at `36aaddb37` and `c81ffaf7c`; the new
+`TestLbzFinalBoss1GraphRewind#muzzleKeepsNoReferenceToARetiredHead` fails all
+three stages (countdown, blink, fired) at `36aaddb37` with the trace's exact
+message. Steps 1-3 only changed the post-frontier trajectory that reaches it.
+
+### Transitions per measured commit (each against `c81ffaf7c`)
+
+| Measured commit | green->green | green->red | red->red identical | red->red changed | red->green |
+| --- | --- | --- | --- | --- | --- |
+| `1bee975c8` (A) | 77 | 0 | 63 | 1 | 2 |
+| `d2678cf45` (B) | 77 | 0 | 62 | 2 | 2 |
+| `b6669b030` (d4) | 77 | 0 | 62 | 2 | 2 |
+| `64e49c0f5` (Obj53 MANUAL) | 77 | 0 | 62 | 2 | 2 |
+| `84b48e6d8` (strip) | 77 | 0 | 62 | 2 | 2 |
+| `f8214016b` (crouch) | 77 | 0 | 62 | 2 | 2 |
+
+Red->green: `TestS1Slz1CompleteRunTraceReplay`, `TestS1Slz2CompleteRunTraceReplay`
+(full passes). Changed reds: `TestS1CompleteEmeraldRunChain` (same failing
+segments 12, 15, 26, 32; segment 15 back from 5,187 errors to 6, the
+`36aaddb37` count) and `TestS3kLbzZoneSliceTraceReplay` (no closure exception;
+the replay completes with 2,091 errors, first error unchanged at f30582
+`tails_y`). Every commit after `d2678cf45` is byte-identical to it.
+
+### Stopped or deferred
+
+- **C, SSZ1 cold routes.** All 16 `ssz1-*.script` routes share P1's inputs
+  through input 1366 (the 800-px, solo and paired variants first differ at
+  1379-3408), so every SSZ1 cold route meets the same frame. Base `36aaddb37`
+  and the branch were captured side by side
+  (`GameplayCaptureTool`, Sonic+Tails native320, 20,720 inputs). The
+  base engine's swallowed jump at 1366 cost exactly one bridge carry (2 px);
+  under the corrected order the jump costs two (the release frame and the
+  landing frame), and dropping the press costs none, so P1 ends 2 px right or
+  left of the base path for the rest of the bridge. No local input edit can
+  reproduce one lost carry: every airborne episode on the bridge costs at least
+  two frames, and Sonic's grounded acceleration and friction (`$C`) move him in
+  multiples of 12 subpixels, so a 512-subpixel correction is unreachable before
+  the spindash. The no-jump variant re-converges in the coarse capture state
+  from 2648 to 3528 and then drifts (y at 3528, hidden phase from the offset
+  camera history). Re-authoring therefore means re-authoring every SSZ1 route
+  from 1366 to its end, boss fights included. Not done in this lane; the two
+  smoke reds (`TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`,
+  `TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`)
+  remain. The whole-route captures (`TestSszColdRouteCapture`,
+  `TestSszTailsColdRouteCapture`, `TestSszSoloColdRouteCapture`,
+  `TestSszWidePaired*ColdRouteCapture`) are `exhaustive-audit` and share the
+  frame; they were not run.
+- **S2 ARZ boss pillar MANUAL conversion, rejected.** `Obj89_Pillar_Sub0` /
+  `Sub2` call `Obj89_Pillar_SolidObject` before the body moves
+  (s2.asm:65451-65497,65652-65661), and FixBugs=0 `Sub4` makes no call and
+  leaves a rider's `Status_OnObj` set (65601-65640). Moving the call there
+  (with or without deleting `preservesMovingSideContactVelocity`) turns
+  `TestS2Arz2LevelSelectTraceReplay` red at f4707 (`x` `$2B4D`/`$2B4F`): the
+  rising right pillar returns no contact. Cause: `SolidObject_OnScreenTest`
+  (s2.asm:35336-35341) reads the bit the previous BuildSprites set with its
+  approximate 32 px Y test (30603-30611); at y `$501` against camera y `$400`
+  that test only passes with the ARZ screen-shake offset, and the engine's live
+  on-screen proxy (`isWithinSolidContactBounds`) has none. The old AUTO call
+  saw the post-raise y, one pixel higher, which masked it. Needs that gate
+  fixed first ([known bugs](../../status/known-bugs.md)).
+- **Not started:** MGZ top platform (its hooks fake a pre-move call and its
+  state machine reacts to the result a frame late; the last
+  `carriesRiderOnHorizontalMove` override stays until it is converted), CPZ
+  staircase and ARZ arrow (`preservesRidingPushStatus`, step 5), MTZ / conveyor
+  / elevator (`staleHorizontalLogicalInputFramesWhileRiding`), S3K breakable
+  wall, CNZ trap door (`getTopSolidPlayerPositionHistoryFrames` covers a loose
+  state-machine port of `loc_31CCA`, which always calls `SolidObjectTop` and
+  then `Animate_Sprite`), AIZ transition floor and the other immediate
+  checkpoints, ICZ snow pile, the balance check's frame-start reads
+  (`terrainMoveDispatchOwnsDetachAnimation`), and the offscreen-sidekick skips
+  (the P2 gate exists only in S2 `SolidObject` and S3K `SolidObjectFull`, which
+  the engine's helper vocabulary cannot yet name).
+
+### Validation
+
+- Per step, focused `maven_queue.py --normal -Dmse=off` runs with the three ROM
+  paths and surfaceless EGL: Obj53 unit tests and the S1 headless set (39-40
+  tests), the LBZ boss classes (53 tests), the d4-conversion classes (945 tests;
+  the only failure was the known SSZ1 route), the strip classes (178 tests),
+  `TestSonic2ObjectBugFixes` (70 tests; one pre-existing order-dependent error,
+  `mtzCogHighSpeedLeftwardReleaseStillSkipsFoldedSiblingSideStop`, which errors
+  the same way in isolation at `64e49c0f5`) and `TestPlayableSpriteMovement`
+  (188 tests).
+- `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`: green at every
+  step.
+- `-Pguards`: 820 tests, 0 failures at `c7d6a81b1`, `b6669b030`, `64e49c0f5`,
+  `84b48e6d8` and `f8214016b`.

@@ -122670,3 +122670,30 @@ an `Invalid rewind reference closure` at f42015 (LBZ final boss laser children).
 Five S3K Sonic+Tails reds change only their error totals after unchanged first
 errors (MGZ slice, AIZ5, HPZ, HPZ2, LRZ). `TestS3kAizTraceReplay` stays green;
 S2 OOZ1 f447 unchanged.
+
+## 2026-11-01 — ROM-owned solid contact continuation: SLZ hand-off, LBZ closure, pruning
+
+Branch `bugfix/ai-rom-owned-solid-contact-2` (worktree `t3-84f26081`), base
+`c81ffaf7c` (`feature/ai-weakness-pass`), measured head `f8214016b`. Same 143
+classes, commands and environment as the 2026-10-31 solid-contact entry; each
+commit measured in a separate copy-on-write worktree with classes deleted first.
+Details and the per-commit table:
+[audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#continuation-items-a-d-2026-11-01).
+
+| Trace | `c81ffaf7c` | Head |
+| --- | --- | --- |
+| `TestS1Slz1CompleteRunTraceReplay` | red: 2,747 errors, f4055 `air` 0/1 | **green** (`1bee975c8`) |
+| `TestS1Slz2CompleteRunTraceReplay` | red: 1,744 errors, f4510 `air` 0/1 | **green** (`1bee975c8`) |
+| `TestS1CompleteEmeraldRunChain` | red, segments 12/15/26/32; segment 15 5,187 errors | red, same segments; segment 15 6 errors |
+| `TestS3kLbzZoneSliceTraceReplay` | error: `Invalid rewind reference closure` at f42015 | red: 2,091 errors, first f30582 `tails_y` (unchanged); replay completes (`d2678cf45`) |
+
+SLZ fix: Obj53 now resets to routine 2 on any `ExitPlatform` exit and no longer
+holds the rider on the routine-4 frame whose timer reached zero; the s54->s63
+hand-off at f4052 and s63's fragmentation release at f4061 follow the ROM frame
+by frame. LBZ fix: the laser muzzle no longer keeps a rewind reference to a
+retired laser head (latent since before `36aaddb37`; the new graph test fails
+there). Everything else is identical to `c81ffaf7c`
+(77 green -> green, 0 green -> red, 62 identical reds); `TestS3kAizTraceReplay`
+stays green. SSZ1 cold routes still leave their path at input 1366; the
+re-authoring analysis is in the
+[SSZ1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#rom-owned-solid-contact-opening-bridge-jump-2026-10-31).

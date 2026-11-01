@@ -8,6 +8,18 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## LBZ final boss laser heads skip their Obj_FlickerMove flight — 2026-11-01
+
+`Child_Draw_Sprite_FlickerMove` turns a laser head whose segment detaches into
+`Obj_FlickerMove` debris: it sets the head's status bit 7, gives it an indexed
+velocity and lets it fall until it leaves the screen (sonic3k.asm:178205-178215).
+`LbzFinalBoss1Instance.LaserHeadChild` retires instead. A muzzle that is still
+blinking or charging (`loc_73270` / `loc_732A8`) keeps refreshing from that
+moving head in the ROM; the engine muzzle holds the head's last position. The
+retirement also frees the head's SST slot earlier than the ROM. Removal
+condition: model the head's FlickerMove flight and slot lifetime, then let the
+muzzle follow it.
+
 ## AIZ hollow tree Player 2 standing-bit leak is not modelled — 2026-10-31
 
 `AIZHollowTree_CheckPlayers` (sonic3k.asm:43693-43707) ships with
