@@ -407,6 +407,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.currentLevelManager();
 	}
 
+	/** Homing and dash launches lag the camera exactly like the fire-shield dash below. */
+	private void applyHomingCameraLag() {
+		sprite.resetPositionAndStatTableHistory();
+		Camera camera = camera();
+		if (camera != null && camera.getFocusedSprite() == sprite) {
+			camera.setHorizScrollDelay(com.openggf.game.mutators.HomingAttackRuntime.CAMERA_LAG_FRAMES);
+		}
+	}
+
+	private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
+		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
+	}
+
 	private CollisionSystem collisionSystem() {
 		CollisionSystem current = sprite.currentCollisionSystemOrNull();
 		return current != null ? current : bootstrapCollisionSystem;
@@ -741,6 +754,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		if (motionMutators != null) {
 			motionMutators.beforeMovement(sprite);
+		}
+		var homingAttack = homingAttack();
+		if (homingAttack != null) {
+			homingAttack.beforeMovement(sprite);
 		}
 		storeInputState(up, down, left, right, jump);
 
@@ -1155,7 +1172,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sidekickCpu.applyFlyingCarryVerticalVelocity();
 				tailsFlightVerticalUpdatedThisFrame = true;
 			}
-			doChgJumpDir();
+			var homingAttack = homingAttack();
+			if (homingAttack == null || !homingAttack.steer(sprite)) {
+				doChgJumpDir();
+			}
 			doLevelBoundary();
 		}
 		if (!hurt && isCpuLevelBoundaryKillActive()) {
@@ -1604,6 +1624,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					inputJumpPress = false;
 					return;
 				}
+				// Homing-attack mutator: a live target outranks the native double-jump move;
+				// without one the native move runs and the forward air dash is the fallback.
+				var homingAttack = homingAttack();
+				if (homingAttack != null && homingAttack.tryLaunch(sprite)) {
+					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+					applyHomingCameraLag();
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
+					return;
+				}
 				if (sprite.getSecondaryAbility() == SecondaryAbility.FLY
 						&& tryActivateSuperFromAirAbility()) {
 					jumpReleasedSinceJump = false;
@@ -1632,6 +1662,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				}
 				if (tryShieldAbility()) {
 					jumpReleasedSinceJump = false;
+					return;
+				}
+				if (homingAttack != null && homingAttack.tryAirDash(sprite)) {
+					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+					applyHomingCameraLag();
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
 					return;
 				}
 			}

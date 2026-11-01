@@ -35,7 +35,7 @@ import java.util.Map;
  * rider-control seam from {@code sub_324C0}.</p>
  */
 public final class CnzCylinderInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -1426,5 +1426,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 playerTwoSlot.twistAngle & 0xFF,
                 playerTwoSlot.horizontalDistance & 0xFF,
                 playerTwoSlot.priorityThresholdSource & 0xFF);
+    }
+    /** Homing: the cylinder's top is a ride point; the native solid landing takes the rider. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return com.openggf.level.objects.HomingTargets.onTop(this,
+                com.openggf.level.objects.homing.HomingTargetKind.ATTACHABLE, player);
     }
 }

@@ -23,7 +23,7 @@ import java.util.Map;
  * Supports multi-component bosses with parent-child relationships.
  */
 public abstract class AbstractBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, InstagibBossTarget {
     @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
         return com.openggf.game.mutators.ObjectHeadRole.BOSS;
     }
@@ -206,6 +206,11 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
         hitHandler.processHit(player);
+    }
+
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() {
+        if (state.hitCount > 1) state.hitCount = 1;
     }
 
     /**

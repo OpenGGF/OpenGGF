@@ -11,7 +11,7 @@ import com.openggf.debug.DebugColor;
  * Base class for boss child components with common functionality.
  * Child components are full object instances so they can participate in collision and rendering buckets.
  */
-public abstract class AbstractBossChild extends AbstractObjectInstance implements BossChildComponent {
+public abstract class AbstractBossChild extends AbstractObjectInstance implements BossChildComponent, InstagibBossTarget {
     @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
         return com.openggf.game.mutators.ObjectHeadRole.BOSS;
     }
@@ -285,5 +285,9 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
     public void setPosition(int x, int y) {
         this.currentX = x;
         this.currentY = y;
+    }
+    /** Instagib: a struck part (for example a hittable head) collapses its owning boss's hits. */
+    @Override public void collapseToFinalHit() {
+        if (parent != null) parent.collapseToFinalHit();
     }
 }

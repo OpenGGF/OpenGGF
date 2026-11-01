@@ -9,4 +9,6 @@ public interface PlayableMutatorPolicySource {
     default void beforeForwardTick() { }
     /** Internal structural binding for native motion consumers, never creator callback authority. */
     default com.openggf.game.mutators.TransientMutatorPolicySource transientPolicies() { return null; }
+    /** Internal structural binding for the homing-attack mutator; null when the world has none. */
+    default com.openggf.game.mutators.HomingAttackRuntime homingAttack() { return null; }
 }

@@ -2680,7 +2680,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public boolean getInvulnerable() {
                 // Debug mode and Super Sonic make player completely invulnerable
-                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt;
+                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
         }
 
         public int getInvulnerableFrames() {

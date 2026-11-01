@@ -421,7 +421,7 @@ public final class EditorInputHandler {
         var view = controller.canvasView();
         view.setViewportSize(graphics.getProjectionWidth(), Math.max(224, (int) graphics.getScreenHeight()));
         int[] point = EditorMouseTransform.logicalPoint(input, graphics);
-        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
+        int wheel = com.openggf.control.MouseWheel.of(input).notches();
         boolean middle = input.isMouseButtonDown(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
         if (!middle) panningCanvas = false;
         if (point[2] == 0) {

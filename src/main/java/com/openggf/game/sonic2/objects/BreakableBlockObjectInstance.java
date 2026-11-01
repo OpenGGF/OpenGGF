@@ -34,7 +34,7 @@ import java.util.logging.Logger;
  * - Plays SLOW_SMASH sound effect (0xCB)
  */
 public class BreakableBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     // Obj32 owns a block, debris and score popup; debris velocity is not body facing.
 
     private static final Logger LOGGER = Logger.getLogger(BreakableBlockObjectInstance.class.getName());
@@ -451,5 +451,10 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         public int getPriorityBucket() {
             return RenderPriority.clamp(4);
         }
+    }
+    /** Homing: a CPZ block broken by landing on it in a roll, so the attack aims at its top. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.onTop(this,
+                com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE, player);
     }
 }

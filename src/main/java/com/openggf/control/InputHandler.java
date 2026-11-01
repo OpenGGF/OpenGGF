@@ -930,6 +930,7 @@ public class InputHandler {
 			}
 		}
 		textInput.endFrame();
+		wheel.endPass();
 		menuFrame++;
 		pendingSceneEvents.clear();
 		droppedSceneEvents = 0;

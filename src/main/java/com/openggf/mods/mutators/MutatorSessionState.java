@@ -529,6 +529,21 @@ public final class MutatorSessionState implements AutoCloseable {
                     speeds.stream().anyMatch(MutatorPolicy.GameplaySpeed::audioFollowsSpeed));
         }
 
+        /** Any Instagib contribution selects Instagib; contributed characters are united. */
+        public com.openggf.game.mutators.HomingAttackRuntime.Policy homingPolicy(Set<MutatorCapability> available) {
+            if (!available.contains(MutatorCapability.HOMING_ATTACK))
+                return com.openggf.game.mutators.HomingAttackRuntime.Policy.STOCK;
+            var contributions = contributions(MutatorPolicy.HomingAttack.class);
+            if (contributions.isEmpty()) return com.openggf.game.mutators.HomingAttackRuntime.Policy.STOCK;
+            var characters = new java.util.TreeSet<String>();
+            contributions.forEach(value -> value.characters().forEach(character ->
+                    characters.add(character.name().toLowerCase(java.util.Locale.ROOT))));
+            boolean instagib = contributions.stream().anyMatch(value -> value.mode() == MutatorPolicy.HomingMode.INSTAGIB);
+            return new com.openggf.game.mutators.HomingAttackRuntime.Policy(instagib
+                    ? com.openggf.game.mutators.HomingAttackRuntime.Mode.INSTAGIB
+                    : com.openggf.game.mutators.HomingAttackRuntime.Mode.HOMING, characters);
+        }
+
         private boolean active(Set<MutatorCapability> available, MutatorCapability capability) {
             return available.contains(capability) && policies.values().stream().flatMap(List::stream)
                     .anyMatch(value -> value.capability() == capability);

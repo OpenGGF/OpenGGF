@@ -1175,7 +1175,11 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      * Each orb can break away when the boss is hit, bouncing off-screen.
      */
     public static class MTZBossOrb extends AbstractBossChild
-            implements TouchResponseProvider, TouchResponseAttackable, TouchResponseListener, RewindRecreatable {
+            implements TouchResponseProvider, TouchResponseAttackable, TouchResponseListener, RewindRecreatable,
+            com.openggf.level.objects.homing.HomingTargetSource {
+
+        /** Homing: never a target. Intact orbs hurt ($87); a struck loose orb ($DA) only pops. */
+        @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) { return null; }
 
         /** Obj53 routine states (Obj53_Index, s2.asm:67282-67287). */
         private static final int RT_INIT = 0;
