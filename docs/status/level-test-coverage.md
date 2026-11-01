@@ -2376,3 +2376,8 @@ MGZ2 powered rescue follow-up (2026-11-01): the
 records runtime art-refresh ownership, Super/Hyper palette-clock continuation
 and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
 the matrix's broader route, donor/team and rewind obligations open.
+
+LBZ1 box rewind follow-up (2026-11-01): `TestLbz1BoxRigRewind` covers fresh
+controller restoration with a progressed carried/standalone box, restoration
+before creation, and 180 updates of piece replay. The [act matrix](../architecture/validation/levels/s3k-lbz-act1.md)
+retains the inherited route, donor, roster and viewport gaps.
