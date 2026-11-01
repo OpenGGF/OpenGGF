@@ -1,5 +1,8 @@
 package com.openggf;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
@@ -14,11 +17,16 @@ final class DisplayWindowController {
     }
     record Placement(int x, int y, int width, int height, boolean maximized) { }
     record Monitor(long handle, int x, int y, int width, int height, int refreshRate) { }
+    record OutputObservation(Monitor windowMonitor, int presentationCeilingHz) { }
 
     interface Desktop {
         default void observeWindowed() { }
         Placement placement();
         Monitor monitor();
+        default OutputObservation outputObservation() {
+            Monitor known = monitor();
+            return new OutputObservation(known, refresh(known));
+        }
         void windowed(Placement placement);
         void fullscreen(Mode mode, Monitor monitor);
     }
@@ -39,9 +47,11 @@ final class DisplayWindowController {
 
     boolean apply(String setting) {
         boolean changed = applyMode(setting);
-        Monitor monitor = desktop.monitor();
-        if (changed || output.epoch() == 0 || !sameOutput(observed, monitor)) {
-            output = new DisplayOutput(output.epoch() + 1, monitor == null ? 0 : Math.max(0, monitor.refreshRate()));
+        var observation = desktop.outputObservation();
+        Monitor monitor = observation.windowMonitor();
+        if (changed || output.epoch() == 0 || !sameOutput(observed, monitor)
+                || output.presentationCeilingHz() != observation.presentationCeilingHz()) {
+            output = new DisplayOutput(output.epoch() + 1, refresh(monitor), observation.presentationCeilingHz());
         }
         observed = monitor;
         return changed;
@@ -68,6 +78,18 @@ final class DisplayWindowController {
     }
 
     static Monitor monitorForWindow(long window) { return new GlfwDesktop(window).monitor(); }
+
+    /** A preferred placement monitor is not evidence of a Wayland window's current output. */
+    static OutputObservation observeOutput(boolean wayland, Monitor attached, Monitor selected,
+                                           List<Monitor> connected) {
+        Monitor known = attached != null ? attached : !wayland ? selected
+                : connected.size() == 1 ? connected.getFirst() : null;
+        int ceiling = known != null ? refresh(known)
+                : connected.stream().mapToInt(DisplayWindowController::refresh).max().orElse(0);
+        return new OutputObservation(known, ceiling);
+    }
+
+    private static int refresh(Monitor monitor) { return monitor == null ? 0 : Math.max(0, monitor.refreshRate()); }
 
     private static final class GlfwDesktop implements Desktop {
         private final long window;
@@ -117,6 +139,18 @@ final class DisplayWindowController {
                 }
             }
             return describe(selected);
+        }
+
+        @Override public OutputObservation outputObservation() {
+            var connected = new ArrayList<Monitor>();
+            var handles = glfwGetMonitors();
+            if (handles != null) for (int i = 0; i < handles.limit(); i++) {
+                var monitor = describe(handles.get(i));
+                if (monitor != null) connected.add(monitor);
+            }
+            boolean wayland = glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
+            return observeOutput(wayland, describe(glfwGetWindowMonitor(window)),
+                    wayland ? null : monitor(), connected);
         }
 
         private Monitor describe(long monitor) {

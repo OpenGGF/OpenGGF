@@ -23,7 +23,7 @@ boundaries, gravity-puzzle landings and walk-offs, turbine floor responses and h
 control, ordered physical gameplay and native-menu short-tap admission, and live
 PAL50/NTSC60 simulation/audio scheduling independent of the window rendering limit,
 display-locked pacing on matching refresh rates with a drift-regulated speaker,
-measured VRR swap pacing with even tick-gated presents,
+VRR inference from blocking swaps with even tick-gated presents,
 opt-in render-only motion interpolation on higher refresh rates with an Auto rendering
 limit beside its Display setting,
 with region-cadence viewport recording, redraw-independent native object state,

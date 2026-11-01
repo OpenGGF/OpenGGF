@@ -245,7 +245,8 @@ class TestDisplayCadencePolicy {
             for (int tick = 0; tick <= 10 * hz; tick++) {
                 double submitted = tick * period + 1_000_000;
                 long returned = Math.round(fixed ? Math.ceil(submitted / vblank) * vblank : submitted);
-                pacing.observeSwap(returned + random.nextLong(-100_000, 100_001));
+                pacing.observeSwap(returned + random.nextLong(-100_000, 100_001),
+                        fixed ? Math.round(returned - submitted) : Math.round(vblank / 2));
                 var expected = refresh % hz == 0 ? SwapPacingPolicy.VrrEngagement.UNKNOWN
                         : fixed ? SwapPacingPolicy.VrrEngagement.NOT_DETECTED : SwapPacingPolicy.VrrEngagement.ACTIVE;
                 assertEquals(tick < hz ? SwapPacingPolicy.VrrEngagement.UNKNOWN : expected,
@@ -258,24 +259,58 @@ class TestDisplayCadencePolicy {
     }
 
     @Test
+    void nonBlockingSwapsCannotClassifyEitherReturnModel() {
+        for (boolean fixed : new boolean[] {false, true}) {
+            var pacing = new SwapPacingPolicy(60, 144);
+            for (int i = 0; i <= 180; i++) {
+                double submitted = i * SECOND / 60.0;
+                long returned = Math.round(fixed ? Math.ceil(submitted * 144 / SECOND) * SECOND / 144 : submitted);
+                pacing.observeSwap(returned, 0);
+            }
+            assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
+            assertEquals(SwapPacingPolicy.Reason.NO_SWAP_WAIT, pacing.measurement().reason());
+        }
+    }
+
+    @Test
+    void swapWaitModelsMeetAtQuarterVblankAndExpireWithTheIntervalWindow() {
+        for (long wait : new long[] {2_499_999, 2_500_000, 2_500_001}) {
+            var pacing = new SwapPacingPolicy(60, 100);
+            for (int i = 0; i <= 180; i++) pacing.observeSwap(Math.round(i * SECOND / 60.0), wait);
+            assertEquals(wait > 2_500_000 ? SwapPacingPolicy.VrrEngagement.ACTIVE
+                    : SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
+            for (int i = 181; i <= 300; i++) pacing.observeSwap(Math.round(i * SECOND / 60.0), 0);
+            assertEquals(SwapPacingPolicy.Reason.NO_SWAP_WAIT, pacing.measurement().reason());
+            assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
+        }
+    }
+
+    @Test
+    void anAutoCeilingDoesNotNominateAWindowRefreshLock() {
+        var request = new Request(DisplayPacing.AUTO, true, 144, 60, new DisplayOutput(1, 0, 144));
+        assertEquals(0, policy.nominate(request));
+        assertEquals(DisplayCadencePolicy.Reason.REFRESH_UNKNOWN, policy.reason());
+    }
+
+    @Test
     void vrrEvidenceRequiresKnownRefreshEnoughSamplesAndUnambiguousCadence() {
         for (int refresh : new int[] {0, 50, 120, 180}) {
             var pacing = new SwapPacingPolicy(60, refresh);
-            for (int i = 0; i <= 180; i++) pacing.observeSwap(Math.round(i * SECOND / 60.0));
+            for (int i = 0; i <= 180; i++) pacing.observeSwap(Math.round(i * SECOND / 60.0), 4_000_000);
             assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
         }
         var pacing = new SwapPacingPolicy(50, 120);
-        for (int i = 0; i <= 150; i++) pacing.observeSwap(i * 20_000_000L);
+        for (int i = 0; i <= 150; i++) pacing.observeSwap(i * 20_000_000L, 4_000_000);
         assertEquals(20_000_000, pacing.measurement().meanNanos());
         assertEquals(0, pacing.measurement().spreadNanos());
         assertEquals(SwapPacingPolicy.VrrEngagement.ACTIVE, pacing.measurement().vrr());
         pacing.reset();
         assertTrue(Double.isNaN(pacing.measurement().meanNanos()));
-        pacing.observeSwap(0);
-        pacing.observeSwap(SECOND);
+        pacing.observeSwap(0, 0);
+        pacing.observeSwap(SECOND, 0);
         assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
         // A cap/overload at half the service rate is neither of the competing models.
-        for (int i = 1; i <= 150; i++) pacing.observeSwap(SECOND + i * 40_000_000L);
+        for (int i = 1; i <= 150; i++) pacing.observeSwap(SECOND + i * 40_000_000L, 4_000_000);
         assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, pacing.measurement().vrr());
     }
 
@@ -284,7 +319,7 @@ class TestDisplayCadencePolicy {
         var pacing = new SwapPacingPolicy(50, 120);
         pacing.observeWork(3_000_000);
         assertEquals(1_000_000, pacing.presentDeadline(0, 20_000_000, 1_000_000));
-        for (int i = 0; i <= 100; i++) pacing.observeSwap(i * 20_000_000L);
+        for (int i = 0; i <= 100; i++) pacing.observeSwap(i * 20_000_000L, 4_000_000);
         assertEquals(3_000_000, pacing.presentDeadline(0, 20_000_000, 1_000_000));
         assertEquals(4_000_000, pacing.presentDeadline(0, 20_000_000, 4_000_000));
         pacing.observeWork(25_000_000);

@@ -805,7 +805,7 @@ class TestLiveFrameRuntime {
         final boolean fixed;
         int ticks, deviceServices;
         boolean focused = true, interpolation, capture;
-        long extraWork;
+        long extraWork, swapWait;
         Object boundary = "start";
         final List<Long> returns = new ArrayList<>();
         final List<Long> ticksAt = new ArrayList<>();
@@ -834,10 +834,34 @@ class TestLiveFrameRuntime {
         }
         public void swap() {
             if (fixed) now = Math.round((Math.floor(now * (double) refresh / SECOND) + 1) * SECOND / refresh);
+            else now += swapWait;
             returns.add(now);
         }
         public void swapInterval(int interval) { assertEquals(1, interval); }
         public void serviceDevice() { deviceServices++; }
+    }
+
+    @Test void nonBlockingServicePacedReturnsCannotEstablishVrrOn144Hz() {
+        var host = new MeasuredHost(60, 144, false);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        runUntil(runtime, runtime.iterate(), 5 * SECOND);
+        assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, runtime.statistics().swapPacing().vrr());
+        assertEquals(SwapPacingPolicy.Reason.NO_SWAP_WAIT, runtime.statistics().swapPacing().reason());
+        assertEquals("vrr UNKNOWN NOWAIT", runtime.statistics().vrrLine());
+        assertEquals(host.ticks, host.deviceServices - 1, "non-blocking swaps never start an even-present hold");
+    }
+
+    @Test void waylandUnknownWindowOutputUsesAutoCeilingWithoutNominatingALock() throws Exception {
+        var runtime = open(60, 60);
+        output = new DisplayOutput(1, 0, 144);
+        regulated = true;
+        config.setConfigValue(SonicConfiguration.FPS, "AUTO");
+        runUntil(runtime, runtime.iterate(), 3 * SECOND);
+        assertEquals(144, runtime.statistics().pictureCap());
+        assertEquals("EXACT", runtime.statistics().cadence());
+        assertEquals("REFRESH_UNKNOWN", runtime.statistics().reason());
+        assertEquals(SwapPacingPolicy.VrrEngagement.UNKNOWN, runtime.statistics().swapPacing().vrr());
+        assertEquals(List.of(1), intervals);
     }
 
     @ParameterizedTest
@@ -846,6 +870,7 @@ class TestLiveFrameRuntime {
         for (boolean fixed : new boolean[] {false, true}) {
             now = 0;
             var host = new MeasuredHost(hz, refresh, fixed);
+            if (!fixed) host.swapWait = Math.round(SECOND / (2.0 * refresh));
             var runtime = new LiveFrameRuntime(host, () -> now);
             runUntil(runtime, runtime.iterate(), 5 * SECOND);
             var expected = refresh % hz == 0 ? SwapPacingPolicy.VrrEngagement.UNKNOWN
@@ -883,6 +908,7 @@ class TestLiveFrameRuntime {
         for (String change : List.of("blend", "capture", "focus", "boundary", "late", "slow")) {
             now = 0;
             var host = new MeasuredHost(50, 120, false);
+            host.swapWait = Math.round(SECOND / 240.0);
             var runtime = new LiveFrameRuntime(host, () -> now);
             var last = runtime.iterate();
             // A held picture has been drawn, but has no swap yet.
@@ -958,13 +984,14 @@ class TestLiveFrameRuntime {
         runUntil(runtime, runtime.iterate(), 3 * SECOND);
         var lines = Engine.livePresentationPanelLines();
         assertEquals("swap 20.0+/-0.0ms", lines.get(lines.size() - 2));
-        assertEquals("vrr ACTIVE", lines.getLast());
+        assertEquals("vrr UNKNOWN NOWAIT", lines.getLast());
         var font = new com.openggf.graphics.PixelFont();
         assertTrue(font.measureWidth(lines.get(lines.size() - 2),
                 0.5f) <= 85);
         String clipboard = Engine.liveSchedulingDiagnostics();
         assertTrue(clipboard.contains("swap 20.0+/-0.0ms"));
-        assertTrue(clipboard.contains("vrr ACTIVE (swap-return inference)"));
+        assertTrue(font.measureWidth(lines.getLast(), 0.5f) <= 85);
+        assertTrue(clipboard.contains("vrr UNKNOWN NOWAIT (swap-return inference)"));
     }
 
 }

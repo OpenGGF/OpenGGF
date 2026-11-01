@@ -5,12 +5,16 @@ final class SwapPacingPolicy {
     private static final long SECOND = 1_000_000_000L;
 
     enum VrrEngagement { ACTIVE, NOT_DETECTED, UNKNOWN }
+    enum Reason { NONE, INSUFFICIENT_SAMPLES, REFRESH_UNKNOWN, NO_SWAP_WAIT, AMBIGUOUS }
 
-    record Measurement(double meanNanos, double spreadNanos, VrrEngagement vrr) { }
+    record Measurement(double meanNanos, double spreadNanos, VrrEngagement vrr, Reason reason) {
+        static final Measurement UNKNOWN = new Measurement(Double.NaN, Double.NaN,
+                VrrEngagement.UNKNOWN, Reason.INSUFFICIENT_SAMPLES);
+    }
 
     private final int serviceHz, refreshHz;
     // Two seconds retain several quantization cycles; one full second is required to decide.
-    private final long[] intervals, work;
+    private final long[] intervals, waits, work;
     private int count, cursor, workCount, workCursor;
     private long lastSwap;
     private boolean started;
@@ -19,6 +23,7 @@ final class SwapPacingPolicy {
         this.serviceHz = serviceHz;
         this.refreshHz = refreshHz;
         intervals = new long[2 * serviceHz];
+        waits = new long[intervals.length];
         work = new long[serviceHz];
     }
 
@@ -27,12 +32,13 @@ final class SwapPacingPolicy {
         started = false;
     }
 
-    void observeSwap(long returnedAtNanos) {
+    void observeSwap(long returnedAtNanos, long blockingNanos) {
         if (started) {
             long delta = returnedAtNanos - lastSwap;
             if (delta <= 0 || delta > LiveFrameRuntime.MAX_DEBT_NANOS) reset();
             else {
                 intervals[cursor] = delta;
+                waits[cursor] = Math.max(0, blockingNanos);
                 cursor = (cursor + 1) % intervals.length;
                 count = Math.min(count + 1, intervals.length);
             }
@@ -62,9 +68,12 @@ final class SwapPacingPolicy {
     }
 
     Measurement measurement() {
-        if (count == 0) return new Measurement(Double.NaN, Double.NaN, VrrEngagement.UNKNOWN);
-        double sum = 0;
-        for (int i = 0; i < count; i++) sum += intervals[i];
+        if (count == 0) return Measurement.UNKNOWN;
+        double sum = 0, waitSum = 0;
+        for (int i = 0; i < count; i++) {
+            sum += intervals[i];
+            waitSum += waits[i];
+        }
         double mean = sum / count, variance = 0, latticeError = 0;
         double vblank = refreshHz > 0 ? (double) SECOND / refreshHz : Double.NaN;
         for (int i = 0; i < count; i++) {
@@ -76,7 +85,16 @@ final class SwapPacingPolicy {
         variance /= count;
         latticeError /= count;
         var verdict = VrrEngagement.UNKNOWN;
-        if (count >= serviceHz && refreshHz > serviceHz && refreshHz % serviceHz != 0) {
+        var reason = Reason.AMBIGUOUS;
+        // An unsynchronised present waits uniformly in [0,T) on a blocking
+        // fixed-refresh swap, with mean T/2. A non-blocking swap predicts zero.
+        // The nearest-mean models meet at T/4. Below that boundary, even VRR
+        // below its maximum rate can return immediately, so cadence cannot
+        // separate VRR from compositor callbacks. Neither verdict is justified.
+        if (count < serviceHz) reason = Reason.INSUFFICIENT_SAMPLES;
+        else if (refreshHz <= 0) reason = Reason.REFRESH_UNKNOWN;
+        else if (waitSum / count <= vblank / 4) reason = Reason.NO_SWAP_WAIT;
+        else if (refreshHz > serviceHz && refreshHz % serviceHz != 0) {
             double period = (double) SECOND / serviceHz;
             double fraction = (double) (refreshHz % serviceHz) / serviceHz;
             // Fixed refresh has intervals q*T and (q+1)*T with weights 1-f and f.
@@ -95,6 +113,7 @@ final class SwapPacingPolicy {
                 }
             }
         }
-        return new Measurement(mean, Math.sqrt(variance), verdict);
+        if (verdict != VrrEngagement.UNKNOWN) reason = Reason.NONE;
+        return new Measurement(mean, Math.sqrt(variance), verdict, reason);
     }
 }

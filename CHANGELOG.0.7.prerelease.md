@@ -76,8 +76,10 @@ Unreleased. The earlier development themes remain in
   play runs at the measured display speed and returns to host time on repeated missed
   vblanks, non-blocking swaps or an out-of-band rate; `EXACT` keeps nominal speed.
   The lock needs a rate-regulated or silent speaker; an unregulated backend keeps host time.
-  Tick-gated Exact pictures report measured swap pacing and a VRR inference, with even
-  present deadlines when detected; diagnostic rates exclude unfocused time.
+  Tick-gated Exact pictures report measured swap pacing and a VRR inference only when
+  swaps wait; non-blocking returns stay unknown. Even present deadlines require that
+  inference. Windowed Wayland uses a connected-output ceiling for Auto without claiming
+  a per-window refresh; diagnostic rates exclude unfocused time.
   Native menu/background and MGZ blink clocks advance
   with updates. Trace ghosts advance their private animation on admitted replay
   rows, including pictures omitted during fast-forward; repeated pictures and

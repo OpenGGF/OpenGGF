@@ -127,7 +127,7 @@ final class DisplayCadencePolicy { /* see unit 3 */ }
 public enum DisplayPacing { AUTO, EXACT }      // display.pacing, default AUTO
 
 // com.openggf (DisplayWindowController)
-record DisplayOutput(long epoch, int advertisedRefreshHz) { }   // 0 = unknown; no VRR claim
+record DisplayOutput(long epoch, int windowRefreshHz, int presentationCeilingHz) { } // 0 = unknown
 ```
 
 `FixedSimulationScheduler.Batch` splits `nanosUntilNextIteration` into `nanosUntilTick` and
@@ -380,19 +380,31 @@ off the Mod API surface in `0e296306d`), runtime cadence `545d23b96` + `76dd927c
 ### Implementation notes: VRR measurement and even presents
 
 `SwapPacingPolicy` owns a rolling two-second interval window, with at least one
-second of samples before a verdict. It receives timestamps and measured work only.
+second of samples before a verdict. It receives return timestamps, swap-call blocking
+durations, and measured work. The runtime reads the clock immediately before and
+after `owner.swap()`; the policy reads no clock.
 The performance panel and Ctrl+P report the mean swap-return interval, population
-standard deviation, and `ACTIVE`, `NOT_DETECTED`, or `UNKNOWN`.
+standard deviation, and `ACTIVE`, `NOT_DETECTED`, or `UNKNOWN`. A lack of swap
+blocking reports `vrr UNKNOWN NOWAIT` in both diagnostics.
 
-For service period P and advertised vblank period T, let q = floor(P/T) and
+Both decisive verdicts first require evidence that swaps wait. An unsynchronised
+present on a blocking fixed-refresh swap waits uniformly in [0,T), with mean T/2.
+A non-blocking swap has mean zero. The nearest-mean decision boundary is T/4.
+Mean blocking time at or below T/4 reports `UNKNOWN`, whatever the return cadence.
+VRR swaps below the maximum rate can also return without waiting. Those returns
+cannot distinguish VRR from a compositor following our own service cadence, so
+they remain `UNKNOWN` too. T/4 comes from the two models, not a fitted device constant.
+
+For service period P and the known window output's advertised vblank period T, let q = floor(P/T) and
 f = P/T - q. Tick-gated fixed-refresh swaps alternate q*T and (q+1)*T, with
 weights 1-f and f. Both models have mean P. Fixed refresh predicts variance
 Q = f*(1-f)*T*T, while service-following swaps predict zero. The nearest-variance
 model changes at Q/2. The mean error must also fit within that half-separation
 budget. `NOT_DETECTED` additionally requires a fixed-lattice residual below Q/2.
 Variable work can cross extra vblanks and increase the fixed-refresh variance above Q,
-so the lattice fit remains valid without an upper variance bound. Unknown refresh, refresh at or below the service rate, integer ratios, insufficient
-data, stalls, and ambiguous noisy intervals report `UNKNOWN`. The rule has no device-fitted
+so the lattice fit remains valid without an upper variance bound. Unknown refresh,
+refresh at or below the service rate, integer ratios, insufficient data, stalls,
+and ambiguous noisy intervals report `UNKNOWN`. The rule has no device-fitted
 threshold. Measurement restarts on host boundary, focus, configuration, cadence,
 and picture-mode changes. Only ordinary `Exact` pictures with one completed
 service and no pending debt contribute. Paused, thinned, captured, forced,
@@ -412,10 +424,21 @@ keeps its existing behavior and is never disabled automatically.
 Rate windows restart at focus loss, regain, and boundary changes, including
 changes observed during a service. Unfocused time contributes no rate samples.
 
-These verdicts infer a swap-return model, not physical scan-out engagement.
-A compositor that returns at service cadence can look like VRR without the panel
-following it. Advertised refresh can also be stale or identify the wrong Wayland
-output. Missed deadlines, irregular work, and low-framerate compensation can make
+`DisplayWindowController` owns two separate output facts. `windowRefreshHz` is
+known only when the window's output can be identified. Cadence nomination and VRR
+measurement use that fact. `presentationCeilingHz` is an Auto rendering cap,
+resolved by `FrameRateResolver`; it never nominates a lock or supplies a VRR refresh.
+GLFW cannot map a windowed Wayland window to one of several outputs. In that case,
+the window refresh is unknown and the ceiling is the maximum connected refresh.
+The primary monitor remains a placement choice only. One connected monitor is
+known, as is a fullscreen attached monitor. Non-Wayland overlap selection is unchanged.
+
+These verdicts infer a blocking swap-return model, not physical scan-out engagement.
+Wayland frame callbacks can let swaps return immediately at the application's
+own cadence on either fixed-refresh or VRR displays. The wait gate rejects that
+evidence even if the refresh is known. Blocking time can also include host scheduling
+or driver work, so the gate is a necessary model check, not proof of scan-out.
+Missed deadlines, irregular work, and low-framerate compensation can make
 the models ambiguous. Real-panel qualification still requires the independent
 render-rate design's device matrix and an external engagement indicator. No real
 display, driver, compositor policy, or desktop setting was changed or qualified.
