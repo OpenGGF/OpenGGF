@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+S3K Act 1 music handoff (2026-11-01): results-owner regressions cover no
+premature music request across Act 1 zones and one request at the carried
+title wait gate. The existing title/transition lifecycle checks remain the
+integration coverage. This bounded correction does not certify audible output,
+whole-act routes, or broader character/donor/viewport and rewind matrices;
+those inherited obligations remain open.
+
+
 Floating S3K capsule effects (2026-11-01): the focused
 `TestStageplayCapsuleControlRelease` regression checks subtype-$08 completion,
 seven normal explosion children, sprite priority and child-owned break sound.
