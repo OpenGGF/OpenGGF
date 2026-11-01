@@ -4,6 +4,7 @@ Support material to help agents implement OpenGGF objects/zones/trace-fixes with
 
 - [Stageplay speech sync](../guide/creating/stageplay-authoring.md#validate-inspect-and-timeline): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
 
+- [AMP testbed deploy](../../racing/deploy/README.md#multiplayer-testbed-amp): `racing/deploy/amp_deploy.py` stops, updates and restarts a multiplayer master in CubeCoders AMP, then requires a certificate-validated WebSocket upgrade; CI runs it after smoke on develop/next (2026-11-01 testbed deployment).
 - [Racing deployment witness](../../racing/deploy/README.md#deployment-witness): `racing-server deployment-smoke` checks real TLS relay, recording upload, ROM replay and an external signed verdict using fresh isolated fixtures (2026-10-23 Docker deployment).
 - [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
   reproducible local room-capacity, hostile-state and lifecycle checks, with explicitly
