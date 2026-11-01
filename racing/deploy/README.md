@@ -242,6 +242,46 @@ Successful network execution emits a JSON line with `"phase":"verified"` after
 `replayed` and `uploaded`. A healthy master alone is a narrower check. Delete only
 the isolated fixture's containers, volumes and generated data after inspection.
 
+## Multiplayer testbed (AMP)
+
+The project's own testbed runs the master (no verifier) as
+[CubeCoders AMP](https://cubecoders.com/AMP) instances on a shared host, from the
+`openggf-multi` template in
+[OpenGGF/openggf-amp-templates](https://github.com/OpenGGF/openggf-amp-templates).
+Routing is by port: the master terminates TLS itself and enforces per-IP limits, so
+an SNI or HTTP reverse proxy in front of it would hide client addresses.
+
+| Branch | Player URL | AMP instance | Rolling prerelease |
+|---|---|---|---|
+| master | `wss://multi.openggf.com:27900/master` | not yet created | `multi-latest` |
+| develop | `wss://multi-dev.openggf.com:27910/master` | OpenGGF Multi-Dev | `multi-dev-latest` |
+| next | `wss://multi-next.openggf.com:27920/master` | OpenGGF Multi-Next | `multi-next-latest` |
+
+All three names share one Let's Encrypt certificate; a certbot deploy hook on the host
+copies it into each instance's `openggf-multi/tls/`, and a master loads it at its
+next start. Each instance reserves Master Port + 1 for the loopback-only admin
+listener.
+
+After smoke passes on a develop or next push, CI's `deploy-multiplayer` job builds
+`target/racing-server/dist`, replaces the branch's rolling prerelease asset
+`openggf-racing-server.zip` (moving its tag to the tested commit), and runs:
+
+```bash
+AMP_URL=https://amp.example.org AMP_USERNAME=... AMP_PASSWORD=... \
+  python3 racing/deploy/amp_deploy.py --instance-id <AMP instance ID> \
+  --endpoint wss://multi-dev.openggf.com:27910/master
+```
+
+The script stops the instance's application, runs AMP's update (Temurin 25 JRE plus
+the prerelease zip), starts it and requires a certificate-validated WebSocket
+upgrade. Credentials come only from the environment and the panel URL must be HTTPS.
+The CI account belongs to an ADS role limited to Manage/Start/Stop/Restart on the
+OpenGGF instances and, inside each instance, a role limited to application
+start/stop/restart/update and console reading. The branch's GitHub environment
+(`multiplayer-dev`, `multiplayer-next`) admits only that branch and holds
+`AMP_INSTANCE_ID`, `MULTI_ENDPOINT`, `RELEASE_TAG` and the `AMP_PASSWORD` secret.
+Every deploy restarts the master, which disconnects rooms (see below).
+
 ## Operation and updates
 
 - Back up the entire master `/data` volume while the master is stopped, including
