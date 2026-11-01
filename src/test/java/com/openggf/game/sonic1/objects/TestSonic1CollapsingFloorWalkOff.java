@@ -36,4 +36,27 @@ class TestSonic1CollapsingFloorWalkOff {
         assertFalse(floor.airborneStaleStandingBitReturnsNoContact(player),
                 "ExitPlatform resets the object to routine 2");
     }
+
+    @Test
+    void groundedWalkOffAlsoResetsTheFloorToRoutineTwo() {
+        // ExitPlatform `.exitedPlatform` sets obRoutine = 2 for an out-of-band
+        // grounded Sonic too, so the next CFlo_ChkTouch fragments with the flag cleared.
+        Sonic1CollapsingFloorObjectInstance floor =
+                new Sonic1CollapsingFloorObjectInstance(
+                        new ObjectSpawn(0x1320, 0x05E8, 0x53, 0, 0, false, 0), 4);
+        TestPlayableSprite player = new TestPlayableSprite();
+        floor.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        player.setAir(false);
+        assertTrue(floor.airborneStaleStandingBitReturnsNoContact(player), "routine 4");
+
+        TestPlayableSprite sidekick = new TestPlayableSprite();
+        sidekick.setCpuControlled(true);
+        floor.onSolidContactCleared(sidekick, 1);
+        assertTrue(floor.airborneStaleStandingBitReturnsNoContact(player),
+                "ExitPlatform reads v_player only");
+
+        floor.onSolidContactCleared(player, 1);
+        assertFalse(floor.airborneStaleStandingBitReturnsNoContact(player),
+                "a grounded walk-off resets the object to routine 2");
+    }
 }
