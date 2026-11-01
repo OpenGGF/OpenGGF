@@ -2948,7 +2948,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				String.format(java.util.Locale.ROOT, "pic %.1f svc %.1f", stats.picturesPerSecond(), stats.servicesPerSecond()),
 				String.format(java.util.Locale.ROOT, "blend %.1f a%.2f", stats.blendedPerSecond(), stats.lastAlpha()),
 				"int " + stats.interpolation(),
-				LevelMotionAccess.panelOutcome(instance.levelManager));
+				LevelMotionAccess.panelOutcome(instance.levelManager),
+				stats.swapIntervalLine(), stats.vrrLine());
 	}
 
 	public static String liveSchedulingDiagnostics() {
@@ -2963,6 +2964,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				+ String.format(java.util.Locale.ROOT, "Interpolation: %s; alpha %.2f\nRates: %.1f pictures/s, %.1f blended/s, %.1f services/s\n",
 						stats.interpolation(), stats.lastAlpha(), stats.picturesPerSecond(), stats.blendedPerSecond(),
 						stats.servicesPerSecond())
+				+ stats.swapIntervalLine() + "\n" + stats.vrrLine() + " (swap-return inference)\n"
 				+ LevelMotionAccess.diagnostics(instance.levelManager) + "\n";
 	}
 
