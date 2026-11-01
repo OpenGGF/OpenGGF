@@ -47,6 +47,7 @@ public enum SonicConfiguration {
 	 * Live window cadence: AUTO locks services to a qualified display refresh; EXACT keeps host time.
 	 */
 	DISPLAY_PACING,
+	DISPLAY_INTERPOLATION,
 	/**
 	 * Normal-play simulation policy for ROM-backed load queues.
 	 */
@@ -209,6 +210,7 @@ public enum SonicConfiguration {
 	 * Key to cycle the display color profile at runtime.
 	 */
 	DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
+	DISPLAY_INTERPOLATION_TOGGLE_KEY,
 
 	/** Display aspect preset (NATIVE_4_3, WIDE_16_10, WIDE_16_9, ULTRA_21_9, SUPER_32_9). Resolves to SCREEN_WIDTH_PIXELS; height stays 224. */
 	DISPLAY_ASPECT,

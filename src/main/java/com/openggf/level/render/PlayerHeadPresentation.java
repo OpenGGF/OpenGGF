@@ -10,6 +10,9 @@ import java.util.HashMap;
 final class PlayerHeadPresentation {
     private PlayerHeadPresentation() { }
     static Frame compose(Frame nativeFrame, int cameraX, int cameraY) {
+        return compose(null, nativeFrame, cameraX, cameraY);
+    }
+    static Frame compose(com.openggf.graphics.GraphicsManager graphics, Frame nativeFrame, int cameraX, int cameraY) {
         if (nativeFrame.tiles().stream().noneMatch(t -> t.subject().head() != null)) return nativeFrame;
         var tiles = new ArrayList<Tile>();
         var headTiles = new ArrayList<Tile>();
@@ -49,25 +52,25 @@ final class PlayerHeadPresentation {
                     body.setPixel(sourceX, sourceY, (byte) 0);
                 }
             }
-            if (!changed && !foregroundChanged) { tiles.add(withoutHead(tile)); continue; }
+            if (!changed && !foregroundChanged) { tiles.add(withoutHead(graphics, tile)); continue; }
             int generated = generatedByBank.getOrDefault(head.fragmentBase(), head.fragmentBase());
             // Each draw owns 256 cutout companions; native admission still determines source pixels.
             if (generated + 1 + (changed ? 1 : 0) + (foregroundChanged ? 1 : 0) > head.fragmentBase() + 256)
                 throw new IllegalStateException("Head presentation fragment limit exceeded");
             Subject subject = new Subject(tile.subject().id(), tile.subject().part(), false, 100, null, tile.subject().body());
             versions.put(generated, SpritePresentationRenderer.version(body));
-            tiles.add(copy(tile, generated++, tile.x(), tile.y(), 8, 8, tile.rowStart(), tile.rowEnd(), subject));
+            tiles.add(copy(graphics, tile, generated++, tile.x(), tile.y(), 8, 8, tile.rowStart(), tile.rowEnd(), subject));
             if (changed) {
                 versions.put(generated, SpritePresentationRenderer.version(enlarged));
                 float scale = head.percent() / 100f;
                 float anchorX = head.originX() - cameraX + (head.hFlip() ? -head.mask().anchorX() : head.mask().anchorX());
                 float anchorY = head.originY() - cameraY + (head.vFlip() ? -head.mask().anchorY() : head.mask().anchorY());
-                headTiles.add(copy(tile, generated++, anchorX + (tile.x() - anchorX) * scale,
+                headTiles.add(copy(graphics, tile, generated++, anchorX + (tile.x() - anchorX) * scale,
                         anchorY + (tile.y() - anchorY) * scale, 8 * scale, 8 * scale, 0, 8, subject));
             }
             if (foregroundChanged) {
                 versions.put(generated, SpritePresentationRenderer.version(foreground));
-                foregroundTiles.add(copy(tile, generated++, tile.x(), tile.y(), 8, 8, tile.rowStart(), tile.rowEnd(), subject));
+                foregroundTiles.add(copy(graphics, tile, generated++, tile.x(), tile.y(), 8, 8, tile.rowStart(), tile.rowEnd(), subject));
             }
             generatedByBank.put(head.fragmentBase(), generated);
         }
@@ -91,14 +94,14 @@ final class PlayerHeadPresentation {
                 && x.originX() == y.originX() && x.originY() == y.originY()
                 && x.hFlip() == y.hFlip() && x.vFlip() == y.vFlip();
     }
-    private static Tile withoutHead(Tile tile) {
-        return copy(tile, tile.patternId(), tile.x(), tile.y(), tile.width(), tile.height(), tile.rowStart(), tile.rowEnd(),
+    private static Tile withoutHead(com.openggf.graphics.GraphicsManager graphics, Tile tile) {
+        return copy(graphics, tile, tile.patternId(), tile.x(), tile.y(), tile.width(), tile.height(), tile.rowStart(), tile.rowEnd(),
                 new Subject(tile.subject().id(), tile.subject().part(), tile.subject().suppressed(), 100, null, tile.subject().body()));
     }
-    private static Tile copy(Tile source, int id, float x, float y, float width, float height,
+    private static Tile copy(com.openggf.graphics.GraphicsManager graphics, Tile source, int id, float x, float y, float width, float height,
                              int rowStart, int rowEnd, Subject subject) {
-        return new Tile(source.layer(), id, source.palette(), source.hFlip(), source.vFlip(), source.priority(),
+        return com.openggf.graphics.SpriteMotionInternalAccess.replacement(graphics, source, new Tile(source.layer(), id, source.palette(), source.hFlip(), source.vFlip(), source.priority(),
                 x, y, width, height, source.priorityShader(), source.occlusionMask(), source.ghost(), source.ghostAlpha(),
-                rowStart, rowEnd, subject, source.ghostColour(), source.pixelOperation());
+                rowStart, rowEnd, subject, source.ghostColour(), source.pixelOperation()));
     }
 }

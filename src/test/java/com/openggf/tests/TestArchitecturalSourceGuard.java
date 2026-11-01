@@ -582,8 +582,8 @@ class TestArchitecturalSourceGuard {
                 "LiveFrameRuntime is the sole live swap-interval writer");
         assertTrue(source.contains("sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions())"));
         String coordinator = Files.readString(SRC_MAIN.resolve("com/openggf/LiveFrameRuntime.java"));
-        assertOrdered(coordinator, "owner.tick()", "owner.draw(host.captureActive())");
-        assertOrdered(coordinator, "owner.draw(false)", "owner.swap()");
+        assertOrdered(coordinator, "owner.tick(active)", "owner.draw(exactPicture(host.captureActive()))");
+        assertOrdered(coordinator, "owner.draw(picture)", "owner.swap()");
         String presenter = Files.readString(SRC_MAIN.resolve("com/openggf/SceneFocusPresentation.java"));
         assertOrdered(presenter, "Engine.displayAndSwap(display, swap)",
                 "scenePresented = sceneSubmissions.getAsLong() != before");

@@ -75,7 +75,7 @@ public final class EngineSettingsDraft {
         if (key == SonicConfiguration.DEBUG_VIEW_ENABLED) return Category.GAMEPLAY;
         if (key == SonicConfiguration.DISPLAY_SHADER_LIBRARY_ROOT
                 || key == SonicConfiguration.DISPLAY_SHADER_DEFAULT_PHASE
-                || key == SonicConfiguration.FPS || key == SonicConfiguration.DISPLAY_PACING
+                || key == SonicConfiguration.DISPLAY_PACING
                 || key == SonicConfiguration.SCALE) return Category.ADVANCED;
         if (section.equals("ui") || section.startsWith("display")) return Category.DISPLAY;
         if (section.startsWith("audio")) return Category.AUDIO;
@@ -146,6 +146,16 @@ public final class EngineSettingsDraft {
         if (!values.containsKey(key)) throw new IllegalArgumentException("Derived setting");
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
         Object parsed;
+        if (key == SonicConfiguration.FPS) {
+            if (text.equalsIgnoreCase("AUTO")) parsed = "AUTO";
+            else {
+                try { parsed = Integer.parseInt(text.trim()); }
+                catch (NumberFormatException e) { throw new IllegalArgumentException("Choose Auto or a whole number"); }
+            }
+            validateRange(key, parsed);
+            put(key, parsed);
+            return;
+        }
         try {
             parsed = switch (meta.type()) {
                 case BOOL -> {
@@ -178,8 +188,18 @@ public final class EngineSettingsDraft {
         put(key, parsed);
     }
 
+    public static List<String> presentationLimits() {
+        return List.of("AUTO", "30", "50", "60", "75", "100", "120", "144", "165", "240", "360");
+    }
+
     public void step(SonicConfiguration key, int direction) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
+        if (key == SonicConfiguration.FPS) {
+            var options = presentationLimits();
+            int index = options.indexOf(text(key).toUpperCase(java.util.Locale.ROOT));
+            set(key, options.get(Math.floorMod(index + direction, options.size())));
+            return;
+        }
         if (key == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) {
             set(key, Integer.toString(Math.clamp(Integer.parseInt(text(key)) + direction * 5, 0, 100)));
             return;

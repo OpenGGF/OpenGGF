@@ -2518,6 +2518,8 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE_TOGGLE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_ANCHOR
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_TIME_HUNDREDTHS
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_INTERPOLATION
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_INTERPOLATION_TOGGLE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_PACING
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SCALING
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_DEFAULT_PHASE

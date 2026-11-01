@@ -270,6 +270,11 @@ public class SonicConfigurationService {
 			return getInt(SonicConfiguration.P2_A);
 		}
 		Object value = getConfigValue(sonicConfiguration);
+		if (sonicConfiguration == SonicConfiguration.FPS) {
+			if (FrameRateResolver.automaticPresentation(this)) return FrameRateResolver.simulation(this);
+			try { return sanitizeIntValue(sonicConfiguration, Integer.parseInt(value.toString())); }
+			catch (NumberFormatException ignored) { return 60; }
+		}
 		if (value instanceof Integer) {
 			return sanitizeIntValue(sonicConfiguration, (Integer) value);
 		} else {
@@ -730,6 +735,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
 		putDefault(SonicConfiguration.DISPLAY_COLOR_EXPANSION, "FULL");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
+		putDefaultKey(SonicConfiguration.DISPLAY_INTERPOLATION_TOGGLE_KEY, GLFW_KEY_N);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");
@@ -788,8 +794,9 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.NEXT_ACT, GLFW_KEY_PAGE_UP);
 		putDefaultKey(SonicConfiguration.NEXT_ZONE, GLFW_KEY_PAGE_DOWN);
 		putDefaultKey(SonicConfiguration.DEBUG_MODE_KEY, GLFW_KEY_D);
-		putDefault(SonicConfiguration.FPS, 60);
+		putDefault(SonicConfiguration.FPS, "AUTO");
 		putDefault(SonicConfiguration.DISPLAY_PACING, "AUTO");
+		putDefault(SonicConfiguration.DISPLAY_INTERPOLATION, false);
 		putDefault(SonicConfiguration.LOAD_TIME_SIMULATION, "FAST");
 		putDefault(SonicConfiguration.CONFIG_PRESERVE_EXPLICIT_DEFAULTS, false);
 		putDefaultKey(SonicConfiguration.SPECIAL_STAGE_KEY, GLFW_KEY_TAB);

@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.level.PictureSelection;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.NullAudioBackend;
@@ -80,7 +81,7 @@ class TestLiveFrameRuntime {
         return runtime(capture -> pictures++, () -> swaps++);
     }
 
-    private LiveFrameRuntime runtime(java.util.function.Consumer<Boolean> render, Runnable swap) {
+    private LiveFrameRuntime runtime(java.util.function.Consumer<LivePictureRequest> render, Runnable swap) {
         return engine.createLiveFrameRuntime(new Engine.LiveEndpoints(render, swap, intervals::add, () -> output,
                 () -> regulated, () -> now));
     }
@@ -117,7 +118,7 @@ class TestLiveFrameRuntime {
         }
     }
 
-    private LiveFrameRuntime paced(FakeVsync vsync, java.util.function.Consumer<Boolean> render) {
+    private LiveFrameRuntime paced(FakeVsync vsync, java.util.function.Consumer<LivePictureRequest> render) {
         output = new DisplayOutput(1, (int) Math.round(SECOND / vsync.period));
         regulated = true;
         return engine.createLiveFrameRuntime(new Engine.LiveEndpoints(render, vsync::swap,
@@ -136,7 +137,7 @@ class TestLiveFrameRuntime {
 
     private static LiveFrameRuntime.HostState host(int hz, int fps, Object boundary) {
         return new LiveFrameRuntime.HostState(hz, fps, true, false, boundary, false, false,
-                com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false);
+                com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false, false, false, false);
     }
 
     @ParameterizedTest @CsvSource({"50,30", "50,50", "50,60", "50,120", "50,144",
@@ -171,6 +172,28 @@ class TestLiveFrameRuntime {
             assertEquals(0, runtime.statistics().pendingTicks());
             assertEquals(0, runtime.statistics().discardedWallNanos());
         }
+    }
+
+    @ParameterizedTest @CsvSource({"60,AUTO,PANEL_RATE", "60,60,FPS_LIMIT", "60,144,PANEL_RATE", "50,AUTO,PANEL_RATE", "0,AUTO,FPS_LIMIT"})
+    void liveAutoDiagnosticSeparatesPanelRateFromExplicitLimit(int refresh, String limit, String status) throws Exception {
+        var runtime = open(60, 60);
+        config.setConfigValue(SonicConfiguration.FPS, limit);
+        config.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, true);
+        output = new DisplayOutput(1, refresh);
+        runtime.iterate();
+        iterate(runtime, 16_666_667);
+        assertEquals(status, runtime.statistics().interpolation().name());
+    }
+
+    @ParameterizedTest @CsvSource({"120,2", "240,4"})
+    void autoWithInterpolationOffAllowsMultipleRefreshLock(int refresh, int interval) throws Exception {
+        open(60, 60);
+        config.setConfigValue(SonicConfiguration.FPS, "AUTO");
+        config.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, false);
+        var runtime = paced(new FakeVsync(refresh), request -> pictures++);
+        runUntilLocked(runtime, runtime.iterate());
+        assertEquals(interval, runtime.statistics().swapInterval());
+        assertEquals(LiveFrameRuntime.InterpolationStatus.OFF, runtime.statistics().interpolation());
     }
 
     @Test void firstIterationIsTheSoleSwapIntervalWriter() throws Exception {
@@ -291,14 +314,14 @@ class TestLiveFrameRuntime {
     @Test void failedSemanticServiceStopsTheBatchBeforeAnyPictureOrSwap() {
         var owner = mock(LiveFrameRuntime.Owner.class);
         when(owner.hostState()).thenReturn(host(60, 30, "visit"));
-        when(owner.draw(anyBoolean())).thenReturn(true);
+        when(owner.draw(any())).thenReturn(true);
         var runtime = new LiveFrameRuntime(owner, () -> now);
         runtime.iterate();
         clearInvocations(owner);
-        when(owner.tick()).thenReturn(false);
+        when(owner.tick(anyBoolean())).thenReturn(false);
         assertEquals(0, iterate(runtime, 100_000_000).services());
-        verify(owner, times(1)).tick();
-        verify(owner, never()).draw(anyBoolean());
+        verify(owner, times(1)).tick(anyBoolean());
+        verify(owner, never()).draw(any());
         verify(owner, never()).swap();
         assertEquals(0, runtime.statistics().pendingTicks());
     }
@@ -308,8 +331,8 @@ class TestLiveFrameRuntime {
         var boundary = new java.util.concurrent.atomic.AtomicReference<>("old");
         long[] work = {SECOND}; // one second spent in the transitioning service
         when(owner.hostState()).thenAnswer(invocation -> host(60, 30, boundary.get()));
-        when(owner.draw(anyBoolean())).thenReturn(true);
-        when(owner.tick()).thenAnswer(invocation -> {
+        when(owner.draw(any())).thenReturn(true);
+        when(owner.tick(anyBoolean())).thenAnswer(invocation -> {
             boundary.set("new");
             now += work[0];
             return true;
@@ -540,7 +563,7 @@ class TestLiveFrameRuntime {
             field("liveCaptureController", controller);
             field("liveCaptureFrameRate", hz);
             var presentation = new com.openggf.capture.LiveCapturePresentationCoordinator(controller);
-            java.util.function.Consumer<Boolean> render = capture -> presentation.present(viewport, capture, () -> { }, () -> { });
+            java.util.function.Consumer<LivePictureRequest> render = capture -> presentation.present(viewport, capture.capture(), () -> { }, () -> { });
             boolean paced = displayHz > 0;
             var runtime = paced ? paced(new FakeVsync(displayHz), render) : runtime(render, () -> swaps++);
             var last = runtime.iterate();
@@ -588,6 +611,162 @@ class TestLiveFrameRuntime {
             assertEquals(hz, runtime.statistics().pictures() - picturesBefore,
                     "a coincident window present reuses the capture draw; no capture-only redraws");
         }
+    }
+
+    @ParameterizedTest @CsvSource({"50,75", "50,144", "50,165", "60,75", "60,144", "60,165"})
+    void interpolatedActualCallerPreservesEveryTickStateAndPcm(int hz, int cap) throws Exception {
+        var runtime = open(hz, cap);
+        config.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, true);
+        screen.after = () -> input.setLogicalOverride(sample(screen.samples.size() % 7));
+        input.setLogicalOverride(sample(0));
+        try (var tap = audio.beginLiveCaptureAudio(hz)) {
+            runUntil(runtime, runtime.iterate(), SECOND);
+            var expected = new ArrayList<Long>();
+            long state = 0;
+            for (int tick = 0; tick < hz; tick++) {
+                state = state * 17 + tick % 7;
+                expected.add(state);
+            }
+            assertEquals(expected, screen.states);
+            short[] packet = new short[2 * tap.maxStereoFramesPerPacket()];
+            for (int tick = 0; tick < hz; tick++) tap.drainPresentationFrame(packet);
+            assertEquals(48_000, tap.totalStereoFrames());
+            assertTrue(pictures > hz);
+        }
+    }
+
+    private final class InterpolatedHost implements LiveFrameRuntime.Owner {
+        final int hz, cap;
+        boolean enabled = true, paused, capture, forced, screenshot;
+        Object boundary = "visit";
+        int ticks;
+        long work;
+        final List<LivePictureRequest> requests = new ArrayList<>();
+        final List<Boolean> retained = new ArrayList<>();
+        InterpolatedHost(int hz, int cap) { this.hz = hz; this.cap = cap; }
+        public LiveFrameRuntime.HostState hostState() {
+            return new LiveFrameRuntime.HostState(hz, cap, true, paused, boundary, capture, forced,
+                    com.openggf.configuration.DisplayPacing.EXACT, DisplayOutput.UNKNOWN, false, enabled, screenshot, false);
+        }
+        public boolean tick(boolean active) { ticks++; retained.add(active); now += work; return true; }
+        public boolean draw(LivePictureRequest picture) { requests.add(picture); screenshot = false; return true; }
+        public void swap() { }
+        public void swapInterval(int interval) { assertEquals(1, interval); }
+        public void serviceDevice() { }
+    }
+
+    @ParameterizedTest @CsvSource({"50,75", "50,144", "50,165", "60,75", "60,144", "60,165"})
+    void interpolationChangesPicturesWithoutChangingServiceSequence(int hz, int cap) {
+        var host = new InterpolatedHost(hz, cap);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        runUntil(runtime, runtime.iterate(), SECOND);
+        assertEquals(hz, host.ticks);
+        assertTrue(host.requests.size() > hz, "render deadlines redraw between services");
+        assertEquals("EXACT", runtime.statistics().cadence());
+        assertTrue(host.retained.stream().allMatch(Boolean::booleanValue));
+        assertTrue(host.requests.stream().anyMatch(p -> p.selection() instanceof PictureSelection.Between));
+        assertEquals(LiveFrameRuntime.InterpolationStatus.BLENDING, runtime.statistics().interpolation());
+        host.requests.forEach(p -> {
+            if (p.selection() instanceof PictureSelection.Between between) {
+                assertTrue(between.alpha() >= 0 && between.alpha() < 1);
+            }
+        });
+        now = 0;
+        host.enabled = false;
+        host.ticks = 0;
+        host.requests.clear();
+        runtime = new LiveFrameRuntime(host, () -> now);
+        runUntil(runtime, runtime.iterate(), SECOND);
+        assertEquals(hz, host.ticks);
+        assertTrue(host.requests.stream().allMatch(p -> p.selection() instanceof PictureSelection.Latest));
+        assertEquals(LiveFrameRuntime.InterpolationStatus.OFF, runtime.statistics().interpolation());
+    }
+
+    @Test void interpolationStatusNamesTheFpsLimitAndReportsMeasuredRates() {
+        var host = new InterpolatedHost(60, 60);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        runUntil(runtime, runtime.iterate(), 3 * SECOND);
+        var stats = runtime.statistics();
+        assertEquals(LiveFrameRuntime.InterpolationStatus.FPS_LIMIT, stats.interpolation());
+        assertEquals(0, stats.blendedPerSecond());
+        assertEquals(60, stats.servicesPerSecond(), 1.5);
+
+        now = 0;
+        var blending = new LiveFrameRuntime(new InterpolatedHost(60, 144), () -> now);
+        runUntil(blending, blending.iterate(), 3 * SECOND);
+        var measured = blending.statistics();
+        stats = measured;
+        assertEquals(60, stats.servicesPerSecond(), 1.5);
+        assertTrue(stats.picturesPerSecond() > 60, () -> "render deadlines add pictures: " + measured);
+        assertTrue(stats.blendedPerSecond() > 0, () -> "blended pictures are counted: " + measured);
+        assertTrue(stats.lastAlpha() >= 0 && stats.lastAlpha() < 1);
+    }
+
+    @Test void screenshotBarrierNeverMovesBackwardWithinAServiceInterval() {
+        var host = new InterpolatedHost(60, 165);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        runtime.iterate();
+        iterate(runtime, 16_666_667);
+        host.requests.clear();
+        iterate(runtime, 2_000_000);
+        var first = (PictureSelection.Between) host.requests.getLast().selection();
+        iterate(runtime, 6_000_000);
+        var second = (PictureSelection.Between) host.requests.getLast().selection();
+        assertTrue(second.alpha() > first.alpha());
+        host.screenshot = true;
+        runtime.iterate();
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
+        iterate(runtime, 6_000_000);
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
+    }
+
+    @Test void exactBarriersAndOverdueWorkNeverBlend() {
+        var host = new InterpolatedHost(60, 144);
+        var runtime = new LiveFrameRuntime(host, () -> now);
+        runtime.iterate();
+        host.capture = true;
+        iterate(runtime, 16_666_667);
+        assertInstanceOf(LivePictureRequest.CaptureLatest.class, host.requests.getLast());
+        host.capture = false;
+        host.forced = true;
+        iterate(runtime, 16_666_667);
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
+        host.forced = false;
+        host.paused = true;
+        iterate(runtime, 16_666_667);
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
+        host.paused = false;
+        host.boundary = "new";
+        iterate(runtime, 16_666_667);
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
+        host.work = 20_000_000;
+        var result = iterate(runtime, 16_666_667);
+        assertInstanceOf(PictureSelection.Latest.class, host.requests.getLast().selection());
+        assertTrue(result.wakeAtNanos() <= now, "overdue service work wakes immediately");
+    }
+
+    @Test void interpolationAt120HzUsesExactIntervalOneAnd60HzStillLocksWithoutBlends() throws Exception {
+        open(60, 144);
+        config.setConfigValue(SonicConfiguration.DISPLAY_INTERPOLATION, true);
+        var requests = new ArrayList<LivePictureRequest>();
+        var runtime = paced(new FakeVsync(120), requests::add);
+        runUntil(runtime, runtime.iterate(), 3 * SECOND);
+        assertEquals("EXACT", runtime.statistics().cadence());
+        assertEquals(List.of(1), intervals);
+        assertTrue(requests.stream().anyMatch(p -> p.selection() instanceof PictureSelection.Between));
+        requests.clear();
+        runtime = paced(new FakeVsync(60), requests::add);
+        runUntilLocked(runtime, runtime.iterate());
+        assertTrue(requests.stream().allMatch(p -> p.selection() instanceof PictureSelection.Latest));
+        assertEquals(1, runtime.statistics().swapInterval());
+    }
+
+    @Test void pictureSelectionRejectsInvalidFractions() {
+        assertInstanceOf(PictureSelection.Latest.class, PictureSelection.between(1));
+        assertThrows(IllegalArgumentException.class, () -> PictureSelection.between(-0.1));
+        assertThrows(IllegalArgumentException.class, () -> PictureSelection.between(Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> new PictureSelection.Between(1));
+        assertTrue(new LivePictureRequest.CaptureLatest().capture());
     }
 
     private static final class CollectingEncoder implements com.openggf.capture.CaptureEncoder {

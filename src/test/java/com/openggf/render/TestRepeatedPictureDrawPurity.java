@@ -1,5 +1,12 @@
 package com.openggf.render;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.graphics.SpriteMotionInternalAccess;
+import com.openggf.graphics.SpriteMotionProjection;
+import com.openggf.level.LevelMotionAccess;
+import com.openggf.level.LevelSpritePresentation;
+import com.openggf.level.PictureSelection;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshotDiff;
@@ -54,12 +61,32 @@ class TestRepeatedPictureDrawPurity {
             for (int extraDraws : List.of(1, 3)) {
                 assertPure(registry, session::renderFrame, extraDraws);
             }
+            var level = GameServices.level();
+            var camera = GameServices.camera();
+            camera.setX((short) 0x300); camera.setY((short) 0); camera.captureRenderCopy();
+            LevelMotionAccess.observeService(level, GameServices.sprites(), true);
+            for (int i = 0; i < 2; i++) {
+                LevelSpritePresentation.prepare(level, GameServices.sprites());
+                LevelSpritePresentation.publish(level, PlcLifecyclePhase.ORDINARY_LEVEL);
+                LevelMotionAccess.observeService(level, GameServices.sprites(), true);
+            }
+            camera.setX((short) 0x308); camera.captureRenderCopy();
+            LevelSpritePresentation.prepare(level, GameServices.sprites());
+            LevelSpritePresentation.publish(level, PlcLifecyclePhase.ORDINARY_LEVEL);
+            LevelMotionAccess.observeService(level, GameServices.sprites(), true);
+            Runnable interpolated = () -> LevelMotionAccess.present(level, PictureSelection.between(.5), () -> {
+                session.renderFrame();
+                assertEquals(new SpriteMotionProjection.Offset(-4, 0),
+                        SpriteMotionInternalAccess.cameraOffset(GameServices.graphics()),
+                        "Purity must exercise an adopted nonzero blend, never Latest fallback");
+            });
+            assertPure(registry, interpolated, 3);
             if (negativeControl) {
                 var mutator = new MutatingDrawObject();
                 registry.register(mutator);
                 try {
                     AssertionError failure = assertThrows(AssertionError.class, () -> assertPure(registry, () -> {
-                        session.renderFrame();
+                        interpolated.run();
                         // Inject a test-only object submission into the same picture boundary.
                         mutator.appendRenderCommands(new ArrayList<>());
                     }, 1));

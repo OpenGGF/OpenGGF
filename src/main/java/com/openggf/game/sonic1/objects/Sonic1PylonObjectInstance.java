@@ -49,6 +49,7 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/5C Pylon.asm
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
 // Pylon camera parallax positions static foreground geometry without horizontal facing.

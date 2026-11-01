@@ -40,7 +40,7 @@ final class EngineSettingLabels {
         if (category == com.openggf.configuration.EngineSettingsDraft.Category.DISPLAY) {
             return switch (key) {
                 case DISPLAY_ASPECT, DISPLAY_WINDOW_MODE, DISPLAY_SCALING, DISPLAY_WINDOW_AUTOSIZE -> "WINDOW";
-                case DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION,
+                case FPS, DISPLAY_INTERPOLATION, DISPLAY_SHADER_SELECTION, DISPLAY_COLOR_PROFILE, DISPLAY_COLOR_EXPANSION,
                         DISPLAY_SPRITE_SCANLINE_LIMIT -> "PICTURE";
                 case WIDESCREEN_DEADZONE_MODE, DISPLAY_HUD_ANCHOR -> "WIDESCREEN";
                 default -> "HUD";
@@ -48,7 +48,7 @@ final class EngineSettingLabels {
         }
         if (category != com.openggf.configuration.EngineSettingsDraft.Category.ADVANCED) return null;
         String section = meta.section();
-        if (section.equals("display")) return key == SonicConfiguration.FPS || key == SonicConfiguration.DISPLAY_PACING
+        if (section.equals("display")) return key == SonicConfiguration.DISPLAY_PACING
                 ? "RENDERING AND LOADING" : "SHADERS";
         if (section.equals("gameplay")) return "RENDERING AND LOADING";
         if (section.equals("characters") || section.equals("crossGame")) return "DIRECT LAUNCH";
@@ -118,6 +118,7 @@ final class EngineSettingLabels {
     }
 
     static String value(SonicConfiguration key, String raw) {
+        if (key == SonicConfiguration.FPS && raw.equalsIgnoreCase("AUTO")) return UiMessages.text("settings.value.auto_display_refresh");
         if (key == SonicConfiguration.UI_LANGUAGE) return LanguagePickerScreen.displayName(raw);
         if (raw.isEmpty() && key == SonicConfiguration.CAPTURE_ENCODER_PRESET) return UiMessages.text("settings.value.encoder_default");
         if (raw.isEmpty()) return ConfigCatalog.meta(key).type() == ConfigType.KEY ? UiMessages.text("settings.value.unbound") : UiMessages.text("settings.value.NONE");

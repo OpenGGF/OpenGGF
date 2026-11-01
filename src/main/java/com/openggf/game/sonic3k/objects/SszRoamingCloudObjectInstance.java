@@ -48,6 +48,7 @@ import java.util.logging.Logger;
  * of the player and the GHZ ball (bucket 5): native movie frames 453000/453080
  * corroborate that overlap (2026-09-24 SSZ cloud-order observation).
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class SszRoamingCloudObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     private static final Logger LOGGER =

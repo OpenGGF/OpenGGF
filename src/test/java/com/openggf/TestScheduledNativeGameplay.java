@@ -84,7 +84,7 @@ class TestScheduledNativeGameplay {
         var reshape = Engine.class.getDeclaredMethod("reshape", int.class, int.class);
         reshape.setAccessible(true); reshape.invoke(engine, 320, 224);
         GameServices.graphics().setProjectionMatrixBuffer(engine.getProjectionMatrixBuffer());
-        render = Engine.class.getDeclaredMethod("renderScheduledFrame", boolean.class);
+        render = Engine.class.getDeclaredMethod("renderScheduledFrame", LivePictureRequest.class);
         render.setAccessible(true);
     }
 

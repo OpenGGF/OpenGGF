@@ -95,10 +95,16 @@ public final class ConfigCatalog {
                 Set.of("FULL", "LIMITED")));
         put(DISPLAY_COLOR_PROFILE_TOGGLE_KEY, of("display", "colorProfileToggleKey", KEY,
                 "Runtime key to cycle the display color profile"));
-        put(FPS, of("display", "fps", INT, "Window rendering limit; gameplay and audio use the region cadence"));
+        put(DISPLAY_INTERPOLATION_TOGGLE_KEY, of("display", "interpolationToggleKey", KEY,
+                "Runtime key to toggle presentation interpolation"));
         put(DISPLAY_PACING, ofEnum("display", "pacing",
                 "Live cadence: AUTO locks to a display refresh near the region rate, EXACT keeps nominal speed",
                 Set.of("AUTO", "EXACT")));
+
+        put(FPS, of("display", "fps", STRING, "Window rendering limit: AUTO follows display refresh (region rate if unknown), or a positive integer; gameplay and audio stay at 50/60 Hz"));
+        put(DISPLAY_INTERPOLATION, of("display", "interpolation", BOOL,
+                "Render-only motion interpolation above the region rate; "
+                + "adds up to one tick of visual latency; recordings and screenshots stay exact"));
 
         // ui: presentation language never changes persisted keys or game text.
         put(UI_LANGUAGE, of("ui", "language", STRING,

@@ -23,6 +23,7 @@ import java.util.List;
  *
  * Not spawned as a dynamic object — the plane child manages update/render directly.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizIntroBoosterChild implements RewindStateful<AizIntroBoosterChild.RewindState> {
 
     private static final Logger LOG = Logger.getLogger(AizIntroBoosterChild.class.getName());

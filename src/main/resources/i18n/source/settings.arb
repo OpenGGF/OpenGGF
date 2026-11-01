@@ -136,13 +136,29 @@
   "@settings.key.display_color_profile_toggle_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.fps.label": "Rendering limit (FPS)",
+  "settings.key.display_interpolation_toggle_key.label": "Interpolation shortcut",
+  "@settings.key.display_interpolation_toggle_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_INTERPOLATION_TOGGLE_KEY (display.interpolationToggleKey)."
+  },
+  "settings.key.display_interpolation_toggle_key.help": "Toggle and save motion interpolation during play. Binding changes apply after restart.",
+  "@settings.key.display_interpolation_toggle_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_INTERPOLATION_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.fps.label": "Rendering limit",
   "@settings.key.fps.label": {
     "description": "Settings label for stable configuration key FPS (display.fps)."
   },
-  "settings.key.fps.help": "Window pictures per second. Gameplay and audio stay at 60 Hz NTSC or 50 Hz PAL.",
+  "settings.key.fps.help": "Auto follows the display refresh rate, or the region rate when unknown. Gameplay and audio stay at 60 Hz NTSC or 50 Hz PAL.",
   "@settings.key.fps.help": {
     "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_interpolation.label": "Interpolation",
+  "@settings.key.display_interpolation.label": {
+    "description": "Settings label for stable configuration key DISPLAY_INTERPOLATION (display.interpolation)."
+  },
+  "settings.key.display_interpolation.help": "Smooths motion between game ticks. Works when pictures run faster than the region rate. Adds up to one tick of visual latency. Recordings and screenshots stay exact.",
+  "@settings.key.display_interpolation.help": {
+    "description": "Settings help for stable configuration key DISPLAY_INTERPOLATION."
   },
   "settings.key.display_pacing.label": "Display pacing",
   "@settings.key.display_pacing.label": {
@@ -2021,6 +2037,10 @@
   "settings.value.openggf_folder": "OpenGGF folder",
   "@settings.value.openggf_folder": {
     "description": "OpenGGF host UI: settings.value.openggf_folder. Preserve the complete message and its named arguments."
+  },
+  "settings.value.auto_display_refresh": "Auto (display refresh)",
+  "@settings.value.auto_display_refresh": {
+    "description": "Rendering limit choice that follows the display refresh rate."
   },
   "settings.value.automatic": "Automatic",
   "@settings.value.automatic": {
