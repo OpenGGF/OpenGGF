@@ -1702,10 +1702,11 @@ its original drawing priority.
 ## Maintenance and release preparation
 
 - Trace entry placement distinguishes native level boots from intentional
-  positioned entries. Native preludes retain their ROM start history; positioned
-  S3K camera focus follows declared SpawnPlayers ordering; unknown entry kinds
-  retain their existing camera behavior. Intentional re-anchoring moves the whole
-  team without refilling native history, and initial Tails assembly preserves
+  positioned entries. Explicit native loads retain their ROM start history;
+  positioned S3K camera focus follows declared SpawnPlayers ordering. Unknown
+  entry kinds retain their existing placement, history and camera behavior.
+  Intentional re-anchoring moves the whole team without refilling native history,
+  and initial Tails assembly preserves
   placement already assigned by native objects.
 
 - Supported mod builds now check attributed Java source and compiled payloads against

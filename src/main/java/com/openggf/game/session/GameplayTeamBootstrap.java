@@ -149,7 +149,7 @@ public final class GameplayTeamBootstrap {
     }
 
     public static void repositionRegisteredSidekicks(GameModule module, LevelManager levelManager) {
-        repositionRegisteredSidekicks(module, levelManager, LevelEntryProvenance.POSITIONED_ENTRY);
+        repositionRegisteredSidekicks(module, levelManager, LevelEntryProvenance.UNCLASSIFIED_ENTRY);
     }
 
     public static void repositionRegisteredSidekicks(GameModule module, LevelManager levelManager,

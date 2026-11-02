@@ -371,9 +371,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
         public HeadlessTestFixture build() {
             var entryProvenance = this.entryProvenance != null ? this.entryProvenance
-                    : customStartPositionProvided
-                    ? com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY
-                    : com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START;
+                    : com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
             if (sharedLevel == null && zone < 0) {
                 throw new IllegalStateException(
                         "HeadlessTestFixture.Builder requires either withSharedLevel() or withZoneAndAct() before build()");
@@ -557,7 +555,9 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // A native load already placed the camera before sprite initialization.
             if (initializeNativeTeam
                     || entryProvenance.isPositioned()) {
-                if (entryProvenance.isPositioned()) {
+                if (entryProvenance.isPositioned()
+                        && (customStartPositionProvided || entryProvenance
+                        != com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY)) {
                     com.openggf.level.LevelEntryInitialization.initializeCamera(
                             GameServices.level(), entryProvenance);
                 } else {

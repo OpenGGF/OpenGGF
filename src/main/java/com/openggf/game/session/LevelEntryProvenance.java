@@ -2,6 +2,8 @@ package com.openggf.game.session;
 
 /** Authority for entry placement; never inferred from coordinates or compared gameplay state. */
 public enum LevelEntryProvenance {
+    /** Compatibility path: missing placement authority retains existing setup side effects. */
+    UNCLASSIFIED_ENTRY,
     /** Production load owns placement, camera and native history initialization. */
     NATIVE_LEVEL_START,
     /** Production restore owns placement; reserved for explicit return provenance. */
@@ -14,7 +16,7 @@ public enum LevelEntryProvenance {
     POSITIONED_RETURN_SPAWN;
 
     public boolean isPositioned() {
-        return this == POSITIONED_ENTRY || hasPostSpawnCameraOrigin();
+        return this == UNCLASSIFIED_ENTRY || this == POSITIONED_ENTRY || hasPostSpawnCameraOrigin();
     }
 
     public boolean hasPostSpawnCameraOrigin() {

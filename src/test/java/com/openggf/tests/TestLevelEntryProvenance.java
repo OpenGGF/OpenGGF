@@ -27,13 +27,16 @@ class TestLevelEntryProvenance {
     }
 
     @Test @RequiresRom(SonicGame.SONIC_2)
-    void nativePreludeKeepsTheRomStartHistoryAndIgnoresDescriptiveCoordinates() throws Exception {
+    void declaredNativeLoadKeepsTheRomStartHistoryAndIgnoresDescriptiveCoordinates() throws Exception {
         var trace = TraceData.load(Path.of("src/test/resources/traces/kis2/ehz1"));
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
         com.openggf.tests.trace.TraceReplayTestSession.reopenForRecordedTeam(trace.metadata());
-        var origin = TraceReplayBootstrap.entryProvenanceForTraceReplay(trace);
-        assertEquals(LevelEntryProvenance.NATIVE_LEVEL_START, origin);
-        assertFalse(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace));
+        // The production caller can declare a native load. The fixture itself
+        // lacks recorder-observed placement provenance and stays unclassified.
+        assertEquals(LevelEntryProvenance.UNCLASSIFIED_ENTRY,
+                TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
+        assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace));
+        var origin = LevelEntryProvenance.NATIVE_LEVEL_START;
         fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0)
                 .withEntryProvenance(origin)
                 .startPosition((short) 0x700, (short) 0x700).startPositionIsCentre().build();
@@ -43,7 +46,9 @@ class TestLevelEntryProvenance {
         var beforeX = player.copyXHistory();
         var beforeY = player.copyYHistory();
         int cursor = player.historyPos();
-        TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+        int cameraY = fixture.camera().getY();
+        TraceReplaySessionBootstrap.applyPostLoadLevelInit(trace, origin);
+        assertEquals(cameraY, fixture.camera().getY());
         GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), GameServices.level(), origin);
         assertArrayEquals(beforeX, player.copyXHistory());
         assertArrayEquals(beforeY, player.copyYHistory());
@@ -54,6 +59,18 @@ class TestLevelEntryProvenance {
                 LevelEntryProvenance.POSITIONED_ENTRY);
         assertArrayEquals(beforeY, player.copyYHistory());
         assertEquals(cursor, player.historyPos());
+    }
+
+    @Test
+    void timingPreludeDoesNotDeclareStartTableOrReturnPlacement() throws Exception {
+        for (String path : new String[] {
+                "kis2/ehz1", "s2/runs/s2-ehz-halfpipe-roundtrip/seg2_ehz1" }) {
+            var trace = TraceData.load(Path.of("src/test/resources/traces").resolve(path));
+            assertTrue(trace.metadata().hasNativePreludeBootstrap());
+            assertEquals(LevelEntryProvenance.UNCLASSIFIED_ENTRY,
+                    TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
+            assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace));
+        }
     }
 
     @Test @RequiresRom(SonicGame.SONIC_3K)

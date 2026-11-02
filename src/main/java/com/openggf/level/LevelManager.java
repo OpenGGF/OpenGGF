@@ -3317,7 +3317,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @param yOffset sidekick Y offset from player. S2 uses 0, S3K uses +4.
      */
     public void spawnSidekicks(int xOffset, int yOffset) {
-        placeSidekicks(xOffset, yOffset, false);
+        placeSidekicks(xOffset, yOffset, true);
     }
 
     /** Entry provenance determines whether native spawn side effects are already complete. */
@@ -3325,16 +3325,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                                    com.openggf.game.session.LevelEntryProvenance provenance) {
         java.util.Objects.requireNonNull(provenance, "provenance");
         if (!provenance.isPositioned()) return;
-        placeSidekicks(xOffset, yOffset, true);
+        placeSidekicks(xOffset, yOffset,
+                provenance == com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY);
     }
 
-    private void placeSidekicks(int xOffset, int yOffset, boolean positionedEntry) {
+    private void placeSidekicks(int xOffset, int yOffset, boolean initializeLeaderHistory) {
         spriteManager.removeTemporarySidekicks();
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player == null) {
             return;
         }
-        if (!positionedEntry && player instanceof AbstractPlayableSprite leaderInit) {
+        if (initializeLeaderHistory && player instanceof AbstractPlayableSprite leaderInit) {
             // ROM Obj01_Init_Continued (s2.asm:36201-36217) / Sonic_Init_Continued
             // -> Reset_Player_Position_Array (sonic3k.asm:21967-21977, 22202-22214):
             // the leader's own init offsets its position by (-$20, +4), zeroes

@@ -453,16 +453,19 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean requiresFreshLevelLoadForTraceReplay(TraceData trace) {
-        return (hasRecordedPreLevelPrefix(trace) || trace.metadata().hasNativePreludeBootstrap())
+        return hasRecordedPreLevelPrefix(trace)
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
     }
 
     public static com.openggf.game.session.LevelEntryProvenance entryProvenanceForTraceReplay(TraceData trace) {
-        // The declared prelude is an explicit native-load contract. Metadata
-        // coordinates are descriptive there, not a second spawn instruction.
-        return trace.metadata().hasNativePreludeBootstrap() || hasRecordedPreLevelPrefix(trace)
+        // A recorded pre-level input prefix already owns the production load.
+        // native_prelude_bootstrap alone describes title-card timing: both
+        // start-table boots and special-stage returns carry that marker.
+        // Preserve their existing placement/history until the recorder supplies
+        // entry provenance; neither coordinates nor manifest topology select it.
+        return hasRecordedPreLevelPrefix(trace)
                 ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
-                : com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY;
+                : com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
     }
 
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {

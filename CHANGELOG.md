@@ -5,10 +5,11 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-- Native replay entries retain their start history and initial native-object
+- Explicit native entries retain their start history and initial native-object
   placement of Tails. Explicit spawn-order provenance enables native S3K camera
   focus; unclassified positioned entries retain their existing camera behavior.
-  Intentional positioned entries re-anchor the whole team without refilling history.
+  Intentional positioned entries re-anchor the whole team without refilling history;
+  traces lacking entry provenance retain their existing initialization.
 
 - LBZ2 submits native EggRobo-head art during head initialization.
 - Solo S2 title-card entry records leader history during its native object passes.
