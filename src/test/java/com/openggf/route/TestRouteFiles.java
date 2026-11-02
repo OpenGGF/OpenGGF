@@ -97,8 +97,63 @@ class TestRouteFiles {
         Files.writeString(written.manifest(), manifest.replace("\"r.script\"", "\"../r.script\""));
         assertThrows(IOException.class, () -> RouteFiles.read(written.manifest()));
         Files.writeString(written.manifest(), manifest.replace("63522553", "63522554"));
-        assertFalse(RouteFiles.read(written.manifest()).launch().rom().matches(RomIdentity.standard("s3k")),
+        assertTrue(assertThrows(IOException.class, () -> RouteFiles.read(written.manifest())).getMessage()
+                .contains("no passed engine qualification"), "another launch is another content; its stamp is stale");
+        assertFalse(RouteFiles.readDraft(written.manifest()).launch().rom().matches(RomIdentity.standard("s3k")),
                 "ROM identity is read as declared, never corrected; the host resolver rejects the mismatch");
+    }
+
+    @Test
+    void draftsAreSavedMarkedAndRefusedByConsumers(@TempDir Path dir) throws Exception {
+        RouteArtifact route = sample();
+        var written = RouteFiles.writeDraft(dir.resolve("d"), route);
+        assertTrue(Files.readString(written.manifest()).contains("\"draft\" : true"));
+        assertTrue(assertThrows(IOException.class, () -> RouteFiles.read(written.manifest())).getMessage()
+                .contains("unqualified draft"));
+        RouteArtifact draft = RouteFiles.readDraft(written.manifest());
+        assertTrue(draft.manifest().draft());
+        assertTrue(draft.manifest().qualification().isEmpty());
+        assertEquals(route.content(), draft.content(), "the draft flag is not content");
+        RouteFiles.writeDraft(dir.resolve("d"), route); // a draft may replace a draft
+        RouteFiles.replace(dir.resolve("d"), route, evidence(route));
+        assertFalse(RouteFiles.read(written.manifest()).manifest().draft(), "qualifying clears the draft flag");
+        assertThrows(IOException.class, () -> RouteFiles.writeDraft(dir.resolve("d"), route),
+                "a draft never replaces a qualified route");
+    }
+
+    @Test
+    void transportTextCarriesLaunchGoalsAndRowsLosslessly() throws Exception {
+        var goals = GoalProgram.of(Guard.safe(),
+                new Leg("reach", new RouteGoal.Achieve(new SamplePredicate.All(List.of(
+                        new SamplePredicate.PlayerIn(PlayerSlot.P1, new Region(100, 200, 300, 400)),
+                        new SamplePredicate.Settled(PlayerSlot.P1, 64)))), Guard.NONE, 600),
+                new Leg("load", new RouteGoal.EnterBoundary(), Guard.safe(), 900),
+                new Leg("arrive", new RouteGoal.Achieve(new SamplePredicate.LevelIs(10, 1)), Guard.NONE, 10));
+        RouteArtifact route = sample().withChecks(goals);
+        assertNotEquals(sample().content(), route.content(), "checks are content");
+        RouteArtifact copy = RouteCodec.parseTransport(RouteCodec.formatTransport(route));
+        assertEquals(route.manifest(), copy.manifest());
+        assertEquals(route.tape(), copy.tape());
+        assertEquals(goals, RouteCodec.parseGoals(RouteCodec.formatGoals(goals)));
+        assertEquals(route.launch(), RouteCodec.parseLaunch(RouteCodec.formatLaunch(route.launch())));
+        String tampered = RouteCodec.formatTransport(route).replace("\"rows\" : 4", "\"rows\" : 5");
+        assertThrows(IOException.class, () -> RouteCodec.parseTransport(tampered));
+    }
+
+    @Test
+    void stampsCarryTheirFirstDivergingRow(@TempDir Path dir) throws Exception {
+        RouteArtifact route = sample();
+        var written = RouteFiles.writeNew(dir.resolve("n"), route, evidence(route));
+        var nativeStamp = QualificationStamp.diverged(ReplayScope.BIZHAWK, 2, "x off by 3", route.content(),
+                "bizhawk 2.11", 3);
+        RouteFiles.addStamp(written.manifest(), nativeStamp, NativeFacts.NONE);
+        RouteArtifact read = RouteFiles.read(written.manifest());
+        var stamp = read.manifest().qualification().stream().filter(s -> s.scope() == ReplayScope.BIZHAWK)
+                .findFirst().orElseThrow();
+        assertFalse(stamp.passed());
+        assertEquals(2, stamp.divergedRow().orElseThrow());
+        assertEquals("x off by 3", stamp.reason());
+        assertTrue(read.engineQualified(), "a native verdict does not replace the engine one");
     }
 
 }

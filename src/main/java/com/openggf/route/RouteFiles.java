@@ -16,6 +16,10 @@ import java.util.List;
  * Reads and writes routes. A route is two committed files: {@code <stem>.route.json} (the
  * manifest, the launch authority) and {@code <stem>.script} (the editable rows). A BizHawk movie
  * is derived on demand and never committed beside them.
+ *
+ * <p>{@link #read} is the consumer path: it refuses drafts and routes without a passed engine
+ * stamp for their exact content. Editors save and reopen unqualified work with
+ * {@link #writeDraft} and {@link #readDraft}.
  */
 public final class RouteFiles {
     public static final String MANIFEST_SUFFIX = ".route.json";
@@ -26,10 +30,26 @@ public final class RouteFiles {
     /** The files a write produced. */
     public record Written(Path manifest, Path script) { }
 
-    /** Reads a manifest and its script, verifying row count and content hash. */
+    /**
+     * Reads a qualified route: verifies row count and content hash, and refuses a draft or a route
+     * with no passed engine stamp for its content.
+     */
     public static RouteArtifact read(Path manifest) throws IOException {
+        RouteArtifact route = readDraft(manifest);
+        if (route.manifest().draft()) {
+            throw new IOException(manifest + " is an unqualified draft; qualify it before using it as a route");
+        }
+        if (!route.engineQualified()) {
+            throw new IOException(manifest + " has no passed engine qualification for its content "
+                    + route.content().shortForm());
+        }
+        return route;
+    }
+
+    /** Reads a route or draft for editing, verifying only that the rows match the manifest. */
+    public static RouteArtifact readDraft(Path manifest) throws IOException {
         String text = Files.readString(manifest, StandardCharsets.UTF_8);
-        RouteJson.Parsed parsed = RouteJson.read(text);
+        RouteCodec.ParsedManifest parsed = RouteCodec.parseManifest(text);
         if (parsed.scriptName().contains("/") || parsed.scriptName().contains("\\")) {
             throw new IOException("script must sit beside its manifest: " + parsed.scriptName());
         }
@@ -41,6 +61,18 @@ public final class RouteFiles {
                     + parsed.manifest().tapeHash().shortForm());
         }
         return new RouteArtifact(parsed.manifest(), tape);
+    }
+
+    /**
+     * Saves unqualified work: the manifest is marked as a draft and carries no qualification
+     * stamp. A draft never replaces a qualified route.
+     */
+    public static Written writeDraft(Path stem, RouteArtifact route) throws IOException {
+        Path manifest = manifestPath(stem);
+        if (Files.exists(manifest) && !readDraft(manifest).manifest().draft()) {
+            throw new IOException("a draft cannot replace the qualified route " + manifest);
+        }
+        return writeFiles(stem, route.manifest().asDraft(true), route.tape());
     }
 
     /**
@@ -67,19 +99,42 @@ public final class RouteFiles {
 
     private static Written write(Path stem, RouteArtifact route, ReplayEvidence engine) throws IOException {
         requireEvidence(route, engine);
-        Path manifest = manifestPath(stem);
-        Path script = scriptPath(stem);
         var stamps = new ArrayList<QualificationStamp>();
         for (QualificationStamp stamp : route.manifest().qualification()) {
             if (stamp.content().equals(route.content()) && stamp.scope() != ReplayScope.ENGINE) stamps.add(stamp);
         }
         stamps.add(engine.stamp());
-        RouteManifest next = route.manifest().withQualification(stamps);
+        return writeFiles(stem, route.manifest().asDraft(false).withQualification(stamps), route.tape());
+    }
+
+    /**
+     * Records a verdict (for example a native one) on an existing qualified route without
+     * changing its content. The stamp must be for the route's content.
+     */
+    public static Written addStamp(Path manifest, QualificationStamp stamp, NativeFacts facts) throws IOException {
+        RouteArtifact route = read(manifest);
+        if (!stamp.content().equals(route.content())) {
+            throw new IllegalArgumentException("stamp is for " + stamp.content().shortForm() + ", route is "
+                    + route.content().shortForm());
+        }
+        var stamps = new ArrayList<QualificationStamp>();
+        for (QualificationStamp existing : route.manifest().qualification()) {
+            if (existing.scope() != stamp.scope() || !existing.content().equals(stamp.content())) stamps.add(existing);
+        }
+        stamps.add(stamp);
+        String name = manifest.getFileName().toString();
+        Path stem = manifest.resolveSibling(name.substring(0, name.length() - MANIFEST_SUFFIX.length()));
+        return writeFiles(stem, route.manifest().withQualification(stamps).withNativeFacts(facts), route.tape());
+    }
+
+    private static Written writeFiles(Path stem, RouteManifest next, InputTape tape) throws IOException {
+        Path manifest = manifestPath(stem);
+        Path script = scriptPath(stem);
         Path parent = manifest.toAbsolutePath().getParent();
         if (parent != null) Files.createDirectories(parent);
-        writeAtomically(script, RouteScript.write(route.tape(), List.of(
+        writeAtomically(script, RouteScript.write(tape, List.of(
                 "Route rows for " + manifest.getFileName() + "; launch, identity and checks live there.")));
-        writeAtomically(manifest, RouteJson.write(next, script.getFileName().toString()));
+        writeAtomically(manifest, RouteCodec.formatManifest(next, script.getFileName().toString()));
         return new Written(manifest, script);
     }
 
