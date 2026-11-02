@@ -7,6 +7,7 @@ readable and historical versions can be referenced directly.
 
 - AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
   endpoints, and shows staggered explosion puffs when Knuckles breaks it.
+  Knuckles uses the ROM standing pose and run/jump/laugh animation cadence.
 
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
   and snow corridor, including ICZ2’s run toward LBZ1.
@@ -15,6 +16,8 @@ readable and historical versions can be referenced directly.
   preventing a second native pause when resuming.
 
 S3K elemental shields keep animating after returning from Bonus/Special stages.
+Their frame publication, animation switches and invincibility/blank-player pauses
+follow the native scripts.
 
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.

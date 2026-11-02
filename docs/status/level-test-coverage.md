@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+AIZ2 ending animation (2026-11-02): [Knuckles and shield controls](../architecture/validation/levels/s3k-aiz2.md#ending-knuckles-and-shield-animation-2026-11-02)
+cover native script publication/cadence, deferred switches, elemental freeze,
+actual object recreation and forward replay. Matched original-movie capture is
+bounded presentation evidence; whole-act, native floor/bounce and wider
+viewport/donor/team obligations remain inherited gaps.
+
+
 AIZ2 ending drawbridge presentation (2026-11-02): the [act maintenance matrix](../architecture/validation/levels/s3k-aiz2.md#ending-drawbridge-presentation-2026-11-02) records native twelve-log geometry, delayed collapse puffs, focused lifecycle/recreation checks and original-movie visual comparison. Broader configuration and route obligations remain open.
 
 Post-results transition music (2026-11-02): the [ICZ2 corridor](../architecture/validation/levels/s3k-icz-act2.md#post-results-transition-music-2026-11-02)

@@ -97,9 +97,53 @@ class TestShieldAnimationArtLifecycle {
         superseded.setAnimation(0);
         superseded.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
         assertEquals(0, superseded.animationId());
-        assertEquals(0, superseded.frameIndex());
+        assertEquals(saved.frameIndex(), superseded.frameIndex(), "writing anim retains the cursor until dispatch");
         assertEquals(saved.mappingFrame(), superseded.mappingFrame(),
                 "new animation intent before art binding must win over restored playback");
+    }
+
+    @Test
+    void recreationAtFdBoundaryPreservesPendingAnimationChangeAndForwardPlayback() {
+        ShieldAnimationArtLifecycle original = new ShieldAnimationArtLifecycle(1);
+        original.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
+        for (int i = 0; i < 3; i++) original.stepAnimation();
+        assertEquals(0, original.animationId());
+        assertEquals(21, original.mappingFrame());
+        ShieldAnimationArtLifecycle recreated = new ShieldAnimationArtLifecycle(0);
+        recreated.restoreRewindStateValue(original.captureRewindStateValue());
+        recreated.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
+        for (int i = 0; i < 12; i++) {
+            original.stepAnimation();
+            recreated.stepAnimation();
+            assertEquals(original.captureRewindStateValue(), recreated.captureRewindStateValue());
+        }
+    }
+
+    @Test
+    void elementalOwnersFreezeForInvincibilityAndBlankButResumeSameCursor() throws Exception {
+        var player = new com.openggf.tests.TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        var services = new com.openggf.level.objects.StubObjectServices();
+        for (var shield : List.of(new FireShieldObjectInstance(player),
+                new BubbleShieldObjectInstance(player), new LightningShieldObjectInstance(player))) {
+            shield.setServices(services);
+            var field = shield.getClass().getDeclaredField("animationLifecycle");
+            field.setAccessible(true);
+            var lifecycle = (ShieldAnimationArtLifecycle) field.get(shield);
+            lifecycle.ensureArtLoaded(() -> new ShieldAnimationArtLifecycle.Art(null, animations()));
+            shield.update(0, player);
+            assertEquals(10, lifecycle.mappingFrame());
+            var before = lifecycle.captureRewindStateValue();
+            player.setInvincibleFrames(2);
+            shield.update(1, player);
+            assertEquals(before, lifecycle.captureRewindStateValue());
+            player.setInvincibleFrames(0);
+            player.setAnimationId(0x1C);
+            shield.update(2, player);
+            assertEquals(before, lifecycle.captureRewindStateValue());
+            player.setAnimationId(0);
+            shield.update(3, player);
+            assertEquals(11, lifecycle.mappingFrame());
+        }
     }
 
     private static SpriteAnimationSet animations() {

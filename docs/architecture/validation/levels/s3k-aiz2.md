@@ -1299,3 +1299,30 @@ cliff-bounded log endpoints and staggered puffs during collapse. Original
 BizHawk pixels remain the visual reference; character-pose/timing differences
 are not claimed resolved. The capture exits successfully with the existing
 `level-load-preparer` shutdown-thread warning.
+
+## Ending Knuckles and shield animation (2026-11-02)
+
+`ObjSlot_CutsceneKnux` installs mapping `$16`. AIZ2 run-in calls
+`Animate_RawNoSST`; laugh and jump retain the raw script pointer for
+`Animate_Raw`. The object now uses the existing ROM-backed `S3kRawAnimation`
+state rather than separate Java frame arrays. Raw cursor preincrement, signed
+countdown and the laugh intro's `$F8` jump are retained across recreation.
+Movement, bounce and floor handling are outside this animation correction.
+
+The four S3K shield objects share one `Animate_Sprite` playback owner.
+Publication reads the current cursor before incrementing it; a script delay
+holds a frame for delay plus one dispatches. `$FD` writes the next animation
+without publishing it until the following dispatch. Rewind retains both
+`anim` and `prev_anim`. Fire, Bubble and Lightning pause before animation when
+the player is invincible or uses blank animation `$1C`, matching their native
+Main routines. S1/S2 playback and unrelated cutscene objects are unchanged.
+
+`TestAiz2KnucklesAnimation` covers initial mapping, first run/jump cursor,
+raw cadence, laugh pointer jump, actual recreation in both laugh phases and
+jump, and forward motion/animation replay. `TestShieldAnimationArtLifecycle`
+covers first publication, delay, loop/backtrack, deferred switch, freeze/resume
+and restored pending switches. The existing shield session-recreation controls
+also replay the recreated owner through subsequent script boundaries. These
+short checks do not depend on completing the original movie. Whole-act,
+viewport/donor/team breadth and the full native floor/bounce path remain
+inherited obligations.
