@@ -1,7 +1,8 @@
 # Shared route planner: route tapes
 
-Status: accepted design, implementation in progress on `feature/ai-shared-route-planner`
-(based on `feature/ai-weakness-pass` at `0baca6ee4`). Produced by the architect workflow:
+Status: accepted design, implementation in progress on `feature/ai-shared-route-planner` (steps
+1-4, partial 6) and `feature/ai-shared-route-planner-2` (step 6, from `feature/ai-weakness-pass`
+at `d84b25bd8`). Produced by the architect workflow:
 grounding, two candidates (base "B" and graft source "A"), a cross-judge, and a lead synthesis.
 This file condenses those artefacts; it is the contract the implementation follows. Deviations
 found while implementing are recorded in [Deviations](#deviations).
@@ -401,10 +402,74 @@ Recorded during implementation; each states what the sketch said, what was built
   rejoin tolerance (an experiment, not committed) stalled at the same row. Neither wrote a route,
   so the consumers keep their `.bk2` movies, and the two smoke reds remain red.
 
+- **Exact re-synchronising repair (step 6, `feature/ai-shared-route-planner-2`).** Following a
+  position track within six pixels cannot express what the SSZ1 routes needed. Re-measured on
+  `d84b25bd8`, all sixteen routes still first leave their `36aaddb37` track at row 1366, and the
+  residue that matters is sub-pixel: for solo Tails, P1's state at row 2000 equals the
+  `36aaddb37` run in every field except `x_sub` (10496 there, 9728 now). Transplanting only that
+  subpixel at row 2000 makes the current engine reproduce the `36aaddb37` track in every recorded
+  field for all 14923 rows, so the route's rows are still right; only the state they start from
+  moved. `AuthorHints.exactResync(sidekick)` with a reference carrying exact
+  `ReferencePath.PlayerState`s (centre, subpixels, raw speeds, air and roll bits, per row) runs
+  `ResyncExpander`: source rows are mandatory while every tracked state matches exactly; where they
+  part, single-row edits (a direction held or released, the jump buttons toggled) in the next 320
+  rows are tried, best first by remaining state distance, up to four per window, until 120
+  consecutive rows match again. Edits replace rows, so frame-counter timers stay aligned. The
+  qualification replay adds an exact check on every rejoined row. Tracks are now recorded by
+  `RouteTrackRecorder` (full P1/P2 states) and the sixteen 36aaddb37 tracks were re-recorded with
+  it in one temporary copy-on-write tree (positions identical to the old tracks).
+- **The solo-Tails offset was the bridge, not a second engine change (step 6).** The repair's
+  "steady 11-16 px from 2971" chain: the 1366 airborne release leaves a 768-subpixel `x_sub`
+  residue; the wall at x 1141 re-synchronises the pixel (rows ~1900-2000) but not the subpixel; at
+  2879 the residue crosses a pixel on the slope (x 4376/4377, angle 16/14); by 2898-2900 the wall
+  contact zeroes `x_vel` one row apart, so the leftward air acceleration from 2900 starts a row
+  later; P1 lands at 2972 instead of 2971 and the jump pressed at 2972 is lost (it fires at 2976).
+  The subpixel transplant above is the evidence. There is no native solo-Tails entry movie (the
+  only native SSZ1 entry is the Sonic+Tails complete run), so native evidence for 1366 is the
+  pair route's fixture, where native follows the current engine.
+- **An engine regression the re-synchronised routes exposed (fixed in step 6).** With the
+  subpixel repaired, the pair route next parts at 3428 and solo Tails 800 at 6847, both after a
+  jump off `Obj_SSZRotatingPlatform`'s carrier. Its jump branches `loc_45E90`/`loc_45FE4` leave the
+  object's standing bit set; the next frame's `SolidObjectTop` takes the airborne release
+  `loc_1E2E0` (sonic3k.asm:41852-41857), clearing `Status_OnObj`. The engine's `jumpOff` released
+  the ride (and the standing bit) at once, so that release never ran and `Status_OnObj` stayed set;
+  `36aaddb37` had cleared it through a since-deleted end-of-frame sweep. Native SSZ1
+  (`hpz_completerun`, frames 3243 and 3314 at the same carrier) clears it on the next frame, so
+  the current engine had regressed; a stale bit made `Player_AnglePos` skip floor following and P1
+  ran flat through the slope at 3528. The fix keeps the ride for the next `SolidObjectTop`.
+- **Pair routes re-synchronise the leader only (step 6).** P2 (the CPU Tails) first differs at
+  1416, from P1's differing history; P1 cannot be exactly re-synchronised before then (bridge
+  losses come in airborne/landing pairs and walking moves in 12-subpixel steps), and P2 never
+  re-synchronises later on its own. `exactResync(false)` therefore tracks P1 exactly and lets P2
+  differ; the qualification replay still checks P1 exactly on every rejoined row and the route's
+  boss and boundary goals. The 800-wide pair family (`first-replica-800`, `second-replica-800`,
+  `complete-800`) parts from P1 in the GHZ fight (rows ~4214-4608), where P2's different position
+  changes the fight; no single-row P1 edit re-synchronises it, so those routes are not repaired.
+- **Repair results (step 6).** Engine-qualified (cold replay with goals and exact states):
+  solo Tails `complete-320`/`-800`, `replicas-320`/`-800`, `flight-320` (one edited row, 1495);
+  solo Sonic `complete-320`, `replicas-320` (rows 1597 and 2297); pair `complete-320`, `upper-320`
+  (row 1597) and `first-replica-320`, `ghz-320`, `staircase-320` (rows 1597 and 2199). Goals: the
+  replica and Mecha `defeat` legs and the DEZ boundary where the route claims them; the three
+  short pair routes never meet a boss on either engine, so they carry the route guard only.
+  Not repaired: `middle-320` and `complete-800` (P1 already died on `36aaddb37`) and the two other
+  800-wide pair routes; their movies stay as they were.
+- **Facade additions (step 6), all source-compatible.** `ReferencePath.PlayerState` (record with
+  `of(PlayerView)` and `distance(PlayerView)`), `ReferencePath.withStates(List, List)` and
+  `hasStates()`; `AuthorHints.exactResync(boolean)`. Nothing existing changed signature;
+  `ReferencePath.extract` now also records states. Tools: `RouteRepairTool.repair(..., hints, scope,
+  checks, listener)`, `RouteTrackRecorder`, `RouteNativeStampTool`.
+- **Native composition is a tools script, not a core `NativeCheck` (step 6).** The engine core
+  cannot run BizHawk. `tools/traces/route_native_check.py` composes the entry prefix, the route's
+  exported rows and one filler per observed lag frame, captures each pass with TraceChaser's
+  headless harness, and compares both players with the route's engine track; lag facts and the
+  verdict are then written into the manifest as native facts and a `BIZHAWK` stamp. Only routes
+  with a native entry (the Sonic+Tails complete run) can be checked; solo routes stay
+  `UNSUPPORTED_INLET`.
+
 ## Next step
 
-Steps 1-4 are delivered. Step 6 has its repair front-end and the SSZ1 tracks, but no repaired
-route. Next: instrument the reference expander's commit rule at the solo-Tails stall (row 3266);
-author the paired route's segment from row 3489 as a goal program rather than against the
-`36aaddb37` track; then manifest the SSZ1 consumers and native-check them with filler rows. Steps
-5a and 5b follow.
+Steps 1-4 are delivered. Step 6 repaired and manifested twelve of the sixteen SSZ1 routes by exact
+re-synchronisation and switched their consumers to the manifests. Open: the four unrepaired SSZ1
+movies (two already died on `36aaddb37`, two need the 800-wide GHZ fight authored as a goal
+program because the CPU sidekick cannot be re-synchronised), the `lrz-*-hpz-ssz1*` campaign
+routes, the remaining route consumers' manifests, and steps 5a and 5b.

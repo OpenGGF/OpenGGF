@@ -1,0 +1,55 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s3k",
+      "crc32" : "63522553",
+      "sha1" : "CFBF98C36C776677290A872547AC47C53D2761D6"
+    },
+    "inlet" : {
+      "kind" : "cold-level",
+      "zone" : 10,
+      "act" : 0,
+      "showTitleCard" : false
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "legs" : [ ]
+  },
+  "tape" : {
+    "script" : "ssz1-sonic-tails-cold-staircase-320.script",
+    "rows" : 2779,
+    "sha256" : "19e52101eff07c6a4e5a0c5fc63a61e9fe340b6abd7210670fffbb3a0539f74e"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/2 exact_resync(window 320, horizon 600, edits 4, confirm 120, leader only)",
+    "engine" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "source" : "repair of 84667ce0b867 from row 1366 following ReferencePath[2779 rows of 3a9e498bfddb, window 1366..2778, openggf 36aaddb37 recorded track ssz1-sonic-tails-cold-staircase-320.csv.gz]",
+    "notes" : [ "kept 2777/2779 original rows (99.9%), 0 reference rows, 2 authored rows, 2779 output rows; unchanged through row 1597" ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd",
+    "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "rows" : 2779
+  } ],
+  "native" : {
+    "lag" : [ ]
+  }
+}

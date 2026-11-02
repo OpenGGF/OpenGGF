@@ -28,8 +28,8 @@ class TestSszTailsColdRouteCapture {
     @ParameterizedTest
     @ValueSource(ints = {320, 352, 400, 528, 800})
     void coldGhzApproachProjectsThePreliminaryBoundsBeforeTestingTheLock(int width) throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-replicas-320.bk2"));
+        // The native320 rows at each width: only the approach to the GHZ lock is exercised.
+        var movie = RouteFixtures.rowsUnderOtherSettings("ssz1-tails-solo-cold-replicas-320");
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
         boolean spawned = false;
         var drawing = new RouteFrameDrawing();
@@ -75,10 +75,8 @@ class TestSszTailsColdRouteCapture {
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void coldMechaEntryRetainsItsNativeWorldBox(int width) throws Exception {
-        String file = width == 320 ? "ssz1-tails-solo-cold-complete-320.bk2"
-                : "ssz1-tails-solo-cold-complete-800.bk2";
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of("src/test/resources/routes/s3k/" + file));
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
+        var movie = RouteFixtures.movie("ssz1-tails-solo-cold-complete-" + (width == 320 ? 320 : 800), settings);
         boolean initialized = false;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -127,8 +125,8 @@ class TestSszTailsColdRouteCapture {
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int width) throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-replicas-" + width + ".bk2"));
+        var movie = RouteFixtures.movie("ssz1-tails-solo-cold-replicas-" + width,
+                new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null));
         assertEquals(width == 320 ? 8350 : 8425, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
         // Retain all 53 original 320 windows. The 2026-10-21 controller additionally covers
@@ -219,8 +217,8 @@ class TestSszTailsColdRouteCapture {
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int width) throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-" + width + ".bk2"));
+        var movie = RouteFixtures.movie("ssz1-tails-solo-cold-complete-" + width,
+                new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null));
         assertEquals(width == 320 ? 14923 : 15072, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);

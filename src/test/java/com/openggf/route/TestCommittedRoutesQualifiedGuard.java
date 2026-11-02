@@ -10,7 +10,11 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** No unqualified draft is committed among the route fixtures; every manifest parses strictly. */
+/**
+ * No unqualified draft is committed among the route fixtures; every manifest parses strictly; and a
+ * manifested route has no committed BizHawk movie beside it (a movie is derived on demand, so a
+ * committed one would be a third copy of the rows that can drift).
+ */
 class TestCommittedRoutesQualifiedGuard {
     @Test
     void committedRouteManifestsAreNotDrafts() throws IOException {
@@ -19,6 +23,10 @@ class TestCommittedRoutesQualifiedGuard {
         if (Files.isDirectory(routes)) {
             try (Stream<Path> files = Files.walk(routes)) {
                 for (Path manifest : files.filter(p -> p.toString().endsWith(RouteFiles.MANIFEST_SUFFIX)).sorted().toList()) {
+                    String name = manifest.getFileName().toString();
+                    Path movie = manifest.resolveSibling(name.substring(0, name.length()
+                            - RouteFiles.MANIFEST_SUFFIX.length()) + ".bk2");
+                    if (Files.exists(movie)) problems.add(movie + " duplicates the rows of " + manifest);
                     try {
                         if (RouteCodec.parseManifest(Files.readString(manifest)).manifest().draft()) {
                             problems.add(manifest + " is an unqualified draft");
