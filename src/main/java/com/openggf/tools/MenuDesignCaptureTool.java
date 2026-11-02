@@ -126,7 +126,10 @@ public final class MenuDesignCaptureTool {
                 new Scene("m08-recordings", recordings, List.of(down, down, right, right, enter), 20),
                 new Scene("m09-recordings-row", recordings, List.of(down, down, right, right, enter, down), 20),
                 new Scene("m10-trace-picker", traces, List.of(), 120),
-                new Scene("m11-trace-picker-row", traces, List.of(), 120)));
+                new Scene("m11-trace-picker-row", traces, List.of(), 120),
+                // Starting S3K (right of the default S2 card) asks first; the second has Don't show again on.
+                new Scene("m15-support-notice", none, List.of(right, enter), 20),
+                new Scene("m15b-support-notice-dont-show", none, List.of(right, enter, up, enter), 20)));
         if (modsCopy != null) {
             hubScenes.add(new Scene("m12-mods", mods, List.of(up, enter), 30));
             hubScenes.add(new Scene("m13-mods-row", mods, List.of(up, enter, down, down), 30));

@@ -766,6 +766,7 @@ public class SonicConfigurationService {
         putDefault(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY, true);
         putDefault(SonicConfiguration.MULTIPLAYER_CHAT_DISABLED, false);
         putDefault(SonicConfiguration.HUB_LAST_GAME, "s2");
+        putDefault(SonicConfiguration.HUB_DISMISSED_NOTICES, "");
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_CHARACTER, "");
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_ZONE, -1);
         putDefault(SonicConfiguration.HUB_CONTINUE_S1_ACT, 0);

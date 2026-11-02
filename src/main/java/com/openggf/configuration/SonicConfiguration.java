@@ -184,6 +184,8 @@ public enum SonicConfiguration {
     /** Personal receive/display opt-out for typed and quick multiplayer chat. */
     MULTIPLAYER_CHAT_DISABLED,
     HUB_LAST_GAME,
+    /** Support notices the player chose not to see again, as comma-separated game:stage tokens. */
+    HUB_DISMISSED_NOTICES,
     // Legacy hub progress keys retained for configuration/API compatibility; ignored.
     HUB_CONTINUE_S1_CHARACTER,
     HUB_CONTINUE_S1_ZONE,

@@ -29,6 +29,8 @@ class TestMasterTitleScreenAudio {
     Path configDirectory;
 
     private final AudioManager audio = AudioManager.getInstance();
+    /** Isolates hub history, so the selected game never comes from a working-directory config.yaml. */
+    @TempDir Path configDirectory;
 
     @BeforeEach
     void clearPriorAudio() {

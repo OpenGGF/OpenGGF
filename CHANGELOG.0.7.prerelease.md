@@ -848,6 +848,12 @@ Unreleased. The earlier development themes remain in
   follows each texture's own row capacity when sidekick banks are reclaimed or
   independent graphics hosts retain different texture sizes.
 
+- **Support notices:** Starting Sonic 3 & Knuckles from the hub first shows a
+  translated Please note dialog saying its support is in alpha and asking for bug
+  reports on Discord or GitHub. Back returns to the shelf; Continue starts the game,
+  and Don't show again hides that game's notice until its stage changes. Any stock
+  game can be gated or released by editing one table.
+
 - **Main menu:** Compact and bold lettering now share one proportional
   pixel-font family, with narrower lowercase, steady digits for counters and
   clear navy lettering on gold launch buttons; long names, paths and text fields
