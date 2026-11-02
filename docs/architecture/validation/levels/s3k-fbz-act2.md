@@ -424,3 +424,15 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+### Encounter presentation follow-up — 2026-11-02
+
+The subboss roof emitters now preserve `loc_70302`'s vertical render flip
+(native subtypes 0/2); floor emitters 4/6 remain unflipped. The subsequent
+rising-floor entrance pillar preserves `Obj_FBZBossPillar`'s art priority bit
+independently of SAT bucket 6, so terrain cannot hide the blocking pillar.
+`TestFbzAct2Subboss` checks all four emitter draw calls;
+`TestFbzBossPillarInstance` checks priority and the existing eight-step closure,
+including a single `SpikeBalls` impact sound when displacement reaches zero.
+These bounded checks retain the existing route, viewport/donor and native pixel
+coverage limits above; they do not certify additional routes.

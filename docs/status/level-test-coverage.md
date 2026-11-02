@@ -2504,3 +2504,9 @@ Big Arm INIT follow-up (2026-11-02): the [Act 2 matrix](../architecture/validati
 records exact module admission and initialized graph-rewind ownership. Composed
 checks pass80 controls, zero skips; replay remains232 errors with an identical
 profile. No full-route or roster/donor/viewport/presentation gap is closed.
+
+FBZ2 encounter presentation follow-up (2026-11-02): roof-emitter vertical flips
+and rising-floor entrance-pillar art priority have focused draw/priority checks;
+closure timing and its single impact sound are covered in the
+[Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#encounter-presentation-follow-up--2026-11-02).
+Inherited route and native pixel coverage limits remain.
