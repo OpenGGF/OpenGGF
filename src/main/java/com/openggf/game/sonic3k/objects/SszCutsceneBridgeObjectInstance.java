@@ -183,6 +183,13 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
         // other native standing branches retain Wait for this negative header.
         return true;
     }
+    @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectTop_1P loc_1E2E0 (sonic3k.asm:41852-41857): a rider that is
+        // airborne or outside [x-$60,x+$60) loses Status_OnObj, gains Status_InAir
+        // and loses this bridge's d6 bit in the same call. Native SSZ1 clears P1's
+        // and P2's bit on the walk-off frame, not on the next stale-rider pass.
+        return true;
+    }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     /** Obj_SSZCutsceneBridge: make_art_tile(ArtTile_SSZMisc+$20,2,1). */
