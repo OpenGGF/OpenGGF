@@ -2504,3 +2504,8 @@ Big Arm INIT follow-up (2026-11-02): the [Act 2 matrix](../architecture/validati
 records exact module admission and initialized graph-rewind ownership. Composed
 checks pass80 controls, zero skips; replay remains232 errors with an identical
 profile. No full-route or roster/donor/viewport/presentation gap is closed.
+
+SOZ rappel-wire art follow-up (2026-11-02):
+`TestSozRapelWireArtWord` checks pulley/link/handle pattern identity and full
+mapping-word resolution. See the [local matrix record](../architecture/validation/levels/s3k-soz-act2.md#rappel-wire-pulley-art-2026-11-02).
+Inherited route breadth and native pixel acceptance remain open.

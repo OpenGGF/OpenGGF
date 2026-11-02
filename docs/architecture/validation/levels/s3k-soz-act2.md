@@ -968,3 +968,14 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+### Rappel wire pulley art (2026-11-02)
+
+`TestSozRapelWireArtWord` checks the production SOZ sheet's stationary pulley,
+links and handle against their level pattern identities. The pulley mapping
+word `$FFC4` must add the full parent art word `$4411`, yielding `$43D5`:
+tile `$3D5`, palette 2, no flips or priority. Resolving only the tile index
+loses this wrap and leaves the pulley blank. Both acts share this art builder.
+The existing `TestSozSwingAndWireProduction` covers placed wires in both acts,
+including extension, ratcheting and graph recreation/forward replay. This local
+art regression does not close inherited viewport, donor or native pixel coverage.
