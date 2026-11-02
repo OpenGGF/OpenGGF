@@ -344,9 +344,9 @@ probe code is removed before the correction measurements.
 
 The correction checks target the two affected zone slices, the r6 AIZ/CNZ
 classes and complete-run prefix, then the keep-green/solid-manager/affected
-component selection. The remaining initial HPZ/MHZ/Pachinko counts remain
-blocking until the final comparison is assessed; they are not waved through
-as green because they follow an earlier divergence.
+component selection. The initial HPZ/MHZ/Pachinko increases were held pending attribution at this
+checkpoint. The lead-review follow-up below resolves their disposition without
+calling the inherited red traces green.
 
 Additional executed observations bound the remaining interpretation:
 
@@ -362,9 +362,9 @@ Additional executed observations bound the remaining interpretation:
   radius 15, at manager clock 3174. The recorded sidekick is instead near
   (1930,2489), with object_control=$81 and no OnObj. This is already a
   different route/state after the baseline frontier. The later metric
-  changes cannot be used as same-state ROM landing evidence. They remain
-  blocking metrics under the requested gate; the unchanged earlier HPZ
-  frontier and the separate MHZ wall-push frontier still need their own fixes.
+  changes cannot be used as same-state ROM landing evidence. They were held pending attribution at the initial handoff. The unchanged
+  earlier HPZ frontier and separate MHZ wall-push frontier still need their
+  own fixes; the lead has accepted this post-divergence attribution.
 
 ### Surveyed Pachinko contacts
 
@@ -382,8 +382,9 @@ row, where the baseline lands early and zeroes y-speed:
 Rows 122 and 469 cited in the task are the classes' earlier ring and bumper
 frontiers; the survey lists the flipper contacts separately. Their unchanged
 first-error rows do not mean the landing correction failed. Sonic/Tails
-Pachinko nevertheless has a higher later grouped-error total, so the requested
-count gate is still blocked rather than waived on that basis.
+Pachinko nevertheless has a higher later grouped-error total. It was held for
+attribution at the initial handoff; the follow-up below applies the clarified
+state-based regression standard.
 
 ### Correction measurements completed
 
@@ -396,7 +397,8 @@ prefix 3/3 pass; CNZ retains its four baseline failures in 27 tests. All 14
 emitted reports match the before report digests exactly, including restored
 campaign exit coverage. There are no new errors or skips in this selection.
 The earlier AIZ/CNZ regressions are resolved while retaining the native window.
-Remaining AIZ/CNZ consumer replays and the final component checks are pending.
+The remaining AIZ/CNZ consumer replays and component checks were pending at
+this checkpoint; their completed results are recorded below.
 
 ## Post-diagnosis commands
 
@@ -449,13 +451,14 @@ first-physics values and mismatch-cell totals for detailed interpretation.
 | `TestS3kTailsFullChainPachinko3BonusTraceReplay` | r7 | 192 → 22 | 0 camera_y |
 | `TestS3kTailsFullChainPachinkoBonusTraceReplay` | r7 | 760 → 10 | 0 camera_y |
 
-**Delivery remains blocked.** Four classes have higher grouped-error totals:
+The initial handoff held four higher grouped-error totals for attribution:
 Sonic/Tails HPZ (1781→1808), Sonic/Tails MHZ7 (493→494), Tails Full Chain MHZ4
-(411→687), and Sonic/Tails Pachinko (1638→1659). This is not called a green
-migration. The local unsigned-window decisions have ROM and executed evidence;
-that does not waive the requested whole-class metric gate. MHZ4's aggregate
-increase has not been independently attributed beyond its later, already
-diverged portion. No native rejection is reverted or softened to fit a replay.
+(411→687), and Sonic/Tails Pachinko (1638→1659). Group count alone is not the
+regression gate. The lead clarified that a newly red class, an earlier first
+error, or an added error from an otherwise agreeing engine/ROM state blocks
+integration. Additions after an already diverged state require attribution.
+The follow-up below resolves the two previously unattributed cases. No native
+rejection is reverted or softened to fit a replay.
 
 The four requested first-step LRZ/HPZ replay classes retain their accepted
 first-step report digests; the new dome binding does not disturb those routes.
@@ -489,25 +492,146 @@ python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-segments -Dsurefire.fo
 
 No trace fixtures, comparison tolerances, gameplay hydration, frame exceptions
 or recorder metadata are changed. Runtime/test report-owner prints are removed.
-The four higher grouped-error totals remain unresolved and block delivery.
-The second commit is preserved locally for lead review; there is no push or
-merge. The worktree and branch are retained, as requested. Temporary diagnostic
+At the initial handoff the four higher grouped-error totals were held pending
+attribution and the second commit was kept local. The follow-up below records
+the clarified regression standard and the remaining attributions. Runtime code
+is unchanged; the branch is cleared for the lead's combined integration. No
+merge is performed. The worktree and branch remain available to the lead. Temporary diagnostic
 reports and scripts are consumed and removed after recording these results.
 No release full-suite or broad smoke run is claimed.
 
+## Lead-review attribution follow-up
+
+The lead accepted the HPZ and MHZ7 attributions above and requested bounded,
+read-only attribution for MHZ4 and Sonic/Tails Pachinko. The following four
+focused measurements reproduce the earlier totals exactly. Each invocation
+runs one test, with one existing assertion failure, no errors and no skips.
+Neither class newly goes red, and their first ERROR row/field is unchanged:
+MHZ4 row 0 camera_y; Pachinko row 122 rings.
+
+| Class | Before source | After source | Groups before → after | Cells before → after | Added / removed cells |
+| --- | --- | --- | --- | --- | --- |
+| TestS3kTailsFullChainMhz4SegmentTraceReplay | 6f454d71b | 42821ffe3 | 411 → 687 | 81405 → 77772 | 4862 / 8495 |
+| TestS3kSonicTailsPachinkoBonusTraceReplay | 6f454d71b | 42821ffe3 | 1638 → 1659 | 52549 → 43523 | 3207 / 12233 |
+
+Grouped spans were expanded into `(comparison row, field)` ERROR cells. The
+first symmetric difference identifies an actual addition/removal, rather than
+mistaking a changed span endpoint for a change at the span's starting row.
+Temporary observers captured the already-read comparison arguments and fields
+at TraceBinder.compareFrame, plus read-only body/control getters at that same
+boundary. These are completed comparison rows, not the pre-step
+productionOutputRowObserver clock. The ROM values at the reported rows also
+match the committed physics.csv.gz rows. Both runtime source views were measured
+in this worktree without switching branches. All observers and temporary source
+views were restored; no production/test/fixture/tolerance changes remain.
+
+### MHZ4: first difference and first addition are row 1623
+
+The first changed ERROR cells are **additions**: `air`, `rolling`, and
+`player_animation_id`. ROM/before/after values are respectively 1/1/0, 1/1/0,
+and 2/2/0. There is no removal on that row. The first removal is status_byte at
+1632. Compared engine values in the two builds are identical through row 1622;
+their first engine-state difference is also row 1623.
+
+The existing primary movement divergence is already present at row 171
+(ROM x_speed=$0572 versus engine $0272; g_speed=$057D versus zero; status=$00
+versus $20), in addition to the row-0 camera/start discrepancy. More directly,
+on the row immediately preceding the addition, 1622, ROM is at (7492,2121)
+with velocity (-489,992) and camera (7348,2019); both engine builds are at
+(4387,1019), velocity (-2030,560), camera (4330,908). Thus the new error does
+not arise from an agreeing player or camera state.
+
+Row 1623 states follow. Positions/camera are decimal pixels; velocities and
+g-speed are signed 8.8 integer values. A/R means air/rolling; status is hex.
+The sidekick is absent in ROM and both builds.
+
+| State | Primary (x,y) | Velocity (x,y); g-speed | A/R; status; animation | Sidekick | Camera (x,y) | Rings |
+| --- | --- | --- | --- | --- | --- | --- |
+| ROM | (7490,2124) | (-489,1048); -1076 | 1/1; 0x0017; 0x0002 | absent | (7346,2019) | 68 |
+| Engine 6f454d71b | (4379,1021) | (-2030,616); -2030 | 1/1; 0x0007; 0x0002 | absent | (4330,908) | 1 |
+| Engine 42821ffe3 | (4379,1007) | (-2030,0); -2030 | 0/0; 0x0009; 0x0000 | absent | (4330,911) | 1 |
+
+The candidate becomes grounded/on-object with standing radii at its already
+diverged location; the ROM player is thousands of pixels farther through the
+act. The added air/rolling/animation cells are therefore attributed to a
+post-divergence contact, not a newly incorrect decision from matching state.
+No runtime change is made.
+
+### Pachinko: removal at row 266, first addition at row 659
+
+The first difference is **removal** of six ERROR cells at row 266: y_speed, y,
+camera_y, g_speed, air and status_byte. No error is added there. The first
+engine-state difference between the builds is likewise row 266. This is the
+already-proved zero-distance flipper correction; the candidate preserves the
+falling state on the ROM-rejected zero boundary.
+
+| State at row 266 | Primary (x,y) | Velocity (x,y); g-speed | A/R; status; animation | Sidekick (x,y); velocity; g; A/R; status | Camera (x,y) | Rings |
+| --- | --- | --- | --- | --- | --- | --- |
+| ROM | (154,3119) | (-655,968); 2048 | 1/1; 0x0007; 0x0002 | (471,3861); v=(-528,2616); g=1384; A/R=1/1; S=0x0007 | (10,3019) | 263 |
+| Engine 6f454d71b | (154,3122) | (-655,0); -655 | 0/1; 0x000D; 0x0002 | (471,3861); v=(-528,2616); g=1384; A/R=1/1; S=0x0007 | (10,3021) | 263 |
+| Engine 42821ffe3 | (154,3119) | (-655,968); 2048 | 1/1; 0x0007; 0x0002 | (471,3861); v=(-528,2616); g=1384; A/R=1/1; S=0x0007 | (10,3019) | 263 |
+
+The first **added** ERROR cell is `g_speed` at row **659**: ROM=$0800,
+before=$0800, after=$02A0. The same row removes existing mapping-frame, rings
+and tails_status_byte errors. There are no added cells before row 659.
+
+| State at row 659 | Primary (x,y) | Velocity (x,y); g-speed | A/R; status; animation | Sidekick (x,y); velocity; g; A/R; status | Camera (x,y) | Rings |
+| --- | --- | --- | --- | --- | --- | --- |
+| ROM | (202,2825) | (0,0); 2048 | 1/1; 0x0007; 0x0002 | (208,2656); v=(0,0); g=0; A/R=1/0; S=0x0002 | (49,2692) | 267 |
+| Engine 6f454d71b | (318,3268) | (256,-1280); 2048 | 1/1; 0x0007; 0x0002 | (288,3270); v=(0,0); g=0; A/R=1/0; S=0x0003 | (158,3177) | 264 |
+| Engine 42821ffe3 | (199,2820) | (-288,2464); 672 | 1/1; 0x0007; 0x0002 | (206,2654); v=(0,0); g=0; A/R=1/0; S=0x0002 | (46,2687) | 267 |
+
+The baseline's matching g-speed at 659 does not represent an agreeing state:
+its primary is over 400 pixels below the ROM and its sidekick is over 600
+pixels below it. The candidate is closer, but is already displaced and still
+falling while the ROM has zeroed velocity. This is also visible **before** the
+added cell: at row 658 ROM primary=(203,2820), velocity=(-264,2464),
+camera=(49,2687); baseline=(317,3273), velocity=(512,-1536), camera=(157,3177);
+candidate=(200,2810), velocity=(-264,2408), camera=(46,2677). ROM sidekick is
+(207,2655), baseline=(291,3269), candidate=(205,2653). These existing movement
+and camera errors precede the new g-speed error, rather than starting with it.
+At row 659 the ROM aux object_control is $01; the engine body observer shows
+baseline controlled=true and candidate controlled=false, further confirming
+different movement states. These booleans are reported as engine getters, not
+reconstructed as a ROM byte.
+
+The addition is attributed to an already diverged motion/control state. No
+runtime change is made.
+
+### Disposition and bounded commands
+
+Under the lead's clarified standard neither remaining case blocks integration:
+there is no newly red class, no earlier first error, and no added error from
+an agreeing state. With the already accepted HPZ/MHZ7 attributions, all four
+higher-group-count cases are accounted for. This does not declare the red
+traces green or certify their unrelated frontiers. The branch is pushed for
+lead integration; no merge is performed.
+
+The environment and ROM_FLAGS are the same as above. The commands below ran
+once at each source view, before=6f454d71b and after=42821ffe3. Temporary
+comparison-boundary observation was identical in both builds. Each `phase`
+uses a fresh report directory under target/topsolid-attribution; raw outputs
+are consumed and removed after this record is committed.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS3kTailsFullChainMhz4SegmentTraceReplay "-Dopenggf.surefire.reports=target/topsolid-attribution/$phase/r7/surefire" "-Dopenggf.trace.reports=target/topsolid-attribution/$phase/r7/trace" "${ROM_FLAGS[@]}" test
+python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-segments -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS3kSonicTailsPachinkoBonusTraceReplay "-Dopenggf.surefire.reports=target/topsolid-attribution/$phase/seg/surefire" "-Dopenggf.trace.reports=target/topsolid-attribution/$phase/seg/trace" "${ROM_FLAGS[@]}" test
+```
+
 ## Proposed frontier-log entry (lead-owned file is untouched)
 
-> 2026-11-02 — S3K top-solid helper audit follow-up, candidate held.
-> Base: rebased first-step 6f454d71b on origin/develop 506c653a0.
+> 2026-11-02 — S3K top-solid helper audit follow-up, attributed for integration.
+> Base 6f454d71b on origin/develop 506c653a0; implementation 42821ffe3.
 > Native flat/sloped providers select loc_1E45A's 1..16 window at 24 proved
 > missing callers; four apparent gaps already used that window. d3/raw-surface
 > and AIZ render-flip/CNZ sampling corrections preserve native helper ownership.
 > Pachinko landing errors clear at Sonic/Tails 266/1435 and Tails Full Chain
 > 468/666. Earlier shield/bumper and MHZ wall-push frontiers remain.
-> Full r7/segments and all S3K r6 classes measured before/after, with all affected
-> AIZ/CNZ consumers rechecked after repairs. 410 focused tests covered; keep-green
-> passes. Four class totals worsen: Sonic/Tails HPZ 1781→1808, Sonic/Tails MHZ7
-> 493→494, Tails Full Chain MHZ4 411→687, Sonic/Tails Pachinko 1638→1659.
-> Delivery is blocked; no native rejection is reverted to fit a trace.
-> See docs/architecture/audits/2026-11-02-s3k-top-solid-helper-contract.md for
-> every changed class, exact commands, skips, inherited failures and ROM evidence.
+> Higher grouped totals are attributed after prior divergence: MHZ4 first adds
+> air/rolling/animation at 1623, with ROM=(7490,2124), old engine=(4379,1021),
+> new=(4379,1007). Sonic/Tails Pachinko first removes six errors at 266; first
+> adds g-speed at 659, with ROM=(202,2825), old engine=(318,3268), new=(199,2820).
+> HPZ and MHZ7 post-divergence attributions were already accepted by the lead.
+> No newly red case or earlier first error; no added error from matching state.
+> Runtime code unchanged in this attribution follow-up. See the helper-contract
+> audit for both builds' player/sidekick/camera values, commands and scope limits.
