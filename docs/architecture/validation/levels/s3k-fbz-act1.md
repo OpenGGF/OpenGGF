@@ -770,3 +770,13 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Magnetic-platform crush follow-up (2026-11-02)
+
+`TestFbzMagneticPlatformObjectManagerIntegration` now covers a grounded Sonic
+beneath the real offset solid: crush enters death, preserves rings, and rejects
+later object-owned damage. `TestDeathRadiusTransition` covers direct death draw
+with a preserved hurt timer, timer freeze, and a hurt-floor callback that must
+not request ring loss after death. Existing route, viewport, donor, character,
+rewind and native pixel-comparison gaps remain; these bounded checks do not
+certify the full act or establish the exact timing of the reported ring scatter.

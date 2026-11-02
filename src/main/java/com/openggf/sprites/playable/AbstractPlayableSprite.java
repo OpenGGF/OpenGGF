@@ -1838,7 +1838,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isHidden()) {
                         return false;
                 }
-                return PlayableSpriteArtPresentation.nativeBodyVisible(
+                // S3K loc_123AA (sonic3k.asm:24568-24573) draws routine 6 directly;
+                // the preserved hurt timer belongs only to the control display path.
+                return dead || PlayableSpriteArtPresentation.nativeBodyVisible(
                         invulnerableFrames, invulnerabilityDisplayTimerDecrementedThisFrame,
                         isHurt(), hurtRoutineOwnedDisplayThisFrame);
         }
@@ -2687,8 +2689,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean getInvulnerable() {
-                // Debug mode and Super Sonic make player completely invulnerable
-                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
+                // Dead players cannot enter object-owned hurt/ring-loss paths.
+                // Debug mode and Super Sonic also make the player invulnerable
+                return dead || debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
         }
 
         public int getInvulnerableFrames() {
@@ -2849,8 +2852,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 invulnerabilityDisplayTimerTickedThisFrame = true;
                 // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
                 // During hurt routine (routine 4), DisplaySprite is called directly,
-                // so the timer stays frozen until Sonic lands.
-                if (invulnerableFrames > 0 && !hurt) {
+                // so the timer stays frozen until Sonic lands. Routine 6 also draws
+                // directly and leaves this timer frozen throughout death.
+                if (invulnerableFrames > 0 && !hurt && !dead) {
                         if (suppressNextInvulnerabilityDecrement) {
                                 suppressNextInvulnerabilityDecrement = false;
                         } else {
@@ -3106,7 +3110,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean isDamageBlocked(boolean ignoreIFrames) {
-                if (debugMode || invincibleFrames > 0 || isSuperSonic()) {
+                if (dead || debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
                 // ROM Touch_Hurt (sonic3k.asm:21080-21083, s2.asm Touch_Hurt) gates
