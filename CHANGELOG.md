@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
+  endpoints, and shows staggered explosion puffs when Knuckles breaks it.
+
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
   and snow corridor, including ICZ2’s run toward LBZ1.
 
