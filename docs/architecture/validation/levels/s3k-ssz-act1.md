@@ -4769,3 +4769,18 @@ reverting the bridge opt-in, turns it red at the expected input.
 Route re-authoring is not part of this branch. It waits for the route-planner
 programme, so row 93, the Tails solo complete route and the other SSZ1 cold
 routes stay red from 1366 as recorded above.
+
+## Shared-planner repair frontier (2026-11-02)
+
+The SSZ1 route tracks recorded on `36aaddb37` (`src/test/resources/routes/s3k/tracks/`) confirm that
+every measured route first leaves its old path at input 1366, the `Obj_SSZCutsceneBridge` walk-off.
+Fourteen of the sixteen route movies run clean to their end on `36aaddb37`; `middle-320` dies at
+6151 and `complete-800` at 11664, both at (4853, ~2915), so those two were already broken there.
+
+`RouteRepairTool` keeps rows to 1365 and follows the track. The paired `complete-320` repair stalls
+at input 3566: at 3489 the current engine lands P1 on terrain at Y 2540, while the `36aaddb37` run
+fell to the Y 2604 floor, where the `$74` retracting spring at (2656, 2608) launched it left. The
+solo Tails repair stalls at 3266 while flying 11-16 px off its track. No route was rewritten, so
+the SSZ1 rows remain **inherited gaps**: cold reachability past 1366 is not established for any
+SSZ1 route movie. Next: author the paired segment from 3489 as a goal program, and diagnose the
+solo Tails stall ([design record](../../designs/2026-11-02-shared-route-planner.md#deviations)).
