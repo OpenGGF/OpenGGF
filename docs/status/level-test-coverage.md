@@ -2550,6 +2550,11 @@ closure timing and its single impact sound are covered in the
 [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#encounter-presentation-follow-up--2026-11-02).
 Inherited route and native pixel coverage limits remain.
 
+SOZ2 vertical seam presentation follow-up (2026-11-02): the connected sand-carry
+route requires player art at its wrap, with independent SAT admission boundary
+checks. See the [SOZ2 matrix](../architecture/validation/levels/s3k-soz-act2.md#vertical-seam-sprite-admission-2026-11-02)
+for the bounded coverage and remaining manual/pixel obligations.
+
 SOZ push-switch overlap correction (2026-11-02): focused
 `TestSozMechanisms.handlePrecedesRailInSatButFollowsItInPainterOrder` pins
 the native main-handle-before-child-rail emission for both mounting sides and
