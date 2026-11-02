@@ -1489,6 +1489,13 @@ A full level frame may retire results art, run Obj_LevelResultsCreate, publish t
 
 ### Physical retained planes and source-cache dimensions
 
+Recreating an S3K layout map with identical contents can still change its COW byte
+array identity. The next shared level restore then invalidates both tilemaps.
+Preserve the captured map-byte reference when restoring layout metadata, and only
+rebind derived geometry when its actual inputs changed. An unchanged full-layout
+background is camera-independent; camera windows and retained planes need their
+own restore rules. Origin: LRZ1/SOZ2 held-rewind investigation, 2026-11-02.
+
 An event-owned VDP Plane B is64x32 cells even when its source-world cache is
 taller. Native row writes into the first32 cache rows do not update the later
 world rows; rendering with that taller height can sample untouched art while

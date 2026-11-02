@@ -96,7 +96,7 @@ Current changes are recorded in
 remains future scope; `next` has no separate 0.8 implementation line yet.
 
 Recent maintenance includes supported mod-consumption checks, protected movie and trace controls, codec-backed rewind
-snapshot equality, session-owned
+snapshot equality and unchanged S3K terrain-cache reuse, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility
 timing, S3K fresh-level ring timing and touch-suppressed lightning attraction,
