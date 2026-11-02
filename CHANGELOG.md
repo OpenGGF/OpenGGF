@@ -5,6 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Correct FBZ2 boss pilot-light colors, shipped rotation expression and debug geometry; preserve S3K’s native Super/Hyper revert grace boundary.
 - Death sprites draw without hurt-timer blinking, and crushed players reject further hurt and object-owned ring-loss requests.
 
 - S3K level select uses native zone save-card previews, and data select uses the correct Flying Battery palette.

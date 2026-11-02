@@ -266,6 +266,26 @@ class TestSonic3kSuperStateRewind {
     }
 
     @Test
+    void bossTimerStopProtectsSuperAndHyperUntilNextNativeEightFrameBoundary() throws Exception {
+        for (boolean hyper : new boolean[]{false, true}) {
+            for (int phase = 0; phase < 8; phase++) {
+                setUp();
+                if (hyper) {
+                    for (int i = 0; i < 7; i++) GameServices.gameState().markSuperEmeraldCollected(i);
+                }
+                assertTrue(controller.activateFromAirAbility());
+                setField(SuperStateController.class, controller, "state", SuperState.SUPER);
+                GameServices.level().setFrameCounter(phase);
+                GameServices.level().getLevelGamestate().pauseTimer();
+                controller.update();
+                assertEquals(SuperState.NORMAL, controller.getState());
+                assertEquals(8 - phase, sonic.getInvincibleFrames());
+                assertEquals(50, sonic.getRingCount(), "timer-stop revert does not drain rings");
+            }
+        }
+    }
+
+    @Test
     void hyperSonicUsesTheTimedSonicReverseFade() throws Exception {
         for (int i = 0; i < 7; i++) {
             GameServices.gameState().markSuperEmeraldCollected(i);

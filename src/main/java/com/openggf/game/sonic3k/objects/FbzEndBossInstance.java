@@ -744,6 +744,12 @@ public final class FbzEndBossInstance extends AbstractBossInstance
                 && !suppressRootDrawThisFrame)
             renderer.drawFrameIndex(0, state.x, state.y, !facingRight, false);
     }
+    @Override public void appendDebugRenderCommands(com.openggf.debug.DebugRenderContext ctx) {
+        // Touch_Sizes[$16], rather than the visual width/height attributes.
+        ctx.drawRect(state.x, state.y, 0x20, 0x20, 1f, 0.4f, 0.2f);
+        ctx.drawWorldLabel(state.x, state.y, -2, "FBZ boss " + phase() + " HP=" + state.hitCount,
+                com.openggf.debug.DebugColor.ORANGE);
+    }
     @Override public int getPriorityBucket() {
         if (phase() == Phase.DESCEND) return 4;
         int signedAngle = (byte) angle;

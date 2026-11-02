@@ -1084,7 +1084,10 @@ public class Sonic3kSuperStateController extends SuperStateController implements
         // period, this is how SonicKnux_SuperHyper.revertToNormal restores the
         // zone music: it plays none itself and lets Sonic_ChkInvin re-issue
         // Current_music when the timer expires.
-        player.setInvincibleFrames(1);
+        // Sonic_ChkInvin decrements the native timer only when Level_frame_counter & 7 is zero.
+        // Our public timer counts individual frames; preserve protection until that boundary.
+        LevelManager nativeLevel = GameServices.levelOrNull();
+        player.setInvincibleFrames(8 - ((nativeLevel == null ? 0 : nativeLevel.getFrameCounter()) & 7));
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
         }

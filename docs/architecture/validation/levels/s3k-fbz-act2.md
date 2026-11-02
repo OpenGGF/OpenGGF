@@ -425,6 +425,13 @@ this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
 
+
+FBZ2 boss display follow-up (2026-11-02): focused regressions cover the shipped
+neutral rotation head, palette-zero pilot flame, and root/arm debug geometry.
+The S3K revert timer now retains invincibility until the next native eight-frame
+boundary. Arms remain harmful until native dismantling; this does not guarantee
+protection throughout the defeat sequence. Full-route, pixel and configuration
+coverage gaps above remain open.
 ### Encounter presentation follow-up — 2026-11-02
 
 The subboss roof emitters now preserve `loc_70302`'s vertical render flip
