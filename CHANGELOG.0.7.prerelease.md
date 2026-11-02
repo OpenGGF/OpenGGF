@@ -14,6 +14,12 @@ Unreleased. The earlier development themes remain in
   player's standing bit on the same frame, as the shipped game does. The bit
   previously lingered for one more frame after the player had left.
 
+- **Sky Sanctuary rotating platforms:** Jumping off a spinning post or its
+  carrier bar clears the player's "standing on an object" status on the next
+  frame, as the shipped game does. The status previously stayed set until
+  another object cleared it, so the player could run flat through the next
+  slopes instead of following them.
+
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an
