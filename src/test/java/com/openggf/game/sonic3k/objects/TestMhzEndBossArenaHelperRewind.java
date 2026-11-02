@@ -98,6 +98,28 @@ class TestMhzEndBossArenaHelperRewind {
 
     }
 
+    @Test
+    void hiddenSpikeRestoreRetainsItsUnprojectedPlacement() throws Exception {
+        var events = new Sonic3kMHZEvents();
+        var eventManager = new Sonic3kLevelEventManager();
+        set(eventManager, "mhzEvents", events);
+        configureSpikeEventState(events, false, 0x320);
+        var manager = installObjectManager(eventManager);
+        var spike = manager.createDynamicObject(() -> MhzEndBossArenaHelperInstance.spike(events, 2, 1, true));
+        spike.update(0, null);
+        var registry = new RewindRegistry();
+        registry.register(manager.rewindSnapshottable());
+        var saved = registry.capture();
+        manager.removeDynamicObject(spike);
+        registry.restore(saved);
+        var restored = liveHelpers(manager).getFirst();
+        assertEquals(0, restored.getX());
+        assertEquals(0, restored.getY());
+        restored.update(1, null);
+        assertEquals(0, restored.getX(), "a hidden pass must not substitute the pillar origin");
+        assertEquals(0, restored.getY());
+    }
+
     private static ObjectManager installObjectManager(Sonic3kLevelEventManager eventManager) {
         GraphicsManager.getInstance().initHeadless();
         ObjectManager[] holder = new ObjectManager[1];

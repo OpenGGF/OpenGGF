@@ -1307,3 +1307,82 @@ Knuckles-route tests retain the switch-only bypass. The existing MHZ2 level-musi
 restore remains in place. This bounded change adds no captured state; existing
 cutscene graph rewind checks cover the controller/carrier graph. Broader route,
 viewport/donor/team and audible native comparison obligations remain inherited.
+
+
+## End-boss rendering follow-up — 2026-11-02
+
+Implementation base: `e07cb4592`, owned worktree `t3-030a3500`.
+This is a local presentation correction, not act or encounter certification.
+The locked-on ROM at the original absolute path supplied by `S3K_ROM`
+has CRC32 `63522553` and SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+| Symptom | Owning evidence and correction |
+| --- | --- |
+| Missing ship and pilot | `ObjDat_MHZEndBoss` (sonic3k.asm:157784-157788) selects `Map_RobotnikShip`, palette 0, frame `$A`. The parent previously drew body frame 1 a second time. `Obj_MHZEndBoss` (sonic3k.asm:156981-156985) loads the shared ship PLC; MHZ2's art plan omitted that sheet. |
+| Missing capsule | `PLC_MHZEndBoss_Explosion` (sonic3k.asm:157871-157874) contains capsule art. MHZ2's art plan omitted the shared capsule sheet used by the existing upright capsule. |
+| Corrupt rings and pillars | `ArtKosM_MHZEndBossPillar` (sonic3k.asm:201639-201641) matches the local archive byte-for-byte at `$159CFE`, with a `$06C0` decompressed-byte header, 54 tiles. The old `$159DFE` points 256 bytes into that stream and reads a false `$53EF` header. Its oversized level upload starts at tile `$580` and reaches the virtual ring bank after the 2016 level patterns. The local ROM instruction at `$5536C` is `43 F9 00 15 9C FE`, directly corroborating the source pointer. The source address, not the ring renderer, is corrected. |
+| Absent spike balls | `loc_5576A` and `loc_557C8` (sonic3k.asm:113445-113505) delete only under arena event flags. Ordinary manager range-unloading previously removed hidden helpers whose X remained zero. Helpers now retain their native event-owned lifetime. Hidden-helper recreation also retains captured fallback coordinates; constructing every role at the pillar origin changed zero-position hidden balls after restore. |
+| Depth and parallax | `loc_55380` / `loc_553B6` (sonic3k.asm:113065-113104) select the special canopy and background rows. The full-layout renderer omitted those source translations. `sub_5550C` (sonic3k.asm:113225-113252) writes Plane A's first `$30` H-scroll words; MHZ2 only enabled per-line foreground drawing for the later ship sequence. The chase now consumes those words and its authored row sources. `loc_556F8` (sonic3k.asm:113420-113429) gives the fixed pillar high-priority art. |
+| Wrong flame colours | `ObjDat3_7694C` (sonic3k.asm:157799-157803) selects palette base 0 for frame `$11`; the shared body sheet uses base 1. The flame draw now selects its own additive base, preserving mapping-piece palette bits. |
+
+`TestMhzEndBossRendering` is a positioned native-width Sonic-only EGL witness.
+It admits the real placed boss after fresh-level fade completion, stages a weather-machine
+hit and chase entry, uses native full scripted control to suppress player movement/touch for the rendering fixture, spills rings,
+and checks the eight helper lifetimes, ROM palette/art shape, source row selection,
+whole-world restore/forward replay and identical replayed pixels at both 360 and 600 chase steps, with native sprite limits enabled. Its final capsule
+picture is a staged asset witness; capsule completion is covered separately by existing
+boss-object checks. Optional PNG output uses `-Dopenggf.tests.mhzRenderOut=<outside-repo-directory>`.
+
+Rejected fixture shortcuts: an extra `updateObjectPositions()` call consumed the
+boss's one-time palette submission outside the frame accumulator; removing it
+made all sixteen colours match the ROM. Seeding only an invincibility timer
+omitted its star owner and made restore reconcile an extra object. Native scripted
+control avoids that inconsistent seed. Neither workaround changed runtime owners.
+The strict snapshot diff also exposed the hidden-helper placement bug above;
+its separate recreation regression preserves the zero-position case.
+
+Focused validation used the following Maven arguments from this worktree,
+with `DISPLAY` and `WAYLAND_DISPLAY` removed from each process environment.
+`S3K_ROM` names the verified absolute original ROM path; `MHZ_RENDER_OUT` names
+the outside-repository task artifact directory recorded in the implementation handoff:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestMhzEndBossRendering,TestMhzBossObjects,TestMhzEndBossArenaHelperRewind,SwScrlMhzTest,TestMhzEndBossSpikeRewind,TestMhzEndBossVisualRewind,TestMhzEndBossRobotnikHeadRewind,TestS3kMhzEndBossGraphRewind,TestS3kMhzEndBossViewport,TestS3kMhzEndBossAdmission,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits+mhz2PlanIncludesAct2SpecificRenderedObjectArtKeys,TestPatternSpriteRendererCorruptionGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dopenggf.tests.mhzRenderOut=$MHZ_RENDER_OUT" test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestMhzEndBossRendering,TestMhzEndBossArenaHelperRewind,TestMhzBossObjects,TestS3kMhzEndBossViewport' "-Dopenggf.tests.mhzRenderOut=$MHZ_RENDER_OUT" test
+```
+
+The first command completed at 11:09:58 UTC: 234 tests across 17 classes,
+233 passed, one rendering-fixture admission failure, zero errors/skips.
+Both classes named `TestSonic3kLevelLoading` ran. Required AIZ/loading/bootstrap/
+decoding checks, art/mapping corruption guard, boss logic, graph recreation,
+scroll arithmetic and viewport checks passed. Queue wait was 10s; Maven's reported
+execution was 45.174s. Intermediate one-class fixture probes identified the
+palette dispatch and hidden-helper restoration failures above. No assertion or
+snapshot component was removed to accept them.
+
+After the helper recreation correction and fixture repairs, the second command
+completed at 11:26:59 UTC: **145 passed, zero failures/errors/skips**. Queue wait
+was 211s; Maven's reported execution was 1m42s. It reran the affected helper,
+boss and viewport checks and the final rendering witness. Other passing focused
+coverage was reused because its runtime inputs were unchanged. These are focused
+checks, not a smoke-suite or full-suite result. Total command wall timing beyond
+these queue/Maven measurements was not measured.
+
+Final artifacts are under `$MHZ_RENDER_OUT/`:
+`state.csv`, `admitted.png`, `chase-222.png`, `chase-280.png`, `chase-350.png`,
+`chase-450.png`, `chase-580.png`, and `capsule-sheet.png`. Read the labelled CSV
+before selecting images; its frame numbers are declared fixture steps, not native
+movie rows. The 450/580 pictures show the spike-ball depth passes; the 280 picture
+shows spilled rings. The capsule image is the staged asset witness described above.
+
+`python3 tools/disasm/disasm_citations.py check --strict docs/architecture/validation/levels/s3k-mhz-act2.md`
+and `git diff --check` also pass. No category-run diagnostics were created.
+
+Inherited gaps: no native-emulator pixel comparator or cold-route replay was run here.
+The engine's existing delayed redraw counters are retained; exact intermediate row
+publication timing remains unqualified. This change does not certify all character,
+team, donor, viewport or complete defeat-to-FBZ products. Existing viewport checks
+exercise the native camera and ramp arithmetic across the supported widths; the new
+pixel witness covers 320px, Sonic alone, native donor only. Combined smoke belongs
+to the parent integration owner.

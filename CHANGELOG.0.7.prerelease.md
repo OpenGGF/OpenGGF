@@ -10,7 +10,10 @@ Unreleased. The earlier development themes remain in
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
   and snow corridor, including ICZ2’s run toward LBZ1.
 
-- **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his leaf-blower cutscene begins.
+- **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his
+  leaf-blower cutscene begins. Restore the end-boss ship, pilot and capsule art,
+  the dash flames' palette, and the chase's canopy, pillar and spike-ball layers.
+  Correct the pillar archive address so its upload cannot corrupt ring art.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.

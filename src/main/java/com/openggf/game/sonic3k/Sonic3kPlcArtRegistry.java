@@ -2383,6 +2383,13 @@ public final class Sonic3kPlcArtRegistry {
 
     private static void addMhzAct2Art(List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        // Obj_MHZEndBoss loads PLCID_7B; PLC_MHZEndBoss_Explosion later loads the capsule.
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR, CompressionType.NEMESIS, 0,
+                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.EGG_CAPSULE,
+                Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR, CompressionType.NEMESIS, 0,
+                Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0, -1));
         standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_END_BOSS,
                 Sonic3kConstants.ART_KOSM_MHZ_END_BOSS_ADDR,
                 CompressionType.KOSINSKI_MODULED, 0,

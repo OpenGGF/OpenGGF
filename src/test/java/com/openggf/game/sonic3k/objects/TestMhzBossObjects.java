@@ -100,6 +100,40 @@ class TestMhzBossObjects {
     }
 
     @Test
+    void mhzEndBossDashFlamesUseTheirOwnPaletteBase() {
+        var renderer = readyRenderer();
+        var renderManager = mocks.mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(renderer);
+        var boss = new MhzEndBossInstance(new ObjectSpawn(
+                0x3C40, 0x324, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+        boss.setCustomFlag(0x38, 0x40);
+        var flame = new com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild(boss, 0, -0x14, 0x18);
+        flame.setServices(servicesWithRenderManager(renderManager));
+        flame.update(0, null);
+        flame.appendRenderCommands(new ArrayList<>());
+        verify(renderer).drawFrameIndexWithPaletteBase(0x11, boss.getX() - 0x14,
+                boss.getY() + 0x18, false, false, 0);
+        clearInvocations(renderer);
+        flame.update(1, null);
+        flame.appendRenderCommands(new ArrayList<>());
+        verifyNoInteractions(renderer);
+    }
+
+    @Test
+    void mhzArenaHelpersRemainResidentBetweenVisiblePasses() {
+        var events = new Sonic3kMHZEvents();
+        var pillar = MhzEndBossArenaHelperInstance.pillar(events);
+        var support = MhzEndBossArenaHelperInstance.tallSupport(events);
+        var ball = MhzEndBossArenaHelperInstance.spike(events, 0, 2, false);
+        assertTrue(pillar.isPersistent());
+        assertTrue(support.isPersistent());
+        assertTrue(ball.isPersistent());
+        assertTrue(pillar.isHighPriority());
+        assertFalse(support.isHighPriority());
+        assertFalse(ball.isHighPriority());
+    }
+
+    @Test
     void mhzMinibossFlamesUsePaletteZeroInsteadOfBodyPalette() {
         Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
         PatternSpriteRenderer renderer = readyRenderer();
@@ -5033,7 +5067,7 @@ class TestMhzBossObjects {
         ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(minibossRenderer);
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS_TREE)).thenReturn(treeRenderer);
-        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS)).thenReturn(endBossRenderer);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)).thenReturn(endBossRenderer);
         ObjectServices services = servicesWithRenderManager(renderManager);
 
         MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
@@ -5057,7 +5091,7 @@ class TestMhzBossObjects {
         verify(endBossRenderer).isReady();
         verify(minibossRenderer).drawFrameIndex(0, 0x1800, 0x0400, false, false);
         verify(treeRenderer).drawFrameIndex(5, 0x1810, 0x0410, false, false);
-        verify(endBossRenderer).drawFrameIndex(1, 0x42C0, 0x0300, false, false);
+        verify(endBossRenderer).drawFrameIndex(0xA, 0x42C0, 0x0300, false, false);
         verifyNoMoreInteractions(minibossRenderer, treeRenderer, endBossRenderer);
     }
 
@@ -5323,9 +5357,9 @@ class TestMhzBossObjects {
         assertEquals(7, tree.getPriorityBucket(),
                 "ObjDat_MHZMinibossTree uses priority $380");
         assertEquals(5, endBoss.getPriorityBucket(),
-                "ObjDat3_76934 for the active MHZ end boss core uses priority $280");
-        assertRenderBounds(endBoss, 0x80, 0x80,
-                "ObjDat3_76934 gives the active MHZ end boss core x/y radius $80,$80");
+                "ObjDat_MHZEndBoss ship uses priority $280");
+        assertRenderBounds(endBoss, 0x20, 0x20,
+                "ObjDat_MHZEndBoss gives the ship x/y radius $20,$20; children own the large body layers");
     }
 
     @Test

@@ -1198,7 +1198,7 @@ public class Sonic3kConstants {
       // MHZ2 ship sequence propeller art. The ROM queues ArtKosM_MHZShipPropeller
       // to ArtTile_MHZShipPropeller ($500), and loc_55814 renders
       // Map_MHZEndBossMisc frames 5-7 via Ani_MHZEndPropellers.
-      public static final int ART_KOSM_MHZ_END_BOSS_PILLAR_ADDR = 0x159DFE;
+      public static final int ART_KOSM_MHZ_END_BOSS_PILLAR_ADDR = 0x159CFE;
       public static final int ART_KOSM_MHZ_SHIP_PROPELLER_ADDR = 0x159F10;
       public static final int MAP_MHZ_END_BOSS_MISC_ADDR = 0x055908;
       public static final int ART_TILE_MHZ_END_BOSS_PILLAR = 0x0580;
