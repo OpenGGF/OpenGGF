@@ -5,6 +5,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
+
 - **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his leaf-blower cutscene begins.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit

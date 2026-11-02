@@ -8,6 +8,8 @@ readable and historical versions can be referenced directly.
 - Default Player 1 Start to Enter and Player 2 Start to Backspace; unify live Start with the visible pause,
   preventing a second native pause when resuming.
 
+S3K elemental shields keep animating after returning from Bonus/Special stages.
+
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.
 
