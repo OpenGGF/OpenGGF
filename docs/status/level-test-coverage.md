@@ -2408,3 +2408,12 @@ checks carried-player terrain dispatch and next-pass velocity-mismatch release.
 See the [MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#mushroom-parachute-landing-correction--2026-11-02)
 and [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#mushroom-parachute-landing-correction--2026-11-02)
 for inherited route, configuration and rewind gaps.
+
+MHZ1 damage flash follow-up (2026-11-02): the boss now uses the ROM's four
+palette entries and pre-decrement 32-update alternation. The
+[local matrix](../architecture/validation/levels/s3k-mhz-act1.md#miniboss-damage-flash--2026-11-02)
+records checks and inherited route/pixel coverage limits.
+
+The same audit corrected custom-flash counter ordering for AIZ1, HCZ1 and HCZ2.
+Their local matrices record the all-32-row output contract; existing route
+qualification limits remain.

@@ -8,14 +8,6 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
-## MHZ1 miniboss damage palette flash — 2026-11-02
-
-The body still inherits the shared single-colour boss flasher. ROM
-`sub_75D80` and `word_75E02` / `word_75E0A` instead alternate palette line 1
-indices 7, 11, 13 and 14 between `$224,$222,$A64,$642` and
-`$AAA,$EEE,$888,$666`, reading the 32-update damage counter before decrement.
-This parity gap remains open; the flame palette correction does not fix it.
-
 ## DEZ original-input ring frontier at the second staircase — 2026-10-30
 
 The [fresh continuation](trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)

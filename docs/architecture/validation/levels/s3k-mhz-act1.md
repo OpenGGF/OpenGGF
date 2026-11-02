@@ -483,8 +483,7 @@ while the body retains base 1. This local draw selection applies across
 viewport, donor and team configurations; native pixel comparison and complete
 route breadth remain inherited gaps. Flame graph restoration/forward replay
 is covered separately by `TestS3kMhzMinibossFlameGraphRewind`.
-The [damage flash gap](../../../status/s3k-known-bugs.md#mhz1-miniboss-damage-palette-flash--2026-11-02)
-remains open.
+The damage flash follow-up now uses the ROM four-colour table below.
 
 ## Mushroom parachute landing correction — 2026-11-02
 
@@ -494,3 +493,46 @@ pass, where `sub_3F5C2` detects the velocity mismatch and `loc_3F660` releases
 the player with y velocity -$100. The focused parachute regression covers this
 ordering; full cold-route, viewport/donor breadth and carry/landing rewind
 remain inherited obligations rather than certification from this component check.
+
+## Miniboss damage flash — 2026-11-02
+
+`sub_75D80` / `sub_75DF4`, with `word_75E02` / `word_75E0A`, own the
+32-update line-1 flash at indices 7, 11, 13 and 14. The boss reads the
+counter before decrement, uses its bright row on even values and normal row
+on odd values, and restores collision after writing the final normal row.
+The normal row matches the original locked-on ROM's `Pal_MHZMiniboss` bytes.
+The shared boss flasher is unchanged; MHZ1 opts out of its update.
+
+`TestMhzMinibossPaletteFlash` checks natural hit admission, all 32 palette
+outputs, ownership, untouched palette entries, collision re-admission and
+missing-level timing. These are configuration-independent local contracts;
+native pixel and full donor/team/viewport route qualification remain inherited
+gaps. Existing encounter and flame graph checks remain separate.
+
+The mid-flash parent recreation case in
+`TestS3kMhzMinibossFlameGraphRewind` captures after five updates, forces fresh
+recreation, then compares all remaining 27 palette rows and the completion state.
+The cross-boss audit also corrected pre-decrement phase ownership in AIZ1 and
+both HCZ bosses; shared Sonic 1/2 flashing and other custom handlers are unchanged.
+
+Validation used queued Maven with `-Dmse=off` from task base
+`9b1fdf1dc4e388d5031d252d72907717991f99a7` plus the correction. Focused
+commands selected these classes with exact `-Dtest` selectors:
+
+- `TestMhzMinibossPaletteFlash,TestMhzBossObjects,TestS3kMhzMinibossFlameGraphRewind,TestAbstractBossPaletteOwnership,TestCnzMinibossPaletteOwnership,TestSonic2ArzBossPaletteFlash,TestSonic1FZBossDamageFlash`: 136 passed, zero skips.
+- `TestMhzMinibossPaletteFlash,TestS3kMhzMinibossFlameGraphRewind,TestMhzMinibossDefeat,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`: 69 passed, zero skips.
+- After the AIZ/HCZ phase correction, `TestMhzMinibossPaletteFlash,TestHczEndBossInstance,TestHczMinibossVisualParity,TestS3kAizMinibossGraphRewind,TestS3kHczEndBossGraphRewind,TestAizMinibossHistoryRewind`: 26 passed, zero skips.
+
+The latter two commands supplied the absolute original S3&K ROM path
+(`63522553` CRC32). Test totals overlap and are not summed. Tool preflight
+passed with `LUA_BIN=/usr/bin/lua5.4`. Focused behavior, collision and graph
+checks replace broad smoke for these local palette/timer owners; no shared
+algorithm, flasher, physics, fixture or selection policy changes. The source
+audit inspected all 18 S3K `AbstractBossInstance` subclasses: remaining owners
+use custom handlers, disable generic palette output or own their hit entry.
+This is bounded regression evidence, not an exhaustive native-pixel audit.
+
+Final HCZ collision/cleanup selection
+`TestHczMinibossRocketTouchRewind,TestHczMinibossWaterEffectCleanup,TestHczEndBossWaterColumnControlPolicy,TestS3kHczPaletteOwnershipMigrationGuard`
+passed 18 checks with zero skips using the same queued command shape and
+absolute original S3&K ROM path.
