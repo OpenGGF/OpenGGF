@@ -122697,3 +122697,24 @@ there). Everything else is identical to `c81ffaf7c`
 stays green. SSZ1 cold routes still leave their path at input 1366; the
 re-authoring analysis is in the
 [SSZ1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#rom-owned-solid-contact-opening-bridge-jump-2026-10-31).
+
+## 2026-11-02 — SSZ1 cold route native fixture; bridge walk-off standing bit
+
+Branch `bugfix/ai-ssz1-native-routes` (from `feature/ai-weakness-pass` `fa313dfa3`),
+worktree `t3-d7a94639`. New comparison-only fixture
+`traces/s3k/ssz1_cold_route_native` (composite movie
+`_movies/s3k-ssz1-cold-route-composite.bk2`, 1998 rows, SSZ act 1 cold route).
+
+| Check | Commit | Result |
+| --- | --- | --- |
+| Native vs engine, route inputs 1-1956, P1/P2 physics, camera, rings, bridge standing bits | `fa313dfa3` | first error input 1416 `bridge.p1_standing` native 0 / engine 1; then 1430 `bridge.p2_standing` |
+| Same | `f02d2deaf` | **green**, no error through 1956; the first native lag frame (1957) ends the window |
+
+Command: `python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Ds3k.rom.path=<s3k.gen> -Dtest=TestS3kSsz1ColdRouteNativeTrace test` with
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`. The class sits in
+`-Ptrace-replay-r7` by name. The `fa313dfa3` row reproduces by reverting the
+bridge's `clearsStandingBitOnContinuedRideExit` opt-in. The SSZ1 cold routes
+still leave their recorded path at 1366; native follows the current engine
+there, and re-authoring waits for the route-planner programme
+([audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#c-follow-up-native-settlement-and-bridge-walk-off-2026-11-02)).
