@@ -775,3 +775,19 @@ retires; individual native SST release/allocation pressure is not certified.
 Full-route completion, viewport/donor/team breadth, Knuckles-specific post-boss
 palette omission, and matched native pixels remain inherited gaps. A positioned
 engine picture does not close those obligations.
+
+Verification: the four ICZ classes (`TestS3kIczMinibossObject`,
+`TestIczMinibossGraphRewind`, `TestIczMinibossRenderBuckets`,
+`TestIczMinibossFieldDisposition`) pass 35 checks without skips. The lifetime
+API correction and tightened raw-call inventory pass all 32 checks in
+`TestObjectPhysicsStandardizationGuard`; the other 819 checks in the earlier
+820-check guards invocation passed before that bounded correction. The four
+required S3K loading/bootstrap selectors pass 60 checks without skips. These
+are focused/guard checks, not a broad smoke or full-suite result.
+
+An owned EGL probe rendered ICZ2 assets with apparent act 0, explicit native
+arena bounds and an injected miniboss. Its declared six-hit test hook at tick
+600 showed falling ice and ongoing explosions at tick 700 and a falling
+signpost at tick 900. This skips route traversal and does not compare native
+pixels. The arm mapping frames, offsets and sprite ordering remain source-led;
+no speculative arm shortening is applied.

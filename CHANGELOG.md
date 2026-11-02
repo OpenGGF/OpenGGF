@@ -5,11 +5,15 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+S3K act transitions start Act 2 music once at the title-card wait gate.
+
 Current fixes include the IceCap Act 1 miniboss charge flashes and falling-ice
 destruction/signpost handoff, the normal explosion effect and break sound for
 upside-down S3K capsules, crowded-scene sprite retention with sprite limits
 disabled, and Tails carrying Sonic into CNZ1 after the MGZ2 rescue. See the
 development changelog below.
+
+ICZ2 → LBZ1 now launches Sonic out of the snow after the zone handoff.
 
 MGZ2 rescue-Tails art refresh also preserves Super/Hyper palette cycling and
 boss-defeat detransformation.

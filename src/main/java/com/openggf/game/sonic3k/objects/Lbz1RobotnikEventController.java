@@ -116,7 +116,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private int droppedBoxTimer;
     private int droppedBoxX;
     private int droppedBoxY;
-    private LbzMinibossBoxRig boxRig;
+    private final LbzMinibossBoxRig.OptionalRig boxRig = new LbzMinibossBoxRig.OptionalRig();
     private int hitReactionTimer;
     private boolean shipGone;
     @RewindTransient(reason = "hardware handle is rebound from the captured KosM ordinal")
@@ -233,8 +233,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
 
     @Override
     public int[] extraRenderBuckets() {
-        return boxRig == null ? new int[0]
-                : LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, boxRig);
+        return boxRig.value == null ? new int[0]
+                : LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, boxRig.value);
     }
 
     @Override
@@ -319,8 +319,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         this.routine = routine;
         this.facingLeft = facingLeft;
         this.flameVisible = xVel != 0;
-        if (boxRig == null) {
-            boxRig = new LbzMinibossBoxRig(x & 0xFFFF, (y + BOX_ANCHOR_Y_OFFSET) & 0xFFFF);
+        if (boxRig.value == null) {
+            boxRig.value = new LbzMinibossBoxRig(x & 0xFFFF, (y + BOX_ANCHOR_Y_OFFSET) & 0xFFFF);
         }
         updateDynamicSpawn(x, y);
     }
@@ -330,8 +330,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         droppedBoxArmed = true;
         droppedBoxX = x & 0xFFFF;
         droppedBoxY = y & 0xFFFF;
-        boxRig = new LbzMinibossBoxRig(droppedBoxX, droppedBoxY);
-        boxRig.release();
+        boxRig.value = new LbzMinibossBoxRig(droppedBoxX, droppedBoxY);
+        boxRig.value.release();
     }
 
     private void initialize() {
@@ -347,7 +347,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (lbz != null) {
             lbz.setRobotnikIntroActive(true);
         }
-        boxRig = new LbzMinibossBoxRig(getX(), getY() + BOX_ANCHOR_Y_OFFSET);
+        boxRig.value = new LbzMinibossBoxRig(getX(), getY() + BOX_ANCHOR_Y_OFFSET);
     }
 
     private void queueInitialMinibossBoxArt() {
@@ -563,7 +563,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (!shipGone && isShipCoarseOffscreen()) {
             shipGone = true;
         }
-        if (shipGone && (boxRig == null || !boxRig.hasVisiblePieces())) {
+        if (shipGone && (boxRig.value == null || !boxRig.value.hasVisiblePieces())) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
@@ -678,27 +678,27 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     }
 
     private void updateBoxRig() {
-        if (boxRig == null) {
+        if (boxRig.value == null) {
             return;
         }
-        if (!boxRig.isReleased()) {
+        if (!boxRig.value.isReleased()) {
             int anchorX = droppedBoxArmed ? droppedBoxX : getX();
             int anchorY = droppedBoxArmed ? droppedBoxY : getY() + BOX_ANCHOR_Y_OFFSET;
-            boxRig.follow(anchorX, anchorY);
+            boxRig.value.follow(anchorX, anchorY);
         }
         var camera = services().camera();
-        boxRig.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
+        boxRig.value.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
     }
 
     private void drawMinibossBox(int bucket) {
-        if (boxRig == null || !boxRig.hasVisiblePieces()) {
+        if (boxRig.value == null || !boxRig.value.hasVisiblePieces()) {
             return;
         }
         PatternSpriteRenderer boxRenderer = getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX);
         if (boxRenderer == null) {
             return;
         }
-        boxRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
+        boxRig.value.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
     }
 
     private void ensureRobotnikArtLoaded() {
@@ -737,8 +737,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         minibossSpawned = true;
         // ROM loc_8CD9C: bset #3,$38 releases the box pieces, plays
         // sfx_BossActivate, and creates Obj_LBZMiniboss.
-        if (boxRig != null) {
-            boxRig.release();
+        if (boxRig.value != null) {
+            boxRig.value.release();
         }
         services().playSfx(Sonic3kSfx.BOSS_ACTIVATE.id);
         notifyBoxOpenedChunkSwap();

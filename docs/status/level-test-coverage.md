@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+S3K Act 1 music handoff (2026-11-01): results-owner regressions cover no
+premature music request across Act 1 zones and one request at the carried
+title wait gate. The existing title/transition lifecycle checks remain the
+integration coverage. This bounded correction does not certify audible output,
+whole-act routes, or broader character/donor/viewport and rewind matrices;
+those inherited obligations remain open.
+
+
 Floating S3K capsule effects (2026-11-01): the focused
 `TestStageplayCapsuleControlRelease` regression checks subtype-$08 completion,
 seven normal explosion children, sprite priority and child-owned break sound.
@@ -2382,3 +2390,10 @@ MGZ2 powered rescue follow-up (2026-11-01): the
 records runtime art-refresh ownership, Super/Hyper palette-clock continuation
 and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
 the matrix's broader route, donor/team and rewind obligations open.
+
+LBZ1 box rewind follow-up (2026-11-01): `TestLbz1BoxRigRewind` covers fresh
+controller restoration with a progressed carried/standalone box, restoration
+before creation, and 180 updates of piece replay. The [act matrix](../architecture/validation/levels/s3k-lbz-act1.md)
+retains the inherited route, donor, roster and viewport gaps.
+
+LBZ1 fresh-entry follow-up (2026-11-01): the [act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records the ICZ2 fade/load/title-to-ground-launch regression witness. Sonic-alone emergence and control release are bounded coverage; broader roster/viewport/donor and transition rewind obligations remain open.
