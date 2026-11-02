@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K Lava Reef collapsing bridges and Sky Sanctuary floating platforms now reject
+  exact-boundary new landings, matching the ROM’s one-to-sixteen-pixel overlap
+  check and preserving falling speed until the actual landing frame.
+
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
   child-owned break sound, including Hydrocity’s separate capsule owner.
 

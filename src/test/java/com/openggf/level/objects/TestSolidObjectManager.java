@@ -1956,6 +1956,40 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void s3kLrzBridgeAndSszPlatformRejectZeroDistanceButLandInside() {
+        for (boolean lrz : new boolean[] {true, false}) {
+            for (int overlap : new int[] {0, 1, 16, 17}) {
+                ObjectSpawn spawn = new ObjectSpawn(100, 100, 0, 0, 0, false, 0);
+                AbstractObjectInstance object = lrz
+                        ? new com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance(spawn)
+                        : new com.openggf.game.sonic3k.objects.SszFloatingPlatformObjectInstance(spawn);
+                ObjectManager manager = buildManager(object);
+                object.snapshotPreUpdatePosition();
+                SolidObjectParams params = ((SolidObjectProvider) object).getSolidParams();
+                TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+                player.useGameRules(GameRules.SONIC_3K);
+                player.setWidth(20);
+                player.setHeight(38);
+                player.setAir(true);
+                player.setYSpeed((short) 0x100);
+                player.setCentreX((short) 100);
+                int y = 100 - 4 - params.groundHalfHeight() - player.getYRadius() + overlap;
+                player.setCentreY((short) y);
+                player.resetPositionHistory();
+
+                manager.updateSolidContacts(player);
+
+                String context = object.getClass().getSimpleName() + " overlap=" + overlap;
+                boolean lands = overlap >= 1 && overlap <= 16;
+                assertEquals(lands, player.isOnObject(), context);
+                assertEquals(!lands, player.getAir(), context);
+                assertEquals(lands ? 0 : 0x100, player.getYSpeed(), context);
+                if (!lands) assertEquals(y, player.getCentreY(), context);
+            }
+        }
+    }
+
+    @Test
     public void cnzTrapDoorSolidObjectTopAcceptsExactSurfaceBoundaryAndLandsOnePixelInside() {
         ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x44, 0, 0, false, 0);
         CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
