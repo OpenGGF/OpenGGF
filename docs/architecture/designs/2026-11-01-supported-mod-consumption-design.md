@@ -157,7 +157,11 @@ values or fixed-point maths, and every public member acceptable as a promise.
 - We accept a dependency on the public `com.sun.source` compiler API in exchange for seeing constants and
   inferred terminal values that bytecode cannot show.
 - We accept a shrink-only pending-migration project set for the duration of the programme in exchange for
-  enforcement on every other official project from the first unit.
+  enforcement on every other official project from the first unit. The set lives in
+  `tools/modding/supported-consumption-pending.txt`, the single list read by the guard test, the creator-kit
+  workflow and the exported example READMEs, which build those projects with `--expert-legacy`. The first
+  PR run (15e18a232) failed `creator-kit` because the workflow built every example strictly while the set was
+  a constant inside the test.
 - We accept `@EngineOnly` as a change to surface policy in exchange for narrowing promises without
   unmarking types every mod touches.
 - We accept callback signature changes (title providers, frame-controller draws) in exchange for no

@@ -239,3 +239,5 @@ default, both in attributed Java source and compiled classes. Unsupported engine
 symbols fail with a source location and a facade hint. Advanced third-party authors
 can explicitly choose `--expert-legacy` to retain the previous warning-based
 validation. That expert option gives no compatibility promise for engine internals.
+A few official examples still use it while their supported facades are written;
+their exported READMEs say so, and new mods should not copy their engine references.

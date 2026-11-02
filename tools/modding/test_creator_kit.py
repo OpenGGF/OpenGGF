@@ -367,6 +367,15 @@ class CreatorKitTest(unittest.TestCase):
         self.assertIn(b"<classifier>mod-testkit</classifier><scope>test</scope>", pom)
         self.assertIn(b"<artifactId>maven-surefire-plugin</artifactId><version>3.2.5", pom)
 
+    def test_actual_export_builds_only_pending_migration_examples_in_the_expert_lane(self):
+        root = Path(__file__).resolve().parents[2]
+        pending = kit.pending_migration(root)
+        self.assertTrue(pending <= set(kit.exported_projects(root)), pending)
+        entries = kit.export_examples(root)
+        for name in kit.exported_projects(root):
+            readme = entries["examples/" + name + "/README.md"].decode()
+            self.assertEqual(name in pending, "build_project.py . --expert-legacy" in readme, name)
+
     def test_exported_readme_leads_with_artifact_build_and_run_instructions(self):
         project = self.root / "examples/hello-scene"
         main = project / "src/main/resources/META-INF/openggf-mod.yaml"

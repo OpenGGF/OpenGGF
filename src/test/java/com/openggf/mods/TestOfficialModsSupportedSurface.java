@@ -11,10 +11,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** ROM-free attributed compile and bytecode admission of maintained production projects. */
 class TestOfficialModsSupportedSurface {
-    private static final Set<String> PENDING_MIGRATION = Set.of("typing-of-the-hedgehog", "infinite-sonic",
-            "sonic-survivors", "putt-putt-paradise", "starpost-valley");
     private static final Path ROOT = Path.of("").toAbsolutePath();
+    private static final Set<String> PENDING_MIGRATION = pendingMigration();
     private static final Path TEMP = ROOT.resolve("target/test-tmp");
+    /** The shared shrink-only list, also read by the creator-kit build and workflow. */
+    private static Set<String> pendingMigration() {
+        try {
+            return Files.readAllLines(ROOT.resolve("tools/modding/supported-consumption-pending.txt")).stream()
+                    .map(String::strip).filter(line -> !line.isEmpty() && !line.startsWith("#"))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+    }
     private record Compilation(boolean success, List<String> findings, String errors) { }
 
     private Compilation compile(List<Path> sources, Path output, boolean audit) throws Exception {
@@ -85,7 +92,7 @@ class TestOfficialModsSupportedSurface {
                     owners.merge(symbol,1,Integer::sum);
                 }
                 System.out.println("SUPPORTED "+id+" "+owners);
-                if(PENDING_MIGRATION.contains(id)) { pendingSeen.add(id); if(findings.isEmpty()) failures.add(id+": remove clean project from PENDING_MIGRATION"); }
+                if(PENDING_MIGRATION.contains(id)) { pendingSeen.add(id); if(findings.isEmpty()) failures.add(id+": remove clean project from tools/modding/supported-consumption-pending.txt"); }
                 else if(!findings.isEmpty()) failures.add(id+": "+owners);
             }
             assertEquals(PENDING_MIGRATION,pendingSeen);
