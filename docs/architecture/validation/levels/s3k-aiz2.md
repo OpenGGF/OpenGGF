@@ -1247,3 +1247,13 @@ certification; combined delivery and integration remain Root-owned.
 ## TAS mechanism accuracy — 2026-10-26
 
 The initialized Knuckles raw slot is captured separately from typed animation references. Actual retirement/reuse, self-occupancy, empty/unarmed/other-occupant controls and rewind distinguish the button behavior. Level reset clears the slot; boss-sequence reset preserves it. The full published bridge allocation/camera history remains unexecuted. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.
+
+
+## Post-results transition music (2026-11-02)
+
+The retained post-results owner restores the apparent act's level music once
+before the outgoing corridor/cutscene. `TestS3kPostResultsMusic` checks the
+results gate, the single music request and subsequent dispatches; existing boss,
+cutscene and rewind checks cover surrounding lifecycle behavior. This bounded
+request check does not certify audible synthesis, whole-route timing, or broader
+donor/team/viewport and rewind matrices; inherited obligations remain open.
