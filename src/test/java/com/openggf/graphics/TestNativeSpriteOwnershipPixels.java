@@ -32,6 +32,31 @@ import static org.lwjgl.opengl.GL30.*;
 @Isolated
 class TestNativeSpriteOwnershipPixels {
     @Test
+    void nativeReplayPreservesSamplerBindingOnCore41() throws Exception {
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(true);
+            fixture.clear(0);
+            int sampler = org.lwjgl.opengl.GL33.glGenSamplers();
+            try {
+                org.lwjgl.opengl.GL33.glBindSampler(6, sampler);
+                glActiveTexture(GL_TEXTURE0 + 2);
+                assertEquals(GL_NO_ERROR, glGetError());
+                fixture.sat(1, false, false, 2, true);
+                assertEquals(GL_TEXTURE0 + 2, glGetInteger(GL_ACTIVE_TEXTURE));
+                glActiveTexture(GL_TEXTURE0 + 6);
+                assertEquals(sampler, glGetInteger(org.lwjgl.opengl.GL33.GL_SAMPLER_BINDING));
+                pixel(pixels(), 41, 42, 3);
+                pixel(pixels(), 46, 42, 2);
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally {
+                org.lwjgl.opengl.GL33.glBindSampler(6, 0);
+                org.lwjgl.opengl.GL33.glDeleteSamplers(sampler);
+                glActiveTexture(GL_TEXTURE0);
+            }
+        }
+    }
+
+    @Test
     void defaultStencilBackupAcceptsNormalized32BitDepthAndPreservesBothImages() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         try (Fixture fixture = new Fixture()) {
@@ -690,7 +715,8 @@ class TestNativeSpriteOwnershipPixels {
     }
 
     private static final class Fixture implements AutoCloseable {
-        final PresentationOffscreenTestContext context = PresentationOffscreenTestContext.open(320, 224);
+        final PresentationOffscreenTestContext context = PresentationOffscreenTestContext.openConfigured(
+                320, 224, PresentationOffscreenTestContext.LegacyProfile.CORE_41);
         final GraphicsManager graphics = new GraphicsManager();
         Fixture() throws Exception {
             try {

@@ -10,6 +10,7 @@ readable and historical versions can be referenced directly.
 
 
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
+- Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
 
 - AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
   endpoints, and shows staggered explosion puffs when Knuckles breaks it.
