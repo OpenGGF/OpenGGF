@@ -388,7 +388,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             spawnBossComponent(() -> new AizMinibossFlameBarrelChild(this, barrelIndex, false));
         }
 
-        services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
     }
 
     private void onDescendComplete() {
@@ -565,7 +565,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // the SAME physical SST (044fa46:179742-179759,137455-137458).
         // Wait_FadeToLevelMusic uses global AllocateObject (sonic3k.asm:179754),
         // so a lower free SST first dispatches on the following Process_Sprites pass.
-        spawnDynamicObjectLowestFreeSlot(new SongFadeTransitionInstance(120, Sonic3kMusic.AIZ1.id));
+        spawnDynamicObjectLowestFreeSlot(SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.AIZ1.id));
         var retainedHeader = S3kChildDrawParentHeader.fromBoss(this);
         int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
         ObjectLifetimeOps.deleteNoRespawn(this);

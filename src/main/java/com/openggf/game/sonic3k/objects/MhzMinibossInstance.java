@@ -421,7 +421,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         // subtype = mus_Miniboss, which fades the zone track over 90 frames
         // (Obj_Song_Fade_Transition, :180414) before swapping to the boss track.
         // Playing it instantly gave the miniboss music no time to fade in.
-        spawnChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.MINIBOSS.id));
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.MINIBOSS_S3.id));
         // loc_75220 loads PLC_MHZMiniboss_Explosion (ArtTile_BossExplosion2).
         // Use the existing ROM-backed shared sheet path, also used by MHZ2.
         if (svc.renderManager() != null
@@ -988,7 +988,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         if (svc != null) {
             int levelMusicId = svc.getCurrentLevelMusicId();
             if (levelMusicId > 0) {
-                spawnChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_TIME, levelMusicId));
+                spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
             }
             // Wait_FadeToLevelMusic replaces the boss owner with the shared
             // EndSignControl chain. In this SST ordering the first signpost

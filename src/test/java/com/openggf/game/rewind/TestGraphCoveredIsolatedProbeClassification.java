@@ -283,6 +283,8 @@ class TestGraphCoveredIsolatedProbeClassification {
                 "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossVisualRewind",
                 "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild",
                 "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind",
+                "com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController",
+                "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossExplosionController",
                 "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
                 "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind");
 

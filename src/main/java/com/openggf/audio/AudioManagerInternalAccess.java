@@ -44,6 +44,13 @@ public final class AudioManagerInternalAccess {
         Objects.requireNonNull(manager, "manager").installMatchedSource(rom, profile);
     }
 
+    /** Submits a ring award through its native owner, retaining ordinary music as the default. */
+    public static void playRingExtraLife(AudioManager manager) {
+        GameAudioProfile profile = Objects.requireNonNull(manager, "manager").getAudioProfile();
+        if (profile instanceof RingExtraLifeRequestOwner owner) owner.playRingExtraLife(manager);
+        else if (profile != null) manager.playMusic(profile.getExtraLifeMusicId());
+    }
+
     public static void playSecondaryNativeRequest(AudioManager manager, int nativeId) {
         Objects.requireNonNull(manager, "manager").playSecondaryNativeRequest(nativeId);
     }

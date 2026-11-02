@@ -551,7 +551,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         setCustomFlag(TIMER_OFFSET, FADE_TO_LEVEL_MUSIC_FRAMES - 1);
-        spawnFreeChild(() -> new SongFadeTransitionInstance(FADE_TO_LEVEL_MUSIC_FRAMES, resolveLevelMusicId()));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(resolveLevelMusicId()));
         startFinalDefeatClimbAway();
     }
 
@@ -673,7 +673,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
         int levelMusic = resolveLevelMusicId();
         if (levelMusic >= 0 && services != null) {
-            services.playMusic(levelMusic);
+            services.playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services, levelMusic));
         }
         lockPostCapsuleNativePlayersUp();
         setCustomFlag(TIMER_OFFSET, ROBOTNIK_SHIP_WAIT_FRAMES);
