@@ -163,10 +163,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean processingFixedSkidDustTick;
 	private boolean skidAnimationRefreshedThisFrame;
 	private int lastFixedSkidDustTickFrame = Integer.MIN_VALUE;
-	private int staleHorizontalInputRideSlotIndex;
-	private int staleHorizontalInputSuppressFrames;
-	private int staleHorizontalInputRideFrames;
-	private boolean staleHorizontalInputPreviousHorizontal;
 	private boolean preMoveBalanceEvaluated;
 	private int preMoveBalanceState;
 	private Direction preMoveBalanceDirection;
@@ -257,10 +253,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		slopeResistAppliedThisFrame = false;
 		facingFlipForcesPushClearAfterGroundWall = false;
 		wasCrouching = false;
-		staleHorizontalInputRideSlotIndex = -1;
-		staleHorizontalInputSuppressFrames = 0;
-		staleHorizontalInputRideFrames = 0;
-		staleHorizontalInputPreviousHorizontal = false;
 		preMoveBalanceEvaluated = false;
 		preMoveBalanceState = 0;
 		preMoveBalanceDirection = null;
@@ -290,10 +282,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				inputRawRight,
 				facingFlipForcesPushClearAfterGroundWall,
 				wasCrouching,
-				staleHorizontalInputRideSlotIndex,
-				staleHorizontalInputSuppressFrames,
-				staleHorizontalInputRideFrames,
-				staleHorizontalInputPreviousHorizontal,
 				preMoveBalanceEvaluated,
 				preMoveBalanceState,
 				preMoveBalanceDirection,
@@ -321,10 +309,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = state.inputRawRight();
 		facingFlipForcesPushClearAfterGroundWall = state.facingFlipForcesPushClearAfterGroundWall();
 		wasCrouching = state.wasCrouching();
-		staleHorizontalInputRideSlotIndex = state.staleHorizontalInputRideSlotIndex();
-		staleHorizontalInputSuppressFrames = state.staleHorizontalInputSuppressFrames();
-		staleHorizontalInputRideFrames = state.staleHorizontalInputRideFrames();
-		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
 		preMoveBalanceEvaluated = state.preMoveBalanceEvaluated();
 		preMoveBalanceState = state.preMoveBalanceState();
 		preMoveBalanceDirection = state.preMoveBalanceDirection();
@@ -349,10 +333,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean inputRawRight,
 			boolean facingFlipForcesPushClearAfterGroundWall,
 			boolean wasCrouching,
-			int staleHorizontalInputRideSlotIndex,
-			int staleHorizontalInputSuppressFrames,
-			int staleHorizontalInputRideFrames,
-			boolean staleHorizontalInputPreviousHorizontal,
 			boolean preMoveBalanceEvaluated,
 			int preMoveBalanceState,
 			Direction preMoveBalanceDirection,
@@ -415,80 +395,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private GameStateManager gameState() {
 		GameStateManager current = sprite.currentGameStateOrNull();
 		return current != null ? current : bootstrapGameState;
-	}
-
-	private boolean applyStaleRidingLogicalHorizontalInput(boolean left, boolean right) {
-		boolean horizontal = left || right;
-		LevelManager level = levelManager();
-		var objectManager = level != null ? level.getObjectManager() : null;
-		ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
-		if (ridingObject == null || !(ridingObject instanceof SolidObjectProvider provider)) {
-			staleHorizontalInputRideSlotIndex = -1;
-			staleHorizontalInputSuppressFrames = 0;
-			staleHorizontalInputRideFrames = 0;
-			staleHorizontalInputPreviousHorizontal = horizontal;
-			return false;
-		}
-		boolean preservesMovingEdge = objectManager == null
-				? provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite)
-				: com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, ridingObject,
-						() -> provider.preservesStaleHorizontalInputEdgeWhileMoving(sprite));
-		if (sprite.getGSpeed() != 0 && !preservesMovingEdge) {
-			staleHorizontalInputRideSlotIndex = -1;
-			staleHorizontalInputSuppressFrames = 0;
-			staleHorizontalInputRideFrames = 0;
-			staleHorizontalInputPreviousHorizontal = horizontal;
-			return false;
-		}
-		int ridingSlotIndex = slotIndexForStaleHorizontalInput(objectManager, ridingObject);
-		if (ridingSlotIndex < 0 || ridingSlotIndex != staleHorizontalInputRideSlotIndex) {
-			staleHorizontalInputRideSlotIndex = ridingSlotIndex;
-			staleHorizontalInputSuppressFrames = 0;
-			staleHorizontalInputRideFrames = 0;
-			staleHorizontalInputPreviousHorizontal = false;
-		}
-
-		staleHorizontalInputRideFrames++;
-		// Keep the held-horizontal edge latched while the rider remains on the
-		// same object. S2 ObjD5/PlatformObjectD5 can zero inertia mid-ride, but
-		// the next Obj01_Control still consumes the already-held Ctrl_1_Logical
-		// right bit through Sonic_MoveRight (docs/s2disasm/s2.asm:35860-35874,
-		// 36233-36243, 36560-36567, 36945-36962).
-		if (sprite.getGSpeed() == 0
-				&& horizontal
-				&& !staleHorizontalInputPreviousHorizontal) {
-			staleHorizontalInputSuppressFrames = objectManager == null
-					? provider.staleHorizontalLogicalInputFramesWhileRiding(
-							sprite, staleHorizontalInputRideFrames, left, right)
-					: com.openggf.level.objects.ObjectCallbackDispatch.call(objectManager, ridingObject,
-							() -> provider.staleHorizontalLogicalInputFramesWhileRiding(
-									sprite, staleHorizontalInputRideFrames, left, right));
-		}
-		staleHorizontalInputPreviousHorizontal = horizontal;
-
-		if (!horizontal || staleHorizontalInputSuppressFrames <= 0) {
-			return false;
-		}
-		staleHorizontalInputSuppressFrames--;
-		return true;
-	}
-
-	private static int slotIndexForStaleHorizontalInput(
-			com.openggf.level.objects.ObjectManager objectManager, ObjectInstance object) {
-		return object instanceof AbstractObjectInstance aoi && objectManager != null
-				? com.openggf.level.objects.ObjectCallbackDispatch.call(
-						objectManager, object, aoi::getSlotIndex) : -1;
-	}
-
-	private ObjectInstance currentRidingSolidForStaleHorizontalInput() {
-		LevelManager manager = levelManager();
-		var objectManager = manager != null ? manager.getObjectManager() : null;
-		if (objectManager == null
-				|| !objectManager.isRidingObject(sprite)
-				|| sprite.getAir()) {
-			return null;
-		}
-		return objectManager.getRidingObject(sprite);
 	}
 
 	/**
@@ -701,11 +607,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: move_lock only blocks Sonic_Move/Sonic_RollSpeed, NOT Sonic_Jump
 		if (objControlLocked && !sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP)) {
 			jump = false;
-		}
-
-		if (applyStaleRidingLogicalHorizontalInput(left, right)) {
-			left = false;
-			right = false;
 		}
 
 		facingFlipForcesPushClearAfterGroundWall = false;

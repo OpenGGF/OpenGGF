@@ -2154,7 +2154,7 @@ CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteAnimation public  <init>(
 CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState public  <init>(int,int)
 CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite)
 CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.physics.CollisionSystem,com.openggf.game.GameStateManager)
-CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,boolean,int,com.openggf.physics.Direction,int,int,int)
+CONSTRUCTOR com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,com.openggf.physics.Direction,int,int,int)
 CONSTRUCTOR com.openggf.sprites.managers.SpindashDustController public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.render.PlayerSpriteRenderer)
 CONSTRUCTOR com.openggf.sprites.managers.SpindashDustController public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.sprites.render.PlayerSpriteRenderer,int)
 CONSTRUCTOR com.openggf.sprites.managers.SpindashDustController$RewindState public  <init>(int,int,int,boolean)
@@ -11526,7 +11526,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesNa
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesObjectManagedRideWhileNotSolidFor(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesPostSpecialTouchAirborneSideVelocity()
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesRidingPushStatus(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesStaleHorizontalInputEdgeWhileMoving(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesZeroDistanceSideContactMotion()
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean projectsPreMovementGroundXForSolidContact(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean rejectsBit7ObjectControlNewSolidContact(com.openggf.game.PlayableEntity)
@@ -11554,8 +11553,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  int getMonitorSolid
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopLandingHalfWidth(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopLandingSnapAdjustment(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.SolidObjectProvider public  int staleHorizontalLogicalInputFramesWhileRiding(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidObjectProvider public  int staleHorizontalLogicalInputFramesWhileRiding(com.openggf.game.PlayableEntity,int,boolean,boolean)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int tailCallD4(int)
 METHOD com.openggf.level.objects.SolidObjectProvider public  java.lang.Integer getObjectManagedRideCentreY(com.openggf.game.PlayableEntity,int,com.openggf.level.objects.SolidObjectParams)
 METHOD com.openggf.level.objects.SolidObjectProvider public  void onRejectedZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
@@ -14608,7 +14605,6 @@ METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  b
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean jumpPrevious()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean jumpReleasedSinceJump()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean preMoveBalanceEvaluated()
-METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean staleHorizontalInputPreviousHorizontal()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean testKeyPressed()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  boolean wasCrouching()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  com.openggf.physics.Direction preMoveBalanceDirection()
@@ -14616,9 +14612,6 @@ METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  i
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int latchedNextTilt()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int latchedTilt()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int preMoveBalanceState()
-METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int staleHorizontalInputRideFrames()
-METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int staleHorizontalInputRideSlotIndex()
-METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public  int staleHorizontalInputSuppressFrames()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public,final  int hashCode()
 METHOD com.openggf.sprites.managers.PlayableSpriteMovement$RewindState public,final  java.lang.String toString()
@@ -19739,10 +19732,6 @@ RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState preMoveBalanceDirection com.openggf.physics.Direction
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState preMoveBalanceEvaluated boolean
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState preMoveBalanceState int
-RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState staleHorizontalInputPreviousHorizontal boolean
-RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState staleHorizontalInputRideFrames int
-RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState staleHorizontalInputRideSlotIndex int
-RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState staleHorizontalInputSuppressFrames int
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState testKeyPressed boolean
 RECORD-COMPONENT com.openggf.sprites.managers.PlayableSpriteMovement$RewindState wasCrouching boolean
 RECORD-COMPONENT com.openggf.sprites.managers.SpindashDustController$RewindState activeLastTick boolean

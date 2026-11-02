@@ -24,24 +24,6 @@ class TestElevatorObjectInstance {
     }
 
     @Test
-    void cnzElevatorSuppressesThreeInitialRidingHorizontalInputFrames() {
-        ElevatorObjectInstance elevator = new ElevatorObjectInstance(
-                new ObjectSpawn(0x1530, 0x0188, Sonic2ObjectIds.CNZ_ELEVATOR, 0, 0, false, 0),
-                "Elevator");
-
-        assertEquals(3, elevator.staleHorizontalLogicalInputFramesWhileRiding(null, 1));
-    }
-
-    @Test
-    void cnzElevatorKeepsStaleInputEdgeAcrossMidRideInertiaReset() {
-        ElevatorObjectInstance elevator = new ElevatorObjectInstance(
-                new ObjectSpawn(0x20B0, 0x0398, Sonic2ObjectIds.CNZ_ELEVATOR, 0, 0, false, 0),
-                "Elevator");
-
-        assertTrue(elevator.preservesStaleHorizontalInputEdgeWhileMoving(null));
-    }
-
-    @Test
     void cnzElevatorSkipsNewContactWhenPlayerAlreadyRidesAnotherObject() {
         ElevatorObjectInstance elevator = new ElevatorObjectInstance(
                 new ObjectSpawn(0x20B0, 0x0398, Sonic2ObjectIds.CNZ_ELEVATOR, 0, 0, false, 0),

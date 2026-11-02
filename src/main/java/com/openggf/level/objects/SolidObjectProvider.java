@@ -598,38 +598,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Number of newly-pressed horizontal-input frames to ignore while this
-     * object is the player's current riding solid.
-     * <p>
-     * Default is zero. Object-specific overrides are for ROM helper timing
-     * quirks where the BK2 input row is aligned to V-int, but the player
-     * movement routine does not consume the new logical horizontal value until
-     * a later gameplay step. Keep this object-local; do not broaden stale input
-     * suppression into shared movement unless all callers of the helper have
-     * been checked.
-     */
-    default int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        return 0;
-    }
-
-    default int staleHorizontalLogicalInputFramesWhileRiding(
-            PlayableEntity player, int rideFrames, boolean left, boolean right) {
-        return right && !left ? staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames) : 0;
-    }
-
-    /**
-     * Whether the stale-horizontal-input edge tracker should remain attached to
-     * this riding object while the player has nonzero ground speed.
-     * <p>
-     * Most providers keep the historic reset-while-moving behavior. Concrete
-     * ROM routines may opt in when a mid-ride inertia reset should not make a
-     * still-held horizontal input look newly pressed.
-     */
-    default boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
-        return false;
-    }
-
-    /**
      * Whether this object returns no contact when the player is already riding
      * another object.
      * <p>
