@@ -1621,6 +1621,8 @@ checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
 Codec-backed field snapshots also compare and hash their scalar and opaque array
 contents, so separate captures of unchanged state remain equal.
+S3K held rewind retains unchanged foreground and full-layout background tilemaps;
+actual geometry and encoded row-pointer changes still rebuild their derived images.
 Boss rewind also retains child construction history after those children retire,
 so future effects keep the same identities when replayed.
 Typed level and object-manager snapshot comparisons also accept equal untyped

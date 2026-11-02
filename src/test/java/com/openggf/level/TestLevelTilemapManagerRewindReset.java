@@ -110,6 +110,100 @@ public class TestLevelTilemapManagerRewindReset {
     // ── BG incremental-shift baseline ─────────────────────────────────────────
 
     @Test
+    public void repeatedRewindRestoresReuseCameraIndependentBackground() {
+        ZoneFeatureProvider features = new StubZoneFeatures(false, false, false);
+        var manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+        byte[] built = manager.getBackgroundTilemapData();
+        byte[] expected = built.clone();
+        int rebuilds = manager.bgFullRebuildCount;
+        assertEquals(BG_WIDTH_PX / Pattern.PATTERN_WIDTH, manager.getBackgroundTilemapWidthTiles());
+
+        for (int restore = 0; restore < 3; restore++) {
+            manager.resetTilemapsForRewindRestore();
+            manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+
+            assertSame(built, manager.getBackgroundTilemapData(),
+                    "a camera-independent layout remains the same background image after restore");
+            assertArrayEquals(expected, manager.getBackgroundTilemapData());
+            assertEquals(rebuilds, manager.bgFullRebuildCount,
+                    "held rewind must not rebuild unchanged full-layout background bytes");
+        }
+    }
+
+    @Test
+    public void rewindRestoreStillRebuildsCameraWindowBackground() {
+        ZoneFeatureProvider features = new StubZoneFeatures(true, false, false);
+        var manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setCurrentBgPeriodWidth(PERIOD_PX);
+        manager.setBgTilemapBaseX(496);
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+        byte[] discarded = manager.getBackgroundTilemapData();
+        byte[] expected = discarded.clone();
+        int rebuilds = manager.bgFullRebuildCount;
+
+        manager.resetTilemapsForRewindRestore();
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+
+        assertNotSame(discarded, manager.getBackgroundTilemapData(),
+                "camera-window bytes cannot inherit the discarded forward baseline");
+        assertArrayEquals(expected, manager.getBackgroundTilemapData());
+        assertEquals(rebuilds + 1, manager.bgFullRebuildCount);
+    }
+
+    @Test
+    public void rewindRestoreRebuildsLegacyBackgroundDescriptorsWhenRevisionIsReused() {
+        var features = org.mockito.Mockito.mock(ZoneFeatureProvider.class,
+                org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.internal.BackgroundDescriptorOverride.class));
+        var owner = (com.openggf.game.internal.BackgroundDescriptorOverride) features;
+        org.mockito.Mockito.when(owner.backgroundDescriptorRevision()).thenReturn(1L);
+        org.mockito.Mockito.when(owner.backgroundDescriptorAt(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenReturn(0xE801);
+        var manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+        byte[] discarded = manager.getBackgroundTilemapData();
+        byte[] first = discarded.clone();
+        int rebuilds = manager.bgFullRebuildCount;
+
+        org.mockito.Mockito.when(owner.backgroundDescriptorAt(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt())).thenReturn(0x1002);
+        manager.resetTilemapsForRewindRestore();
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+
+        assertNotSame(discarded, manager.getBackgroundTilemapData());
+        assertFalse(java.util.Arrays.equals(first, manager.getBackgroundTilemapData()),
+                "the same restored revision can own different descriptor bytes");
+        assertEquals(rebuilds + 1, manager.bgFullRebuildCount);
+        var restored = new LevelTilemapManager(geometry, graphicsManager, null);
+        restored.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+        assertArrayEquals(restored.getBackgroundTilemapData(), manager.getBackgroundTilemapData());
+    }
+
+    @Test
+    public void backgroundWrapChangeAfterRestoreReplacesFullLayoutWithCameraWindow() {
+        var features = org.mockito.Mockito.mock(ZoneFeatureProvider.class);
+        var manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setCurrentBgPeriodWidth(PERIOD_PX);
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+        byte[] discarded = manager.getBackgroundTilemapData();
+        int rebuilds = manager.bgFullRebuildCount;
+        assertEquals(BG_WIDTH_PX / Pattern.PATTERN_WIDTH, manager.getBackgroundTilemapWidthTiles());
+
+        manager.resetTilemapsForRewindRestore();
+        org.mockito.Mockito.when(features.bgWrapsHorizontally()).thenReturn(true);
+        manager.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+
+        assertNotSame(discarded, manager.getBackgroundTilemapData());
+        assertEquals(PERIOD_PX / Pattern.PATTERN_WIDTH, manager.getBackgroundTilemapWidthTiles());
+        assertEquals(rebuilds + 1, manager.bgFullRebuildCount);
+        var wrapped = new LevelTilemapManager(geometry, graphicsManager, null);
+        wrapped.setCurrentBgPeriodWidth(PERIOD_PX);
+        wrapped.ensureBackgroundTilemapData(blockLookup, features, 0, null, false);
+        assertArrayEquals(wrapped.getBackgroundTilemapData(), manager.getBackgroundTilemapData());
+    }
+
+    @Test
     public void resetBgIncrementalShiftBaselineInvalidatesBuildSnapshotAndForcesFullRebuild()
             throws Exception {
         ZoneFeatureProvider zfp = new StubZoneFeatures(true, false, false);

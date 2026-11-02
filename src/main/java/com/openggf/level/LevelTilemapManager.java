@@ -1576,8 +1576,9 @@ public class LevelTilemapManager {
     }
 
     /**
-     * Convenience hook for the rewind system. Stateless Plane B invalidates its
-     * camera-derived incremental baseline, while persistent Plane B publishes the
+     * Convenience hook for the rewind system. Camera-window Plane B invalidates its
+     * incremental baseline. Unchanged full-layout geometry can reuse its image
+     * when no descriptor owner is active. Persistent Plane B publishes the
      * already-restored physical ring exactly once without rebuilding it. An exact
      * event-owned Plane-B image installed during the preceding reconciliation is
      * retained instead; forward event bytes without such reconciliation are rejected
@@ -1622,6 +1623,10 @@ public class LevelTilemapManager {
         retainedBackgroundPlaneRestoredForRewind = false;
         if (lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32) {
             finishPersistentRestoreUpload();
+        } else if (bgLastBuildValid && bgLastBuildParams != null
+                && !bgLastBuildParams.bgWrap() && backgroundTilemapData != null
+                && backgroundDescriptorRevision == 0 && !retainedBackgroundPlaneAuthoritative) {
+            bgWindowShiftCandidate = false;
         } else {
             resetBgIncrementalShiftBaseline();
         }

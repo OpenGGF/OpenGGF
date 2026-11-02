@@ -2,6 +2,8 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Rendered held-rewind probe](../../src/test/java/com/openggf/TestRenderedRewindPerformance.java) measures the live Engine scheduler with isolated EGL and no-device audio. Select it explicitly with `-Pbenchmarks -Dtest=TestRenderedRewindPerformance`; `openggf.perf.*` properties select a recorded input route, repeats and JSON/JFR destination. Use the [runtime isolation owner](../../tools/performance/run_isolated.py) for counterbalanced prebuilt baseline and fixed timing runs. Engine forward/restore pixel comparisons are regression evidence, not emulator parity evidence. Origin: LRZ1/SOZ2 rewind performance, 2026-11-02.
+
 - [Stageplay speech sync](../guide/creating/stageplay-authoring.md#validate-inspect-and-timeline): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
 
 - [Master channel catalogue](../../racing/deploy/README.md#hostname-discovery-srv-records): `racing/deploy/master_channels.py` prints a branch channel's master endpoint from `master-channels.properties` and checks the published `_openggf._tcp` SRV record against it without editing DNS; CI runs it before each testbed deploy (2026-11-01 hostname-only endpoints).
