@@ -5,14 +5,17 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-- Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
-  filling the background tile ring at the restored camera height.
+- LBZ2 submits native EggRobo-head art during head initialization.
+- Solo S2 title-card entry records leader history during its native object passes.
 - Knuckles restores the native animation after non-flat glide landings.
 - LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
 
 - Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
 
 - Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
+
+- Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
+  filling the background tile ring at the restored camera height.
 
 - Clear the native sanctuary openings so stray terrain no longer appears above
   the left Super Emerald pedestals during the results camera descent.

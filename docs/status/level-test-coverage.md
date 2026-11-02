@@ -2485,3 +2485,9 @@ Combined integration passes25 boss/rewind checks, including the already-owned
 ready-job camera-exit edge, within322 functional cases with zero skips; both
 known replay frontiers remain red. Inherited cold traversal, roster/donor/viewport
 and presentation gaps remain open.
+
+
+LBZ2 EggRobo-head follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#eggrobo-head-producer-follow-up--2026-11-02)
+adds native one-time module admission, actual-main identity controls and graph
+rewind coverage. Standalone replay advances239→232 errors; composed functional
+checks pass with zero skips. Existing full-route and breadth gaps remain open.
