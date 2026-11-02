@@ -2077,6 +2077,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setYSpeed((short) (yVel + 0x20));
 		}
 
+		// Knuckles_Move_Glide .fallingFast (sonic3k.asm:31733-31746),
+		// also KiS2 Knuckles_GlideSpeedControl: signed word boundary compare,
+		// then ASR.W on both velocities. The -$100 minimum enables Y wrapping.
+		short minimumY = (short) camera().getMinY();
+		if (minimumY != (short) -0x100
+				&& sprite.getCentreY() < (short) (minimumY + 0x10)) {
+			sprite.setXSpeed((short) (sprite.getXSpeed() >> 1));
+			sprite.setGSpeed((short) (sprite.getGSpeed() >> 1));
+		}
+
 		// Collision is checked after doLevelCollision() in modeAirborne
 		setGlideAnimation();
 	}
