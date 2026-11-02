@@ -599,3 +599,18 @@ collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
 and countdown value for AIZ1 and both HCZ bosses through the public update.
 Existing route, donor/team/viewport and native pixel qualification gaps remain;
 this local correction does not renew whole-act certification.
+
+### Miniboss water-effect release (2026-11-02)
+
+`sub_6A9B8` (sonic3k.asm:140281-140301) records native players below the
+water effect independently of capture ownership. `loc_6A5FA`
+(sonic3k.asm:139925-139930) releases them at vortex end but retains those
+slots for `loc_6A636` (sonic3k.asm:139945-139952), whose deletion release
+sets InAir again through `sub_6A996` (sonic3k.asm:140254-140259).
+`TestHczMinibossWaterEffectCleanup` exercises non-captured players and a
+cooldown capture/restore followed by landing and deletion. The existing
+multi-sidekick tests cover extension-owner relinking and cleanup.
+
+These are local release/rewind obligations. The HCZ slice and sibling traces
+remain the route checks; inherited segment-start state differences, broader
+character/donor/viewport coverage and the matrix's other gaps remain open.
