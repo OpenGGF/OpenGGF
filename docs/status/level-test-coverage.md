@@ -2466,3 +2466,7 @@ route/configuration products remain open.
 MHZ2 ending capsule priority follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#ending-capsule-priority--2026-11-02)
 records the shared upright capsule sprite/tile attribute correction and bounded
 regression scope. Native pixel and route/configuration breadth remain open.
+
+The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#sanctuary-foreground-initialization-2026-11-02)
+records the local foreground-clear regression for sanctuary entry and Super
+Emerald results rebuilds; inherited route and native presentation gaps remain.

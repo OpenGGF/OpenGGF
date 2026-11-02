@@ -549,6 +549,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
                 || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
             registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
+            if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)) {
+                initializeSanctuaryForeground();
+            }
         } else if (isLavaReef(zone, act)) {
             registry.install(new com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState(
                     zone, act, playerCharacter));
@@ -556,6 +559,24 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             registry.clear();
         }
+    }
+
+    /** HPZS_ScreenInit clears the foreground openings before Refresh_PlaneFull. */
+    private void initializeSanctuaryForeground() {
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getCurrentLevel() == null) return;
+        var level = levelManager.getCurrentLevel();
+        var context = new com.openggf.game.mutation.LayoutMutationContext(
+                com.openggf.game.mutation.LevelMutationSurface.forLevel(level),
+                levelManager::applyMutationEffects);
+        GameServices.zoneLayoutMutationPipeline().applyImmediately(ctx -> {
+            // HPZS_ScreenInit: $10(a3) / $14(a3) are foreground rows 4 / 5;
+            // clr.b $29(a1), clr.b $2B(a1), then clr.b $29(a1).
+            ctx.surface().setBlockInMap(0, 0x29, 4, 0);
+            ctx.surface().setBlockInMap(0, 0x2B, 4, 0);
+            ctx.surface().setBlockInMap(0, 0x29, 5, 0);
+            return com.openggf.game.mutation.MutationEffects.foregroundRedraw();
+        }, context);
     }
 
     /**
