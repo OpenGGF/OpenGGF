@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -31,7 +32,7 @@ import java.util.List;
  * the surface, and launches them when jump is pressed.
  */
 public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+        implements S3kSlopedTopSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
 
     @Override
     public ObjectVisualFacing.Basis nativeFacing() {

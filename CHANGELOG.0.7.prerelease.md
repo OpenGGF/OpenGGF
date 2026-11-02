@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K top-solid platforms, bonus flippers and curled vines now select the ROM’s
+  1–16 pixel landing window on the native helper surface. Flat helpers use their
+  landing radius, and AIZ flipping bridges use their raw signed slope heights.
+
 - S3K Lava Reef collapsing bridges and Sky Sanctuary floating platforms now reject
   exact-boundary new landings, matching the ROM’s one-to-sixteen-pixel overlap
   check and preserving falling speed until the actual landing frame.

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -15,7 +16,6 @@ import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -48,7 +48,7 @@ import java.util.List;
  * in this class.
  */
 public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable,
+        implements S3kTopSolidProvider, SolidObjectListener, RewindRecreatable,
                    RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The same direction that the native rider/launch routine installs on the player.
@@ -265,7 +265,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        return SolidRoutineProfile.fromProvider(this);
     }
 
     @Override

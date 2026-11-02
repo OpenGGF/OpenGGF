@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -11,7 +12,6 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -48,7 +48,7 @@ import java.util.List;
  * set and the player keeps the priority the swing gave them.
  */
 public final class SszRotatingPlatformCarrierObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements S3kTopSolidProvider, RewindRecreatable {
     /** {@code addi.w #$30,y_pos(a0)}. */
     public static final int Y_OFFSET = 0x30;
     /** {@code moveq #$60,d0} and {@code move.w #$A0,d0} for subtype bit 0. */

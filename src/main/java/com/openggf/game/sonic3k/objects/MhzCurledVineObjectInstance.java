@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -8,7 +9,6 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
-import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -30,7 +30,7 @@ import java.util.Map;
  * the generated segment surface.
  */
 public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
+        implements S3kSlopedTopSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
         RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     // Native flips orient a sloped geometric surface, not a logical horizontal-facing performer.

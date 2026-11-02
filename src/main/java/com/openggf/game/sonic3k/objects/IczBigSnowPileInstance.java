@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -16,7 +17,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -34,7 +34,7 @@ import java.util.List;
  * release once the pile reaches its final Y position.
  */
 public final class IczBigSnowPileInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
+        implements S3kSlopedTopSolidProvider, SolidObjectListener, RewindRecreatable {
     public static final int X_POSITION = 0x3880;
     public static final int BASE_Y = 0x05E0;
 

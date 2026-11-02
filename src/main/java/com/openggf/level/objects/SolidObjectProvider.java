@@ -53,10 +53,13 @@ public interface SolidObjectProvider {
     /**
      * Whether this top-solid object rejects the exact surface boundary before landing.
      * <p>
-     * Most shared top-solid callers keep the established engine/profile behavior.
-     * Some helper variants reject {@code d0 == 0}; S3K's
-     * {@code SolidObjectTop_1P} accepts only {@code [-$10,-1]} at its new
-     * landing check (loc_1E45A, sonic3k.asm:42044-42055).
+     * This shared interface also serves full-solid and cross-game helpers, so
+     * its compatibility default does not select a native top-helper window.
+     * S3K's {@link com.openggf.game.sonic3k.S3kTopSolidProvider} selects the
+     * native {@code SolidObjectTop_1P} window: {@code [-$10,-1]} at
+     * loc_1E45A (sonic3k.asm:42044-42055), excluding the exact boundary.
+     * Selection belongs to the object's ROM helper, independently of the
+     * playable character's game/donor rules.
      */
     default boolean rejectsZeroDistanceTopSolidLanding() {
         return false;
@@ -70,9 +73,10 @@ public interface SolidObjectProvider {
      * Whether this object accepts a new top-solid landing at the exact surface
      * boundary even when the game's shared top-solid profile normally rejects it.
      * <p>
-     * The shared {@code topSolidLandingAllowsZeroDist} game flag models
-     * {@code PlatformObject_ChkYRange}, whose new-landing fall-through window is
-     * gated per game (S2 rejects the exact boundary; S1/S3K accept it).  However,
+     * The shared {@code topSolidLandingAllowsZeroDist} game flag retains the
+     * legacy PlatformObject-oriented profile (S2 rejects the exact boundary;
+     * S1/S3K profiles allow it). Native helper providers may select a stricter
+     * direct window independently of that compatibility flag. However,
      * top-solid objects that land players through {@code SolidObject_Landed}
      * (reached via {@code SolidObject_TopBottom}) rather than
      * {@code PlatformObject_ChkYRange} accept the exact surface boundary on every

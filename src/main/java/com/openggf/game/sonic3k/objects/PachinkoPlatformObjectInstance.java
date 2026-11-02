@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -11,7 +12,6 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -25,7 +25,7 @@ import java.util.List;
  * D3 = height_pixels + 1.
  */
 public class PachinkoPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     // Native bumper/orb/platform geometry has no horizontal facing; contact and orbit affect separate players.
 
@@ -73,7 +73,7 @@ public class PachinkoPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        return SolidRoutineProfile.fromProvider(this);
     }
 
     @Override

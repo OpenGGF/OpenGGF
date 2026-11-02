@@ -1,5 +1,7 @@
 # S3K top-solid zero-distance audit
 
+This is the first-step record. The [helper-contract follow-up](2026-11-02-s3k-top-solid-helper-contract.md) supersedes its decision to leave the accepting rows unchanged and corrects four false positives in the method-only audit.
+
 Base: `4311f21c4` (origin/develop). Scope: all S3K object source files declaring
 `isTopSolidOnly`, including nested providers. False-only full-solid providers are
 listed separately below. This is a source/routine audit, not route certification.
@@ -55,7 +57,7 @@ tests explicitly assert the historically incorrect accepting behavior.
 | `FloatingPlatformObjectInstance` | SolidObjectTop (caller citation in source) | Reject (existing) | No |
 | `HCZHandLauncherObjectInstance` | SolidObjectTop (caller citation in source) | Reject (existing) | No |
 | `HPZSuperEmeraldObjectInstance` | SolidObjectTop, loc_908DE | Accept — additional gap | No |
-| `IczBigSnowPileInstance` | SolidObjectTopSloped2 (:110504) | Accept — additional gap | No |
+| `IczBigSnowPileInstance` | SolidObjectTopSloped2 (:110503) | Accept — additional gap | No |
 | `IczIceBlockObjectInstance` | SolidObjectTop, Obj_ICZIceBlock | Accept — additional gap | No |
 | `IczTensionPlatformObjectInstance` | SolidObjectTop (caller citation in source) | Reject (existing) | No |
 | `LbzMovingPlatformObjectInstance` | SolidObjectTop (caller citation in source) | Reject (existing) | No |
