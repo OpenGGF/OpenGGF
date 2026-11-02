@@ -457,8 +457,20 @@ public final class TraceReplayBootstrap {
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
     }
 
+    public static com.openggf.game.session.LevelEntryProvenance entryProvenanceForTraceReplay(TraceData trace) {
+        // A recorded pre-level input prefix already owns the production load.
+        // native_prelude_bootstrap alone describes title-card timing: both
+        // start-table boots and special-stage returns carry that marker.
+        // Preserve their existing placement/history until the recorder supplies
+        // entry provenance; neither coordinates nor manifest topology select it.
+        return hasRecordedPreLevelPrefix(trace)
+                ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
+                : com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
+    }
+
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
-        return replaySeedTraceIndexForTraceReplay(trace) == 0
+        return entryProvenanceForTraceReplay(trace).isPositioned()
+                && replaySeedTraceIndexForTraceReplay(trace) == 0
                 && !hasRecordedPreLevelPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
     }

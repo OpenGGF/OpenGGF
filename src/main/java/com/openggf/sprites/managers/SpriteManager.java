@@ -1145,8 +1145,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 
 		// Player_2 is the first CPU slot after Player_1. Tails_Init resets the
-		// CPU globals and installs the spawn-offset state but returns before the
-		// normal delayed-follow CPU routine (sonic3k.asm:26141-26196).
+		// CPU globals and returns before the normal delayed-follow CPU routine.
+		// SpawnLevelMainSprites has already placed the assembled team
+		// before this slot executes (sonic3k.asm:26141-26196).
 		if (sidekicks.isEmpty() || sidekicks.getFirst() != playable) {
 			return;
 		}
@@ -1164,12 +1165,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		playable.setObjectControlAllowsCpu(objectControlAllowsCpu);
 		playable.setObjectControlSuppressesMovement(objectControlSuppressesMovement);
 		playable.setControlLocked(controlLocked);
-		playable.setCentreXPreserveSubpixel((short) (leader.getCentreX() - 0x20));
-		playable.setCentreYPreserveSubpixel((short) (leader.getCentreY() + 4));
-		playable.setXSpeed((short) 0);
-		playable.setYSpeed((short) 0);
-		playable.setGSpeed((short) 0);
-		playable.setAir(leader.getAir());
+		// SpawnLevelMainSprites owns Player_2 placement before Process_Sprites.
+		// Tails_Init (sonic3k.asm:26141-26200) writes no position or velocity.
+		// Repeating the spawn offset here overwrites a later object owner such
+		// as sub_90A4C (sonic3k.asm:197928-197936), which locks both shrine players.
 		playable.setObjectRoutineOverride(null);
 		playable.getDrowningController().reset();
 		playable.setFlipSpeed(4);

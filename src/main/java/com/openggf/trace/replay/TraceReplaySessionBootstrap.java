@@ -1360,8 +1360,10 @@ public final class TraceReplaySessionBootstrap {
      * spawned player, re-apply S3K zone player state, refresh sidekick CPU bounds,
      * and snap the player to ground.
      *
-     * <p>The test fixture always runs these at build time because
-     * {@code TestEnvironment.resetPerTest()} cleared the transient managers. The
+     * <p>Unclassified entries retain the existing repeated setup. Explicit
+     * native entries retain the team, camera and events initialized by the load;
+     * only transient collision wiring, CPU bounds and ground attachment remain.
+     * The
      * headless trace-capture tool boots via {@code HeadlessGameBoot.boot}, which
      * only does {@code loadZoneAndAct}; it must call this so capture starts from
      * the same post-load state the tests do (otherwise physics drifts by the
@@ -1370,6 +1372,13 @@ public final class TraceReplaySessionBootstrap {
      * callers (e.g. pre-level-intro-prefix traces) where that method short-circuits.
      */
     public static void applyPostLoadLevelInit(TraceData trace) {
+        applyPostLoadLevelInit(trace, TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
+    }
+
+    /** Explicit native loads have already initialized their team, camera and events. */
+    public static void applyPostLoadLevelInit(TraceData trace,
+            com.openggf.game.session.LevelEntryProvenance provenance) {
+        java.util.Objects.requireNonNull(provenance, "provenance");
         var level = GameServices.levelOrNull();
         if (level == null) {
             return;
@@ -1377,13 +1386,20 @@ public final class TraceReplaySessionBootstrap {
         AbstractPlayableSprite sprite = GameServices.cameraOrNull() != null
                 ? GameServices.camera().getFocusedSprite()
                 : null;
-        GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), level);
+        GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), level, provenance);
         GroundSensor.setLevelManager(level);
-        level.initCameraForLevel();
-        level.initLevelEventsForLevel();
-        var levelEventProvider = GameServices.module().getLevelEventProvider();
-        if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
-            s3kLem.applyZonePlayerState();
+        if (provenance.isPositioned()) {
+            // The unclassified path retains its existing cold-camera behavior.
+            if (provenance == com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY) {
+                level.initCameraForLevel();
+            } else {
+                com.openggf.level.LevelEntryInitialization.initializeCamera(level, provenance);
+            }
+            level.initLevelEventsForLevel();
+            var levelEventProvider = GameServices.module().getLevelEventProvider();
+            if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
+                s3kLem.applyZonePlayerState();
+            }
         }
         refreshSidekickCpuBoundsFromCamera();
         var collision = GameServices.collisionOrNull();
@@ -1428,7 +1444,7 @@ public final class TraceReplaySessionBootstrap {
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
                     GameServices.module(),
-                    level);
+                    level, TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             if ("s2".equals(meta.game()) && meta.hasNativePreludeBootstrap()) {
                 for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
                     SidekickCpuController cpu = sidekick.getCpuController();
@@ -1439,7 +1455,8 @@ public final class TraceReplaySessionBootstrap {
             }
             GroundSensor.setLevelManager(level);
             if (!preserveProductionLoadCamera) {
-                com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+                com.openggf.level.LevelEntryInitialization.initializeCamera(level,
+                        TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             }
             level.initLevelEventsForLevel();
             // Re-apply zone player state after sidekick reposition. ROM's

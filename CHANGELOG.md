@@ -18,6 +18,11 @@ S3K capsule and cutscene-button routines now share their common behavior; the
 object ownership audit also corrected explosion RNG/allocation drift and FBZ
 capsule sprite/plane priority, with rewind-safe opening control ownership.
 
+- Explicit native entries retain their start history and initial native-object
+  placement of Tails. Explicit spawn-order provenance enables native S3K camera
+  focus; unclassified positioned entries retain their existing camera behavior.
+  Intentional positioned entries re-anchor the whole team without refilling history;
+  traces lacking entry provenance retain their existing initialization.
 
 - LBZ2 submits native EggRobo-head art during head initialization.
 - Solo S2 title-card entry records leader history during its native object passes.
