@@ -1,5 +1,13 @@
 # Level test coverage backlog
 
+S3K Act 1 music handoff (2026-11-01): results-owner regressions cover no
+premature music request across Act 1 zones and one request at the carried
+title wait gate. The existing title/transition lifecycle checks remain the
+integration coverage. This bounded correction does not certify audible output,
+whole-act routes, or broader character/donor/viewport and rewind matrices;
+those inherited obligations remain open.
+
+
 Floating S3K capsule effects (2026-11-01): the focused
 `TestStageplayCapsuleControlRelease` regression checks subtype-$08 completion,
 seven normal explosion children, sprite priority and child-owned break sound.
@@ -2383,3 +2391,42 @@ records the actual cold controller replay, matched before/after samples, native
 whole-object and multi-draw culling corrections, and the permanent raw-table
 budget regression. This is a partial route witness with inherited breadth gaps;
 the longer strict-red act1 replay does not certify ICZ2.
+
+ICZ1 miniboss attack/destruction follow-up (2026-11-01): the
+[bounded obligation update](../architecture/validation/levels/s3k-icz-act1.md#miniboss-attack-and-destruction-correction--2026-11-01)
+tracks palette flashing, shard wait ordering, independent sign/explosion
+lifetimes and rewind of the falling-ice tail. Native pixel, complete-route and
+configuration breadth remain open, as does individual folded-child slot release.
+
+MGZ2 powered rescue follow-up (2026-11-01): the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#powered-rescue-art-refresh--2026-11-01)
+records runtime art-refresh ownership, Super/Hyper palette-clock continuation
+and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
+the matrix's broader route, donor/team and rewind obligations open.
+
+LBZ1 box rewind follow-up (2026-11-01): `TestLbz1BoxRigRewind` covers fresh
+controller restoration with a progressed carried/standalone box, restoration
+before creation, and 180 updates of piece replay. The [act matrix](../architecture/validation/levels/s3k-lbz-act1.md)
+retains the inherited route, donor, roster and viewport gaps.
+
+LBZ1 fresh-entry follow-up (2026-11-01): the [act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records the ICZ2 fade/load/title-to-ground-launch regression witness. Sonic-alone emergence and control release are bounded coverage; broader roster/viewport/donor and transition rewind obligations remain open.
+
+MHZ1 flame palette follow-up (2026-11-02): both miniboss flame slots now
+select ROM palette base 0 independently of the body sheet's base 1. See the
+[bounded matrix entry](../architecture/validation/levels/s3k-mhz-act1.md#miniboss-flame-palette--2026-11-02)
+for checks and inherited gaps; this does not certify the whole encounter.
+
+MHZ parachute landing correction (2026-11-02): the focused parachute test
+checks carried-player terrain dispatch and next-pass velocity-mismatch release.
+See the [MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#mushroom-parachute-landing-correction--2026-11-02)
+and [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#mushroom-parachute-landing-correction--2026-11-02)
+for inherited route, configuration and rewind gaps.
+
+MHZ1 damage flash follow-up (2026-11-02): the boss now uses the ROM's four
+palette entries and pre-decrement 32-update alternation. The
+[local matrix](../architecture/validation/levels/s3k-mhz-act1.md#miniboss-damage-flash--2026-11-02)
+records checks and inherited route/pixel coverage limits.
+
+The same audit corrected custom-flash counter ordering for AIZ1, HCZ1 and HCZ2.
+Their local matrices record the all-32-row output contract; existing route
+qualification limits remain.

@@ -1802,7 +1802,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        playableArtInitializer.initialize();
+        playableArtInitializer.refresh();
     }
 
     /**

@@ -1,7 +1,7 @@
 # NOTICE
 
-OpenGGF is distributed under the GNU General Public License, version 3
-(`LICENSE`). This file lists the third-party components that carry their own
+OpenGGF is distributed under the GNU General Public License, version 3 only
+(`LICENSE`, `GPL-3.0-only`). This file lists the third-party components that carry their own
 licence terms and notices, which must accompany every copy of OpenGGF,
 including the executable JAR (`META-INF/openggf/`) and the release archives.
 
@@ -9,9 +9,10 @@ including the executable JAR (`META-INF/openggf/`) and the release archives.
 
 The OpenGGF contributors add a permission under GPL-3 section 7, the
 [OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt): a mod that uses
-OpenGGF only through the Mod API (the `@ModApi` types, the mod SDK and test kit,
-and the documented manifest and resource formats) may be conveyed under any
-terms, alone or with OpenGGF. OpenGGF itself stays under GPL-3.
+OpenGGF through its mod interface (the `@ModApi` types, the mod SDK and test kit,
+the documented manifest and resource formats, and any other engine types it
+calls or extends) without copying engine code may be conveyed under any terms,
+alone or with OpenGGF. OpenGGF itself stays under GPL-3.0-only.
 
 ## Mod starter and example material
 
@@ -42,11 +43,17 @@ port of Nuked OPN2, a cycle-accurate Yamaha YM3438 / YM2612 emulator.
   chip type made per instance; state copy helpers and value equality added.
   Each modified file records this in its header (LGPL-2.1 section 2(b)).
 
-The ported files remain licensed under LGPL-2.1-or-later and may be extracted
-and reused under that licence on their own. OpenGGF as a combined work is
-conveyed under GPL-3 by applying the upgrade option of LGPL-2.1 section 3 to
-the combination; the LGPL headers and the upstream copyright notice are
-retained in every ported file.
+The ported files are conveyed under LGPL-2.1-or-later and are not converted to
+the GPL; the rest of OpenGGF uses them as a library, and they may be extracted
+and reused under that licence on their own. A distribution that includes them,
+with or without mods, must meet the LGPL's conditions for them, including
+section 6: its terms must permit modification for the recipient's own use and
+reverse engineering for debugging such modifications, and the recipient must be
+able to rebuild the program with a modified copy of these files, which
+OpenGGF's Corresponding Source provides. The LGPL headers and the upstream
+copyright notice are retained in every ported file. Releases up to and
+including 0.6.20260917 described the combination as conveyed under GPL-3
+through LGPL-2.1 section 3; later versions do not use that conversion.
 
 ## blip_buf
 
@@ -66,11 +73,17 @@ configuration.
   stereo configuration only; state copy helpers and value equality added.
   Each modified file records this in its header (LGPL-2.1 section 2(b)).
 
-The ported files remain licensed under LGPL-2.1-or-later and may be extracted
-and reused under that licence on their own. OpenGGF as a combined work is
-conveyed under GPL-3 by applying the upgrade option of LGPL-2.1 section 3 to
-the combination; the LGPL headers and the upstream copyright notice are
-retained in every ported file.
+The ported files are conveyed under LGPL-2.1-or-later and are not converted to
+the GPL; the rest of OpenGGF uses them as a library, and they may be extracted
+and reused under that licence on their own. A distribution that includes them,
+with or without mods, must meet the LGPL's conditions for them, including
+section 6: its terms must permit modification for the recipient's own use and
+reverse engineering for debugging such modifications, and the recipient must be
+able to rebuild the program with a modified copy of these files, which
+OpenGGF's Corresponding Source provides. The LGPL headers and the upstream
+copyright notice are retained in every ported file. Releases up to and
+including 0.6.20260917 described the combination as conveyed under GPL-3
+through LGPL-2.1 section 3; later versions do not use that conversion.
 
 ## musl libm sin
 

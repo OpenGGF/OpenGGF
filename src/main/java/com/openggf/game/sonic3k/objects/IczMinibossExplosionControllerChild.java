@@ -53,7 +53,7 @@ final class IczMinibossExplosionControllerChild extends AbstractObjectInstance
 
         int random = services().rng().nextRaw();
         int x = spawn.x() + (random & ((RANGE * 2) - 1)) - RANGE;
-        int y = spawn.y() + ((random >>> 8) & ((RANGE * 2) - 1)) - RANGE;
+        int y = spawn.y() + ((random >>> 16) & ((RANGE * 2) - 1)) - RANGE;
         services().playSfx(Sonic3kSfx.EXPLODE.id);
         spawnChild(() -> new S3kBossExplosionChild(x, y));
         interval = DISPATCH_INTERVAL - 1;

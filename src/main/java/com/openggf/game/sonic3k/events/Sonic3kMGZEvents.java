@@ -2463,7 +2463,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MGZ, 1)
                         .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
-                        // Results screen already started act 2 music.
+                        // The in-level title wait gate owns the Act 2 music request.
                         .preserveMusic(true)
                         // Obj_LevelResults and its ring/time globals remain live
                         // while MGZ1BGE_Transition reloads the act behind them.

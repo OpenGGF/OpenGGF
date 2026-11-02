@@ -916,7 +916,22 @@ public class HczEndBossInstance extends AbstractBossInstance
      * ROM: Alternates palette indices 0x0A, 0x0B, 0x0E in line 1 between
      * normal colors and white (0xEEE) each frame based on invulnerabilityTimer bit 0.
      */
+    @Override
+    protected boolean usesBaseHitHandler() {
+        return false;
+    }
+
     private void updateCustomFlash() {
+        // The ROM writes its custom palette row before decrementing $20.
+        // Keep timer ownership here so the base handler cannot invert the phase
+        // or suppress the final normal-colour write when the counter reaches 0.
+        applyCustomFlash();
+        if (!state.defeated && state.invulnerable && --state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+        }
+    }
+
+    private void applyCustomFlash() {
         if (state.defeated) {
             return;
         }

@@ -87,6 +87,49 @@ class TestMgzEndBossHandoffHeadless {
     }
 
     @Test
+    void normalArtRefreshRetainsLiveSpeedShoesPhysics() {
+        var sonic = fixture.sprite();
+        sonic.giveSpeedShoes();
+        short max = sonic.getMax();
+        short acceleration = sonic.getRunAccel();
+        GameServices.level().refreshPlayableSpriteArt();
+        assertTrue(sonic.hasSpeedShoes());
+        assertEquals(max, sonic.getMax());
+        assertEquals(acceleration, sonic.getRunAccel());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void runtimeArtRefreshPreservesPoweredPaletteAndTimerReversion(boolean hyper) {
+        var sonic = fixture.sprite();
+        var controller = sonic.getSuperStateController();
+        if (hyper) {
+            controller.debugActivate();
+        } else {
+            for (int i = 0; i < 7; i++) GameServices.gameState().markEmeraldCollected(i);
+            sonic.setRingCount(50);
+            assertTrue(controller.activateFromMonitor());
+        }
+        for (int i = 0; i < 40; i++) controller.update();
+        var before = controller.captureRewindState();
+        GameServices.level().refreshPlayableSpriteArt();
+
+        assertEquals(before, sonic.getSuperStateController().captureRewindState(),
+                "Adding rescue art must retain the powered controller and palette clock");
+        assertTrue(sonic.isSuperSonic());
+        var poweredRenderer = sonic.getSpriteRenderer();
+        fixture.stepIdleFrames(8);
+        assertNotEquals(before.paletteFrame(),
+                sonic.getSuperStateController().captureRewindState().paletteFrame(),
+                "Powered palette must keep advancing after the refresh");
+        sonic.currentLevelState().pauseTimer();
+        fixture.stepIdleFrames(1);
+        assertFalse(sonic.isSuperSonic(), "Boss timer stop must still revert the active form");
+        org.junit.jupiter.api.Assertions.assertNotSame(poweredRenderer, sonic.getSpriteRenderer(),
+                "Reversion must install the rebuilt normal renderer");
+    }
+
+    @Test
     void liveEndBossFloorImpactStartsRealTailsRescueForSonicAlone() throws Exception {
         MgzEndBossInstance boss = new MgzEndBossInstance(new ObjectSpawn(
                 0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));

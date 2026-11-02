@@ -14,12 +14,30 @@ Unreleased. The earlier development themes remain in
   The committed ICZ2 cube/button/bridge route now guards raw table submissions
   with native limits enabled.
 
+- **Powered shields:** Super/Hyper players can collect shields in S3K and S2.
+  Shields remain hidden while transformed and reappear after reverting.
+
+- **IceCap Act 1 miniboss:** Restore the accelerating ice-charge flashes,
+  native ice-piece spread timing, falling/flickering destruction debris and
+  independent palette/signpost handoff while explosions finish.
+
+- **ICZ2 to LBZ1:** Arm the ground-launch intro during fresh zone assembly so
+  Sonic springs out of the snow and regains control.
+
+- S3K Act 1 results defer Act 2 music to the in-level title-card wait gate,
+  preventing a duplicate start during AIZ, HCZ, MGZ and other act transitions.
+
 - **Upside-down S3K capsules:** Use seven normal explosion effects and their
   break sound instead of the long boss-explosion sequence.
 
 - **MGZ2 to CNZ1:** Tails carries Sonic into Carnival Night after the Marble
   Garden rescue instead of leaving Sonic to fall alone. Fresh level assembly
   restores the normal carry policy on configured sidekicks.
+
+- **MGZ2 powered rescue:** Rebuilding art for rescue Tails retains Sonic's
+  Super/Hyper controller, keeping palette cycling and boss-defeat
+  detransformation active.
+
 
 - **Sprite limits disabled:** Also remove the total 80/64-entry sprite-table cap,
   so later sprites survive crowded scenes and results screens. Explicit level
@@ -1649,11 +1667,13 @@ its original drawing priority.
 ## Maintenance and release preparation
 
 - **Mod licensing:** Mods can use any licence. The OpenGGF Mod Exception, a
-  GPL-3 section 7 permission, covers mods that use the engine only through the
-  Mod API. `ggfmod init` adds no licence and its output is MIT-0. The example
+  GPL-3 section 7 permission, covers mods that call, implement or extend engine
+  types, including those outside the `@ModApi` set, without copying engine code.
+  The Nuked OPN2 and blip_buf ports are conveyed under their LGPL rather than
+  converted to the GPL, so mods under other licences can ship with them. `ggfmod init` adds no licence and its output is MIT-0. The example
   mods, the bundled Time Attack mod and the creator kit's sample campaign are
   MIT; each carries a `LICENSE` file that the creator kit exports with it. The
-  engine itself remains GPL-3.
+  engine itself remains GPL-3.0-only.
 
 - **Mod authoring entry points:** Six task recipes and mirrored agent guidance
   route creator work to supported helpers while retaining expert overrides. The

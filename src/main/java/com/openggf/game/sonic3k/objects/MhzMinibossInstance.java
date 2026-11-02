@@ -163,6 +163,10 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     // until the next Set_Raw_Animation-equivalent reset (a fresh script switch).
     private int scriptBase;
     private boolean defeatHandoffQueued;
+    private static final int[] DAMAGE_FLASH_INDICES = {7, 11, 13, 14};
+    private static final int[] DAMAGE_FLASH_NORMAL = {0x224, 0x222, 0xA64, 0x642};
+    private static final int[] DAMAGE_FLASH_BRIGHT = {0xAAA, 0xEEE, 0x888, 0x666};
+
     private boolean paletteLoaded;
 
     public MhzMinibossInstance(ObjectSpawn spawn) {
@@ -245,6 +249,30 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
         } else if (state.routine == ROUTINE_FINAL_ESCAPE_RETURN_WAIT) {
             updateFinalEscapeReturnWait();
         }
+        updateDamageFlash();
+    }
+
+    @Override
+    protected boolean usesBaseHitHandler() {
+        return false;
+    }
+
+    private void updateDamageFlash() {
+        if (!state.invulnerable || state.defeated) {
+            return;
+        }
+        // sub_75D80 calls sub_75DF4 after movement, reading $20 bit 0 BEFORE
+        // decrement. word_75E02 / word_75E0A select these four line-1 colours.
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(), services().currentLevel(),
+                services().graphicsManager(), S3kPaletteOwners.MHZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, 1,
+                DAMAGE_FLASH_INDICES,
+                (state.invulnerabilityTimer & 1) == 0 ? DAMAGE_FLASH_BRIGHT : DAMAGE_FLASH_NORMAL);
+        if (--state.invulnerabilityTimer == 0) {
+            // The final (odd) update already wrote the ROM's normal colours.
+            state.invulnerable = false;
+        }
     }
 
     @Override
@@ -286,7 +314,9 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
 
     @Override
     protected void onHitTaken(int remainingHits) {
-        // sub_75D80 handles flash/collision restore; the fatal branch is onDefeatStarted().
+        // Disable the shared single-colour flasher; sub_75D80 owns the four-colour
+        // flash through the rewind-captured invulnerability counter.
+        paletteFlasher.stopFlash();
     }
 
     @Override

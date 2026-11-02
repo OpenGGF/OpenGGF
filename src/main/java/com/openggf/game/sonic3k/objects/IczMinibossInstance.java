@@ -101,7 +101,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
     private static final int RECOVER_WAIT_TIME = 0x3F;
     private static final int RISE_TIME = 0x17;
     private static final int DEFEAT_TIME = 0x3F;
-    private static final int DEFEAT_FLOW_OVERLAP_ENTRIES = 0x1D;
+
 
     private static final int PARENT_FLAG_ORB_RELEASE = 1 << 1; // $38 bit 1
     private static final int PARENT_FLAG_ORBS_ARMED = 1 << 2;  // $38 bit 2
@@ -164,6 +164,10 @@ public final class IczMinibossInstance extends AbstractBossInstance
     private int[] hitFlashPaletteWords = HIT_FLASH_NORMAL_COLORS;
     private boolean defeatRenderComplete;
     private boolean childSlotsReserved;
+    private IczMinibossDebrisChild.Motion[] debris;
+    private boolean explosionFinished;
+    private int paletteStage, paletteRow, paletteCycles, paletteTimer;
+    private boolean paletteSlowdown;
 
     private enum WaitCallback {
         NONE,
@@ -243,9 +247,8 @@ public final class IczMinibossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
-        updateHitFlash();
-
         if (!arenaGateComplete) {
+            updateHitFlash();
             updateArenaGate();
             if (!arenaGateInitialized) {
                 return;
@@ -267,18 +270,25 @@ public final class IczMinibossInstance extends AbstractBossInstance
                 moveWithVelocity();
                 tickWait();
             }
-            case ROUTINE_WAIT, ROUTINE_PALETTE_SPINUP, ROUTINE_ORB_PREP,
-                    ROUTINE_PALETTE_SLOWDOWN, ROUTINE_RECOVER_WAIT -> tickWait();
+            case ROUTINE_WAIT, ROUTINE_RECOVER_WAIT -> tickWait();
+            case ROUTINE_PALETTE_SPINUP, ROUTINE_ORB_PREP, ROUTINE_PALETTE_SLOWDOWN -> {
+                updateAttackPalette();
+                tickWait();
+            }
             case ROUTINE_DROP -> {
+                updateAttackPalette();
                 moveWithVelocity();
                 tickWait();
             }
             case ROUTINE_ARC -> {
+                updateAttackPalette();
                 updateArcPass();
             }
             case ROUTINE_ORB_ATTACK -> {
                 if ((parentFlags & PARENT_FLAG_ORB_RELEASE) == 0) {
                     enterPaletteSlowdown();
+                } else {
+                    updateAttackPalette();
                 }
             }
             case ROUTINE_RISE -> {
@@ -290,8 +300,13 @@ public final class IczMinibossInstance extends AbstractBossInstance
             }
         }
 
-        updateShards();
-        updateOrbs();
+        // sub_718DA follows the body's routine dispatch, so damage flashing
+        // wins over an attack-script write to the same palette word.
+        updateHitFlash();
+        if (debris == null) {
+            updateShards();
+            updateOrbs();
+        }
     }
 
     private void reserveNativeChildSlots() {
@@ -463,6 +478,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
     }
 
     private void enterSpinup() {
+        startAttackPalette(false);
         state.routine = ROUTINE_PALETTE_SPINUP;
         routineTimer = SPINUP_TIME;
         waitCallback = WaitCallback.ARM_ORBS;
@@ -521,6 +537,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
     }
 
     private void enterPaletteSlowdown() {
+        startAttackPalette(true);
         state.routine = ROUTINE_PALETTE_SLOWDOWN;
         // word_71B52's palette-rotation script reaches loc_71390 after 105
         // dispatches. This is longer than the subsequent $3F Obj_Wait and
@@ -528,6 +545,37 @@ public final class IczMinibossInstance extends AbstractBossInstance
         routineTimer = PALETTE_SLOWDOWN_TIME;
         waitCallback = WaitCallback.START_RECOVER;
         parentFlags &= ~PARENT_FLAG_ORBS_ARMED;
+    }
+
+    // word_71AE6 / word_71B52: two cycles per speed stage; the last
+    // spin-up stage repeats forever, while slowdown ends after four cycles.
+    private void startAttackPalette(boolean slowdown) {
+        paletteSlowdown=slowdown;
+        paletteStage=paletteRow=paletteCycles=paletteTimer=0;
+    }
+
+    private void updateAttackPalette() {
+        if (paletteTimer-- > 0) return;
+        if (paletteRow == 3) {
+            paletteRow=0;
+            if (++paletteCycles >= (paletteStage==4 ? 4 : 2)) {
+                paletteCycles=0;
+                if (paletteStage<4) paletteStage++;
+            }
+        }
+        int color = new int[]{0x222,0xC22,0xEE0}[paletteRow];
+        int normalDelay=paletteStage==4 ? (paletteSlowdown ? 10 : 1)
+                : (paletteSlowdown ? 2+2*paletteStage : 8-2*paletteStage);
+        paletteTimer=(paletteRow==0 ? normalDelay : 1)-1;
+        paletteRow++;
+        ObjectServices svc=servicesOrNull();
+        if(svc==null || svc.currentLevel()==null) return;
+        S3kPaletteWriteSupport.applyContiguousPatch(svc.paletteOwnershipRegistryOrNull(),
+                svc.currentLevel(),svc.graphicsManager(),S3kPaletteOwners.ICZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,1,10,
+                new byte[]{(byte)(color>>>8),(byte)color});
+        S3kPaletteWriteSupport.resolvePendingWritesNow(svc.paletteOwnershipRegistryOrNull(),
+                svc.currentLevel(),svc.graphicsManager());
     }
 
     private void enterRecoverWait() {
@@ -574,13 +622,13 @@ public final class IczMinibossInstance extends AbstractBossInstance
                 }
                 shard.refreshFromParent(state.x, state.y);
             } else if (shard.routine == SHARD_ROUTINE_MOVE) {
+                shard.childDx = (byte) (shard.childDx + signedHighByte(shard.packedVelocity));
+                shard.childDy = (byte) (shard.childDy + signedLowByte(shard.packedVelocity));
                 if (--shard.timer < 0) {
                     shard.routine = SHARD_ROUTINE_STOPPED;
                     shard.refreshFromParent(state.x, state.y);
                     continue;
                 }
-                shard.childDx += signedHighByte(shard.packedVelocity);
-                shard.childDy += signedLowByte(shard.packedVelocity);
                 shard.refreshFromParent(state.x, state.y);
             } else {
                 shard.refreshFromParent(state.x, state.y);
@@ -884,30 +932,49 @@ public final class IczMinibossInstance extends AbstractBossInstance
     }
 
     private void updateDefeated() {
-        if (defeatTimer < 0 || --defeatTimer >= 0) {
+        if (debris != null) {
+            boolean active = false;
+            for (var piece : debris) { piece.tick(servicesOrNull()); active |= piece.active; }
+            if (!active && explosionFinished) com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
+        if (--defeatTimer >= 0) return;
         // BossDefeated writes $3F to the body timer. Wait_FadeToLevelMusic
         // reaches loc_713E8 on the 64th following body dispatch and sets bit 5
         // on the active loc_8B660 snow owner. Child6_CreateBossExplosion is a
         // separate SST and continues emitting after this boundary.
         stopActiveSnowdustEmitter();
+        defeatRenderComplete = true;
+        updateShards();
+        updateOrbs();
+        debris = new IczMinibossDebrisChild.Motion[14];
+        for (int i=0; i<8; i++) {
+            var orb=orbs[i];
+            debris[i]=new IczMinibossDebrisChild.Motion(orb.x,orb.y,i,orb.frame,orbBucket(orb),2);
+            debris[i].xSub = orb.xSub;
+            debris[i].ySub = orb.ySub;
+        }
+        for (int i=0; i<6; i++) {
+            var shard=shards[i];
+            debris[8+i]=new IczMinibossDebrisChild.Motion(shard.x,shard.y,i,shard.frame,SHARD_BUCKET,1);
+        }
+        // loc_713E8 starts control and releases the existing children on this
+        // dispatch, independently of the explosion controller's lifetime.
+        services().fadeOutMusic();
+        spawnChild(() -> new S3kBossDefeatSignpostFlow(state.x,0,
+                S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
+                0,0,0,0,true).withNativeControlSlot(getSlotIndex()));
+        spawnChild(IczMinibossPostBossPaletteController::new);
+        for(int i=0;i<4;i++) {
+            int index=i;
+            spawnChild(() -> new IczMinibossDebrisChild(new ObjectSpawn(
+                    state.x + ((index&1)==0 ? -12 : 12), state.y + (index<2 ? -12 : 12),
+                    0,index*2,0,false,0)));
+        }
     }
 
     void onDefeatExplosionControllerFinished() {
-        if (defeatRenderComplete) {
-            return;
-        }
-        defeatRenderComplete = true;
-        spawnChild(IczMinibossPostBossPaletteController::new);
-        // The ROM boss body changes into Wait_FadeToLevelMusic after its $3F
-        // wait while Child6_CreateBossExplosion continues in another SST. The
-        // engine folds that child's remaining 31 emission entries into this
-        // owner, so carry those already-elapsed entries into its first dispatch.
-        spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
-                DEFEAT_FLOW_OVERLAP_ENTRIES, 0, 0, 0, true));
-        setDestroyed(true);
+        explosionFinished = true;
     }
 
     private void stopActiveSnowdustEmitter() {
@@ -958,7 +1025,6 @@ public final class IczMinibossInstance extends AbstractBossInstance
                 if (services.gameState() != null) {
                     services.gameState().addScore(1000);
                 }
-                services.fadeOutMusic();
                 // ROM loc_71926: jmp (BossDefeated_StopTimer).l
                 // (sonic3k.asm:150540).
                 stopLevelTimerOnBossDefeat();
@@ -1125,6 +1191,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
 
     @Override
     public int partTilePriorities(int bucket) {
+        if (debris != null) return HIGH_PARTS | LOW_PARTS;
         if (bucket != PRIORITY_BUCKET) {
             return LOW_PARTS;
         }
@@ -1147,6 +1214,12 @@ public final class IczMinibossInstance extends AbstractBossInstance
 
     @Override
     public int[] extraRenderBuckets() {
+        if (debris != null) {
+            int mask=0;
+            for(var piece:debris) if(piece.active) mask |= 1 << (piece.bucket-RenderPriority.MIN);
+            mask &= ~(1 << (PRIORITY_BUCKET-RenderPriority.MIN));
+            return extraBucketsForMask(mask);
+        }
         if (!arenaGateInitialized || orbs == null) {
             return NO_EXTRA_BUCKETS;
         }
@@ -1206,6 +1279,14 @@ public final class IczMinibossInstance extends AbstractBossInstance
             return;
         }
 
+        if (debris != null) {
+            for(int i=debris.length-1;i>=0;i--) {
+                var piece=debris[i];
+                if(piece.active && piece.visible && piece.bucket==bucket && highPriority==(piece.palette==1))
+                    renderer.drawFrameIndex(piece.frame,piece.x,piece.y,false,false,piece.palette);
+            }
+            return;
+        }
         // Draw_Sprite appends in Process_Sprites slot order and lower sprite-table
         // entries win, so within one list the parent is on top, then the orbs
         // (created first, 149711-149712), then the shards (149713-149714).

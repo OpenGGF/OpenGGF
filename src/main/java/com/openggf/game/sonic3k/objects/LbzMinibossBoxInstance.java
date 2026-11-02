@@ -47,7 +47,7 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
 
     private Phase phase = Phase.INIT;
     private int activateTimer;
-    private LbzMinibossBoxRig boxRig;
+    private final LbzMinibossBoxRig.OptionalRig boxRig = new LbzMinibossBoxRig.OptionalRig();
 
     public LbzMinibossBoxInstance(ObjectSpawn spawn) {
         super(spawn, "LBZMinibossBox");
@@ -63,16 +63,16 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
         if (isDestroyed()) {
             return;
         }
-        if (boxRig != null) {
+        if (boxRig.value != null) {
             var camera = services().camera();
-            boxRig.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
+            boxRig.value.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
         }
         switch (phase) {
             case INIT -> initialize();
             case WAIT_PLAYER -> updateWaitPlayer(playerEntity);
             case ACTIVATE_WAIT -> updateActivateWait();
             case DONE -> {
-                if (boxRig == null || !boxRig.hasVisiblePieces()) {
+                if (boxRig.value == null || !boxRig.value.hasVisiblePieces()) {
                     ObjectLifetimeOps.deleteNoRespawn(this);
                 }
             }
@@ -89,7 +89,7 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
         ensureArtLoaded();
         services().camera().setMaxX((short) CAMERA_MAX_X);
         services().camera().setMinX((short) CAMERA_MIN_X);
-        boxRig = new LbzMinibossBoxRig(getX(), getY());
+        boxRig.value = new LbzMinibossBoxRig(getX(), getY());
         // ROM: sub_8D116 fades to the miniboss music as soon as the box stages.
         spawnFreeChild(() -> new SongFadeTransitionInstance(
                 MINIBOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS.id));
@@ -117,8 +117,8 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
         }
         // ROM loc_8CD9C: release the pieces, play sfx_BossActivate, spawn the
         // miniboss, and let the screen event swap the boss-area chunk.
-        if (boxRig != null) {
-            boxRig.release();
+        if (boxRig.value != null) {
+            boxRig.value.release();
         }
         services().playSfx(Sonic3kSfx.BOSS_ACTIVATE.id);
         if (services().levelEventProvider() instanceof Sonic3kLevelEventManager manager
@@ -152,8 +152,8 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
 
     @Override
     public int[] extraRenderBuckets() {
-        return boxRig == null ? new int[0]
-                : LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, boxRig);
+        return boxRig.value == null ? new int[0]
+                : LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, boxRig.value);
     }
 
     @Override
@@ -163,14 +163,14 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands, int bucket) {
-        if (isDestroyed() || boxRig == null || !boxRig.hasVisiblePieces()) {
+        if (isDestroyed() || boxRig.value == null || !boxRig.value.hasVisiblePieces()) {
             return;
         }
         PatternSpriteRenderer boxRenderer = getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX);
         if (boxRenderer == null) {
             return;
         }
-        boxRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
+        boxRig.value.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
     }
 
     private boolean isPlayerKnuckles() {

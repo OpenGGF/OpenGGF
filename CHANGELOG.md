@@ -5,11 +5,27 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-Current fixes include the normal explosion effect and break sound for
+- Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
+  boss flash phase, preserving the final normal palette row and hit countdown.
+
+MHZ mushroom parachutes release carried players after their feet reach terrain.
+
+Super/Hyper players can collect shields while transformed; shields stay hidden
+until reversion in S3K and S2.
+
+S3K act transitions start Act 2 music once at the title-card wait gate.
+
+Current fixes include the IceCap Act 1 miniboss charge flashes and falling-ice
+destruction/signpost handoff, the normal explosion effect and break sound for
 upside-down S3K capsules, crowded-scene sprite retention with sprite limits
 disabled, native tally culling and accidental-mask prevention, and Tails
 carrying Sonic into CNZ1 after the MGZ2 rescue. See the
 development changelog below.
+
+ICZ2 → LBZ1 now launches Sonic out of the snow after the zone handoff.
+
+MGZ2 rescue-Tails art refresh also preserves Super/Hyper palette cycling and
+boss-defeat detransformation.
 
 Both development branches currently share the same commit and release line.
 Current changes are recorded in

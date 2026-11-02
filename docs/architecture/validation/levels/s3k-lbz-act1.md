@@ -7,9 +7,11 @@ Knuckles that appears in it is the NPC cutscene, not a playable Knuckles.
 
 | Obligation | Evidence | Remaining scope |
 |---|---|---|
+| ICZ2 → LBZ1 fresh entry | `TestS3kLbz1GroundLaunchIntroHeadless#icz2FreshTransitionLaunchesSonicOutOfSnow`: real fade/load/title handoff, emergence above `$05C0`, input/object-control release and controller retirement. Existing direct-entry tests retain 30-frame timing. | Sonic alone, native viewport, donor off; broader rosters/viewports, checkpoint and transition rewind remain open. |
 | Cup side contact (P1 and CPU) | `TestLbzCupElevatorSolidDispatch`: real dispatch stops an airborne rolling player at the cup edge, then repeats after restore. | Other character geometry and donors |
 | Cup capture/hold control and animation bit | `TestLbzCupElevatorInstance` (native P1/P2, extension, rewind) and `TestS3kLbz1KnucklesSequenceHeadless` | Full-route rewind and load/death boundaries |
 | Rolling drum deletion | `TestLbzRollingDrumDeletion`: real capture and range unload, dead/extension cleanup, rewind | — |
+| Miniboss box creation/recreation | `TestLbz1BoxRigRewind`: fresh owner restore, pre-creation restore, and 180 piece updates for carried and standalone boxes | Full encounter route/render checks remain separate |
 | Miniboss fatal hit | `TestS3kLbz1MinibossAndTransitionHeadless`: real P1/P2 sixth hit, explosion cadence, restore/replay | — |
 | Carried results → title | `TestS3kMgzLbzCarriedResultsTitleOwnership`: twelve real children through carry, rewind, publication, control release and title init; 58/59-ring tally oracle | MGZ ring difference that starts at row 9260 |
 | Retained title counter reset | `TestSonic3kTitleCardKosQueue#retainedResetWaitsForArtAndLastChildMovementAndRestoresThatGate` | Full native `Obj_TitleCardWait2` presentation timing |

@@ -1137,3 +1137,12 @@ The title's private timing owner was not observed through a fabricated API.
 There is no native pixel/audio-output, long-route, rewind, alternate viewport,
 donor/team or whole-boot parity certificate. The unrelated hub START-layout and
 capture-chord negatives remain unchanged. Root owns integration and broader checks.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.

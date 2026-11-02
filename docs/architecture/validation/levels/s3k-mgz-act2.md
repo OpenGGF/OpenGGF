@@ -183,3 +183,17 @@ bootstrap/load/decode/AIZ checks. The runner's shared-file plan selected 4386
 smoke classes; focused checks replace that disproportionate selection because
 only the destination carry-policy binding changes. This is bounded validation,
 not a full-suite or exhaustive trace qualification.
+
+## Powered rescue art refresh — 2026-11-01
+
+MGZ2's solo-Sonic rescue adds Tails and refreshes playable art. That refresh
+must retain Sonic's powered-form owner, palette cursor/timer and ring-drain
+counter. It must rebind the normal renderer used by eventual reversion.
+The native boss defeat still clears the HUD timer; the existing powered-form
+routine owns detransformation on its next player update.
+
+`TestMgzEndBossHandoffHeadless` retains the real floor-impact/rescue admission
+checks and separately covers Super and Hyper palette clock continuation and timer-stop reversion through a runtime art refresh.
+This is a bounded solo-Sonic regression, not certification of all donor,
+viewport/team or full boss-route combinations. Existing matrix gaps remain;
+the existing powered-state rewind tests cover snapshot restoration separately.
