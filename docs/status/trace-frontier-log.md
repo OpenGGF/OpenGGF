@@ -122938,3 +122938,34 @@ JDK 25, original ROMs, surfaceless EGL, forkCount=1, alphabetical):
 - `-Ptrace-segments` HCZ slice, Sonic+Tails Ss/Ss2–7, Sonic+Tails Hcz — 9 pass, HCZ slice red
   at 609 as above. Zero skips throughout.
 Next HCZ slice frontier: the Tails CPU respawn counter at row 12236.
+
+## 2026-11-02 — MGZ act-2 camera target regression (wave 1 of the trace survey)
+
+`TestS3kMgzTraceReplay` was green on 2026-08-28. At survey commit `a8f3f8647` it had 8469
+errors from row 13939 (`camera_x`, ROM 0 vs engine 2). Lane branch
+`bugfix/ai-trace-act2-camera-target` (runtime `9d3fe74c9`, docs `57a5d5996`) traces the cause to
+`15accb4f4`. That commit changed the transition overrides to set only the current camera bounds,
+so the MGZ seamless reload left max-X at current/target `0000/6000` and min-X at `0001/0000`.
+The camera then eased 2 px per frame toward the loaded level size. `MGZ1BGE_Transition
+(sonic3k.asm:106358-106390)` instead offsets the live lock and holds it until the native Act 2
+release. The fix carries the min-X, max-X and min-Y targets with the shifted bounds; reverting
+it reproduces the 8469 errors exactly. FBZ's independent current/target bounds, which
+`15accb4f4` was written for, are unchanged. A matching CNZ candidate was rejected
+(3112 → 3941); CNZ is unchanged.
+
+Integration verification on merge `67ec3c85c` (worktree `.worktrees/trace-wave1-integrate`,
+JDK 25, original ROMs, surfaceless EGL, forkCount=1, alphabetical):
+- `TestS3kMgzTraceReplay` (`-Ptrace-replay`): 8469 @13939 → **4 errors @14384**
+  `player_animation_id` (exp 0x13, act 0x05). Physics comparison clean.
+- `-Ptrace-segments`: MGZ slice 10634 → 7921 (first error unchanged at 5255 `tails_g_speed`);
+  Sonic+Tails MGZ 4807 → 4100 (unchanged at 10709 `x`).
+- `-Ptrace-replay-r7`: Tails MGZ 1 / MGZ2 654 unchanged; Tails MGZ3 3020 → 3161, first error unchanged at
+  row 0. Not attributable to this fix: the first difference *removes* an error at row 1279
+  (camera X now matches ROM). The first added error, at 2061, follows a release desync at
+  1889/2033 that was already present in both builds; the old stale target had only let the camera follow by accident.
+- Ordinary: FBZ transition/rewind intent tests, camera copies/rewind and the S3K keep-green set,
+  83 pass. Zero skips throughout.
+New MGZ frontier: the engine runs EndSignControl in slot 21 after results in slot 7, while the ROM
+runs control in slot 7 before results/title in slot 8 (`Obj_EndSignControlAwaitStart
+(sonic3k.asm:180502-180508)`, `Restore_PlayerControl2 (sonic3k.asm:180455-180461)`).
+Assigned to branch `bugfix/ai-trace-endsign-control-order`.
