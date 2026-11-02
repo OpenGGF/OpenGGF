@@ -23,6 +23,10 @@ allocation/RNG checks are bounded maintenance coverage. Cold routes, pixel/audio
 and broader lifecycle products remain open; HCZ/CNZ button native-pointer
 authority remains an explicit inherited gap.
 
+MGZ seamless horizontal lock (2026-11-02): the
+[MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#seamless-horizontal-lock--2026-11-02)
+records the bounded transition correction and inherited wider route/rewind gaps.
+
 AIZ2 ending animation (2026-11-02): [Knuckles and shield controls](../architecture/validation/levels/s3k-aiz2.md#ending-knuckles-and-shield-animation-2026-11-02)
 cover native script publication/cadence, deferred switches, elemental freeze,
 actual object recreation and forward replay. Fresh original-movie observations
@@ -2546,9 +2550,20 @@ closure timing and its single impact sound are covered in the
 [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#encounter-presentation-follow-up--2026-11-02).
 Inherited route and native pixel coverage limits remain.
 
+SOZ2 vertical seam presentation follow-up (2026-11-02): the connected sand-carry
+route requires player art at its wrap, with independent SAT admission boundary
+checks. See the [SOZ2 matrix](../architecture/validation/levels/s3k-soz-act2.md#vertical-seam-sprite-admission-2026-11-02)
+for the bounded coverage and remaining manual/pixel obligations.
+
 SOZ push-switch overlap correction (2026-11-02): focused
 `TestSozMechanisms.handlePrecedesRailInSatButFollowsItInPainterOrder` pins
 the native main-handle-before-child-rail emission for both mounting sides and
 the reverse painter order. This local presentation fix changes no movement or
 rewind state; the SOZ matrix's inherited viewport/donor and native presentation
 acceptance gaps remain open.
+
+Iwamodoki self-destruct follow-up (2026-11-02): the
+[LRZ1](../architecture/validation/levels/s3k-lrz-act1.md#iwamodoki-rider-release-2026-11-02)
+and [LRZ2](../architecture/validation/levels/s3k-lrz-act2.md#iwamodoki-rider-release-2026-11-02)
+matrices record the bounded P1/P2 shield/rider regression and inherited route,
+breadth and rewind obligations.

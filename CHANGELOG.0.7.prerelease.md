@@ -5,6 +5,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
 - FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
   palette, with debug geometry for its body and children. S3K Super/Hyper reversion
   retains invincibility until the next native eight-frame boundary.
@@ -22,6 +24,9 @@ Unreleased. The earlier development themes remain in
 - HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
 
 - S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
+
+- **MGZ seamless transition:** Keep the shifted camera bounds until the native
+  Act 2 release instead of easing toward the newly loaded level bounds.
 
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
   child-owned break sound, including Hydrocity’s separate capsule owner.

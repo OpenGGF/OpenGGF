@@ -32,7 +32,8 @@ profiler process. Execution took 175 seconds after 510 seconds of queue waiting.
 
 ## Cause and fix
 
-The baseline is `e2c32e2517d51098f5007f61f76ea5c93b012deb`.
+The baseline is `e2c32e2517d51098f5007f61f76ea5c93b012deb`. The measured
+candidate runtime source is committed as `d4f6d7c6b92a2bafa7c5ef637694d494e4327b97`.
 `S3kCollisionLayoutRewindAdapter` runs after the shared level adapter. It recreated
 the map, copied its byte array and unconditionally rebound the level geometry.
 This invalidated both tilemaps immediately and manufactured a different map-byte
@@ -141,7 +142,35 @@ scene/slot publication, required S3K loading checks and LRZ camera/terrain repla
 The existing full-layout mutation test remains in
 `TestLevelTilemapManagerRewindReset`.
 
-The change-based broad plan selected 3,361 smoke classes. Focused checks replaced
-that disproportionate selection because the change only avoids redundant derived
-cache invalidation. Wrapped/retained/descriptor-owned images and real geometry
-mutations have direct regressions. No full suite or exhaustive route sweep ran.
+The initial change-based plan selected 3,361 smoke classes. The final merged-tree
+plan selected 4,414 after concurrent upstream work was included. Focused checks
+replaced that disproportionate selection because this patch only avoids redundant
+derived-cache invalidation. Wrapped/retained/descriptor-owned images and real
+geometry mutations have direct regressions. No full suite or exhaustive route
+sweep ran.
+
+## Updated-base integration
+
+While validation was queued, develop advanced to
+`6cdd598c7be66a5c5fd712805a3795c395135a93`. That work changes MGZ events, Iwamodoki
+behavior and sprite seam visibility, but neither cache-owner file. The changelogs
+merged automatically with both sets of entries retained. The measurements above
+remain pinned to the measured candidate and original baseline, not retimed against
+the later upstream changes.
+
+The merged candidate then passed 79 focused integration checks with no failures or
+skips. The command used the same queued Maven/EGL/absolute-ROM setup and selected:
+
+```text
+TestLevelTilemapManagerRewindReset
+TestS3kCollisionLayoutTilemapRestore
+TestSpriteSatVerticalWrap
+TestIwamodokiBadnikInstance
+TestScheduledNativeGameplay#originalS3kRouteUsesTheSameProductionAdmissionAndRestore
+TestSonic3kLevelLoading
+```
+
+The real Engine/EGL cases compare registered restoration and replay under different
+picture schedules and reject a black or uniform framebuffer. These checks qualify
+the composition with the updated renderer without repeating the completed timing
+experiment or unchanged broad smoke coverage.

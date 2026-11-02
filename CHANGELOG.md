@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
 - Correct FBZ2 boss pilot-light colors, shipped rotation expression and debug geometry; preserve S3K’s native Super/Hyper revert grace boundary.
 - Death sprites draw without hurt-timer blinking, and crushed players reject further hurt and object-owned ring-loss requests.
 

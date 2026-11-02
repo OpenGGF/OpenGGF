@@ -1974,7 +1974,7 @@ public class GraphicsManager {
 		SpriteCaptureControl.control(
 				"SAT control entries require native display-list replay");
 		if (!spriteSatCollectionActive) return;
-		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, y,
+		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, adjustVerticalWrapY(y),
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
 				false, false, false, currentSpriteHighPriority,
 				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
@@ -2002,7 +2002,9 @@ public class GraphicsManager {
         int admittedX = piece.x();
         int biasedX = admittedX - spriteSatViewport.x() + 128;
         if ((spriteSatViewport.width() <= 320 ? biasedX & 0x1FF : biasedX) == 0) admittedX++;
-		SpritePiece admitted = new SpritePiece(admittedX, piece.y(), piece.widthTiles(), piece.heightTiles(),
+		// Admission precedes replay, which can run after the producer's wrap scope ends.
+        // Normalize here just as renderPatternWithId does, before scanline rejection.
+        SpritePiece admitted = new SpritePiece(admittedX, adjustVerticalWrapY(piece.y()), piece.widthTiles(), piece.heightTiles(),
 				piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
 				piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
 				piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),

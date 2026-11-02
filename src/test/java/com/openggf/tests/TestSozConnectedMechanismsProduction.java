@@ -127,6 +127,9 @@ class TestSozConnectedMechanismsProduction {
             boolean wrap = previousY < 0x80 && y > 0x700;
             activated |= activation;
             wrapped |= wrap;
+            if (wrap) {
+                com.openggf.level.SozWrapPresentationAssertions.assertPlayerArtPresent();
+            }
             carried |= events.backgroundCollision() && !fixture.sprite().getAir()
                     && y < previousY && (scene == SozConnectedMechanismRoute.Scene.UPPER ? y < 0xA0 : y < 0x500);
             charged |= SozZoneRuntimeState.trigger(11) == 128;
