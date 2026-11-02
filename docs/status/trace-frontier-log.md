@@ -122909,3 +122909,32 @@ the changed selection above plus `TestHardwareTimingAuthorityGuard` (session
 report exactly at232 errors,6,444 planned rows /6,309 comparisons, gate reached.
 Queue wait949s, Maven execution112s. No unchanged glide chain rerun is required for
 this independent boss initialization change.
+
+## 2026-11-02 — S3K special-stage banner start and HCZ1 miniboss release (wave 1 of the trace survey)
+
+The trace survey at develop `a8f3f8647` measured all three trace profiles: trace-replay 885 tests /
+11 failed / 1 error; trace-replay-r7 117 / 84 / 12; trace-segments 70 / 48 / 8. It selected these
+two independent frontiers. Lane branch `bugfix/ai-trace-ss-banner-hcz-miniboss`, base `4311f21c4`.
+
+- `8e2c84833` — the banner follows `loc_8EA4 (sonic3k.asm:11371-11384)`, which compares the offset
+  before incrementing it, and the `loc_8454 (sonic3k.asm:10745-10753)` dispatch order
+  (Player_1 before the dynamic banner). `TestS3kTailsFullChainSs2SpecialStageTraceReplay`
+  (r7): 24 errors from row 348 `player_x` → **0 errors**. An offset-only candidate was
+  rejected: 287 errors from row 349 plus unmatched emerald-art completions.
+- `22450def0` — the HCZ miniboss tracks native players by centre Y independently of capture
+  (`sub_6A9B8 (sonic3k.asm:140281-140301)`) and keeps both slots through cooldown for the
+  deletion release (`loc_6A636 (sonic3k.asm:139945-139952)`, `loc_6A986 / sub_6A996
+  (sonic3k.asm:140240-140259)`). `TestS3kHczZoneSliceTraceReplay` (seg): 4354 errors from
+  row 9482 `air` → 609 errors from row 12236 `tails_cpu_respawn_counter` (exp 0x004B,
+  act 0x0000). `TestS3kTailsFullChainHcz3SegmentTraceReplay` (r7): 703 → 572; row-0
+  `y` start-state frontier unchanged.
+
+Integration verification on merge `11aca284c` (worktree `.worktrees/trace-wave1-integrate`,
+JDK 25, original ROMs, surfaceless EGL, forkCount=1, alphabetical):
+- ordinary: TestSonic3kSpecialStageBanner, TestHczMinibossWaterEffectCleanup and the S3K
+  keep-green four — 67 pass, 0 fail/error/skip;
+- `-Ptrace-replay-r7` Tails Ss/Ss2–6, TestS3kSpecialStageTraceReplay, Tails Hcz3 — 8 pass,
+  Hcz3 red at 572 as above;
+- `-Ptrace-segments` HCZ slice, Sonic+Tails Ss/Ss2–7, Sonic+Tails Hcz — 9 pass, HCZ slice red
+  at 609 as above. Zero skips throughout.
+Next HCZ slice frontier: the Tails CPU respawn counter at row 12236.
