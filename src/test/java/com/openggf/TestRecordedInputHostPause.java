@@ -108,6 +108,18 @@ class TestRecordedInputHostPause {
         }
     }
 
+    @Test
+    void forcedPlaybackStartReachesNativeAdmissionWithoutBecomingHostPause() {
+        var input = new InputHandler();
+        var playback = mock(PlaybackDebugManager.class);
+        org.mockito.Mockito.when(playback.isCurrentForcedStartPress()).thenReturn(true);
+        assertTrue(GameLoopPauseInput.nativeStartEdge(input, playback));
+        assertFalse(GameLoopPauseInput.nextUserPaused(GameMode.LEVEL, input,
+                SonicConfigurationService.createStandalone(), false, false, false, playback, () -> false));
+        org.mockito.Mockito.when(playback.isCurrentForcedStartPress()).thenReturn(false);
+        assertFalse(GameLoopPauseInput.nativeStartEdge(input, playback));
+    }
+
     private static boolean nextPaused(GameMode mode, InputHandler input) {
         return GameLoopPauseInput.nextUserPaused(mode, input, SonicConfigurationService.createStandalone(),
                 false, false, false, mock(PlaybackDebugManager.class), () -> false);

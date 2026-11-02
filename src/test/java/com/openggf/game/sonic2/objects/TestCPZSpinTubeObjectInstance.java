@@ -2,11 +2,14 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,6 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCPZSpinTubeObjectInstance {
+
+    @BeforeEach
+    void setUpGameplaySession() {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+    }
 
     @Test
     void hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl() {
