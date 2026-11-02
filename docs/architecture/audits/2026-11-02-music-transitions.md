@@ -169,3 +169,28 @@ Focused checks replace another broad smoke repetition: the final changes are
 one explicit field policy, one object's recreation/lifetime and affected
 fixtures/declarations. Shared algorithms and unrelated input paths were retained.
 The original broad smoke result remains red with the exact baseline limits above.
+
+## Final composition and delivery validation
+
+Develop's LBZ art-admission/camera-exit and glide repairs through `4311f21c4`
+were merged into the audit at `cec1112ed`; runtime changes merged automatically.
+Additive LBZ matrix/backlog conflicts retained both evidence records. The commit
+hook rejected adding an `@EngineOnly` method to the creator-facing audio profile
+under its source-surface rule. The final implementation leaves `GameAudioProfile`
+unchanged and routes ring awards through `AudioManagerInternalAccess` plus the
+internal `RingExtraLifeRequestOwner` profile contract. No signature pin or API
+version was changed.
+
+The final focused command (`SONIC2_ROM` and `S3K_ROM` denote the absolute original
+ROM paths used locally) was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$SONIC2_ROM" "-Ds3k.rom.path=$S3K_ROM" -Dtest=TestRingExtraLifeRequestRouting,TestSonic2CompetitionRingExtraLifeMusic,TestModApiSignatureSurface,TestOfficialModsSupportedSurface,TestLbzEndBossKosOwnerRewind,TestSongFadeRestoreMusic test
+```
+
+All26 cases passed, zero failures/errors/skips (345 seconds queue, 1m49s Maven).
+This grades the internal audio relocation and overlapping LBZ owner on the
+composed source. The MHZ implementation, capture policy and inventory declarations
+are unchanged from the 1,400-case and 820-guard passing runs above. No unchanged
+broad smoke or guards were repeated solely for the merge. Only this validation
+record changed after the final focused run.
