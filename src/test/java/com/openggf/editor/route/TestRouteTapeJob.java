@@ -24,16 +24,20 @@ class TestRouteTapeJob {
     @TempDir
     Path dir;
 
-    private RouteTapeJob.Request request(Path manifest, String script) {
-        return new RouteTapeJob.Request(RouteTapeJob.Kind.REPLAY, manifest, script, null, false);
+    private RouteTapeJob.Request request(Path manifest, String script) throws Exception {
+        return new RouteTapeJob.Request(RouteTapeJob.Kind.REPLAY, working(manifest, script), null, false);
+    }
+
+    private static RouteArtifact working(Path manifest, String script) throws Exception {
+        RouteArtifact source = RouteFiles.readDraft(manifest);
+        var tape = RouteFiles.tapeFromScript(script);
+        RouteManifest m = source.manifest();
+        return new RouteArtifact(new RouteManifest(m.launch(), tape.hash(), tape.size(), m.checks(), m.draft(),
+                m.provenance(), m.qualification(), m.nativeFacts()), tape);
     }
 
     private static String content(Path manifest, String script) throws Exception {
-        RouteArtifact source = RouteFiles.read(manifest);
-        var tape = RouteFiles.tapeFromScript(script);
-        RouteManifest m = source.manifest();
-        return new RouteArtifact(new RouteManifest(m.launch(), tape.hash(), tape.size(), m.provenance(),
-                m.qualification(), m.nativeFacts()), tape).content().toString();
+        return working(manifest, script).content().toString();
     }
 
     @Test
@@ -47,7 +51,7 @@ class TestRouteTapeJob {
             return child("pass");
         })) {
             String content = content(manifest, script);
-            job.start(request(manifest, script), content, 4);
+            job.start(request(manifest, script));
             await(() -> !job.poll().running());
             var update = job.poll();
             assertEquals(RouteTapeJob.Phase.PASSED, update.phase(), update.message());
@@ -68,13 +72,13 @@ class TestRouteTapeJob {
         String script = "4 R\n";
         String content = content(manifest, script);
         try (var job = new RouteTapeJob(Map::of, args -> child("other"))) {
-            job.start(request(manifest, script), content, 4);
+            job.start(request(manifest, script));
             await(() -> !job.poll().running());
             assertEquals(RouteTapeJob.Phase.ERROR, job.poll().phase());
             assertTrue(job.poll().message().contains("other content"), job.poll().message());
         }
         try (var job = new RouteTapeJob(Map::of, args -> child("crash"))) {
-            job.start(request(manifest, script), content, 4);
+            job.start(request(manifest, script));
             await(() -> !job.poll().running());
             assertEquals(RouteTapeJob.Phase.ERROR, job.poll().phase());
             assertTrue(job.poll().message().contains("fixture crash"), job.poll().message());
@@ -85,7 +89,7 @@ class TestRouteTapeJob {
             launched.set(child);
             return child;
         })) {
-            job.start(request(manifest, script), content, 4);
+            job.start(request(manifest, script));
             await(() -> launched.get() != null && job.poll().total() == 4 && job.poll().pass() == 1
                     && job.poll().done() == 2);
             job.cancel();
@@ -94,8 +98,8 @@ class TestRouteTapeJob {
             Thread.sleep(200);
             assertEquals(RouteTapeJob.Phase.CANCELLED, job.poll().phase(), "A cancelled job publishes nothing later");
             assertThrows(java.io.IOException.class, () -> {
-                job.start(request(manifest, script), content, 4);
-                job.start(request(manifest, script), content, 4);
+                job.start(request(manifest, script));
+                job.start(request(manifest, script));
             }, "One job at a time");
         }
     }
@@ -118,8 +122,9 @@ class TestRouteTapeJob {
         public static void main(String[] args) throws Exception {
             try (var input = new RouteEditorProtocol.LineReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
                 var request = RouteEditorProtocol.decodeRequest(input);
-                String content = content(request.manifest(), request.script());
-                int rows = RouteFiles.tapeFromScript(request.script()).size();
+                var route = com.openggf.route.RouteCodec.parseTransport(request.route());
+                String content = route.content().toString();
+                int rows = route.tape().size();
                 if (args[0].equals("crash")) {
                     System.err.println("fixture crash");
                     System.exit(3);

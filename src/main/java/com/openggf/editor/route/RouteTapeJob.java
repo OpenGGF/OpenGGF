@@ -1,5 +1,7 @@
 package com.openggf.editor.route;
 
+import com.openggf.route.RouteArtifact;
+import com.openggf.route.RouteCodec;
 import com.openggf.tools.RouteEditorProtocol;
 
 import java.io.BufferedWriter;
@@ -29,16 +31,14 @@ public final class RouteTapeJob implements AutoCloseable {
     public enum Kind { REPLAY, SAVE }
 
     /**
-     * @param manifest the route manifest supplying launch, provenance and native facts
-     * @param script   the working rows as route-script text
-     * @param target   for a save: the stem to write
-     * @param replace  for a save: replace the existing route rather than write a new one
+     * @param route   the working route (launch, goals, rows); it travels as codec transport text
+     * @param target  for a save: the stem to write
+     * @param replace for a save: replace the existing route rather than write a new one
      */
-    public record Request(Kind kind, Path manifest, String script, Path target, boolean replace) {
+    public record Request(Kind kind, RouteArtifact route, Path target, boolean replace) {
         public Request {
             Objects.requireNonNull(kind, "kind");
-            Objects.requireNonNull(manifest, "manifest");
-            Objects.requireNonNull(script, "script");
+            Objects.requireNonNull(route, "route");
             if (kind == Kind.SAVE && target == null) throw new IllegalArgumentException("a save names its target stem");
         }
     }
@@ -85,10 +85,32 @@ public final class RouteTapeJob implements AutoCloseable {
     public RouteTapeJob(Supplier<Map<String, Path>> roms) {
         this(roms, command -> {
             var builder = new ProcessBuilder(command);
-            builder.environment().remove("DISPLAY");
-            builder.environment().remove("WAYLAND_DISPLAY");
+            // A display-free GL context: the worker never connects to the editor's desktop.
+            if (command.contains(SURFACELESS)) {
+                builder.environment().remove("DISPLAY");
+                builder.environment().remove("WAYLAND_DISPLAY");
+            }
             return builder.start();
         });
+    }
+
+    private static final String SURFACELESS = "-Dopenggf.headless.gl=surfaceless-egl";
+
+    /**
+     * The worker's capture session needs GL. Linux uses display-free surfaceless EGL (an explicit
+     * parent selection is passed through); other platforms keep the engine's hidden-window default.
+     */
+    static List<String> graphicsArguments() {
+        String selected = System.getProperty("openggf.headless.gl");
+        var arguments = new ArrayList<String>();
+        if (selected != null && !selected.isBlank()) arguments.add("-Dopenggf.headless.gl=" + selected);
+        else if (System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("linux")) {
+            arguments.add(SURFACELESS);
+        }
+        if (System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("mac")) {
+            arguments.add("-XstartOnFirstThread");
+        }
+        return arguments;
     }
 
     RouteTapeJob(Supplier<Map<String, Path>> roms, Launcher launcher) {
@@ -100,14 +122,16 @@ public final class RouteTapeJob implements AutoCloseable {
         return update;
     }
 
-    /** Starts {@code request} for working content {@code content}; one job runs at a time. */
-    public synchronized void start(Request request, String content, int rows) throws IOException {
+    /** Starts {@code request}; one job runs at a time. Its result names the content it replayed. */
+    public synchronized void start(Request request) throws IOException {
+        String content = request.route().content().toString();
+        int rows = request.route().tape().size();
         if (task != null && task.isAlive()) throw new IOException("Cancel the current route job before starting another");
         var wire = new RouteEditorProtocol.Request(request.kind() == Kind.SAVE ? RouteEditorProtocol.Kind.SAVE
-                : RouteEditorProtocol.Kind.REPLAY, request.manifest(), request.script(), request.target(),
+                : RouteEditorProtocol.Kind.REPLAY, RouteCodec.formatTransport(request.route()), request.target(),
                 request.replace(), roms.get());
         long token = ++generation;
-        update = new Update(token, Phase.RUNNING, request.kind(), 1, 2, 0, rows, "Starting the route worker", content,
+        update = new Update(token, Phase.RUNNING, request.kind(), 1, 1, 0, rows, "Starting the route worker", content,
                 -1, null, null);
         task = Thread.ofVirtual().name("route-tape-job").start(() -> {
             try {
@@ -127,6 +151,7 @@ public final class RouteTapeJob implements AutoCloseable {
         command.add("--enable-native-access=ALL-UNNAMED");
         command.add("-Xmx2g");
         command.add("-Djava.awt.headless=true");
+        command.addAll(graphicsArguments());
         command.add("-cp");
         command.add(System.getProperty("java.class.path"));
         command.add("com.openggf.tools.RouteEditorWorker");
@@ -165,8 +190,7 @@ public final class RouteTapeJob implements AutoCloseable {
                     if (record.progress() != null) {
                         var progress = record.progress();
                         publish(token, new Update(token, Phase.RUNNING, kind, progress.pass(), progress.passes(),
-                                progress.done(), progress.total(), progress.pass() == 1 ? "Replaying the route"
-                                : "Qualifying the route", content, -1, null, null));
+                                progress.done(), progress.total(), "Replaying the route", content, -1, null, null));
                     } else if (record.point() != null) {
                         var point = record.point();
                         if (p1.size() + p2.size() >= 2 * RouteEditorProtocol.MAX_PATH_POINTS + 2) {
@@ -197,7 +221,7 @@ public final class RouteTapeJob implements AutoCloseable {
                 case FAILED -> Phase.FAILED;
                 case UNSUPPORTED -> Phase.UNSUPPORTED;
             };
-            publish(token, new Update(token, phase, kind, 2, 2, rows, rows, result.detail(), content, result.row(), path,
+            publish(token, new Update(token, phase, kind, 1, 1, rows, rows, result.detail(), content, result.row(), path,
                     saved));
         } finally {
             retire(child);

@@ -12,6 +12,10 @@
   "@editor.route_tape.action_clear_lane": {
     "description": "Route tape editor: Clear lane"
   },
+  "editor.route_tape.action_create": "Create",
+  "@editor.route_tape.action_create": {
+    "description": "Route tape editor: Create"
+  },
   "editor.route_tape.action_delete_rows": "Delete rows",
   "@editor.route_tape.action_delete_rows": {
     "description": "Route tape editor: Delete rows"
@@ -64,6 +68,10 @@
   "@editor.route_tape.action_menu": {
     "description": "Route tape editor: Route menu"
   },
+  "editor.route_tape.action_new": "New route",
+  "@editor.route_tape.action_new": {
+    "description": "Route tape editor: New route"
+  },
   "editor.route_tape.action_next_fact": "Next fact",
   "@editor.route_tape.action_next_fact": {
     "description": "Route tape editor: Next fact"
@@ -87,6 +95,10 @@
   "editor.route_tape.action_save": "Save qualified",
   "@editor.route_tape.action_save": {
     "description": "Route tape editor: Save qualified"
+  },
+  "editor.route_tape.action_save_draft": "Save draft",
+  "@editor.route_tape.action_save_draft": {
+    "description": "Route tape editor: Save draft"
   },
   "editor.route_tape.action_toggle": "Toggle button",
   "@editor.route_tape.action_toggle": {
@@ -128,6 +140,10 @@
   "@editor.route_tape.fact_donor": {
     "description": "Route tape editor: Donor"
   },
+  "editor.route_tape.fact_goals": "Goals",
+  "@editor.route_tape.fact_goals": {
+    "description": "Route tape editor: Goals"
+  },
   "editor.route_tape.fact_level": "Level",
   "@editor.route_tape.fact_level": {
     "description": "Route tape editor: Level"
@@ -164,9 +180,21 @@
   "@editor.route_tape.fact_width": {
     "description": "Route tape editor: Width"
   },
+  "editor.route_tape.field_act": "Act",
+  "@editor.route_tape.field_act": {
+    "description": "Route tape editor: Act"
+  },
   "editor.route_tape.field_count": "Rows",
   "@editor.route_tape.field_count": {
     "description": "Route tape editor: Rows"
+  },
+  "editor.route_tape.field_game": "Game",
+  "@editor.route_tape.field_game": {
+    "description": "Route tape editor: Game"
+  },
+  "editor.route_tape.field_main": "Player 1",
+  "@editor.route_tape.field_main": {
+    "description": "Route tape editor: Player 1"
   },
   "editor.route_tape.field_manifest": "Route manifest",
   "@editor.route_tape.field_manifest": {
@@ -180,9 +208,97 @@
   "@editor.route_tape.field_row": {
     "description": "Route tape editor: Row"
   },
+  "editor.route_tape.field_sidekick": "Player 2 (blank for none)",
+  "@editor.route_tape.field_sidekick": {
+    "description": "Route tape editor: Player 2 (blank for none)"
+  },
   "editor.route_tape.field_template": "New rows",
   "@editor.route_tape.field_template": {
     "description": "Route tape editor: New rows"
+  },
+  "editor.route_tape.field_vint": "Start V-int",
+  "@editor.route_tape.field_vint": {
+    "description": "Route tape editor: Start V-int"
+  },
+  "editor.route_tape.field_width": "Width",
+  "@editor.route_tape.field_width": {
+    "description": "Route tape editor: Width"
+  },
+  "editor.route_tape.field_zone": "Zone index",
+  "@editor.route_tape.field_zone": {
+    "description": "Route tape editor: Zone index"
+  },
+  "editor.route_tape.goal_boundary": "Enter the next level",
+  "@editor.route_tape.goal_boundary": {
+    "description": "Route tape editor: Enter the next level"
+  },
+  "editor.route_tape.goal_level": "Level zone {zone} act {act}",
+  "@editor.route_tape.goal_level": {
+    "description": "Route tape editor: Level zone <zone> act <act>",
+    "placeholders": {
+      "zone": {
+        "type": "String",
+        "example": "3"
+      },
+      "act": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.goal_reach": "{player} reaches {left},{top} to {right},{bottom}",
+  "@editor.route_tape.goal_reach": {
+    "description": "Route tape editor: <player> reaches <left>,<top> to <right>,<bottom>",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "3"
+      },
+      "left": {
+        "type": "String",
+        "example": "3"
+      },
+      "top": {
+        "type": "String",
+        "example": "3"
+      },
+      "right": {
+        "type": "String",
+        "example": "3"
+      },
+      "bottom": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.goal_settled": "{player} settles",
+  "@editor.route_tape.goal_settled": {
+    "description": "Route tape editor: <player> settles",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.goal_within": "{goal} within {rows} rows",
+  "@editor.route_tape.goal_within": {
+    "description": "Route tape editor: <goal> within <rows> rows",
+    "placeholders": {
+      "goal": {
+        "type": "String",
+        "example": "3"
+      },
+      "rows": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.goals_none": "None; replay checks the rows only",
+  "@editor.route_tape.goals_none": {
+    "description": "Route tape editor: None; replay checks the rows only"
   },
   "editor.route_tape.hud_air": "Air",
   "@editor.route_tape.hud_air": {
@@ -191,6 +307,16 @@
   "editor.route_tape.hud_button_word": "Button",
   "@editor.route_tape.hud_button_word": {
     "description": "Route tape editor: Button"
+  },
+  "editor.route_tape.hud_goal_legs": "Goals: {legs} legs (F2 for details)",
+  "@editor.route_tape.hud_goal_legs": {
+    "description": "Route tape editor: Goals: <legs> legs (F2 for details)",
+    "placeholders": {
+      "legs": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.hud_ground": "Ground",
   "@editor.route_tape.hud_ground": {
@@ -310,6 +436,34 @@
       }
     }
   },
+  "editor.route_tape.native_diverged": "Diverged at row {row}: {reason}",
+  "@editor.route_tape.native_diverged": {
+    "description": "Route tape editor: Diverged at row <row>: <reason>",
+    "placeholders": {
+      "row": {
+        "type": "String",
+        "example": "3"
+      },
+      "reason": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.native_diverged_engine_qualified": "Engine-qualified, native-diverged at row {row}: {reason}",
+  "@editor.route_tape.native_diverged_engine_qualified": {
+    "description": "Route tape editor: Engine-qualified, native-diverged at row <row>: <reason>",
+    "placeholders": {
+      "row": {
+        "type": "String",
+        "example": "3"
+      },
+      "reason": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "editor.route_tape.native_entry_none": "None recorded",
   "@editor.route_tape.native_entry_none": {
     "description": "Route tape editor: None recorded"
@@ -368,9 +522,17 @@
   "@editor.route_tape.no_route": {
     "description": "Route tape editor: Open a route first."
   },
+  "editor.route_tape.not_a_manifest": "Choose a .route.json manifest.",
+  "@editor.route_tape.not_a_manifest": {
+    "description": "Route tape editor: Choose a .route.json manifest."
+  },
   "editor.route_tape.note_discard": "Unsaved row edits are lost.",
   "@editor.route_tape.note_discard": {
     "description": "Route tape editor: Unsaved row edits are lost."
+  },
+  "editor.route_tape.qualification_draft": "Draft; not qualified",
+  "@editor.route_tape.qualification_draft": {
+    "description": "Route tape editor: Draft; not qualified"
   },
   "editor.route_tape.qualification_edited": "Edited; replay to qualify",
   "@editor.route_tape.qualification_edited": {
@@ -409,6 +571,16 @@
   "editor.route_tape.status_cancelled": "Route job cancelled.",
   "@editor.route_tape.status_cancelled": {
     "description": "Route tape editor: Route job cancelled."
+  },
+  "editor.route_tape.status_created": "New draft {path}; save it as a draft or replay and save qualified.",
+  "@editor.route_tape.status_created": {
+    "description": "Route tape editor: New draft <path>; save it as a draft or replay and save qualified.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.status_exported": "Exported {path}",
   "@editor.route_tape.status_exported": {
@@ -486,6 +658,16 @@
   "@editor.route_tape.status_replaying": {
     "description": "Route tape editor: Replaying in a separate worker."
   },
+  "editor.route_tape.status_saved_draft": "Saved draft {path}; consumers refuse it until it is qualified.",
+  "@editor.route_tape.status_saved_draft": {
+    "description": "Route tape editor: Saved draft <path>; consumers refuse it until it is qualified.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "editor.route_tape.status_saved_qualified": "Saved after a passing replay of {rows} rows.",
   "@editor.route_tape.status_saved_qualified": {
     "description": "Route tape editor: Saved after a passing replay of <rows> rows.",
@@ -503,6 +685,10 @@
   "editor.route_tape.subtitle_export": "Writes a new BizHawk movie of the working rows.",
   "@editor.route_tape.subtitle_export": {
     "description": "Route tape editor: Writes a new BizHawk movie of the working rows."
+  },
+  "editor.route_tape.subtitle_new": "A cold-level launch over neutral rows; saved as a draft until a replay passes.",
+  "@editor.route_tape.subtitle_new": {
+    "description": "Route tape editor: A cold-level launch over neutral rows; saved as a draft until a replay passes."
   },
   "editor.route_tape.subtitle_open": "Choose a .route.json manifest; its .script sits beside it.",
   "@editor.route_tape.subtitle_open": {
@@ -527,6 +713,10 @@
   "editor.route_tape.title_insert": "Insert rows",
   "@editor.route_tape.title_insert": {
     "description": "Route tape editor: Insert rows"
+  },
+  "editor.route_tape.title_new": "New route",
+  "@editor.route_tape.title_new": {
+    "description": "Route tape editor: New route"
   },
   "editor.route_tape.title_open": "Open route",
   "@editor.route_tape.title_open": {

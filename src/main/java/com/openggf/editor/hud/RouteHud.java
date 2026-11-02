@@ -249,7 +249,7 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             case QUALIFIED -> GOOD;
             case PASSES_UNSAVED -> ACCENT;
             case NOT_QUALIFIED, UNSUPPORTED -> WARN;
-            case EDITED -> GOLD;
+            case EDITED, DRAFT -> GOLD;
             case EMPTY, UNCHECKED -> TEXT_DIM;
         };
     }
@@ -274,7 +274,15 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         facts(c, x, y, half, workspace.launchFacts(), TEXT, pitch);
         float rx = x + half + 8, ry = y;
         c.text(UiMessages.text("editor.route_tape.hud_native_caps"), rx, ry, Size.SMALL, TEXT_FAINT, 1);
-        ry = facts(c, rx, ry + pitch, half, workspace.nativeFacts(), TEXT_DIM, pitch) + 2;
+        ry = facts(c, rx, ry + pitch, half, workspace.nativeFacts(), TEXT_DIM, pitch);
+        var goals = workspace.goalFacts();
+        if (ry + pitch <= bottom) {
+            c.fittedText(goals.size() == 1 ? goals.getFirst()[0] + "  " + goals.getFirst()[1]
+                    : UiMessages.text("editor.route_tape.hud_goal_legs", Map.of("legs", String.valueOf(goals.size()))),
+                    rx, ry, half, Size.SMALL, TEXT_DIM, 1);
+            ry += pitch;
+        }
+        ry += 2;
         if (workspace.overlay() != null && ry + pitch <= bottom) {
             c.rect(rx, ry + 2, 6, 3, RouteTapeOverlay.GROUND, 1);
             c.text(UiMessages.text("editor.route_tape.hud_ground"), rx + 9, ry, Size.SMALL, TEXT_DIM, 1);

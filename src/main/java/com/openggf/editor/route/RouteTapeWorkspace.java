@@ -40,7 +40,7 @@ public final class RouteTapeWorkspace {
             return Path.of("src/test/resources/routes").toAbsolutePath().normalize();
         }
 
-        default void startJob(RouteTapeJob.Request request, String content, int rows) throws IOException {
+        default void startJob(RouteTapeJob.Request request) throws IOException {
             throw new IOException(UiMessages.text("editor.route_tape.jobs_unavailable"));
         }
 
@@ -65,12 +65,14 @@ public final class RouteTapeWorkspace {
     }
 
     public enum Action {
-        OPEN, SAVE, REPLAY, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
+        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
 
         public String label() {
             return switch (this) {
                 case OPEN -> UiMessages.text("editor.route_tape.action_open");
+                case NEW -> UiMessages.text("editor.route_tape.action_new");
                 case SAVE -> UiMessages.text("editor.route_tape.action_save");
+                case SAVE_DRAFT -> UiMessages.text("editor.route_tape.action_save_draft");
                 case REPLAY -> UiMessages.text("editor.route_tape.action_replay");
                 case CANCEL_JOB -> UiMessages.text("editor.route_tape.action_cancel_job");
                 case EXPORT_BK2 -> UiMessages.text("editor.route_tape.action_export_bk2");
@@ -103,8 +105,10 @@ public final class RouteTapeWorkspace {
         NOT_QUALIFIED,
         /** The worker cannot replay this launch here (ROM missing, unsupported inlet). */
         UNSUPPORTED,
-        /** The rows changed since the file's stamps; they have not been replayed. */
+        /** The rows changed since the file was read; they have not been replayed. */
         EDITED,
+        /** An unqualified draft: editors reopen it, consumers refuse it. */
+        DRAFT,
         /** No engine stamp covers the working content. */
         UNCHECKED
     }
@@ -115,7 +119,8 @@ public final class RouteTapeWorkspace {
     private final EditorProjectMenu menu = new EditorProjectMenu();
     private final Deque<InputTape> undo = new ArrayDeque<>();
     private final Deque<InputTape> redo = new ArrayDeque<>();
-    private Path manifest;
+    private Path stem;
+    private boolean unsaved;
     private RouteArtifact loaded;
     private InputTape tape = InputTape.empty();
     private RouteTapeJob.Update job;
@@ -167,8 +172,9 @@ public final class RouteTapeWorkspace {
         return loaded != null;
     }
 
+    /** The route's manifest path, or null for a new route not yet given a file. */
     public Path manifestPath() {
-        return manifest;
+        return stem == null ? null : stem.resolveSibling(stem.getFileName() + RouteFiles.MANIFEST_SUFFIX);
     }
 
     public RouteArtifact loaded() {
@@ -180,15 +186,19 @@ public final class RouteTapeWorkspace {
     }
 
     public boolean dirty() {
-        return loaded != null && !tape.equals(loaded.tape());
+        return loaded != null && (unsaved || !tape.equals(loaded.tape()));
     }
 
-    /** The route as it would be saved: the file's launch, provenance and facts over the working rows. */
+    public boolean draft() {
+        return loaded != null && loaded.manifest().draft();
+    }
+
+    /** The route as it would be saved: the file's launch, goals, provenance and facts over the working rows. */
     public RouteArtifact working() {
         if (loaded == null) return null;
         RouteManifest source = loaded.manifest();
-        return new RouteArtifact(new RouteManifest(source.launch(), tape.hash(), tape.size(), source.provenance(),
-                source.qualification(), source.nativeFacts()), tape);
+        return new RouteArtifact(new RouteManifest(source.launch(), tape.hash(), tape.size(), source.checks(),
+                source.draft(), source.provenance(), source.qualification(), source.nativeFacts()), tape);
     }
 
     public String workingContent() {
@@ -221,23 +231,29 @@ public final class RouteTapeWorkspace {
     public Qualification qualification() {
         if (loaded == null) return Qualification.EMPTY;
         RouteTapeJob.Update current = result();
-        boolean stamped = engineStamp().map(QualificationStamp::passed).orElse(false);
+        boolean stamped = !unsaved && working().engineQualified();
         if (current != null) {
-            return switch (current.phase()) {
-                case PASSED -> stamped ? Qualification.QUALIFIED : Qualification.PASSES_UNSAVED;
-                case FAILED -> Qualification.NOT_QUALIFIED;
-                case UNSUPPORTED -> Qualification.UNSUPPORTED;
-                default -> dirty() ? Qualification.EDITED : stamped ? Qualification.QUALIFIED : Qualification.UNCHECKED;
-            };
+            switch (current.phase()) {
+                case PASSED -> { return stamped ? Qualification.QUALIFIED : Qualification.PASSES_UNSAVED; }
+                case FAILED -> { return Qualification.NOT_QUALIFIED; }
+                case UNSUPPORTED -> { return Qualification.UNSUPPORTED; }
+                default -> { }
+            }
         }
         if (stamped) return Qualification.QUALIFIED;
-        return dirty() ? Qualification.EDITED : Qualification.UNCHECKED;
+        if (engineStamp().isPresent() && !dirty()) return Qualification.NOT_QUALIFIED;
+        if (dirty()) return Qualification.EDITED;
+        return draft() ? Qualification.DRAFT : Qualification.UNCHECKED;
     }
 
-    /** The first row the last replay of the working content could not complete, or -1. */
+    /**
+     * The first row the working content could not complete: from this session's replay, else from
+     * a failed engine stamp in the file; -1 when neither exists.
+     */
     public int divergedRow() {
         RouteTapeJob.Update current = result();
-        return current != null && current.phase() == RouteTapeJob.Phase.FAILED ? current.row() : -1;
+        if (current != null && current.phase() == RouteTapeJob.Phase.FAILED) return current.row();
+        return engineStamp().filter(stamp -> !stamp.passed()).map(stamp -> stamp.divergedRow().orElse(-1)).orElse(-1);
     }
 
     public String qualificationText() {
@@ -249,6 +265,7 @@ public final class RouteTapeWorkspace {
                     Map.of("row", String.valueOf(divergedRow())));
             case UNSUPPORTED -> UiMessages.text("editor.route_tape.qualification_unsupported");
             case EDITED -> UiMessages.text("editor.route_tape.qualification_edited");
+            case DRAFT -> UiMessages.text("editor.route_tape.qualification_draft");
             case UNCHECKED -> UiMessages.text("editor.route_tape.qualification_unchecked");
         };
     }
@@ -300,14 +317,53 @@ public final class RouteTapeWorkspace {
                 ? UiMessages.text("editor.route_tape.native_lag_none")
                 : UiMessages.text("editor.route_tape.native_lag_value",
                         Map.of("count", String.valueOf(facts.lag().size()), "stale", String.valueOf(facts.lag().size() - matching)))));
+        boolean engineQualified = working().engineQualified();
         for (QualificationStamp stamp : loaded.manifest().qualification()) {
             if (stamp.scope() != ReplayScope.BIZHAWK) continue;
-            String verdict = stamp.passed() ? UiMessages.text("editor.route_tape.native_passed") : stamp.verdict();
+            String verdict = stamp.passed() ? UiMessages.text("editor.route_tape.native_passed")
+                    : UiMessages.text(engineQualified ? "editor.route_tape.native_diverged_engine_qualified"
+                            : "editor.route_tape.native_diverged", Map.of("row",
+                            String.valueOf(stamp.divergedRow().orElse(-1)), "reason", stamp.reason()));
             if (!stamp.content().equals(content)) verdict = UiMessages.text("editor.route_tape.native_other_content",
                     Map.of("verdict", verdict));
             lines.add(fact(UiMessages.text("editor.route_tape.fact_native_check"), verdict));
         }
         return List.copyOf(lines);
+    }
+
+    /** The goal program replay checks, one line per leg, in manifest words. */
+    public List<String[]> goalFacts() {
+        if (loaded == null) return List.of();
+        var program = loaded.checks();
+        var lines = new ArrayList<String[]>();
+        if (program.isEmpty()) {
+            lines.add(fact(UiMessages.text("editor.route_tape.fact_goals"), UiMessages.text("editor.route_tape.goals_none")));
+            return List.copyOf(lines);
+        }
+        for (var leg : program.legs()) {
+            String goal = switch (leg.goal()) {
+                case com.openggf.route.RouteGoal.Achieve achieve -> predicateText(achieve.condition());
+                case com.openggf.route.RouteGoal.EnterBoundary ignored -> UiMessages.text("editor.route_tape.goal_boundary");
+            };
+            lines.add(fact(leg.id(), UiMessages.text("editor.route_tape.goal_within", Map.of("goal", goal,
+                    "rows", String.valueOf(leg.maxRows())))));
+        }
+        return List.copyOf(lines);
+    }
+
+    private static String predicateText(com.openggf.route.SamplePredicate predicate) {
+        return switch (predicate) {
+            case com.openggf.route.SamplePredicate.PlayerIn in -> UiMessages.text("editor.route_tape.goal_reach",
+                    Map.of("player", in.player().name(), "left", String.valueOf(in.region().left()),
+                            "top", String.valueOf(in.region().top()), "right", String.valueOf(in.region().right()),
+                            "bottom", String.valueOf(in.region().bottom())));
+            case com.openggf.route.SamplePredicate.Settled settled -> UiMessages.text("editor.route_tape.goal_settled",
+                    Map.of("player", settled.player().name()));
+            case com.openggf.route.SamplePredicate.LevelIs level -> UiMessages.text("editor.route_tape.goal_level",
+                    Map.of("zone", String.valueOf(level.zone()), "act", String.valueOf(level.act() + 1)));
+            case com.openggf.route.SamplePredicate.All all -> String.join(" + ",
+                    all.clauses().stream().map(RouteTapeWorkspace::predicateText).toList());
+        };
     }
 
     private static String[] fact(String label, String value) {
@@ -394,6 +450,12 @@ public final class RouteTapeWorkspace {
         }
         if (loaded != null) {
             var content = working().content();
+            for (QualificationStamp stamp : loaded.manifest().qualification()) {
+                int row = stamp.divergedRow().orElse(-1);
+                if (stamp.scope() == ReplayScope.BIZHAWK && stamp.content().equals(content) && row >= 0 && row < tape.size()) {
+                    markers.add(new RouteTapeTimeline.Marker(RouteTapeTimeline.MarkerKind.NATIVE_DIVERGED, row, row + 1));
+                }
+            }
             for (NativeFacts.LagFact lag : loaded.manifest().nativeFacts().lag()) {
                 if (lag.content().equals(content) && lag.beforeRow() < tape.size()) {
                     markers.add(new RouteTapeTimeline.Marker(RouteTapeTimeline.MarkerKind.NATIVE_LAG,
@@ -431,7 +493,9 @@ public final class RouteTapeWorkspace {
             host.finishPendingEdits();
             switch (action) {
                 case OPEN -> beforeReplace(this::openForm);
+                case NEW -> beforeReplace(this::newForm);
                 case SAVE -> save();
+                case SAVE_DRAFT -> saveDraft();
                 case REPLAY -> replay();
                 case CANCEL_JOB -> cancelJob();
                 case EXPORT_BK2 -> exportForm();
@@ -469,9 +533,14 @@ public final class RouteTapeWorkspace {
 
     public void open(Path source) throws IOException {
         Path absolute = source.toAbsolutePath().normalize();
-        RouteArtifact candidate = RouteFiles.read(absolute);
+        if (!absolute.getFileName().toString().endsWith(RouteFiles.MANIFEST_SUFFIX)) {
+            throw new IOException(UiMessages.text("editor.route_tape.not_a_manifest"));
+        }
+        // Editing reads drafts and unqualified routes too; consumers use RouteFiles.read.
+        RouteArtifact candidate = RouteFiles.readDraft(absolute);
         cancelJob();
-        manifest = absolute;
+        stem = stemOf(absolute);
+        unsaved = false;
         loaded = candidate;
         tape = candidate.tape();
         undo.clear();
@@ -485,11 +554,70 @@ public final class RouteTapeWorkspace {
                 "rows", String.valueOf(tape.size())));
     }
 
-    /** Re-reads the saved route after a qualified save, keeping cursor and edit history. */
+    /** Re-reads the saved route after a save, keeping cursor and edit history. */
     private void reload(Path saved) throws IOException {
-        RouteArtifact candidate = RouteFiles.read(saved);
-        manifest = saved.toAbsolutePath().normalize();
+        RouteArtifact candidate = RouteFiles.readDraft(saved);
+        stem = stemOf(saved.toAbsolutePath().normalize());
+        unsaved = false;
         loaded = candidate;
+    }
+
+    private static Path stemOf(Path manifest) {
+        String name = manifest.getFileName().toString();
+        return manifest.resolveSibling(name.substring(0, name.length() - RouteFiles.MANIFEST_SUFFIX.length()));
+    }
+
+    /** A new unsaved draft route: a cold-level launch over {@code rows} neutral rows, to be saved at {@code manifest}. */
+    public void create(Path manifest, LaunchContract launch, int rows) {
+        Path absolute = manifest.toAbsolutePath().normalize();
+        if (!absolute.getFileName().toString().endsWith(RouteFiles.MANIFEST_SUFFIX)) {
+            throw new IllegalArgumentException(UiMessages.text("editor.route_tape.not_a_manifest"));
+        }
+        if (rows < 1 || rows > InputTape.MAX_ROWS) throw new IllegalArgumentException(UiMessages.text("editor.route_tape.insert_count_range"));
+        var builder = new InputTape.Builder();
+        for (int i = 0; i < rows; i++) builder.add(PadRow.NEUTRAL);
+        InputTape rowsTape = builder.build();
+        cancelJob();
+        var fresh = RouteArtifact.of(launch, rowsTape, new com.openggf.route.Provenance("openggf-editor", "", "", List.of()));
+        loaded = new RouteArtifact(new RouteManifest(launch, rowsTape.hash(), rowsTape.size(), fresh.checks(), true,
+                fresh.manifest().provenance(), List.of(), fresh.manifest().nativeFacts()), rowsTape);
+        tape = rowsTape;
+        stem = stemOf(absolute);
+        unsaved = true;
+        undo.clear();
+        redo.clear();
+        result = null;
+        cursor = 0;
+        first = 0;
+        mark = -1;
+        active = true;
+        status = UiMessages.text("editor.route_tape.status_created", Map.of("path", absolute.getFileName().toString()));
+    }
+
+    private void newForm() {
+        String game = host.currentLevel().map(LevelId::game).orElse("s3k");
+        int zone = host.currentLevel().map(LevelId::zone).orElse(0), act = host.currentLevel().map(LevelId::act).orElse(0);
+        menu.showForm(UiMessages.text("editor.route_tape.title_new"), List.of(
+                new EditorProjectMenu.Field("path", UiMessages.text("editor.route_tape.field_manifest"),
+                        host.initialDirectory().resolve("new-route" + RouteFiles.MANIFEST_SUFFIX).toString(), MenuTextEditor.Mode.PATH),
+                new EditorProjectMenu.Field("game", UiMessages.text("editor.route_tape.field_game"), game, List.of("s1", "s2", "s3k")),
+                new EditorProjectMenu.Field("zone", UiMessages.text("editor.route_tape.field_zone"), String.valueOf(zone), MenuTextEditor.Mode.TEXT, 3),
+                new EditorProjectMenu.Field("act", UiMessages.text("editor.route_tape.field_act"), String.valueOf(act + 1), MenuTextEditor.Mode.TEXT, 2),
+                new EditorProjectMenu.Field("main", UiMessages.text("editor.route_tape.field_main"), "sonic", MenuTextEditor.Mode.TEXT, 24),
+                new EditorProjectMenu.Field("sidekick", UiMessages.text("editor.route_tape.field_sidekick"), "tails", MenuTextEditor.Mode.TEXT, 24),
+                new EditorProjectMenu.Field("width", UiMessages.text("editor.route_tape.field_width"), "320", MenuTextEditor.Mode.TEXT, 4),
+                new EditorProjectMenu.Field("vint", UiMessages.text("editor.route_tape.field_vint"), "0", MenuTextEditor.Mode.TEXT, 6),
+                new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_count"), "60", MenuTextEditor.Mode.TEXT, 7)),
+                UiMessages.text("editor.route_tape.action_create"), values -> {
+                    String chosen = values.get("game");
+                    var level = new LevelId(chosen, Integer.parseInt(values.get("zone").strip()),
+                            Integer.parseInt(values.get("act").strip()) - 1);
+                    var launch = LaunchContract.coldLevel(com.openggf.route.RomIdentity.standard(chosen), level,
+                            new com.openggf.route.Roster(values.get("main").strip(), values.get("sidekick").strip()),
+                            Integer.parseInt(values.get("width").strip()), Integer.parseInt(values.get("vint").strip()));
+                    create(Path.of(values.get("path")), launch, Integer.parseInt(values.get("rows").strip()));
+                });
+        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_new"));
     }
 
     private void openForm() {
@@ -527,6 +655,17 @@ public final class RouteTapeWorkspace {
         startJob(RouteTapeJob.Kind.SAVE);
     }
 
+    /** Saves the working rows as an unqualified draft; a draft never replaces a qualified route. */
+    private void saveDraft() {
+        requireRoute();
+        io(() -> {
+            var written = RouteFiles.writeDraft(stem, working());
+            reload(written.manifest());
+            status = UiMessages.text("editor.route_tape.status_saved_draft", Map.of("path",
+                    written.manifest().getFileName().toString()));
+        });
+    }
+
     private void replay() {
         requireRoute();
         startJob(RouteTapeJob.Kind.REPLAY);
@@ -535,11 +674,9 @@ public final class RouteTapeWorkspace {
     private void startJob(RouteTapeJob.Kind kind) {
         if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
         if (tape.size() == 0) throw new IllegalStateException(UiMessages.text("editor.route_tape.empty_tape"));
-        String stem = manifest.getFileName().toString();
-        stem = stem.substring(0, stem.length() - RouteFiles.MANIFEST_SUFFIX.length());
-        var request = new RouteTapeJob.Request(kind, manifest, RouteFiles.scriptText(tape),
-                kind == RouteTapeJob.Kind.SAVE ? manifest.resolveSibling(stem) : null, true);
-        io(() -> host.startJob(request, workingContent(), tape.size()));
+        var request = new RouteTapeJob.Request(kind, working(), kind == RouteTapeJob.Kind.SAVE ? stem : null,
+                kind == RouteTapeJob.Kind.SAVE && Files.exists(manifestPath()));
+        io(() -> host.startJob(request));
         job = host.pollJob();
         status = UiMessages.text(kind == RouteTapeJob.Kind.SAVE ? "editor.route_tape.status_saving"
                 : "editor.route_tape.status_replaying");
@@ -584,7 +721,7 @@ public final class RouteTapeWorkspace {
 
     private void exportForm() {
         requireRoute();
-        String name = manifest.getFileName().toString().replace(RouteFiles.MANIFEST_SUFFIX, ".bk2");
+        String name = stem.getFileName() + ".bk2";
         Path suggested = Path.of("target", "route-exports", name).toAbsolutePath().normalize();
         menu.showForm(UiMessages.text("editor.route_tape.title_export"), List.of(new EditorProjectMenu.Field("path",
                 UiMessages.text("editor.route_tape.field_movie"), suggested.toString(), MenuTextEditor.Mode.PATH)),
@@ -714,8 +851,10 @@ public final class RouteTapeWorkspace {
     private void routeMenu() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
         actions.add(action(Action.OPEN));
+        actions.add(action(Action.NEW));
         if (loaded != null) {
             actions.add(action(Action.SAVE));
+            actions.add(action(Action.SAVE_DRAFT));
             actions.add(action(jobRunning() ? Action.CANCEL_JOB : Action.REPLAY));
             actions.add(action(Action.EXPORT_BK2));
             actions.add(action(Action.GO_TO_ROW));
@@ -740,9 +879,10 @@ public final class RouteTapeWorkspace {
     /** Plain-text details for the HUD reader and the desktop help. */
     public String detailsText() {
         var text = new StringBuilder();
-        text.append(manifest == null ? UiMessages.text("editor.route_tape.qualification_empty") : manifest.toString())
+        text.append(manifestPath() == null ? UiMessages.text("editor.route_tape.qualification_empty") : manifestPath().toString())
                 .append("\n\n").append(qualificationText()).append('\n');
         for (String[] fact : launchFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
+        for (String[] fact : goalFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
         text.append('\n').append(UiMessages.text("editor.route_tape.native_heading")).append('\n');
         for (String[] fact : nativeFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
         text.append('\n').append(status);

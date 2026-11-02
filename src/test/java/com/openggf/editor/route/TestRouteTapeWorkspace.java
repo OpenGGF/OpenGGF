@@ -2,7 +2,12 @@ package com.openggf.editor.route;
 
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.route.ContentHash;
+import com.openggf.route.GoalProgram;
 import com.openggf.route.LevelId;
+import com.openggf.route.NativeFacts;
+import com.openggf.route.QualificationStamp;
+import com.openggf.route.ReplayScope;
 import com.openggf.route.PhysicalButton;
 import com.openggf.route.PlayerSlot;
 import com.openggf.route.RouteFiles;
@@ -34,10 +39,10 @@ class TestRouteTapeWorkspace {
         int rows;
 
         @Override
-        public void startJob(RouteTapeJob.Request request, String content, int rows) {
+        public void startJob(RouteTapeJob.Request request) {
             requests.add(request);
-            this.content = content;
-            this.rows = rows;
+            this.content = request.route().content().toString();
+            this.rows = request.route().tape().size();
             update.set(new RouteTapeJob.Update(requests.size(), RouteTapeJob.Phase.RUNNING, request.kind(), 1, 2, 0, rows,
                     "running", content, -1, null, null));
         }
@@ -103,8 +108,7 @@ class TestRouteTapeWorkspace {
         workspace.insertRows(4, true);
         assertEquals(36, workspace.tape().size());
         assertTrue(workspace.tape().row(3).isNeutral());
-        assertEquals(RouteFiles.read(manifest).tape(), RouteFiles.read(manifest).tape(), "Edits never touch the file");
-        assertEquals(35, RouteFiles.read(manifest).tape().size());
+        assertEquals(35, RouteFiles.readDraft(manifest).tape().size(), "Edits never touch the file");
 
         workspace.invoke(RouteTapeWorkspace.Action.OPEN);
         assertTrue(workspace.menu().isOpen(), "Unsaved edits ask before another route replaces them");
@@ -126,8 +130,8 @@ class TestRouteTapeWorkspace {
         assertTrue(workspace.jobRunning());
         var request = host.requests.getFirst();
         assertEquals(RouteTapeJob.Kind.REPLAY, request.kind());
-        assertEquals(manifest, request.manifest());
-        assertEquals(workspace.tape(), RouteFiles.tapeFromScript(request.script()));
+        assertEquals(workspace.tape(), request.route().tape());
+        assertEquals(RouteFiles.readDraft(manifest).launch(), request.route().launch());
         assertEquals(workspace.workingContent(), host.content);
         workspace.invoke(RouteTapeWorkspace.Action.REPLAY);
         assertEquals(1, host.requests.size(), "One job at a time");
@@ -165,15 +169,13 @@ class TestRouteTapeWorkspace {
 
     @Test
     void qualifiedStampsNativeFactsAndLagMarkersAreReadFromTheManifestForTheWorkingContent() throws IOException {
-        String nativeFacts = """
-                {"entry": {"movie": "native/ehz.bk2", "prefixRows": 420, "inputHash": "%s"},
-                 "lag": [{"beforeRow": 4, "harness": "tracechaser 9", "content": "%%CONTENT%%"},
-                         {"beforeRow": 7, "harness": "tracechaser 8", "content": "%s"}]}
-                """.formatted("a".repeat(64), "b".repeat(64));
-        String nativeStamp = "{\"scope\": \"BIZHAWK\", \"verdict\": \"diverged at row 7: x\", \"content\": \"%CONTENT%\", "
-                + "\"environment\": \"bizhawk 2.11\", \"rows\": 10}";
-        Path manifest = RouteTapeFixtures.write(dir, "ehz", "10 R\n",
-                List.of(RouteTapeFixtures.engineStamp("passed"), nativeStamp), nativeFacts);
+        var other = new ContentHash("b".repeat(64));
+        Path manifest = RouteTapeFixtures.write(dir, "ehz", "10 R\n", GoalProgram.NONE, false,
+                content -> List.of(QualificationStamp.passed(ReplayScope.ENGINE, content, "test", 10),
+                        QualificationStamp.diverged(ReplayScope.BIZHAWK, 7, "x", content, "bizhawk 2.11", 10)),
+                content -> new NativeFacts(Optional.of(new NativeFacts.NativeEntry("native/ehz.bk2", 420,
+                        new ContentHash("a".repeat(64)))), List.of(new NativeFacts.LagFact(4, "tracechaser 9", content),
+                        new NativeFacts.LagFact(6, "tracechaser 8", other))));
         var host = new Host();
         var workspace = new RouteTapeWorkspace(host);
         workspace.open(manifest);
@@ -181,21 +183,60 @@ class TestRouteTapeWorkspace {
         var facts = workspace.nativeFacts();
         assertTrue(facts.get(0)[1].contains("native/ehz.bk2") && facts.get(0)[1].contains("420"));
         assertTrue(facts.get(1)[1].contains("2") && facts.get(1)[1].contains("1"), facts.get(1)[1]);
-        assertEquals("diverged at row 7: x", facts.get(2)[1]);
+        assertEquals("Engine-qualified, native-diverged at row 7: x", facts.get(2)[1]);
         var lag = workspace.timeline().markers().stream()
                 .filter(marker -> marker.kind() == RouteTapeTimeline.MarkerKind.NATIVE_LAG).toList();
         assertEquals(1, lag.size(), "Lag recorded against other content is not drawn on these rows");
         assertEquals(4, lag.getFirst().from());
-        assertEquals(List.of(4), workspace.factRows());
+        assertEquals(List.of(4, 7), workspace.factRows(), "Native lag and the native divergence are both facts");
         workspace.invoke(RouteTapeWorkspace.Action.NEXT_FACT);
         assertEquals(4, workspace.cursor());
+        workspace.invoke(RouteTapeWorkspace.Action.NEXT_FACT);
+        assertEquals(7, workspace.cursor());
 
         workspace.invoke(RouteTapeWorkspace.Action.TOGGLE);
         assertEquals(RouteTapeWorkspace.Qualification.EDITED, workspace.qualification());
-        assertTrue(workspace.nativeFacts().get(2)[1].contains("diverged at row 7"),
+        assertEquals("Diverged at row 7: x (other content)", workspace.nativeFacts().get(2)[1],
                 "The native verdict stays visible, marked as describing other content");
-        assertNotEquals("diverged at row 7: x", workspace.nativeFacts().get(2)[1]);
         assertTrue(workspace.timeline().markers().isEmpty());
+    }
+
+    @Test
+    void draftsSaveInProcessReopenAsDraftsAndNeverReplaceAQualifiedRoute() throws IOException {
+        var workspace = new RouteTapeWorkspace(new Host());
+        workspace.create(dir.resolve("fresh.route.json"), RouteTapeFixtures.ehz(), 30);
+        assertTrue(workspace.dirty(), "A new route is unsaved");
+        assertEquals(RouteTapeWorkspace.Qualification.EDITED, workspace.qualification());
+        assertEquals(30, workspace.tape().size());
+        assertTrue(workspace.tape().row(29).isNeutral());
+        workspace.setTrack(RouteTapeTimeline.TRACKS.indexOf(new RouteTapeTimeline.Track(PlayerSlot.P1, PhysicalButton.RIGHT)));
+        workspace.invoke(RouteTapeWorkspace.Action.TOGGLE);
+        workspace.invoke(RouteTapeWorkspace.Action.SAVE_DRAFT);
+        assertFalse(workspace.dirty());
+        assertEquals(RouteTapeWorkspace.Qualification.DRAFT, workspace.qualification());
+        Path draft = dir.resolve("fresh.route.json");
+        assertTrue(RouteFiles.readDraft(draft).manifest().draft());
+        assertThrows(IOException.class, () -> RouteFiles.read(draft), "Consumers refuse drafts");
+        var reopenedHost = new Host();
+        var reopened = new RouteTapeWorkspace(reopenedHost);
+        reopened.open(draft);
+        assertEquals(RouteTapeWorkspace.Qualification.DRAFT, reopened.qualification());
+        assertTrue(reopened.tape().row(0).held(PlayerSlot.P1, PhysicalButton.RIGHT));
+        reopened.invoke(RouteTapeWorkspace.Action.SAVE);
+        var save = reopenedHost.requests.getLast();
+        assertTrue(save.replace(), "A qualified save replaces the draft on disk");
+
+        Path qualified = RouteTapeFixtures.write(dir, "ehz", "10 R\n", GoalProgram.NONE, false,
+                content -> List.of(QualificationStamp.passed(ReplayScope.ENGINE, content, "test", 10)),
+                content -> NativeFacts.NONE);
+        var edited = new RouteTapeWorkspace(new Host());
+        edited.open(qualified);
+        edited.invoke(RouteTapeWorkspace.Action.TOGGLE);
+        edited.invoke(RouteTapeWorkspace.Action.SAVE_DRAFT);
+        assertTrue(edited.dirty(), "A draft never replaces the qualified route");
+        assertTrue(RouteFiles.read(qualified).engineQualified());
+        assertThrows(IllegalArgumentException.class,
+                () -> workspace.create(dir.resolve("plain.json"), RouteTapeFixtures.ehz(), 1));
     }
 
     @Test

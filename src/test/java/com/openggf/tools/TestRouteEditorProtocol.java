@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestRouteEditorProtocol {
     @Test
     void requestsAndResponsesRoundTripIncludingSpacesAndNewlinesInText() throws IOException {
-        var request = new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.SAVE, Path.of("/a b/ehz.route.json"),
-                "# rows\n3 R\n1 R+A / L\n", Path.of("/a b/ehz"), true, Map.of("s2", Path.of("/roms/s 2.gen")));
+        var request = new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.SAVE,
+                "{\n  \"format\": \"route text\"\n}", Path.of("/a b/ehz"), true, Map.of("s2", Path.of("/roms/s 2.gen")));
         var decoded = RouteEditorProtocol.decodeRequest(new RouteEditorProtocol.LineReader(
                 new StringReader(RouteEditorProtocol.encode(request))));
         assertEquals(request, decoded);

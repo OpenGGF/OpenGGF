@@ -508,7 +508,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		});
 		this.routeTapes = new com.openggf.editor.route.RouteTapeWorkspace(new com.openggf.editor.route.RouteTapeWorkspace.Host() {
 			private final com.openggf.editor.route.RouteTapeJob job = new com.openggf.editor.route.RouteTapeJob(Engine.this::routeTapeRoms);
-			public void startJob(com.openggf.editor.route.RouteTapeJob.Request request, String content, int rows) throws IOException { job.start(request, content, rows); }
+			public void startJob(com.openggf.editor.route.RouteTapeJob.Request request) throws IOException { job.start(request); }
 			public com.openggf.editor.route.RouteTapeJob.Update pollJob() { return job.poll(); }
 			public void cancelJob() { job.cancel(); }
 			public java.util.Optional<com.openggf.route.LevelId> currentLevel() {

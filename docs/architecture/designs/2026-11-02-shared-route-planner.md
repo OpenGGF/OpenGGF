@@ -251,7 +251,8 @@ per line): bounded progress, path points and one result on stdout; cancel destro
 tree. `RouteTapeJob` is the only editor class that references the protocol, an explicitly owned
 `editor -> tools` dependency.
 
-Pure file and value work stays in the editor process: `RouteFiles.read`, `tapeFromScript`,
+Pure file and value work stays in the editor process: `RouteFiles.readDraft` (editors open
+drafts and unqualified routes; consumers use `read`), `writeDraft`, `tapeFromScript`,
 `scriptText`, `exportBk2`, tape edits and timeline layout.
 
 `ReplayEvidence` cannot leave the worker (no public constructor, by design). So **Save** is a
@@ -399,11 +400,16 @@ declares. `defeat` needs a hit-point target.
 
 Recorded during implementation; each states what the sketch said, what was built, and why.
 
-- **Editor worker transport is interim (editor, step 1).** The editor plan hands the worker the
-  original manifest path plus the working rows as script text, so a route must exist on disk
-  before it can be replayed or saved; New route waits for the public manifest codec and
-  `RouteFiles.writeDraft` (gap 3). Replay runs two passes, `RouteReplay.open` for the path and
-  `RouteReplay.replay` for the verdict, until the replay observer (gap 1) lands.
+- **Editor worker transport (editor, step 1).** The first editor slice (`fceed7b1d`) handed the
+  worker the original manifest path plus script text and replayed twice (playback for the path,
+  then the qualifying replay). Once the facade gained `RouteCodec.formatTransport` and the replay
+  observer (`3432b401d`), the worker takes the in-memory route as transport text and replays once,
+  copying post-row centres from the qualifying pass; new routes no longer need a file first.
+- **The worker needs GL (editor, step 1).** `EngineRouteHosts` boots a `GameplayCaptureSession`, so
+  the worker opens a GL context. On Linux the job launches it with surfaceless EGL and no display
+  variables (a parent's explicit `openggf.headless.gl` passes through); other platforms keep the
+  engine's hidden-window default. The first slice stripped the display without selecting EGL and
+  failed with "Unable to initialize GLFW" in the desktop picture run.
 - **Shared worker plumbing not extracted yet (editor, step 1).** The plan put
   `StageplayRouteJob`'s process lifecycle into one shared helper. Step 3 replaces the Stageplay
   route job's planning, so the extraction waits for it rather than churning a file the planner

@@ -13,8 +13,9 @@ import java.util.Objects;
  * Line protocol between the editor's route tape job and the isolated {@link RouteEditorWorker}.
  * Pure text: it holds no engine state. Free text travels as Base64 so a record is one line.
  *
- * <p>Request (stdin): {@link #MAGIC}, then {@code kind}, {@code manifest}, {@code script},
- * optional {@code target}/{@code replace}, one {@code rom <game> <path>} per game, then {@code end}.
+ * <p>Request (stdin): {@link #MAGIC}, then {@code kind}, {@code route} (the
+ * {@code RouteCodec} transport text, rows inline), optional {@code target}/{@code replace}, one
+ * {@code rom <game> <path>} per game, then {@code end}.
  * Response (stdout): {@code progress}, {@code point} and finally one {@code result}, with
  * {@code saved} before it when a save wrote the route.
  */
@@ -28,16 +29,14 @@ public final class RouteEditorProtocol {
     public enum Verdict { PASSED, FAILED, UNSUPPORTED }
 
     /**
-     * @param manifest the route manifest that supplies launch, provenance and native facts
-     * @param script   the working rows as route-script text
-     * @param target   for {@link Kind#SAVE}: the stem to write
-     * @param replace  for {@link Kind#SAVE}: replace an existing route rather than write a new one
+     * @param route   the working route as {@code RouteCodec} transport text (launch, goals, rows)
+     * @param target  for {@link Kind#SAVE}: the stem to write
+     * @param replace for {@link Kind#SAVE}: replace an existing route rather than write a new one
      */
-    public record Request(Kind kind, Path manifest, String script, Path target, boolean replace, Map<String, Path> roms) {
+    public record Request(Kind kind, String route, Path target, boolean replace, Map<String, Path> roms) {
         public Request {
             Objects.requireNonNull(kind, "kind");
-            Objects.requireNonNull(manifest, "manifest");
-            Objects.requireNonNull(script, "script");
+            Objects.requireNonNull(route, "route");
             roms = Map.copyOf(roms);
             if (kind == Kind.SAVE && target == null) throw new IllegalArgumentException("a save names its target stem");
         }
@@ -62,8 +61,7 @@ public final class RouteEditorProtocol {
     public static String encode(Request request) {
         var out = new StringBuilder(MAGIC).append('\n');
         out.append("kind ").append(request.kind()).append('\n');
-        out.append("manifest ").append(text(request.manifest().toString())).append('\n');
-        out.append("script ").append(text(request.script())).append('\n');
+        out.append("route ").append(text(request.route())).append('\n');
         if (request.target() != null) out.append("target ").append(text(request.target().toString())).append('\n');
         out.append("replace ").append(request.replace()).append('\n');
         request.roms().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(rom ->
@@ -74,19 +72,18 @@ public final class RouteEditorProtocol {
     public static Request decodeRequest(LineReader input) throws IOException {
         if (!MAGIC.equals(input.readLine(MAGIC.length()))) throw new IOException("not a route worker request");
         Kind kind = null;
-        Path manifest = null, target = null;
-        String script = null;
+        Path target = null;
+        String route = null;
         boolean replace = false;
         var roms = new LinkedHashMap<String, Path>();
         for (String line; (line = input.readLine(MAX_RECORD_CHARS)) != null; ) {
             if (line.equals("end")) {
-                return new Request(kind, manifest, script, target, replace, roms);
+                return new Request(kind, route, target, replace, roms);
             }
             String[] field = line.split(" ", 3);
             switch (field[0]) {
                 case "kind" -> kind = Kind.valueOf(field[1]);
-                case "manifest" -> manifest = Path.of(untext(field[1]));
-                case "script" -> script = untext(field[1]);
+                case "route" -> route = untext(field[1]);
                 case "target" -> target = Path.of(untext(field[1]));
                 case "replace" -> replace = Boolean.parseBoolean(field[1]);
                 case "rom" -> {
