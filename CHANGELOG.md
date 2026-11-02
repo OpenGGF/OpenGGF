@@ -9,6 +9,9 @@ S3K capsule and cutscene-button routines now share their common behavior; the
 object ownership audit also corrected explosion RNG/allocation drift and FBZ
 capsule sprite/plane priority, with rewind-safe opening control ownership.
 
+
+- LBZ2 submits native EggRobo-head art during head initialization.
+- Solo S2 title-card entry records leader history during its native object passes.
 - Knuckles restores the native animation after non-flat glide landings.
 - LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
 
