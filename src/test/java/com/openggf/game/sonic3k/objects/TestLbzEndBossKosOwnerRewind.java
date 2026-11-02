@@ -68,6 +68,24 @@ class TestLbzEndBossKosOwnerRewind {
     }
 
     @Test
+    void readyConstructionOwnerIsClaimedAfterCameraLeavesAdmissionRange() throws Exception {
+        Harness harness = queueOwner();
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        HardwareWorkHandle expected = ownerHandle(harness.boss(), timing);
+        long nextOrdinal = nextKosOrdinal(timing);
+        drain(timing);
+        GameServices.camera().setX((short) 0x3B21);
+        GameServices.camera().setY((short) 0x05A0);
+
+        harness.boss().update(1, harness.fixture().sprite());
+
+        assertFalse(timing.isPending(expected));
+        assertTrue((boolean) field(harness.boss(), "bossArtLoaded"),
+                "camera admission must not strand an already-submitted construction owner");
+        assertEquals(nextOrdinal, nextKosOrdinal(timing));
+    }
+
+    @Test
     void restoredOrdinalWithoutPendingParentFailsClosed() throws Exception {
         Harness harness = queueOwner();
         HardwareTimingService timing = GameServices.hardwareTiming();

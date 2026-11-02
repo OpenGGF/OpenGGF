@@ -2470,3 +2470,13 @@ regression scope. Native pixel and route/configuration breadth remain open.
 The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#sanctuary-foreground-initialization-2026-11-02)
 records the local foreground-clear regression for sanctuary entry and Super
 Emerald results rebuilds; inherited route and native presentation gaps remain.
+
+
+LBZ2 camera-admission follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#camera-admitted-end-boss-art-ownership--2026-11-02)
+records the launcher-art admission boundary, pending/ready recreation and
+missing-owner controls. The local worker passes24 focused checks and advances
+its standalone replay249→239 errors, without qualifying a complete route.
+Combined integration passes25 boss/rewind checks, including the already-owned
+ready-job camera-exit edge, within322 functional cases with zero skips; both
+known replay frontiers remain red. Inherited cold traversal, roster/donor/viewport
+and presentation gaps remain open.

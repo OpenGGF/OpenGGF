@@ -122582,3 +122582,129 @@ fixture-only normalized camera witness supplies no new engine parity rows.
 Physical-frame, whole-act, campaign, full-route rewind and parent broad-smoke
 qualification remain unclaimed. The branch is retained locally for the lead;
 only owned diagnostic logs/reports are removed after inspection.
+
+
+## 2026-11-02 — KiS2 glide landing and LBZ2 camera-owned art
+
+Worker base: `2557cf5b09c2bc4c4feff41540b3b4d606b3fa39`.
+Lead integration base: `a8f3f8647ed1e0920e7ee5119a8ce11a1d6a2ad6`.
+The two local repairs are combined in `91ea642e5`, plus the lead owner-service
+correction described below. Combined verification is complete. Neither replay
+frontier is green.
+
+- `2832c01cf`: native non-flat Knuckles glide landing resets unsigned animation
+  bytes at or above `$20` to Walk. The flat slide and tested lower animation
+  values are retained. KiS2 EHZ1 advances from 93 to 91 errors across all 1,817
+  compared rows, gate reached, no warnings/skips: the animation row289 and
+  mapping rows289–290 spans disappear. The 91 history-bootstrap errors retain
+  their exact field/count profile (cursor, 26 X entries, 64 Y entries).
+  The worker's 271 focused movement/loading checks pass without skips.
+- `c839a6bde`: LBZ end-boss art `$376542` to VRAM `$84A0` is submitted only after
+  native camera admission, rather than merely because object loading constructed
+  the owner. The worker replay advances 249 to 239 errors: 242 to 232 physics,
+  seven animation in both. Both gates complete: 6,444 planned rows / 6,309 gameplay
+  comparisons, no skips/bootstrap errors. Twenty-four boss/rewind cases pass.
+
+Lead comparison against the survey's completed per-class baseline at `a8f3f8647`
+confirms every non-queue/timing error record is identical to the LBZ worker
+candidate. Direct `active_source` errors split from three spans into eight,
+but covered mismatch frames fall from 6,248 to 13: removing a single long
+spurious source block exposes shorter genuine missing-producer gaps. Do not
+interpret span count alone as regression or hide the new first queue frontier.
+The remaining queue frontier starts at row858, expected EggRobo-head source
+`$15FDDE`, engine absent. The row945 movement/animation disagreement, frame-zero
+rings55/0 and unmatched completions from6313 remain separate work.
+
+Native references:
+
+- KiS2 `Knuckles_BeginSlide` and `Sonic_ResetOnFloor_Part3`: `s2.asm` at
+  reference `c336fed`, lines38217–38234 and40997–41020, respectively.
+- `Knux_Gliding_HitFloor` (`skdisasm/sonic3k.asm:30776-30791`).
+- `Knux_TouchFloor` (`skdisasm/sonic3k.asm:32869-32908`).
+- `Obj_LBZEndBoss` (`skdisasm/sonic3k.asm:153420-153434`).
+- `loc_73906` (`skdisasm/sonic3k.asm:153440-153456`).
+- `Check_CameraInRange` (`skdisasm/sonic3k.asm:180524-180554`).
+
+S3K line ranges use pinned reference `8b2cf3c4178f`; dirty-checkout evidence was
+checked by label and remapped to that reference. The five new S3K anchors pass
+a strict isolated citation check. Existing historical citation debt was not
+rewritten. These are read-only research references; no ROM assets or disassembly
+pins/content were changed.
+
+Worker commands used the queued Maven wrapper, Java25, `-Dmse=off`, surfaceless
+EGL with display variables unset, original absolute supported ROM paths,
+`-Ptrace-replay`, and exact selectors. KiS2 selected
+`TestKis2MovementRules,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`;
+LBZ selected
+`TestS3kKnucklesLbz2BigArmTraceReplay,TestLbzEndBossKosOwnerRewind,TestLbzEndBossInstance`.
+
+The LBZ report still advertises nine unimplemented auxiliary comparators:
+`cage_state_per_frame`, `cage_execution_per_frame`, `velocity_write_per_frame`,
+`position_write_per_frame`, `sonic_record_pos_per_frame`,
+`tails_cpu_normal_step_per_frame`, `sidekick_interact_object_per_frame`,
+`cnz_cylinder_state_per_frame`, `cnz_cylinder_execution_per_frame`.
+No full auxiliary parity, full-suite or complete campaign qualification is
+claimed. Shared timing authority, bootstrap hydration and expected values remain
+unchanged. The lead reproduced a construction-admitted ready owner stranded
+after the camera left range before its first update (one failure, zero skips).
+Servicing now recognizes an existing art ordinal as ownership, independently
+of whether the first ordinary update has latched camera admission. This grants
+no new submission outside camera range.
+
+Combined command: queued Maven with `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, `-Ptrace-replay`,
+`-Dsurefire.forkCount=1`, `-Dsurefire.reuseForks=true`, the original absolute
+S1/S2/S3K ROM paths, Java25 and unset display variables. Exact `-Dtest` selector:
+
+```text
+TestKis2MovementRules,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kKnucklesLbz2BigArmTraceReplay,TestLbzEndBossKosOwnerRewind,TestLbzEndBossInstance,TestHardwareTimingAuthorityGuard,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits
+```
+
+Outcome: 324 cases, two known replay failures, zero errors/skips. All322
+functional checks pass: 271 movement/loading,25 boss/rewind,25 timing-authority,
+and one art-mapping check. Twelve selectors expand to13 concrete classes because
+both loading classes share a simple name. KiS2 remains91 errors (all bootstrap,
+zero animation) and LBZ remains239 (232 physics/seven animation), with completed
+gates and the same row counts as above. Every LBZ nonqueue/timing error record
+matches the survey baseline; no functional regression is hidden by error totals.
+Root queue wait was659s; Maven execution108s including compilation. The isolated
+owner regression waited139s and executed98s including its clean build. These
+intervals are not added to overlapping worker/survey intervals as elapsed time.
+
+The change-based planner selects all4,395 smoke classes for the shared movement
+file. Focused delivery coverage replaces that disproportionate selection: the
+runtime edits are the Knuckles-only non-flat animation tail and one boss's
+submission/owner-service boundary; ordinary collision, other movement dispatch,
+queue algorithms and timing authority are unchanged. Both native rule profiles,
+flat/lower-animation controls, camera boundaries, forced recreation, art mappings,
+timing guards and all four S3K keep-green classes are exercised. No smoke-suite,
+full-suite, complete-act or complete-run pass is claimed.
+
+### Historical representatives in this fleet
+
+At unchanged base `2557cf5b0`, four exact methods ran without skips:
+
+- `TestFbzAct2RouteHeadless#starpost5WaveExecutesTheLowerMagneticPlatformAndChain`
+  passes. Its historical failing full-route method was removed; this short
+  witness does not renew full-route qualification.
+- `TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions`
+  still dies at input26853, centre($339D,$05B6), with zero rings.
+- `TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo`
+  dies at input19924, airborne near($0E96,$0A2B), with zero rings. The historical
+  death was14721; this observation was made without a fleet code change and
+  is not attributed to these repairs. Neither death identifies a responsible
+  contact or establishes a shipped-ROM mismatch.
+- `TestS2EhzHalfpipeRoundTripChain#ehzHalfpipeRoundTrip` still fails two return-gap
+  timestamp axes: eight fields per return, all65 rows early. All three gameplay
+  segment reports have zero physics/animation/bootstrap errors; represented
+  dynamic-art reports pass5,733 and6,381 comparisons. This was the full method,
+  not a lifecycle-prefix substitute. No correction constant was introduced.
+
+FBZ used its default exact selection, cold methods used the explicit
+`exhaustive-audit` profile, and halfpipe used `trace-replay`. An observation-only
+cold rerun was restored before handoff. Measured test execution was about73s,
+Maven/build execution263s and queue waiting3,008s; no source changes or live
+handles remain in that worker. Four other historical campaign classes and nine
+other cold-route classes remain unmeasured by this fleet. CNZ remains with the
+existing solid-order effort. Broader survey hypotheses and policy questions
+await user priorities and do not authorize additional work or hydration.

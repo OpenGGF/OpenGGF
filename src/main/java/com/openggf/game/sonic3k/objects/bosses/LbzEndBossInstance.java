@@ -226,7 +226,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         // Obj_LBZEndBoss: Check_CameraInRange must admit loc_73906 before
         // Queue_Kos_Module may submit ArtKosM_LBZEndBoss. Once admitted, the
         // native object skips the camera check on all subsequent dispatches.
-        if (cameraRangeLatched || isCameraInRange()) {
+        // Construction may already own the submitted job before the first update
+        // latches camera admission. Keep servicing that owner after camera exit.
+        if (bossArtOrdinal >= 0 || cameraRangeLatched || isCameraInRange()) {
             serviceBossArtQueue();
         }
         if (paletteRuntimeIntegrationPending) {
