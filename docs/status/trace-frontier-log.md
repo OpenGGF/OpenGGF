@@ -122969,3 +122969,35 @@ New MGZ frontier: the engine runs EndSignControl in slot 21 after results in slo
 runs control in slot 7 before results/title in slot 8 (`Obj_EndSignControlAwaitStart
 (sonic3k.asm:180502-180508)`, `Restore_PlayerControl2 (sonic3k.asm:180455-180461)`).
 Assigned to branch `bugfix/ai-trace-endsign-control-order`.
+
+## 2026-11-02 — S3K segment entry provenance and the top-solid landing window (wave 1 of the trace survey)
+
+Two lanes, validated together on integration merge `53f5c041e`: develop `6cdd598c7` +
+`bugfix/ai-trace-segment-inlet-start` (`59104e0e2`) + `bugfix/ai-trace-s3k-topsolid-zero-distance`
+(`6f454d71b`, `42821ffe3`, `34da523ea`). The comparison baseline is develop `6cdd598c7` in a separate
+worktree. Both trees ran `-Ptrace-replay`, `-Ptrace-replay-r7` and `-Ptrace-segments`, with forkCount=1,
+alphabetical order, JDK 25, original ROMs and surfaceless EGL. Totals are identical:
+r6 886 tests / 13 failed / 1 error / 7 skipped; r7 117 / 84 / 12 / 0; seg 70 / 48 / 8 / 0. No
+trace is newly red, and no first error moved earlier. Every r6 case is identical.
+
+- Entry provenance (`59104e0e2`): `SpriteManager.initializeInitialAssemblyPlayableSlot()` wrote
+  a spawn offset over the HPZ shrine controller's placement of both players at `$1640,$3A3`
+  (`sub_90A4C (sonic3k.asm:197928-197936)`; `Tails_Init (sonic3k.asm:26141-26200)` writes no
+  position). Seven `$1701` Sonic+Tails shrine fixtures now have their first error later:
+  `dez23` 175@0 → 172@77, `dez23_2` 30@0 → 20@123, `_3` 45 → 15@138, `_4` 60 → 53@135,
+  `_5` 68 → 24@141, `_6` 71 → 76@105 (frontier moves; 5 later errors exposed), `_7` 50 → 50@133.
+  Positioned-entry camera corrections (`loc_1BF70/loc_1BF74 (sonic3k.asm:38281-38316)`, the Tails
+  +4 at `loc_6B42`) are implemented but enabled only with positive spawn-order provenance:
+  34 camera-Y and 3 camera-X fixtures are held pending a ruling on entry-kind provenance.
+  KiS2 EHZ1 is unchanged at 38 history-Y errors, pending a recorder-observed
+  `level_entry_placement_source` (S2/KiS2 `Last_star_pole_hit` $FFFE30; S3K `Last_star_post_hit`
+  $FFFE2A at `loc_1BE46`).
+- Top-solid window (`6f454d71b`, `42821ffe3`): every proved S3K top-solid helper path reaching
+  `loc_1E45A (sonic3k.asm:42044-42055)` now rejects a 0 px landing (the 1–16 px unsigned window).
+  First errors later: Sonic+Tails LRZ 8897@208 → 8328@2355; Tails LRZ 659@218 → 307@2120; Tails HPZ
+  1013@1841 → 740@2159. Totals down: Tails Pachinko/2/3 760/633/192 → 10/26/22; Sonic+Tails
+  Pachinko2 1258 → 443; Sonic+Tails SSZ (DEZ1) 3076 → 2558; Sonic+Tails HPZ 2157 → 1808; Dez238
+  819/434 → 772/412. Higher totals with first errors unchanged, each attributed to errors after
+  an existing divergence (`34da523ea`): Tails MHZ4 411 → 687 (first difference at row 1623, after
+  the row-171 movement divergence), Sonic+Tails Pachinko 1638 → 1659 (first addition at row 659,
+  after displacement at 658), Sonic+Tails MHZ7 493 → 494.
