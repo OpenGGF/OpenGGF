@@ -76,6 +76,20 @@ class TestGameLoopBonusStageSession {
     }
     private void release() throws Exception { TitleCardLifecycleTestAccess.release(loop); }
 
+    @Test void slotsTitleCardDoesNotSpawnSavedShield() {
+        var nativeProvider = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        nativeProvider.onEnter(BonusStageType.SLOT_MACHINE, null);
+        provider(loop, nativeProvider);
+        var saved = new BonusStageState(0, 0, 50, 0, 0,
+                1 << GameLoop.STATUS_FIRE_SHIELD_BIT, 0, 0, 0, 0, 0, 0,
+                (byte) 0, (byte) 0, 0, 0L, 0);
+        var session = (GameLoopBonusStageSession) read(loop, "bonusSession");
+        session.prepareBonusStageForTitleCard(BonusStageType.SLOT_MACHINE, saved);
+        verify(player, never()).giveShield(any());
+        assertEquals(ShieldType.FIRE, GameLoop.resolveShieldToRestore(
+                BonusStageProvider.BonusStageRewards.none(), saved.savedStatusSecondary()));
+    }
+
     @Test void admissionShortCircuitsBeforeCaptureOrPresentation() throws Exception {
         mode(GameMode.BONUS_STAGE); enter(loop, BonusStageType.GUMBALL);
         verifyNoInteractions(module, audio, fade, levels, sprites);

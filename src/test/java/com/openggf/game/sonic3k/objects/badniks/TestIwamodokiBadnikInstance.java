@@ -1,5 +1,11 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.game.ShieldType;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.session.SessionManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -30,6 +36,7 @@ class TestIwamodokiBadnikInstance {
 
     @BeforeEach
     void initBounds() {
+        TestEnvironment.resetAll();
         AbstractObjectInstance.updateCameraBounds(BASE_X - 160, BASE_Y - 112,
                 BASE_X + 160, BASE_Y + 112, 0);
     }
@@ -37,6 +44,7 @@ class TestIwamodokiBadnikInstance {
     @AfterEach
     void tearDown() {
         AbstractObjectInstance.resetCameraBoundsForTests();
+        SessionManager.clear();
     }
 
     /** {@code ObjDat_Iwamodoki}: {@code dc.b $C,$C,0,0} and {@code dc.w $280} (:188198-188199). */
@@ -152,6 +160,57 @@ class TestIwamodokiBadnikInstance {
             assertEquals(expected[i][3], fragment.yVel(), "fragment " + i + " y_vel");
             assertEquals(expected[i][4], fragment.mappingFrame(),
                     "fragment " + i + " (subtype >> 2) + 6");
+        }
+    }
+
+    @Test
+    void selfDestructionReleasesShieldedRidersButLeavesOtherSupportsAlone() {
+        for (var shield : ShieldType.values()) {
+            var sonic = player(BASE_X);
+            var tails = player(BASE_X);
+            var other = player(BASE_X + 100);
+            sonic.setGameRulesForTest(GameRules.SONIC_3K);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            sonic.setShieldStateForTest(true, shield);
+            var query = new ObjectPlayerQuery(
+                    () -> sonic, () -> List.of(tails, other));
+            var services = new TestObjectServices() {
+                @Override public ObjectPlayerQuery playerQuery() {
+                    return query;
+                }
+            }.withIsolatedObjectManager();
+            var bomb = lit(services);
+            var support = new IwamodokiBadnikInstance(
+                    new ObjectSpawn(BASE_X + 100, BASE_Y, OBJECT_ID, 0, 0, false, 0));
+            var manager = services.objectManager();
+            for (var rider : List.of(sonic, tails)) {
+                rider.setCentreY((short) (BASE_Y - 0x0C - rider.getYRadius() + 1));
+                rider.setYSpeed((short) 0x100);
+                rider.setAir(true);
+            }
+            bomb.snapshotPreUpdatePosition();
+            manager.processImmediateInlineSolidCheckpoint(bomb, sonic, List.of(tails));
+            for (var rider : List.of(sonic, tails)) {
+                assertTrue(manager.hasObjectStandingBit(rider, bomb), "landed: " + shield);
+                assertTrue(rider.isOnObject());
+            }
+            manager.forceRidingObjectForBootstrap(other, support);
+            other.setOnObject(true);
+            other.setAir(false);
+
+            for (int frame = 10; frame < 400 && !bomb.detonated(); frame++) {
+                bomb.update(frame, sonic);
+            }
+            assertTrue(bomb.detonated());
+            for (var rider : List.of(sonic, tails)) {
+                assertFalse(manager.isRidingObject(rider, bomb), shield.toString());
+                assertFalse(manager.hasObjectStandingBit(rider, bomb));
+                assertFalse(rider.isOnObject());
+                assertTrue(rider.getAir());
+            }
+            assertTrue(manager.isRidingObject(other, support));
+            assertTrue(other.isOnObject());
+            assertFalse(other.getAir());
         }
     }
 

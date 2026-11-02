@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.game.BonusStageProvider;
+import com.openggf.game.BonusStageShieldEntryPolicy;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -9,6 +10,15 @@ import static com.openggf.GameLoopBonusStageSession.*;
 /** Native saved elemental-shield encoding and bonus entry/reward restoration rules. */
 final class BonusStageShieldRestoration {
     private BonusStageShieldRestoration() { }
+
+    static void restoreOnEntry(BonusStageProvider provider,
+                               AbstractPlayableSprite playable, int savedStatusSecondary) {
+        if (provider instanceof BonusStageShieldEntryPolicy policy
+                && !policy.restoresSavedShieldOnEntry()) {
+            return;
+        }
+        applyBonusStageEntryShieldRestore(playable, savedStatusSecondary);
+    }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
         if (playable == null || !playable.hasShield()) {
@@ -65,12 +75,13 @@ final class BonusStageShieldRestoration {
     /**
      * ROM {@code SpawnLevelMainSprites_SpawnPowerup}
      * (docs/skdisasm/sonic3k.asm:8296-8322) runs on every level spawn, and the
-     * bonus zones are explicitly routed into its restore arm --
+     * Gumball and Glowing Spheres zones are explicitly routed into its restore arm --
      * {@code cmpi.b #$13,(Current_zone).w / beq loc_69E0} and the same for
      * {@code #$14} (:8302-8305). It re-gives Player 1 the shield saved in
-     * {@code Saved_status_secondary}, so the ROM's player keeps its elemental
-     * shield for the DURATION of the bonus stage, not only after returning to
-     * the level.
+     * {@code Saved_status_secondary}, so these bonus stages keep the elemental
+     * shield during the bonus stage, not only after returning to
+     * the level. Slots ($15) instead takes the early return; the owning
+     * coordinator excludes it in {@link #restoreOnEntry}.
      *
      * <p>The engine captured the value at entry
      * ({@link #encodeSavedShieldStatus}) but consumed it only on the way out

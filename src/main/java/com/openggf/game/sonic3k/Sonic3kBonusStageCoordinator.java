@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.AbstractBonusStageCoordinator;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStagePlayerPriorityPolicy;
+import com.openggf.game.BonusStageShieldEntryPolicy;
 import com.openggf.game.BonusStageDebugControls;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameServices;
@@ -32,7 +33,7 @@ import com.openggf.level.objects.ObjectSpawn;
  * of Gumball (ROM loc_2D47E lines 61897, 61910-61912).
  */
 public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
-        implements BonusStagePlayerPriorityPolicy, BonusStageDebugControls {
+        implements BonusStageShieldEntryPolicy, BonusStagePlayerPriorityPolicy, BonusStageDebugControls {
 
     private static final int ZONE_GUMBALL  = 0x1300;
     private static final int ZONE_PACHINKO = 0x1400;
@@ -79,6 +80,14 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
     }
     @Override public void afterBonusRuntimeRewindRestore() {
         if (slotRuntime != null) slotRuntime.rebindRuntimeRewindObjects();
+    }
+
+    @Override
+    public boolean restoresSavedShieldOnEntry() {
+        // SpawnLevelMainSprites_SpawnPowerup (sonic3k.asm:8267-8277)
+        // restores zones $13/$14, but
+        // returns for $15 (Slots). Saved shield bits remain for the return.
+        return getActiveType() != BonusStageType.SLOT_MACHINE;
     }
 
     @Override
