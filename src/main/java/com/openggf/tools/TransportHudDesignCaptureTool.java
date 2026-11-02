@@ -19,7 +19,7 @@ import static org.lwjgl.opengl.GL11.glFinish;
 /**
  * Purpose: verify transport HUD clearance and presentation edge cases over any of the three games.
  * Inputs: {@code <ROM> <new-output-dir> [width=320|400]}; writes 3x PNGs and the gameplay state CSV.
- * Origin: 2026-10-27 menu design review round 4.
+ * Origin: 2026-10-27 menu design review round 4; rewind budget states 2026-11-02.
  * Declared display snapshots are comparison pictures, not recording/rewind/parity evidence.
  * Requires display-free EGL and checks the boot-owned no-device audio backend.
  */
@@ -56,9 +56,28 @@ public final class TransportHudDesignCaptureTool {
             var render = type.getDeclaredMethod("render", PixelFontTextRenderer.class, GraphicsManager.class, int.class);
             render.setAccessible(true);
             Object rewind = constructor.newInstance((Supplier<String>) () -> "REWIND 1248");
+            // Finite budget states, built through the runtime's BudgetHudState record.
+            var budgetType = Class.forName("com.openggf.game.rewind.LiveRewindManager$BudgetHudState");
+            var budgetConstructor = budgetType.getDeclaredConstructor(boolean.class, boolean.class, int.class, int.class, boolean.class);
+            budgetConstructor.setAccessible(true);
+            var budgetOverlay = type.getDeclaredConstructor(Supplier.class, Supplier.class);
+            budgetOverlay.setAccessible(true);
+            Object full = budgetOverlay.newInstance((Supplier<String>) () -> "REWIND 1248",
+                    (Supplier<Object>) () -> budget(budgetConstructor, 600, false));
+            Object mid = budgetOverlay.newInstance((Supplier<String>) () -> "REWIND 1248",
+                    (Supplier<Object>) () -> budget(budgetConstructor, 384, false));
+            Object low = budgetOverlay.newInstance((Supplier<String>) () -> "REWIND 1248",
+                    (Supplier<Object>) () -> budget(budgetConstructor, 107, false));
+            // Denied press: no active rewind, so the frame status is absent.
+            Object empty = budgetOverlay.newInstance((Supplier<String>) () -> null,
+                    (Supplier<Object>) () -> budget(budgetConstructor, 0, true));
             try {
                 save(session, out, width, "00-gameplay", () -> { });
                 save(session, out, width, "04-live-rewind", () -> render.invoke(rewind, text, GameServices.graphics(), width));
+                save(session, out, width, "05-rewind-budget-full", () -> render.invoke(full, text, GameServices.graphics(), width));
+                save(session, out, width, "06-rewind-budget-mid", () -> render.invoke(mid, text, GameServices.graphics(), width));
+                save(session, out, width, "07-rewind-budget-low", () -> render.invoke(low, text, GameServices.graphics(), width));
+                save(session, out, width, "08-rewind-budget-empty", () -> render.invoke(empty, text, GameServices.graphics(), width));
                 save(session, out, width, "13-recording-hold", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         UserRecordingHud.holdPromptState(30, 60)));
                 var active = new UserRecordingHudState(true, "REC frame 1248", "ehz1-review.bk2", 1248, false, false);
@@ -76,6 +95,15 @@ public final class TransportHudDesignCaptureTool {
                 save(session, out, width, "25-long-playback-counters", () -> UserRecordingHud.render(text, GameServices.graphics(),
                         new UserRecordingHudState(true, "PLAYBACK FF 2147483646/2147483647", "VERIFY truncated-sidecar",
                                 Integer.MAX_VALUE - 1, true, false)));
+                save(session, out, width, "26-simultaneous-budget-low", () -> {
+                    render.invoke(low, text, GameServices.graphics(), width);
+                    UserRecordingHud.render(text, GameServices.graphics(), active);
+                });
+                save(session, out, width, "27-simultaneous-budget-empty", () -> {
+                    render.invoke(empty, text, GameServices.graphics(), width);
+                    UserRecordingHud.render(text, GameServices.graphics(),
+                            new UserRecordingHudState(true, "PLAYBACK FF 1248/3600", "VERIFY missing-sidecar", 1248, true, false));
+                });
                 requireNoDeviceAudio(session);
                 System.out.println("Captured " + width + "x224 at scale 3; audio=NullAudioBackend; out=" + out);
             } finally {
@@ -87,6 +115,14 @@ public final class TransportHudDesignCaptureTool {
     private static void requireNoDeviceAudio(GameplayCaptureSession session) {
         if (!session.usesNullAudioBackend()) {
             throw new IllegalStateException("Capture requires the boot-owned NullAudioBackend");
+        }
+    }
+
+    private static Object budget(java.lang.reflect.Constructor<?> constructor, int remaining, boolean empty) {
+        try {
+            return constructor.newInstance(true, false, remaining, 600, empty);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
         }
     }
 

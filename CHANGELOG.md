@@ -12,6 +12,8 @@ readable and historical versions can be referenced directly.
 - Clear the native sanctuary openings so stray terrain no longer appears above
   the left Super Emerald pedestals during the results camera descent.
 
+Live rewind now has a configurable consumable budget with checkpoint, act and zone refills, separate stage toggles and an optional life-loss refill.
+
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 - Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
 

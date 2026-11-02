@@ -2395,5 +2395,118 @@
   "settings.teams.keep_help": "Keeps this team in the list of extra teams.",
   "@settings.teams.keep_help": {
     "description": "Extra save-screen teams editor in Settings: help for Done on one team's page."
+  },
+  "settings.key.rewind_budget_scope.label": "Rewind",
+  "@settings.key.rewind_budget_scope.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_budget_scope.help": "Choose when your rewind allowance refills. Replaying the same boundary never refills it again.",
+  "@settings.key.rewind_budget_scope.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_budget_seconds.label": "Rewind budget",
+  "@settings.key.rewind_budget_seconds.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_budget_seconds.help": "Total seconds you can rewind between refills. Forward play does not restore spent time.",
+  "@settings.key.rewind_budget_seconds.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_refill_on_life_loss.label": "Refill on life loss",
+  "@settings.key.rewind_refill_on_life_loss.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_refill_on_life_loss.help": "Restore the allowance after losing a life and respawning.",
+  "@settings.key.rewind_refill_on_life_loss.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_bonus_stages.label": "Bonus-stage rewind",
+  "@settings.key.rewind_bonus_stages.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_bonus_stages.help": "Allow rewind in supported bonus stages. Each visit starts with a fresh allowance.",
+  "@settings.key.rewind_bonus_stages.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_special_stages.label": "Special-stage rewind",
+  "@settings.key.rewind_special_stages.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_special_stages.help": "Allow rewind in supported special stages. Each visit starts with a fresh allowance.",
+  "@settings.key.rewind_special_stages.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.rewind.scope.off": "Off",
+  "@settings.rewind.scope.off": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.scope.checkpoint": "Per checkpoint",
+  "@settings.rewind.scope.checkpoint": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.scope.act": "Per act",
+  "@settings.rewind.scope.act": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.scope.zone": "Per zone",
+  "@settings.rewind.scope.zone": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.unlimited": "Unlimited",
+  "@settings.rewind.unlimited": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.enabled_help": "Used while Rewind is not Off.",
+  "@settings.rewind.enabled_help": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.seconds": "{seconds} s",
+  "@settings.rewind.seconds": {
+    "description": "Rewind allowance in seconds.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.value.checkpoint": "Per checkpoint",
+  "@settings.value.checkpoint": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.act": "Per act",
+  "@settings.value.act": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.zone": "Per zone",
+  "@settings.value.zone": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.unlimited": "Unlimited",
+  "@settings.value.unlimited": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.5": "5 s",
+  "@settings.value.5": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.10": "10 s",
+  "@settings.value.10": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.15": "15 s",
+  "@settings.value.15": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.20": "20 s",
+  "@settings.value.20": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.30": "30 s",
+  "@settings.value.30": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.60": "60 s",
+  "@settings.value.60": {
+    "description": "Rewind setting enum display value."
   }
 }

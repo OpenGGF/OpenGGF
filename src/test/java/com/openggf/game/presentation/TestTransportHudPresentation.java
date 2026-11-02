@@ -52,7 +52,44 @@ class TestTransportHudPresentation {
                 "a one-pixel dark outline must separate the dot from bright scenery");
     }
 
+    @Test
+    void drainedRewindIsToldByFrameDashesAndGlyphShapeNotOnlyColour() throws Exception {
+        for (int width : new int[] {320, 400}) {
+            var drained = new TransportHud.Message(TransportHud.Status.REWIND_EMPTY, "REW", "0.0s", "", 0, "10.0s");
+            var counting = new TransportHud.Message(TransportHud.Status.REWIND, "REW", "6.4s", "", 64, "10.0s");
+            var text = PixelFontTextRenderer.compactMenu();
+            var empty = TransportHud.layout(text, width, TransportHud.Placement.ABOVE_LIVES, drained);
+            var full = TransportHud.layout(text, width, TransportHud.Placement.ABOVE_LIVES, counting);
+            assertEquals(full.width(), empty.width(), "the reserved value keeps the plate and meter still");
+            RgbaImage drainedPixels = render(width, 0, 0, 0, TransportHud.Placement.ABOVE_LIVES, drained);
+            RgbaImage countingPixels = render(width, 0, 0, 0, TransportHud.Placement.ABOVE_LIVES, counting);
+            int frameX = empty.x() + empty.width() / 2, frameY = empty.y();
+            assertTrue(amber(drainedPixels.argb(frameX, frameY)), "drained frame carries the status colour");
+            assertFalse(amber(countingPixels.argb(frameX, frameY)), "a counting frame keeps the shared edge");
+            int trackY = empty.y() + empty.height() - 4, trackX = empty.x() + 4;
+            assertTrue(amber(drainedPixels.argb(trackX, trackY)) && amber(drainedPixels.argb(trackX + 1, trackY)));
+            assertFalse(amber(drainedPixels.argb(trackX + 2, trackY)) || amber(drainedPixels.argb(trackX + 3, trackY)),
+                    "the empty track breaks into dashes");
+            // Skip-to-start: the glyph's first column is a full stop bar; the rewind arrows taper there.
+            int glyphX = empty.x() + 4, glyphY = empty.y() + 4;
+            assertTrue(amber(drainedPixels.argb(glyphX, glyphY)) && amber(drainedPixels.argb(glyphX, glyphY + 6)));
+            int cyanTop = countingPixels.argb(glyphX, glyphY);
+            assertTrue((cyanTop & 255) < 100, "the rewind glyph has no stop bar");
+        }
+    }
+
+    private static boolean amber(int argb) {
+        int r = (argb >>> 16) & 255, g = (argb >>> 8) & 255, b = argb & 255;
+        return r > 180 && g > 100 && b < 90;
+    }
+
     private static RgbaImage render(int width, float r, float g, float b) throws Exception {
+        return render(width, r, g, b, TransportHud.Placement.BOTTOM_RIGHT,
+                new TransportHud.Message(TransportHud.Status.RECORD, "REC", "F:1248", "", -1));
+    }
+
+    private static RgbaImage render(int width, float r, float g, float b, TransportHud.Placement placement,
+                                    TransportHud.Message message) throws Exception {
         try (var context = PresentationOffscreenTestContext.openConfigured(width, 224, CORE_41)) {
             var shader = new ShaderProgram("shaders/shader_debug_color.vert", "shaders/shader_debug_color.glsl");
             var text = PixelFontTextRenderer.compactMenu();
@@ -74,8 +111,7 @@ class TestTransportHudPresentation {
                 glDisable(GL_DEPTH_TEST);
                 glClearColor(r, g, b, 1);
                 glClear(GL_COLOR_BUFFER_BIT);
-                TransportHud.render(text, graphics, width, TransportHud.Placement.BOTTOM_RIGHT,
-                        new TransportHud.Message(TransportHud.Status.RECORD, "REC", "F:1248", "", -1));
+                TransportHud.render(text, graphics, width, placement, message);
                 glFinish();
                 assertEquals(GL_NO_ERROR, glGetError());
                 return ScreenshotCapture.captureFramebuffer(width, 224);

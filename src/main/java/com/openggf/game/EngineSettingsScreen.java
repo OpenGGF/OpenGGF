@@ -708,6 +708,8 @@ public final class EngineSettingsScreen {
     }
 
     private List<String> options() {
+        if (selected() == SonicConfiguration.REWIND_BUDGET_SCOPE || selected() == SonicConfiguration.REWIND_BUDGET_SECONDS)
+            return EngineSettingsDraft.rewindOptions(selected());
         if (selected() == SonicConfiguration.FPS) {
             var limits = new ArrayList<>(EngineSettingsDraft.presentationLimits());
             String current = draft.text(selected()).toUpperCase(java.util.Locale.ROOT);
@@ -1376,7 +1378,9 @@ public final class EngineSettingsScreen {
                 boolean nonDefault = i < values.size() && !values.get(i).equals(defaultText);
                 boolean current = i < values.size() && values.get(i).equals(draft.text(selected()));
                 if (current) MenuChrome.fill(font, 14, y + 3, 3, 3, MenuChrome.CYAN);
-                label(pageLabel(label, width - 40), 22, y, nonDefault ? AMBER : WHITE);
+                // Option rows share the light face used by the parent Settings form.
+                MenuChrome.compact(font, MenuStyle.fit(label, width - 40, MenuStyle.COMPACT),
+                        22, y, nonDefault ? AMBER : WHITE);
             }
             MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.set_caps")),
                     MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.cancel_caps"))), MenuChrome.controller(lastInput), ticks);

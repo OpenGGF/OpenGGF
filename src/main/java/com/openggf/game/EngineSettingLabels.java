@@ -75,6 +75,8 @@ final class EngineSettingLabels {
      */
     static SonicConfiguration parent(SonicConfiguration key) {
         return switch (key) {
+            case REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS, REWIND_BONUS_STAGES,
+                    REWIND_SPECIAL_STAGES -> SonicConfiguration.REWIND_BUDGET_SCOPE;
             case LIVE_REWIND_TAPE_COAST_ACCELERATION, LIVE_REWIND_TAPE_COAST_DECELERATION,
                     LIVE_REWIND_TAPE_COAST_MAX_STEPS, LIVE_REWIND_TAPE_COAST_MIN_STEPS -> SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED;
             case LIVE_REWIND_VHS_TEAR_BANDS -> SonicConfiguration.LIVE_REWIND_VHS_EFFECT;
@@ -88,6 +90,8 @@ final class EngineSettingLabels {
     /** Whether {@code key} has an effect with its parent stored as {@code parentText}. */
     static boolean inEffect(SonicConfiguration key, String parentText) {
         return switch (key) {
+            case REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS, REWIND_BONUS_STAGES,
+                    REWIND_SPECIAL_STAGES -> !"off".equals(parentText);
             case REWIND_AUDIO_HISTORY_SECONDS -> !"size".equalsIgnoreCase(parentText);
             case REWIND_AUDIO_HISTORY_SIZE_MB -> "size".equalsIgnoreCase(parentText);
             default -> parent(key) == null || Boolean.parseBoolean(parentText);
@@ -97,6 +101,8 @@ final class EngineSettingLabels {
     /** The help line when a dependent setting has no effect right now. */
     static String notInEffect(SonicConfiguration key) {
         SonicConfiguration parent = parent(key);
+        if (parent == SonicConfiguration.REWIND_BUDGET_SCOPE)
+            return UiMessages.text("settings.rewind.enabled_help");
         if (parent == SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE)
             return key == SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB ? UiMessages.text("settings.dependent.used_only_when_the_sound_limit_is_size")
                     : UiMessages.text("settings.dependent.used_only_when_the_sound_limit_is_time");
@@ -118,6 +124,11 @@ final class EngineSettingLabels {
     }
 
     static String value(SonicConfiguration key, String raw) {
+        if (key == SonicConfiguration.REWIND_BUDGET_SCOPE)
+            return UiMessages.text("settings.rewind.scope." + raw);
+        if (key == SonicConfiguration.REWIND_BUDGET_SECONDS)
+            return "unlimited".equals(raw) ? UiMessages.text("settings.rewind.unlimited")
+                    : UiMessages.text("settings.rewind.seconds", java.util.Map.of("seconds", raw));
         if (key == SonicConfiguration.FPS && raw.equalsIgnoreCase("AUTO")) return UiMessages.text("settings.value.auto_display_refresh");
         if (key == SonicConfiguration.UI_LANGUAGE) return LanguagePickerScreen.displayName(raw);
         if (raw.isEmpty() && key == SonicConfiguration.CAPTURE_ENCODER_PRESET) return UiMessages.text("settings.value.encoder_default");

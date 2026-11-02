@@ -46,7 +46,8 @@ class TestSuspendedSettings {
     @Test
     void rewindAndDebugSavedInSettingsReachTheResumedGame() throws Exception {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(directory);
-        assertFalse(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED), "fixture default");
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        assertFalse(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED), "fixture explicitly disables rewind");
         SuspendedSettings paused = SuspendedSettings.suspend(config);
 
         save(config, SonicConfiguration.LIVE_REWIND_ENABLED, "true");

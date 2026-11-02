@@ -3765,6 +3765,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
             // END HCZ1_DIRECT_FF_OUTER_LOAD_FINISH
         }
+        // A budget refill belongs to the completed respawn, never the
+        // rewindable death animation or an attempted/failed reload/cleanup.
+        if (loadCause == com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD) {
+            rewindBoundaryReporter.markBoundary(RewindBoundary.LIFE_LOSS_RESPAWN);
+        }
     }
 
     /**

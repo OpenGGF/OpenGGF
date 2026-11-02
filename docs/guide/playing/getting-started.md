@@ -146,8 +146,8 @@ until you choose a value for that game.
 **Settings** applies to every game. Categories are tabs across the top (Display,
 Sound, Controls, Gameplay, Files, Capture); press Up from the first row to switch
 tabs. Controls groups player bindings and warns about duplicate keys. Expert ROM
-loading and rewind tuning live in Advanced settings; Gameplay keeps the Rewind
-switch. Values that differ from the default have an amber dot. Each tab offers a
+loading and rewind tuning live in Advanced settings; Gameplay keeps the Rewind scope,
+budget and stage/life-loss options together. Values that differ from the default have an amber dot. Each tab offers a
 confirmed reset, which remains a draft until saved. In text editors, Down enters
 the keypad and Up from its top row returns to the text field. Enter/A chooses a key
 or accepts the focused field; you can also type normally. Number fields use a

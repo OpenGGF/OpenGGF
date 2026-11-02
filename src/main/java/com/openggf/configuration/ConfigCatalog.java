@@ -217,6 +217,11 @@ public final class ConfigCatalog {
         // rewind (player-facing live rewind)
         put(LIVE_REWIND_ENABLED, of("rewind", "liveEnabled", BOOL,
                 "Enable held-key rewind during ordinary live play"));
+        put(REWIND_BUDGET_SCOPE, ofEnum("rewind", "budgetScope", "When the consumable rewind allowance refills", Set.of("off", "checkpoint", "act", "zone")));
+        put(REWIND_BUDGET_SECONDS, ofEnum("rewind", "budgetSeconds", "Seconds available per refill, or unlimited", Set.of("5", "10", "15", "20", "30", "60", "unlimited")));
+        put(REWIND_REFILL_ON_LIFE_LOSS, of("rewind", "refillOnLifeLoss", BOOL, "Refill after a completed life-loss respawn"));
+        put(REWIND_BONUS_STAGES, of("rewind", "bonusStages", BOOL, "Allow rewind in supported bonus stages with a fresh allowance per visit"));
+        put(REWIND_SPECIAL_STAGES, of("rewind", "specialStages", BOOL, "Allow rewind in supported special stages with a fresh allowance per visit"));
         put(LIVE_REWIND_KEY, of("rewind", "liveKey", KEY,
                 "Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind"));
         put(LIVE_REWIND_HALF_SPEED_KEY, of("rewind", "liveHalfSpeedKey", KEY,

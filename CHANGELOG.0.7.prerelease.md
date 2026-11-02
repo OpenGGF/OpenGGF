@@ -1,5 +1,7 @@
 # OpenGGF 0.7.prerelease — Development changelog
 
+- Add a default 10-second consumable rewind budget with Off / Per checkpoint / Per act / Per zone, Unlimited, optional life-loss refill, and independent bonus/special-stage visit allowances. The compact rewind HUD shows seconds and a draining bar; an empty press shows the drained treatment for one second.
+
 Unreleased. The earlier development themes remain in
 [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 

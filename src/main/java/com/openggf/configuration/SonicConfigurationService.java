@@ -384,6 +384,8 @@ public class SonicConfigurationService {
 	}
 
 	public boolean getBoolean(SonicConfiguration sonicConfiguration) {
+        if (sonicConfiguration == SonicConfiguration.LIVE_REWIND_ENABLED
+                && "off".equals(getString(SonicConfiguration.REWIND_BUDGET_SCOPE))) return false;
 		Object value = getConfigValue(sonicConfiguration);
 		if(value instanceof Boolean) {
 			return ((Boolean) value);
@@ -516,6 +518,11 @@ public class SonicConfigurationService {
 	void applySettings(Map<SonicConfiguration, Object> changes) throws IOException {
 		Map<String, Object> candidate = new HashMap<>(config);
 		changes.forEach((key, value) -> candidate.put(key.name(), value));
+        // The scope selector replaces the old UI switch. Publish its legacy
+        // launch/tool gate atomically without showing a duplicate unsaved row.
+        if (changes.containsKey(SonicConfiguration.REWIND_BUDGET_SCOPE))
+            candidate.put(SonicConfiguration.LIVE_REWIND_ENABLED.name(),
+                    !"off".equals(changes.get(SonicConfiguration.REWIND_BUDGET_SCOPE)));
 		preserveUnknownConfigFields();
 		writeStringAtomically(resolveConfigFile().toPath(), new ConfigYamlWriter().write(candidate));
 		configSourceNeedingPreservation = null;
@@ -836,7 +843,12 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
 		// putDefault, not putDefaultKey: the default carries its own modifier.
 		putDefault(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SHIFT+O");
-		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        putDefault(SonicConfiguration.REWIND_BUDGET_SCOPE, "act");
+        putDefault(SonicConfiguration.REWIND_BUDGET_SECONDS, "10");
+        putDefault(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS, true);
+        putDefault(SonicConfiguration.REWIND_BONUS_STAGES, true);
+        putDefault(SonicConfiguration.REWIND_SPECIAL_STAGES, true);
 		putDefault(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_HALF_SPEED_KEY, GLFW_KEY_LEFT_CONTROL);

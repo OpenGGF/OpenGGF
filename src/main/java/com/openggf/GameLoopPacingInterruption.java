@@ -11,7 +11,7 @@ final class GameLoopPacingInterruption {
 
     static boolean allows(LiveRewindManager rewind, SonicConfigurationService config, InputHandler input) {
         return !rewind.isRewindingOrReleasing()
-                && !(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED) && input != null
+                && !(rewind.canEngageHeldRewind() && input != null
                     && input.isKeyDown(config.getInt(SonicConfiguration.LIVE_REWIND_KEY)));
     }
 }

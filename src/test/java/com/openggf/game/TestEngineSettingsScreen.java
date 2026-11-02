@@ -657,7 +657,7 @@ class TestEngineSettingsScreen {
     }
 
     @Test
-    void promptListsConcreteChangesAndGameplayHasOneRewindRow() {
+    void promptListsConcreteChangesAndGameplayGroupsBudgetControls() {
         Fixture f = new Fixture();
         f.tab(SOUND);
         f.press(GLFW_KEY_RIGHT);
@@ -665,7 +665,8 @@ class TestEngineSettingsScreen {
         // Each change draws its old value, an arrow glyph, then the new value.
         assertTrue(java.util.Collections.indexOfSubList(f.texts(), List.of("On", "Off")) >= 0, f.texts().toString());
         EngineSettingsDraft catalog = new EngineSettingsDraft(f.config);
-        assertEquals(List.of(LIVE_REWIND_ENABLED), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
+        assertEquals(List.of(REWIND_BUDGET_SCOPE, REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS,
+                REWIND_BONUS_STAGES, REWIND_SPECIAL_STAGES), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
                 .filter(key -> ConfigCatalog.meta(key).section().equals("rewind")).toList());
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(LOAD_TIME_SIMULATION));
     }
@@ -729,6 +730,26 @@ class TestEngineSettingsScreen {
                 }
             }
         }
+    }
+
+    @Test
+    void rewindBudgetControlsFollowScopeAndRemainEditableWhileOff() {
+        Fixture f = new Fixture();
+        f.tab(GAMEPLAY);
+        f.focus(REWIND_BUDGET_SCOPE);
+        f.press(GLFW_KEY_LEFT); // Per act -> Per checkpoint
+        f.press(GLFW_KEY_LEFT); // Per checkpoint -> Off
+        f.press(GLFW_KEY_DOWN);
+        assertEquals(REWIND_BUDGET_SECONDS, f.screen.selectedForTest());
+        assertTrue(f.descriptionLines().contains("Used while Rewind is not Off."), f.descriptionLines().toString());
+        f.press(GLFW_KEY_RIGHT); // allowance can be prepared while disabled
+        f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT); // enable per checkpoint
+        f.press(GLFW_KEY_DOWN);
+        assertFalse(f.descriptionLines().contains("Used while Rewind is not Off."));
+        assertTrue(f.texts().contains("15 s"), f.texts().toString());
+        assertEquals("Per zone", EngineSettingLabels.value(REWIND_BUDGET_SCOPE, "zone"));
+        assertEquals("Unlimited", EngineSettingLabels.value(REWIND_BUDGET_SECONDS, "unlimited"));
     }
 
     @Test
