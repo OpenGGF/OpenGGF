@@ -89,7 +89,11 @@ class TestCommittedHardwareTimingFixtures {
                     Map.entry("bonus_pachinko",
                             new Ownership("v637-knuckles-c", "pachinko")),
                     Map.entry("special_stage",
-                            new Ownership("v637-knuckles-c", "ss")));
+                            new Ownership("v637-knuckles-c", "ss")),
+                    // SSZ1 cold route spliced onto the complete-run prefix
+                    // (tools/traces/compose_route_on_movie_prefix.py); comparison only.
+                    Map.entry("ssz1_cold_route_native",
+                            new Ownership("ssz1-cold-route-composite-20261102", "hpz")));
     private static final Set<String> EXPECTED_DESTINATIONS = Set.of(
             "aiz1_to_hcz_fullrun",
             "aiz_completerun",
@@ -203,6 +207,7 @@ class TestCommittedHardwareTimingFixtures {
             "runs/s3k-knuckles-complete-superemeralds/hpz",
             "soz_completerun",
             "special_stage",
+            "ssz1_cold_route_native",
             "ssz_completerun");
     /**
      * Approved schema-2 fixtures whose represented route reaches a gameplay
