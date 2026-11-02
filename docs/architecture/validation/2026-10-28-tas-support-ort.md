@@ -313,3 +313,248 @@ The focused request completed with no remaining owned tests or native probes.
 Its diagnostic log and Surefire reports are consumed temporary `target/`
 outputs, removed before handoff. The isolated branch/worktree is retained;
 unrelated dirty reference submodules remain untouched.
+
+## SOZ complete-run regression investigation — 2026-11-02
+
+The lane pinned development at `4311f21c408cef8a6c3f77f351968978ec19d804`.
+Its `TestS3kSozCompleteRunTraceReplay` measured 3,155 errors across 59,317
+compared rows, first at row 32951 `tails_y` (`06AF` expected, `06B1` actual),
+with Tails' angle `80` expected and `86` actual. The class executed without
+skips. The historical `bddbce125435f847e3d43e49fca3d316cb2d58af` was independently
+verified at zero errors and zero skips. That revision requires JDK 21: an initial
+JDK 25 attempt was rejected before tests, then the required-JDK rerun passed.
+Modern revisions used JDK 25, Lua5.4, surfaceless EGL and the lane's absolute
+original-ROM properties.
+
+`git bisect run` identified `d31cc5c44e6613dc7e088c66ab63f54b3222f43b`
+(`fix(objects): preserve native ORT exhaustion recovery`) as the first bad
+commit. Its replay has 3,156 errors with the same first ceiling disagreement;
+it also retains a separate terminal ring mismatch. The suspected `f2cfde91e`
+angle wrapper is not the regressor. Measured good ceiling points include
+`501828d3b`, `3da9b9795`, `9c01991c3`, `d1c50b5f2` and `895b76b67`; each has
+only a later ring error at row 59454. An initial any-error bisect predicate was
+therefore rejected. The completed bisect classified the requested row 32951
+`tails_y` span as bad, reports with no errors at/before that row as good, and
+missing/incomplete reports or unrelated earlier failures as skipped. Every
+classified replay compared 59,317 rows. No fixture fields changed.
+
+### Executed mechanism
+
+Temporary read-only instrumentation of the playable path-bit setter and
+`ObjectPlaneSwitcherController` identified a fallback placement marker at
+`(0B80,06C0)`, subtype`88`, changing Tails at `(0B81,06AF)` from top-solid
+bit`0C` to`0E`. The camera was `(0EDC,0413)`, with horizontal cursors 94/103;
+the marker was behind the active horizontal window. The call stack was
+`LevelManager.applyPlaneSwitchers -> ObjectManager.applyPlaneSwitchers ->
+ObjectPlaneSwitcherController.update -> updateSpawn`, rather than the live
+`Sonic3kPathSwapObjectInstance` execution path. The next attachment sample at
+`(0B8B,06AF)`, angle`80`, read path`0E/0F`. Its right ceiling probe returned
+distance −2, angle`86`, collision tile`002C`; the left returned a flagged angle
+and distance 0. That produces the first compared Y/angle disagreement. The
+instrumented replay retained all 3,155 baseline errors.
+
+The ORT rewrite preserved the native layout/respawn cursor arithmetic but
+omitted the old active-window retirement when the front cursor retreats or
+the back cursor advances. The placement-only plane-switch pass consumes that
+active set. A marker with no live inline owner can therefore remain eligible
+behind the camera and change an offscreen participant's collision bank. The
+physics CSV does not compare collision-bank bits, explaining why the first
+visible disagreement follows the hidden write.
+
+The native owners are `loc_1B8BC` (sonic3k.asm:37671-37681) and
+`loc_1B908` (sonic3k.asm:37708-37713): they retire layout entries from the horizontal
+window without clearing respawn bytes or deleting live SSTs. Native
+`loc_1CD8A` (sonic3k.asm:39809-39819) executes the path marker only through
+its object and ends at `Delete_Sprite_If_Not_In_Range`. Engine placement-only
+consumers must not retain a retired source merely because its ORT byte or an
+independently moving live object remains owned.
+
+The new focused
+`TestObjectPlacementManager#twoAxisWindowRetirementStopsFallbackPlaneSwitchesWithoutClearingRespawn`
+executed against unchanged production and failed because the retired marker
+called `setTopSolidBit(14)`. One case ran, one failed, zero errors/skips;
+explicit lean admission completed without OOM. The test exercises retirement
+at both horizontal edges and requires the ORT loaded bit to survive.
+
+### Baseline coverage
+
+The four requested SOZ segment classes executed under both `trace-segments`
+and `trace-replay-r7`, with identical outcomes and zero skips:
+
+| Class suffix | Errors | First error row/field |
+| --- | ---: | --- |
+| SonicTailsSozSegmentTraceReplay | 2745 | 4868 / player_animation_id |
+| SonicTailsSoz2SegmentTraceReplay | 7834 | 0 / tails_y_speed |
+| TailsFullChainSozSegmentTraceReplay | 27 | 0 / camera_y |
+| TailsFullChainSoz2SegmentTraceReplay | 643 | 0 / camera_y |
+
+Both complete default-profile baselines ran with one reusable fork, alphabetical
+order, all six lane ROM properties and no `-Dtest` override. No classes were
+manually removed from either profile:
+
+| Profile | Cases | Passed | Assertion failures | Errors | Skipped |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| trace-replay-r7 | 117 | 21 | 84 | 12 | 0 |
+| trace-segments | 70 | 14 | 48 | 8 | 0 |
+
+The existing errors include campaign terminal-metadata qualification, KosM FIFO
+or transition admission, unmatched hardware completions, and the Sonic/Tails
+AIZ2 rewind-reference closure. They are baseline failures, not attributed to this
+repair. Matched post-repair checks must compare their identities and assertions,
+as well as the individual replay report counts and first errors.
+
+### Repair
+
+`removeFromCursorWindow` withdraws the canonical source from placement-only
+consumers at the existing front-retreat and back-advance boundaries. It clears
+the source's dormant/pending/deferred window bookkeeping, as the prior trim
+helpers did. It leaves live object maps, ORT loaded/lower bits, occurrence keys,
+and independently drifted layout/respawn cursors untouched. The original native
+exhaustion recovery remains implemented. The change introduces no new snapshot
+fields, public API, zone/fixture predicate, or trace-to-gameplay input.
+
+The repaired source passed **260 focused cases, zero failures/errors/skips**.
+The culprit's named selection now contains 188 cases (including the new window
+regression and one intervening ORT case); all pass. The four mandatory S3K
+selectors execute 60 cases across five matching classes, all passing. Four
+additional plane-switch dispatch/isolation/button-rewind classes contribute 12
+passing cases. The intentionally red pre-fix regression and matched green case
+provide the discrimination control: the same output assertion rejects the stale
+marker write before the repair and accepts both retired edges afterward.
+
+The culprit's record claimed 186 component/ROM/rewind cases, not a complete-run
+trace pass. This repair preserves all its named controls. The source checkpoint is `22a873d88c4d457d3a3bedb951c063597027c1f2`.
+Both full post-repair profiles completed at that SHA:
+
+| Profile | Cases | Passed | Assertion failures | Errors | Skipped |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| trace-replay-r7 | 117 | 22 | 83 | 12 | 0 |
+| trace-segments | 70 | 14 | 48 | 8 | 0 |
+
+`TestS3kSozCompleteRunTraceReplay` is the sole changed replay: **3,155 errors
+at row 32951 `tails_y` become zero errors/warnings across all 59,317 compared
+rows**, with one passing Surefire case and zero skips. Its before/after report
+was measured inside the full default `r7` profile as well as the initial
+focused baseline. The check covers both acts and the fixture's exit; it is not
+whole-campaign certification.
+
+The `r7` inventories match (117 case records, 106 replay reports). Only the
+complete-run report metrics changed, and only its case changed failure→pass.
+All 105 other report metric records match: error/warning/bootstrap-error counts,
+compared-row counts, summary and verification-group first spans. All 12 existing
+error identities and messages match exactly. Segments has the same 70 case
+identity/status/message records and 69 report metric records before and after.
+No new/worsened comparison counts, earlier frontiers, new failing cases, or
+skips were found. The profiles remain red for their pre-existing failures;
+this is bounded regression qualification, not a green full-suite claim.
+
+The four requested SOZ classes are unchanged under both profiles. The final
+explicit four-class segments invocation matched the baseline counts and first
+fields exactly, with zero skips:
+
+| Class suffix | Before → after errors | First error before and after |
+| --- | ---: | --- |
+| SozCompleteRunTraceReplay | 3155 → 0 | 32951 / tails_y → none |
+| SonicTailsSozSegmentTraceReplay | 2745 → 2745 | 4868 / player_animation_id |
+| SonicTailsSoz2SegmentTraceReplay | 7834 → 7834 | 0 / tails_y_speed |
+| TailsFullChainSozSegmentTraceReplay | 27 → 27 | 0 / camera_y |
+| TailsFullChainSoz2SegmentTraceReplay | 643 → 643 | 0 / camera_y |
+
+All unchanged `r7` case status/message records also match, including every
+pre-existing assertion failure and error. No production edits followed the
+source checkpoint. The later qualification commit changes this document only.
+
+Citation checking of the changed source and this record against the immutable
+pins found zero new hard/stale findings: baseline/current retain the same two
+stale, one missing-file, one near and 23 unanchored references. Five new explicit
+citations match their labels (14→19 verified references). Inherited citation
+debt was left unchanged. All six ROM paths were identity-checked; the locked-on
+S3K bytes match CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+Queue waiting and execution were distinct throughout. No queue locks, resource
+limits or unrelated jobs were changed. Whole-lane execution/queue totals were
+not aggregated; elapsed delivery timing is not inferred from overlapping fleet
+activity. Consumed transient diagnostics are removed after the final comparison.
+
+### Correction commands
+
+`TAS_ROM_ROOT` and `TAS_MAIN_CHECKOUT` denote the same original ROM directory
+and main checkout used above. Their runtime paths were absolute. The updated
+main-workspace queue wrapper was also used while bisecting older revisions.
+All modern checks used this environment and these ROM arguments:
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JDK_JAVA_OPTIONS MAVEN_ARGS LD_LIBRARY_PATH
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+export JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl
+export PATH="$HOME/.local/bin:$PATH"
+rom_args=(
+  "-Dsonic1.rom.path=${TAS_ROM_ROOT}/s1.gen"
+  "-Dsonic2.rom.path=${TAS_ROM_ROOT}/s2.gen"
+  "-Ds3k.rom.path=${TAS_ROM_ROOT}/s3k.gen"
+  "-Dkis2.rom.path=${TAS_ROM_ROOT}/kis2.gen"
+  "-Dsonic1.rev00.rom.path=${TAS_ROM_ROOT}/s1-r0.gen"
+  "-Dsonic2.rev00.rom.path=${TAS_ROM_ROOT}/s2-r0.gen"
+)
+queue_tool="${TAS_MAIN_CHECKOUT}/tools/testing/maven_queue.py"
+python3 "$queue_tool" -Dmse=off -B test-compile
+python3 "$queue_tool" --lean -Dmse=off -B \
+  '-Dtest=TestObjectPlacementManager#twoAxisWindowRetirementStopsFallbackPlaneSwitchesWithoutClearingRespawn' test
+```
+
+The last command is the intentional pre-fix red control. The complete-run
+bisect and read-only diagnostic replay used:
+
+```bash
+python3 "$queue_tool" -Dmse=off -B -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtest=TestS3kSozCompleteRunTraceReplay "${rom_args[@]}" test
+```
+
+The new direct diagnostics were enabled only for their temporary probe and
+removed before focused/post-repair validation. An earlier attempt to use FINE
+logging was suppressed by the replay harness; a direct-probe compilation error
+was corrected and `test-compile` passed before requeuing. Neither unsuccessful
+attempt is counted as gameplay or regression evidence.
+
+Full-profile baseline and post-repair commands use the default selections:
+
+```bash
+python3 "$queue_tool" -Dmse=off -B -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical "${rom_args[@]}" test
+python3 "$queue_tool" -Dmse=off -B -Ptrace-segments \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical "${rom_args[@]}" test
+```
+
+The focused owner/keep-green/plane-switch command was:
+
+```bash
+python3 "$queue_tool" -Dmse=off -B \
+  -Dtest=TestObjectPlacementManager,TestObjectManagerVerticalPlacement,TestPlacementLowerRespawnBits,TestObjectPlacementControllerS1Counter,TestS1CounterPlacementRememberedParity,TestMutatorPlacementAdmission,TestNativeCompetitionUpfrontPlacement,TestObjectManagerRewindSnapshot,TestTwoPhaseRestoreOrdering,TestObjectManagerChildSlotAllocation,TestNativeObjectSlotOccupancy,TestPlacedChildSlotReservations,TestObjectReservedSlotConstruction,TestSolidObjectManager,TestTasS3kOrtExhaustion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestLevelManagerPlaneSwitcherDispatch,TestSlotOwnedPlaneSwitcherDispatch,TestPlaneSwitcherStateIsolation,TestS3kButtonPathSwapRewind \
+  "${rom_args[@]}" test
+```
+
+The four-class SOZ baseline selector was
+`TestS3kSonicTailsSozSegmentTraceReplay,TestS3kSonicTailsSoz2SegmentTraceReplay,TestS3kTailsFullChainSozSegmentTraceReplay,TestS3kTailsFullChainSoz2SegmentTraceReplay`,
+with the same replay flags under each profile. Default `r7` already includes all
+four; default segments includes the Sonic/Tails pair. The Tails full-chain pair
+also requires the explicit selector under segments for matched coverage.
+
+
+### Frontier-log handoff text
+
+2026-11-02 — SOZ complete-run regression: bisect identifies `d31cc5c44`
+(ORT exhaustion recovery), rather than the suspected gravity-angle wrapper.
+`TestS3kSozCompleteRunTraceReplay` at base `4311f21c4` has 3,155 errors, first
+row 32951 `tails_y`; source `22a873d88` has 0 errors/warnings over 59,317 compared
+rows, zero skips. Restore horizontal `Load_Sprites` placement-window retirement
+so stale fallback path markers cannot switch off-screen Tails' collision bank;
+retain the shipped ORT exhaustion drift and live SST lifetimes. The full `r7`
+command above measured the source checkpoint. Its sole changed case/report is
+SOZ complete-run; full segments and the four requested SOZ segment classes
+retain their baseline metrics and errors. All 260 focused owner/keep-green/plane
+checks pass, zero skips. No class worsened. Both broad profiles retain their
+pre-existing failures; no whole-campaign or full-suite qualification is claimed.
+Commands, native citations, baseline failure attribution and the intentional
+red control are recorded in
+`docs/architecture/validation/2026-10-28-tas-support-ort.md`.

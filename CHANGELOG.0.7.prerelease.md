@@ -1840,6 +1840,8 @@ its original drawing priority.
   S1 offscreen solid omission, S2 launcher and ARZ ordering, Blue Sphere boot
   input, and S3K boss/slot lifetime behavior, with restore-forward controls.
   Further [engine support](docs/architecture/validation/2026-10-28-tas-engine-support.md)
+  keeps off-screen sidekicks on the correct collision path when horizontal
+  placement entries retire, restoring Sandopolis ceiling attachment. It also
   restores paused clock/rewind phase, typed Reset/Power lifecycle, native ORT
   recovery, ordered S2 art-slot reuse and the P2 intro input/palette consequence.
   Verified original-cartridge resources now serve standalone SK title/MHZ startup
