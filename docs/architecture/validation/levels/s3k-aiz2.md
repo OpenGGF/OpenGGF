@@ -1437,3 +1437,22 @@ BizHawk pixel equality or a graded trace-parity pass. Bubble/Lightning native
 movie evidence, wider route/configuration coverage and full terrain/floor
 breadth remain unqualified; their shared playback and freeze gates have focused
 controls and ROM routine evidence.
+
+### Parent integration review
+
+The parent reran `compare_observations.py` and inspected the fresh laugh and
+airborne frame pairs. A separate read-only review found no correctness or
+comment blockers. After merging develop through `f6a18beaa`, queued EGL Maven
+`test -B` selected `TestInstaShieldHitbox`, `TestInstaShieldGating`,
+`TestInstaShieldVisual`, `TestS3kCutsceneKnucklesGraphRewind`,
+`TestAiz2BossEndSequenceObjects`, `TestStageplayCapsuleControlRelease` and
+`TestCnzEggCapsuleInstance`, with absolute S1/S2/S3K ROM properties. It ran
+89 cases with zero failures/errors and one skip. The skipped
+`TestInstaShieldVisual` assumption reports GPU init failure from its legacy
+raw-GLFW setup; it does not use the configured EGL test context. This leaves
+that diagnostic unexecuted, rather than qualifying it from another capture.
+The prior EGL shield-publication tests and fresh movie captures remain separate
+passing evidence. Queue wait was 478 seconds; Maven execution was 92 seconds.
+The 3,829-class change-based smoke selection is replaced by these focused
+animation, consumer, recreation, donor-body and required S3K loading checks
+for the bounded S3K animation-owner correction.
