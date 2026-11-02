@@ -2455,3 +2455,7 @@ records the corrected pillar archive, ship/pilot/capsule sheets, flame palette,
 chase plane sources, helper lifetime and priority, plus the positioned rendering
 and rewind witness. Native pixel parity, intermediate redraw timing and broader
 route/configuration products remain open.
+
+The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#sanctuary-foreground-initialization-2026-11-02)
+records the local foreground-clear regression for sanctuary entry and Super
+Emerald results rebuilds; inherited route and native presentation gaps remain.

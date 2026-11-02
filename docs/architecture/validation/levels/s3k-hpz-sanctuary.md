@@ -813,3 +813,23 @@ focused GPU/resource checks and exact capture protocol](../../plans/2026-10-13-s
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+### Sanctuary foreground initialization (2026-11-02)
+
+`HPZS_ScreenInit` clears foreground chunk cells (41,4), (43,4), and
+(41,5) before drawing the sanctuary. The same initialization applies to the
+Super Emerald results rebuild, preventing neighboring Hidden Palace terrain
+from appearing above the left pedestals during the camera descent.
+`TestS3kSanctuaryResultsBackdropHeadless#sanctuaryScreenInitClearsForegroundAboveLeftPedestalsOnLoadAndResultsRebuild`
+checks both loads and preserves the intervening terrain. Existing results
+load/history isolation and reveal timing checks remain applicable; this local
+layout regression does not add native pixel or wider route certification.
+
+Validation: queued Maven `test` with `-Dmse=off`, the verified original S3&K
+ROM (CRC32 `63522553`), and exact selector
+`TestS3kSanctuaryResultsBackdropHeadless,TestS3kSpecialStageResultsReveal,TestS3kHpzSanctuaryHeadless,TestS3kSanctuaryRuntimeState,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+93 tests, zero failures/errors/skips. The added regression first failed on the
+unchanged runtime with foreground chunk 4 instead of 0 at (41,4).
+The broad change-based plan selects all smoke classes because the event manager
+is shared; focused coverage replaces that disproportionate selection for these
+three sanctuary-only layout writes. No fresh native pixel comparison was run.
