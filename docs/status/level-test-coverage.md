@@ -2504,3 +2504,8 @@ Big Arm INIT follow-up (2026-11-02): the [Act 2 matrix](../architecture/validati
 records exact module admission and initialized graph-rewind ownership. Composed
 checks pass80 controls, zero skips; replay remains232 errors with an identical
 profile. No full-route or roster/donor/viewport/presentation gap is closed.
+
+HCZ1 miniboss release (2026-11-02): the [HCZ1 maintenance matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#miniboss-water-effect-release-2026-11-02)
+records independent native-player tracking and cooldown capture/restore before
+water-effect deletion. This local obligation does not certify broader route,
+character, donor or viewport coverage; inherited matrix gaps remain open.
