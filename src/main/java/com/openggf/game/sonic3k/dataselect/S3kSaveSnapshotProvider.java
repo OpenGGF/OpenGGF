@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.game.ZoneKey;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NativeGameStateOps;
+import com.openggf.game.save.RuntimeSaveCapture;
 import com.openggf.game.save.RuntimeSaveContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SaveSnapshotProvider;
@@ -23,6 +25,7 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
     @Override
     public boolean restoreProgress(
             GameStateManager gameState, int lives, int continues, Map<String, Object> payload) {
+        if (!hasValidSpecialStageProgress(payload)) return false;
         // S3K slot load: replenish exhausted lives and spend a continue
         // (sonic3k.asm:17033-17048), before restoring either payload format.
         if (lives == 0 || (lives < 3 && continues == 0)) {
@@ -36,12 +39,36 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
                     readIntList(payload.get("chaosEmeralds")),
                     readIntList(payload.get("superEmeralds")),
                     payload.get("emeraldsConverted") instanceof Boolean value ? value : null);
+            restoreSpecialStageProgress(gameState, payload);
             return true;
         }
         Boolean converted = payload.get("emeraldsConverted") instanceof Boolean value ? value : null;
         gameState.restoreSaveProgress(lives, continues, List.of(), List.of(), converted);
         S3kEmeraldProgression.restore(gameState, states, Boolean.TRUE.equals(converted));
+        restoreSpecialStageProgress(gameState, payload);
         return true;
+    }
+
+    private static void restoreSpecialStageProgress(GameStateManager gameState, Map<String, Object> payload) {
+        // loc_D540 restores the saved word; completed-file selection at loc_D540
+        // then clears the collection long (sonic3k.asm:17006-17013).
+        int rings = Boolean.TRUE.equals(payload.get("clear")) ? 0
+                : readOptionalProgress(payload, "collectedSpecialRings", 0xFFFF);
+        NativeGameStateOps.restoreSpecialStageSaveProgress(gameState, rings,
+                readOptionalProgress(payload, "currentSpecialStageIndex", 6));
+    }
+
+    static boolean hasValidSpecialStageProgress(Map<String, Object> payload) {
+        return readOptionalProgress(payload, "collectedSpecialRings", 0xFFFF) >= 0
+                && readOptionalProgress(payload, "currentSpecialStageIndex", 6) >= 0;
+    }
+
+    private static int readOptionalProgress(Map<String, Object> payload, String key, int maximum) {
+        if (!payload.containsKey(key)) return 0;
+        if (!(payload.get(key) instanceof Number number)) return -1;
+        double value = number.doubleValue();
+        return Double.isFinite(value) && value == Math.rint(value) && value >= 0 && value <= maximum
+                ? (int) value : -1;
     }
 
     private static List<Integer> readEmeraldStates(Object raw) {
@@ -99,6 +126,21 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
                 act = next.get().act();
                 zoneKey = ZoneKey.stock(zone);
             }
+        } else if (hasLiveState && zoneKey instanceof ZoneKey.Stock) {
+            // SaveGame_SpecialStage leaves the saved zone intact while the
+            // sanctuary runs in $1701. Its Saved2 origin owns the reload destination.
+            var origin = RuntimeSaveCapture.specialStageReturn(context);
+            if (zone == com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA
+                    && act == 1 && origin != null && origin.originZone() >= 0) {
+                zone = origin.originZone();
+                act = origin.originAct();
+            }
+            // sub_DA4E selects zone starts, not temporary boss segments
+            // (sonic3k.asm:17516-17549).
+            var start = S3kSaveProgressions.saveStart(zone, act, context.selectedTeam());
+            zone = start.zone();
+            act = start.act();
+            zoneKey = ZoneKey.stock(zone);
         }
         S3kSavedZone.write(payload, zoneKey);
         payload.put("act", act);
@@ -119,6 +161,11 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         payload.put("superEmeralds", superEmeralds);
         payload.put("emeraldsConverted", emeraldsConverted);
         payload.put("emeraldStates", emeraldStates);
+        // SaveGame_SpecialStage stores the collection low word and chaos-stage
+        // cursor (sonic3k.asm:15974-15991). Forced sanctuary stages leave that
+        // cursor unchanged, so saving it cannot advance the chaos rotation.
+        payload.put("collectedSpecialRings", RuntimeSaveCapture.collectedSpecialRings(context) & 0xFFFF);
+        payload.put("currentSpecialStageIndex", RuntimeSaveCapture.currentSpecialStageIndex(context));
         payload.put("clear", clear);
         payload.put("progressCode", zoneKey instanceof ZoneKey.Stock
                 ? S3kSaveProgressions.progressCodeForState(

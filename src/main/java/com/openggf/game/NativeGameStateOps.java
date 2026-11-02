@@ -8,4 +8,11 @@ public final class NativeGameStateOps {
     public static void clearSpecialRingCollection(GameStateManager state) {
         state.clearSpecialRingCollection();
     }
+    public static int specialRingCollection(GameStateManager state) {
+        return state.specialRingCollection();
+    }
+
+    public static void restoreSpecialStageSaveProgress(GameStateManager state, int rings, int stageIndex) {
+        state.restoreSpecialStageSaveProgress(rings, stageIndex);
+    }
 }

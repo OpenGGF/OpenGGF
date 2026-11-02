@@ -8,6 +8,9 @@ readable and historical versions can be referenced directly.
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 - Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
 
+- S3K saves retain collected giant rings and Chaos Special Stage rotation after
+  reload, and resume stock zones at their native starting act.
+
 - AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
   endpoints, and shows staggered explosion puffs when Knuckles breaks it.
 

@@ -20,7 +20,7 @@ public final class S3kFullSaveGame {
      * (sonic3k.asm:15958), including SK-alone and zero Save_pointer branches.
      * Special-stage/lives saves use separate returns and must not call this.
      * Native clears after SRAM writes; Java requests asynchronous persistence
-     * whose payload omits this mask. Clear before that request so No Save and
+     * which captures this cleared mask. Clear before that request so No Save and
      * missing persistence contexts retain the same runtime behavior.
      */
     public static void complete(ObjectServices services) {
