@@ -14,6 +14,9 @@ readable and historical versions can be referenced directly.
 
 - Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
 
+- Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
+  filling the background tile ring at the restored camera height.
+
 - Clear the native sanctuary openings so stray terrain no longer appears above
   the left Super Emerald pedestals during the results camera descent.
 
