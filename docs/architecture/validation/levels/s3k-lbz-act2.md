@@ -181,3 +181,33 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+
+## Camera-admitted end-boss art ownership — 2026-11-02
+
+`TestLbzEndBossKosOwnerRewind.cameraRangeGateDefersBossArtUntilItsFirstAdmittedDispatch`
+places the launcher just beyond the native camera edge (`X=$3B21`), verifies
+no KosM ordinal is submitted in construction or an unadmitted update, then
+moves to the inclusive edge (`X=$3B20`) and requires exactly one submission.
+Existing pending/ready whole-world recreation and missing-owner controls use
+an explicitly admitted camera (`$3900,$0460`), preserving the original handle
+and failing closed rather than manufacturing replacement work.
+
+The owning sequence is `Obj_LBZEndBoss` (sonic3k.asm:153420-153434),
+`Check_CameraInRange` (sonic3k.asm:180524-180554), then
+`loc_73906` (sonic3k.asm:153440-153456), at pinned reference
+`8b2cf3c4178f`. The camera check rewrites the native
+object dispatch once admitted. The worker's local commit `c839a6bde` passes all
+24 focused boss/rewind checks and advances the standalone Knuckles trace from
+249 to239 errors, with both comparison gates reached and zero skips. Art source
+`$376542` → VRAM `$84A0` is unchanged; this corrects submission ownership, not
+physical queue timing or art decoding.
+
+The lead control first failed when a construction-admitted ready owner was
+left pending after the camera exited before the first ordinary update. The
+service gate now recognizes an existing art ordinal without admitting new
+work out of range. Combined verification passes all25 boss/rewind cases within
+322 functional checks, zero skips; the standalone replay remains239 errors
+(232 physics/seven animation), gate reached. Cold traversal, full roster/team,
+donor/viewport and native presentation breadth remain inherited gaps; this
+does not certify the complete act.

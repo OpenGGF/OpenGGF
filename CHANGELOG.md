@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Knuckles restores the native animation after non-flat glide landings.
+- LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
+
 - Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
 
 - Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.

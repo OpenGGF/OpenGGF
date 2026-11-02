@@ -2475,3 +2475,13 @@ Cross-game music ownership follow-up (2026-11-02): affected S3K act matrices lin
 
 MHZ2 explosion-controller recreation now has an exact-parent adversarial graph
 witness and pending-retirement replay coverage; see the [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#explosion-controller-graph-receiving-repair-2026-11-02).
+
+
+LBZ2 camera-admission follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#camera-admitted-end-boss-art-ownership--2026-11-02)
+records the launcher-art admission boundary, pending/ready recreation and
+missing-owner controls. The local worker passes24 focused checks and advances
+its standalone replay249→239 errors, without qualifying a complete route.
+Combined integration passes25 boss/rewind checks, including the already-owned
+ready-job camera-exit edge, within322 functional cases with zero skips; both
+known replay frontiers remain red. Inherited cold traversal, roster/donor/viewport
+and presentation gaps remain open.
