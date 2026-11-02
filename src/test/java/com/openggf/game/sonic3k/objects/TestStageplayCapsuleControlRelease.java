@@ -55,6 +55,42 @@ class TestStageplayCapsuleControlRelease {
     }
 
     @Test
+    void uprightCapsulesUseSevenNormalExplosionsWithChildOwnedBreakSound() throws Exception {
+        for (var capsule : List.<AbstractObjectInstance>of(
+                new CnzEggCapsuleInstance(spawn()), new HczEndBossEggCapsuleInstance(100, 100))) {
+            var fixture = new Fixture();
+            var manager = mock(com.openggf.level.objects.ObjectManager.class);
+            when(fixture.services.objectManager()).thenReturn(manager);
+            when(fixture.services.rng()).thenReturn(new com.openggf.game.GameRng(
+                    com.openggf.game.GameRng.Flavour.S3K));
+            capsule.setServices(fixture.services);
+            invoke(capsule, "openCapsule", new Class<?>[0]);
+            verify(fixture.services, never()).playSfx(anyInt());
+            var controller = (S3kBossExplosionController) field(capsule, "explosionController").get(capsule);
+            for (int frame = 0; frame < 24; frame++) {
+                if (!(capsule instanceof CnzEggCapsuleInstance)) controller.tick();
+                invoke(capsule, capsule instanceof CnzEggCapsuleInstance
+                        ? "tickExplosionController" : "spawnPendingExplosions", new Class<?>[0]);
+            }
+            assertTrue(controller.isFinished());
+            var children = org.mockito.ArgumentCaptor.forClass(com.openggf.level.objects.ObjectInstance.class);
+            verify(manager, atLeast(7)).addDynamicObjectAfterCurrent(children.capture());
+            var effects = children.getAllValues().stream()
+                    .filter(child -> !(child instanceof com.openggf.level.objects.EggPrisonAnimalInstance)).toList();
+            assertEquals(7, effects.size());
+            for (var child : effects) {
+                assertInstanceOf(FbzEndEggCapsuleExplosionController.FbzEndEggCapsuleNormalExplosion.class, child);
+                assertTrue(child.isHighPriority());
+                assertEquals(1, child.getPriorityBucket());
+                ((AbstractObjectInstance) child).setServices(fixture.services);
+                child.update(1, null);
+            }
+            verify(fixture.services, times(7)).playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id);
+            verify(fixture.services, never()).playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.EXPLODE.id);
+        }
+    }
+
+    @Test
     void idleCapsulesAndEmbeddedBossNeverResetUnacquiredParticipants() {
         var fixture = new Fixture();
         for (var owner : List.<AbstractObjectInstance>of(new CnzEggCapsuleInstance(spawn()),

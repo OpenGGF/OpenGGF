@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
+  child-owned break sound, including Hydrocity’s separate capsule owner.
+
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
 
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene

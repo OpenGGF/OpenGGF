@@ -5,10 +5,9 @@ import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.FbzEndEggCapsuleExplosionController;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -41,7 +40,7 @@ import java.util.logging.Logger;
  * <p>On button press:
  * <ol>
  *   <li>Changes to open frame (mapping_frame = 1)</li>
- *   <li>Spawns boss explosions and animals</li>
+ *   <li>Spawns normal explosions and animals</li>
  *   <li>Sets 64-frame timer</li>
  *   <li>After timer + player on ground: spawns results screen</li>
  * </ol>
@@ -245,15 +244,9 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
             sidekick.getCpuController().setController2SignedLocked(true);
         }
 
-        // Play explosion SFX
-        try {
-            services().playSfx(Sonic3kSfx.EXPLODE.id);
-        } catch (Exception e) {
-            // Ignore audio errors
-        }
-
-        // Spawn boss explosion controller (compact type for capsule, subtype 3)
-        explosionController = new S3kBossExplosionController(fixedX, fixedY, 3, services().rng());
+        // sub_865DE selects subtype $08 (sonic3k.asm:181665-181667).
+        // CreateBossExp08 (sonic3k.asm:176802) uses normal explosions with child-owned sfx_Break.
+        explosionController = new S3kBossExplosionController(fixedX, fixedY, 8, services().rng());
 
         // Spawn animals
         spawnAnimals();
@@ -266,14 +259,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         if (explosionController == null) return;
         var pending = explosionController.drainPendingExplosions();
         for (var entry : pending) {
-            if (entry.playSfx()) {
-                try {
-                    services().playSfx(Sonic3kSfx.EXPLODE.id);
-                } catch (Exception e) {
-                    // Ignore audio errors
-                }
-            }
-            spawnChild(() -> new S3kBossExplosionChild(entry.x(), entry.y()));
+            spawnChild(() -> new FbzEndEggCapsuleExplosionController.FbzEndEggCapsuleNormalExplosion(
+                    new ObjectSpawn(entry.x(), entry.y(), 0, 0, 0, false, 0), services()));
         }
     }
 
