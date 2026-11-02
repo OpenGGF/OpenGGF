@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+MHZ mushroom parachutes release carried players after their feet reach terrain.
+
 Super/Hyper players can collect shields while transformed; shields stay hidden
 until reversion in S3K and S2.
 

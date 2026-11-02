@@ -2402,3 +2402,9 @@ MHZ1 flame palette follow-up (2026-11-02): both miniboss flame slots now
 select ROM palette base 0 independently of the body sheet's base 1. See the
 [bounded matrix entry](../architecture/validation/levels/s3k-mhz-act1.md#miniboss-flame-palette--2026-11-02)
 for checks and inherited gaps; this does not certify the whole encounter.
+
+MHZ parachute landing correction (2026-11-02): the focused parachute test
+checks carried-player terrain dispatch and next-pass velocity-mismatch release.
+See the [MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#mushroom-parachute-landing-correction--2026-11-02)
+and [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#mushroom-parachute-landing-correction--2026-11-02)
+for inherited route, configuration and rewind gaps.
