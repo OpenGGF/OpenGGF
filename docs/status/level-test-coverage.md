@@ -7,6 +7,12 @@ match 90 fire-shield and 70 Knuckles animation/position samples at actual V-int
 values, including the native first-bounce penetration. This is bounded evidence; whole-act, native floor/bounce and wider
 viewport/donor/team obligations remain inherited gaps.
 
+Upright S3K capsule effects (2026-11-02):
+`TestStageplayCapsuleControlRelease` checks the shared upright and separate HCZ
+owners for seven normal explosions, priority and child-owned break sound,
+alongside the floating regression. This is focused effect coverage; existing
+route, rewind lifecycle, pixel/audio capture and allocation-exhaustion gaps
+remain open.
 
 AIZ2 ending drawbridge presentation (2026-11-02): the [act maintenance matrix](../architecture/validation/levels/s3k-aiz2.md#ending-drawbridge-presentation-2026-11-02) records native twelve-log geometry, delayed collapse puffs, focused lifecycle/recreation checks and original-movie visual comparison. Broader configuration and route obligations remain open.
 
