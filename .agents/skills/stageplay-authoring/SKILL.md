@@ -64,10 +64,11 @@ hand-edit generated IDs or split intervals across shots.
   may change visibility only. Use Posers for deliberate hand choreography.
 - Use `route` (the editors' **Plan route**) for paths. Only `VERIFIED` is
   certified, and only for that exact input; search failures are not proof of
-  impossibility. A failed Walk is rehearsed at Run within the same budget and
-  may advise `needs Run`, `needs more Attempt frames` or both; follow the advice
-  (`--travel RUN`, larger `--frames`) and plan again. The editors' side panel
-  shows a one-line result; F1 holds the full diagnosis.
+  impossibility. A verified player route is saved as a frozen input track: the
+  exact controller rows from the shot's first frame, replayed as recorded. A
+  failed Walk is not retried at Run; plan again with `--travel RUN` or a larger
+  `--frames` when the diagnosis points there. The editors' side panel shows a
+  one-line result; F1 holds the full diagnosis.
   Player routes start at a shot's first frame.
 - Floors from `ground`, **Place on floor** and the picker are terrain only:
   apply, then confirm the landing in simulation. `INCOMPLETE` or truncated

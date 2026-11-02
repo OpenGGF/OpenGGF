@@ -1579,6 +1579,17 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Shared route planner:** Reference-path authoring, Stageplay player routes
+  and the SSZ and DEZ boss input authors now share one planner. A route is a
+  frozen list of controller rows with a manifest (`.route.json` and `.script`);
+  it counts as qualified only after a cold replay of those rows, and BK2 movies
+  are exported from it. Stageplay saves planned player routes as frozen input
+  tracks (document version 9). Bridges, platforms, updrafts, vines and bosses
+  report their phase, attachment or hit points, so route goals can target them.
+  Repair keeps a route's original rows and searches only where play drifts from
+  a track recorded on the engine the rows were written for. The Sky Sanctuary
+  Act 1 route repairs are not finished.
+
 - **Object service failures:** AIZ intro camera calls, Lava Reef lava-fall clocks
   and launch/drop sound calls propagate service failures instead of silently
   continuing. S2 object PLC submissions retry only queue-capacity rejection;

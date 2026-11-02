@@ -65,6 +65,23 @@ public final class ReferencePath {
                 Arrays.copyOf(epochs, n), hosts.environment(), 0, n - 1);
     }
 
+    /**
+     * A reference recorded by an earlier replay: P1's centre and boundary epoch after each of
+     * {@code rows}, as a cold replay of those rows from {@code launch} produced them on
+     * {@code environment} (for example a route's own rows on the engine they were authored
+     * against). A death row, if any, is the last. The arrays are copied.
+     */
+    public static ReferencePath recorded(LaunchContract launch, InputTape rows, int[] xs, int[] ys, long[] epochs,
+                                         String environment) {
+        Objects.requireNonNull(launch, "launch");
+        Objects.requireNonNull(environment, "environment");
+        if (xs.length == 0 || rows.size() != xs.length || ys.length != xs.length || epochs.length != xs.length) {
+            throw new IllegalArgumentException("a recorded reference needs one position and epoch per row: " + rows.size()
+                    + "/" + xs.length + "/" + ys.length + "/" + epochs.length);
+        }
+        return new ReferencePath(launch, rows, xs.clone(), ys.clone(), epochs.clone(), environment, 0, xs.length - 1);
+    }
+
     /** The same path, followed from index {@code from} until index {@code to} is reached. */
     public ReferencePath window(int from, int to) {
         return new ReferencePath(launch, source, xs, ys, epochs, environment, from, to);

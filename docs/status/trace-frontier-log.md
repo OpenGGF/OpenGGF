@@ -122718,3 +122718,24 @@ bridge's `clearsStandingBitOnContinuedRideExit` opt-in. The SSZ1 cold routes
 still leave their recorded path at 1366; native follows the current engine
 there, and re-authoring waits for the route-planner programme
 ([audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#c-follow-up-native-settlement-and-bridge-walk-off-2026-11-02)).
+
+## 2026-11-02 - SSZ1 route tracks and the first shared-planner repairs
+
+Branch `feature/ai-shared-route-planner`, worktree `t3-9853e716`, on step 4 `48ffcf76e`.
+Not a trace sweep: an engine replay of each route movie, P1 centre after every row.
+
+| Check | Engine | Result |
+| --- | --- | --- |
+| 16 SSZ1 route tracks (cold SSZ1, vInt 0, no draw) | `36aaddb37` | 14 alive to the end; `middle-320` dies 6151, `complete-800` 11664 |
+| 4 `lrz-*-hpz-ssz1*` campaign tracks | `36aaddb37` | all die: Tails 8444 (LRZ1), pair 36000, Sonic 44639 |
+| Same 4 SSZ1 + 3 campaign movies | step-4 tree | SSZ1 first differ at row 1366 (Y 3179/3183 -> 3185); pair complete dies 12679, solo Tails 5212; campaign Tails identical (8444), pair 36000, Sonic 6683 |
+| Repair, pair `complete-320` from 1366 | step-4 tree | stalled at row 3566 after 1248 expansions; no route written |
+| Repair, solo Tails `complete-320` from 1366 | step-4 tree | stalled at row 3266 after 659 expansions (and with a 12 px rejoin experiment); no route written |
+
+Per-row drawing and the V_int override were checked on `middle-320`: identical tracks. At
+row 3489 the current engine lands the pair's P1 on terrain at Y 2540 where `36aaddb37` fell
+to the Y 2604 floor and the `$74` retracting spring at (2656, 2608). Tracks:
+`src/test/resources/routes/s3k/tracks/`. Tool: `RouteRepairTool`. The two smoke reds
+(`TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`,
+`TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`)
+remain red. [Design record](../architecture/designs/2026-11-02-shared-route-planner.md#deviations).

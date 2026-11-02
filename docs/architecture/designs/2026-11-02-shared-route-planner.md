@@ -381,9 +381,30 @@ Recorded during implementation; each states what the sketch said, what was built
   `EncounterRouteAuthor` front-end. MECHA2's two-phase ending is now whatever Mecha Sonic's own
   `defeated()` reports (its hit counter); the zone ending flag the old tool read is not yet an
   owner fact.
+- **Repair tracks are recorded files, not a `TrackingContract` type (step 6).** A route's track is
+  a gzip CSV (`row,x,y,epoch,dead`) under `src/test/resources/routes/s3k/tracks/`, its header binding
+  the engine revision and the SHA-256 of the exact movie it replayed. `RouteTrackReference` reads it
+  as `ReferencePath.recorded(...)`; a track for other rows is refused. `RouteRepairTool` is the
+  front-end. The sixteen SSZ1 tracks were recorded on `36aaddb37` in one temporary copy-on-write tree,
+  removed afterwards.
+- **The `lrz-*-hpz-ssz1*` routes have no trustworthy track (step 6).** On `36aaddb37` they die before
+  SSZ1 (Tails in LRZ1 at row 8444, the pair at 36000, Sonic at 44639), as on the current engine
+  (8444, 36000, 6683); the frontier log has carried their campaign tests red since 2026-10-17. They
+  do not share the SSZ1 opening break, and they are not repaired against those tracks.
+- **The SSZ1 repairs stalled (step 6).** Every measured SSZ1 route first leaves its `36aaddb37` track
+  at row 1366, as designed. Fourteen of sixteen run clean to their end there (`middle-320` dies at
+  6151 and `complete-800` at 11664). The paired `complete-320` repair kept rows to about 3486, then
+  stalled at row 3566 for 1248 expansions: at row 3489 the current engine lands P1 on terrain at
+  Y 2540, where the `36aaddb37` run fell to the Y 2604 floor and the `$74` retracting spring at
+  (2656, 2608) launched it left. That path is not reachable by local candidates. The solo-Tails
+  repair stalled at row 3266 with P1 flying a steady 11-16 px off its track from row 2971; a 12 px
+  rejoin tolerance (an experiment, not committed) stalled at the same row. Neither wrote a route,
+  so the consumers keep their `.bk2` movies, and the two smoke reds remain red.
 
 ## Next step
 
-Step 1: the typed two-lane tape and launch artefact, plus the shared replay-only driver. Pin it
-with the existing codec tests and a hostile all-buttons, held-edge round trip before extracting
-any search.
+Steps 1-4 are delivered. Step 6 has its repair front-end and the SSZ1 tracks, but no repaired
+route. Next: instrument the reference expander's commit rule at the solo-Tails stall (row 3266);
+author the paired route's segment from row 3489 as a goal program rather than against the
+`36aaddb37` track; then manifest the SSZ1 consumers and native-check them with filler rows. Steps
+5a and 5b follow.
