@@ -204,6 +204,8 @@ class TestArchUnitRules {
             "route -> debug",
             "route -> game",
             "tools -> route",
+            // Both editors present route tapes through the planner facade and value types only.
+            "editor -> route",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",
@@ -752,6 +754,9 @@ class TestArchUnitRules {
             case "com.openggf.editor.stageplay.StageplayWorkspace" -> Set.of(
                     "com.openggf.tools.StageplayScriptCompiler",
                     "com.openggf.tools.StageplayScriptDecompiler").contains(target);
+            // Route tape jobs speak the isolated worker's line protocol; the worker owns the host.
+            case "com.openggf.editor.route.RouteTapeJob" -> target.equals("com.openggf.tools.RouteEditorProtocol")
+                    || target.startsWith("com.openggf.tools.RouteEditorProtocol$");
             case "com.openggf.editor.project.EditorProjectRuntimeModule" -> Set.of(
                     "com.openggf.mods.code.ModLevelExportStagingValidator",
                     "com.openggf.mods.code.AuthoredStageplayServices",

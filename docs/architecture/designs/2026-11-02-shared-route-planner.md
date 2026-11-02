@@ -246,10 +246,10 @@ The engine host is process-global (`EngineRouteHosts`: one world per process), a
 process owns the live level session. Every job that boots a world (replay, plan, repair,
 qualify-and-save) therefore runs in an isolated worker JVM, as `StageplayRouteJob` already does.
 The worker is a thin tool, `com.openggf.tools.RouteEditorWorker --worker`, which composes
-`EngineRouteHosts` and calls the facade. It streams bounded progress lines and one result record
-on stdout; cancel destroys the process tree. The process plumbing (spawn, bounded stderr tail,
-owned-child retirement, wall limit) is extracted from `StageplayRouteJob` into one shared
-`EditorWorkerProcess`, so the two jobs do not carry two copies.
+`EngineRouteHosts` and calls the facade. It speaks `RouteEditorProtocol` (one Base64-safe record
+per line): bounded progress, path points and one result on stdout; cancel destroys the process
+tree. `RouteTapeJob` is the only editor class that references the protocol, an explicitly owned
+`editor -> tools` dependency.
 
 Pure file and value work stays in the editor process: `RouteFiles.read`, `tapeFromScript`,
 `scriptText`, `exportBk2`, tape edits and timeline layout.
@@ -303,7 +303,8 @@ separate **Native** line, labelled observations; they never feed planning or rep
 
 ### In-engine HUD (`StageplayHud` idiom, MenuChrome, controller-first)
 
-A **Routes** workspace beside Stageplay: F5 or the `Routes  F5` plate, and the command palette.
+A **Routes** workspace beside Stageplay: the `Routes` plate beside the Stageplay plate and the
+editor command sheet (F5 already starts a fresh playtest in the editor, so no function key).
 
 - **Level view** (centre): the editor's level when it matches the route's `LevelId`, with the
   path overlay; the camera follows the path sample at the cursor row. When the level differs, a
@@ -397,6 +398,17 @@ declares. `defeat` needs a hit-point target.
 ## Deviations
 
 Recorded during implementation; each states what the sketch said, what was built, and why.
+
+- **Editor worker transport is interim (editor, step 1).** The editor plan hands the worker the
+  original manifest path plus the working rows as script text, so a route must exist on disk
+  before it can be replayed or saved; New route waits for the public manifest codec and
+  `RouteFiles.writeDraft` (gap 3). Replay runs two passes, `RouteReplay.open` for the path and
+  `RouteReplay.replay` for the verdict, until the replay observer (gap 1) lands.
+- **Shared worker plumbing not extracted yet (editor, step 1).** The plan put
+  `StageplayRouteJob`'s process lifecycle into one shared helper. Step 3 replaces the Stageplay
+  route job's planning, so the extraction waits for it rather than churning a file the planner
+  lane is about to change; `RouteTapeJob` owns its own spawn, bounded stderr tail and
+  owned-child retirement meanwhile.
 
 - **Engine host lives in `com.openggf.tools`, not package-private in `com.openggf.route` (step 1).**
   The sketch put hosts beside the search. The engine host wraps `GameplayCaptureSession` (a

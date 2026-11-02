@@ -244,6 +244,14 @@ Unreleased. The earlier development themes remain in
   object art loads without a native zone header; native stages retain their title
   timing and zone-owned spring art.
 
+- **Route tapes in both editors:** the in-engine editor's Routes workspace and
+  OpenGGF Editor open `<stem>.route.json` routes and edit both pads' physical
+  button rows on a two-lane timeline with undo. Replay and qualified saves run in
+  a separate worker; the editors show qualified or the first row a replay cannot
+  complete, draw the replayed path over the route's level, list the manifest's
+  launch and native observations (display only), and export a BizHawk movie on
+  demand. Saving changes the files only after a passing replay.
+
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
   named choices, collapsed Advanced settings and structured F1 details with buttons,

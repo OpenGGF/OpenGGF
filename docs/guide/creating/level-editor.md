@@ -430,6 +430,28 @@ Application quit and the window close button also offer **Save and quit**,
 **Quit without saving**, and **Cancel quit**. A failed save keeps the application
 open; cancelling restores the editor or active playtest.
 
+## Edit route tapes
+
+A route tape is a recorded controller route: `<stem>.route.json` (how the route
+starts: ROM, level, team, width and start clock) and `<stem>.script` (one row per
+controller poll, both pads, physical buttons). Open the **Routes** workspace from
+the plate beside **Stageplay** or from the command sheet, then **Open route**
+(`Ctrl+O`).
+
+The timeline shows P1's eight buttons above P2's. Move the cursor with
+**Left/Right** (`Shift` steps 60 rows, the bumpers page) and the button with
+**Up/Down**; **Space** or South toggles the button, **M** or West marks a range,
+North (or `Insert`/`Delete`) opens row actions. Every edit is one undo step.
+
+**Replay** (`R`) plays the working rows from a cold boot in a separate worker and
+reports **Qualified**, **Passes replay; not saved** or **Not qualified: stopped
+at row N**, moving the cursor to that row. When the editor shows the route's
+level, the replayed path is drawn over it and the view follows the cursor.
+**Save qualified** (`Ctrl+S`) replays first and writes the files only after a
+passing replay. **Export BK2** writes a new BizHawk movie of the rows and never
+overwrites a file. The panel lists the manifest's native observations, such as
+lag frames seen on BizHawk; they are display only and never change a replay.
+
 ## Playtest and return
 
 Choose **Playtest from level start** (`F5`) for the authored start or **Playtest
