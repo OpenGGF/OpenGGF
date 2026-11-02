@@ -122708,3 +122708,71 @@ handles remain in that worker. Four other historical campaign classes and nine
 other cold-route classes remain unmeasured by this fleet. CNZ remains with the
 existing solid-order effort. Broader survey hypotheses and policy questions
 await user priorities and do not authorize additional work or hydration.
+
+
+## 2026-11-02 — Solo S2 title-card leader-history passes
+
+Worker commit `6d8cab5e9`, based on `2832c01cf`, invokes the existing leader
+fallback recorder on solo S2 title-card object passes. Sidekick dispatch keeps
+its existing path. The pass count remains26, now derived as1+5+11+9 from native
+Level/title-card transitions rather than comparison-history contents. No leader
+movement, history reseeding, gameplay-clock increment or snapshot hydration is
+introduced. `AbstractPlayableSprite` and the recorder algorithm are unchanged.
+
+The ROM-backed `TestKis2SoloHistoryPrelude` witness failed before the change
+(latest slot$3F instead of$19), then passed with untouched-slot and gameplay-clock
+controls. The worker's exact selection completed36 cases:35 passes and the known
+KiS2 replay failure, no errors/skips. Ordinary S2 EHZ1 remains green over5,852
+rows. KiS2 advances91→38 bootstrap errors across1,817 rows, gate reached, zero
+warnings and zero gameplay/animation errors. The only remaining differences are
+unwritten Y slots26..63, expected$0293 versus engine$0294. Initialization-anchor
+ordering remains open; no corrective reseed or offset is applied.
+
+Native references use the explicit KiS2 source revision
+`c336fede00092017f48c9d7851e0d3728c4fae2b`, `s2.asm`:
+`Obj01_Init_Continued` lines37808–37826 (offset fill/status clear),
+`Sonic_RecordPos` lines37963–37977 (word writes/low-byte index),
+`Level_FromCheckpoint` lines5330,5381–5389 (pre-loop/exit dispatch), and
+`Obj34_LeftPartOut`, `Obj34_BottomPartOut`, `Obj34_BackgroundOutInit/Out`
+lines28839–28922 (native pass derivation). This optional KiS2 reference is
+separate from the stock S2 gitlink, not a request to move a pin.
+
+Worker fixed selection, with the queued wrapper, Java25, display variables
+unset, surfaceless EGL, `-Dmse=off -Ptrace-replay` and original absolute S2/S3K
+ROM paths:
+
+```text
+TestKis2SoloHistoryPrelude,TestKis2Ehz1TraceReplay,TestS2ReplayBootstrapTailsFrame0,TestS2Ehz1TraceReplay,TestPreludeFramesKnobsZero,TestSonic3kBootstrapResolver,TestS3kAiz1SkipHeadless
+```
+
+Root merged this into `develop`4311f21c4 as `6ec3de1a4`. The cross-entry
+selection completed116 cases:114 passes, the two known replay failures, zero
+errors/skips. All four replay comparison gates completed: KiS2 retains exactly
+38 bootstrap Y errors over1,817 rows; ordinary S1 GHZ1 passes3,905 rows and S2
+EHZ1 passes5,852; LBZ remains239 errors over6,309 gameplay comparisons /6,444
+planned rows. No gameplay or animation error was added to KiS2.
+
+The queued command used Java25, unset display variables, surfaceless EGL,
+`-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`,
+all three original absolute ROM paths, and this exact selection:
+
+```text
+TestKis2SoloHistoryPrelude,TestKis2Ehz1TraceReplay,TestS2ReplayBootstrapTailsFrame0,TestS2Ehz1TraceReplay,TestPreludeFramesKnobsZero,TestSonic3kBootstrapResolver,TestS3kAiz1SkipHeadless,TestSonic2TornadoRidePrelude,TestTraceReplaySessionBootstrapClockParity,TestTraceReplaySessionBootstrapBonus,TestS1Ghz1TraceReplay,TestHardwareTimingAuthorityGuard,TestSonic3kLevelLoading,TestSonic3kDecodingUtils,TestS3kKnucklesLbz2BigArmTraceReplay
+```
+
+Queue wait was400s and Maven execution106s. The change-based plan selected4,395
+smoke classes; these focused checks replace it because the runtime change only
+adds the existing recorder to already-counted solo S2 title-card passes. Recorder
+arithmetic, movement and gameplay clocks are unchanged; cross-entry controls
+cover team, Tornado, bonus, clock, S1/S2 and required S3K consumers. This is bounded
+verification, not a green trace suite or a full-suite result.
+
+A subsequent ROM-backed boundary probe passed without production edits:
+native start Y$028F initializes untouched history to$0293 before the live ground
+snap to$0290; metadata/reanchor initialization instead fills$0294. Both early
+fixture construction and later `GameplayTeamBootstrap.repositionRegisteredSidekicks()`
+(via `LevelManager.spawnSidekicks()`) affect this provenance. The remaining38
+entries need explicit native-versus-positioned entry ownership, not a fitted
+one-pixel adjustment. This shared work is handed to the survey lead's inlet lane;
+parallel anchor edits are stopped. KiS2 glide top-boundary and LBZ producer work
+remain assigned. Carried-state policy and halfpipe return-gap timing are unchanged.

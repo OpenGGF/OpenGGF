@@ -173,3 +173,21 @@ effort. Historical row-stamping and newly surveyed hypotheses receive no new
 assignment while user priorities are pending. The removed FBZ full-route method
 is a coverage obligation, not a currently failing test; its short replacement
 pass does not certify the full route.
+
+
+## Solo history follow-up
+
+Worker `6d8cab5e9`, preserved in merge `6ec3de1a4`, restores leader-history
+recording on existing solo S2 title-card passes. KiS2 EHZ1 advances91→38 errors,
+all in untouched Y slots26–63 ($0293/$0294), with1,817 rows compared and zero
+gameplay/animation errors. Cross-entry integration completes116 cases:114 passes,
+known KiS2/LBZ replay failures, zero errors/skips. S1 GHZ1 and ordinary S2 EHZ1
+remain green; LBZ stays239 errors. The exact selection and bounded-validation
+rationale are in the [frontier entry](../../status/trace-frontier-log.md#2026-11-02--solo-s2-title-card-leader-history-passes).
+
+The remaining history defect involves initialization provenance at both fixture
+construction and sidekick reanchoring. Its edits are handed to the survey lead's
+shared inlet lane to avoid overlap. The KiS2 worker instead owns native glide
+top-boundary speed halving; LBZ owns the missing EggRobo-head art producer.
+These newer assignments supersede the earlier hold on those survey hypotheses.
+Carried-run-state policy and unrelated survey work remain outside this repair.
