@@ -605,6 +605,7 @@ com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance
+com.openggf.game.sonic3k.objects.IczMinibossDebrisChild
 com.openggf.game.sonic3k.objects.IczMinibossExplosionControllerChild
 com.openggf.game.sonic3k.objects.IczMinibossInstance
 com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController

@@ -1,5 +1,32 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+## Native sprite producer maintenance (2026-11-01)
+
+The follow-up investigates disappearing parts with sprite limits disabled.
+`TestGraphicsManagerSpriteSatReplay` reproduces an ordinary offscreen mapping
+piece becoming an unintended zero-X mask. It covers both zero-X equivalents on
+native H40 and both limit settings; `TestSpriteSatPixels` checks the later sprite's
+pixels in direct and instanced replay. Explicit mask controls remain supported.
+
+The normal end-of-act tally had two missing admission stages: whole-element
+bounds and individual mapping-piece padded-raster bounds. The results child unit
+test covers initial offscreen rejection, partial visibility and a widened right
+edge. `TestHczResultsTerrainPixels` exercises actual ROM-loaded tally mappings,
+including a surviving whole-element boundary whose digits must still be rejected,
+and retains its art/terrain pixel checks. AIZ plant culling keeps its existing
+focused checks. This repairs producer semantics rather than relaxing native
+limits. No new simulation state is introduced; recreation/rewind fields are
+unchanged. Exact reported AIZ footage, native-emulator pixel comparison,
+full routes, donor/team products and fresh whole-world rewind qualification
+remain inherited gaps. Focused and combined validation outcomes are reported
+with delivery; this matrix does not certify a whole level.
+
+The follow-up positioned gameplay capture boots Sonic+Tails at centre
+(6176, 1116), camera (6023, 944), steps 120 neutral inputs through the initial fade,
+and shows the complete Sonic body with native limits enabled. This is a positioned
+scene observation, not a replay or a whole-route certificate. A separate trace
+capture produced terrain-only pictures and was rejected as sprite evidence.
+
 ## Foreground plant visibility (2026-10-29)
 
 The [sprite-culling record](../../plans/2026-10-29-sprite-scanline-rendering.md)
@@ -1110,3 +1137,12 @@ The title's private timing owner was not observed through a fabricated API.
 There is no native pixel/audio-output, long-route, rewind, alternate viewport,
 donor/team or whole-boot parity certificate. The unrelated hub START-layout and
 capture-chord negatives remain unchanged. Root owns integration and broader checks.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.

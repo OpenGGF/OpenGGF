@@ -59,6 +59,27 @@ class TestHczResultsTerrainPixels {
             assertTrue(results.hasLoadedResultsArt(), "all three ROM results archives must be claimed");
             var children = manager.activeObjectsOfType(S3kResultsElementObjectInstance.class).stream().toList();
             assertEquals(12, children.size(), "native results publication must have completed");
+            // Every ObjArray_LevResults element starts outside its declared bounds.
+            // The real ROM-backed mappings must not enter the table until slide-in.
+            graphics.beginSpriteSatCollection();
+            for (var child : children) child.appendRenderCommands(new ArrayList<>());
+            Field entriesField = graphics.getClass().getDeclaredField("spriteSatEntries");
+            entriesField.setAccessible(true);
+            assertTrue(((List<?>) entriesField.get(graphics)).isEmpty(),
+                    "offscreen results must be culled before their ROM mappings consume SAT entries");
+            graphics.endSpriteSatCollectionAndReplay();
+            var bonus = children.stream().filter(child -> child.entryIndex() == 6).findFirst().orElseThrow();
+            Field currentX = bonus.getClass().getDeclaredField("currentX");
+            currentX.setAccessible(true);
+            int startingX = currentX.getInt(bonus);
+            currentX.setInt(bonus, -64); // whole-element left boundary survives; its pieces do not
+            graphics.beginSpriteSatCollection();
+            bonus.appendRenderCommands(new ArrayList<>());
+            assertTrue(((List<?>) entriesField.get(graphics)).isEmpty(),
+                    "multi-draw must reject piece origins outside the native padded raster");
+            graphics.endSpriteSatCollectionAndReplay();
+            currentX.setInt(bonus, startingX);
+
             assertArrayEquals(patternsBefore, patterns(level), "results art must not write CPU terrain patterns");
             for (int i = 0; i < 400 && integer(results, "totalBonusCountUp") == 0; i++) {
                 results.update(dispatch++, session.player());

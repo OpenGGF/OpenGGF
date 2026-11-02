@@ -1802,7 +1802,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * gameplay, such as MGZ2's boss-transition Tails rescue object.
      */
     public void refreshPlayableSpriteArt() {
-        playableArtInitializer.initialize();
+        playableArtInitializer.refresh();
     }
 
     /**
@@ -3372,6 +3372,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 sidekick.setLrbSolidBit(leaderPaths.getLrbSolidBit());
             }
             if (sidekick.getCpuController() != null) {
+                sidekick.getCpuController().setCarryTrigger(activeGameModule().getSidekickCarryTrigger());
                 applySidekickLevelBounds(sidekick);
                 // Capture the spawn centre for the deferred CPU placement. ROM
                 // SpawnLevelMainSprites_SpawnPlayers places the sidekick and fills

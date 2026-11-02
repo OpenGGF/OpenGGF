@@ -904,7 +904,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         .targetZoneAct(Sonic3kZoneIds.ZONE_HCZ, 1)
                         .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
-                        // Results screen already started act 2 music
+                        // The in-level title wait gate owns the Act 2 music request.
                         .preserveMusic(true)
                         // Load_Level swaps HCZ resources without clearing the
                         // running act-results ring/time globals.

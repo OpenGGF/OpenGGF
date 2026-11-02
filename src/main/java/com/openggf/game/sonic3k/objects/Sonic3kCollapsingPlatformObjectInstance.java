@@ -655,6 +655,7 @@ public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjec
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!isWithinRenderSpriteBounds(config.halfWidth, config.halfHeight)) return;
         ObjectRenderManager renderManager = getRenderManager();
         if (renderManager == null) {
             return;
@@ -776,6 +777,7 @@ public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjec
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (!isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight)) return;
             PatternSpriteRenderer renderer = getRenderer(artKey);
             if (renderer == null) {
                 return;

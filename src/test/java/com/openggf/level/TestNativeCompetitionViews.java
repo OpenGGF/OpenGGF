@@ -29,7 +29,8 @@ class TestNativeCompetitionViews {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings);
-             var renderer = new NativeCompetitionRenderer()) {
+             var renderer = new NativeCompetitionRenderer();
+             var limits = NativeSpriteLimits.enable()) {
             session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, settings);
             session.step(null); session.step(null);
             var context = SessionManager.getCurrentGameplayMode();

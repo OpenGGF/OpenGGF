@@ -23,6 +23,38 @@ import static org.mockito.Mockito.*;
 
 class TestStageplayCapsuleControlRelease {
     @Test
+    void floatingCapsuleUsesSevenNormalExplosionsWithChildOwnedBreakSound() throws Exception {
+        var fixture = new Fixture();
+        var manager = mock(com.openggf.level.objects.ObjectManager.class);
+        when(fixture.services.objectManager()).thenReturn(manager);
+        when(fixture.services.rng()).thenReturn(new com.openggf.game.GameRng(
+                com.openggf.game.GameRng.Flavour.S3K));
+        var capsule = new Aiz2EndEggCapsuleInstance(100, 100) {
+            @Override protected int getAnimalCount() { return 0; }
+        };
+        capsule.setServices(fixture.services);
+        invoke(capsule, "openCapsule", new Class<?>[0]);
+        verify(fixture.services, never()).playSfx(anyInt());
+        var controller = (S3kBossExplosionController) field(capsule, "explosionController").get(capsule);
+        for (int frame = 0; frame < 24; frame++) {
+            controller.tick();
+            invoke(capsule, "spawnPendingExplosions", new Class<?>[0]);
+        }
+        assertTrue(controller.isFinished());
+        var children = org.mockito.ArgumentCaptor.forClass(com.openggf.level.objects.ObjectInstance.class);
+        verify(manager, times(7)).addDynamicObjectAfterCurrent(children.capture());
+        for (var child : children.getAllValues()) {
+            assertInstanceOf(FbzEndEggCapsuleExplosionController.FbzEndEggCapsuleNormalExplosion.class, child);
+            assertTrue(child.isHighPriority());
+            assertEquals(1, child.getPriorityBucket());
+            ((AbstractObjectInstance) child).setServices(fixture.services);
+            child.update(1, null);
+        }
+        verify(fixture.services, times(7)).playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id);
+        verify(fixture.services, never()).playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.EXPLODE.id);
+    }
+
+    @Test
     void idleCapsulesAndEmbeddedBossNeverResetUnacquiredParticipants() {
         var fixture = new Fixture();
         for (var owner : List.<AbstractObjectInstance>of(new CnzEggCapsuleInstance(spawn()),

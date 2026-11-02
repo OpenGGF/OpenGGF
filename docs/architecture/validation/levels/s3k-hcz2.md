@@ -1044,3 +1044,12 @@ families through entry and two destructive restores; disabled/outside contacts
 and consumed siblings remain negative controls. This extends the shared mechanism
 floor only. The HCZ checkpoint route, death/reload, later rewind, viewport/donor/
 roster and native-pixel obligations above remain inherited and unfulfilled.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.

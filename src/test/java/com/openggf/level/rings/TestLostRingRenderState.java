@@ -53,6 +53,32 @@ class TestLostRingRenderState {
         }
     }
 
+    @Test void offscreenLostRingsDoNotChargeNativeTableOrLineBudgets() throws Exception {
+        for (SonicGame game : List.of(SonicGame.SONIC_1, SonicGame.SONIC_2, SonicGame.SONIC_3K)) {
+            TestEnvironment.configureGameModuleFixture(game);
+            GraphicsManager graphics = GraphicsManager.getInstance(); graphics.initHeadless();
+            RingManager rings = new RingManager(List.of(), TestRingNativeSlotDispatch.sheet(), null, null, null);
+            rings.ensurePatternsCached(graphics, 300);
+            GameModule module = GameServices.currentOrBootstrapGameModule();
+            var services = new StubObjectServices() {
+                @Override public GraphicsManager graphicsManager() { return graphics; }
+                @Override public GameModule gameModule() { return module; }
+                @Override public RingManager ringManager() { return rings; }
+            };
+            var field = GraphicsManager.class.getDeclaredField("spriteSatEntries"); field.setAccessible(true);
+            com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(100, 0, 420, 224, 0);
+            for (int x : new int[]{-9, -8, 327, 328}) {
+                LostRingObjectInstance ring = LostRingObjectInstance.forTest(x + 100, 64, 0, 0, 0, 255);
+                ring.setServices(services);
+                SpriteSatInternalAccess.beginCollection(graphics, SpriteSatMaskPostProcessor.Raster.h40(100, 0, 224));
+                ring.appendRenderCommands(new ArrayList<>());
+                assertEquals(x == -9 || x == 328 ? 0 : 1, ((List<?>) field.get(graphics)).size(),
+                        game + " native half-width 8 at X=" + x);
+                graphics.endSpriteSatCollectionAndReplay();
+            }
+        }
+    }
+
     @Test void convertedRenderWordsSurviveDrawingPausesAndADeferredOwnerDispatch() {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         GraphicsManager graphics = GraphicsManager.getInstance();

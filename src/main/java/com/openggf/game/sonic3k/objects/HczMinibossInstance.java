@@ -2046,7 +2046,22 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
     }
 
+    @Override
+    protected boolean usesBaseHitHandler() {
+        return false;
+    }
+
     private void updateCustomFlash() {
+        // The ROM writes its custom palette row before decrementing $20.
+        // Keep timer ownership here so the base handler cannot invert the phase
+        // or suppress the final normal-colour write when the counter reaches 0.
+        applyCustomFlash();
+        if (!state.defeated && state.invulnerable && --state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+        }
+    }
+
+    private void applyCustomFlash() {
         if (state.defeated) {
             return;
         }

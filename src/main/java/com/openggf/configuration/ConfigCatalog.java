@@ -62,8 +62,8 @@ public final class ConfigCatalog {
                 "Show hundredths of a second in the HUD's TIME (0:00.00), as Sonic CD does; "
                 + "the original three games show whole seconds"));
         put(DISPLAY_SPRITE_SCANLINE_LIMIT, of("display", "spriteScanlineLimit", BOOL,
-                "Enforce native per-scanline sprite count and pixel-width limits; "
-                + "disabling retains explicit sprite masks and total table capacity"));
+                "Enforce native sprite-table capacity and per-scanline count and pixel-width limits; "
+                + "disabling retains explicit sprite masks"));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
         put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,

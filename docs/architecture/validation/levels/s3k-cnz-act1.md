@@ -245,3 +245,31 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## MGZ2 to CNZ1 carry handoff regression (2026-11-01)
+
+`TestS3kMgzCnzCarryHandoffHeadless` engages the real MGZ rescue controller,
+then submits the normal CNZ1 zone request with solo Sonic and configured Tails.
+The production recording driver owns fade, load and title-card completion.
+It checks destination pickup, the native `$100` horizontal flight velocity,
+eight-frame complete-world restore/replay, landing, and control release.
+On base `745eb44df` with the corrected regression `211cc9d95`, the solo
+case passed and the configured-Tails case failed at destination attachment.
+The run had two tests, one failure, zero errors and zero skips. MGZ replaces
+the controller's carry trigger, and fresh assembly retains it.
+The repair restores the module's normal trigger during sidekick assembly.
+
+The disassembly's `loc_13A32` selects the CNZ pickup and `loc_13FC2` starts
+carrying. `loc_14016` detects Sonic's landing. This is a positioned local rescue
+and destination-load witness, not automatic boss/results/fade route completion.
+It does not add donor or viewport breadth, cross-load rewind, or native pixel
+qualification. Those inherited matrix obligations remain open.
+
+The repair on `211cc9d95` plus the one-line runtime change passed both handoff
+cases and the combined 171-test consumer selection with zero failures, errors
+or skips. The selection covered CNZ pair/solo carry, scripted carrier admission,
+MGZ rescue/events, sidekick spawn/start policy, and the four required S3K
+bootstrap/load/decode/AIZ checks. The runner's shared-file plan selected 4386
+smoke classes; focused checks replace that disproportionate selection because
+only the destination carry-policy binding changes. This is bounded validation,
+not a full-suite or exhaustive trace qualification.

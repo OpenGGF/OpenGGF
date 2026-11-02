@@ -4174,10 +4174,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_DoLevelCollision: Full airborne collision (s2.asm:37540) */
 	private void doLevelCollision(boolean forceFloorCheck) {
+		resolveObjectControlledLevelCollision(collisionSystem(), forceFloorCheck);
+	}
+
+	/** Shared native terrain dispatch for object-owned player movement. */
+	void resolveObjectControlledLevelCollision(CollisionSystem collisionSystem, boolean forceFloorCheck) {
 		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
 		Consumer<AbstractPlayableSprite> landingHandler =
 				usesDirectHitFloorLanding(quadrant) ? this::calculateDirectFloorLanding : this::calculateLanding;
-		CollisionSystem collisionSystem = collisionSystem();
 		// Keep the established virtual overload as the collision seam. The shared
 		// owner publishes wall/floor/ceiling writes during native execution; the
 		// player tail copies the final global pair after the dispatch returns.

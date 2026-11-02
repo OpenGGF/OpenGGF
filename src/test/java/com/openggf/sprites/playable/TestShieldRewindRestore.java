@@ -49,6 +49,43 @@ class TestShieldRewindRestore {
         TestEnvironment.resetAll();
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(ShieldType.class)
+    void transformedPlayerCollectsHiddenShieldAndRetainsItAfterReversion(ShieldType type) {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 100, (short) 200);
+        RecordingShield shield = new RecordingShield(type);
+        sprite.setPowerUpSpawner(new RecordingPowerUpSpawner(shield));
+        sprite.setSuperSonic(true);
+
+        sprite.giveShield(type);
+
+        assertTrue(sprite.hasShield());
+        assertEquals(type, sprite.getShieldType());
+        assertSame(shield, sprite.getShieldObject());
+        assertFalse(shield.visible);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+        assertFalse(shield.visible);
+        sprite.setSuperSonic(false);
+        sprite.setShieldVisible(true);
+        assertTrue(sprite.hasShield());
+        assertTrue(shield.visible);
+    }
+
+    @Test
+    void invincibilityExpiryDoesNotRevealTransformedPlayersShield() {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("sonic", (short) 100, (short) 200);
+        RecordingShield shield = new RecordingShield(ShieldType.BASIC);
+        sprite.setPowerUpSpawner(new RecordingPowerUpSpawner(shield));
+        sprite.setSuperSonic(true);
+        sprite.giveShield();
+        sprite.setInvincibleFrames(1);
+
+        ((AbstractPlayableSprite) sprite).tickInvincibilityDisplayTimer();
+
+        assertFalse(shield.visible);
+        assertTrue(sprite.hasShield());
+    }
+
     @Test
     void restoreBeforeFirstStatusTickKeepsInstaShieldRegistrationPending() {
         TestablePlayableSprite sprite = instaShieldSprite();
@@ -471,6 +508,7 @@ class TestShieldRewindRestore {
 
     private static final class RecordingShield implements PowerUpObject {
         private final ShieldType type;
+        private boolean visible = true;
         private boolean destroyed;
         private int artRefreshRequests;
 
@@ -490,6 +528,7 @@ class TestShieldRewindRestore {
 
         @Override
         public void setVisible(boolean visible) {
+            this.visible = visible;
         }
 
         @Override

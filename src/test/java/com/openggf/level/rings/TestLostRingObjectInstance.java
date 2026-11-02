@@ -549,6 +549,7 @@ class TestLostRingObjectInstance {
 
     @Test
     void appendRenderCommandsDrawsMovingLostRingObjectWithSharedSpillFrame() {
+        AbstractObjectInstance.updateCameraBounds(128, 224, 448, 448, 0);
         RingManager ringManager = spy(buildRingManagerWithLevelManager(null));
         SpillAnimationState animation = new SpillAnimationState();
         animation.reset();
@@ -574,6 +575,7 @@ class TestLostRingObjectInstance {
 
     @Test
     void appendRenderCommandsDrawsEachMovedLostRingObjectWithItsOwnPhase() {
+        AbstractObjectInstance.updateCameraBounds(128, 224, 448, 448, 0);
         RingManager ringManager = spy(buildRingManagerWithLevelManager(null));
         SpillAnimationState animation = new SpillAnimationState();
         animation.reset();

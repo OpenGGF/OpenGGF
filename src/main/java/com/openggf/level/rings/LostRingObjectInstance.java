@@ -813,7 +813,11 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed()) {
+        // BuildSprites/Render_Sprites rejects this SST before mapping expansion.
+        // Keep the existing game-specific Obj37 vertical extent, independent of
+        // the prior render bit used by the floor probe.
+        if (isDestroyed() || !isWithinRenderSpriteBounds(
+                RING_RENDER_HALF_WIDTH, resolveLostRingRenderVerticalMargin())) {
             return;
         }
         ObjectServices services = servicesOrNull();

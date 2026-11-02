@@ -569,11 +569,26 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
         // Segment X positions: bridgeX - (segCount/2)*16, +16 per segment
         int startX = spawn.x() - ((segmentCount >> 1) * SEGMENT_WIDTH);
-        for (int i = 0; i < segmentCount; i++) {
-            int x = startX + (i * SEGMENT_WIDTH);
-            int y = baseY + segmentYOffsets[i];
-            int frame = (segmentFrames != null) ? segmentFrames[i] : 0;
-            renderer.drawFrameIndex(frame, x, y, false, false);
+        // sub_38756 (sonic3k.asm:75608-75633) creates flag-$40 child groups
+        // with $40/$08 bounds. Their centres are the middle segment minus8.
+        for (int group = 0; group < segmentCount; group += 8) {
+            int count = Math.min(8, segmentCount - group);
+            int groupX = startX + (group + (count >> 1)) * SEGMENT_WIDTH - 8;
+            if (!isWithinBuildSpritesBounds(groupX, baseY, 0x40, 8)) continue;
+            for (int i = group; i < group + count; i++) {
+                int x = startX + (i * SEGMENT_WIDTH);
+                int y = baseY + segmentYOffsets[i];
+                int frame = (segmentFrames != null) ? segmentFrames[i] : 0;
+                // Every native HCZ/ICZ/LRZ segment frame is exactly one piece.
+                // loc_1B07A (sonic3k.asm:36743-36766) tests its origin, not its extent.
+                var bounds = renderer.getFrameBoundsForIndex(frame);
+                int screenX = x + bounds.minX() - cameraLeft();
+                int screenY = y + bounds.minY() - cameraTop();
+                if (screenX > -32 && screenX < viewportWidth()
+                        && screenY > -32 && screenY < viewportHeight()) {
+                    renderer.drawFrameIndex(frame, x, y, false, false);
+                }
+            }
         }
     }
 

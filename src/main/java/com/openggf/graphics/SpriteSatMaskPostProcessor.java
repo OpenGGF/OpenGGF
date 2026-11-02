@@ -111,7 +111,7 @@ public final class SpriteSatMaskPostProcessor {
         return processLogicalReusable(entries, spriteMaskEnabled, raster, true);
     }
 
-    /** Presentation may relax only line budgets; explicit masks and table capacity remain native. */
+    /** Presentation may relax sprite budgets; explicit masks remain native. */
     static List<SpriteSatEntry> processLogicalReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled,
                                                        LogicalViewport raster, boolean scanlineLimits) {
         Scratch scratch = SCRATCH.get();
@@ -150,7 +150,7 @@ public final class SpriteSatMaskPostProcessor {
         int nativeEntries = 0;
         for (int slot = 0; slot < ordered; slot++) {
             int index = scratch.order[slot];
-            if (entries.get(index).isGhost() || nativeEntries++ < raster.tableSprites()) {
+            if (!scanlineLimits || entries.get(index).isGhost() || nativeEntries++ < raster.tableSprites()) {
                 scratch.order[total++] = index;
             }
         }

@@ -590,3 +590,12 @@ fan/SS7 questions. Parent retains final review, combined smoke and delivery.
 ## TAS mechanism accuracy — 2026-10-26
 
 The water-skim owner now retires after participants exit and the native P1-anchored range tail admits removal. Mixed-P2, range boundary, allocation reuse and restore-forward controls are bounded owner evidence. The full HCZ boss-overwrite/death route remains unexecuted. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.
+
+## Custom damage flash phase — 2026-11-02
+
+The custom palette owner now reads the 32-update hit counter before decrement,
+matching the ROM palette-copy tail. It writes the final normal row before
+collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
+and countdown value for AIZ1 and both HCZ bosses through the public update.
+Existing route, donor/team/viewport and native pixel qualification gaps remain;
+this local correction does not renew whole-act certification.

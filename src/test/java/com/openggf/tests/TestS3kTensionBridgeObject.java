@@ -32,6 +32,39 @@ class TestS3kTensionBridgeObject {
     }
 
     @Test
+    void nativeChildGroupsAndPieceOriginsCullBeforeSegmentSubmission() {
+        var renderer = org.mockito.Mockito.mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        org.mockito.Mockito.when(renderer.isReady()).thenReturn(true);
+        org.mockito.Mockito.when(renderer.getFrameBoundsForIndex(org.mockito.Mockito.anyInt()))
+                .thenReturn(new com.openggf.level.render.PatternSpriteRenderer.FrameBounds(-8, -8, 7, 7));
+        com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        for (int[] position : new int[][]{{640, 100}, {160, 300}}) {
+            var bridge = drawingBridge(position[0], position[1], renderer);
+            bridge.appendRenderCommands(new java.util.ArrayList<>());
+        }
+        org.mockito.Mockito.verify(renderer, org.mockito.Mockito.never()).drawFrameIndex(
+                org.mockito.Mockito.anyInt(), org.mockito.Mockito.anyInt(), org.mockito.Mockito.anyInt(),
+                org.mockito.Mockito.anyBoolean(), org.mockito.Mockito.anyBoolean());
+        var edge = drawingBridge(8, 100, renderer);
+        edge.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(renderer, org.mockito.Mockito.times(7)).drawFrameIndex(
+                org.mockito.Mockito.anyInt(), org.mockito.Mockito.anyInt(), org.mockito.Mockito.eq(100),
+                org.mockito.Mockito.eq(false), org.mockito.Mockito.eq(false));
+        org.mockito.Mockito.verify(renderer, org.mockito.Mockito.never()).drawFrameIndex(
+                org.mockito.Mockito.anyInt(), org.mockito.Mockito.eq(-24), org.mockito.Mockito.eq(100),
+                org.mockito.Mockito.eq(false), org.mockito.Mockito.eq(false));
+    }
+
+    private static TensionBridgeObjectInstance drawingBridge(int x, int y,
+            com.openggf.level.render.PatternSpriteRenderer renderer) {
+        return new TensionBridgeObjectInstance(new ObjectSpawn(x, y, 0x6C, 12, 0, false, y)) {
+            @Override protected com.openggf.level.render.PatternSpriteRenderer getRenderer(String key) {
+                return renderer;
+            }
+        };
+    }
+
+    @Test
     void registryCreatesTensionBridgeInstance() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.TENSION_BRIDGE, 0x0C, 0x00, false, 0));
