@@ -47,6 +47,32 @@ import static org.mockito.Mockito.when;
 class TestLostRingObjectInstance {
 
     @Test
+    void bouncingRingRebasesWithTheArenaAndKeepsItsFractionAndVelocity() {
+        var ring = LostRingObjectInstance.forTest(0x4270, 0x300, -0x238, -0x400, 0, 0xFF);
+        ring.update(0, null);
+        int x = ring.getXSubpixelForTest();
+        int y = ring.getYSubpixelForTest();
+        int vx = ring.getXVelForTest();
+        int vy = ring.getYVelForTest();
+        var runtime = mock(com.openggf.game.zone.ZoneRuntimeState.class);
+        when(runtime.levelRepeatOffset()).thenReturn(0x200);
+        ring.setServices(new StubObjectServices() {
+            @Override public com.openggf.game.zone.ZoneRuntimeState zoneRuntimeState() { return runtime; }
+        });
+        var before = ring.captureRewindState();
+        ring.update(1, null);
+        assertEquals(x + vx - 0x20000, ring.getXSubpixelForTest());
+        assertEquals(y + vy, ring.getYSubpixelForTest());
+        assertEquals(vx, ring.getXVelForTest());
+        assertEquals(vy + 0x18, ring.getYVelForTest());
+        var expected = ring.captureRewindState();
+        ring.restoreRewindState(before);
+        ring.update(1, null);
+        assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "ring", expected, ring.captureRewindState()));
+    }
+
+    @Test
     void deferredObj37OwnerClearsRingsOnItsFirstExecution() {
         SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
         player.setRingCount(11);

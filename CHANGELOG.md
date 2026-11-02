@@ -8,6 +8,13 @@ readable and historical versions can be referenced directly.
 S3K capsule and cutscene-button routines now share their common behavior; the
 object ownership audit also corrected explosion RNG/allocation drift.
 
+- Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
+
+- Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
+
+- Clear the native sanctuary openings so stray terrain no longer appears above
+  the left Super Emerald pedestals during the results camera descent.
+
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 - Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
 

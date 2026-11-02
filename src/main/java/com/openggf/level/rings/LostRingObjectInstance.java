@@ -481,6 +481,13 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             }
         }
 
+        if (!collected) {
+            ObjectServices services = servicesOrNull();
+            int repeat = services == null || services.zoneRuntimeState() == null
+                    ? 0 : services.zoneRuntimeState().levelRepeatOffset();
+            // loc_1A7B0/loc_1A83C subtract after movement/probing, before Draw_Sprite.
+            xSubpixel -= repeat << 8;
+        }
         queueNativeDisplaySprite();
     }
 

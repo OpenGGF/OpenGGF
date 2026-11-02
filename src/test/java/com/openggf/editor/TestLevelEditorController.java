@@ -639,10 +639,25 @@ class TestLevelEditorController {
             gameLoop.step();
 
             assertEquals(EditorHierarchyDepth.BLOCK, controller.depth());
+            assertEquals(EditorSpawnEditMode.TILES, controller.spawnEditMode(),
+                    "Enter must not also cycle spawn mode through the default Start binding");
+            assertFalse(gameLoop.isUserPaused(), "Enter belongs to the editor, not host pause");
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_ENTER));
         } finally {
             SessionManager.clear();
         }
+    }
+
+    @Test
+    void editor_startWithoutEnterStillCyclesSpawnMode() {
+        var input = new InputHandler();
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(0, 0, 0, 0, true, true),
+                com.openggf.control.PlayerInputState.neutral()));
+        var controller = new LevelEditorController();
+        new EditorInputHandler(controller).update(input);
+        org.junit.jupiter.api.Assertions.assertTrue(controller.isSpawnEditing());
+        assertEquals(EditorHierarchyDepth.WORLD, controller.depth());
     }
 
     @Test
