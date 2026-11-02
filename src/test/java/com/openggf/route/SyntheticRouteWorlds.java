@@ -62,7 +62,7 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
 
         @Override public RouteSample observe() {
             var p1 = new PlayerView(s.x, 1000 + s.y, 0, 0, 0, 0, 0, 0, s.air, false, false, false, false, s.dead, 10,
-                    false, false);
+                    false, false, false, PlayerView.Motion.NONE);
             return new RouteSample(s.rows, s.epoch, new RouteSample.Level(0, 0, 0, "LEVEL"),
                     new RouteSample.Clocks(s.rows, s.rows), p1, Optional.empty(), 0, 0, 0);
         }

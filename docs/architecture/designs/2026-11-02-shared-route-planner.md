@@ -123,6 +123,14 @@ lives only in that trial's edge, and the contaminated host is closed and rebuilt
 prefix. The host proves that its rows own the effective gameplay input. If a mod
 `GameplayFrameController` could substitute input or hold the world, the launch is rejected.
 
+**Engine hosts need a GL context.** `EngineRouteHosts` worlds are `GameplayCaptureSession`s booted
+through `HeadlessGameBoot`, which creates an OpenGL context. Any process that opens them (an
+isolated editor planning or replay worker JVM, a test fork, native-check tooling that replays the
+engine side) must select surfaceless EGL on Linux:
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl` with `DISPLAY`, `WAYLAND_DISPLAY` and
+`LD_LIBRARY_PATH` unset. It never falls back to the shared desktop. `ReplayEvidence` stays inside
+the worker; only stamps and value results leave it.
+
 **Visibility.** Search, journal, frontier and checkpoint envelope are package-private in
 `com.openggf.route`. A `.internal` subpackage cannot express that in Java. Host SPI construction
 is trusted composition only. A bytecode guard checks that tests and front-ends reference only
@@ -291,9 +299,50 @@ Recorded during implementation; each states what the sketch said, what was built
 - **Qualification steps are reported, not budgeted (step 2).** The search budget counts search
   steps (trials and reconstruction). The final cold replay is always run in full and reported in
   `WorkReport.qualificationSteps`.
+- **A repair keeps the original's goals and drops its native facts (step 2 fix, step 3 commit).**
+  The step-2 planner rebuilt a repaired route without the original's `GoalProgram`, so a repaired
+  route lost its replay checks (found by the editor lane). The solved route now keeps
+  `original.checks()` and the cold qualification replay evaluates them; tracking the reference is
+  not enough if a goal fails. Native facts and native stamps are not carried: they describe the
+  old rows. `RepairReport.firstChangedRow()` says how far the rows are unchanged and
+  `nativeStale()` says the native check must be re-run.
 - **Repair takes an explicit `ReferencePath` (step 2).** It doubles as the tracking contract: for
   a route repair it is the route's own rows replayed on the engine it was authored against. It is
   not yet persisted in the manifest.
+
+- **Two expanders over one frontier (step 3).** `PrefixSearch` keeps the frontier, row journal,
+  checkpoint envelope, reconstruction and budgets; an internal `Expander` decides edges, progress
+  and completion. Reference following (`ReferenceExpander`, step 2's logic) and point goals
+  (`PointExpander`, the former `StageplayRoutePlanner.searchPass`) are the two expanders. The
+  sketch described one undifferentiated rollout engine; the point search's A*-style ranking and
+  twelve-row steering edges did not fit the reference trial/commit shape without special cases.
+  Both still record accepted rows and commit by literal replay.
+- **Hosts may certify an equivalence key (step 3).** `RouteWorld.equivalenceKey()` defaults to
+  empty (no merge). The static-terrain probe certifies every future-relevant probe field,
+  including subpixels and ground speed, which is stricter than the old Stageplay key (floored
+  position, no ground speed or subpixels); live worlds certify none.
+- **Draft tier and qualification hosts (step 3).** `RoutePlanner.withDraftTier(probe)` searches on
+  the probe and qualifies on the planner's hosts. Stageplay's qualification host
+  (`StageplayRouteHosts.SceneQualifier`) installs the route's rows as the candidate document's
+  `FrozenInputTrack` and replays the document from frame zero, so qualification and final
+  playback read rows at the same `StageplayLiveWorld` input boundary. Hosts that need the rows to
+  open a replay override `RouteWorldFactory.openColdReplay(RouteArtifact)`.
+- **No live scene search yet (step 3).** The scene host replays only; escalation to a live search
+  after a failed probe draft (for object goals in scenes) is deferred. A draft that fails live
+  qualification reports `VERIFICATION_FAILED`, as before.
+- **Run advice dropped (step 3).** The old Stageplay search ran a diagnostic Run pass after a failed
+  Walk search and appended "needs Run" advice. B rejects diagnostic second searches inside the
+  core; the advice is gone. A front-end could restore it by submitting a second task.
+- **Shot obligations are front-end checks on the qualification replay (step 3).** Death, damage,
+  timeout, set change, overshoot, skid under a gentle stop, the stroll cap and the end-of-window
+  settle/facing/spindash checks run as a `RouteReplay.Observer` over the single qualification
+  replay, through `RoutePlanner.plan(task, cancellation, listener, observer)`.
+- **Probe-tier tests qualify on the probe (step 3).** `StageplayRoutePlanner.draft` (package-private)
+  plans with `StageplayRouteHosts.probeOnly`, whose replay host is the probe itself, so focused
+  tests can check the draft tier. Production never qualifies on static terrain.
+- **Arrival tolerance (step 3).** The search accepts arrival at 12 raw speed units (the old search
+  tolerance) and the replayed end of the window must be settled within 64 (the old verification
+  tolerance), so the two numbers remain, now named in `PointGoal`.
 
 ## Next step
 

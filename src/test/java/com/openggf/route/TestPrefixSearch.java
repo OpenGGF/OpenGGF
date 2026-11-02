@@ -159,4 +159,34 @@ class TestPrefixSearch {
         var firstSpan = assertInstanceOf(RepairReport.Span.Original.class, edited.repair().spans().getFirst());
         assertTrue(firstSpan.length() >= 100, "rows before the required window are kept: " + edited.repair().summary());
     }
+
+    @Test
+    void aRepairKeepsTheOriginalsGoalsAndTheColdReplayReevaluatesThem() {
+        var now = new SyntheticRouteWorlds(List.of(new SyntheticRouteWorlds.Pit(60, 66)), Integer.MAX_VALUE,
+                Integer.MIN_VALUE, false);
+        ReferencePath reference = recordedOn(SyntheticRouteWorlds.flat());
+        var reachable = GoalProgram.of(Guard.safe(), Leg.of("far-end", new RouteGoal.Achieve(new SamplePredicate.PlayerIn(
+                PlayerSlot.P1, new Region(190, 0, 210, 2000))), 400));
+        var withNative = original().withChecks(reachable);
+        var stamped = new RouteArtifact(withNative.manifest().withNativeFacts(new NativeFacts(java.util.Optional.empty(),
+                List.of(new NativeFacts.LagFact(30, "harness", withNative.content())))), withNative.tape());
+        var solved = assertInstanceOf(PlanResult.Solved.class, new RoutePlanner(now).plan(new RouteTask.Repair(
+                stamped, reference, WHOLE, AuthorHints.referenceFollowing(), SearchBudget.referenceRepair()),
+                Cancellation.NONE));
+        assertEquals(reachable, solved.route().checks(), "the original's goal program travels with its rows");
+        assertTrue(solved.engineEvidence().coverage().contains("goals[far-end]"), solved.engineEvidence().coverage().toString());
+        assertEquals(NativeFacts.NONE, solved.route().manifest().nativeFacts(), "native facts describe the old rows");
+        assertTrue(solved.repair().nativeStale(), solved.repair().summary());
+        assertTrue(solved.repair().firstChangedRow() > 0 && solved.repair().firstChangedRow() <= 60,
+                solved.repair().summary());
+
+        // Tracking the reference is not enough: a goal the repaired rows cannot meet fails qualification.
+        var unreachable = original().withChecks(GoalProgram.of(Guard.NONE, Leg.of("beyond", new RouteGoal.Achieve(
+                new SamplePredicate.PlayerIn(PlayerSlot.P1, new Region(900, 0, 910, 2000))), 1000)));
+        var stopped = assertInstanceOf(PlanResult.Stopped.class, new RoutePlanner(now).plan(new RouteTask.Repair(
+                unreachable, reference, WHOLE, AuthorHints.referenceFollowing(), SearchBudget.referenceRepair()),
+                Cancellation.NONE));
+        assertEquals(StopReason.QUALIFICATION_FAILED, stopped.reason(), stopped.detail());
+        assertTrue(stopped.detail().contains("beyond"), stopped.detail());
+    }
 }

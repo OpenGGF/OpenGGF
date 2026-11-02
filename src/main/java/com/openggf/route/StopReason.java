@@ -14,6 +14,8 @@ public enum StopReason {
     QUALIFICATION_FAILED,
     /** A host refused the launch (ROM, inlet, input ownership). */
     HOST_UNAVAILABLE,
+    /** The goal is outside what the search supports (for example too far from the entry). */
+    UNSUPPORTED_GOAL,
     /** Every solution found had already been rejected. */
     ALL_CANDIDATES_REJECTED
 }

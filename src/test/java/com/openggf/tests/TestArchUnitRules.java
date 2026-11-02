@@ -203,7 +203,11 @@ class TestArchUnitRules {
             // core never reaches the gameplay runtime.
             "route -> debug",
             "route -> game",
+            // Point goals steer through the one numeric owner, NativeRouteSteering.
+            "route -> sprites",
             "tools -> route",
+            // The trusted engine route host reads native facing (physics.Direction) into samples.
+            "tools -> physics",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",
@@ -213,6 +217,8 @@ class TestArchUnitRules {
             "stageplay -> graphics",
             "stageplay -> level",
             "stageplay -> sprites",
+            // Frozen input tracks reach the live world through the lossless recorded-input conversion.
+            "stageplay -> debug",
             // Only the bounded world presenter consumes the shared FBO binding helper.
             "stageplay -> util",
             "game -> architecture",
@@ -798,7 +804,8 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplaySpeechSynth", Set.of("audio")),
             java.util.Map.entry("com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods")),
             java.util.Map.entry("com.openggf.stageplay.StageplayObjectCatalog", Set.of("game", "level")),
-            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayLiveWorld", Set.of("audio", "camera", "configuration", "control", "data", "game", "graphics", "level", "mods", "physics", "sprites")),
+            // Frozen input tracks: route rows through the recorded-input conversion (route, debug).
+            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayLiveWorld", Set.of("audio", "camera", "configuration", "control", "data", "debug", "game", "graphics", "level", "mods", "physics", "route", "sprites")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayOfflinePreview", Set.of("audio", "data", "game", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayGroundSurvey", Set.of("physics", "sprites")),
@@ -823,7 +830,15 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.route.StageplayObjectRoutePlanner", Set.of("level", "physics")),
             java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteAssets", Set.of("io")),
             java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteInputs", Set.of("data")),
-            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutePlanner", Set.of("game", "level", "mods", "sprites")));
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutePlanner", Set.of("game", "level", "mods", "route", "sprites")),
+            // Stageplay's route front-end (shared route planner, 2026-11-02): probe and scene hosts,
+            // track/tape translation and the shot checks on the qualification replay.
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteHosts", Set.of("game", "level", "mods", "physics", "route", "sprites")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutes", Set.of("route")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayShotChecks", Set.of("game", "level", "route", "sprites")),
+            // One numeric steering owner: the live command kernel delegates to NativeRouteSteering.
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteSteering", Set.of("sprites")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayMovementIntent", Set.of("sprites")));
 
     private static boolean approvedStageplayConsumer(String origin, String target) {
         if (typeOrNested(origin, "com.openggf.mods.code.AuthoredStageplayServices"))

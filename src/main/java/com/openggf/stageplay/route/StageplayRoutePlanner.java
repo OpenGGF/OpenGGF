@@ -3,6 +3,23 @@ package com.openggf.stageplay.route;
 import static com.openggf.stageplay.StageplayDocument.*;
 import static com.openggf.stageplay.route.StageplayRouteResult.Status.*;
 
+import com.openggf.route.Cancellation;
+import com.openggf.route.GoalProgram;
+import com.openggf.route.Guard;
+import com.openggf.route.InitialState;
+import com.openggf.route.Inlet;
+import com.openggf.route.LaunchContract;
+import com.openggf.route.PlanProgress;
+import com.openggf.route.PlanResult;
+import com.openggf.route.PlayerSlot;
+import com.openggf.route.PointGoal;
+import com.openggf.route.RomIdentity;
+import com.openggf.route.Roster;
+import com.openggf.route.RoutePlanner;
+import com.openggf.route.RouteTask;
+import com.openggf.route.SearchBudget;
+import com.openggf.route.Seeds;
+import com.openggf.sprites.playable.route.NativeRouteSteering;
 import com.openggf.game.session.SessionManager;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.sprites.playable.PlayablePuppet;
@@ -11,20 +28,19 @@ import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.stageplay.runtime.StageplayLiveWorld;
 import com.openggf.stageplay.runtime.StageplayResources;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.function.BooleanSupplier;
 
-/** Bounded native-input search followed by a fresh, strictly linear live-world qualification. */
+/**
+ * Stageplay's route front-end. Player routes: admission, then one point-goal task for the shared
+ * {@link RoutePlanner}, which searches on the private static-terrain probe (a draft tier) and
+ * qualifies the frozen rows by a fresh, strictly linear replay of the candidate document, whose
+ * new {@link FrozenInputTrack} drives the actor. The result installs that track; there is no
+ * command re-encoding. Visual object routes stay a separate, non-controller actuator.
+ */
 public final class StageplayRoutePlanner {
-    // Authoring-search limits, not fitted/native movement values. Retain at most 256
-    // private stock-player/audio checkpoints; expanded ancestors retain metadata only.
-    private static final int MAX_FRONTIER_CHECKPOINTS = 256;
-    private static final int EDGE_TICKS = 12;
+    // Authoring choice: retain at most 256 probe checkpoints (the former frontier ceiling).
+    private static final int RETAINED_CHECKPOINTS = 256;
 
     private StageplayRoutePlanner() {}
 
@@ -110,11 +126,20 @@ public final class StageplayRoutePlanner {
                     0,
                     0);
         long deadline = System.nanoTime() + request.maxMillis() * 1_000_000L;
-        StageplayRouteProposal proposal;
-        try (var probe =
-                resources.createRouteProbe(
-                        StageplayRouteContract.source(document, request.startFrame()), actor, anchor, track)) {
-            proposal = search(document, request, probe, cancelled, deadline);
+        boolean[] timedOut = {false};
+        Cancellation cancellation = () -> {
+            if (cancelled.getAsBoolean()) return true;
+            if (System.nanoTime() >= deadline) timedOut[0] = true;
+            return timedOut[0];
+        };
+        var source = StageplayRouteContract.source(document, request.startFrame());
+        var task = task(document, request, actor.character());
+        var shot = new StageplayShotChecks(request, actor.id());
+        var scene = new StageplayRouteHosts.SceneQualifier(resources, library, document, actor.id(), request.startFrame());
+        PlanResult planned;
+        PlayablePuppet created;
+        try {
+            created = resources.createRouteProbe(source, actor, anchor, track);
         } catch (RuntimeException error) {
             return failure(
                     UNSUPPORTED,
@@ -124,28 +149,111 @@ public final class StageplayRoutePlanner {
                     0,
                     0);
         }
-        if (!proposal.found())
-            return failure(
-                    proposal.status(),
-                    proposal.message(),
-                    fingerprint,
-                    request,
-                    proposal.nodes(),
-                    proposal.ticks(), proposal.path());
-        StageplayDocument candidate;
-        try {
-            candidate = patch(document, request, proposal.commands());
-        } catch (IllegalArgumentException error) {
-            return failure(
-                    UNSUPPORTED,
-                    "Generated route conflicts with existing scene contracts: " + error.getMessage(),
-                    fingerprint,
-                    request,
-                    proposal.nodes(),
-                    proposal.ticks());
+        try (var probe = created) {
+            if (request.motion().startingAction() == StartAction.SPINDASH
+                    && !probe.supports(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH))
+                return failure(UNSUPPORTED, "This actor does not declare native spindash", fingerprint, request, 0, 0);
+            planned = new RoutePlanner(scene).withDraftTier(StageplayRouteHosts.probe(probe, request.startFrame()))
+                    .plan(task, cancellation, PlanProgress.Listener.NONE, (row, sample) -> shot.observe(row, sample, scene));
         }
-        return verify(
-                resources, library, candidate, request, fingerprint, proposal, cancelled, deadline);
+        return switch (planned) {
+            case PlanResult.Stopped stopped -> {
+                var status = switch (stopped.reason()) {
+                    case CANCELLED -> timedOut[0] ? BUDGET_EXCEEDED : CANCELLED;
+                    case BUDGET_EXHAUSTED -> BUDGET_EXCEEDED;
+                    case UNSUPPORTED_GOAL, HOST_UNAVAILABLE -> UNSUPPORTED;
+                    case QUALIFICATION_FAILED -> VERIFICATION_FAILED;
+                    default -> SEARCH_EXHAUSTED;
+                };
+                String message = switch (stopped.reason()) {
+                    case CANCELLED -> timedOut[0] ? "Route search exceeded its time budget" : "Route search cancelled";
+                    case BUDGET_EXHAUSTED -> stopped.detail().startsWith("expansions")
+                            ? "Native terrain search exhausted its bounded work budget; reachability is not disproved"
+                            : stopped.detail();
+                    case NO_PROGRESS -> stopped.detail().startsWith("every line")
+                            ? "No route found within the bounded terrain graph; this does not prove the destination unreachable"
+                            : stopped.detail();
+                    case QUALIFICATION_FAILED -> shot.failure().isEmpty()
+                            ? "Cold live qualification failed: " + stopped.detail() : shot.failure();
+                    default -> stopped.detail();
+                };
+                yield failure(status, message, fingerprint, request, (int) stopped.work().expansions(),
+                        (int) (stopped.work().searchSteps() + stopped.work().qualificationSteps()), shot.path());
+            }
+            case PlanResult.Solved solved -> {
+                String failed = shot.finish();
+                int nodes = (int) solved.work().expansions();
+                int ticks = (int) (solved.work().searchSteps() + solved.work().qualificationSteps());
+                if (!failed.isEmpty()) yield failure(VERIFICATION_FAILED, failed, fingerprint, request, nodes, ticks, shot.path());
+                var frozen = scene.track(solved.route().tape());
+                yield new StageplayRouteResult(VERIFIED, "Reached and settled after a fresh linear native-world replay of frozen rows",
+                        fingerprint, request, scene.candidate(solved.route().tape()), List.of(), List.of(), shot.path(),
+                        nodes, ticks, true, frozen);
+            }
+        };
+
+    }
+
+
+    /** The point goal a request names; Stageplay motion enums translate to native steering settings. */
+    static PointGoal goal(StageplayRouteRequest request) {
+        RouteMotion motion = request.motion();
+        var steering = new NativeRouteSteering.Settings(
+                motion.travelSpeed() == TravelSpeed.WALK ? NativeRouteSteering.TravelSpeed.WALK : NativeRouteSteering.TravelSpeed.RUN,
+                switch (motion.endingAction()) {
+                    case GENTLE_STOP -> NativeRouteSteering.EndingAction.GENTLE_STOP;
+                    case HARD_STOP -> NativeRouteSteering.EndingAction.HARD_STOP;
+                    case OVERSHOOT -> NativeRouteSteering.EndingAction.OVERSHOOT;
+                });
+        PointGoal.Start start = switch (motion.startingAction()) {
+            case WALK -> PointGoal.Start.WALK;
+            case JUMP -> PointGoal.Start.JUMP;
+            case SPINDASH -> PointGoal.Start.SPINDASH;
+        };
+        PointGoal.Facing facing = switch (motion.endingFacing()) {
+            case INHERIT -> PointGoal.Facing.INHERIT;
+            case LEFT -> PointGoal.Facing.LEFT;
+            case RIGHT -> PointGoal.Facing.RIGHT;
+        };
+        return new PointGoal(PlayerSlot.P1, request.targetX(), request.targetY(), request.maxFrames(), start, steering,
+                facing, request.urgency());
+    }
+
+    /** The scene launch identity: the set's game, the routed character, the scene width and the shot entry. */
+    static LaunchContract launch(StageplayDocument document, SetSource source, String character, int startFrame) {
+        RomIdentity rom;
+        try {
+            rom = RomIdentity.standard(source.gameId());
+        } catch (IllegalArgumentException unknown) {
+            rom = new RomIdentity(source.gameId(), 0, "0".repeat(40));
+        }
+        String scene;
+        try {
+            scene = com.openggf.route.ContentHash.of(com.openggf.stageplay.StageplayStore.encode(document)).sha256();
+        } catch (java.io.IOException impossible) {
+            throw new java.io.UncheckedIOException(impossible);
+        }
+        return new LaunchContract(rom, new Inlet.Scene(scene, startFrame), new Roster(character, ""),
+                document.width(), "off", new InitialState(0, Seeds.NONE));
+    }
+
+    /** The point-goal task for {@code request}, with count budgets taken from it. */
+    static RouteTask.Author task(StageplayDocument document, StageplayRouteRequest request, String character) {
+        return new RouteTask.Author(launch(document, StageplayRouteContract.source(document, request.startFrame()), character,
+                request.startFrame()), goal(request), GoalProgram.of(new Guard(false, true, false, false)),
+                new SearchBudget(request.maxNodes(), request.maxTicks(), RETAINED_CHECKPOINTS, 0));
+    }
+
+    /**
+     * Searches on the probe and replays the rows on the same probe, for focused tests of the draft
+     * tier; production qualification is the scene replay in {@link #plan}.
+     */
+    static PlanResult draft(StageplayDocument document, StageplayRouteRequest request, PlayablePuppet probe,
+                            BooleanSupplier cancelled) {
+        String character = document.actors().stream().filter(a -> a.id().equals(request.actorId())).findFirst()
+                .map(Actor::character).orElse("probe");
+        return new RoutePlanner(StageplayRouteHosts.probeOnly(probe, request.startFrame()))
+                .plan(task(document, request, character), cancelled::getAsBoolean);
     }
 
     private static StageplayRouteResult objectRoute(
@@ -352,662 +460,10 @@ public final class StageplayRoutePlanner {
         }
     }
 
-    static StageplayRouteProposal search(
-            StageplayDocument document,
-            StageplayRouteRequest request,
-            PlayablePuppet probe,
-            BooleanSupplier cancelled,
-            long deadline) {
-        if (request.maxNodes() < 4 || request.maxTicks() < 4)
-            return searchPass(document, request, probe, cancelled, deadline, false);
-        var entry = probe.capture();
-        boolean walk = request.motion().travelSpeed() == TravelSpeed.WALK;
-        int diagnosticEnd = Math.min(StageplayRouteContract.shotEnd(document, request.startFrame()),
-                request.startFrame() + 3600);
-        var actor = document.actors().stream().filter(a -> a.id().equals(request.actorId())).findFirst();
-        if (actor.isPresent()) for (var key : actor.get().keys())
-            if (key.frame() > request.startFrame()) diagnosticEnd = Math.min(diagnosticEnd, key.frame());
-        int diagnosticFrames = Math.max(request.maxFrames(), diagnosticEnd - request.startFrame());
-        boolean diagnose = walk || diagnosticFrames > request.maxFrames();
-        var direct = searchPass(document, budget(request, request.maxNodes()/3, request.maxTicks()/3,
-                request.motion()), probe, cancelled, deadline, false);
-        if (direct.found() || direct.status() == CANCELLED || direct.status() == UNSUPPORTED) return direct;
-        if (cancelled.getAsBoolean() || System.nanoTime() >= deadline) return direct;
-        int nodes = direct.nodes(), ticks = direct.ticks();
-        String advice = "";
-        // Spend the diagnostic reservation before detours, under the same total work/deadline.
-        // Its horizon follows the continuous shot, not the attempted performance's frame limit.
-        // A successful longer rehearsal is evidence for advice only, never an applicable patch.
-        if (diagnose) {
-            probe.restore(entry);
-            var motion = new RouteMotion(request.motion().startingAction(), TravelSpeed.RUN,
-                    request.motion().endingAction(), request.motion().endingFacing());
-            var diagnostic = new StageplayRouteRequest(request.actorId(), request.startFrame(),
-                    request.targetX(), request.targetY(), diagnosticFrames, request.maxNodes()/4,
-                    request.maxTicks()/4, request.maxMillis(), request.urgency(), null, request.objectSpeed(), motion);
-            var run = searchPass(document, diagnostic, probe, cancelled, deadline, false);
-            nodes += run.nodes(); ticks += run.ticks();
-            if (run.found() && !direct.path().isEmpty()) {
-                boolean longer = run.commands().stream().anyMatch(c ->
-                        c.frame() >= request.startFrame() + request.maxFrames());
-                if (walk || longer) {
-                    var stall = direct.path().getLast();
-                    advice = "; terrain near x=" + Math.round(stall.x()) + ": needs "
-                            + (walk ? "Run" : "") + (walk && longer ? " and " : "")
-                            + (longer ? "more Attempt frames" : "")
-                            + " (matched native-terrain probe reaches and settles)";
-                }
-            }
-            if (run.status() == CANCELLED) return new StageplayRouteProposal(CANCELLED,
-                    "Route diagnosis cancelled", List.of(), direct.path(), nodes, ticks);
-        }
-        probe.restore(entry);
-        var detour = searchPass(document, budget(request, request.maxNodes()-nodes,
-                request.maxTicks()-ticks, request.motion()), probe, cancelled, deadline, true);
-        nodes += detour.nodes(); ticks += detour.ticks();
-        if (detour.found()) return new StageplayRouteProposal(null, detour.message(), detour.commands(),
-                detour.path(), nodes, ticks);
-        if (detour.status() == CANCELLED) return new StageplayRouteProposal(detour.status(), detour.message(),
-                List.of(), detour.path(), nodes, ticks);
-        String explanation = detour.message();
-        if (!direct.message().equals(explanation) && (direct.message().contains("more frames")
-                || direct.message().contains("Starting actor") || direct.message().contains("Spindash")))
-            explanation += "; " + direct.message();
-        return new StageplayRouteProposal(detour.status(), explanation + advice,
-                List.of(), detour.path(), nodes, ticks);
-    }
-
-    private static StageplayRouteRequest budget(StageplayRouteRequest request, int nodes, int ticks, RouteMotion motion) {
-        return new StageplayRouteRequest(request.actorId(), request.startFrame(), request.targetX(), request.targetY(),
-                request.maxFrames(), Math.max(1,nodes), Math.max(1,ticks), request.maxMillis(), request.urgency(),
-                request.footprint(), request.objectSpeed(), motion);
-    }
-
-    static StageplayRouteProposal searchPass(StageplayDocument document, StageplayRouteRequest request,
-            PlayablePuppet probe, BooleanSupplier cancelled, long deadline, boolean detours) {
-        var initial = probe.sample();
-        if (request.motion().startingAction() == StartAction.SPINDASH &&
-                !probe.supports(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH))
-            return rejected(UNSUPPORTED, "This actor does not declare native spindash", 0, 0);
-        int preparationTicks = 0;
-        List<StageplayRoutePoint> preparation = new ArrayList<>();
-        preparation.add(new StageplayRoutePoint(request.startFrame(), initial.x(), initial.y(), initial.onGround()));
-        // A falling spawn lands before its starting action. Never manufacture grounding.
-        while (initial.airborne()) {
-            if (cancelled.getAsBoolean()) return rejected(CANCELLED,"Route preparation cancelled",0,preparationTicks);
-            if (preparationTicks >= request.maxTicks() || preparationTicks >= request.maxFrames() || System.nanoTime() >= deadline)
-                return new StageplayRouteProposal(BUDGET_EXCEEDED,"Starting actor did not land within the route budget",
-                        List.of(),List.copyOf(preparation),0,preparationTicks);
-            probe.tick(false,false,false,request.startFrame()+preparationTicks++);
-            initial = probe.sample();
-            preparation.add(new StageplayRoutePoint(request.startFrame()+preparationTicks-1,initial.x(),initial.y(),initial.onGround()));
-        }
-        int actionStart = request.startFrame()+preparationTicks;
-        if (request.motion().startingAction() == StartAction.SPINDASH) {
-            boolean charged = false, released = false;
-            for (int elapsed=0;elapsed<=StageplayRouteSteering.CHARGE_FRAMES+1;elapsed++) {
-                if (cancelled.getAsBoolean()) return rejected(CANCELLED,"Route charge cancelled",0,preparationTicks);
-                if (preparationTicks >= request.maxTicks() || preparationTicks >= request.maxFrames() || System.nanoTime() >= deadline)
-                    return rejected(BUDGET_EXCEEDED,"Spindash charge exceeded route budget",0,preparationTicks);
-                var buttons = StageplayRouteSteering.charge(initial.x(), request.targetX(), elapsed,
-                        initial.groundSpeed(), initial.airborne(), initial.crouching(), initial.spindash(),
-                        initial.friction(), initial.slopeImpulse());
-                probe.tick(buttons.direction()<0,buttons.direction()>0,buttons.down(),buttons.jump(),
-                        request.startFrame()+preparationTicks++);
-                initial=probe.sample();
-                charged |= initial.spindash();
-                released |= charged && !initial.spindash() && !buttons.down() && initial.groundSpeed()!=0;
-                preparation.add(new StageplayRoutePoint(request.startFrame()+preparationTicks-1,initial.x(),initial.y(),initial.onGround()));
-            }
-            if (!charged || !released)
-                return new StageplayRouteProposal(SEARCH_EXHAUSTED,
-                    "Native spindash charge and release did not occur near x=" + Math.round(initial.x())
-                            + "; could not settle and establish Duck within the charge window",
-                    List.of(), List.copyOf(preparation), 0, preparationTicks);
-        }
-        if (Math.abs(request.targetX() - initial.x()) > 1536
-                || Math.abs(request.targetY() - initial.y()) > 768)
-            return rejected(
-                    UNSUPPORTED,
-                    "Basic routes are bounded to 1536 horizontal and 768 vertical pixels from shot" + " entry",
-                    0,
-                    0);
-        double minX = Math.min(initial.x(), request.targetX()) - 256,
-                maxX = Math.max(initial.x(), request.targetX()) + 256;
-        double minY = Math.min(initial.y(), request.targetY()) - 256,
-                maxY = Math.max(initial.y(), request.targetY()) + 256;
-        Comparator<Node> order =
-                Comparator.comparingDouble((Node n) -> n.score).thenComparingInt(n -> n.ordinal);
-        PriorityQueue<Node> frontier = new PriorityQueue<>(order);
-        Node root =
-                new Node(
-                        null,
-                        probe.capture(),
-                        initial,
-                        request.startFrame() + preparationTicks - 1,
-                        request.startFrame() - 2,
-                        0,
-                        initial.x(),
-                        0,
-                        0,
-                        score(initial, request, 0),
-                        0);
-        root.edge = List.copyOf(preparation);
-        root.actionStart = actionStart;
-        root.approach = request.targetX() < initial.x() ? -1 : 1;
-        Node best = root;
-        frontier.add(root);
-        Map<Key, Integer> visited = new HashMap<>();
-        int expanded = 0, ticks = preparationTicks, ordinal = 1;
-        boolean trimmed = false;
-        while (!frontier.isEmpty()) {
-            if (cancelled.getAsBoolean())
-                return rejected(CANCELLED, "Route search cancelled", expanded, ticks, best);
-            if (System.nanoTime() >= deadline
-                    || expanded >= request.maxNodes()
-                    || ticks >= request.maxTicks())
-                return rejected(
-                        BUDGET_EXCEEDED,
-                        "Native terrain search exhausted its bounded work budget; reachability is"
-                                + " not disproved",
-                        expanded,
-                        ticks, best);
-            Node current = frontier.remove();
-            PlayablePuppet.Snapshot checkpoint = current.snapshot;
-            current.snapshot = null;
-            expanded++;
-            if (arrived(current.observation, request) && (request.motion().endingAction()!=EndingAction.OVERSHOOT || current.returning)
-                    && !(current.parent==null && request.motion().startingAction()!=StartAction.WALK))
-                return proposal(document, request, current, expanded, ticks);
-            int nextFrame = current.frame + 1;
-            if (nextFrame >= request.startFrame() + request.maxFrames()) continue;
-            // A fallback chooses one run-up at the root and completes it before
-            // heading to the destination. It cannot branch into arbitrary waypoint noise.
-            boolean completingDetour = current.goalX != request.targetX() && current.parent != null
-                    && (Math.abs(current.observation.x()-current.goalX)>6
-                        || Math.abs(current.observation.groundSpeed())>12);
-            double[] goals = detours && current.parent == null
-                    ? new double[] {request.targetX(), initial.x()-64, initial.x()+64, initial.x()-128, initial.x()+128}
-                    : new double[] {completingDetour ? current.goalX : request.targetX()};
-            int[] holds = current.parent == null && request.motion().startingAction() == StartAction.JUMP
-                    ? new int[] {12}
-                    : current.observation.onGround() && nextFrame > current.jumpEnd + 1
-                            ? new int[] {0,6,12,24} : new int[] {0};
-            for (double goal : goals)
-                for (int hold : holds) {
-                    if (goal != request.targetX() && hold > 0) continue;
-                    if (goal < 0
-                            || goal > 32767
-                            || hold > request.startFrame() + request.maxFrames() - nextFrame) continue;
-                    if (cancelled.getAsBoolean())
-                        return rejected(CANCELLED, "Route search cancelled", expanded, ticks, best);
-                    probe.restore(checkpoint);
-                    int jumpEnd = hold == 0 ? current.jumpEnd : nextFrame + hold;
-                    int finalFrame =
-                            Math.min(nextFrame + EDGE_TICKS, request.startFrame() + request.maxFrames());
-                    PlayablePuppet.Observation sample = current.observation;
-                    boolean outside = false;
-                    List<StageplayRoutePoint> edge = new ArrayList<>();
-                    int frame = nextFrame;
-                    boolean returning = current.returning;
-                    for (; frame < finalFrame; frame++) {
-                        if (ticks >= request.maxTicks() || System.nanoTime() >= deadline)
-                            return rejected(
-                                    BUDGET_EXCEEDED,
-                                    "Native terrain search exhausted its tick/time budget",
-                                    expanded,
-                                    ticks, best);
-                        if (goal == request.targetX() && request.motion().endingAction() == EndingAction.OVERSHOOT)
-                            returning=StageplayRouteSteering.returning(Math.floor(sample.x()),goal,current.approach,returning);
-                        int direction = StageplayRouteSteering.direction(Math.floor(sample.x()),sample.xSpeed(),
-                                sample.groundSpeed(),sample.runAccel(),sample.runDecel(),sample.friction(),
-                                sample.maxSpeed(),sample.slopeImpulse(),sample.airborne(),goal,request.urgency(),steeringMotion(request,goal),returning,current.approach);
-                        ticks++;
-                        probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
-                        sample = probe.sample();
-                        // Discard an unsafe launch/landing branch before it can become a
-                        // proposal. Cold replay independently enforces the same Walk bound.
-                        if (request.motion().travelSpeed() == TravelSpeed.WALK
-                                && Math.max(Math.abs(sample.groundSpeed()),Math.abs(sample.xSpeed()))
-                                    > StageplayRouteSteering.STROLL_CAP) {
-                            outside = true;
-                            break;
-                        }
-                        edge.add(new StageplayRoutePoint(frame, sample.x(), sample.y(), sample.onGround()));
-                        if (sample.x() < minX || sample.x() > maxX || sample.y() < minY || sample.y() > maxY) {
-                            outside = true;
-                            break;
-                        }
-                        if (arrived(sample, request) && (request.motion().endingAction()!=EndingAction.OVERSHOOT || returning)) {
-                            frame++;
-                            break;
-                        }
-                    }
-                    if (outside) continue;
-                    int last = frame - 1;
-                    Key key = key(sample, last < jumpEnd, jumpEnd - last, returning, goal==request.targetX()?0:(int)goal+1);
-                    int elapsed = last - request.startFrame() + 1;
-                    int jumpCost = current.jumpCost + (hold > 0 && request.motion().startingAction()!=StartAction.JUMP ? 2000 : 0);
-                    int detourCost = current.detourCost + (current.parent==null && goal != request.targetX()
-                            ? 600+(int)Math.abs(goal-initial.x()) : 0);
-                    int cost = elapsed+jumpCost+detourCost;
-                    Integer previous = visited.get(key);
-                    if (previous != null && previous <= cost) continue;
-                    visited.put(key, cost);
-                    Node child =
-                            new Node(
-                                    current,
-                                    probe.capture(),
-                                    sample,
-                                    last,
-                                    jumpEnd,
-                                    hold,
-                                    goal,
-                                    nextFrame,
-                                    elapsed,
-                                    score(sample, request, elapsed) + jumpCost + detourCost,
-                                    ordinal++);
-                    child.edge = List.copyOf(edge);
-                    child.returning=returning; child.approach=current.approach;
-                    child.actionStart=current.actionStart; child.jumpCost=jumpCost; child.detourCost=detourCost;
-                    if (distance(sample, request) < distance(best.observation, request)) best = child;
-                    // Arrival is accepted only when popped: a jump may discover the goal
-                    // before the cheaper, grounded route has finished.
-
-                    frontier.add(child);
-                    if (frontier.size() > MAX_FRONTIER_CHECKPOINTS) {
-                        Node worst = frontier.stream().max(order).orElseThrow();
-                        frontier.remove(worst);
-                        worst.snapshot = null;
-                        trimmed = true;
-                    }
-                }
-        }
-        return rejected(
-                SEARCH_EXHAUSTED,
-                "No route found within the bounded terrain graph"
-                        + (trimmed ? " and retained-checkpoint budget" : "")
-                        + "; this does not prove the destination unreachable",
-                expanded,
-                ticks, best);
-    }
-
-    private static double distance(PlayablePuppet.Observation point, StageplayRouteRequest request) {
-        return Math.hypot(point.x() - request.targetX(), point.y() - request.targetY());
-    }
-
-    private static List<StageplayRoutePoint> observedPath(Node end) {
-        List<Node> chain = new ArrayList<>();
-        for (Node node = end; node != null; node = node.parent) chain.add(node);
-        java.util.Collections.reverse(chain);
-        List<StageplayRoutePoint> path = new ArrayList<>();
-        for (Node node : chain) path.addAll(node.edge);
-        return path;
-    }
-
-    private static StageplayRouteProposal rejected(
-            StageplayRouteResult.Status status, String message, int nodes, int ticks, Node best) {
-        return new StageplayRouteProposal(status, message, List.of(), observedPath(best), nodes, ticks);
-    }
-
-    private static StageplayRouteProposal proposal(
-            StageplayDocument document, StageplayRouteRequest request, Node found, int nodes, int ticks) {
-        List<Node> chain = new ArrayList<>();
-        for (Node node = found; node.parent != null; node = node.parent) chain.add(node);
-        java.util.Collections.reverse(chain);
-        Set<String> ids = StageplayRouteContract.identities(document);
-        List<PuppetCommand> commands = new ArrayList<>();
-        List<StageplayRoutePoint> path = new ArrayList<>();
-        Node root=found;
-        while(root.parent!=null) root=root.parent;
-        int moveStart=root.actionStart;
-        if(request.motion().startingAction()==StartAction.SPINDASH) {
-            commands.add(command(ids,"route.charge.",moveStart,PuppetCommandKind.SPINDASH,
-                    request.targetX(),request.targetY(),request.urgency(),StageplayRouteSteering.CHARGE_FRAMES,request.motion()));
-            moveStart+=StageplayRouteSteering.CHARGE_FRAMES+2;
-        }
-        double previousGoal = Double.NaN;
-        for (Node node : chain) {
-            if (node.goalX != previousGoal) {
-                commands.add(command(ids,"route.move.",Double.isNaN(previousGoal)?moveStart:node.start,
-                        PuppetCommandKind.MOVE_TO,node.goalX,request.targetY(),request.urgency(),0,
-                        steeringMotion(request,node.goalX)));
-                previousGoal = node.goalX;
-            }
-            if(node.hold>0) commands.add(command(ids,"route.jump.",node.start,PuppetCommandKind.JUMP,0,0,0,node.hold,request.motion()));
-            path.addAll(node.edge);
-        }
-        if (chain.isEmpty()) commands.add(command(ids,"route.move.",moveStart,PuppetCommandKind.MOVE_TO,
-                request.targetX(),request.targetY(),request.urgency(),0,request.motion()));
-        int terminal=Math.max(found.frame+1,moveStart+1);
-        int end=request.startFrame()+request.maxFrames();
-        if(terminal>=end) return rejected(BUDGET_EXCEEDED,"Route needs more frames to settle",nodes,ticks,found);
-        commands.add(command(ids,"route.stop.",terminal,PuppetCommandKind.STOP,0,0,0,0,request.motion()));
-        if(request.motion().endingFacing()!=EndingFacing.INHERIT) {
-            // Let the last fractional velocity coast away before the single native facing tap.
-            int facingFrame=terminal+8;
-            if(facingFrame>=end) return rejected(BUDGET_EXCEEDED,"Route needs more frames for its final facing tap",nodes,ticks,found);
-            commands.add(command(ids,"route.face.",facingFrame,
-                    request.motion().endingFacing()==EndingFacing.LEFT?PuppetCommandKind.FACE_LEFT:PuppetCommandKind.FACE_RIGHT,
-                    0,0,0,0,request.motion()));
-        }
-        return new StageplayRouteProposal(
-                null,
-                "Static native-terrain hypothesis requires cold live verification",
-                List.copyOf(commands),
-                List.copyOf(path),
-                nodes,
-                ticks);
-    }
-
-    private static PuppetCommand command(Set<String> ids,String prefix,int frame,PuppetCommandKind kind,
-            double x,double y,double urgency,int hold,RouteMotion motion) {
-        return new PuppetCommand(StageplayRouteContract.nextId(ids,prefix),frame,kind,x,y,urgency,hold,
-                ObjectTarget.none(),WaitCondition.NONE,0,motion);
-    }
-
-    private static RouteMotion steeringMotion(StageplayRouteRequest request, double goal) {
-        return goal == request.targetX() ? request.motion() : new RouteMotion(request.motion().startingAction(),
-                request.motion().travelSpeed(), EndingAction.HARD_STOP, EndingFacing.INHERIT);
-    }
-
-    private static StageplayDocument patch(
-            StageplayDocument document, StageplayRouteRequest request, List<PuppetCommand> replacement) {
-        int end = request.startFrame() + request.maxFrames();
-        return document.withPuppets(
-                document.puppets().stream()
-                        .map(
-                                track -> {
-                                    if (!track.actorId().equals(request.actorId())) return track;
-                                    List<PuppetCommand> commands = new ArrayList<>();
-                                    track.commands().stream()
-                                            .filter(c -> c.frame() < request.startFrame())
-                                            .forEach(commands::add);
-                                    commands.addAll(replacement);
-                                    track.commands().stream().filter(c -> c.frame() >= end).forEach(commands::add);
-                                    return new PuppetTrack(
-                                            track.actorId(), track.snapToFloor(), track.collisionPath(), commands);
-                                })
-                        .toList());
-    }
-
-    private static StageplayRouteResult verify(
-            StageplayResources resources,
-            SceneRomLibrary library,
-            StageplayDocument candidate,
-            StageplayRouteRequest request,
-            String fingerprint,
-            StageplayRouteProposal proposal,
-            BooleanSupplier cancelled,
-            long deadline) {
-        List<StageplayRoutePoint> path = new ArrayList<>();
-        int ticks = proposal.ticks();
-        boolean charged = false, released = false;
-        int end = request.startFrame() + request.maxFrames();
-        StageplayTimeline.Frame sample = null;
-        int nativeZone = -1, nativeAct = -1;
-        com.openggf.level.Level nativeLevel = null;
-        try (var world = StageplayLiveWorld.openOffline(library)) {
-            resources.setLiveWorld(world);
-            for (int frame = 0; frame < end; frame++) {
-                if (cancelled.getAsBoolean())
-                    return failure(
-                            CANCELLED,
-                            "Cold live qualification cancelled",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                if (System.nanoTime() >= deadline)
-                    return failure(
-                            BUDGET_EXCEEDED,
-                            "Cold live qualification exceeded the route time budget",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                int cost = coldTickCost(candidate, frame);
-                if (cost > request.maxTicks() - ticks)
-                    return failure(
-                            BUDGET_EXCEEDED,
-                            "Cold qualification exhausted the combined search/preparation/replay"
-                                    + " tick budget",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                sample = resources.resolveFrame(candidate, StageplayTimeline.sample(candidate, frame));
-                ticks += cost;
-                if (frame < request.startFrame()) continue;
-                var loaded = SessionManager.getCurrentGameplayMode().getLevelManager();
-                if (nativeLevel == null) {
-                    nativeLevel = loaded.getCurrentLevel();
-                    nativeZone = loaded.getCurrentZone();
-                    nativeAct = loaded.getCurrentAct();
-                } else if (loaded.getCurrentLevel() != nativeLevel
-                        || loaded.getCurrentZone() != nativeZone
-                        || loaded.getCurrentAct() != nativeAct) {
-                    return failure(
-                            VERIFICATION_FAILED,
-                            "The cold live route reloaded or changed its native level",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                }
-                var pose =
-                        sample.actors().stream()
-                                .filter(p -> p.actorId().equals(request.actorId()))
-                                .findFirst()
-                                .orElseThrow();
-                var state =
-                        sample.puppets().stream()
-                                .filter(p -> p.actorId().equals(request.actorId()))
-                                .findFirst()
-                                .orElseThrow();
-                var nativeActor =
-                        sample.world() == null
-                                ? null
-                                : sample.world().actors().stream()
-                                        .filter(p -> p.actorId().equals(request.actorId()))
-                                        .findFirst()
-                                        .orElse(null);
-                if (state.status() == StageplayTimeline.PuppetStatus.DEAD
-                        || state.status() == StageplayTimeline.PuppetStatus.TIMED_OUT
-                        || state.status() == StageplayTimeline.PuppetStatus.INACTIVE
-                        || nativeActor == null
-                        || nativeActor.dead()
-                        || nativeActor.hurt())
-                    return failure(
-                            VERIFICATION_FAILED,
-                            "The cold live route encountered death, damage, timeout or an inactive" + " actor",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                if (!sample.set().equals(StageplayRouteContract.source(candidate, request.startFrame())))
-                    return failure(
-                            VERIFICATION_FAILED,
-                            "The cold live route changed its authored set",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                if (sample.world().events().stream()
-                        .anyMatch(
-                                event ->
-                                        event.frame() >= request.startFrame()
-                                                && event.actorId().equals(request.actorId())
-                                                && (event.kind().equals("WAIT_TIMED_OUT")
-                                                        || event.kind().equals("INTENT_TIMED_OUT"))))
-                    return failure(
-                            VERIFICATION_FAILED,
-                            "The cold live route timed out an intent",
-                            fingerprint,
-                            request,
-                            proposal.nodes(),
-                            ticks, path);
-                int approach=path.isEmpty()? (request.targetX()<pose.x()?-1:1)
-                        : request.targetX()<path.getFirst().x()?-1:1;
-                if(request.motion().endingAction()!=EndingAction.OVERSHOOT &&
-                        (pose.x()-request.targetX())*approach>6)
-                    return failure(VERIFICATION_FAILED,"Native motion cannot stop before the point with this start; choose Walk start or a farther destination",
-                            fingerprint,request,proposal.nodes(),ticks,path);
-                var motionState=world.routeMotionState(request.actorId());
-                charged |= motionState.spindash();
-                released |= charged && !motionState.spindash() && motionState.groundSpeed()!=0;
-                if (request.motion().endingAction()==EndingAction.GENTLE_STOP && motionState.skidding())
-                    return failure(VERIFICATION_FAILED,"Native terrain forced a skid; Gentle Stop cannot be qualified here",
-                            fingerprint,request,proposal.nodes(),ticks,path);
-                if (request.motion().travelSpeed()==TravelSpeed.WALK &&
-                        Math.max(Math.abs(motionState.groundSpeed()),Math.abs(motionState.xSpeed()))>StageplayRouteSteering.STROLL_CAP)
-                    return failure(VERIFICATION_FAILED,"Walk controller exceeded the stroll cap near x=" + Math.round(pose.x()) + "; route could not be qualified",
-                            fingerprint,request,proposal.nodes(),ticks,path);
-                path.add(new StageplayRoutePoint(frame, pose.x(), pose.y(), !state.airborne()));
-            }
-            var pose =
-                    sample.actors().stream()
-                            .filter(p -> p.actorId().equals(request.actorId()))
-                            .findFirst()
-                            .orElseThrow();
-            var state =
-                    sample.puppets().stream()
-                            .filter(p -> p.actorId().equals(request.actorId()))
-                            .findFirst()
-                            .orElseThrow();
-            if (Math.abs(pose.x() - request.targetX()) > 6
-                    || Math.abs(pose.y() - request.targetY()) > 12
-                    || state.airborne()
-                    || Math.abs(state.velocityX()) > .25
-                    || Math.abs(state.groundSpeed()) > .25)
-                return failure(
-                        VERIFICATION_FAILED,
-                        "Static terrain proposal did not arrive and settle in the real live world;"
-                                + " objects, events or water may differ",
-                        fingerprint,
-                        request,
-                        proposal.nodes(),
-                        ticks, path);
-            if (request.motion().startingAction()==StartAction.SPINDASH && (!charged || !released))
-                return failure(VERIFICATION_FAILED,"Cold replay did not observe native spindash charge and release",
-                        fingerprint,request,proposal.nodes(),ticks,path);
-            var finalMotion=world.routeMotionState(request.actorId());
-            if (request.motion().endingFacing()!=EndingFacing.INHERIT && finalMotion.facingLeft()!=(request.motion().endingFacing()==EndingFacing.LEFT))
-                return failure(VERIFICATION_FAILED,"Native final facing did not hold",fingerprint,request,proposal.nodes(),ticks,path);
-            return new StageplayRouteResult(
-                    VERIFIED,
-                    "Reached and settled after a fresh linear native-world replay",
-                    fingerprint,
-                    request,
-                    candidate,
-                    proposal.commands(),
-                    List.of(),
-                    path,
-                    proposal.nodes(),
-                    ticks,
-                    true);
-        } catch (RuntimeException error) {
-            return failure(
-                    VERIFICATION_FAILED,
-                    "Cold live qualification failed: " + error.getMessage(),
-                    fingerprint,
-                    request,
-                    proposal.nodes(),
-                    ticks, path);
-        }
-    }
-
     /** Presented world ticks plus the explicit native assembly scan at each new native shot. */
     private static int coldTickCost(StageplayDocument document, int frame) {
         boolean load = frame == 0 || document.sceneChanges().stream().anyMatch(c -> c.frame() == frame);
         return load ? 2 : 1;
-    }
-
-    private static boolean arrived(PlayablePuppet.Observation sample, StageplayRouteRequest request) {
-        return sample.onGround()
-                && Math.abs(sample.x() - request.targetX()) <= 6
-                && Math.abs(sample.y() - request.targetY()) <= 12
-                && Math.abs(sample.xSpeed()) <= 12
-                && Math.abs(sample.groundSpeed()) <= 12;
-    }
-
-    private static double score(
-            PlayablePuppet.Observation sample, StageplayRouteRequest request, int elapsed) {
-        return elapsed
-                + 2
-                        * (Math.abs(request.targetX() - sample.x())
-                                + 2 * Math.abs(request.targetY() - sample.y()))
-                        / Math.max(1, sample.maxSpeed() / 256.0);
-    }
-
-    private static Key key(PlayablePuppet.Observation sample, boolean held, int jumpRemaining, boolean returning, int detourGoal) {
-        return new Key(
-                (int) Math.floor(sample.x()),
-                (int) Math.floor(sample.y()),
-                sample.xSpeed(),
-                sample.ySpeed(),
-                sample.angle(),
-                sample.airborne(),
-                held,
-                Math.max(0, jumpRemaining),
-                sample.xRadius(),
-                sample.yRadius(), returning, detourGoal);
-    }
-
-    private record Key(
-            int x,
-            int y,
-            int vx,
-            int vy,
-            int angle,
-            boolean air,
-            boolean jump,
-            int jumpRemaining,
-            int radiusX,
-            int radiusY, boolean returning, int detourGoal) {}
-
-    private static final class Node {
-        final Node parent;
-        boolean returning;
-        int approach, actionStart, jumpCost, detourCost;
-        List<StageplayRoutePoint> edge = List.of();
-        PlayablePuppet.Snapshot snapshot;
-        final PlayablePuppet.Observation observation;
-        final int frame, jumpEnd, hold;
-        final double goalX;
-        final int start, elapsed;
-        final double score;
-        final int ordinal;
-
-        Node(
-                Node parent,
-                PlayablePuppet.Snapshot snapshot,
-                PlayablePuppet.Observation observation,
-                int frame,
-                int jumpEnd,
-                int hold,
-                double goalX,
-                int start,
-                int elapsed,
-                double score,
-                int ordinal) {
-            this.parent = parent;
-            this.snapshot = snapshot;
-            this.observation = observation;
-            this.frame = frame;
-            this.jumpEnd = jumpEnd;
-            this.hold = hold;
-            this.goalX = goalX;
-            this.start = start;
-            this.elapsed = elapsed;
-            this.score = score;
-            this.ordinal = ordinal;
-        }
-    }
-
-    private static StageplayRouteProposal rejected(
-            StageplayRouteResult.Status status, String message, int nodes, int ticks) {
-        return new StageplayRouteProposal(status, message, List.of(), List.of(), nodes, ticks);
     }
 
     private static StageplayRouteResult failure(

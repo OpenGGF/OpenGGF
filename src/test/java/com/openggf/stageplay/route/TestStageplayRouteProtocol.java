@@ -19,28 +19,38 @@ class TestStageplayRouteProtocol {
                 .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of(new PuppetCommand("later",90,PuppetCommandKind.STOP,0,0,0,0)))));
     }
+    /** A verified player route: thirty frozen Right rows installed as the actor's input track. */
     public static StageplayRouteResult result(StageplayDocument source,StageplayRouteRequest request,String fingerprint) {
-        var generated=List.of(new PuppetCommand("route.go",0,PuppetCommandKind.MOVE_TO,150,200,1,0),
-                new PuppetCommand("route.stop",29,PuppetCommandKind.STOP,0,0,0,0));
-        var all=new java.util.ArrayList<>(generated);all.addAll(source.puppets().getFirst().commands());
-        var candidate=source.withPuppets(List.of(new PuppetTrack("hero",false,0,all)));
-        return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"fixture response",fingerprint,request,candidate,generated,List.of(),
-                List.of(new StageplayRoutePoint(29,150,200,true)),1,30,true);
+        var rows=com.openggf.route.RouteFiles.tapeFromScript(request.maxFrames()+" R");
+        var track=StageplayRoutes.track("route.rows.1","hero",request.startFrame(),rows);
+        var candidate=StageplayRoutes.install(source,track);
+        return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"fixture response",fingerprint,request,candidate,List.of(),List.of(),
+                List.of(new StageplayRoutePoint(29,150,200,true)),1,30,true,track);
     }
-    @Test void commandOnlyPatchRoundTripsAndPreservesEveryUnrelatedField() throws Exception {
+    @Test void frozenTrackPatchRoundTripsAndPreservesEveryUnrelatedField() throws Exception {
         var source=source();var request=new StageplayRouteRequest("hero",0,150,200,30);var result=result(source,request,"0".repeat(64));
         var decoded=StageplayRouteProtocol.decodeResult(StageplayRouteProtocol.encodeResult(result));
         assertEquals(result,decoded);StageplayRouteProtocol.validatePatch(source,request,result.fingerprint(),decoded);
+        assertEquals(30,StageplayRoutes.tape(decoded.track()).size());
         var changedTrack=new PuppetTrack("hero",true,0,result.candidate().puppets().getFirst().commands());
         var changedCollisionPath=new PuppetTrack("hero",false,1,result.candidate().puppets().getFirst().commands());
         for(var modified:List.of(result.candidate().withName("tampered"),result.candidate().withCamera(List.of(new CameraKey(0,42,0,1,Interpolation.HOLD))),
                 result.candidate().withPuppets(List.of(changedTrack)),result.candidate().withPuppets(List.of(changedCollisionPath)))) {
-            var forged=new StageplayRouteResult(result.status(),result.message(),result.fingerprint(),request,modified,result.commands(),List.of(),result.path(),1,30,true);
+            var forged=new StageplayRouteResult(result.status(),result.message(),result.fingerprint(),request,modified,result.commands(),List.of(),result.path(),1,30,true,result.track());
             assertThrows(IOException.class,()->StageplayRouteProtocol.validatePatch(source,request,result.fingerprint(),forged),
                     "Candidate must preserve scene fields and Puppet floor/collision policy: "+modified);
         }
         assertThrows(IOException.class,()->StageplayRouteProtocol.validatePatch(source,request,"1".repeat(64),result));
         assertEquals("later",result.candidate().puppets().getFirst().commands().getLast().id());
+        // Rows that stop short of the requested interval are not this request's route.
+        var shortRows=StageplayRoutes.track("route.rows.1","hero",0,com.openggf.route.RouteFiles.tapeFromScript("20 R"));
+        var shortResult=new StageplayRouteResult(result.status(),result.message(),result.fingerprint(),request,
+                StageplayRoutes.install(source,shortRows),List.of(),List.of(),result.path(),1,30,true,shortRows);
+        assertThrows(IOException.class,()->StageplayRouteProtocol.validatePatch(source,request,result.fingerprint(),shortResult));
+        // A player route with commands instead of rows is refused.
+        var commandOnly=new StageplayRouteResult(result.status(),result.message(),result.fingerprint(),request,result.candidate(),
+                List.of(new PuppetCommand("route.go",0,PuppetCommandKind.MOVE_TO,150,200,1,0)),List.of(),result.path(),1,30,true,result.track());
+        assertThrows(IOException.class,()->StageplayRouteProtocol.validatePatch(source,request,result.fingerprint(),commandOnly));
     }
     @Test void protocolRejectsUnknownDuplicateTrailingAndCoercedFields() throws Exception {
         var request=new StageplayRouteRequest("hero",0,150,200,30);

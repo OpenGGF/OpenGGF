@@ -28,7 +28,7 @@ public final class RouteReplay {
 
     /** Opens forward-only playback for tests that assert on the live world as rows play. */
     public RoutePlayback open(RouteArtifact route) {
-        return new RoutePlayback(route, hosts.openColdReplay(route.launch()));
+        return new RoutePlayback(route, hosts.openColdReplay(route));
     }
 
     /** Replays every row and evaluates the route's goal program. */
@@ -48,7 +48,7 @@ public final class RouteReplay {
         var checks = new ArrayList<ReplayCheck>();
         checks.add(route.checks().check());
         checks.addAll(extra);
-        try (ReplayWorld world = hosts.openColdReplay(route.launch())) {
+        try (ReplayWorld world = hosts.openColdReplay(route)) {
             InputTape tape = route.tape();
             RouteSample sample = world.observe();
             for (ReplayCheck check : checks) check.begin(sample);
