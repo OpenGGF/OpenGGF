@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- S3K level select uses native zone save-card previews, and data select uses the correct Flying Battery palette.
+
 - Knuckles glide speed halves above the native top boundary, including signed-word wrapping and arithmetic-shift behavior.
 - Big Arm submits its ROM art module during native initialization.
 S3K capsule and cutscene-button routines now share their common behavior; the

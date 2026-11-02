@@ -2582,7 +2582,7 @@ class TestS3kDataSelectPresentation {
     }
 
     @Test
-    void render_selectedS3ZoneCard8UsesDedicatedPalette() {
+    void render_flyingBatteryUsesLockedOnZoneCardPalette() {
         RecordingGraphics graphics = new RecordingGraphics();
         SelectedS3ZoneCard8PaletteAssets assets = new SelectedS3ZoneCard8PaletteAssets();
         S3kDataSelectRenderer renderer = new S3kDataSelectRenderer();
@@ -2605,10 +2605,9 @@ class TestS3kDataSelectPresentation {
 
         Palette palette = graphics.cachedPalette(3);
         assertNotNull(palette);
-        assertTrue((palette.getColor(0).r & 0xFF) > 0
-                        || (palette.getColor(0).g & 0xFF) > 0
-                        || (palette.getColor(0).b & 0xFF) > 0,
-                "selected S3 zone card 8 should use its dedicated palette instead of the generic zone-card palette");
+        assertEquals(255, palette.getColor(0).r & 0xFF);
+        assertEquals(0, palette.getColor(0).b & 0xFF,
+                "Flying Battery must not use the S3-only card 8 palette");
     }
 
     @Test

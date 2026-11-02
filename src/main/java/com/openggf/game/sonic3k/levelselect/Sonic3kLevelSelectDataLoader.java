@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.levelselect;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic3k.dataselect.S3kDataSelectDataLoader;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
@@ -51,7 +53,7 @@ public class Sonic3kLevelSelectDataLoader {
     private int[] iconMappings;
     private int iconMappingsWidth;
 
-    // Icon palettes (15 palettes, one per icon)
+    // Native save-card palettes, one per zone preview
     private Palette[] iconPalettes;
 
     // Menu palettes (4 palette lines from ROM Pal_S2Menu)
@@ -90,8 +92,10 @@ public class Sonic3kLevelSelectDataLoader {
                     Sonic3kConstants.ART_NEM_S22P_OPTIONS_ADDR, "S22POptions");
             Pattern[] menuBoxPatterns = PatternDecompressor.nemesis(rom,
                     Sonic3kConstants.ART_NEM_S2_MENU_BOX_ADDR, "S2MenuBox");
-            Pattern[] levelSelectPicsPatterns = PatternDecompressor.nemesis(rom,
-                    Sonic3kConstants.ART_NEM_S2_LEVEL_SELECT_PICS_ADDR, "S2LevelSelectPics");
+            S3kDataSelectDataLoader saveCards = new S3kDataSelectDataLoader(RomByteReader.fromRom(rom));
+            saveCards.loadData();
+            Pattern[] levelSelectPicsPatterns = buildZonePreviews(saveCards);
+
 
             LOGGER.info("Loaded patterns: Font=" + (fontPatterns != null ? fontPatterns.length : 0) +
                     ", MenuBox=" + (menuBoxPatterns != null ? menuBoxPatterns.length : 0) +
@@ -106,19 +110,19 @@ public class Sonic3kLevelSelectDataLoader {
             // Load Enigma-compressed mappings
             loadScreenLayout(rom);
             loadBackgroundLayout(rom);
-            loadIconMappings(rom);
+
 
             // Modify screen layout with S3K zone names
             buildZoneText();
 
             // Load palettes
             loadMenuPalettes(rom);
-            loadIconPalettes(rom);
+
 
             dataLoaded = true;
             return true;
 
-        } catch (RuntimeException e) {
+        } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.WARNING, "Failed to load S3K level select data", e);
             return false;
         }
@@ -367,34 +371,40 @@ public class Sonic3kLevelSelectDataLoader {
         LOGGER.info("Built S3K zone text in screen layout");
     }
 
-    /**
-     * Loads the icon box mappings from Enigma-compressed data.
-     */
-    private void loadIconMappings(Rom rom) {
-        try {
-            byte[] compressed = rom.readBytes(Sonic3kConstants.MAP_ENI_S2_LEV_SEL_ICON_ADDR, 256);
-            try (ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
-                 ReadableByteChannel channel = Channels.newChannel(bais)) {
-                byte[] decompressed = EnigmaReader.decompress(channel,
-                        Sonic3kLevelSelectConstants.LEVEL_SELECT_PICS_OFFSET);
-
-                int wordCount = decompressed.length / 2;
-                iconMappings = new int[wordCount];
-                ByteBuffer buf = ByteBuffer.wrap(decompressed);
-                for (int i = 0; i < wordCount; i++) {
-                    iconMappings[i] = buf.getShort() & 0xFFFF;
+    /** Fits the native 80x56 save cards into the existing 32x24 preview box. */
+    private Pattern[] buildZonePreviews(S3kDataSelectDataLoader cards) {
+        Pattern[] result = new Pattern[14 * 12];
+        iconMappings = new int[result.length];
+        iconMappingsWidth = 4;
+        iconPalettes = new Palette[14];
+        for (int card = 0; card < 14; card++) {
+            Pattern[] source = cards.getSlotIconPatterns(card);
+            for (int tile = 0; tile < 12; tile++) {
+                Pattern pattern = new Pattern();
+                for (int y = 0; y < 8; y++) {
+                    for (int x = 0; x < 8; x++) {
+                        int sx = (tile % 4 * 8 + x) * 80 / 32;
+                        int sy = (tile / 4 * 8 + y) * 56 / 24;
+                        pattern.setPixel(x, y, source[saveCardTile(sx / 8, sy / 8)]
+                                .getPixel(sx % 8, sy % 8));
+                    }
                 }
-
-                // Icon box is 4 tiles wide x 3 tiles tall per icon
-                iconMappingsWidth = 4;
-
-                LOGGER.info("Loaded icon mappings: " + wordCount + " words");
+                int index = card * 12 + tile;
+                result[index] = pattern;
+                iconMappings[index] = Sonic3kLevelSelectConstants.LEVEL_SELECT_PICS_OFFSET + index;
             }
-        } catch (IOException e) {
-            LOGGER.warning("Failed to load icon mappings: " + e.getMessage());
-            iconMappings = new int[0];
-            iconMappingsWidth = 0;
+            iconPalettes[card] = new Palette();
+            iconPalettes[card].fromSegaFormat(cards.getZoneCardPalettes()[card]);
         }
+        return result;
+    }
+
+    // Map_SaveScreen frame 0x17: three column-major pieces per row band.
+    static int saveCardTile(int x, int y) {
+        int band = y < 4 ? 0 : 40;
+        int height = y < 4 ? 4 : 3;
+        int localY = y < 4 ? y : y - 4;
+        return band + x * height + localY;
     }
 
     /**
@@ -420,31 +430,6 @@ public class Sonic3kLevelSelectDataLoader {
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Failed to load menu palettes: " + e.getMessage());
             menuPalettes = new Palette[0];
-        }
-    }
-
-    /**
-     * Loads the 15 icon palettes from ROM (uncompressed).
-     */
-    private void loadIconPalettes(Rom rom) {
-        try {
-            byte[] paletteData = rom.readBytes(Sonic3kConstants.PAL_S2_LEVEL_ICONS_ADDR,
-                    Sonic3kConstants.PAL_S2_LEVEL_ICONS_SIZE);
-            iconPalettes = new Palette[15];
-
-            for (int i = 0; i < 15; i++) {
-                iconPalettes[i] = new Palette();
-                int offset = i * 32;
-                if (offset + 32 <= paletteData.length) {
-                    byte[] lineData = Arrays.copyOfRange(paletteData, offset, offset + 32);
-                    iconPalettes[i].fromSegaFormat(lineData);
-                }
-            }
-
-            LOGGER.info("Loaded 15 icon palettes");
-        } catch (IOException | RuntimeException e) {
-            LOGGER.warning("Failed to load icon palettes: " + e.getMessage());
-            iconPalettes = new Palette[0];
         }
     }
 
