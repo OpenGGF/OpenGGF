@@ -751,3 +751,11 @@ and the four required S3K loading selectors completed 83 tests with no
 failures, errors or skips using the original locked-on ROM. The new test
 failed on the pre-fix implementation at world Y=608. No visual capture was
 performed for this correction.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

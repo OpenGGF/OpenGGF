@@ -960,3 +960,11 @@ propose later observation, but grants no new execution authority.
 ## TAS mechanism accuracy — 2026-10-26
 
 The authored Sonic fire-dash entry now matches completed-player native correction and reverse exit, with the no-dash control and two registered-world restore-forward runs. Sonic/Tails response-axis component controls cover the native quadrant boundary. Existing long-route and Knuckles frontiers are unchanged; this is not a complete act replay. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

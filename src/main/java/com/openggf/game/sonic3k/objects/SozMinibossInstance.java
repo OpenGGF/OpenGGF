@@ -55,7 +55,7 @@ public final class SozMinibossInstance extends SozMinibossSprite implements Spaw
         switch(routine){
             case 0 -> {
                 visible=true;routine=2;timer=0x3F;callback=0x76B30;
-                services().playMusic(Sonic3kMusic.MINIBOSS.id);
+                services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
                 spawnFreeChild(() -> new SozMinibossChild.PaletteFade(getSpawn()));
             }
             case 2,6 -> waitCallback();

@@ -257,7 +257,9 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
     private void spawnMusicFade(int nativeWaitWord, int musicId) {
         musicFadeTargets.add(musicId);
         musicFadeWaitWords.add(nativeWaitWord);
-        spawnDynamicObject(new SongFadeTransitionInstance(nativeWaitWord, musicId));
+        spawnFreeChild(() -> nativeWaitWord == SongFadeTransitionInstance.TO_LEVEL_MUSIC_WAIT_WORD
+                ? SongFadeTransitionInstance.toLevelMusic(musicId)
+                : new SongFadeTransitionInstance(nativeWaitWord, musicId));
     }
 
     private void initializeAfterServices() {

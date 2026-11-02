@@ -375,7 +375,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
         }
         arenaGateComplete = cameraGate.update(services.camera(), () -> {
             if (!bossMusicStarted) {
-                services.playMusic(Sonic3kMusic.MINIBOSS.id);
+                services.playMusic(Sonic3kMusic.MINIBOSS_S3.id);
                 bossMusicStarted = true;
             }
         });

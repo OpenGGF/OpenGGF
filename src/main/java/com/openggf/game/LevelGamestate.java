@@ -1,6 +1,5 @@
 package com.openggf.game;
 
-import com.openggf.audio.GameAudioProfile;
 
 /**
  * Manages transient state for a single level execution, such as Rings and Time.
@@ -93,8 +92,7 @@ public class LevelGamestate implements LevelState {
 
     private void awardRingExtraLife() {
         GameServices.gameState().addLife();
-        GameAudioProfile profile = GameServices.audio().getAudioProfile();
-        if (profile != null) GameServices.audio().playMusic(profile.getExtraLifeMusicId());
+        com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(GameServices.audio());
     }
 
     // A native HUD redraw flag is distinct from Ring_count. Ordinary mutators

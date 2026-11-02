@@ -107,7 +107,7 @@ class TestMgzEndBossKnuxAdmission {
         assertEquals(1,f.fades);assertEquals(1,f.manager.getActiveObjects().size());
         for(int i=0;i<120;i++)f.tick();
         assertEquals(0,f.music);assertEquals(0,gate(boss).captureRewindStateValue().musicWaitTimer());
-        f.tick();assertEquals(1,f.music);assertEquals(Sonic3kMusic.MINIBOSS.id,f.musicId);
+        f.tick();assertEquals(1,f.music);assertEquals(Sonic3kMusic.MINIBOSS_S3.id,f.musicId);
         assertEquals(1,number(boss,"admissionPhase"),"music alone does not complete camera approach");
         assertEquals(0,f.camera.getMinY());assertEquals(0x3C78,f.camera.getMinX()&65535);
         assertEquals(1,f.manager.getActiveObjects().size());

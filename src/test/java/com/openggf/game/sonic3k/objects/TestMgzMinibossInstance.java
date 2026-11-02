@@ -594,6 +594,12 @@ class TestMgzMinibossInstance {
                 spawnedChildren.add(child);
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any());
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) instance.setServices(this);
+                spawnedChildren.add(child);
+                return null;
+            }).when(objectManager).addDynamicObject(any());
         }
 
         @Override

@@ -807,7 +807,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         if (main != null && main.getInvincibleFrames() > 0) {
             music = services().gameModule().getAudioProfile().getInvincibilityMusicId();
         }
-        if (music >= 0) services().playMusic(music);
+        if (music >= 0) services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), music));
 
         // AllocateObject writes only the new code owner here. The geyser's
         // existing Init later resolves live player/camera coordinates itself.

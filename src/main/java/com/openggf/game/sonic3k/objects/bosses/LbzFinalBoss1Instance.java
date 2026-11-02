@@ -777,7 +777,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId >= 0) {
-            services().playMusic(levelMusicId);
+            services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), levelMusicId));
         }
         // ROM: Load_PLC_Raw PLC_BossExplosion happens with the music restore.
         loadBossExplosionPlcRaw();

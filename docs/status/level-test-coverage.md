@@ -2471,6 +2471,11 @@ The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#sa
 records the local foreground-clear regression for sanctuary entry and Super
 Emerald results rebuilds; inherited route and native presentation gaps remain.
 
+Cross-game music ownership follow-up (2026-11-02): affected S3K act matrices link the [music audit](../architecture/audits/2026-11-02-music-transitions.md), including native request identity and apparent-act/invincibility restoration. Inherited route/configuration and audible timing obligations remain open.
+
+MHZ2 explosion-controller recreation now has an exact-parent adversarial graph
+witness and pending-retirement replay coverage; see the [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#explosion-controller-graph-receiving-repair-2026-11-02).
+
 
 LBZ2 camera-admission follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#camera-admitted-end-boss-art-ownership--2026-11-02)
 records the launcher-art admission boundary, pending/ready recreation and
