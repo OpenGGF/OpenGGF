@@ -1481,6 +1481,8 @@ public class TestSonic3kPlcArtRegistry {
         assertStandaloneArtKeys(plan,
                 Sonic3kObjectArtKeys.CLUCKOID_ARROW,
                 Sonic3kObjectArtKeys.MHZ_END_BOSS,
+                Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                Sonic3kObjectArtKeys.EGG_CAPSULE,
                 Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES,
                 Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR,
                 Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER,

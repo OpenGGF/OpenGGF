@@ -92,7 +92,10 @@ public final class MhzEndBossArenaHelperInstance extends AbstractObjectInstance
         if (liveEvents == null) {
             return null;
         }
-        return pillar(liveEvents);
+        // Hidden spike helpers can still have no dynamic position. Preserve their
+        // captured placement rather than giving them the pillar's fallback origin.
+        return new MhzEndBossArenaHelperInstance(liveEvents, Role.PILLAR,
+                ctx.spawn().x(), ctx.spawn().y(), -1, 0, false);
     }
 
     private void initializeRomObjectData() {
@@ -110,6 +113,19 @@ public final class MhzEndBossArenaHelperInstance extends AbstractObjectInstance
                 priorityBucket = 1 + spikeTier; // priority $80,$100,$180
             }
         }
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // loc_5576A/loc_557C8 retire only on event flags, including hidden
+        // spike phases whose initial X is still zero. Draw_Sprite never culls them.
+        return true;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // loc_556F8 sets art_tile bit 15 only for the fixed foreground pillar.
+        return role == Role.PILLAR;
     }
 
     @Override

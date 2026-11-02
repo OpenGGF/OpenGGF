@@ -2432,3 +2432,11 @@ Their local matrices record the all-32-row output contract; existing route
 qualification limits remain.
 
 MHZ2 cutscene music follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#cutscene-music-follow-up-2026-11-02) records the restored Knuckles-theme fade and bounded regression coverage; inherited route and configuration gaps remain open.
+
+
+MHZ2 end-boss rendering follow-up (2026-11-02): the
+[Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#end-boss-rendering-follow-up--2026-11-02)
+records the corrected pillar archive, ship/pilot/capsule sheets, flame palette,
+chase plane sources, helper lifetime and priority, plus the positioned rendering
+and rewind witness. Native pixel parity, intermediate redraw timing and broader
+route/configuration products remain open.

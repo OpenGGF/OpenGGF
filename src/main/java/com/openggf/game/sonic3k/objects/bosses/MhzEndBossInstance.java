@@ -68,10 +68,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private static final int HIT_COUNT = 9;
     private static final int COLLISION_SIZE = 0x0F;
     private static final int INITIAL_X_OFFSET = 0xC0;
-    private static final int ACTIVE_CORE_MAPPING_FRAME = 1;
-    private static final int PRIORITY_BUCKET = 5; // ObjDat3_76934 priority $280
-    private static final int ACTIVE_CORE_RENDER_HALF_WIDTH = 0x80;
-    private static final int ACTIVE_CORE_RENDER_HALF_HEIGHT = 0x80;
+    private static final int SHIP_MAPPING_FRAME = 0x0A; // ObjDat_MHZEndBoss
+    private static final int PRIORITY_BUCKET = 5; // ObjDat_MHZEndBoss priority $280
+    private static final int SHIP_RENDER_HALF_WIDTH = 0x20;
+    private static final int SHIP_RENDER_HALF_HEIGHT = 0x20;
     private static final int CAMERA_RANGE_MIN_Y = 0x0000; // word_769F4
     private static final int CAMERA_RANGE_MAX_Y = 0x0300;
     private static final int CAMERA_RANGE_MIN_X = 0x3AA0;
@@ -1074,11 +1074,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!cameraRangePassed) return;
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS);
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(ACTIVE_CORE_MAPPING_FRAME, state.x, state.y, false, false);
+        renderer.drawFrameIndex(SHIP_MAPPING_FRAME, state.x, state.y,
+                (state.renderFlags & 1) != 0, false);
     }
 
     @Override
@@ -1088,12 +1089,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public int getOnScreenHalfWidth() {
-        return ACTIVE_CORE_RENDER_HALF_WIDTH;
+        return SHIP_RENDER_HALF_WIDTH;
     }
 
     @Override
     public int getOnScreenHalfHeight() {
-        return ACTIVE_CORE_RENDER_HALF_HEIGHT;
+        return SHIP_RENDER_HALF_HEIGHT;
     }
 
     @Override

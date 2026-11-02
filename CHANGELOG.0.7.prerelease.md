@@ -7,7 +7,10 @@ Unreleased. The earlier development themes remain in
 
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
 
-- **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his leaf-blower cutscene begins.
+- **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his
+  leaf-blower cutscene begins. Restore the end-boss ship, pilot and capsule art,
+  the dash flames' palette, and the chase's canopy, pillar and spike-ball layers.
+  Correct the pillar archive address so its upload cannot corrupt ring art.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.

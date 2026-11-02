@@ -157,7 +157,8 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(MAPPING_FRAME, x, y, false, false);
+        // ObjDat3_7694C selects palette base 0; body layers use base 1.
+        renderer.drawFrameIndexWithPaletteBase(MAPPING_FRAME, x, y, false, false, 0);
     }
 
     @Override

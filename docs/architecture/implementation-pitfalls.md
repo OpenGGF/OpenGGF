@@ -1,5 +1,14 @@
 # Shared implementation pitfalls
 
+**Position updates execute object code.** `LevelManager.updateObjectPositions()`
+is not a read-only placement refresh. In a positioned rendering fixture, calling it
+between production steps can admit a boss and consume its one-time palette load;
+the following frame-top `PaletteOwnershipRegistry.beginFrame()` then clears the
+pending write. Move the declared camera/player state and let the ordinary frame
+step execute admission. The MHZ2 rendering witness checks the admitted palette
+against the ROM and stages its camera without an extra object pass.
+
+
 **A handler capture is not proof of a stored world checkpoint.** Cold headless
 loading can leave parallax's active selection uninitialized even when a zone
 handler is available directly. Initialize through the ordinary production entry
