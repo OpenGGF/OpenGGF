@@ -20,6 +20,8 @@ public final class ModApiVersion {
      * Doomsday delayed tail missile are finite unactivated campaign ingredients.
      * The opt-in DISPLAY_INTERPOLATION preference and DISPLAY_INTERPOLATION_TOGGLE_KEY
      * shortcut extend this unpublished candidate.
+     * EngineOnly members, initially ambient singleton accessors, are excluded from the
+     * supported surface; attributed source and bytecode consumption use the same contract.
      * The 0.7 candidate also includes
      * live window mode and display scaling preferences, configurable widescreen HUD anchoring,
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,

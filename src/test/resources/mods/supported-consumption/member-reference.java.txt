@@ -1,0 +1,2 @@
+// expected: com.openggf.graphics.GraphicsManager#getInstance
+class Probe { java.util.function.Supplier<com.openggf.graphics.GraphicsManager> s = com.openggf.graphics.GraphicsManager::getInstance; }

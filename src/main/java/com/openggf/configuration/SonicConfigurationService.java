@@ -648,6 +648,7 @@ public class SonicConfigurationService {
 		}
 	}
 
+	@com.openggf.game.EngineOnly
 	public synchronized static SonicConfigurationService getInstance() {
 		if (sonicConfigurationService == null) {
 			sonicConfigurationService = new SonicConfigurationService();

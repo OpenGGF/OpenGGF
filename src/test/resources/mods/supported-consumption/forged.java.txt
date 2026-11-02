@@ -1,0 +1,2 @@
+// expected: com.openggf.control.InputActionMasks,com.openggf.control.InputActionMasks#ACTION_B
+@com.openggf.game.ModApi class Probe { int x=com.openggf.control.InputActionMasks.ACTION_B; }

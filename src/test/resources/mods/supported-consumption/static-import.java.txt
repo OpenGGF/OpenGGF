@@ -1,0 +1,2 @@
+// expected: com.openggf.control.InputActionMasks,com.openggf.control.InputActionMasks#ACTION_B
+import static com.openggf.control.InputActionMasks.ACTION_B; class Probe { int x=ACTION_B; }

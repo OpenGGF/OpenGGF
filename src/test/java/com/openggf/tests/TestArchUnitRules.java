@@ -5,6 +5,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
+import com.openggf.game.EngineOnly;
 import com.openggf.game.ModApi;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
@@ -419,12 +420,17 @@ class TestArchUnitRules {
     }
 
     private static DescribedPredicate<JavaClass> modApiMarkerType() {
-        return new DescribedPredicate<>("the @ModApi compatibility marker") {
+        return new DescribedPredicate<>("the @ModApi and @EngineOnly compatibility markers") {
             @Override
             public boolean test(JavaClass input) {
-                return input.getName().equals(ModApi.class.getName());
+                return isCompatibilityMarker(input);
             }
         };
+    }
+
+    private static boolean isCompatibilityMarker(JavaClass input) {
+        return input.getName().equals(ModApi.class.getName())
+                || input.getName().equals(EngineOnly.class.getName());
     }
 
     private static boolean approvedGameplayModContractTarget(String originSlice, JavaClass target) {
@@ -676,7 +682,7 @@ class TestArchUnitRules {
                             // only the authored scene adapter can enter Playback/Control. The
                             // Stageplay owner guard rejects its runtime implementation dependencies.
                             .ignoreDependency(authoredStageplayServiceOwner(), authoredStageplayPublicTargets())
-                            // @ModApi is compatibility metadata, not runtime collaboration.
+                            // @ModApi and @EngineOnly are compatibility metadata, not runtime collaboration.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             // Release tooling reads the inventory but is not runtime orchestration.
                             .ignoreDependency(modApiDocumentationTool(), modApiInventoryType())
@@ -892,7 +898,7 @@ class TestArchUnitRules {
                 // to their element type, just as for ordinary value-type references.
                 if (target.isArray()) target = target.getBaseComponentType();
                 String targetSlice = topLevelSlice(target);
-                if (targetSlice == null || target.getName().equals(ModApi.class.getName())) continue;
+                if (targetSlice == null || isCompatibilityMarker(target)) continue;
                 // This transient authoring model must never enter runtime playback or export.
                 if (typeOrNested(target.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
                         && !typeOrNested(origin.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
@@ -1014,7 +1020,7 @@ class TestArchUnitRules {
                             .whereLayer("Audio").mayNotAccessAnyLayer()
                             .whereLayer("Graphics").mayNotAccessAnyLayer()
                             .whereLayer("Data").mayNotAccessAnyLayer()
-                            // @ModApi marks a supported type without coupling its runtime layer.
+                            // @ModApi and @EngineOnly mark the supported surface without coupling a runtime layer.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             .as("audio, graphics, and data layers should not depend on runtime gameplay layers"))
                     .because("lower-level services should stay reusable and should not know about level/sprite/game orchestration; frozen baseline: 209 violations (2026-07-02: +2 ROM-backed SEGA-boot PCM edges in AudioManager, solved edges pruned)");
@@ -1293,7 +1299,7 @@ class TestArchUnitRules {
                 continue;
             }
             for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
-                if (dependency.getTargetClass().getName().equals(ModApi.class.getName())) {
+                if (isCompatibilityMarker(dependency.getTargetClass())) {
                     continue;
                 }
                 if (Set.of(

@@ -1562,6 +1562,7 @@ public class GraphicsManager {
 	/**
 	 * Singleton access to the GraphicsManager instance.
 	 */
+	@com.openggf.game.EngineOnly
 	public static synchronized final GraphicsManager getInstance() {
 		if (graphicsManager == null) {
 			graphicsManager = new GraphicsManager();

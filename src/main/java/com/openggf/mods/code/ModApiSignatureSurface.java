@@ -264,16 +264,16 @@ public final class ModApiSignatureSurface {
                 }
             }
             for (Constructor<?> value : type.getDeclaredConstructors()) {
-                if (supported(value.getModifiers())) collectExecutable(value, pending);
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) collectExecutable(value, pending);
             }
             for (Method value : type.getDeclaredMethods()) {
-                if (supported(value.getModifiers())) {
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) {
                     collectType(value.getGenericReturnType(), pending);
                     collectExecutable(value, pending);
                 }
             }
             for (Field value : type.getDeclaredFields()) {
-                if (supported(value.getModifiers())) {
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) {
                     collectType(value.getGenericType(), pending);
                     for (Annotation annotation : value.getAnnotations()) pending.add(annotation.annotationType());
                 }
@@ -303,16 +303,16 @@ public final class ModApiSignatureSurface {
                 }
             }
             for (Constructor<?> value : type.getDeclaredConstructors()) {
-                if (supported(value.getModifiers())) collectReferenced(value, referenced);
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) collectReferenced(value, referenced);
             }
             for (Method value : type.getDeclaredMethods()) {
-                if (supported(value.getModifiers())) {
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) {
                     collectReferenced(value.getGenericReturnType(), referenced);
                     collectReferenced(value, referenced);
                 }
             }
             for (Field value : type.getDeclaredFields()) {
-                if (supported(value.getModifiers())) {
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) {
                     collectReferenced(value.getGenericType(), referenced);
                     collectAnnotationTypes(value.getDeclaredAnnotations(), referenced);
                 }
@@ -352,11 +352,11 @@ public final class ModApiSignatureSurface {
                 }
             }
             for (Constructor<?> value : type.getDeclaredConstructors())
-                if (supported(value.getModifiers())) addExecutable(lines, type, value, null);
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) addExecutable(lines, type, value, null);
             for (Method value : type.getDeclaredMethods())
-                if (supported(value.getModifiers())) addExecutable(lines, type, value, value.getGenericReturnType());
+                if (supported(value.getModifiers()) && !value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) addExecutable(lines, type, value, value.getGenericReturnType());
             for (Field value : type.getDeclaredFields()) {
-                if (!supported(value.getModifiers())) continue;
+                if (!supported(value.getModifiers()) || value.isAnnotationPresent(com.openggf.game.EngineOnly.class)) continue;
                 String owner = "FIELD " + type.getName() + " " + modifiers(value.getModifiers())
                         + " " + typeName(value.getGenericType()) + " " + value.getName();
                 lines.add(owner);

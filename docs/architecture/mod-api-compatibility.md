@@ -1262,3 +1262,16 @@ The mutable `0.7`
 signature pin is regenerated in place; the descriptor and runtime API version
 remain candidate `0.7.0`. Compiled multiplayer mods must rebuild and use the
 protocol 8 admission and launch shapes. Published pins remain unchanged.
+
+### Supported member consumption
+
+`@EngineOnly` marks methods, fields and constructors used by the engine itself.
+These members are excluded from recursive signature traversal, annotation traversal
+and normalized compatibility pins, even on an `@ModApi` type. Candidate 0.7
+consumption additionally requires a reachable engine-owned marked declaring type
+and a signature without engine-internal terminals (including generic bounds and
+throws). Inherited references resolve to the declaring owner. Merely inheriting a
+terminal-bearing default bridge is allowed; calling, referencing or overriding it
+is unsupported. Creator annotations and the legacy validator allowlist grant no
+supported access. The SDK's `OpenGGFSupported` javac plugin checks attributed source
+before constant folding; `ModValidator.SUPPORTED_ONLY` checks compiled payloads.

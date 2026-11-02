@@ -76,8 +76,17 @@ def exported_projects(root):
     return dict(sorted(projects.items()))
 
 
+def pending_migration(root):
+    """Official examples still building with --expert-legacy; see supported-consumption-pending.txt."""
+    listing = root / "tools/modding/supported-consumption-pending.txt"
+    if not listing.is_file():
+        return set()
+    return {line.strip() for line in listing.read_text().splitlines() if line.strip() and not line.startswith("#")}
+
+
 def export_examples(root):
     entries = {}
+    pending = pending_migration(root)
     for name, project in exported_projects(root).items():
         generator = project / "generate_resources.py"
         if generator.is_file():
@@ -120,22 +129,26 @@ def export_examples(root):
         base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
         game = base_game.group(1) if base_game else "s2"
         test_rom = f" --{game} /absolute/own-{game}.gen" if base_game else ""
+        legacy = " --expert-legacy" if name in pending else ""
+        legacy_note = ("\nThis example still references engine internals outside the supported Mod API\n"
+                       "while its facades are written, so its commands pass `--expert-legacy`. Do not\n"
+                       "copy those references into a new mod.\n") if legacy else ""
         instructions = f'''# Build {name} from the creator kit
 
 Use a Java **25 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
 and `sdk.jar` from the same creator kit/source commit; this is a mutable candidate.
-
+{legacy_note}
 From this project directory, build with the portable launcher:
 
 ```sh
-python3 ../../tools/build_project.py .
+python3 ../../tools/build_project.py .{legacy}
 ```
 
 Run all authored Jupiter tests (including the exported adapters for older check
 programs) with the matching kit's separate testkit:
 
 ```sh
-python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar{test_rom}
+python3 ../../tools/build_project.py .{legacy} --test --testkit ../../mod-testkit.jar{test_rom}
 ```
 
 Native gameplay tests need your original ROMs. The command includes the declared
@@ -158,7 +171,7 @@ Launch with your own ROM paths. This example supplies the {game} path; add the
 required game/donor paths using `--s1`, `--s2` or `--s3k` as needed:
 
 ```sh
-python3 ../../tools/build_project.py . --run --{game} /absolute/own-{game}.gen
+python3 ../../tools/build_project.py .{legacy} --run --{game} /absolute/own-{game}.gen
 ```
 
 Use `--doctor --format json` for read-only prerequisite checks; add `--test` to
