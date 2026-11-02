@@ -44,6 +44,8 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // Obj_LightningShield_Main returns before updating any animation state.
+        if (ShieldAnimationArtLifecycle.elementalAnimationFrozen(player)) return;
         super.update(vIntRunCount, player);
         if (isShieldDestroyed()) return;
         animationLifecycle.ensureArtLoaded(this::loadShieldArt);
@@ -57,7 +59,8 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
     }
 
     private void appendNativeRenderCommands(List<GLCommand> commands) {
-        if (isShieldDestroyed() || !isShieldVisible()) {
+        if (isShieldDestroyed() || !isShieldVisible()
+                || ShieldAnimationArtLifecycle.elementalAnimationFrozen((AbstractPlayableSprite) getPlayer())) {
             return;
         }
         animationLifecycle.ensureArtLoaded(this::loadShieldArt);

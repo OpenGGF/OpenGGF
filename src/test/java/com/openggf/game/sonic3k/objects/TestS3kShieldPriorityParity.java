@@ -53,7 +53,7 @@ class TestS3kShieldPriorityParity {
         ShieldAnimationArtLifecycle lifecycle = (ShieldAnimationArtLifecycle) field.get(shield);
         ShieldAnimationArtLifecycle.RewindState state = lifecycle.captureRewindStateValue();
         lifecycle.restoreRewindStateValue(new ShieldAnimationArtLifecycle.RewindState(
-                state.animationId(), state.frameIndex(), state.delayCounter(), frame));
+                state.animationId(), state.previousAnimationId(), state.frameIndex(), state.delayCounter(), frame));
     }
 }
 

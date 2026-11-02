@@ -12,6 +12,9 @@ Unreleased. The earlier development themes remain in
   reload, and resume stock zones at their native starting act.
 
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
+  Their native playback publishes the first frame on dispatch, defers animation
+  switches, and pauses elemental shields while the player is invincible or blank.
+  AIZ2 cutscene Knuckles uses the ROM standing pose and raw run/jump/laugh scripts.
 
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
   and snow corridor, including ICZ2’s run toward LBZ1.

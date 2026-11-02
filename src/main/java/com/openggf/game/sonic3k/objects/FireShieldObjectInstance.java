@@ -43,6 +43,8 @@ public class FireShieldObjectInstance extends ShieldObjectInstance {
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // Obj_FireShield_Main returns before updating any animation state.
+        if (ShieldAnimationArtLifecycle.elementalAnimationFrozen(player)) return;
         super.update(vIntRunCount, player);
         if (isShieldDestroyed()) return;
         animationLifecycle.ensureArtLoaded(this::loadShieldArt);
@@ -56,7 +58,8 @@ public class FireShieldObjectInstance extends ShieldObjectInstance {
     }
 
     private void appendNativeRenderCommands(List<GLCommand> commands) {
-        if (isShieldDestroyed() || !isShieldVisible()) {
+        if (isShieldDestroyed() || !isShieldVisible()
+                || ShieldAnimationArtLifecycle.elementalAnimationFrozen((AbstractPlayableSprite) getPlayer())) {
             return;
         }
         animationLifecycle.ensureArtLoaded(this::loadShieldArt);
