@@ -180,6 +180,18 @@ public class StomperObjectInstance extends AbstractObjectInstance
         return RenderPriority.clamp(4);
     }
 
+    @Override
+    protected boolean usesCustomRenderHeight() {
+        // Obj2A_Init: move.b #$50,y_radius / bset #render_flags.explicit_height
+        // (s2.asm:24224-24225); BuildSprites tests y_radius (s2.asm:30580-30593).
+        return true;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x50;
+    }
+
     // --- SolidObjectProvider implementation ---
 
     @Override

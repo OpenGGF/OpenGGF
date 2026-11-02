@@ -56,7 +56,7 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
             // loc_3CD4C/loc_3CDD0 read render_flags bit 7 from the previous
             // Render_Sprites pass. That flag uses the object's $10-pixel
             // render extents, not a centre-point viewport check.
-            boolean renderBoxOnScreen = isWithinSolidContactBounds();
+            boolean renderBoxOnScreen = isWithinOnScreenRenderBounds();
             if ((levelFrameCounter & 0xF) == 0 && (isLateral() || renderBoxOnScreen)) {
                 services().playSfx(Sonic3kSfx.FLAMETHROWER_LOUD.id);
             }

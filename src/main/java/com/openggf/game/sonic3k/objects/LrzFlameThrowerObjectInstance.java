@@ -254,7 +254,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
     }
 
     private boolean canPresentEchoWarning() {
-        return isWithinSolidContactBounds() && getRenderer(Sonic3kObjectArtKeys.LRZ2_FLAME_THROWER) != null;
+        return isWithinOnScreenRenderBounds() && getRenderer(Sonic3kObjectArtKeys.LRZ2_FLAME_THROWER) != null;
     }
 
     /** {@code loc_43E14} / {@code loc_43F4A} (sonic3k.asm:89367-89412, :89412-89473). */
@@ -275,7 +275,7 @@ public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
         emissionAngle = (TrigLookupTable.sinHex(angle & 0xFF) >> 4) & 0xFF;
         angle = (angle + ANGLE_STEP) & 0xFF;
         // tst.b render_flags(a0) / bpl: no allocation at all while the thrower is off screen.
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             return;
         }
         spawnFlame();

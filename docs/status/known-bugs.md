@@ -17,24 +17,31 @@ Entries should include:
 
 ---
 
-## S2 solid on-screen gate ignores the screen-shake camera offset — 2026-11-01
+## Solid on-screen gate: render-pass approximations — 2026-11-02
 
-- **Location** — `AbstractObjectInstance.isWithinSolidContactBounds`, used by the
-  S2 `SolidObject_OnScreenTest` gate in `ObjectSolidContactController`.
-- **Symptom** — with `ARZBossPillar`'s `Obj89_Pillar_SolidObject` call moved to its
-  ROM site (before the pillar rises, s2.asm:65451-65497), the rising right pillar
-  returns no contact at `TestS2Arz2LevelSelectTraceReplay` f4707; the ROM pushes
-  Sonic to the pillar's left edge (`x` `$2B4D`, `Status_Push`).
-- **Suspected cause** — `SolidObject_OnScreenTest` (s2.asm:35336-35341) reads the
-  `render_flags.on_screen` bit the previous `BuildSprites` set. Obj89 leaves
-  `explicit_height` clear, so `BuildSprites_ApproxYCheck` assumes a 32 px radius
-  (s2.asm:30603-30611): at y `$501` against camera y `$400` the bit is set only
-  with the pillar raise's screen-shake offset applied to the sprite camera. The
-  engine recomputes the bit from the unshaken camera. The pillar's current AUTO
-  call evaluates the post-raise y, one pixel higher, which hides the gap.
-- **Removal condition** — the gate uses the camera position `BuildSprites` used,
-  including the shake offset; then the pillar call can move to its ROM site
-  ([solid-contact audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#continuation-items-a-d-2026-11-01)).
+The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /
+Render_Sprites pass wrote it, against the camera copy including the screen-shake
+offset ([solid-contact audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#a-the-on-screen-gate-reads-the-previous-render-pass)).
+Three parts of that pass are still approximated.
+
+- **Location** — `AbstractObjectInstance.captureRenderFlagOnScreen` /
+  `isWithinSolidContactBounds`, `ObjectManager.refreshPostCameraRenderState`.
+- **Symptom** — none measured; each differs from the ROM only in the case named.
+  1. BuildSprites rewrites the bit only for objects queued through
+     `DisplaySprite` that frame (s2.asm:30560, sonic3k.asm:36378); the engine pass
+     rewrites it for every live, unsuspended object. An object that stops
+     displaying while crossing a screen edge keeps a stale bit in the ROM.
+  2. Multi-sprite objects (`render_flags.multi_sprite`) take S2
+     `BuildSprites_MultiDraw` (s2.asm:30664) / S3K `loc_1AE58`
+     (sonic3k.asm:36481) with `mainspr_width` /
+     `mainspr_height`; the engine tests the object's single render box.
+  3. Before the first pass has seen an object, the gate tests its current render
+     box against the cached camera. That models the level-init BuildSprites for
+     objects present at level start, but a child registered mid-frame into a later
+     slot reads its init `render_flags` (bit 7 clear) in the ROM.
+- **Suspected cause** — the engine has no per-object display queue.
+- **Removal condition** — the render pass consumes the objects' display requests,
+  multi-sprite boxes and a cleared bit for objects created after a pass.
 
 ## Bottom kill plane runs the FixBugs branch — 2026-10-31
 

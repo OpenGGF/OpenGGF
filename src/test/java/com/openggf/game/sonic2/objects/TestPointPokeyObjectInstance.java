@@ -322,7 +322,7 @@ class TestPointPokeyObjectInstance {
         }
 
         @Override
-        public boolean isWithinSolidContactBounds() {
+        protected boolean isWithinOnScreenRenderBounds() {
             return false;
         }
     }

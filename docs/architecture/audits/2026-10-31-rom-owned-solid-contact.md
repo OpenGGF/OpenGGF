@@ -375,3 +375,61 @@ the replay completes with 2,091 errors, first error unchanged at f30582
   same gated set as the step-3 smoke (system properties, captures, perf and
   native-GPU checks, and `TestCPZObjectBugs#testSpinTubeForcesRolling`'s
   runtime assumption).
+
+## Continuation 3: on-screen gate, ARZ pillar, remaining families (2026-11-02)
+
+Branch `bugfix/ai-rom-owned-solid-contact-3`, based on `feature/ai-weakness-pass`
+at `fa313dfa3` (the merge of the first continuation). Same protocol and 143
+classes; baseline and every measured commit ran in a separate copy-on-write
+worktree on `/home` with `target/classes` and `target/test-classes` deleted
+first. The baseline at `fa313dfa3` gives 79 green, 64 red, 215 tests, no skips.
+
+### A. The on-screen gate reads the previous render pass
+
+All three games' full-solid helpers gate side/top/bottom resolution on the
+object's `render_flags.on_screen`: S1 `SolidObject` / `Solid_ChkEnter`
+(`tst.b obRender`, _incObj/sub SolidObject.asm:112,153), S2
+`SolidObject_OnScreenTest` (s2.asm:35336-35341) and S3K `loc_1DF88`
+(sonic3k.asm:41435-41436). Only the sprite renderer writes that bit, at the end
+of the frame: S1 `BuildSprites` against `v_screenposx/y`
+(_inc/BuildSprites.asm:38-116), S2 `BuildSprites` against `Camera_X_pos_copy` /
+`Camera_Y_pos_copy` (s2.asm:30560-30611), which the zone's scroll routine has
+already moved by the screen-shake ripple (e.g. `SwScrl_ARZ`, s2.asm:17709-17728),
+and S3K `Render_Sprites` against the same copies after ScreenEvents has added
+`Screen_shake_offset` (sonic3k.asm:36358-36410). S1/S2 test Y with an assumed
+32-px radius unless the object sets the explicit-height flag
+(`BuildSprites_ApproxYCheck`, s2.asm:30603-30611; S1 `.assumeHeight`, _inc/BuildSprites.asm:62,86-94); S3K always
+uses `height_pixels` (sonic3k.asm:36396-36404).
+
+The engine evaluated a live proxy at the solid call instead: the object's
+current position (post-move for AUTO routines), the live camera without shake,
+and a default 16-px Y extent. Now:
+
+- `ObjectManager.refreshPostCameraRenderState` (the existing end-of-frame
+  BuildSprites slot in `LevelFrameStep`) records every live object's bit with
+  `AbstractObjectInstance.captureRenderFlagOnScreen` before the objects' own
+  retained-flag refreshes. Its camera bounds are the copy words plus the
+  published shake offsets, so the ~60 objects with their own retained render
+  flags also see the shaken camera. The Y test follows
+  `CameraRules.useScreenYWrapValueForVisibility`, the rule that already selects
+  the playable sprite's render-flag Y test.
+- `isWithinSolidContactBounds()` returns that bit (rewind-captured as two new
+  `PerObjectRewindSnapshot` components). An object no pass has seen yet answers
+  from its live render box, as the playable render flag does.
+- Object routines that test their render box when they run keep that check
+  under its own name, `isWithinOnScreenRenderBounds()` (22 classes renamed, no
+  behaviour change).
+- S2 objects that set `render_flags.explicit_height` and call `SolidObject` now
+  declare it: Obj2A stomper (`y_radius` `$50`, s2.asm:24224-24225), Obj2F
+  smashable ground (`$20`, s2.asm:49158-49159) and Obj64 twin stompers (`$6C` for
+  mapping frame 0, plus its `width_pixels` from `Obj64_Properties`,
+  s2.asm:52712-52718). FixBugs=0 Obj2B and Obj82 leave the flag clear
+  (s2.asm:51821-51830, 57285-57290).
+
+Deleted: the S3K spike and FBZ rotating-platform `isWithinSolidContactBounds`
+overrides (pre-update-position approximations of the retained bit), Obj89's
+fitted `getOnScreenHalfHeight` `$21` ("one-pixel lower-edge slack"), and an
+unreachable catch in `LrzShootingTriggerObjectInstance.onScreen` with its
+broad-catch baseline row. Residual approximations (display-queue membership,
+multi-sprite boxes, objects registered mid-frame) are in
+[known bugs](../../status/known-bugs.md#solid-on-screen-gate-render-pass-approximations--2026-11-02).

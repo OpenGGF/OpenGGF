@@ -341,6 +341,24 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         return RenderPriority.clamp(4);
     }
 
+    @Override
+    public int getOnScreenHalfWidth() {
+        // Obj64_Init: move.b (a3)+,width_pixels(a0) from Obj64_Properties (s2.asm:52713).
+        return widthPixels;
+    }
+
+    @Override
+    protected boolean usesCustomRenderHeight() {
+        // Obj64_Init sets render_flags.explicit_height only for mapping frame 0
+        // (s2.asm:52716-52718); BuildSprites then tests y_radius (s2.asm:30580-30593).
+        return renderYRadius != 0;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return renderYRadius != 0 ? renderYRadius : super.getOnScreenHalfHeight();
+    }
+
     /**
      * Renders using level art patterns.
      * art_tile = make_art_tile(ArtTile_ArtKos_LevelArt, 1, 0) => palette line 1.

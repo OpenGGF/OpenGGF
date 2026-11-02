@@ -75,7 +75,12 @@ public record PerObjectRewindSnapshot(
         // Compact schema-backed sidecar for default object-subclass state.
         // Present when every default-captured subclass field has a compact codec;
         // genericState remains the compatibility fallback for unsupported shapes.
-        RewindObjectStateBlob compactGenericState
+        RewindObjectStateBlob compactGenericState,
+
+        // ROM render_flags.on_screen as the last BuildSprites/Render_Sprites pass
+        // wrote it, and whether such a pass has seen this object yet.
+        boolean renderFlagPassSeen,
+        boolean renderFlagOnScreen
 ) {
     public PerObjectRewindSnapshot(
             boolean destroyed,
@@ -106,7 +111,9 @@ public record PerObjectRewindSnapshot(
                 null,
                 playerExtra,
                 null,
-                null
+                null,
+                false,
+                false
         );
     }
 
@@ -141,7 +148,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                null
+                null,
+                false,
+                false
         );
     }
 
@@ -506,7 +515,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 extra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -523,7 +534,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -540,7 +553,9 @@ public record PerObjectRewindSnapshot(
                 extra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -557,7 +572,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -574,7 +591,28 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
+        );
+    }
+
+    /** Returns a copy of this snapshot carrying the retained BuildSprites on-screen bit. */
+    public PerObjectRewindSnapshot withRenderFlagOnScreen(boolean passSeen, boolean onScreen) {
+        return new PerObjectRewindSnapshot(
+                destroyed, destroyedRespawnable,
+                hasDynamicSpawn, dynamicSpawnX, dynamicSpawnY,
+                preUpdateX, preUpdateY, preUpdateValid, preUpdateCollisionFlags,
+                skipTouchThisFrame, solidContactFirstFrame,
+                slotIndex, respawnStateIndex,
+                badnikExtra,
+                badnikSubclassExtra,
+                objectSubclassExtra,
+                playerExtra,
+                genericState,
+                compactGenericState,
+                passSeen,
+                onScreen
         );
     }
 }

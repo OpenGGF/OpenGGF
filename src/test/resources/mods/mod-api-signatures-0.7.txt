@@ -1769,7 +1769,7 @@ CONSTRUCTOR com.openggf.level.objects.ObjectSpawn public  <init>(int,int,int,int
 CONSTRUCTOR com.openggf.level.objects.ObjectSpriteSheet public  <init>(com.openggf.level.Pattern[],java.util.List<com.openggf.level.render.SpriteMappingFrame>,int,int)
 CONSTRUCTOR com.openggf.level.objects.PatrolMovementHelper$PatrolResult public  <init>(int,int,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot public  <init>(boolean,boolean,boolean,int,int,int,int,boolean,int,boolean,boolean,int,int,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra,com.openggf.game.rewind.snapshot.GenericObjectSnapshot)
-CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot public  <init>(boolean,boolean,boolean,int,int,int,int,boolean,int,boolean,boolean,int,int,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra,com.openggf.game.rewind.snapshot.GenericObjectSnapshot,com.openggf.game.rewind.schema.RewindObjectStateBlob)
+CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot public  <init>(boolean,boolean,boolean,int,int,int,int,boolean,int,boolean,boolean,int,int,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra,com.openggf.game.rewind.snapshot.GenericObjectSnapshot,com.openggf.game.rewind.schema.RewindObjectStateBlob,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot public  <init>(boolean,boolean,boolean,int,int,int,int,boolean,int,boolean,boolean,int,int,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra,com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$ArzPlatformRewindExtra public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$BadnikProjectileRewindExtra public  <init>(java.lang.String,int,int,int,int,int,int,boolean,int,int,int,boolean,int,int,boolean,int,int,int,int,boolean)
@@ -10326,6 +10326,7 @@ METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean isOnS
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean isOnScreenX(int)
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean isPlayerRiding()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean isPreUpdateWithinRenderSpriteBounds(int,int)
+METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean isWithinOnScreenRenderBounds()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean isWithinRenderSpriteBounds(int,int)
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean skipsSameFrameUpdateAfterSpawn()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  boolean usesCustomRenderHeight()
@@ -11023,6 +11024,8 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean destroy
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean destroyedRespawnable()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean hasDynamicSpawn()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean preUpdateValid()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean renderFlagOnScreen()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean renderFlagPassSeen()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean skipTouchThisFrame()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  boolean solidContactFirstFrame()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.game.rewind.schema.RewindObjectStateBlob compactGenericState()
@@ -11032,6 +11035,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.lev
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot withGenericState(com.openggf.game.rewind.snapshot.GenericObjectSnapshot)
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot withObjectSubclassExtra(com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra)
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot withPlayerExtra(com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra)
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot withRenderFlagOnScreen(boolean,boolean)
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot$BadnikRewindExtra badnikExtra()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra badnikSubclassExtra()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot public  com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra objectSubclassExtra()
@@ -18537,6 +18541,8 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot preUpdateColl
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot preUpdateValid boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot preUpdateX int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot preUpdateY int
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot renderFlagOnScreen boolean
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot renderFlagPassSeen boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot respawnStateIndex int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot skipTouchThisFrame boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot slotIndex int

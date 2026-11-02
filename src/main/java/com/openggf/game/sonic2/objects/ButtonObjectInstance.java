@@ -121,9 +121,9 @@ public class ButtonObjectInstance extends AbstractObjectInstance
         // every frame, so the MTZ_LONG_PLATFORM (subtype-7 button retract) never saw
         // the press and stayed extended, dropping Sonic through the floor it should
         // have landed on (mtz1 trace f863 air/rolling/y divergence).
-        // isWithinSolidContactBounds() mirrors the ROM Render_Sprites render_flags
+        // isWithinOnScreenRenderBounds() mirrors the ROM Render_Sprites render_flags
         // bit-7 bounding-box test for this object's width_pixels.
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             return;
         }
 

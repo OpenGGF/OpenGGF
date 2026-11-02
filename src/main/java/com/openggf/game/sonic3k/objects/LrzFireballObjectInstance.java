@@ -95,7 +95,7 @@ public final class LrzFireballObjectInstance extends AbstractObjectInstance
             mappingFrame = (mappingFrame + 1) & 1;
         }
         // tst.b render_flags(a0) / bpl -> Delete_Current_Sprite (:88250-88251, :88257).
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             setDestroyedByOffscreen();
             return;
         }

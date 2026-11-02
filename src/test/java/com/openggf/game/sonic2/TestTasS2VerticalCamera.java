@@ -142,7 +142,9 @@ class TestTasS2VerticalCamera {
                     .filter(o -> o.getY() >= camera.getY() + camera.getHeight() + 32).toList();
             w.objects().update(camera.getX(), p, List.of(), frame, false, true, true);
             for (var animal : belowViewport) if (animal.isDestroyed()) verticalCulls++;
-            camera.updatePosition(); events.update(1, frame);
+            // DeformBgLayer (loc_C4D0) publishes Camera_*_pos_copy for BuildSprites
+            // (s2.asm:15174-15179).
+            camera.updatePosition(); camera.captureRenderCopy(); events.update(1, frame);
             w.objects().refreshPostCameraRenderState();
             com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(p, w.objects().getActiveObjects(), 1, 0, "capsule look-up; collision-only terrain", camera.getX(), camera.getY());
             pressed |= button.getBoolean(capsule);

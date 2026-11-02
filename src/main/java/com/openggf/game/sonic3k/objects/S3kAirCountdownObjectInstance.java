@@ -208,7 +208,7 @@ public final class S3kAirCountdownObjectInstance extends AbstractObjectInstance
             setDestroyed(true);
             return;
         }
-        renderFlags = isWithinSolidContactBounds()
+        renderFlags = isWithinOnScreenRenderBounds()
                 ? (renderFlags | 0x80)
                 : (renderFlags & 0x7F);
     }
