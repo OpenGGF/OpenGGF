@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kExplosionOffsets;
 import com.openggf.graphics.GLCommand;
@@ -16,7 +15,6 @@ import java.util.List;
 
 /** MHZ's CreateBossExp00 stationary burst and CreateBossExp20 following burst. */
 public final class MhzEndBossExplosionController extends AbstractObjectInstance implements RewindRecreatable {
-    @RewindTransient(reason = "Structural link restored by object reference identity.")
     private final MhzEndBossInstance parent;
     private int remaining;
     private int waitCounter;
@@ -49,7 +47,7 @@ public final class MhzEndBossExplosionController extends AbstractObjectInstance 
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         if (pendingDelete) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         if (parent != null) {

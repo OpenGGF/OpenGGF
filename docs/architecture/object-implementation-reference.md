@@ -23,13 +23,15 @@ sharing an algorithm. Scalar rewind fields can call a pure transition; they do
 not require an inline copy of that transition.
 
 S3K fixed capsules share `AbstractS3kEggCapsuleInstance` opening writes, native
-sprite/plane priority and body drawing. HCZ inherits the upright capsule's opening, effects and geometry, retaining
+sprite/plane priority, P2 CPU-lock acquisition/release and body drawing. HCZ inherits the upright capsule's opening, effects and geometry, retaining
 its real button SST and results/geyser handoff. FBZ retains its five fragments,
 nine animals and independent explosion SST instead of being folded into a virtual
 button graph. `AbstractS3kCutsceneButtonInstance` owns common button proximity,
 press and presentation; subtype actions remain adapters. `S3kExplosionOffsets`
 owns the low-word X/high-word Y arithmetic used by the real-SST and folded
-explosion controllers. Their timer/parent/lifetime adapters remain distinct.
+explosion controllers. Their timer/parent/lifetime adapters remain distinct. The MHZ following burst
+captures its exact parent reference through the central rewind policy; proximity
+is only a provisional reconstruction lookup.
 
 The 2026-11-02 ownership audit scanned 827 S3K object files and triaged 74
 repeated pre-class `Obj_*` citation groups. Camera-boundary workers and Robotnik

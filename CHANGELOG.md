@@ -7,7 +7,7 @@ readable and historical versions can be referenced directly.
 
 S3K capsule and cutscene-button routines now share their common behavior; the
 object ownership audit also corrected explosion RNG/allocation drift and FBZ
-capsule sprite/plane priority.
+capsule sprite/plane priority, with rewind-safe opening control ownership.
 
 - Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
 

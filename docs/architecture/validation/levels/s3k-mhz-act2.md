@@ -1,5 +1,13 @@
 # S3K Mushroom Hill Act 2 coverage matrix
 
+Shared-routine ownership maintenance (2026-11-02): the native explosion adapters
+use the common low/high random-word offset kernel. The following adapter captures
+its exact parent through the central rewind policy; a fresh-recreation regression
+with a decoy left at the birth position rejects proximity as final ownership authority. Native
+burst cadence, allocation-first behavior and retirement remain covered by
+`TestMhzEndBossExplosionController`; broader route/pixel obligations below are
+unchanged.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

@@ -581,6 +581,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance", "hitProxy"), RewindFieldPolicy.CAPTURED),
             // loc_764C4 follows the exact native parent3; proximity is never reconstruction authority.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // Both explosion adapters retain the exact native parent3 through reconstruction.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController", "parent"), RewindFieldPolicy.CAPTURED),
             // loc_76674 retires spikes through that same exact parent status owner.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
@@ -617,7 +619,6 @@ final class DefaultObjectRewindPolicies {
             // ChildObjDat_6EDE4 encodes the signed field offset in the captured spawn subtype;
             // CnzEndBossFieldChild.recreateForRewind() deterministically reconstructs it.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild", "xOffset"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance", "cameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "arenaCameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "effectChildren"), RewindFieldPolicy.CAPTURED),

@@ -51,8 +51,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractS3kEg
     private boolean sidekickEndPoseWaiting;
     private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
 
-    protected final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
-
     protected final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
     protected S3kBossExplosionController explosionController;
     // Recreated capsules must resume Obj_CreateBossExplosion's timers; its children draw the
@@ -100,10 +98,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractS3kEg
                 sprite.setForcedAnimationId(-1);
             }
         }
-        for (var sprite : sidekickControlOwners.players()) {
-            if (sprite.getCpuController() != null) sprite.getCpuController().setController2SignedLocked(false);
-        }
-        sidekickControlOwners.clear();
+        super.releasePlayersForVisualDirection();
         sidekickPoseOwners.clear();
     }
 
@@ -231,12 +226,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractS3kEg
      */
     protected boolean endOfLevelFlagSet() {
         return true;
-    }
-
-    /** ROM {@code sub_865DE}: every upright route except MGZ sets signed {@code Ctrl_2_locked}. */
-    @Override
-    protected void onNativeP2ControlAcquired(AbstractPlayableSprite player) {
-        sidekickControlOwners.add(player);
     }
 
     protected void updateAfterResultsStarted(int frameCounter, PlayableEntity player) {

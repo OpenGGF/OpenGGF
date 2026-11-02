@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.NativeSstSlotAccess;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -42,7 +43,7 @@ public class S3kCutsceneButtonObjectInstance extends AbstractS3kCutsceneButtonIn
 
     @Override protected boolean suppressUpdate() {
         if (!cutsceneOverride && Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return true;
         }
         return false;

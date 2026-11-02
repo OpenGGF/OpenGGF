@@ -5,10 +5,12 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Common fixed-capsule ROM state; native child graphs and results continuations remain adapters. */
 public abstract class AbstractS3kEggCapsuleInstance extends AbstractObjectInstance {
+    private final PlayerControlOwners nativeP2ControlOwners = new PlayerControlOwners();
     protected boolean opened;
     protected int mappingFrame;
     protected int postOpenTimer;
@@ -29,14 +31,19 @@ public abstract class AbstractS3kEggCapsuleInstance extends AbstractObjectInstan
         if (locksNativeP2CpuOnOpen()) {
             PlayableEntity candidate = services().playerQuery().nativeP2OrNull();
             if (candidate instanceof AbstractPlayableSprite p2 && p2.getCpuController() != null) {
-                onNativeP2ControlAcquired(p2);
+                nativeP2ControlOwners.add(p2);
                 p2.getCpuController().setController2SignedLocked(true);
             }
         }
     }
 
     protected boolean locksNativeP2CpuOnOpen() { return true; }
-    protected void onNativeP2ControlAcquired(AbstractPlayableSprite player) { }
+    @Override public void releasePlayersForVisualDirection() {
+        for (var player : nativeP2ControlOwners.players()) {
+            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
+        }
+        nativeP2ControlOwners.clear();
+    }
 
     protected final void drawCapsuleBody() {
         var renderer = getRenderer(Sonic3kObjectArtKeys.EGG_CAPSULE);

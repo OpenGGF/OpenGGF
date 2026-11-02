@@ -3,7 +3,8 @@
 Capsule ownership maintenance (2026-11-02): the fixed capsule shares native
 opening writes, body drawing and body sprite/plane priority. Its separate button,
 five fragments, nine animals and explosion controller retain their native SST
-graph. `TestS3kSharedRoutineOwnership` pins body/button high art priority and the
+graph. Opening CPU-lock ownership is also captured and can be released before
+any ending pose without changing native phase or player pose. `TestS3kSharedRoutineOwnership` pins body/button high art priority and the
 five FBZ2 fragment frames; FBZ1’s separate low-art fragment exception remains
 outside this final-capsule graph. `TestFbzFinalEggCapsule` and graph checks cover
 recreation/lifetime behavior. This does not renew whole-route or pixel/audio and

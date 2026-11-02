@@ -124,6 +124,35 @@ class TestStageplayCapsuleControlRelease {
     }
 
     @Test
+    void openingControlOwnerRestoresAndReleasesBeforeAnyEndingPose() throws Exception {
+        for (var capsule : List.<AbstractObjectInstance>of(new CnzEggCapsuleInstance(spawn()),
+                new HczEndBossEggCapsuleInstance(100, 100), new FbzEndEggCapsuleInstance(spawn()))) {
+            var fixture = new Fixture();
+            var cpu = mock(SidekickCpuController.class);
+            when(fixture.sidekick.getCpuController()).thenReturn(cpu);
+            when(fixture.services.rng()).thenReturn(new com.openggf.game.GameRng(
+                    com.openggf.game.GameRng.Flavour.S3K));
+            capsule.setServices(fixture.services);
+            invoke(capsule, capsule instanceof FbzEndEggCapsuleInstance ? "openOnce" : "openCapsule",
+                    new Class<?>[0]);
+            verify(cpu).setController2SignedLocked(true);
+            var saved = capsule.captureRewindState(fixture.context());
+            var nativeState = nativeScalarState(capsule);
+            clearInvocations(cpu, fixture.main, fixture.sidekick);
+            capsule.releasePlayersForVisualDirection();
+            verify(cpu, only()).setController2SignedLocked(false);
+            verify(fixture.sidekick, never()).applyObjectControlState(any());
+            verifyNoInteractions(fixture.main);
+            assertEquals(nativeState, nativeScalarState(capsule));
+            capsule.restoreRewindState(saved, fixture.context());
+            clearInvocations(cpu);
+            capsule.releasePlayersForVisualDirection();
+            capsule.releasePlayersForVisualDirection();
+            verify(cpu, only()).setController2SignedLocked(false);
+        }
+    }
+
+    @Test
     void idleCapsulesAndEmbeddedBossNeverResetUnacquiredParticipants() {
         var fixture = new Fixture();
         for (var owner : List.<AbstractObjectInstance>of(new CnzEggCapsuleInstance(spawn()),

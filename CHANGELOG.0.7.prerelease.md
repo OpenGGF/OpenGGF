@@ -6,7 +6,8 @@ Unreleased. The earlier development themes remain in
 ## Gameplay and presentation
 
 - **Shared S3K object behavior:** HCZ reuses common capsule opening, effects,
-  geometry and drawing while retaining its native button/results handoff. FBZ
+  geometry, drawing and rewind-safe opening control ownership while retaining
+  its native button/results handoff. FBZ
   shares common opening writes and native sprite/plane priority without losing
   its child-slot graph; its button and final-capsule fragments retain high art priority. Cutscene
   buttons share proximity and presentation, including native sprite priority.

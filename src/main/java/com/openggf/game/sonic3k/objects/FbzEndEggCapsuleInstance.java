@@ -24,9 +24,9 @@ public final class FbzEndEggCapsuleInstance extends AbstractS3kEggCapsuleInstanc
     public void releasePlayersForVisualDirection() {
         for (var player : visualControlOwners.players()) {
             ObjectControlState.none().applyTo(player);
-            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
         }
         visualControlOwners.clear();
+        super.releasePlayersForVisualDirection();
     }
 
     private static final int[] FRAGMENT_X = {0, -0x10, 0x10, -0x18, 0x18};
