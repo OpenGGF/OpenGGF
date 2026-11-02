@@ -899,6 +899,8 @@ class TestEngine {
             TrackingS1ImageCacheManager suppliedCacheManager) throws Exception {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
+        // Bootstrap mocks do not provide gameplay rewind snapshots.
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_SOURCE, donorActive ? "s3k" : "s2");
