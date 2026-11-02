@@ -13,8 +13,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.SolidContact;
-import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -34,7 +34,7 @@ import java.util.List;
  * - FALLING: Arrow falls when stood on too long or boss defeated
  */
 public class ARZBossArrow extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, RewindRecreatable {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable {
 
     private static final int ARROW_SUB_INIT = 0;
     private static final int ARROW_SUB_FLYING = 2;
@@ -66,11 +66,6 @@ public class ARZBossArrow extends AbstractObjectInstance
     private int xVel;
     private int yVel;
     private int arrowTimer;
-    // Obj89_Arrow_Platform tests p1_standing only after PlatformObject has
-    // resolved both characters (s2.asm:65816-65833, FixBugs=0); the engine learns of the
-    // P1 landing inside that call, so the timer start waits for its end.
-    private boolean timerStartPending;
-    private boolean timerExpiredThisFrame;
     private boolean dropPlayersProcessed;
     private boolean dropPushClearProcessed;
 
@@ -150,7 +145,6 @@ public class ARZBossArrow extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
-        timerExpiredThisFrame = false;
 
         // Check if boss defeated
         if (mainBoss != null && mainBoss.isInDefeatSequence()) {
@@ -160,7 +154,7 @@ public class ARZBossArrow extends AbstractObjectInstance
         switch (routineState) {
             case ARROW_SUB_INIT -> initArrow();
             case ARROW_SUB_FLYING -> updateArrowFlying();
-            case ARROW_SUB_STUCK -> updateArrowStuck();
+            case ARROW_SUB_STUCK -> updateArrowStuck(player);
             case ARROW_SUB_FALLING -> updateArrowFalling(player);
         }
     }
@@ -207,9 +201,9 @@ public class ARZBossArrow extends AbstractObjectInstance
         }
     }
 
-    private void updateArrowStuck() {
+    private void updateArrowStuck(AbstractPlayableSprite player) {
         collisionFlags = 0;
-        updateArrowPlatform();
+        updateArrowPlatform(player);
         animateArrow();
         if (mappingFrame == 0) {
             mappingFrame = 4;
@@ -232,20 +226,31 @@ public class ARZBossArrow extends AbstractObjectInstance
         y = nextY;
     }
 
-    private void updateArrowPlatform() {
-        if (timerStartPending) {
-            // The previous call's #$1F write and its same-call decay decrement.
-            timerStartPending = false;
-            arrowTimer = 0x1E;
-        }
+    /**
+     * ROM Obj89_Arrow_Platform, FixBugs=0 (s2.asm:65779,65816-65836): PlatformObject
+     * runs only while the decay timer is clear; a Sonic landing (p1_standing,
+     * tested after both characters) writes #$1F and falls through to the decay
+     * decrement in the same call. During the countdown the arrow makes no
+     * PlatformObject call, so a rider keeps Status_OnObj without being carried.
+     * The fixed branch calls PlatformObject every stuck frame and also lets a
+     * standing Tails start the timer.
+     */
+    private void updateArrowPlatform(AbstractPlayableSprite player) {
         if (arrowTimer == 0) {
-            return;
+            if (!standsOn(checkpointAll(), player)) {
+                return;
+            }
+            arrowTimer = 0x1F;
         }
         arrowTimer--;
         if (arrowTimer == 0) {
-            timerExpiredThisFrame = true;
             routineState = ARROW_SUB_FALLING;
         }
+    }
+
+    private static boolean standsOn(SolidCheckpointBatch batch, PlayableEntity player) {
+        var result = player != null ? batch.perPlayer().get(player) : null;
+        return result != null && result.standingNow();
     }
 
     private void dropPlayers(AbstractPlayableSprite player, boolean clearPush) {
@@ -374,17 +379,14 @@ public class ARZBossArrow extends AbstractObjectInstance
     }
 
     @Override
-    public boolean isSolidFor(PlayableEntity playerEntity) {
-        // ROM Obj89_Arrow_Platform only calls PlatformObject while
-        // obj89_arrow_timer is zero. Once a rider starts the timer, later
-        // decay frames skip fresh platform contact entirely.
-        // docs/s2disasm/s2.asm:65658-65683
-        return routineState == ARROW_SUB_STUCK && arrowTimer == 0;
+    public boolean isTopSolidOnly() {
+        // Obj89_Arrow_Platform's only solid call is PlatformObject.
+        return true;
     }
 
     @Override
-    public boolean isTopSolidOnly() {
-        return routineState == ARROW_SUB_STUCK;
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -403,53 +405,6 @@ public class ARZBossArrow extends AbstractObjectInstance
         // Using d2=1 misses the f5928 Tails landing by one pixel.
         // docs/s2disasm/s2.asm:65658-65665
         return true;
-    }
-
-    @Override
-    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
-        // Despite the generic hook name, this is the flat PlatformObject
-        // equivalent: timer-decay frames skip MvSonicOnPtfm, but the player
-        // remains attached until Obj89_Arrow_Sub6 explicitly drops riders.
-        // docs/s2disasm/s2.asm:65658-65702
-        return (routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame;
-    }
-
-    @Override
-    public boolean preservesRidingPushStatus(PlayableEntity player) {
-        // During Obj89_Arrow_Platform_Decay the shipped ROM skips PlatformObject,
-        // so non-rolling CPU Tails keeps the prior side-push state while the
-        // arrow remains latched. Tails_Animate can still clear Status_Push when
-        // the sidekick switches to the rolling/jump animation before this later
-        // object pass samples the arrow.
-        // docs/s2disasm/s2.asm:41272-41279,65658-65702
-        return player instanceof AbstractPlayableSprite sprite
-                && sprite.isCpuControlled()
-                && !sprite.getRolling()
-                && ((routineState == ARROW_SUB_STUCK && arrowTimer > 0) || timerExpiredThisFrame);
-    }
-
-    @Override
-    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        if (routineState != ARROW_SUB_STUCK) {
-            return;
-        }
-        if (!contact.standing()) {
-            return;
-        }
-        if (arrowTimer == 0) {
-            // The ROM writes #$1F and immediately falls through to
-            // Obj89_Arrow_Platform_Decay in the same object call, after
-            // PlatformObject has resolved both characters: the Sidekick's
-            // airborne release still runs with the timer clear. The write is
-            // applied at the start of the next call as the already
-            // decremented $1E. CPU Tails does not start the timer in the
-            // shipped ROM: the p2-standing timer write lives under the disabled
-            // fixBugs block, while p1-standing still writes #$1F.
-            // docs/s2disasm/s2.asm:65816-65833 (Obj89_Arrow_Platform, FixBugs=0)
-            if (!playerEntity.isCpuControlled()) {
-                timerStartPending = true;
-            }
-        }
     }
 
     @Override
