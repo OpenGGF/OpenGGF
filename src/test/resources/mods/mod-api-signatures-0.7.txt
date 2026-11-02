@@ -11522,7 +11522,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  boolean keepsOnObjW
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean landingPreservesRolling(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean nonRollingLandingPublishesWalk(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesEdgeSubpixelMotion()
-METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesMovingSideContactVelocity(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesNativePushLatchAcrossSkippedSolidCheckpoints()
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesObjectManagedRideWhileNotSolidFor(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  boolean preservesPostSpecialTouchAirborneSideVelocity()

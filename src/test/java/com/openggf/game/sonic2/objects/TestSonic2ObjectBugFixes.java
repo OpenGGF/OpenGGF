@@ -288,40 +288,6 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void arzBossPillarPostPhysicsSidePushPreservesTailsVelocity() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-        ObjectManager manager = buildSingleObjectManager(pillar);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A73);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setAir(false);
-        tails.setPushing(false);
-        tails.setXSpeed((short) -0x24);
-        tails.setGSpeed((short) -0x24);
-
-        assertTrue(pillar.preservesMovingSideContactVelocity(tails),
-                "The Round 50 Obj89 handoff is only preserved while Tails' integer x_pos is still "
-                        + "at the pillar edge.");
-        manager.processImmediateInlineSolidCheckpoint(pillar, null, List.of(tails));
-
-        assertEquals(0xFFDC, tails.getXSpeed() & 0xFFFF);
-        assertEquals(0xFFDC, tails.getGSpeed() & 0xFFFF,
-                "Obj89's pillar can run an engine-side post-physics checkpoint after Tails has "
-                        + "already applied the ROM-visible CPU/movement velocity. Preserve that "
-                        + "velocity while the integrated trace replay verifies the same side "
-                        + "contact still carries Status_Push "
-                        + "(docs/s2disasm/s2.asm:35424-35436,65330-65374).");
-    }
-
-    @Test
     void arzBossPillarKeepsSolidLatchInItsMovingSstSlot() {
         ARZBossPillar pillar = new ARZBossPillar(
                 new ObjectSpawn(0x2B70, 0x0510, Sonic2ObjectIds.ARZ_BOSS, 0x04, 1, false, 0),
@@ -353,81 +319,6 @@ class TestSonic2ObjectBugFixes {
                 "Obj2A's standard SolidObject BHI gate accepts relX == 2*d1");
         assertTrue(stomper.preservesEdgeSubpixelMotion(),
                 "Obj2A exact-edge AtEdge contact must preserve velocity and x_sub");
-    }
-
-    @Test
-    void arzBossPillarMainPlayerSidePushUsesRomStopPath() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setGameRulesForTest(GameRules.SONIC_2);
-        sonic.setWidth(18);
-        sonic.setHeight(18);
-        sonic.setCentreX((short) 0x2A73);
-        sonic.setCentreY((short) 0x04BC);
-        sonic.setCpuControlled(false);
-        sonic.setRenderFlagOnScreen(true);
-        sonic.setAir(false);
-        sonic.setPushing(false);
-        sonic.setXSpeed((short) -0x15D);
-        sonic.setGSpeed((short) -0x15D);
-
-        assertFalse(pillar.preservesMovingSideContactVelocity(sonic),
-                "Obj89's temporary-anchor SolidObject call should use SolidObject_StopCharacter "
-                        + "for Sonic because no later sidekick CPU/movement slot overwrites the stop "
-                        + "(docs/s2disasm/s2.asm:35424-35436,65531-65539).");
-    }
-
-    @Test
-    void arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A72);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setAir(false);
-        tails.setPushing(true);
-        tails.setXSpeed((short) -0x48);
-        tails.setGSpeed((short) -0x48);
-
-        assertFalse(pillar.preservesMovingSideContactVelocity(tails),
-                "Once Tails' integrated x_pos crosses inside Obj89 pillar's right edge, the object-local "
-                        + "handoff no longer suppresses ROM SolidObject_StopCharacter "
-                        + "(docs/s2disasm/s2.asm:35424-35436).");
-    }
-
-    @Test
-    void arzBossPillarOnePixelInsideWithoutPushUsesRomStopPath() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A72);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setAir(false);
-        tails.setPushing(false);
-        tails.setXSpeed((short) -0x57);
-        tails.setGSpeed((short) -0x57);
-
-        assertFalse(pillar.preservesMovingSideContactVelocity(tails),
-                "ARZ2 f5845: after Tails' integrated x_pos crosses one pixel inside Obj89's right edge, "
-                        + "ROM reaches SolidObject_StopCharacter even if Status_Push was not already set "
-                        + "(docs/s2disasm/s2.asm:35424-35436,65531-65539).");
     }
 
     @Test

@@ -3606,8 +3606,6 @@ public final class ObjectSolidContactController {
             // and obVelX, then falls through to Solid_Centre (position correction).
             // When d0!=0 AND NOT movingInto, ROM goes to Solid_Centre directly
             // (position correction only, no speed zeroing).
-            boolean preserveMovingSideVelocity = instance instanceof SolidObjectProvider solidProvider
-                    && InitialObjectDispatchController.afterCallback(initialDispatch, solidProvider.preservesMovingSideContactVelocity(player));
             if (instance instanceof SolidObjectProvider solidProvider
                     && sideContactProviderReturnsNoContact(player, instance, pieceIndex, solidProvider)) {
                 return null;
@@ -3631,12 +3629,10 @@ public final class ObjectSolidContactController {
                             && player.getAir()
                             && distX == (player.getXSpeed() >> 8);
                     if (distX != 0 && movingInto) {
-                        if (!airborneSpecialTouchEdge && !preserveMovingSideVelocity) {
+                        if (!airborneSpecialTouchEdge) {
                             player.setXSpeed((short) 0);
-                            player.setGSpeed((short) 0);
-                        } else if (airborneSpecialTouchEdge) {
-                            player.setGSpeed((short) 0);
                         }
+                        player.setGSpeed((short) 0);
                     }
                     if (distX != 0) {
                         if (projectedPreMovementX) {
@@ -3654,12 +3650,12 @@ public final class ObjectSolidContactController {
                             && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesZeroDistanceSideContactMotion());
                     if (distX == 0 && !preserveSubpixels && !preserveZeroDistanceMotion) {
                         writeNativePlayerCentreX(player, playerCenterX);
-                        if (movingInto && !preserveMovingSideVelocity) {
+                        if (movingInto) {
                             player.setXSpeed((short) 0);
                             player.setGSpeed((short) 0);
                         }
                     }
-                    if (distX != 0 && movingInto && !preserveMovingSideVelocity) {
+                    if (distX != 0 && movingInto) {
                         player.setXSpeed((short) 0);
                         player.setGSpeed((short) 0);
                     }
