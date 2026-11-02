@@ -41,6 +41,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Shared-checkout integration](../../tools/git/INTEGRATION.md): `integrate.py`
+  holds a machine-local checkout lease across fail-fast delivery and preserves
+  conflicts/staged work through explicit recovery and handoff (issue #256).
 - [Checked commit preparation](../../tools/testing/checked_commit.py) validates an exact message, intended staged paths, and final coauthors before ordinary Git commit. Inputs and limits are in the [contributor policy](../guide/contributing/documentation-policy.md#ai-assisted-commits). Origin: issue #230.
 
 - [Time Attack design captures](../../src/test/java/com/openggf/tools/TimeAttackDesignCaptureTool.java): source-file launcher for real bundled-menu, lobby and crowded Room details pictures in an owned loopback namespace; inputs and class-loader separation are documented in the tool. Set `SHORTCUT_CAPTURE_ONLY=1` for Tab-details checks (2026-10-28/29 menu hill climb); the `tb*` states add F1/R3 details pages, long values and scripted-pad hints (2026-10-29).
