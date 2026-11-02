@@ -215,13 +215,20 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         platformRecreateIndex = 0;
         tubeRecreateIndex = 0;
         requestStartupAssets();
-        queueBossArtDuringConstruction();
+        if (isCameraInRange()) {
+            queueBossArtDuringConstruction();
+        }
         spawnInitialVisuals();
     }
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
-        serviceBossArtQueue();
+        // Obj_LBZEndBoss: Check_CameraInRange must admit loc_73906 before
+        // Queue_Kos_Module may submit ArtKosM_LBZEndBoss. Once admitted, the
+        // native object skips the camera check on all subsequent dispatches.
+        if (cameraRangeLatched || isCameraInRange()) {
+            serviceBossArtQueue();
+        }
         if (paletteRuntimeIntegrationPending) {
             requestStartupAssets();
         }
