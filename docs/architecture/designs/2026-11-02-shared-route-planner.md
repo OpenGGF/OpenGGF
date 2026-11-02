@@ -234,6 +234,166 @@ Rejected:
 - Whether the full corrected SSZ suffix is repairable within the first declared bounds.
 - Which owner facts the first native grab and phase goals need beyond the bridge and updraft.
 
+## Editor integration
+
+Owner: the editor lane on `feature/ai-route-editor-support` (OpenGGF) and `feature/ai-route-tapes`
+(OpenGGF-Editor). Editors are front-ends: they call only `RoutePlanner`, `RouteReplay`,
+`RouteFiles` and the value types, and never construct a host in the editor process.
+
+### Where the work runs
+
+The engine host is process-global (`EngineRouteHosts`: one world per process), and the editor
+process owns the live level session. Every job that boots a world (replay, plan, repair,
+qualify-and-save) therefore runs in an isolated worker JVM, as `StageplayRouteJob` already does.
+The worker is a thin tool, `com.openggf.tools.RouteEditorWorker --worker`, which composes
+`EngineRouteHosts` and calls the facade. It streams bounded progress lines and one result record
+on stdout; cancel destroys the process tree. The process plumbing (spawn, bounded stderr tail,
+owned-child retirement, wall limit) is extracted from `StageplayRouteJob` into one shared
+`EditorWorkerProcess`, so the two jobs do not carry two copies.
+
+Pure file and value work stays in the editor process: `RouteFiles.read`, `tapeFromScript`,
+`scriptText`, `exportBk2`, tape edits and timeline layout.
+
+`ReplayEvidence` cannot leave the worker (no public constructor, by design). So **Save** is a
+worker job: the worker cold-replays the working artifact and, on a pass, calls
+`RouteFiles.writeNew` or `replace`. A failed replay leaves the file untouched and the edits
+unsaved in the editor, marked with the first diverging row.
+
+### Shared engine-side model (`com.openggf.editor.route`)
+
+Both front-ends present one model, as they do for `StageplayWorkspace`; neither owns a second
+route model.
+
+- `RouteTapeWorkspace`: the open route (stem, loaded `RouteArtifact`), the working `InputTape`
+  with row-edit undo/redo (each edit one step), cursor row, selected lane and button, selection
+  range, the goal program being authored, the current job and its last result. Actions and forms
+  use `EditorProjectMenu`, so the desktop presents the same forms natively.
+- `RouteTapeTimeline`: frontend-neutral layout of a two-lane window: for each of the 16 tracks
+  (P1 and P2: Up, Down, Left, Right, A, B, C, Start), the held runs inside `[first, first+rows)`,
+  plus markers: cursor, selection, first diverging row, native lag rows, repair windows
+  (searched spans) and kept original slices. Painting reads values only.
+- `RouteTapeOverlay`: the per-row P1/P2 centre path from the replay samples, painted in world
+  coordinates with the editor camera transform, using the same ink-outlined stroke style and
+  ground/air colours as `StageplayRouteOverlay`. Missing samples break the line; it never
+  invents a path.
+- `RouteTapeJob`: phases `IDLE, RUNNING, PASSED, FAILED, SOLVED, STOPPED, CANCELLED`, generation
+  tokens and a freshness check (the working content hash at submission), as `StageplayRouteJob`.
+
+### Features and the facade calls they use
+
+| Feature | Facade | Where |
+|---|---|---|
+| Open route | `RouteFiles.read(manifest)` | editor |
+| New route (launch form: ROM game, level, roster, width, initial `V_int_run_count`, seeds) | `LaunchContract`, `RomIdentity.standard`, `RouteArtifact.of` | editor |
+| Edit rows (toggle, paint run, insert/delete/duplicate rows, set lane neutral) | `InputTape`, `PadRow`, `InputTape.Builder`/`slice`/`append` | editor |
+| Edit as text | `RouteFiles.scriptText`, `RouteFiles.tapeFromScript` | editor |
+| Replay: qualified / not qualified, first diverging row, path overlay | `RouteReplay.replay` → `ReplayResult.Passed/Failed/Unsupported` | worker |
+| Save (qualify, then write) | `RouteReplay.replay`, `RouteFiles.writeNew` / `replace` | worker |
+| Plan a goal program (progress, cancel) | `RoutePlanner.plan(RouteTask.Author)`, `Cancellation`, `PlanResult.Solved/Stopped` | worker |
+| Goal legs | `GoalProgram`, `Leg(goal, guard, hints, maxRows)`, `RouteGoals.board/ride/attach/hold/awaitPhase/defeat/cross` | editor builds, worker plans |
+| Object targets: placed or runtime-spawned | `ObjectTarget` placement and `select(alias, capability, region, order)` | editor |
+| Repair from row r (kept share, searched rows) | `RouteTask.Repair`, `RepairScope`, `PlanResult.Solved.repair()` | worker |
+| Native facts (display only) | `RouteManifest.nativeFacts()` (`NativeEntry`, `LagFact`), BIZHAWK `QualificationStamp` | editor |
+| Export BK2 | `RouteFiles.exportBk2` | editor |
+
+Qualification status shown for the working content: **Qualified** when a passing ENGINE stamp
+matches `RouteArtifact.content()`; **Stale** when stamps exist only for other content (edited
+since); **Not qualified at row r** after a failed replay. A BIZHAWK stamp or lag facts show as a
+separate **Native** line, labelled observations; they never feed planning or replay.
+
+### In-engine HUD (`StageplayHud` idiom, MenuChrome, controller-first)
+
+A **Routes** workspace beside Stageplay: F5 or the `Routes  F5` plate, and the command palette.
+
+- **Level view** (centre): the editor's level when it matches the route's `LevelId`, with the
+  path overlay; the camera follows the path sample at the cursor row. When the level differs, a
+  plate offers to load the route level. The route never changes the editor's level silently.
+- **Route panel** (left): file and launch summary, qualification and native lines, repair
+  summary (kept share bar, searched spans), job progress with Cancel.
+- **Timeline** (bottom): P1 above P2, eight tracks each, a row ruler with run-length bars, cursor
+  and markers. D-pad left/right moves the cursor (held accelerates, L/R page), up/down picks the
+  track, A toggles the button at the cursor or across the selection, X starts/ends a selection,
+  Y opens the row menu (insert, delete, duplicate, neutral). Keyboard mirrors it (arrows, Space,
+  Shift+arrows, Insert/Delete, Ctrl+Z/Y).
+- **Start** opens the route menu: Open, New, Save, Replay, Plan, Goals, Repair, Export BK2,
+  Details, Level editor. Forms (launch, leg, repair scope) are `EditorProjectMenu` forms.
+
+Built on `EditorHudCanvas` (the engine pixel font and quad renderer); no toolkit dependency.
+
+### Desktop (OpenGGF-Editor, `StageplayChromeShell` idiom)
+
+`RouteChromeShell` presents the same `RouteTapeWorkspace`:
+
+- Main menu: File (Open, New, Save, Save as, Export BK2), Route (Replay, Plan, Repair, Cancel),
+  View. Status at the right of the menu bar: Qualified / Not qualified / Unsaved changes.
+- Dock: **Route** inspector (launch, qualification, native facts, repair report), **Goals**
+  (leg list with add, edit through the shared form, move up/down, remove; target picking on the
+  canvas), **Tape** timeline (draw-list grid; click toggles, drag paints a run, wheel scrolls,
+  Shift+click selects), level canvas with the overlay through the same `Painter` interface.
+- Shared forms render through the existing `StageplayFormView` path for `EditorProjectMenu`.
+
+### Stageplay player routes (after planner step 3)
+
+The Stageplay **Plan route** helper keeps its form (destination, start/speed/stop/facing, budgets)
+and its review-then-Apply flow. Its result becomes a `FrozenInputTrack`: the review shows the
+path overlay plus the track's two-lane rows in the same timeline component, read-only until
+applied. Apply installs the track as one undo step through the existing freshness check. In the
+Stageplay cue list, a frozen track is one row per bound actor (`Inputs  frames a–b`); selecting
+it opens the rows in the timeline. Editing rows makes the track unqualified until re-planned or
+re-qualified through the scene host. Object (visual-terrain) routes keep their existing path.
+
+### Object goals (after planner step 4)
+
+A leg form picks the goal word, the player and the target. Targets come from two sources:
+
+- **Placed**: pick a placement on the canvas (layout index, object id, subtype), giving a
+  placement target.
+- **Runtime**: choose a capability (attachment, phase, hit points, airflow), a region drawn on
+  the canvas, and a spatial order, giving a selector. This covers objects that the layout does
+  not contain, such as the SSZ replica bosses that `Sonic3kSSZEvents` constructs. An optional
+  **Scan at row r** asks the worker to replay to row r and list the live objects with
+  capabilities, so the author can pick one by its type and position.
+
+`awaitPhase` and `ride(until phaseIs)` offer the phase states that the chosen capability
+declares. `defeat` needs a hit-point target.
+
+### Facade gaps (requested from the planner lane)
+
+1. **Replay observer.** `RouteReplay.replay(route, cancellation, observer)` delivering each
+   post-row `RouteSample`, so one evidence-minting run also yields progress and the path overlay.
+   Without it the worker replays twice (`open` for samples, `replay` for evidence).
+2. **Plan progress.** A progress observer on `plan` with count snapshots (expansions, steps,
+   committed rows, best row), for the job's progress line.
+3. **Unqualified drafts.** `RouteFiles.writeDraft(stem, artifact)` (no evidence; writes no stamp
+   for this content) or a public manifest text codec. Needed to save work in progress that does
+   not yet replay, and to hand an in-memory artifact (launch, goals, tape) to the worker.
+   Decision needed: are unqualified drafts allowed on disk?
+4. **Goals in the manifest.** The manifest carries the `GoalProgram` (B's `checks`) through the
+   canonical codec, so an authored program persists and transports with the route.
+5. **Structured native divergence.** `QualificationStamp.divergedRow()` (and reason) instead of
+   parsing the verdict string `diverged at row N: reason`.
+6. **Repair and stop reports (step 2).** Public `RepairReport` with original rows, kept rows,
+   kept share, original slices `(sourceStart, outputStart, length)` and searched output ranges;
+   `Stopped` with reason and the furthest row reached.
+7. **Object targets (step 4).** A public `Capability` enum, the phase states a capability
+   declares, placement-target construction from editor-known placement fields, and a sample-time
+   list of live objects with capabilities (instance key, optional placement, type key, centre)
+   for scan-and-pick of runtime-spawned objects.
+8. **Stageplay frozen tracks (step 3).** `FrozenInputTrack` exposes its tape, interval and
+   lane bindings; the Stageplay route result carries the track and its observed path, so the
+   existing review/Apply flow and overlay stay.
+9. **Native-composed export (step 6).** If the native composer becomes public, an export that
+   includes the entry prefix and lag fillers, beside the plain `exportBk2`.
+
+### Verification
+
+- In-engine: focused headless tests for `RouteTapeWorkspace` (open, edit, undo, stale
+  qualification, job freshness), `RouteTapeTimeline` layout and `RouteTapeOverlay` geometry, the
+  worker protocol with a fake launcher, and an offscreen surfaceless-EGL render of the HUD
+  timeline and overlay.
+- Desktop: its suite including `TestStageplayChrome`, a route-chrome test, and an offscreen
+  screenshot of the route panel.
+
 ## Deviations
 
 Recorded during implementation; each states what the sketch said, what was built, and why.
