@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -48,5 +50,14 @@ final class FbzMinibossPaletteChild extends AbstractObjectInstance implements Re
     void setBoss(FbzMinibossInstance boss) { this.boss = boss; }
     @Override public int getX() { return boss == null ? getSpawn().x() : boss.getX(); }
     @Override public int getY() { return boss == null ? getSpawn().y() : boss.getY() - 8; }
-    @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    // loc_6F0CE installs word_6FA5E and calls Draw_Sprite on every update.
+    // Frame $11 supplies the flashing eyes; the neutral face uses different art.
+    @Override public int getPriorityBucket() { return 3; } // priority $180
+    @Override public boolean isHighPriority() { return true; } // inherited art_tile
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_MINIBOSS);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(17, getX(), getY(), false, false);
+        }
+    }
 }
