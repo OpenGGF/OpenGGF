@@ -56,6 +56,11 @@ public final class RouteTapeWorkspace {
             return Optional.empty();
         }
 
+        /** Placed objects of the level the editor shows (layout order), for placement goal targets. */
+        default List<PlacedObject> placements() {
+            return List.of();
+        }
+
         /** Centres the editor's level view on a world point. */
         default void focusWorld(int x, int y) {
         }
@@ -64,8 +69,20 @@ public final class RouteTapeWorkspace {
         }
     }
 
+    /** A placed object of the editor's level: its layout index, id, subtype and position. */
+    public record PlacedObject(int layoutIndex, int objectId, int subtype, int x, int y) { }
+
+    /** A goal target the author chose, with words for it and the phases it reports. */
+    public record PickedTarget(com.openggf.route.ObjectTarget target, String description, List<String> phases) {
+        public PickedTarget {
+            Objects.requireNonNull(target, "target");
+            Objects.requireNonNull(description, "description");
+            phases = List.copyOf(phases);
+        }
+    }
+
     public enum Action {
-        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, REPAIR, USE_ATTEMPT, APPLY_ROWS, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
+        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, REPAIR, PLAN, GOALS, ADD_LEG, EDIT_GOALS, SCAN, USE_ATTEMPT, APPLY_ROWS, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
 
         public String label() {
             return switch (this) {
@@ -75,6 +92,11 @@ public final class RouteTapeWorkspace {
                 case SAVE_DRAFT -> UiMessages.text("editor.route_tape.action_save_draft");
                 case REPLAY -> UiMessages.text("editor.route_tape.action_replay");
                 case REPAIR -> UiMessages.text("editor.route_tape.action_repair");
+                case PLAN -> UiMessages.text("editor.route_tape.action_plan");
+                case GOALS -> UiMessages.text("editor.route_tape.action_goals");
+                case ADD_LEG -> UiMessages.text("editor.route_tape.action_add_leg");
+                case EDIT_GOALS -> UiMessages.text("editor.route_tape.action_edit_goals");
+                case SCAN -> UiMessages.text("editor.route_tape.action_scan");
                 case USE_ATTEMPT -> UiMessages.text("editor.route_tape.action_use_attempt");
                 case APPLY_ROWS -> UiMessages.text("editor.route_tape.action_apply_rows");
                 case CANCEL_JOB -> UiMessages.text("editor.route_tape.action_cancel_job");
@@ -137,8 +159,14 @@ public final class RouteTapeWorkspace {
 
     private final Host host;
     private final EditorProjectMenu menu = new EditorProjectMenu();
-    private final Deque<InputTape> undo = new ArrayDeque<>();
-    private final Deque<InputTape> redo = new ArrayDeque<>();
+    /** Rows and goals change together under undo: a plan replaces both in one step. */
+    private record State(InputTape tape, com.openggf.route.GoalProgram goals) { }
+
+    private final Deque<State> undo = new ArrayDeque<>();
+    private final Deque<State> redo = new ArrayDeque<>();
+    private com.openggf.route.GoalProgram goals = com.openggf.route.GoalProgram.NONE;
+    private PickedTarget picked;
+    private List<RouteTapeJob.LiveObject> scanned = List.of();
     private Path stem;
     private boolean unsaved;
     private SceneRows scene;
@@ -219,7 +247,21 @@ public final class RouteTapeWorkspace {
 
     public boolean dirty() {
         if (scene != null) return !tape.equals(scene.original());
-        return loaded != null && (unsaved || !tape.equals(loaded.tape()));
+        return loaded != null && (unsaved || !tape.equals(loaded.tape()) || !goals.equals(loaded.checks()));
+    }
+
+    /** The working goal program replay checks and Plan completes. */
+    public com.openggf.route.GoalProgram goals() {
+        return goals;
+    }
+
+    public PickedTarget pickedTarget() {
+        return picked;
+    }
+
+    /** Live objects the last scan saw, for picking targets. */
+    public List<RouteTapeJob.LiveObject> scannedObjects() {
+        return scanned;
     }
 
     public boolean draft() {
@@ -230,7 +272,7 @@ public final class RouteTapeWorkspace {
     public RouteArtifact working() {
         if (loaded == null) return null;
         RouteManifest source = loaded.manifest();
-        return new RouteArtifact(new RouteManifest(source.launch(), tape.hash(), tape.size(), source.checks(),
+        return new RouteArtifact(new RouteManifest(source.launch(), tape.hash(), tape.size(), goals,
                 source.draft(), source.provenance(), source.qualification(), source.nativeFacts()), tape);
     }
 
@@ -417,7 +459,7 @@ public final class RouteTapeWorkspace {
     /** The goal program replay checks, one line per leg, in manifest words. */
     public List<String[]> goalFacts() {
         if (loaded == null) return List.of();
-        var program = loaded.checks();
+        var program = goals;
         var lines = new ArrayList<String[]>();
         if (program.isEmpty()) {
             lines.add(fact(UiMessages.text("editor.route_tape.fact_goals"), UiMessages.text("editor.route_tape.goals_none")));
@@ -446,6 +488,27 @@ public final class RouteTapeWorkspace {
                     Map.of("zone", String.valueOf(level.zone()), "act", String.valueOf(level.act() + 1)));
             case com.openggf.route.SamplePredicate.All all -> String.join(" + ",
                     all.clauses().stream().map(RouteTapeWorkspace::predicateText).toList());
+            case com.openggf.route.SamplePredicate.Riding riding -> UiMessages.text("editor.route_tape.goal_riding",
+                    Map.of("player", riding.player().name(), "target", targetText(riding.target())));
+            case com.openggf.route.SamplePredicate.Attached attached -> UiMessages.text("editor.route_tape.goal_attached",
+                    Map.of("player", attached.player().name(), "kind", attached.kind().name().toLowerCase(java.util.Locale.ROOT),
+                            "target", targetText(attached.target())));
+            case com.openggf.route.SamplePredicate.PhaseIs phase -> UiMessages.text("editor.route_tape.goal_phase",
+                    Map.of("target", targetText(phase.target()), "phase", phase.phase()));
+            case com.openggf.route.SamplePredicate.Defeated defeated -> UiMessages.text("editor.route_tape.goal_defeated",
+                    Map.of("target", targetText(defeated.target())));
+        };
+    }
+
+    /** A target in words: a placed object by layout index, or a live object by type. */
+    public static String targetText(com.openggf.route.ObjectTarget target) {
+        return switch (target) {
+            case com.openggf.route.ObjectTarget.Placement p -> UiMessages.text("editor.route_tape.target_placed", Map.of(
+                    "index", String.valueOf(p.key().layoutIndex()), "id", String.format("%02X", p.key().objectId())));
+            case com.openggf.route.ObjectTarget.Typed t -> UiMessages.text("editor.route_tape.target_typed",
+                    Map.of("type", t.typeKey(), "capability", t.capability().name().toLowerCase(java.util.Locale.ROOT)));
+            case com.openggf.route.ObjectTarget.Instance i -> UiMessages.text("editor.route_tape.target_instance",
+                    Map.of("kind", i.key().kind(), "slot", String.valueOf(i.key().slot())));
         };
     }
 
@@ -587,6 +650,11 @@ public final class RouteTapeWorkspace {
                 case SAVE -> save();
                 case SAVE_DRAFT -> saveDraft();
                 case REPAIR -> repairForm();
+                case PLAN -> planForm();
+                case GOALS -> goalsMenu();
+                case ADD_LEG -> legForm();
+                case EDIT_GOALS -> goalsTextForm();
+                case SCAN -> startScan();
                 case USE_ATTEMPT -> useAttempt();
                 case REPLAY -> replay();
                 case CANCEL_JOB -> cancelJob();
@@ -636,6 +704,9 @@ public final class RouteTapeWorkspace {
         unsaved = false;
         loaded = candidate;
         tape = candidate.tape();
+        goals = candidate.checks();
+        picked = null;
+        scanned = List.of();
         undo.clear();
         redo.clear();
         result = null;
@@ -656,6 +727,7 @@ public final class RouteTapeWorkspace {
         stem = null;
         unsaved = false;
         tape = rows.original();
+        goals = com.openggf.route.GoalProgram.NONE;
         undo.clear();
         redo.clear();
         result = null;
@@ -711,6 +783,7 @@ public final class RouteTapeWorkspace {
         stem = stemOf(saved.toAbsolutePath().normalize());
         unsaved = false;
         loaded = candidate;
+        goals = candidate.checks();
     }
 
     private static Path stemOf(Path manifest) {
@@ -734,6 +807,9 @@ public final class RouteTapeWorkspace {
         loaded = new RouteArtifact(new RouteManifest(launch, rowsTape.hash(), rowsTape.size(), fresh.checks(), true,
                 fresh.manifest().provenance(), List.of(), fresh.manifest().nativeFacts()), rowsTape);
         tape = rowsTape;
+        goals = com.openggf.route.GoalProgram.NONE;
+        picked = null;
+        scanned = List.of();
         stem = stemOf(absolute);
         unsaved = true;
         undo.clear();
@@ -853,7 +929,11 @@ public final class RouteTapeWorkspace {
         job = next;
         if (next.running()) return;
         switch (next.phase()) {
-            case SOLVED, STOPPED -> finishRepair(next);
+            case SOLVED, STOPPED -> {
+                if (next.kind() == RouteTapeJob.Kind.PLAN) finishPlan(next);
+                else finishRepair(next);
+            }
+            case SCANNED -> finishScan(next);
             case PASSED, FAILED, UNSUPPORTED -> {
                 if (next.kind() == RouteTapeJob.Kind.REPAIR) {
                     status = UiMessages.text("editor.route_tape.status_replay_unsupported", Map.of("reason", next.message()));
@@ -979,6 +1059,223 @@ public final class RouteTapeWorkspace {
         return RouteArtifact.of(loaded.launch(), RouteFiles.tapeFromMovie(path, Integer.parseInt(rows)), provenance);
     }
 
+    // ---------------------------------------------------------------- goals, scan and plan
+
+    private void goalsMenu() {
+        requireRoute();
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        actions.add(action(Action.ADD_LEG));
+        actions.add(action(Action.EDIT_GOALS));
+        if (!goals.legs().isEmpty()) {
+            var last = goals.legs().getLast();
+            actions.add(new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_remove_leg",
+                    Map.of("leg", last.id())), () -> setGoals(new com.openggf.route.GoalProgram(goals.routeGuard(),
+                    goals.legs().subList(0, goals.legs().size() - 1), goals.startRow()))));
+        }
+        boolean safe = goals.routeGuard().equals(com.openggf.route.Guard.safe());
+        actions.add(new EditorProjectMenu.Action(UiMessages.text(safe ? "editor.route_tape.action_guard_off"
+                : "editor.route_tape.action_guard_safe"), () -> setGoals(new com.openggf.route.GoalProgram(
+                safe ? com.openggf.route.Guard.NONE : com.openggf.route.Guard.safe(), goals.legs(), goals.startRow()))));
+        if (!jobRunning()) {
+            actions.add(action(Action.SCAN));
+            if (!goals.legs().isEmpty()) actions.add(action(Action.PLAN));
+        }
+        actions.add(new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_back"), () -> { }));
+        menu.showActions(UiMessages.text("editor.route_tape.title_goals", Map.of("legs", String.valueOf(goals.legs().size()))),
+                actions);
+    }
+
+    /** The goal program as the codec's text, edited whole; parsing errors leave the goals unchanged. */
+    private void goalsTextForm() {
+        requireRoute();
+        String text = com.openggf.route.RouteCodec.formatGoals(goals);
+        // The shared text field holds at most 8192 characters; longer programs are edited leg by leg.
+        if (text.length() > 8192) throw new IllegalStateException(UiMessages.text("editor.route_tape.goals_text_too_long"));
+        menu.showForm(UiMessages.text("editor.route_tape.action_edit_goals"), List.of(new EditorProjectMenu.Field("goals",
+                UiMessages.text("editor.route_tape.field_goals"), text, MenuTextEditor.Mode.TEXT, 8192)),
+                UiMessages.text("editor.route_tape.action_apply"),
+                values -> io(() -> setGoals(com.openggf.route.RouteCodec.parseGoals(values.get("goals")))));
+        menu.setMultilinePreview("goals");
+        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_goals_text"));
+    }
+
+    private static final List<String> LEG_KINDS = List.of("reach", "board", "ride", "attach", "hold", "await-phase",
+            "defeat", "cross");
+
+    private void legForm() {
+        requireRoute();
+        int[] at = cursorPosition();
+        var targets = new ArrayList<String>();
+        if (picked != null) targets.add(UiMessages.text("editor.route_tape.target_choice_picked", Map.of("target", picked.description())));
+        targets.add(UiMessages.text("editor.route_tape.target_choice_placed"));
+        String phase = picked != null && !picked.phases().isEmpty() ? picked.phases().getFirst() : "";
+        menu.showForm(UiMessages.text("editor.route_tape.action_add_leg"), List.of(
+                new EditorProjectMenu.Field("id", UiMessages.text("editor.route_tape.field_leg_id"),
+                        "leg" + (goals.legs().size() + 1), MenuTextEditor.Mode.TEXT, 32),
+                new EditorProjectMenu.Field("goal", UiMessages.text("editor.route_tape.field_leg_goal"), "reach", LEG_KINDS),
+                new EditorProjectMenu.Field("player", UiMessages.text("editor.route_tape.field_leg_player"), "P1",
+                        List.of("P1", "P2")),
+                new EditorProjectMenu.Field("target", UiMessages.text("editor.route_tape.field_leg_target"), targets.getFirst(),
+                        List.copyOf(targets)),
+                new EditorProjectMenu.Field("x", UiMessages.text("editor.route_tape.field_leg_x"), String.valueOf(at[0]),
+                        MenuTextEditor.Mode.TEXT, 6),
+                new EditorProjectMenu.Field("y", UiMessages.text("editor.route_tape.field_leg_y"), String.valueOf(at[1]),
+                        MenuTextEditor.Mode.TEXT, 6),
+                new EditorProjectMenu.Field("radius", UiMessages.text("editor.route_tape.field_leg_radius"), "32",
+                        MenuTextEditor.Mode.TEXT, 5),
+                new EditorProjectMenu.Field("interaction", UiMessages.text("editor.route_tape.field_leg_interaction"), "GRAB",
+                        java.util.Arrays.stream(com.openggf.route.InteractionKind.values()).map(Enum::name).toList()),
+                new EditorProjectMenu.Field("phase", UiMessages.text("editor.route_tape.field_leg_phase"), phase,
+                        MenuTextEditor.Mode.TEXT, 32),
+                new EditorProjectMenu.Field("until", UiMessages.text("editor.route_tape.field_leg_until"), "phase",
+                        List.of("phase", "region")),
+                new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_leg_rows"), "600",
+                        MenuTextEditor.Mode.TEXT, 7)),
+                UiMessages.text("editor.route_tape.action_add"), values -> setGoals(appendLeg(values, targets)));
+        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_leg"));
+    }
+
+    private com.openggf.route.GoalProgram appendLeg(Map<String, String> values, List<String> targets) {
+        String id = values.get("id").strip();
+        var player = com.openggf.route.PlayerSlot.valueOf(values.get("player"));
+        int x = Integer.parseInt(values.get("x").strip()), y = Integer.parseInt(values.get("y").strip());
+        int radius = Integer.parseInt(values.get("radius").strip());
+        int rows = Integer.parseInt(values.get("rows").strip());
+        var region = com.openggf.route.Region.around(x, y, radius, radius);
+        java.util.function.Supplier<com.openggf.route.ObjectTarget> target = () ->
+                picked != null && values.get("target").equals(targets.getFirst()) ? picked.target() : placedNear(x, y);
+        String phase = values.get("phase").strip();
+        java.util.function.Supplier<com.openggf.route.SamplePredicate> until = () -> values.get("until").equals("region")
+                ? new com.openggf.route.SamplePredicate.PlayerIn(player, region)
+                : new com.openggf.route.SamplePredicate.PhaseIs(target.get(), requirePhase(phase));
+        var interaction = com.openggf.route.InteractionKind.valueOf(values.get("interaction"));
+        com.openggf.route.Leg leg = switch (values.get("goal")) {
+            case "reach" -> com.openggf.route.RouteGoals.reach(id, player, region, rows);
+            case "board" -> com.openggf.route.RouteGoals.board(id, player, target.get(), rows);
+            case "ride" -> com.openggf.route.RouteGoals.ride(id, player, target.get(), until.get(), rows);
+            case "attach" -> com.openggf.route.RouteGoals.attach(id, player, target.get(), interaction, rows);
+            case "hold" -> com.openggf.route.RouteGoals.hold(id, player, target.get(), interaction, until.get(), rows);
+            case "await-phase" -> com.openggf.route.RouteGoals.awaitPhase(id, target.get(), requirePhase(phase), rows);
+            case "defeat" -> com.openggf.route.RouteGoals.defeat(id, target.get(), rows);
+            case "cross" -> com.openggf.route.RouteGoals.cross(id, rows);
+            default -> throw new IllegalArgumentException(values.get("goal"));
+        };
+        var legs = new ArrayList<>(goals.legs());
+        legs.add(leg);
+        return new com.openggf.route.GoalProgram(goals.routeGuard(), legs, goals.startRow());
+    }
+
+    private static String requirePhase(String phase) {
+        if (phase.isEmpty()) throw new IllegalArgumentException(UiMessages.text("editor.route_tape.phase_needed"));
+        return phase;
+    }
+
+    /** The placed object of the editor's level nearest {@code (x, y)}, as a placement target. */
+    private com.openggf.route.ObjectTarget placedNear(int x, int y) {
+        if (!levelMatches()) throw new IllegalStateException(UiMessages.text("editor.route_tape.placed_needs_level"));
+        var level = ((Inlet.ColdLevel) loaded.launch().inlet()).level();
+        return host.placements().stream()
+                .min(java.util.Comparator.comparingLong(p -> (long) (p.x() - x) * (p.x() - x) + (long) (p.y() - y) * (p.y() - y)))
+                .map(p -> (com.openggf.route.ObjectTarget) new com.openggf.route.ObjectTarget.Placement(
+                        new com.openggf.route.PlacementKey(level.zone(), level.act(), p.layoutIndex(), p.objectId(), p.subtype())))
+                .orElseThrow(() -> new IllegalStateException(UiMessages.text("editor.route_tape.no_placements")));
+    }
+
+    /** P1's observed centre after the cursor row, else the origin; a convenient default target point. */
+    private int[] cursorPosition() {
+        RouteTapeOverlay path = overlay();
+        RouteTapeOverlay.Point point = path == null ? null : path.at(cursor);
+        return point == null ? new int[] {0, 0} : new int[] {point.x(), point.y()};
+    }
+
+    /** Lists the live objects (placed or spawned at runtime) after the cursor row, for picking a target. */
+    private void startScan() {
+        requireRoute();
+        if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
+        io(() -> host.startJob(RouteTapeJob.Request.scan(working(), Math.min(cursor + 1, tape.size()))));
+        job = host.pollJob();
+        status = UiMessages.text("editor.route_tape.status_scanning", Map.of("row", String.valueOf(cursor)));
+    }
+
+    private void finishScan(RouteTapeJob.Update next) {
+        scanned = next.objects();
+        if (scanned.isEmpty()) {
+            status = UiMessages.text("editor.route_tape.scan_none", Map.of("row", String.valueOf(next.row() - 1)));
+            return;
+        }
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        for (var object : scanned) {
+            actions.add(new EditorProjectMenu.Action(objectText(object), String.join(", ", object.capabilities())
+                    + (object.phase().isEmpty() ? "" : " · " + object.phase()), () -> pick(object)));
+        }
+        actions.add(new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_back"), () -> { }));
+        menu.showActions(UiMessages.text("editor.route_tape.title_scan", Map.of("row", String.valueOf(next.row() - 1))), actions);
+        status = UiMessages.text("editor.route_tape.status_scanned", Map.of("count", String.valueOf(scanned.size())));
+    }
+
+    private static String objectText(RouteTapeJob.LiveObject object) {
+        String x = String.valueOf(object.x()), y = String.valueOf(object.y());
+        return object.placed()
+                ? UiMessages.text("editor.route_tape.object_placed", Map.of("type", object.typeKey(), "x", x, "y", y,
+                        "index", String.valueOf(object.layoutIndex())))
+                : UiMessages.text("editor.route_tape.object_runtime", Map.of("type", object.typeKey(), "x", x, "y", y));
+    }
+
+    /** Placed objects become placement targets; runtime objects a typed target near where they were seen. */
+    public void pick(RouteTapeJob.LiveObject object) {
+        com.openggf.route.ObjectTarget target = object.placed()
+                ? new com.openggf.route.ObjectTarget.Placement(new com.openggf.route.PlacementKey(object.zone(), object.act(),
+                        object.layoutIndex(), object.objectId(), object.subtype()))
+                : new com.openggf.route.ObjectTarget.Typed(object.typeKey(),
+                        com.openggf.route.Capability.valueOf(object.capabilities().getFirst()),
+                        java.util.Optional.of(com.openggf.route.Region.around(object.x(), object.y(), 64, 64)));
+        picked = new PickedTarget(target, objectText(object), object.phaseNames());
+        status = UiMessages.text("editor.route_tape.status_picked", Map.of("target", picked.description()));
+    }
+
+    private void planForm() {
+        requireRows();
+        requireRoute();
+        if (goals.legs().isEmpty()) throw new IllegalStateException(UiMessages.text("editor.route_tape.plan_needs_legs"));
+        menu.showForm(UiMessages.text("editor.route_tape.title_plan"), List.of(new EditorProjectMenu.Field("from",
+                UiMessages.text("editor.route_tape.field_plan_from"), String.valueOf(cursor), MenuTextEditor.Mode.TEXT, 8)),
+                UiMessages.text("editor.route_tape.action_plan"), values -> io(() ->
+                        startPlan(Integer.parseInt(values.get("from").strip()))));
+        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_plan"));
+    }
+
+    /** Plans rows after the kept prefix {@code [0, from)} that complete the working goals. */
+    public void startPlan(int from) throws IOException {
+        requireRoute();
+        if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
+        if (goals.legs().isEmpty()) throw new IllegalStateException(UiMessages.text("editor.route_tape.plan_needs_legs"));
+        if (from < 0 || from > tape.size()) throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
+        repairFrom = workingContent();
+        host.startJob(RouteTapeJob.Request.plan(working(), from));
+        job = host.pollJob();
+        status = UiMessages.text("editor.route_tape.status_planning");
+    }
+
+    private void finishPlan(RouteTapeJob.Update next) {
+        if (next.phase() == RouteTapeJob.Phase.STOPPED) {
+            repair = next;
+            status = repairText();
+            return;
+        }
+        if (!Objects.equals(repairFrom, workingContent())) {
+            status = UiMessages.text("editor.route_tape.repair_stale");
+            return;
+        }
+        var planned = next.planned();
+        change(planned.tape(), planned.checks());
+        repair = null;
+        result = new RouteTapeJob.Update(next.generation(), RouteTapeJob.Phase.PASSED, RouteTapeJob.Kind.PLAN, 1, 1,
+                planned.tape().size(), planned.tape().size(), next.message(), planned.content().toString(),
+                planned.tape().size(), next.path(), null);
+        pathResult = result.path() == null ? pathResult : result;
+        status = UiMessages.text("editor.route_tape.status_planned", Map.of("rows", String.valueOf(planned.tape().size())));
+    }
+
     private void exportForm() {
         requireRoute();
         String name = stem.getFileName() + ".bk2";
@@ -1003,11 +1300,22 @@ public final class RouteTapeWorkspace {
     // ---------------------------------------------------------------- row edits
 
     private void edit(InputTape next) {
-        if (next.equals(tape)) return;
-        undo.push(tape);
+        change(next, goals);
+    }
+
+    /** Replaces the goal program as one undo step. */
+    public void setGoals(com.openggf.route.GoalProgram next) {
+        if (scene != null) throw new IllegalStateException(UiMessages.text("editor.route_tape.scene_rows_only"));
+        change(tape, Objects.requireNonNull(next, "next"));
+    }
+
+    private void change(InputTape nextTape, com.openggf.route.GoalProgram nextGoals) {
+        if (nextTape.equals(tape) && nextGoals.equals(goals)) return;
+        undo.push(new State(tape, goals));
         while (undo.size() > UNDO_LIMIT) undo.removeLast();
         redo.clear();
-        tape = next;
+        tape = nextTape;
+        goals = nextGoals;
         cursor = Math.min(cursor, Math.max(0, tape.size() - 1));
         if (mark >= tape.size()) mark = -1;
     }
@@ -1022,16 +1330,21 @@ public final class RouteTapeWorkspace {
 
     private void undo() {
         if (undo.isEmpty()) return;
-        redo.push(tape);
-        tape = undo.pop();
-        cursor = Math.min(cursor, Math.max(0, tape.size() - 1));
+        redo.push(new State(tape, goals));
+        restore(undo.pop());
     }
 
     private void redo() {
         if (redo.isEmpty()) return;
-        undo.push(tape);
-        tape = redo.pop();
+        undo.push(new State(tape, goals));
+        restore(redo.pop());
+    }
+
+    private void restore(State state) {
+        tape = state.tape();
+        goals = state.goals();
         cursor = Math.min(cursor, Math.max(0, tape.size() - 1));
+        if (mark >= tape.size()) mark = -1;
     }
 
     private void toggle() {
@@ -1124,7 +1437,11 @@ public final class RouteTapeWorkspace {
             actions.add(action(Action.SAVE));
             actions.add(action(Action.SAVE_DRAFT));
             actions.add(action(jobRunning() ? Action.CANCEL_JOB : Action.REPLAY));
-            if (!jobRunning()) actions.add(action(Action.REPAIR));
+            if (!jobRunning()) {
+                actions.add(action(Action.GOALS));
+                actions.add(action(Action.PLAN));
+                actions.add(action(Action.REPAIR));
+            }
             if (repairOutcome() != null && !repairOutcome().solved()) actions.add(action(Action.USE_ATTEMPT));
             actions.add(action(Action.EXPORT_BK2));
             actions.add(action(Action.GO_TO_ROW));

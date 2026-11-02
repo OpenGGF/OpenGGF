@@ -2,6 +2,10 @@ package com.openggf.tools;
 
 import com.openggf.route.AuthorHints;
 import com.openggf.route.Cancellation;
+import com.openggf.route.GoalProgram;
+import com.openggf.route.ObjectView;
+import com.openggf.route.PlacementKey;
+import com.openggf.route.RouteSample;
 import com.openggf.route.PlanResult;
 import com.openggf.route.ReferencePath;
 import com.openggf.route.RepairReport;
@@ -57,9 +61,20 @@ public final class RouteEditorWorker {
 
     static void run(RouteEditorProtocol.Request request, PrintStream output) throws IOException {
         RouteArtifact route = RouteCodec.parseTransport(request.route());
-        if (request.kind() == RouteEditorProtocol.Kind.REPAIR) {
-            repair(request, route, output);
-            return;
+        switch (request.kind()) {
+            case REPAIR -> {
+                repair(request, route, output);
+                return;
+            }
+            case PLAN -> {
+                plan(request, route, output);
+                return;
+            }
+            case SCAN -> {
+                scan(request, route, output);
+                return;
+            }
+            default -> { }
         }
         var replay = new RouteReplay(EngineRouteHosts.withRoms(request.roms()));
         String content = route.content().toString();
@@ -143,6 +158,67 @@ public final class RouteEditorWorker {
                 output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.STOPPED,
                         stopped.furthestRow(), stopped.reason() + ": " + stopped.detail(), original.content().toString())));
             }
+        }
+    }
+
+    /**
+     * Authors rows after the kept prefix {@code [0, row)} that complete the route's goal program, through
+     * the one planner. The qualifying replay streams the path; a solved plan returns the whole route.
+     */
+    private static void plan(RouteEditorProtocol.Request request, RouteArtifact route, PrintStream output) {
+        var hosts = EngineRouteHosts.withRoms(request.roms());
+        var goals = route.checks();
+        var program = new GoalProgram(goals.routeGuard(), goals.legs(), request.row());
+        var task = new RouteTask.Author(route.launch(), route.tape().slice(0, request.row()), program,
+                SearchBudget.encounter());
+        int[] stride = {1};
+        PlanResult result = new RoutePlanner(hosts).plan(task, Cancellation.NONE, progress ->
+                output.println(RouteEditorProtocol.plan(new RouteEditorProtocol.Plan(progress.phase(),
+                        progress.expansions(), progress.bestRow(), progress.bestProgress(), progress.target()))),
+                (row, sample) -> {
+                    if (row % stride[0] == 0) {
+                        emit(output, 1, row, sample.epoch(), sample.p1());
+                        if (sample.p2().isPresent()) emit(output, 2, row, sample.epoch(), sample.p2().get());
+                    }
+                });
+        switch (result) {
+            case PlanResult.Solved solved -> {
+                output.println(RouteEditorProtocol.plannedRoute(RouteCodec.formatTransport(solved.route())));
+                output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.SOLVED,
+                        solved.route().tape().size(), solved.engineEvidence().environment(),
+                        solved.route().content().toString())));
+            }
+            case PlanResult.Stopped stopped -> {
+                output.println(RouteEditorProtocol.rows(RouteFiles.scriptText(stopped.bestDraft())));
+                output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.STOPPED,
+                        stopped.furthestRow(), stopped.reason() + ": " + stopped.detail(), route.content().toString())));
+            }
+        }
+    }
+
+    /**
+     * Plays the route's rows to {@code row} and lists the live objects that report a capability,
+     * placed or spawned at runtime, so the editor can pick goal targets. Comparison of values only.
+     */
+    private static void scan(RouteEditorProtocol.Request request, RouteArtifact route, PrintStream output) {
+        var replay = new RouteReplay(EngineRouteHosts.withRoms(request.roms()));
+        try (var playback = replay.open(route)) {
+            RouteSample sample = playback.stepTo(Math.min(request.row(), route.tape().size()));
+            for (ObjectView object : sample.objects()) {
+                var placement = object.placement();
+                output.println(RouteEditorProtocol.object(new RouteEditorProtocol.ScannedObject(object.typeKey(),
+                        placement.map(PlacementKey::zone).orElse(sample.level().zone()),
+                        placement.map(PlacementKey::act).orElse(sample.level().act()),
+                        placement.map(PlacementKey::layoutIndex).orElse(-1), placement.map(PlacementKey::objectId).orElse(-1),
+                        placement.map(PlacementKey::subtype).orElse(-1), object.centreX(), object.centreY(),
+                        object.capabilities().stream().map(Enum::name).sorted().toList(), object.phaseNames(),
+                        object.phase(), object.hitsRemaining(), object.defeated())));
+            }
+            output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.PASSED,
+                    playback.row(), "scan", route.content().toString())));
+        } catch (RouteHostException refused) {
+            output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
+                    RouteEditorProtocol.Verdict.UNSUPPORTED, 0, refused.getMessage(), route.content().toString())));
         }
     }
 

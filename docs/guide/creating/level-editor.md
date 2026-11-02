@@ -461,6 +461,18 @@ kept and searched spans on the timeline; it still needs **Save qualified**. A
 stopped repair names the furthest row it reached and offers **Use best attempt**
 to inspect that unqualified attempt.
 
+**Goals** are the route's legs, checked on every row of a replay: reach a region,
+board or ride an object, attach or hold (grab, hang, tube, airflow and so on),
+wait for an object's phase, defeat a boss, or cross into the next level. **Add leg**
+builds one; its target is the placed object nearest a point (the player's position
+at the cursor by default) or an object picked from **Scan objects here**, which plays
+the rows to the cursor in a separate worker and lists the live objects that report
+a phase, an attachment or hit points, including ones spawned at runtime such as a
+replica boss. **Edit goals as text** edits the whole program in the manifest's format.
+**Plan** keeps the rows before a chosen row and searches rows that complete every
+leg in order; a solved plan replaces the rows and goals as one undo step and still
+needs **Save qualified**.
+
 Stageplay input rows (an applied **Plan route**) open here too, from **Edit input
 rows** in Stageplay. Then the panel names the actor and frames, file, replay and
 repair commands are off, and **Apply to scene** returns the rows to the scene as

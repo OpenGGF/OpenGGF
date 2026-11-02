@@ -333,6 +333,104 @@ class TestRouteTapeWorkspace {
     }
 
     @Test
+    void goalLegsScanPicksAndPlansChangeRowsAndGoalsTogetherUnderUndo() throws IOException {
+        Path manifest = RouteTapeFixtures.write(dir, "ehz", "60 R\n");
+        var host = new Host();
+        host.level = Optional.of(new LevelId("s2", 0, 0));
+        var workspace = new RouteTapeWorkspace(new RouteTapeWorkspace.Host() {
+            public void startJob(RouteTapeJob.Request request) { host.startJob(request); }
+            public RouteTapeJob.Update pollJob() { return host.pollJob(); }
+            public Optional<LevelId> currentLevel() { return host.level; }
+            public List<RouteTapeWorkspace.PlacedObject> placements() {
+                return List.of(new RouteTapeWorkspace.PlacedObject(3, 0x26, 2, 400, 600),
+                        new RouteTapeWorkspace.PlacedObject(7, 0x41, 0, 900, 600));
+            }
+        });
+        workspace.open(manifest);
+        workspace.invoke(RouteTapeWorkspace.Action.ADD_LEG);
+        assertNotNull(workspace.menu().formView());
+        workspace.menu().setValue("goal", "reach");
+        workspace.menu().setValue("x", "300");
+        workspace.menu().setValue("y", "650");
+        workspace.menu().setValue("rows", "240");
+        workspace.menu().submit();
+        assertNull(workspace.menu().error(), workspace.menu().error());
+        assertEquals(1, workspace.goals().legs().size());
+        assertEquals(com.openggf.route.RouteGoals.reach("leg1", PlayerSlot.P1,
+                com.openggf.route.Region.around(300, 650, 32, 32), 240), workspace.goals().legs().getFirst());
+        assertTrue(workspace.dirty(), "Goals are part of the working route");
+        assertTrue(workspace.goalFacts().getFirst()[1].contains("240"), workspace.goalFacts().getFirst()[1]);
+
+        workspace.invoke(RouteTapeWorkspace.Action.ADD_LEG);
+        workspace.menu().setValue("goal", "board");
+        workspace.menu().setValue("x", "880");
+        workspace.menu().setValue("y", "600");
+        workspace.menu().submit();
+        var board = (com.openggf.route.SamplePredicate.Riding) ((com.openggf.route.RouteGoal.Achieve)
+                workspace.goals().legs().get(1).goal()).condition();
+        assertEquals(new com.openggf.route.ObjectTarget.Placement(new com.openggf.route.PlacementKey(0, 0, 7, 0x41, 0)),
+                board.target(), "The placed object nearest X,Y becomes a placement target");
+
+        workspace.invoke(RouteTapeWorkspace.Action.SCAN);
+        var scan = host.requests.getLast();
+        assertEquals(RouteTapeJob.Kind.SCAN, scan.kind());
+        var bridge = new RouteTapeJob.LiveObject("SszCutsceneBridgeObjectInstance", 10, 0, 12, 0x77, 0, 800, 3200,
+                List.of("PHASE"), List.of("waiting", "retracting", "extended"), "waiting", 0, false);
+        var replica = new RouteTapeJob.LiveObject("SszGhzReplicaBoss", 10, 0, -1, -1, -1, 2000, 3000,
+                List.of("HIT_POINTS"), List.of(), "", 8, false);
+        host.update.set(new RouteTapeJob.Update(9, RouteTapeJob.Phase.SCANNED, RouteTapeJob.Kind.SCAN, 1, 1, 1, 1,
+                "scan", workspace.workingContent(), 1, null, null, null, null, List.of(bridge, replica)));
+        tick(workspace);
+        assertTrue(workspace.menu().isOpen(), "A scan lists the live objects to pick");
+        assertEquals(RouteTapeWorkspace.Qualification.EDITED, workspace.qualification(), "A scan is not a replay verdict");
+        workspace.pick(replica);
+        assertEquals(new com.openggf.route.ObjectTarget.Typed("SszGhzReplicaBoss", com.openggf.route.Capability.HIT_POINTS,
+                Optional.of(com.openggf.route.Region.around(2000, 3000, 64, 64))), workspace.pickedTarget().target(),
+                "A runtime-spawned object becomes a typed target near where it was seen");
+        workspace.pick(bridge);
+        assertEquals(new com.openggf.route.ObjectTarget.Placement(new com.openggf.route.PlacementKey(10, 0, 12, 0x77, 0)),
+                workspace.pickedTarget().target());
+        workspace.menu().close();
+        workspace.invoke(RouteTapeWorkspace.Action.ADD_LEG);
+        assertEquals("retracting".equals(workspace.menu().values().get("phase")) ? "retracting" : "waiting",
+                workspace.menu().values().get("phase"), "The picked target's phases fill the phase field");
+        workspace.menu().setValue("goal", "await-phase");
+        workspace.menu().setValue("phase", "retracting");
+        workspace.menu().submit();
+        assertNull(workspace.menu().error(), workspace.menu().error());
+        assertTrue(workspace.goalFacts().get(2)[1].contains("retracting"), workspace.goalFacts().get(2)[1]);
+
+        workspace.invoke(RouteTapeWorkspace.Action.EDIT_GOALS);
+        String text = workspace.menu().values().get("goals");
+        workspace.menu().setValue("goals", text);
+        workspace.menu().submit();
+        assertEquals(3, workspace.goals().legs().size(), "Goals round-trip through the codec text");
+
+        host.update.set(null);
+        workspace.startPlan(20);
+        var plan = host.requests.getLast();
+        assertEquals(RouteTapeJob.Kind.PLAN, plan.kind());
+        assertEquals(20, plan.row());
+        assertEquals(workspace.goals(), plan.route().checks());
+        var plannedTape = RouteFiles.tapeFromScript("20 R\n90 R+A\n");
+        var planned = com.openggf.route.RouteArtifact.of(RouteFiles.readDraft(manifest).launch(),
+                new com.openggf.route.GoalProgram(workspace.goals().routeGuard(), workspace.goals().legs(), 20),
+                plannedTape, new com.openggf.route.Provenance("planner", "", "", List.of()));
+        var before = workspace.workingContent();
+        host.update.set(new RouteTapeJob.Update(10, RouteTapeJob.Phase.SOLVED, RouteTapeJob.Kind.PLAN, 2, 2, 1, 1, "test",
+                planned.content().toString(), 110, null, null, null, planned, List.of()));
+        tick(workspace);
+        assertEquals(plannedTape, workspace.tape());
+        assertEquals(20, workspace.goals().startRow());
+        assertEquals(RouteTapeWorkspace.Qualification.PASSES_UNSAVED, workspace.qualification());
+        workspace.invoke(RouteTapeWorkspace.Action.UNDO);
+        assertEquals(before, workspace.workingContent(), "A plan's rows and goals undo in one step");
+        workspace.invoke(RouteTapeWorkspace.Action.UNDO);
+        assertEquals(2, workspace.goals().legs().size(),
+                "An unchanged text edit adds no undo step; the next undo removes the last added leg");
+    }
+
+    @Test
     void pathFollowsTheCursorOnlyOnTheRouteLevelAndExportWritesALoadableMovieWithoutOverwriting() throws IOException {
         Path manifest = RouteTapeFixtures.write(dir, "ehz", "3 R\n2 R+A / L\n");
         var host = new Host();

@@ -255,6 +255,9 @@ Unreleased. The earlier development themes remain in
   rows where play still tracks a reference and reports the share it kept.
   Stageplay's applied routes are now input rows; **Edit input rows** opens them in
   the same timeline and applies edits back to the scene as one undo step.
+  Routes carry goal legs (reach, board, ride, attach, hold, await a phase, defeat,
+  cross) on placed or runtime-spawned objects, picked from a scan of live objects;
+  Plan searches rows that complete them after a kept prefix.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,

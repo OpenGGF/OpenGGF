@@ -446,6 +446,15 @@ Recorded during implementation; each states what the sketch said, what was built
   undo; file, replay and repair commands off). Apply returns them through `StageplayRoutes` as one
   scene undo step, keeping the track's lane bindings; scene playback is the check. One timeline
   component instead of a second Stageplay-only one.
+- **Object-goal authoring (editor, step 4).** The plan's per-leg editor became: a goal program
+  held in the working route (undo covers rows and goals together), an Add leg form over the
+  `RouteGoals` words, Edit goals as text through `RouteCodec.formatGoals`/`parseGoals` for every
+  form the codec knows, and Scan, a worker job that plays the rows to the cursor with
+  `RoutePlayback` and lists `RouteSample.objects()`. A placed pick becomes an `ObjectTarget`
+  placement; a runtime pick becomes a typed target in a region around where it was seen (instance
+  keys are not offered: they are slot-specific and need not reproduce). Plan submits
+  `RouteTask.Author` with the rows before a chosen row as the kept prefix and
+  `SearchBudget.encounter()`.
 - **Shared worker plumbing not extracted yet (editor, step 1).** The plan put
   `StageplayRouteJob`'s process lifecycle into one shared helper. Step 3 replaces the Stageplay
   route job's planning, so the extraction waits for it rather than churning a file the planner

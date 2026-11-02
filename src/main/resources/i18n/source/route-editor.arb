@@ -1,5 +1,17 @@
 {
   "@@locale": "en",
+  "editor.route_tape.action_add": "Add",
+  "@editor.route_tape.action_add": {
+    "description": "Route tape editor: Add"
+  },
+  "editor.route_tape.action_add_leg": "Add leg",
+  "@editor.route_tape.action_add_leg": {
+    "description": "Route tape editor: Add leg"
+  },
+  "editor.route_tape.action_apply": "Apply",
+  "@editor.route_tape.action_apply": {
+    "description": "Route tape editor: Apply"
+  },
   "editor.route_tape.action_apply_rows": "Apply to scene",
   "@editor.route_tape.action_apply_rows": {
     "description": "Route tape editor: Apply to scene"
@@ -36,6 +48,10 @@
   "@editor.route_tape.action_duplicate_rows": {
     "description": "Route tape editor: Duplicate rows"
   },
+  "editor.route_tape.action_edit_goals": "Edit goals as text",
+  "@editor.route_tape.action_edit_goals": {
+    "description": "Route tape editor: Edit goals as text"
+  },
   "editor.route_tape.action_exit": "Level editor",
   "@editor.route_tape.action_exit": {
     "description": "Route tape editor: Level editor"
@@ -55,6 +71,18 @@
   "editor.route_tape.action_go_to_row": "Go to row",
   "@editor.route_tape.action_go_to_row": {
     "description": "Route tape editor: Go to row"
+  },
+  "editor.route_tape.action_goals": "Goals",
+  "@editor.route_tape.action_goals": {
+    "description": "Route tape editor: Goals"
+  },
+  "editor.route_tape.action_guard_off": "Allow hurt and boundaries",
+  "@editor.route_tape.action_guard_off": {
+    "description": "Route tape editor: Allow hurt and boundaries"
+  },
+  "editor.route_tape.action_guard_safe": "Guard the route: no hurt, death or unexpected boundary",
+  "@editor.route_tape.action_guard_safe": {
+    "description": "Route tape editor: Guard the route: no hurt, death or unexpected boundary"
   },
   "editor.route_tape.action_insert": "Insert",
   "@editor.route_tape.action_insert": {
@@ -88,9 +116,23 @@
   "@editor.route_tape.action_open": {
     "description": "Route tape editor: Open route"
   },
+  "editor.route_tape.action_plan": "Plan",
+  "@editor.route_tape.action_plan": {
+    "description": "Route tape editor: Plan"
+  },
   "editor.route_tape.action_redo": "Redo",
   "@editor.route_tape.action_redo": {
     "description": "Route tape editor: Redo"
+  },
+  "editor.route_tape.action_remove_leg": "Remove leg {leg}",
+  "@editor.route_tape.action_remove_leg": {
+    "description": "Route tape editor: Remove leg <leg>",
+    "placeholders": {
+      "leg": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.action_repair": "Repair",
   "@editor.route_tape.action_repair": {
@@ -111,6 +153,10 @@
   "editor.route_tape.action_save_draft": "Save draft",
   "@editor.route_tape.action_save_draft": {
     "description": "Route tape editor: Save draft"
+  },
+  "editor.route_tape.action_scan": "Scan objects here",
+  "@editor.route_tape.action_scan": {
+    "description": "Route tape editor: Scan objects here"
   },
   "editor.route_tape.action_toggle": "Toggle button",
   "@editor.route_tape.action_toggle": {
@@ -220,6 +266,54 @@
   "@editor.route_tape.field_game": {
     "description": "Route tape editor: Game"
   },
+  "editor.route_tape.field_goals": "Goal program",
+  "@editor.route_tape.field_goals": {
+    "description": "Route tape editor: Goal program"
+  },
+  "editor.route_tape.field_leg_goal": "Goal",
+  "@editor.route_tape.field_leg_goal": {
+    "description": "Route tape editor: Goal"
+  },
+  "editor.route_tape.field_leg_id": "Leg id",
+  "@editor.route_tape.field_leg_id": {
+    "description": "Route tape editor: Leg id"
+  },
+  "editor.route_tape.field_leg_interaction": "Interaction",
+  "@editor.route_tape.field_leg_interaction": {
+    "description": "Route tape editor: Interaction"
+  },
+  "editor.route_tape.field_leg_phase": "Phase",
+  "@editor.route_tape.field_leg_phase": {
+    "description": "Route tape editor: Phase"
+  },
+  "editor.route_tape.field_leg_player": "Player",
+  "@editor.route_tape.field_leg_player": {
+    "description": "Route tape editor: Player"
+  },
+  "editor.route_tape.field_leg_radius": "Region radius",
+  "@editor.route_tape.field_leg_radius": {
+    "description": "Route tape editor: Region radius"
+  },
+  "editor.route_tape.field_leg_rows": "Most rows",
+  "@editor.route_tape.field_leg_rows": {
+    "description": "Route tape editor: Most rows"
+  },
+  "editor.route_tape.field_leg_target": "Target",
+  "@editor.route_tape.field_leg_target": {
+    "description": "Route tape editor: Target"
+  },
+  "editor.route_tape.field_leg_until": "Ride or hold until",
+  "@editor.route_tape.field_leg_until": {
+    "description": "Route tape editor: Ride or hold until"
+  },
+  "editor.route_tape.field_leg_x": "X",
+  "@editor.route_tape.field_leg_x": {
+    "description": "Route tape editor: X"
+  },
+  "editor.route_tape.field_leg_y": "Y",
+  "@editor.route_tape.field_leg_y": {
+    "description": "Route tape editor: Y"
+  },
   "editor.route_tape.field_main": "Player 1",
   "@editor.route_tape.field_main": {
     "description": "Route tape editor: Player 1"
@@ -239,6 +333,10 @@
   "editor.route_tape.field_movie": "BizHawk movie",
   "@editor.route_tape.field_movie": {
     "description": "Route tape editor: BizHawk movie"
+  },
+  "editor.route_tape.field_plan_from": "Keep rows before",
+  "@editor.route_tape.field_plan_from": {
+    "description": "Route tape editor: Keep rows before"
   },
   "editor.route_tape.field_reference": "Reference",
   "@editor.route_tape.field_reference": {
@@ -284,9 +382,37 @@
   "@editor.route_tape.field_zone": {
     "description": "Route tape editor: Zone index"
   },
+  "editor.route_tape.goal_attached": "{player} {kind} on {target}",
+  "@editor.route_tape.goal_attached": {
+    "description": "Route tape editor: <player> <kind> on <target>",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "3"
+      },
+      "kind": {
+        "type": "String",
+        "example": "3"
+      },
+      "target": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "editor.route_tape.goal_boundary": "Enter the next level",
   "@editor.route_tape.goal_boundary": {
     "description": "Route tape editor: Enter the next level"
+  },
+  "editor.route_tape.goal_defeated": "{target} defeated",
+  "@editor.route_tape.goal_defeated": {
+    "description": "Route tape editor: <target> defeated",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.goal_level": "Level zone {zone} act {act}",
   "@editor.route_tape.goal_level": {
@@ -297,6 +423,20 @@
         "example": "3"
       },
       "act": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.goal_phase": "{target} in phase {phase}",
+  "@editor.route_tape.goal_phase": {
+    "description": "Route tape editor: <target> in phase <phase>",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "3"
+      },
+      "phase": {
         "type": "String",
         "example": "3"
       }
@@ -323,6 +463,20 @@
         "example": "3"
       },
       "bottom": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.goal_riding": "{player} rides {target}",
+  "@editor.route_tape.goal_riding": {
+    "description": "Route tape editor: <player> rides <target>",
+    "placeholders": {
+      "player": {
+        "type": "String",
+        "example": "3"
+      },
+      "target": {
         "type": "String",
         "example": "3"
       }
@@ -355,6 +509,10 @@
   "editor.route_tape.goals_none": "None; replay checks the rows only",
   "@editor.route_tape.goals_none": {
     "description": "Route tape editor: None; replay checks the rows only"
+  },
+  "editor.route_tape.goals_text_too_long": "This goal program is too long to edit as text; add or remove legs instead.",
+  "@editor.route_tape.goals_text_too_long": {
+    "description": "Route tape editor: This goal program is too long to edit as text; add or remove legs instead."
   },
   "editor.route_tape.hud_air": "Air",
   "@editor.route_tape.hud_air": {
@@ -582,6 +740,10 @@
   "@editor.route_tape.no_attempt": {
     "description": "Route tape editor: No stopped repair attempt to use."
   },
+  "editor.route_tape.no_placements": "The level has no placed objects.",
+  "@editor.route_tape.no_placements": {
+    "description": "Route tape editor: The level has no placed objects."
+  },
   "editor.route_tape.no_route": "Open a route first.",
   "@editor.route_tape.no_route": {
     "description": "Route tape editor: Open a route first."
@@ -597,6 +759,58 @@
   "editor.route_tape.note_discard": "Unsaved row edits are lost.",
   "@editor.route_tape.note_discard": {
     "description": "Route tape editor: Unsaved row edits are lost."
+  },
+  "editor.route_tape.object_placed": "{type} at {x},{y} · placed #{index}",
+  "@editor.route_tape.object_placed": {
+    "description": "Route tape editor: <type> at <x>,<y> · placed #<index>",
+    "placeholders": {
+      "type": {
+        "type": "String",
+        "example": "3"
+      },
+      "x": {
+        "type": "String",
+        "example": "3"
+      },
+      "y": {
+        "type": "String",
+        "example": "3"
+      },
+      "index": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.object_runtime": "{type} at {x},{y} · spawned at runtime",
+  "@editor.route_tape.object_runtime": {
+    "description": "Route tape editor: <type> at <x>,<y> · spawned at runtime",
+    "placeholders": {
+      "type": {
+        "type": "String",
+        "example": "3"
+      },
+      "x": {
+        "type": "String",
+        "example": "3"
+      },
+      "y": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.phase_needed": "Name the phase.",
+  "@editor.route_tape.phase_needed": {
+    "description": "Route tape editor: Name the phase."
+  },
+  "editor.route_tape.placed_needs_level": "Load the route's level to choose a placed object.",
+  "@editor.route_tape.placed_needs_level": {
+    "description": "Route tape editor: Load the route's level to choose a placed object."
+  },
+  "editor.route_tape.plan_needs_legs": "Add a goal leg first.",
+  "@editor.route_tape.plan_needs_legs": {
+    "description": "Route tape editor: Add a goal leg first."
   },
   "editor.route_tape.qualification_draft": "Draft; not qualified",
   "@editor.route_tape.qualification_draft": {
@@ -715,6 +929,16 @@
   "editor.route_tape.route_unsaved_first": "Save or discard the open route first.",
   "@editor.route_tape.route_unsaved_first": {
     "description": "Route tape editor: Save or discard the open route first."
+  },
+  "editor.route_tape.scan_none": "No live objects report a capability after row {row}.",
+  "@editor.route_tape.scan_none": {
+    "description": "Route tape editor: No live objects report a capability after row <row>.",
+    "placeholders": {
+      "row": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.scene_rows_only": "Scene inputs are applied to their scene, not saved or replayed as a route.",
   "@editor.route_tape.scene_rows_only": {
@@ -854,6 +1078,30 @@
       }
     }
   },
+  "editor.route_tape.status_picked": "Picked {target} as the goal target.",
+  "@editor.route_tape.status_picked": {
+    "description": "Route tape editor: Picked <target> as the goal target.",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.status_planned": "Planned {rows} rows; replay passed. Save qualified to keep them.",
+  "@editor.route_tape.status_planned": {
+    "description": "Route tape editor: Planned <rows> rows; replay passed. Save qualified to keep them.",
+    "placeholders": {
+      "rows": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.status_planning": "Planning in a separate worker.",
+  "@editor.route_tape.status_planning": {
+    "description": "Route tape editor: Planning in a separate worker."
+  },
   "editor.route_tape.status_repairing": "Repairing in a separate worker.",
   "@editor.route_tape.status_repairing": {
     "description": "Route tape editor: Repairing in a separate worker."
@@ -920,6 +1168,26 @@
   "@editor.route_tape.status_saving": {
     "description": "Route tape editor: Replaying before save in a separate worker."
   },
+  "editor.route_tape.status_scanned": "{count} live objects; pick one as a goal target.",
+  "@editor.route_tape.status_scanned": {
+    "description": "Route tape editor: <count> live objects; pick one as a goal target.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.status_scanning": "Scanning live objects after row {row} in a separate worker.",
+  "@editor.route_tape.status_scanning": {
+    "description": "Route tape editor: Scanning live objects after row <row> in a separate worker.",
+    "placeholders": {
+      "row": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "editor.route_tape.status_scene_rows": "Editing {track} ({rows} rows); apply to return them to the scene.",
   "@editor.route_tape.status_scene_rows": {
     "description": "Route tape editor: Editing <track> (<rows> rows); apply to return them to the scene.",
@@ -938,6 +1206,14 @@
   "@editor.route_tape.subtitle_export": {
     "description": "Route tape editor: Writes a new BizHawk movie of the working rows."
   },
+  "editor.route_tape.subtitle_goals_text": "The manifest's goal program; replay checks it on every row.",
+  "@editor.route_tape.subtitle_goals_text": {
+    "description": "Route tape editor: The manifest's goal program; replay checks it on every row."
+  },
+  "editor.route_tape.subtitle_leg": "Reach uses the region; object goals use the target; ride and hold continue until the phase or region.",
+  "@editor.route_tape.subtitle_leg": {
+    "description": "Route tape editor: Reach uses the region; object goals use the target; ride and hold continue until the phase or region."
+  },
   "editor.route_tape.subtitle_new": "A cold-level launch over neutral rows; saved as a draft until a replay passes.",
   "@editor.route_tape.subtitle_new": {
     "description": "Route tape editor: A cold-level launch over neutral rows; saved as a draft until a replay passes."
@@ -946,9 +1222,69 @@
   "@editor.route_tape.subtitle_open": {
     "description": "Route tape editor: Choose a .route.json manifest; its .script sits beside it."
   },
+  "editor.route_tape.subtitle_plan": "Keeps rows before this row and searches rows that complete every goal leg in order.",
+  "@editor.route_tape.subtitle_plan": {
+    "description": "Route tape editor: Keeps rows before this row and searches rows that complete every goal leg in order."
+  },
   "editor.route_tape.subtitle_repair": "Keeps rows where play still tracks the reference and searches only where it drifts.",
   "@editor.route_tape.subtitle_repair": {
     "description": "Route tape editor: Keeps rows where play still tracks the reference and searches only where it drifts."
+  },
+  "editor.route_tape.target_choice_picked": "Picked: {target}",
+  "@editor.route_tape.target_choice_picked": {
+    "description": "Route tape editor: Picked: <target>",
+    "placeholders": {
+      "target": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.target_choice_placed": "Placed object nearest X,Y",
+  "@editor.route_tape.target_choice_placed": {
+    "description": "Route tape editor: Placed object nearest X,Y"
+  },
+  "editor.route_tape.target_instance": "live {kind} slot {slot}",
+  "@editor.route_tape.target_instance": {
+    "description": "Route tape editor: live <kind> slot <slot>",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "3"
+      },
+      "slot": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.target_placed": "placed #{index} (${id})",
+  "@editor.route_tape.target_placed": {
+    "description": "Route tape editor: placed #<index> ($<id>)",
+    "placeholders": {
+      "index": {
+        "type": "String",
+        "example": "3"
+      },
+      "id": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.target_typed": "{type} ({capability})",
+  "@editor.route_tape.target_typed": {
+    "description": "Route tape editor: <type> (<capability>)",
+    "placeholders": {
+      "type": {
+        "type": "String",
+        "example": "3"
+      },
+      "capability": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.template_copy": "Copy cursor row",
   "@editor.route_tape.template_copy": {
@@ -966,6 +1302,16 @@
   "@editor.route_tape.title_go_to": {
     "description": "Route tape editor: Go to row"
   },
+  "editor.route_tape.title_goals": "Goals ({legs} legs)",
+  "@editor.route_tape.title_goals": {
+    "description": "Route tape editor: Goals (<legs> legs)",
+    "placeholders": {
+      "legs": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "editor.route_tape.title_insert": "Insert rows",
   "@editor.route_tape.title_insert": {
     "description": "Route tape editor: Insert rows"
@@ -977,6 +1323,10 @@
   "editor.route_tape.title_open": "Open route",
   "@editor.route_tape.title_open": {
     "description": "Route tape editor: Open route"
+  },
+  "editor.route_tape.title_plan": "Plan rows for the goals",
+  "@editor.route_tape.title_plan": {
+    "description": "Route tape editor: Plan rows for the goals"
   },
   "editor.route_tape.title_repair": "Repair route",
   "@editor.route_tape.title_repair": {
@@ -995,6 +1345,16 @@
         "example": "3"
       },
       "to": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.title_scan": "Live objects after row {row}",
+  "@editor.route_tape.title_scan": {
+    "description": "Route tape editor: Live objects after row <row>",
+    "placeholders": {
+      "row": {
         "type": "String",
         "example": "3"
       }

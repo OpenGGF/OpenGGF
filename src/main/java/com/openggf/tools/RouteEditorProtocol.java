@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -24,7 +25,7 @@ public final class RouteEditorProtocol {
     /** Longest accepted record; a route record carries the whole tape. */
     public static final int MAX_RECORD_CHARS = 64 * 1024 * 1024;
 
-    public enum Kind { REPLAY, SAVE, REPAIR }
+    public enum Kind { REPLAY, SAVE, REPAIR, PLAN, SCAN }
 
     public enum Verdict { PASSED, FAILED, UNSUPPORTED, SOLVED, STOPPED }
 
@@ -40,8 +41,12 @@ public final class RouteEditorProtocol {
      * @param replace   for {@link Kind#SAVE}: replace an existing route rather than write a new one
      * @param reference for {@link Kind#REPAIR}: the reference route (launch and rows) as transport text
      */
+    /**
+     * @param row for {@link Kind#PLAN}: rows {@code [0, row)} are kept as the prefix the goals
+     *            continue from; for {@link Kind#SCAN}: the row after which live objects are listed
+     */
     public record Request(Kind kind, String route, Path target, boolean replace, String reference, Repair repair,
-                          Map<String, Path> roms) {
+                          int row, Map<String, Path> roms) {
         public Request {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(route, "route");
@@ -50,10 +55,29 @@ public final class RouteEditorProtocol {
             if (kind == Kind.REPAIR && (reference == null || repair == null)) {
                 throw new IllegalArgumentException("a repair names its reference and bounds");
             }
+            if ((kind == Kind.PLAN || kind == Kind.SCAN) && row < 0) throw new IllegalArgumentException("negative row");
+        }
+
+        public Request(Kind kind, String route, Path target, boolean replace, String reference, Repair repair,
+                       Map<String, Path> roms) {
+            this(kind, route, target, replace, reference, repair, 0, roms);
         }
 
         public Request(Kind kind, String route, Path target, boolean replace, Map<String, Path> roms) {
-            this(kind, route, target, replace, null, null, roms);
+            this(kind, route, target, replace, null, null, 0, roms);
+        }
+    }
+
+    /**
+     * A live object a scan observed: its type key, placement (layout index or -1), centre,
+     * capabilities, phases and hit points, copied from the replay sample.
+     */
+    public record ScannedObject(String typeKey, int zone, int act, int layoutIndex, int objectId, int subtype, int x, int y,
+                                List<String> capabilities, List<String> phaseNames, String phase, int hitsRemaining,
+                                boolean defeated) {
+        public ScannedObject {
+            capabilities = List.copyOf(capabilities);
+            phaseNames = List.copyOf(phaseNames);
         }
     }
 
@@ -86,6 +110,7 @@ public final class RouteEditorProtocol {
         out.append("route ").append(text(request.route())).append('\n');
         if (request.target() != null) out.append("target ").append(text(request.target().toString())).append('\n');
         out.append("replace ").append(request.replace()).append('\n');
+        out.append("row ").append(request.row()).append('\n');
         if (request.reference() != null) out.append("reference ").append(text(request.reference())).append('\n');
         if (request.repair() != null) {
             var r = request.repair();
@@ -104,10 +129,11 @@ public final class RouteEditorProtocol {
         String route = null, reference = null;
         Repair repair = null;
         boolean replace = false;
+        int row = 0;
         var roms = new LinkedHashMap<String, Path>();
         for (String line; (line = input.readLine(MAX_RECORD_CHARS)) != null; ) {
             if (line.equals("end")) {
-                return new Request(kind, route, target, replace, reference, repair, roms);
+                return new Request(kind, route, target, replace, reference, repair, row, roms);
             }
             String[] field = line.split(" ", 3);
             try {
@@ -116,6 +142,7 @@ public final class RouteEditorProtocol {
                     case "route" -> route = untext(field[1]);
                     case "target" -> target = Path.of(untext(field[1]));
                     case "replace" -> replace = Boolean.parseBoolean(field[1]);
+                    case "row" -> row = Integer.parseInt(field[1]);
                     case "reference" -> reference = untext(field[1]);
                     case "repair" -> {
                         String[] n = line.split(" ");
@@ -158,6 +185,19 @@ public final class RouteEditorProtocol {
         return "saved " + text(manifest.toString());
     }
 
+    /** A planned route (launch, goals and rows) as {@code RouteCodec} transport text. */
+    public static String plannedRoute(String transport) {
+        return "planned " + text(transport);
+    }
+
+    public static String object(ScannedObject o) {
+        String body = String.join("\u001f", o.typeKey(), String.valueOf(o.zone()), String.valueOf(o.act()),
+                String.valueOf(o.layoutIndex()), String.valueOf(o.objectId()),
+                String.valueOf(o.subtype()), String.valueOf(o.x()), String.valueOf(o.y()), String.join(",", o.capabilities()),
+                String.join(",", o.phaseNames()), o.phase(), String.valueOf(o.hitsRemaining()), String.valueOf(o.defeated()));
+        return "object " + text(body);
+    }
+
     /** The rows a repair produced (solved) or the furthest attempt it held (stopped), as route-script text. */
     public static String rows(String script) {
         return "rows " + text(script);
@@ -170,7 +210,11 @@ public final class RouteEditorProtocol {
 
     /** One decoded response record: exactly one of the fields is set. */
     public record Response(Progress progress, Plan plan, Point point, Span span, Path saved, String rows,
-                           Result result) { }
+                           Result result, String planned, ScannedObject object) {
+        Response(Progress progress, Plan plan, Point point, Span span, Path saved, String rows, Result result) {
+            this(progress, plan, point, span, saved, rows, result, null, null);
+        }
+    }
 
     public static Response decodeResponse(String line) throws IOException {
         String[] field = line.split(" ");
@@ -190,6 +234,16 @@ public final class RouteEditorProtocol {
                 case "rows" -> new Response(null, null, null, null, null, untext(field[1]), null);
                 case "result" -> new Response(null, null, null, null, null, null, new Result(Verdict.valueOf(field[1]),
                         Integer.parseInt(field[2]), untext(field[3]), untext(field[4])));
+                case "planned" -> new Response(null, null, null, null, null, null, null, untext(field[1]), null);
+                case "object" -> {
+                    String[] o = untext(field[1]).split("\u001f", -1);
+                    yield new Response(null, null, null, null, null, null, null, null, new ScannedObject(o[0],
+                            Integer.parseInt(o[1]), Integer.parseInt(o[2]), Integer.parseInt(o[3]), Integer.parseInt(o[4]),
+                            Integer.parseInt(o[5]), Integer.parseInt(o[6]), Integer.parseInt(o[7]),
+                            o[8].isEmpty() ? List.of() : List.of(o[8].split(",")),
+                            o[9].isEmpty() ? List.of() : List.of(o[9].split(",")), o[10], Integer.parseInt(o[11]),
+                            Boolean.parseBoolean(o[12])));
+                }
                 default -> throw new IOException("unknown route worker record " + field[0]);
             };
         } catch (RuntimeException malformed) {

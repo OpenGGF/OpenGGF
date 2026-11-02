@@ -520,6 +520,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						GameServices.module().getGameId().code(), levelManager.getCurrentZone(), levelManager.getCurrentAct()));
 			}
 			public void focusWorld(int x, int y) { levelEditorController.setWorldCursor(new com.openggf.game.session.EditorCursorState(x, y)); }
+			public java.util.List<com.openggf.editor.route.RouteTapeWorkspace.PlacedObject> placements() {
+				var level = levelEditorController.currentLevel();
+				return level == null ? java.util.List.of() : level.getObjects().stream().filter(spawn -> spawn.layoutIndex() >= 0)
+						.map(spawn -> new com.openggf.editor.route.RouteTapeWorkspace.PlacedObject(spawn.layoutIndex(),
+								spawn.objectId(), spawn.subtype(), spawn.x(), spawn.y())).toList();
+			}
 			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
 		});
 		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->

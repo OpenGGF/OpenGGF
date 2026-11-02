@@ -2,6 +2,11 @@ package com.openggf.tools;
 
 import com.openggf.editor.route.RouteTapeFixtures;
 import com.openggf.route.GoalProgram;
+import com.openggf.route.LaunchContract;
+import com.openggf.route.LevelId;
+import com.openggf.route.RomIdentity;
+import com.openggf.route.Roster;
+import com.openggf.route.RouteGoals;
 import com.openggf.route.Guard;
 import com.openggf.route.Leg;
 import com.openggf.route.PlayerSlot;
@@ -38,10 +43,19 @@ class TestRouteEditorWorker {
 
     private List<RouteEditorProtocol.Response> run(RouteEditorProtocol.Kind kind, RouteArtifact route, Path target,
                                                    boolean replace, Map<String, Path> roms) throws Exception {
+        return run(new RouteEditorProtocol.Request(kind, RouteCodec.formatTransport(route), target, replace, roms));
+    }
+
+    private List<RouteEditorProtocol.Response> run(RouteEditorProtocol.Kind kind, RouteArtifact route, int row,
+                                                   Map<String, Path> roms) throws Exception {
+        return run(new RouteEditorProtocol.Request(kind, RouteCodec.formatTransport(route), null, false, null, null, row,
+                roms));
+    }
+
+    private List<RouteEditorProtocol.Response> run(RouteEditorProtocol.Request request) throws Exception {
         var bytes = new ByteArrayOutputStream();
         try (var out = new PrintStream(bytes, true, StandardCharsets.UTF_8)) {
-            RouteEditorWorker.run(new RouteEditorProtocol.Request(kind, RouteCodec.formatTransport(route), target,
-                    replace, roms), out);
+            RouteEditorWorker.run(request, out);
         }
         var records = new ArrayList<RouteEditorProtocol.Response>();
         for (String line : bytes.toString(StandardCharsets.UTF_8).lines().toList()) {
@@ -129,6 +143,46 @@ class TestRouteEditorWorker {
         assertEquals(120, covered, "Spans cover every output row once");
         assertTrue(records.stream().anyMatch(r -> r.span() != null && r.span().kind().equals("KEPT")));
         assertTrue(records.stream().anyMatch(r -> r.plan() != null), "Planner progress streams to the editor");
+    }
+
+    @Test
+    void planAuthorsRowsAfterTheKeptPrefixThatCompleteTheGoalLegs() throws Exception {
+        Path manifest = RouteTapeFixtures.write(dir, "ehz", "30 R\n");
+        RouteArtifact draft = RouteFiles.readDraft(manifest);
+        var probe = run(RouteEditorProtocol.Kind.REPLAY, draft, null, false, roms());
+        var start = probe.stream().filter(r -> r.point() != null && r.point().slot() == 1).toList().getLast().point();
+        var goals = GoalProgram.of(Guard.NONE, RouteGoals.reach("ahead", PlayerSlot.P1,
+                new Region(start.x() + 150, start.y() - 64, start.x() + 400, start.y() + 64), 300));
+        RouteArtifact route = withRows(draft, "30 R\n", goals);
+        var records = run(RouteEditorProtocol.Kind.PLAN, route, 30, roms());
+        var result = records.getLast().result();
+        assertEquals(RouteEditorProtocol.Verdict.SOLVED, result.verdict(), result.detail());
+        RouteArtifact planned = RouteCodec.parseTransport(records.stream().filter(r -> r.planned() != null).findFirst()
+                .orElseThrow().planned());
+        assertEquals(route.tape(), planned.tape().slice(0, 30), "The prefix is kept verbatim");
+        assertEquals(30, planned.checks().startRow());
+        assertEquals(goals.legs(), planned.checks().legs(), "The goals travel with the planned route");
+        assertEquals(result.content(), planned.content().toString());
+        assertTrue(records.stream().anyMatch(r -> r.point() != null), "The qualifying replay streams the path");
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void scanListsTheSszArrivalBridgeAsAPlacedPhaseObject() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        var launch = LaunchContract.coldLevel(RomIdentity.ofFile("s3k", rom), new LevelId("s3k", 10, 0),
+                new Roster("sonic", "tails"), 320, 0);
+        // The arrival bridge is live before input 1366, where the route reaches it.
+        var rows = RouteFiles.tapeFromMovie(Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"), 1360);
+        var route = RouteArtifact.of(launch, rows, new com.openggf.route.Provenance("test", "", "", List.of()));
+        var records = run(RouteEditorProtocol.Kind.SCAN, route, 1300, Map.of("s3k", rom));
+        assertEquals(RouteEditorProtocol.Verdict.PASSED, records.getLast().result().verdict());
+        var bridge = records.stream().filter(r -> r.object() != null).map(RouteEditorProtocol.Response::object)
+                .filter(o -> o.typeKey().equals("SszCutsceneBridgeObjectInstance")).findFirst().orElseThrow();
+        assertEquals(12, bridge.layoutIndex());
+        assertEquals(0x77, bridge.objectId());
+        assertEquals(List.of("PHASE"), bridge.capabilities());
+        assertEquals(List.of("waiting", "retracting", "extended"), bridge.phaseNames());
     }
 
     @Test

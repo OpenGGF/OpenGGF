@@ -27,10 +27,30 @@ import java.util.function.Supplier;
  * generation; a cancelled or superseded job can never publish a result.
  */
 public final class RouteTapeJob implements AutoCloseable {
-    public enum Phase { IDLE, RUNNING, PASSED, FAILED, UNSUPPORTED, ERROR, CANCELLED, SOLVED, STOPPED }
+    public enum Phase { IDLE, RUNNING, PASSED, FAILED, UNSUPPORTED, ERROR, CANCELLED, SOLVED, STOPPED, SCANNED }
 
-    /** Replay only; replay and then write the route when it passes; or repair it against a reference. */
-    public enum Kind { REPLAY, SAVE, REPAIR }
+    /**
+     * Replay only; replay and then write the route when it passes; repair it against a reference;
+     * plan rows for its goal program after a kept prefix; or list the live objects at a row.
+     */
+    public enum Kind { REPLAY, SAVE, REPAIR, PLAN, SCAN }
+
+    /**
+     * A live object a scan saw: its type key, placement ({@code layoutIndex} -1 when spawned at
+     * runtime), centre, capabilities, phases and hit points. Values only.
+     */
+    public record LiveObject(String typeKey, int zone, int act, int layoutIndex, int objectId, int subtype, int x, int y,
+                             List<String> capabilities, List<String> phaseNames, String phase, int hitsRemaining,
+                             boolean defeated) {
+        public LiveObject {
+            capabilities = List.copyOf(capabilities);
+            phaseNames = List.copyOf(phaseNames);
+        }
+
+        public boolean placed() {
+            return layoutIndex >= 0;
+        }
+    }
 
     /**
      * Repair bounds: rows {@code [0, firstEditable)} stay verbatim; the reference is followed from
@@ -80,7 +100,7 @@ public final class RouteTapeJob implements AutoCloseable {
      * @param replace for a save: replace the existing route rather than write a new one
      */
     public record Request(Kind kind, RouteArtifact route, Path target, boolean replace, RouteArtifact reference,
-                          RepairBounds repair) {
+                          RepairBounds repair, int row) {
         public Request {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(route, "route");
@@ -88,15 +108,26 @@ public final class RouteTapeJob implements AutoCloseable {
             if (kind == Kind.REPAIR && (reference == null || repair == null)) {
                 throw new IllegalArgumentException("a repair names its reference and bounds");
             }
+            if (row < 0 || row > route.tape().size()) throw new IllegalArgumentException("row outside the route: " + row);
         }
 
         public Request(Kind kind, RouteArtifact route, Path target, boolean replace) {
-            this(kind, route, target, replace, null, null);
+            this(kind, route, target, replace, null, null, 0);
         }
 
         /** Repairs {@code route}, keeping its rows where play tracks {@code reference}. */
         public static Request repair(RouteArtifact route, RouteArtifact reference, RepairBounds bounds) {
-            return new Request(Kind.REPAIR, route, null, false, reference, bounds);
+            return new Request(Kind.REPAIR, route, null, false, reference, bounds, 0);
+        }
+
+        /** Plans rows after {@code [0, row)} that complete {@code route}'s goal program. */
+        public static Request plan(RouteArtifact route, int row) {
+            return new Request(Kind.PLAN, route, null, false, null, null, row);
+        }
+
+        /** Lists the live objects with capabilities after {@code row} rows of {@code route}. */
+        public static Request scan(RouteArtifact route, int row) {
+            return new Request(Kind.SCAN, route, null, false, null, null, row);
         }
     }
 
@@ -108,7 +139,17 @@ public final class RouteTapeJob implements AutoCloseable {
      */
     public record Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
                          String message, String content, int row, RouteTapeOverlay path, Path saved,
-                         RepairOutcome repair) {
+                         RepairOutcome repair, RouteArtifact planned, List<LiveObject> objects) {
+        public Update {
+            objects = objects == null ? List.of() : List.copyOf(objects);
+        }
+
+        public Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
+                      String message, String content, int row, RouteTapeOverlay path, Path saved, RepairOutcome repair) {
+            this(generation, phase, kind, pass, passes, done, total, message, content, row, path, saved, repair, null,
+                    List.of());
+        }
+
         public Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
                       String message, String content, int row, RouteTapeOverlay path, Path saved) {
             this(generation, phase, kind, pass, passes, done, total, message, content, row, path, saved, null);
@@ -195,10 +236,12 @@ public final class RouteTapeJob implements AutoCloseable {
             case REPLAY -> RouteEditorProtocol.Kind.REPLAY;
             case SAVE -> RouteEditorProtocol.Kind.SAVE;
             case REPAIR -> RouteEditorProtocol.Kind.REPAIR;
+            case PLAN -> RouteEditorProtocol.Kind.PLAN;
+            case SCAN -> RouteEditorProtocol.Kind.SCAN;
         }, RouteCodec.formatTransport(request.route()), request.target(), request.replace(),
                 request.reference() == null ? null : RouteCodec.formatTransport(request.reference()),
                 bounds == null ? null : new RouteEditorProtocol.Repair(bounds.firstEditable(), bounds.maxAuthoredRows(),
-                        bounds.maxWindows(), bounds.windowFrom(), bounds.windowTo()), roms.get());
+                        bounds.maxWindows(), bounds.windowFrom(), bounds.windowTo()), request.row(), roms.get());
         long token = ++generation;
         update = new Update(token, Phase.RUNNING, request.kind(), 1, 1, 0, rows, "Starting the route worker", content,
                 -1, null, null);
@@ -253,7 +296,9 @@ public final class RouteTapeJob implements AutoCloseable {
             RouteEditorProtocol.Result result = null;
             Path saved = null;
             String rowsText = null;
+            String plannedText = null;
             var spans = new ArrayList<RepairSpan>();
+            var objects = new ArrayList<LiveObject>();
             try (var input = new RouteEditorProtocol.LineReader(new InputStreamReader(child.getInputStream(), StandardCharsets.UTF_8))) {
                 for (String line; (line = input.readLine(64 * 1024)) != null; ) {
                     var record = RouteEditorProtocol.decodeResponse(line);
@@ -285,6 +330,14 @@ public final class RouteTapeJob implements AutoCloseable {
                         }, span.sourceStart(), span.outputStart(), span.length()));
                     } else if (record.rows() != null) {
                         rowsText = record.rows();
+                    } else if (record.planned() != null) {
+                        plannedText = record.planned();
+                    } else if (record.object() != null) {
+                        var o = record.object();
+                        if (objects.size() >= 4096) throw new IOException("Route worker scan exceeds its bound");
+                        objects.add(new LiveObject(o.typeKey(), o.zone(), o.act(), o.layoutIndex(), o.objectId(), o.subtype(),
+                                o.x(), o.y(),
+                                o.capabilities(), o.phaseNames(), o.phase(), o.hitsRemaining(), o.defeated()));
                     } else if (record.saved() != null) {
                         saved = record.saved();
                     } else {
@@ -301,6 +354,34 @@ public final class RouteTapeJob implements AutoCloseable {
             }
             if (kind == Kind.REPAIR) {
                 publish(token, repairUpdate(token, result, content, rowsText, spans));
+                return;
+            }
+            if (kind == Kind.SCAN) {
+                publish(token, result.verdict() == RouteEditorProtocol.Verdict.PASSED
+                        ? new Update(token, Phase.SCANNED, kind, 1, 1, 1, 1, "scan", content, result.row(), null, null,
+                                null, null, objects)
+                        : new Update(token, Phase.UNSUPPORTED, kind, 0, 0, 0, 0, result.detail(), content, -1, null, null));
+                return;
+            }
+            if (kind == Kind.PLAN) {
+                var stridePath = new RouteTapeOverlay(p1, p2, 1, -1);
+                publish(token, switch (result.verdict()) {
+                    case SOLVED -> {
+                        if (plannedText == null) throw new IOException("Route worker sent no planned route");
+                        RouteArtifact planned = RouteCodec.parseTransport(plannedText);
+                        if (!planned.content().toString().equals(result.content())) {
+                            throw new IOException("Route worker's planned route does not match its result");
+                        }
+                        yield new Update(token, Phase.SOLVED, kind, 2, 2, 1, 1, result.detail(), result.content(),
+                                planned.tape().size(), stridePath, null, null, planned, List.of());
+                    }
+                    case STOPPED -> new Update(token, Phase.STOPPED, kind, 2, 2, 1, 1, result.detail(), content,
+                            result.row(), null, null, new RepairOutcome(false, rowsText == null ? InputTape.empty()
+                                    : RouteFiles.tapeFromScript(rowsText), List.of(), 0, result.detail()));
+                    case UNSUPPORTED -> new Update(token, Phase.UNSUPPORTED, kind, 0, 0, 0, 0, result.detail(), content,
+                            -1, null, null);
+                    default -> throw new IOException("Route worker sent a replay result to a plan");
+                });
                 return;
             }
             if (!result.content().equals(content)) throw new IOException("Route worker replayed other content");
