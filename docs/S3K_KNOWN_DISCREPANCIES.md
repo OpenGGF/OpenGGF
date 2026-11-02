@@ -556,7 +556,7 @@ Every Knuckles animation frame displays the correct patterns at the correct posi
 
 ### Original Implementation
 
-The ROM stores save data directly in battery-backed SRAM at fixed offsets. Each of the 8 slots occupies a contiguous region with zone/act, character, emerald, and clear flags packed into specific byte positions. The save screen itself is object-driven, with authored selector/card objects and mappings rather than a debug-style overlay.
+The ROM stores save data directly in battery-backed SRAM at fixed offsets. Each of the 8 slots occupies a contiguous region with zone, character, emerald, giant-ring collection, Special Stage rotation, and clear flags packed into specific byte positions. Checkpoint positions remain in session RAM. The save screen itself is object-driven, with authored selector/card objects and mappings rather than a debug-style overlay.
 
 ### Our Implementation
 
@@ -578,9 +578,16 @@ ending and Knuckles LRZ StartNewLevel. The common ROM return `loc_C4CC` clears
 all 32 bits of `Collected_special_ring_array`, including zero Save_pointer and
 SK-alone branches; generic progression persistence, seamless loads, death/reload,
 and special-stage/lives saves preserve their distinct semantics. The mask already
-belongs to captured game state. Native clears after SRAM writing; Java clears
-before its asynchronous persistence request because that payload omits the mask.
-This does not claim identical SRAM ordering.
+belongs to captured game state. Special Stage saves persist its low 16 bits and
+the Chaos Special Stage rotation. Ordinary slot loads restore both. Completed-save
+zone selection clears the ring mask. Legacy JSON slots without these fields start
+with no collected rings and the initial rotation. Stock zone saves resume at the
+zone start, including the native Hidden Palace and Knuckles Sky Sanctuary acts.
+Checkpoints remain session-only.
+
+Native full SaveGame clears after SRAM writing. Java clears before capturing its
+asynchronous persistence request, so the next-zone payload also contains a zero
+mask. This does not claim identical SRAM ordering.
 
 ### Rationale
 
