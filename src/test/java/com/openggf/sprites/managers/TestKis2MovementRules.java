@@ -57,6 +57,63 @@ class TestKis2MovementRules {
     }
 
     @Test
+    void activeGlideHalvesSpeedStrictlyAboveNativeTopBoundary() throws Exception {
+        for (GameRules gameRules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(gameRules);
+            for (int minimum : new int[]{0, 0x100, 0x7FF8, -0x110, -0x100}) {
+                com.openggf.game.GameServices.camera().setMinY((short) minimum);
+                short boundary = (short) (minimum + 0x10);
+                for (int delta : new int[]{-1, 0, 1}) {
+                    for (boolean left : new boolean[]{false, true}) {
+                        player.setDoubleJumpFlag(1);
+                        player.setDoubleJumpProperty((byte) (left ? 0x80 : 0));
+                        player.setCentreY((short) (boundary + delta));
+                        player.setGSpeed((short) 0x401); // Accelerates to odd $405 before the check.
+                        player.setYSpeed((short) 0x80);
+                        input(false, false, false, false, true, false);
+                        invoke("updateKnucklesGlide");
+                        boolean halve = minimum != -0x100 && player.getCentreY() < boundary;
+                        int nativeX = left ? -0x405 : 0x405;
+                        assertEquals(halve ? nativeX >> 1 : nativeX, player.getXSpeed(),
+                                "X at minimum " + minimum + " delta " + delta);
+                        assertEquals(halve ? 0x202 : 0x405, player.getGSpeed());
+                        assertEquals(0x60, player.getYSpeed(), "Parachute update precedes the boundary check");
+                        assertEquals((short) (boundary + delta), player.getCentreY(), "Speed control does not move Y");
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void topBoundaryAppliesAfterSlowFallGravityAndDoesNotAffectOtherGlideStates() throws Exception {
+        com.openggf.game.GameServices.camera().setMinY((short) 0);
+        for (GameRules gameRules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(gameRules);
+            player.setDoubleJumpFlag(1);
+            player.setDoubleJumpProperty((byte) 0);
+            player.setCentreY((short) 15);
+            player.setGSpeed((short) 0x3FF);
+            player.setYSpeed((short) -1);
+            input(false, false, false, false, true, false);
+            invoke("updateKnucklesGlide");
+            assertEquals(0x203, player.getGSpeed(), "Low-speed +8 precedes ASR");
+            assertEquals(0x203, player.getXSpeed());
+            assertEquals(0x1F, player.getYSpeed());
+            for (int state : new int[]{0, 2}) {
+                player.setDoubleJumpFlag(state);
+                player.setXSpeed((short) -0x405);
+                player.setGSpeed((short) 0x405);
+                player.setYSpeed((short) 0x80);
+                invoke("updateKnucklesGlide");
+                assertEquals(-0x405, player.getXSpeed());
+                assertEquals(0x405, player.getGSpeed());
+                assertEquals(0x80, player.getYSpeed());
+            }
+        }
+    }
+
+    @Test
     void nonFlatGlideLandingResetsNativeAbilityAnimationsButPreservesLowerOnes() throws Exception {
         for (GameRules gameRules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
             rules(gameRules);
