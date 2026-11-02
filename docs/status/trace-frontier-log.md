@@ -122787,6 +122787,7 @@ row, against the same rows recorded on `36aaddb37` (one temporary copy-on-write 
 | Same, solo Tails 800 | `d84b25bd8` | parts at 6847 after a stale `Status_OnObj` from the carrier jump at 3340 |
 | Native SSZ1 `hpz_completerun`, Sonic airborne with `Status_OnObj` | native | 13 occurrences, each exactly one frame (3243 and 3314 at the same carrier) |
 | Exact repair, 12 routes | rotating-platform fix | engine-qualified with one or two edited rows; P1 matches `36aaddb37` exactly after the rejoin |
+| Native check, 5 Sonic+Tails routes (`route_native_check.py`, fillers before 1958-1962) | `f00e91ec4` | native == engine in every P1/P2 field through route row 1968; first error row 1969 `P1.y` native 3064 / engine 3067 (engine lands on `Obj_SSZFloatingPlatform` at `d0 = 0`, which `loc_1E45A` rejects) |
 
 The solo-Tails "steady 11-16 px from 2971" is the 1366 bridge residue: 768 `x_sub` units survive
 the wall at x 1141, cross a pixel on the slope at 2879, shift the wall-zeroing phase at 2898-2900,
@@ -122800,6 +122801,6 @@ pre-fix carrier). The two smoke reds are green on the repaired routes:
 `TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`
 (`python3 tools/testing/maven_queue.py --normal -Dmse=off -Ds3k.rom.path=<s3k.gen> -Dtest=... test`,
 `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`; 28 tests, 0 failures, 0 skips, with the
-other SSZ1 route consumers and the route guards).
+other SSZ1 route consumers and the route guards); `-Pguards` 822 tests, 0 failures, 0 skips.
 [Design record](../architecture/designs/2026-11-02-shared-route-planner.md#deviations),
 [SSZ1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#exact-route-repair-and-native-check-2026-11-02).

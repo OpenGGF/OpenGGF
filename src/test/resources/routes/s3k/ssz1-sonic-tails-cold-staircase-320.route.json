@@ -48,8 +48,41 @@
     "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd",
     "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
     "rows" : 2779
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : false,
+    "divergedRow" : 1969,
+    "reason" : "P1.y native 3064 engine 3067",
+    "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd",
+    "environment" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+    "rows" : 2779
   } ],
   "native" : {
-    "lag" : [ ]
+    "entry" : {
+      "movie" : "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
+      "prefixRows" : 396719,
+      "inputHash" : "7f3c01bc9916da21eee2a4e7cedf38f6aed7deb3df69880665caf834b1b8f4df"
+    },
+    "lag" : [ {
+      "beforeRow" : 1958,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd"
+    }, {
+      "beforeRow" : 1959,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd"
+    }, {
+      "beforeRow" : 1960,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd"
+    }, {
+      "beforeRow" : 1961,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd"
+    }, {
+      "beforeRow" : 1962,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "daf72d00b83218401202d097afb350469d1a9d5bffbd253eb7f0d6df356ff8dd"
+    } ]
   }
 }

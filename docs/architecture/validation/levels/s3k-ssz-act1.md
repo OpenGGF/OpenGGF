@@ -4816,5 +4816,17 @@ the CPU Tails' different position; no single-row P1 edit re-synchronises it). Th
 movies and stay **inherited gaps**.
 
 The solo routes have no native entry movie (the only native SSZ1 entry is the Sonic+Tails
-complete run), so their native check is unsupported. The Sonic+Tails routes are checked natively with
-`tools/traces/route_native_check.py`; the results are recorded below as they complete.
+complete run), so their native check is unsupported. The five Sonic+Tails routes were checked
+natively with `tools/traces/route_native_check.py` (TraceChaser `703bd92`, BizHawk 2.11): the
+complete-run movie's rows `[0, 396719)`, then the route's rows with one filler per observed lag
+frame. Native lags every other frame from route row 1958 (five lag frames, fillers before rows
+1958-1962), and with those fillers native and engine agree in every P1/P2 field through route row
+1968. At 1969 the engine lands P1 on `Obj_SSZFloatingPlatform` (1536, 3104) one frame early:
+P1's bottom plus four is exactly the platform top (`d0 = 0`), which `SolidObjectTop_1P`'s new
+landing check (`loc_1E45A`, sonic3k.asm:42044-42055: `bhi`, then `cmpi.w #-$10,d0 / blo`)
+rejects; native lands at 1970 with `d0 = -2`. The engine accepts `d0 = 0` for this object because
+it does not opt into `rejectsZeroDistanceTopSolidLanding()` (the shared S3K path keeps zero as a
+landing). `36aaddb37` landed at 1969 too, so this is an older engine difference, not part of the
+regression above. The five manifests carry the entry, the five lag facts and a `BIZHAWK` stamp:
+**engine-qualified, native-diverged at row 1969**. Fixing the landing would move the repaired
+routes off their `36aaddb37` run at 1969, so it is left for the solid-contact owner.

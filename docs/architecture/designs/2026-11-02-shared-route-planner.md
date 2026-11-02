@@ -462,14 +462,24 @@ Recorded during implementation; each states what the sketch said, what was built
   cannot run BizHawk. `tools/traces/route_native_check.py` composes the entry prefix, the route's
   exported rows and one filler per observed lag frame, captures each pass with TraceChaser's
   headless harness, and compares both players with the route's engine track; lag facts and the
-  verdict are then written into the manifest as native facts and a `BIZHAWK` stamp. Only routes
-  with a native entry (the Sonic+Tails complete run) can be checked; solo routes stay
-  `UNSUPPORTED_INLET`.
+  verdict are then written into the manifest as native facts and a `BIZHAWK` stamp
+  (`RouteNativeStampTool`). Only routes with a native entry (the Sonic+Tails complete run) can be
+  checked; solo routes stay `UNSUPPORTED_INLET`. A lag frame is a row where the ROM's
+  `Lag_frame_count` rose (the game resets it after each polled frame); one capture yields every lag
+  up to the first input change, because a lag that consumed a route row only shifts later polls by
+  one row. The SSZ1 Sonic+Tails routes lag every other frame from row 1958 (five fillers) and then
+  agree with the engine in every player field through row 1968; at 1969 the engine lands P1 on
+  `Obj_SSZFloatingPlatform` at zero penetration, which `SolidObjectTop_1P` (`loc_1E45A`) rejects.
+  The five manifests record "engine-qualified, native-diverged at row 1969". No SSZ1 test carried a
+  `NATIVE_LAG_FRAMES` list; the HPZ one stays until its routes migrate.
 
 ## Next step
 
 Steps 1-4 are delivered. Step 6 repaired and manifested twelve of the sixteen SSZ1 routes by exact
-re-synchronisation and switched their consumers to the manifests. Open: the four unrepaired SSZ1
+re-synchronisation, switched their consumers to the manifests and native-checked the five
+Sonic+Tails ones (diverged at 1969 on the floating platform's zero-penetration landing). Open: that
+landing (owned by the solid-contact work; fixing it moves the routes off their recorded run at
+1969, so they would then need a goal-authored continuation), the four unrepaired SSZ1
 movies (two already died on `36aaddb37`, two need the 800-wide GHZ fight authored as a goal
 program because the CPU sidekick cannot be re-synchronised), the `lrz-*-hpz-ssz1*` campaign
 routes, the remaining route consumers' manifests, and steps 5a and 5b.
