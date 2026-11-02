@@ -84,6 +84,10 @@
   "@editor.route_tape.action_redo": {
     "description": "Route tape editor: Redo"
   },
+  "editor.route_tape.action_repair": "Repair",
+  "@editor.route_tape.action_repair": {
+    "description": "Route tape editor: Repair"
+  },
   "editor.route_tape.action_replay": "Replay",
   "@editor.route_tape.action_replay": {
     "description": "Route tape editor: Replay"
@@ -107,6 +111,10 @@
   "editor.route_tape.action_undo": "Undo",
   "@editor.route_tape.action_undo": {
     "description": "Route tape editor: Undo"
+  },
+  "editor.route_tape.action_use_attempt": "Use best attempt",
+  "@editor.route_tape.action_use_attempt": {
+    "description": "Route tape editor: Use best attempt"
   },
   "editor.route_tape.button_down": "Down",
   "@editor.route_tape.button_down": {
@@ -188,6 +196,10 @@
   "@editor.route_tape.field_count": {
     "description": "Route tape editor: Rows"
   },
+  "editor.route_tape.field_first_editable": "First editable row",
+  "@editor.route_tape.field_first_editable": {
+    "description": "Route tape editor: First editable row"
+  },
   "editor.route_tape.field_game": "Game",
   "@editor.route_tape.field_game": {
     "description": "Route tape editor: Game"
@@ -200,9 +212,29 @@
   "@editor.route_tape.field_manifest": {
     "description": "Route tape editor: Route manifest"
   },
+  "editor.route_tape.field_max_authored": "Most rows to search",
+  "@editor.route_tape.field_max_authored": {
+    "description": "Route tape editor: Most rows to search"
+  },
+  "editor.route_tape.field_max_windows": "Most repair windows",
+  "@editor.route_tape.field_max_windows": {
+    "description": "Route tape editor: Most repair windows"
+  },
   "editor.route_tape.field_movie": "BizHawk movie",
   "@editor.route_tape.field_movie": {
     "description": "Route tape editor: BizHawk movie"
+  },
+  "editor.route_tape.field_reference": "Reference",
+  "@editor.route_tape.field_reference": {
+    "description": "Route tape editor: Reference"
+  },
+  "editor.route_tape.field_reference_path": "Reference file",
+  "@editor.route_tape.field_reference_path": {
+    "description": "Route tape editor: Reference file"
+  },
+  "editor.route_tape.field_reference_rows": "Movie rows to use",
+  "@editor.route_tape.field_reference_rows": {
+    "description": "Route tape editor: Movie rows to use"
   },
   "editor.route_tape.field_row": "Row",
   "@editor.route_tape.field_row": {
@@ -223,6 +255,14 @@
   "editor.route_tape.field_width": "Width",
   "@editor.route_tape.field_width": {
     "description": "Route tape editor: Width"
+  },
+  "editor.route_tape.field_window_from": "Follow reference from row",
+  "@editor.route_tape.field_window_from": {
+    "description": "Route tape editor: Follow reference from row"
+  },
+  "editor.route_tape.field_window_to": "Until row (blank: end)",
+  "@editor.route_tape.field_window_to": {
+    "description": "Route tape editor: Until row (blank: end)"
   },
   "editor.route_tape.field_zone": "Zone index",
   "@editor.route_tape.field_zone": {
@@ -436,6 +476,10 @@
       }
     }
   },
+  "editor.route_tape.native_check_needed": "Needed for these rows",
+  "@editor.route_tape.native_check_needed": {
+    "description": "Route tape editor: Needed for these rows"
+  },
   "editor.route_tape.native_diverged": "Diverged at row {row}: {reason}",
   "@editor.route_tape.native_diverged": {
     "description": "Route tape editor: Diverged at row <row>: <reason>",
@@ -518,6 +562,10 @@
   "@editor.route_tape.native_passed": {
     "description": "Route tape editor: Passed"
   },
+  "editor.route_tape.no_attempt": "No stopped repair attempt to use.",
+  "@editor.route_tape.no_attempt": {
+    "description": "Route tape editor: No stopped repair attempt to use."
+  },
   "editor.route_tape.no_route": "Open a route first.",
   "@editor.route_tape.no_route": {
     "description": "Route tape editor: Open a route first."
@@ -567,6 +615,84 @@
   "editor.route_tape.qualification_unsupported": "Cannot replay here",
   "@editor.route_tape.qualification_unsupported": {
     "description": "Route tape editor: Cannot replay here"
+  },
+  "editor.route_tape.reference_other": "Another route, script or movie",
+  "@editor.route_tape.reference_other": {
+    "description": "Route tape editor: Another route, script or movie"
+  },
+  "editor.route_tape.reference_rows_needed": "Name how many movie rows to use.",
+  "@editor.route_tape.reference_rows_needed": {
+    "description": "Route tape editor: Name how many movie rows to use."
+  },
+  "editor.route_tape.reference_self": "This route's saved rows",
+  "@editor.route_tape.reference_self": {
+    "description": "Route tape editor: This route's saved rows"
+  },
+  "editor.route_tape.reference_unsaved": "Save the route first, or choose another reference.",
+  "@editor.route_tape.reference_unsaved": {
+    "description": "Route tape editor: Save the route first, or choose another reference."
+  },
+  "editor.route_tape.repair_edited": "Rows changed since the last repair.",
+  "@editor.route_tape.repair_edited": {
+    "description": "Route tape editor: Rows changed since the last repair."
+  },
+  "editor.route_tape.repair_first_range": "The first editable row must be inside the route.",
+  "@editor.route_tape.repair_first_range": {
+    "description": "Route tape editor: The first editable row must be inside the route."
+  },
+  "editor.route_tape.repair_stale": "Rows changed while the repair ran; repair again.",
+  "@editor.route_tape.repair_stale": {
+    "description": "Route tape editor: Rows changed while the repair ran; repair again."
+  },
+  "editor.route_tape.repair_stopped": "Repair stopped at row {row}: {reason}",
+  "@editor.route_tape.repair_stopped": {
+    "description": "Route tape editor: Repair stopped at row <row>: <reason>",
+    "placeholders": {
+      "row": {
+        "type": "String",
+        "example": "3"
+      },
+      "reason": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.repair_summary": "Kept {kept} of {original} original rows ({share}%); searched {searched} rows in {windows} windows",
+  "@editor.route_tape.repair_summary": {
+    "description": "Route tape editor: Kept <kept> of <original> original rows (<share>%); searched <searched> rows in <windows> windows",
+    "placeholders": {
+      "kept": {
+        "type": "String",
+        "example": "3"
+      },
+      "original": {
+        "type": "String",
+        "example": "3"
+      },
+      "share": {
+        "type": "String",
+        "example": "3"
+      },
+      "searched": {
+        "type": "String",
+        "example": "3"
+      },
+      "windows": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.status_attempt": "Using the repair's best attempt ({rows} rows); it is not qualified.",
+  "@editor.route_tape.status_attempt": {
+    "description": "Route tape editor: Using the repair's best attempt (<rows> rows); it is not qualified.",
+    "placeholders": {
+      "rows": {
+        "type": "String",
+        "example": "3"
+      }
+    }
   },
   "editor.route_tape.status_cancelled": "Route job cancelled.",
   "@editor.route_tape.status_cancelled": {
@@ -619,6 +745,10 @@
         "example": "3"
       }
     }
+  },
+  "editor.route_tape.status_repairing": "Repairing in a separate worker.",
+  "@editor.route_tape.status_repairing": {
+    "description": "Route tape editor: Repairing in a separate worker."
   },
   "editor.route_tape.status_replay_failed": "Replay stopped at row {row}: {reason}",
   "@editor.route_tape.status_replay_failed": {
@@ -694,6 +824,10 @@
   "@editor.route_tape.subtitle_open": {
     "description": "Route tape editor: Choose a .route.json manifest; its .script sits beside it."
   },
+  "editor.route_tape.subtitle_repair": "Keeps rows where play still tracks the reference and searches only where it drifts.",
+  "@editor.route_tape.subtitle_repair": {
+    "description": "Route tape editor: Keeps rows where play still tracks the reference and searches only where it drifts."
+  },
   "editor.route_tape.template_copy": "Copy cursor row",
   "@editor.route_tape.template_copy": {
     "description": "Route tape editor: Copy cursor row"
@@ -721,6 +855,10 @@
   "editor.route_tape.title_open": "Open route",
   "@editor.route_tape.title_open": {
     "description": "Route tape editor: Open route"
+  },
+  "editor.route_tape.title_repair": "Repair route",
+  "@editor.route_tape.title_repair": {
+    "description": "Route tape editor: Repair route"
   },
   "editor.route_tape.title_route": "Route",
   "@editor.route_tape.title_route": {

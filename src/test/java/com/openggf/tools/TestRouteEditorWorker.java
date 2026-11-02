@@ -107,6 +107,31 @@ class TestRouteEditorWorker {
     }
 
     @Test
+    void aRepairThatStillTracksItsReferenceKeepsEveryRowAndReportsTheSpans() throws Exception {
+        Path manifest = RouteTapeFixtures.write(dir, "ehz", "90 R\n4 R+A\n26 R\n");
+        RouteArtifact original = RouteFiles.readDraft(manifest);
+        var bytes = new ByteArrayOutputStream();
+        try (var out = new PrintStream(bytes, true, StandardCharsets.UTF_8)) {
+            RouteEditorWorker.run(new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.REPAIR,
+                    RouteCodec.formatTransport(original), null, false, RouteCodec.formatTransport(original),
+                    new RouteEditorProtocol.Repair(60, 60, 4, 60, -1), roms()), out);
+        }
+        var records = new ArrayList<RouteEditorProtocol.Response>();
+        for (String line : bytes.toString(StandardCharsets.UTF_8).lines().toList()) {
+            records.add(RouteEditorProtocol.decodeResponse(line));
+        }
+        var result = records.getLast().result();
+        assertEquals(RouteEditorProtocol.Verdict.SOLVED, result.verdict(), result.detail());
+        assertEquals(120, result.row(), "The report counts the original's rows");
+        String rows = records.stream().filter(r -> r.rows() != null).findFirst().orElseThrow().rows();
+        assertEquals(original.tape(), RouteFiles.tapeFromScript(rows), "Rows that still track are kept verbatim");
+        int covered = records.stream().filter(r -> r.span() != null).mapToInt(r -> r.span().length()).sum();
+        assertEquals(120, covered, "Spans cover every output row once");
+        assertTrue(records.stream().anyMatch(r -> r.span() != null && r.span().kind().equals("KEPT")));
+        assertTrue(records.stream().anyMatch(r -> r.plan() != null), "Planner progress streams to the editor");
+    }
+
+    @Test
     void aMissingRomIsReportedAsUnsupportedNotAsAPassOrACrash() throws Exception {
         Path manifest = RouteTapeFixtures.write(dir, "ehz", "4 R\n");
         var records = run(RouteEditorProtocol.Kind.SAVE, RouteFiles.readDraft(manifest), dir.resolve("ehz"), true, Map.of());

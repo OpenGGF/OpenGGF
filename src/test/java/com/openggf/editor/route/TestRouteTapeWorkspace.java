@@ -189,6 +189,7 @@ class TestRouteTapeWorkspace {
         assertEquals(1, lag.size(), "Lag recorded against other content is not drawn on these rows");
         assertEquals(4, lag.getFirst().from());
         assertEquals(List.of(4, 7), workspace.factRows(), "Native lag and the native divergence are both facts");
+        assertFalse(workspace.needsNativeCheck());
         workspace.invoke(RouteTapeWorkspace.Action.NEXT_FACT);
         assertEquals(4, workspace.cursor());
         workspace.invoke(RouteTapeWorkspace.Action.NEXT_FACT);
@@ -196,6 +197,8 @@ class TestRouteTapeWorkspace {
 
         workspace.invoke(RouteTapeWorkspace.Action.TOGGLE);
         assertEquals(RouteTapeWorkspace.Qualification.EDITED, workspace.qualification());
+        assertTrue(workspace.needsNativeCheck(), "Edited rows need a fresh native check");
+        assertEquals("Needed for these rows", workspace.nativeFacts().getLast()[1]);
         assertEquals("Diverged at row 7: x (other content)", workspace.nativeFacts().get(2)[1],
                 "The native verdict stays visible, marked as describing other content");
         assertTrue(workspace.timeline().markers().isEmpty());
@@ -237,6 +240,72 @@ class TestRouteTapeWorkspace {
         assertTrue(RouteFiles.read(qualified).engineQualified());
         assertThrows(IllegalArgumentException.class,
                 () -> workspace.create(dir.resolve("plain.json"), RouteTapeFixtures.ehz(), 1));
+    }
+
+    @Test
+    void solvedRepairsAdoptAsOneUndoStepWithSpansAndStaleOrStoppedOnesNeverReplaceRows() throws IOException {
+        Path manifest = RouteTapeFixtures.write(dir, "ehz", "40 R\n");
+        var host = new Host();
+        var workspace = new RouteTapeWorkspace(host);
+        workspace.open(manifest);
+        workspace.setCursor(20);
+        workspace.invoke(RouteTapeWorkspace.Action.REPAIR);
+        assertNotNull(workspace.menu().formView());
+        workspace.menu().setValue("authored", "90");
+        workspace.menu().submit();
+        assertNull(workspace.menu().error(), workspace.menu().error());
+        var request = host.requests.getLast();
+        assertEquals(RouteTapeJob.Kind.REPAIR, request.kind());
+        assertEquals(new RouteTapeJob.RepairBounds(20, 90, 24, 20, -1), request.repair());
+        assertEquals(RouteFiles.readDraft(manifest), request.reference(), "This route's saved rows are the reference");
+        String original = workspace.workingContent();
+
+        var repaired = RouteFiles.tapeFromScript("20 R\n6 R+A\n14 R\n");
+        var outcome = new RouteTapeJob.RepairOutcome(true, repaired, List.of(
+                new RouteTapeJob.RepairSpan(RouteTapeTimeline.MarkerKind.KEPT, 0, 0, 20),
+                new RouteTapeJob.RepairSpan(RouteTapeTimeline.MarkerKind.SEARCHED, -1, 20, 6),
+                new RouteTapeJob.RepairSpan(RouteTapeTimeline.MarkerKind.KEPT, 26, 26, 14)), 40, "kept 34 of 40");
+        // The planner's solved artifact: the original launch over the repaired rows, no goal program.
+        String solvedContent = com.openggf.route.RouteArtifact.of(RouteFiles.readDraft(manifest).launch(), repaired,
+                new com.openggf.route.Provenance("planner", "", "", List.of())).content().toString();
+        host.update.set(new RouteTapeJob.Update(1, RouteTapeJob.Phase.SOLVED, RouteTapeJob.Kind.REPAIR, 2, 2, 1, 1,
+                "kept 34 of 40", solvedContent, 40, null, null, outcome));
+        tick(workspace);
+        assertEquals(repaired, workspace.tape(), "A solved repair's rows replace the working rows");
+        assertEquals(RouteTapeWorkspace.Qualification.PASSES_UNSAVED, workspace.qualification(),
+                "The planner's cold replay qualified exactly these rows; they are not saved yet");
+        assertTrue(workspace.repairText().contains("34") && workspace.repairText().contains("85%"), workspace.repairText());
+        assertTrue(workspace.timeline().markers().stream().anyMatch(m -> m.kind() == RouteTapeTimeline.MarkerKind.SEARCHED
+                && m.from() == 20 && m.to() == 26));
+        workspace.invoke(RouteTapeWorkspace.Action.UNDO);
+        assertEquals(original, workspace.workingContent(), "Adopting a repair is one undo step");
+        assertFalse(workspace.repairCurrent());
+        assertTrue(workspace.timeline().markers().isEmpty(), "Spans describe only the repaired rows");
+
+        workspace.invoke(RouteTapeWorkspace.Action.REDO);
+        host.update.set(null);
+        workspace.startRepair(RouteFiles.readDraft(manifest), new RouteTapeJob.RepairBounds(0, 10, 1, 0, -1));
+        workspace.setTrack(0);
+        workspace.invoke(RouteTapeWorkspace.Action.TOGGLE);
+        var editedRows = workspace.tape();
+        host.update.set(new RouteTapeJob.Update(2, RouteTapeJob.Phase.SOLVED, RouteTapeJob.Kind.REPAIR, 2, 2, 1, 1,
+                "kept", solvedContent, 40, null, null, outcome));
+        tick(workspace);
+        assertEquals(editedRows, workspace.tape(), "Rows edited while a repair ran are never replaced");
+
+        host.update.set(null);
+        workspace.startRepair(RouteFiles.readDraft(manifest), new RouteTapeJob.RepairBounds(0, 10, 1, 0, -1));
+        var attempt = RouteFiles.tapeFromScript("12 R\n");
+        host.update.set(new RouteTapeJob.Update(3, RouteTapeJob.Phase.STOPPED, RouteTapeJob.Kind.REPAIR, 2, 2, 1, 1,
+                "BUDGET_EXHAUSTED: no progress", workspace.workingContent(), 12, null, null,
+                new RouteTapeJob.RepairOutcome(false, attempt, List.of(), 0, "BUDGET_EXHAUSTED: no progress")));
+        tick(workspace);
+        assertEquals(editedRows, workspace.tape(), "A stopped repair changes nothing by itself");
+        assertTrue(workspace.repairText().contains("row 12") && workspace.repairText().contains("BUDGET_EXHAUSTED"),
+                workspace.repairText());
+        workspace.invoke(RouteTapeWorkspace.Action.USE_ATTEMPT);
+        assertEquals(attempt, workspace.tape(), "The best attempt can be inspected as working rows");
+        assertEquals(RouteTapeWorkspace.Qualification.EDITED, workspace.qualification());
     }
 
     @Test

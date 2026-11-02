@@ -41,7 +41,9 @@ public final class RouteTapeTimeline {
         /** Output rows a repair searched. */
         SEARCHED,
         /** Output rows a repair kept verbatim from the original. */
-        KEPT
+        KEPT,
+        /** Output rows a repair took verbatim from its reference rather than the original. */
+        REFERENCE
     }
 
     /** Rows {@code [from, to)}; a single-row fact has {@code to == from + 1}. */

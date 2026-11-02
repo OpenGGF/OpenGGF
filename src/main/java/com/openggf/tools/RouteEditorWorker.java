@@ -1,6 +1,15 @@
 package com.openggf.tools;
 
+import com.openggf.route.AuthorHints;
 import com.openggf.route.Cancellation;
+import com.openggf.route.PlanResult;
+import com.openggf.route.ReferencePath;
+import com.openggf.route.RepairReport;
+import com.openggf.route.RepairScope;
+import com.openggf.route.RouteHostException;
+import com.openggf.route.RoutePlanner;
+import com.openggf.route.RouteTask;
+import com.openggf.route.SearchBudget;
 import com.openggf.route.PlayerView;
 import com.openggf.route.ReplayResult;
 import com.openggf.route.RouteArtifact;
@@ -48,6 +57,10 @@ public final class RouteEditorWorker {
 
     static void run(RouteEditorProtocol.Request request, PrintStream output) throws IOException {
         RouteArtifact route = RouteCodec.parseTransport(request.route());
+        if (request.kind() == RouteEditorProtocol.Kind.REPAIR) {
+            repair(request, route, output);
+            return;
+        }
         var replay = new RouteReplay(EngineRouteHosts.withRoms(request.roms()));
         String content = route.content().toString();
         int rows = route.tape().size();
@@ -79,6 +92,57 @@ public final class RouteEditorWorker {
             case ReplayResult.Unsupported unsupported -> output.println(RouteEditorProtocol.result(
                     new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.UNSUPPORTED, 0, unsupported.reason(),
                             content)));
+        }
+    }
+
+    /**
+     * Repairs {@code original} against the reference route through the one planner. A solved repair
+     * returns its rows and kept/searched spans; a stop returns its furthest attempt for inspection.
+     * Nothing is written: the editor adopts rows and saves through a qualifying replay.
+     */
+    private static void repair(RouteEditorProtocol.Request request, RouteArtifact original, PrintStream output)
+            throws IOException {
+        RouteArtifact referenceRoute = RouteCodec.parseTransport(request.reference());
+        var hosts = EngineRouteHosts.withRoms(request.roms());
+        var bounds = request.repair();
+        ReferencePath reference;
+        try {
+            reference = ReferencePath.extract(hosts, referenceRoute.launch(), referenceRoute.tape(),
+                    referenceRoute.tape().size());
+        } catch (RouteHostException refused) {
+            output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
+                    RouteEditorProtocol.Verdict.UNSUPPORTED, 0, refused.getMessage(), original.content().toString())));
+            return;
+        }
+        int to = bounds.windowTo() < 0 ? reference.size() - 1 : Math.min(bounds.windowTo(), reference.size() - 1);
+        var task = new RouteTask.Repair(original, reference.window(Math.min(bounds.windowFrom(), to), to),
+                new RepairScope(bounds.firstEditable(), bounds.maxAuthoredRows(), bounds.maxWindows()),
+                AuthorHints.referenceFollowing(), SearchBudget.referenceRepair());
+        PlanResult result = new RoutePlanner(hosts).plan(task, Cancellation.NONE, progress ->
+                output.println(RouteEditorProtocol.plan(new RouteEditorProtocol.Plan(progress.phase(),
+                        progress.expansions(), progress.bestRow(), progress.bestProgress(), progress.target()))));
+        switch (result) {
+            case PlanResult.Solved solved -> {
+                for (RepairReport.Span span : solved.repair().spans()) {
+                    output.println(RouteEditorProtocol.span(switch (span) {
+                        case RepairReport.Span.Original kept -> new RouteEditorProtocol.Span("KEPT", kept.sourceStart(),
+                                kept.outputStart(), kept.length());
+                        case RepairReport.Span.Reference followed -> new RouteEditorProtocol.Span("REFERENCE",
+                                followed.sourceStart(), followed.outputStart(), followed.length());
+                        case RepairReport.Span.Authored searched -> new RouteEditorProtocol.Span("SEARCHED", -1,
+                                searched.outputStart(), searched.length());
+                    }));
+                }
+                output.println(RouteEditorProtocol.rows(RouteFiles.scriptText(solved.route().tape())));
+                output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.SOLVED,
+                        solved.repair().originalRows(), solved.repair().summary().lines().findFirst().orElse(""),
+                        solved.route().content().toString())));
+            }
+            case PlanResult.Stopped stopped -> {
+                output.println(RouteEditorProtocol.rows(RouteFiles.scriptText(stopped.bestDraft())));
+                output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(RouteEditorProtocol.Verdict.STOPPED,
+                        stopped.furthestRow(), stopped.reason() + ": " + stopped.detail(), original.content().toString())));
+            }
         }
     }
 

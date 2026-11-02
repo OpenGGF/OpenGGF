@@ -451,7 +451,15 @@ level, the replayed path is drawn over it and the view follows the cursor.
 **Save qualified** (`Ctrl+S`) replays first and writes the files only after a
 passing replay. **Save draft** keeps unfinished work: the manifest is marked as a
 draft, tests and native checks refuse it, and a draft never replaces a qualified
-route. The panel lists the route's goals, which replay checks on every row. **Export BK2** writes a new BizHawk movie of the rows and never
+route. The panel lists the route's goals, which replay checks on every row.
+
+**Repair** keeps the rows before the first editable row, then follows a reference
+(the route's saved rows, another route, a route script or a BizHawk movie) and
+searches new rows only where play drifts from it. A solved repair replaces the
+working rows as one undo step, reports how many original rows it kept, and marks
+kept and searched spans on the timeline; it still needs **Save qualified**. A
+stopped repair names the furthest row it reached and offers **Use best attempt**
+to inspect that unqualified attempt. **Export BK2** writes a new BizHawk movie of the rows and never
 overwrites a file. The panel lists the manifest's native observations, such as
 lag frames seen on BizHawk; they are display only and never change a replay.
 

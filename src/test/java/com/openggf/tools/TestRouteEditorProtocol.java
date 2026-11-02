@@ -27,6 +27,17 @@ class TestRouteEditorProtocol {
         assertThrows(IOException.class, () -> RouteEditorProtocol.decodeResponse("verdict PASSED"));
         assertThrows(IOException.class, () -> new RouteEditorProtocol.LineReader(new StringReader("x".repeat(100) + "\n"))
                 .readLine(10));
+        var repair = new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.REPAIR, "route text", null, false,
+                "reference\ntext", new RouteEditorProtocol.Repair(1366, 360, 24, 1366, -1), Map.of());
+        assertEquals(repair, RouteEditorProtocol.decodeRequest(new RouteEditorProtocol.LineReader(
+                new StringReader(RouteEditorProtocol.encode(repair)))));
+        assertThrows(IllegalArgumentException.class, () -> new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.REPAIR,
+                "route", null, false, Map.of()), "A repair names its reference and bounds");
+        var span = new RouteEditorProtocol.Span("SEARCHED", -1, 1366, 42);
+        assertEquals(span, RouteEditorProtocol.decodeResponse(RouteEditorProtocol.span(span)).span());
+        var plan = new RouteEditorProtocol.Plan("search", 17, 1400, 1380, 3528);
+        assertEquals(plan, RouteEditorProtocol.decodeResponse(RouteEditorProtocol.plan(plan)).plan());
+        assertEquals("3 R\n", RouteEditorProtocol.decodeResponse(RouteEditorProtocol.rows("3 R\n")).rows());
         assertEquals(1, RouteEditorProtocol.pathStride(100_000));
         assertEquals(2, RouteEditorProtocol.pathStride(100_001));
     }

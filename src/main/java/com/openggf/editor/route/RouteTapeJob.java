@@ -1,7 +1,9 @@
 package com.openggf.editor.route;
 
+import com.openggf.route.InputTape;
 import com.openggf.route.RouteArtifact;
 import com.openggf.route.RouteCodec;
+import com.openggf.route.RouteFiles;
 import com.openggf.tools.RouteEditorProtocol;
 
 import java.io.BufferedWriter;
@@ -25,21 +27,76 @@ import java.util.function.Supplier;
  * generation; a cancelled or superseded job can never publish a result.
  */
 public final class RouteTapeJob implements AutoCloseable {
-    public enum Phase { IDLE, RUNNING, PASSED, FAILED, UNSUPPORTED, ERROR, CANCELLED }
+    public enum Phase { IDLE, RUNNING, PASSED, FAILED, UNSUPPORTED, ERROR, CANCELLED, SOLVED, STOPPED }
 
-    /** Replay only, or replay and then write the route when it passes. */
-    public enum Kind { REPLAY, SAVE }
+    /** Replay only; replay and then write the route when it passes; or repair it against a reference. */
+    public enum Kind { REPLAY, SAVE, REPAIR }
+
+    /**
+     * Repair bounds: rows {@code [0, firstEditable)} stay verbatim; the reference is followed from
+     * its index {@code windowFrom} until {@code windowTo} ({@code -1}: its last row).
+     */
+    public record RepairBounds(int firstEditable, int maxAuthoredRows, int maxWindows, int windowFrom, int windowTo) {
+        public RepairBounds {
+            if (firstEditable < 0 || maxAuthoredRows < 1 || maxWindows < 1 || windowFrom < 0 || windowTo < -1) {
+                throw new IllegalArgumentException("invalid repair bounds");
+            }
+        }
+    }
+
+    /** One output span of a repair, in output rows: kept original rows, followed reference rows or searched rows. */
+    public record RepairSpan(RouteTapeTimeline.MarkerKind kind, int sourceStart, int outputStart, int length) { }
+
+    /**
+     * What a repair produced. A solved repair carries its qualified rows and spans; a stopped one
+     * carries its furthest attempt, an unqualified diagnostic for inspection.
+     *
+     * @param originalRows the original route's row count (solved)
+     */
+    public record RepairOutcome(boolean solved, InputTape rows, List<RepairSpan> spans, int originalRows, String detail) {
+        public RepairOutcome {
+            spans = List.copyOf(spans);
+        }
+
+        public int keptRows() {
+            return spans.stream().filter(span -> span.kind() == RouteTapeTimeline.MarkerKind.KEPT)
+                    .mapToInt(RepairSpan::length).sum();
+        }
+
+        public int searchedRows() {
+            return spans.stream().filter(span -> span.kind() == RouteTapeTimeline.MarkerKind.SEARCHED)
+                    .mapToInt(RepairSpan::length).sum();
+        }
+
+        /** Kept original rows as a share of the original's length. */
+        public double keptShare() {
+            return originalRows == 0 ? 0 : keptRows() / (double) originalRows;
+        }
+    }
 
     /**
      * @param route   the working route (launch, goals, rows); it travels as codec transport text
      * @param target  for a save: the stem to write
      * @param replace for a save: replace the existing route rather than write a new one
      */
-    public record Request(Kind kind, RouteArtifact route, Path target, boolean replace) {
+    public record Request(Kind kind, RouteArtifact route, Path target, boolean replace, RouteArtifact reference,
+                          RepairBounds repair) {
         public Request {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(route, "route");
             if (kind == Kind.SAVE && target == null) throw new IllegalArgumentException("a save names its target stem");
+            if (kind == Kind.REPAIR && (reference == null || repair == null)) {
+                throw new IllegalArgumentException("a repair names its reference and bounds");
+            }
+        }
+
+        public Request(Kind kind, RouteArtifact route, Path target, boolean replace) {
+            this(kind, route, target, replace, null, null);
+        }
+
+        /** Repairs {@code route}, keeping its rows where play tracks {@code reference}. */
+        public static Request repair(RouteArtifact route, RouteArtifact reference, RepairBounds bounds) {
+            return new Request(Kind.REPAIR, route, null, false, reference, bounds);
         }
     }
 
@@ -50,7 +107,13 @@ public final class RouteTapeJob implements AutoCloseable {
      * @param saved   the written manifest, after a qualified save
      */
     public record Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
-                         String message, String content, int row, RouteTapeOverlay path, Path saved) {
+                         String message, String content, int row, RouteTapeOverlay path, Path saved,
+                         RepairOutcome repair) {
+        public Update(long generation, Phase phase, Kind kind, int pass, int passes, int done, int total,
+                      String message, String content, int row, RouteTapeOverlay path, Path saved) {
+            this(generation, phase, kind, pass, passes, done, total, message, content, row, path, saved, null);
+        }
+
         static Update idle() {
             return new Update(0, Phase.IDLE, null, 0, 0, 0, 0, "", null, -1, null, null);
         }
@@ -127,9 +190,15 @@ public final class RouteTapeJob implements AutoCloseable {
         String content = request.route().content().toString();
         int rows = request.route().tape().size();
         if (task != null && task.isAlive()) throw new IOException("Cancel the current route job before starting another");
-        var wire = new RouteEditorProtocol.Request(request.kind() == Kind.SAVE ? RouteEditorProtocol.Kind.SAVE
-                : RouteEditorProtocol.Kind.REPLAY, RouteCodec.formatTransport(request.route()), request.target(),
-                request.replace(), roms.get());
+        var bounds = request.repair();
+        var wire = new RouteEditorProtocol.Request(switch (request.kind()) {
+            case REPLAY -> RouteEditorProtocol.Kind.REPLAY;
+            case SAVE -> RouteEditorProtocol.Kind.SAVE;
+            case REPAIR -> RouteEditorProtocol.Kind.REPAIR;
+        }, RouteCodec.formatTransport(request.route()), request.target(), request.replace(),
+                request.reference() == null ? null : RouteCodec.formatTransport(request.reference()),
+                bounds == null ? null : new RouteEditorProtocol.Repair(bounds.firstEditable(), bounds.maxAuthoredRows(),
+                        bounds.maxWindows(), bounds.windowFrom(), bounds.windowTo()), roms.get());
         long token = ++generation;
         update = new Update(token, Phase.RUNNING, request.kind(), 1, 1, 0, rows, "Starting the route worker", content,
                 -1, null, null);
@@ -183,6 +252,8 @@ public final class RouteTapeJob implements AutoCloseable {
             var p2 = new ArrayList<RouteTapeOverlay.Point>();
             RouteEditorProtocol.Result result = null;
             Path saved = null;
+            String rowsText = null;
+            var spans = new ArrayList<RepairSpan>();
             try (var input = new RouteEditorProtocol.LineReader(new InputStreamReader(child.getInputStream(), StandardCharsets.UTF_8))) {
                 for (String line; (line = input.readLine(64 * 1024)) != null; ) {
                     var record = RouteEditorProtocol.decodeResponse(line);
@@ -198,6 +269,22 @@ public final class RouteTapeJob implements AutoCloseable {
                         }
                         (point.slot() == 1 ? p1 : p2).add(new RouteTapeOverlay.Point(point.row(), point.epoch(),
                                 point.x(), point.y(), point.air()));
+                    } else if (record.plan() != null) {
+                        var plan = record.plan();
+                        publish(token, new Update(token, Phase.RUNNING, kind, plan.phase().equals("qualify") ? 2 : 1, 2,
+                                Math.max(0, plan.bestProgress()), Math.max(1, plan.target()), plan.phase().equals("qualify")
+                                ? "Qualifying the repaired rows" : "Searching: " + plan.expansions() + " expansions",
+                                content, -1, null, null));
+                    } else if (record.span() != null) {
+                        var span = record.span();
+                        spans.add(new RepairSpan(switch (span.kind()) {
+                            case "KEPT" -> RouteTapeTimeline.MarkerKind.KEPT;
+                            case "REFERENCE" -> RouteTapeTimeline.MarkerKind.REFERENCE;
+                            case "SEARCHED" -> RouteTapeTimeline.MarkerKind.SEARCHED;
+                            default -> throw new IOException("unknown repair span " + span.kind());
+                        }, span.sourceStart(), span.outputStart(), span.length()));
+                    } else if (record.rows() != null) {
+                        rowsText = record.rows();
                     } else if (record.saved() != null) {
                         saved = record.saved();
                     } else {
@@ -212,6 +299,10 @@ public final class RouteTapeJob implements AutoCloseable {
                 synchronized (tail) { diagnostics = String.join(" | ", tail); }
                 throw new IOException("Route worker failed (exit " + child.exitValue() + "): " + diagnostics);
             }
+            if (kind == Kind.REPAIR) {
+                publish(token, repairUpdate(token, result, content, rowsText, spans));
+                return;
+            }
             if (!result.content().equals(content)) throw new IOException("Route worker replayed other content");
             int stride = RouteEditorProtocol.pathStride(rows);
             int diverged = result.verdict() == RouteEditorProtocol.Verdict.FAILED ? result.row() : -1;
@@ -220,6 +311,7 @@ public final class RouteTapeJob implements AutoCloseable {
                 case PASSED -> Phase.PASSED;
                 case FAILED -> Phase.FAILED;
                 case UNSUPPORTED -> Phase.UNSUPPORTED;
+                case SOLVED, STOPPED -> throw new IOException("Route worker sent a repair result to a replay");
             };
             publish(token, new Update(token, phase, kind, 1, 1, rows, rows, result.detail(), content, result.row(), path,
                     saved));
@@ -227,6 +319,25 @@ public final class RouteTapeJob implements AutoCloseable {
             retire(child);
             stderr.join(2000);
         }
+    }
+
+    /** A repair's update; the solved rows' content names what the planner qualified. */
+    private static Update repairUpdate(long token, RouteEditorProtocol.Result result, String original, String rowsText,
+                                       List<RepairSpan> spans) throws IOException {
+        return switch (result.verdict()) {
+            case SOLVED, STOPPED -> {
+                if (rowsText == null) throw new IOException("Route worker sent no repair rows");
+                boolean solved = result.verdict() == RouteEditorProtocol.Verdict.SOLVED;
+                var outcome = new RepairOutcome(solved, RouteFiles.tapeFromScript(rowsText), spans,
+                        solved ? result.row() : 0, result.detail());
+                yield new Update(token, solved ? Phase.SOLVED : Phase.STOPPED, Kind.REPAIR, 2, 2, 1, 1, result.detail(),
+                        solved ? result.content() : original, solved ? outcome.rows().size() : result.row(), null, null,
+                        outcome);
+            }
+            case UNSUPPORTED -> new Update(token, Phase.UNSUPPORTED, Kind.REPAIR, 0, 0, 0, 0, result.detail(), original,
+                    -1, null, null);
+            default -> throw new IOException("Route worker sent a replay result to a repair");
+        };
     }
 
     private static String readTail(RouteEditorProtocol.LineReader input) throws IOException {

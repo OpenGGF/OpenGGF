@@ -13,45 +13,67 @@ import java.util.Objects;
  * Line protocol between the editor's route tape job and the isolated {@link RouteEditorWorker}.
  * Pure text: it holds no engine state. Free text travels as Base64 so a record is one line.
  *
- * <p>Request (stdin): {@link #MAGIC}, then {@code kind}, {@code route} (the
- * {@code RouteCodec} transport text, rows inline), optional {@code target}/{@code replace}, one
- * {@code rom <game> <path>} per game, then {@code end}.
- * Response (stdout): {@code progress}, {@code point} and finally one {@code result}, with
- * {@code saved} before it when a save wrote the route.
+ * <p>Request (stdin): {@link #MAGIC}, then {@code kind}, {@code route} (the {@code RouteCodec}
+ * transport text, rows inline), optional {@code target}/{@code replace} for a save, optional
+ * {@code reference} and {@code repair} for a repair, one {@code rom <game> <path>} per game, then
+ * {@code end}. Response (stdout): {@code progress}, {@code plan}, {@code point} and {@code span}
+ * records, {@code saved}/{@code rows} where they apply, then exactly one {@code result}.
  */
 public final class RouteEditorProtocol {
-    public static final String MAGIC = "openggf-route-worker/1";
-    /** Longest accepted record; a script record carries the whole tape. */
+    public static final String MAGIC = "openggf-route-worker/2";
+    /** Longest accepted record; a route record carries the whole tape. */
     public static final int MAX_RECORD_CHARS = 64 * 1024 * 1024;
 
-    public enum Kind { REPLAY, SAVE }
+    public enum Kind { REPLAY, SAVE, REPAIR }
 
-    public enum Verdict { PASSED, FAILED, UNSUPPORTED }
+    public enum Verdict { PASSED, FAILED, UNSUPPORTED, SOLVED, STOPPED }
 
     /**
-     * @param route   the working route as {@code RouteCodec} transport text (launch, goals, rows)
-     * @param target  for {@link Kind#SAVE}: the stem to write
-     * @param replace for {@link Kind#SAVE}: replace an existing route rather than write a new one
+     * Repair bounds: rows {@code [0, firstEditable)} stay verbatim; the reference is followed from
+     * its index {@code windowFrom} until {@code windowTo} ({@code -1}: its last row).
      */
-    public record Request(Kind kind, String route, Path target, boolean replace, Map<String, Path> roms) {
+    public record Repair(int firstEditable, int maxAuthoredRows, int maxWindows, int windowFrom, int windowTo) { }
+
+    /**
+     * @param route     the working route as {@code RouteCodec} transport text (launch, goals, rows)
+     * @param target    for {@link Kind#SAVE}: the stem to write
+     * @param replace   for {@link Kind#SAVE}: replace an existing route rather than write a new one
+     * @param reference for {@link Kind#REPAIR}: the reference route (launch and rows) as transport text
+     */
+    public record Request(Kind kind, String route, Path target, boolean replace, String reference, Repair repair,
+                          Map<String, Path> roms) {
         public Request {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(route, "route");
             roms = Map.copyOf(roms);
             if (kind == Kind.SAVE && target == null) throw new IllegalArgumentException("a save names its target stem");
+            if (kind == Kind.REPAIR && (reference == null || repair == null)) {
+                throw new IllegalArgumentException("a repair names its reference and bounds");
+            }
+        }
+
+        public Request(Kind kind, String route, Path target, boolean replace, Map<String, Path> roms) {
+            this(kind, route, target, replace, null, null, roms);
         }
     }
 
     /** Pass {@code pass} of {@code passes} has played {@code done} of {@code total} rows. */
     public record Progress(int pass, int passes, int done, int total) { }
 
+    /** Planner counts: {@code bestProgress} of {@code target} reference indices; best prefix {@code bestRow} rows. */
+    public record Plan(String phase, long expansions, int bestRow, int bestProgress, int target) { }
+
     /** A post-row centre for participant {@code slot} (1 or 2). */
     public record Point(int slot, int row, long epoch, int x, int y, boolean air) { }
 
+    /** A repair output span: {@code KEPT} original rows, {@code REFERENCE} rows or {@code SEARCHED} rows. */
+    public record Span(String kind, int sourceStart, int outputStart, int length) { }
+
     /**
-     * @param row     rows completed (PASSED) or the first row that could not complete (FAILED)
+     * @param row     rows completed (PASSED/SOLVED), the first row that could not complete
+     *                (FAILED) or the furthest row a stopped repair held (STOPPED)
      * @param detail  environment (PASSED) or reason
-     * @param content content hash replayed
+     * @param content content hash replayed or produced
      */
     public record Result(Verdict verdict, int row, String detail, String content) { }
 
@@ -64,6 +86,12 @@ public final class RouteEditorProtocol {
         out.append("route ").append(text(request.route())).append('\n');
         if (request.target() != null) out.append("target ").append(text(request.target().toString())).append('\n');
         out.append("replace ").append(request.replace()).append('\n');
+        if (request.reference() != null) out.append("reference ").append(text(request.reference())).append('\n');
+        if (request.repair() != null) {
+            var r = request.repair();
+            out.append("repair ").append(r.firstEditable()).append(' ').append(r.maxAuthoredRows()).append(' ')
+                    .append(r.maxWindows()).append(' ').append(r.windowFrom()).append(' ').append(r.windowTo()).append('\n');
+        }
         request.roms().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(rom ->
                 out.append("rom ").append(rom.getKey()).append(' ').append(text(rom.getValue().toString())).append('\n'));
         return out.append("end\n").toString();
@@ -73,25 +101,36 @@ public final class RouteEditorProtocol {
         if (!MAGIC.equals(input.readLine(MAGIC.length()))) throw new IOException("not a route worker request");
         Kind kind = null;
         Path target = null;
-        String route = null;
+        String route = null, reference = null;
+        Repair repair = null;
         boolean replace = false;
         var roms = new LinkedHashMap<String, Path>();
         for (String line; (line = input.readLine(MAX_RECORD_CHARS)) != null; ) {
             if (line.equals("end")) {
-                return new Request(kind, route, target, replace, roms);
+                return new Request(kind, route, target, replace, reference, repair, roms);
             }
             String[] field = line.split(" ", 3);
-            switch (field[0]) {
-                case "kind" -> kind = Kind.valueOf(field[1]);
-                case "route" -> route = untext(field[1]);
-                case "target" -> target = Path.of(untext(field[1]));
-                case "replace" -> replace = Boolean.parseBoolean(field[1]);
-                case "rom" -> {
-                    if (field.length != 3 || roms.putIfAbsent(field[1], Path.of(untext(field[2]))) != null) {
-                        throw new IOException("bad rom record");
+            try {
+                switch (field[0]) {
+                    case "kind" -> kind = Kind.valueOf(field[1]);
+                    case "route" -> route = untext(field[1]);
+                    case "target" -> target = Path.of(untext(field[1]));
+                    case "replace" -> replace = Boolean.parseBoolean(field[1]);
+                    case "reference" -> reference = untext(field[1]);
+                    case "repair" -> {
+                        String[] n = line.split(" ");
+                        repair = new Repair(Integer.parseInt(n[1]), Integer.parseInt(n[2]), Integer.parseInt(n[3]),
+                                Integer.parseInt(n[4]), Integer.parseInt(n[5]));
                     }
+                    case "rom" -> {
+                        if (field.length != 3 || roms.putIfAbsent(field[1], Path.of(untext(field[2]))) != null) {
+                            throw new IOException("bad rom record");
+                        }
+                    }
+                    default -> throw new IOException("unknown request record " + field[0]);
                 }
-                default -> throw new IOException("unknown request record " + field[0]);
+            } catch (RuntimeException malformed) {
+                throw new IOException("malformed request record " + field[0], malformed);
             }
         }
         throw new IOException("route worker request ended early");
@@ -101,13 +140,27 @@ public final class RouteEditorProtocol {
         return "progress " + progress.pass() + ' ' + progress.passes() + ' ' + progress.done() + ' ' + progress.total();
     }
 
+    public static String plan(Plan plan) {
+        return "plan " + text(plan.phase()) + ' ' + plan.expansions() + ' ' + plan.bestRow() + ' ' + plan.bestProgress()
+                + ' ' + plan.target();
+    }
+
     public static String point(Point point) {
         return "point " + point.slot() + ' ' + point.row() + ' ' + point.epoch() + ' ' + point.x() + ' ' + point.y() + ' '
                 + (point.air() ? 1 : 0);
     }
 
+    public static String span(Span span) {
+        return "span " + span.kind() + ' ' + span.sourceStart() + ' ' + span.outputStart() + ' ' + span.length();
+    }
+
     public static String saved(Path manifest) {
         return "saved " + text(manifest.toString());
+    }
+
+    /** The rows a repair produced (solved) or the furthest attempt it held (stopped), as route-script text. */
+    public static String rows(String script) {
+        return "rows " + text(script);
     }
 
     public static String result(Result result) {
@@ -116,19 +169,26 @@ public final class RouteEditorProtocol {
     }
 
     /** One decoded response record: exactly one of the fields is set. */
-    public record Response(Progress progress, Point point, Path saved, Result result) { }
+    public record Response(Progress progress, Plan plan, Point point, Span span, Path saved, String rows,
+                           Result result) { }
 
     public static Response decodeResponse(String line) throws IOException {
         String[] field = line.split(" ");
         try {
             return switch (field[0]) {
                 case "progress" -> new Response(new Progress(Integer.parseInt(field[1]), Integer.parseInt(field[2]),
-                        Integer.parseInt(field[3]), Integer.parseInt(field[4])), null, null, null);
-                case "point" -> new Response(null, new Point(Integer.parseInt(field[1]), Integer.parseInt(field[2]),
+                        Integer.parseInt(field[3]), Integer.parseInt(field[4])), null, null, null, null, null, null);
+                case "plan" -> new Response(null, new Plan(untext(field[1]), Long.parseLong(field[2]),
+                        Integer.parseInt(field[3]), Integer.parseInt(field[4]), Integer.parseInt(field[5])),
+                        null, null, null, null, null);
+                case "point" -> new Response(null, null, new Point(Integer.parseInt(field[1]), Integer.parseInt(field[2]),
                         Long.parseLong(field[3]), Integer.parseInt(field[4]), Integer.parseInt(field[5]),
-                        field[6].equals("1")), null, null);
-                case "saved" -> new Response(null, null, Path.of(untext(field[1])), null);
-                case "result" -> new Response(null, null, null, new Result(Verdict.valueOf(field[1]),
+                        field[6].equals("1")), null, null, null, null);
+                case "span" -> new Response(null, null, null, new Span(field[1], Integer.parseInt(field[2]),
+                        Integer.parseInt(field[3]), Integer.parseInt(field[4])), null, null, null);
+                case "saved" -> new Response(null, null, null, null, Path.of(untext(field[1])), null, null);
+                case "rows" -> new Response(null, null, null, null, null, untext(field[1]), null);
+                case "result" -> new Response(null, null, null, null, null, null, new Result(Verdict.valueOf(field[1]),
                         Integer.parseInt(field[2]), untext(field[3]), untext(field[4])));
                 default -> throw new IOException("unknown route worker record " + field[0]);
             };
@@ -144,6 +204,14 @@ public final class RouteEditorProtocol {
     private static String untext(String value) {
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
     }
+
+    /** Row spacing of streamed path points: every row up to {@link #MAX_PATH_POINTS} rows, then evenly spaced. */
+    public static int pathStride(int rows) {
+        return Math.max(1, (rows + MAX_PATH_POINTS - 1) / MAX_PATH_POINTS);
+    }
+
+    /** Points streamed per participant, bounding the editor's overlay memory and the pipe. */
+    public static final int MAX_PATH_POINTS = 100_000;
 
     /** Bounded line input: limits apply while reading, before a whole record is allocated. */
     public static final class LineReader implements AutoCloseable {
@@ -182,12 +250,4 @@ public final class RouteEditorProtocol {
             reader.close();
         }
     }
-
-    /** Row spacing of streamed path points: every row up to {@link #MAX_PATH_POINTS} rows, then evenly spaced. */
-    public static int pathStride(int rows) {
-        return Math.max(1, (rows + MAX_PATH_POINTS - 1) / MAX_PATH_POINTS);
-    }
-
-    /** Points streamed per participant, bounding the editor's overlay memory and the pipe. */
-    public static final int MAX_PATH_POINTS = 100_000;
 }

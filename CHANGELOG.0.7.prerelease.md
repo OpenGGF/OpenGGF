@@ -251,7 +251,8 @@ Unreleased. The earlier development themes remain in
   complete, draw the replayed path over the route's level, list the manifest's
   launch and native observations (display only), and export a BizHawk movie on
   demand. Saving changes the files only after a passing replay; unfinished work
-  saves as a draft that tests and native checks refuse.
+  saves as a draft that tests and native checks refuse. Repair keeps a route's
+  rows where play still tracks a reference and reports the share it kept.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,

@@ -410,6 +410,14 @@ Recorded during implementation; each states what the sketch said, what was built
   variables (a parent's explicit `openggf.headless.gl` passes through); other platforms keep the
   engine's hidden-window default. The first slice stripped the display without selecting EGL and
   failed with "Unable to initialize GLFW" in the desktop picture run.
+- **Editor Repair before goal authoring (editor, step 2).** Step 2's planner accepts only
+  `RouteTask.Repair`, so the editors' first plan job is Repair: a reference from the route's saved
+  rows, another manifest (its own launch), a route script or a movie (this route's launch), with
+  `RepairScope` bounds and a reference window. A solved repair's rows replace the working rows as
+  one undo step; its spans mark the timeline; a stop offers its best attempt. The planner builds
+  the solved artifact with `RouteArtifact.of(launch, tape, provenance)`, which drops the
+  original's goal program, so a repaired route that had goals shows as edited until a replay
+  checks them (reported to the planner lane). Goal-program authoring waits for an author task.
 - **Shared worker plumbing not extracted yet (editor, step 1).** The plan put
   `StageplayRouteJob`'s process lifecycle into one shared helper. Step 3 replaces the Stageplay
   route job's planning, so the extraction waits for it rather than churning a file the planner

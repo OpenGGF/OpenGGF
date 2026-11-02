@@ -276,6 +276,11 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         c.text(UiMessages.text("editor.route_tape.hud_native_caps"), rx, ry, Size.SMALL, TEXT_FAINT, 1);
         ry = facts(c, rx, ry + pitch, half, workspace.nativeFacts(), TEXT_DIM, pitch);
         var goals = workspace.goalFacts();
+        String repair = workspace.repairText();
+        if (!repair.isEmpty() && ry + pitch <= bottom) {
+            c.fittedText(repair, rx, ry, half, Size.SMALL, workspace.repairCurrent() ? GOOD : GOLD, 1);
+            ry += pitch;
+        }
         if (ry + pitch <= bottom) {
             c.fittedText(goals.size() == 1 ? goals.getFirst()[0] + "  " + goals.getFirst()[1]
                     : UiMessages.text("editor.route_tape.hud_goal_legs", Map.of("legs", String.valueOf(goals.size()))),
@@ -393,6 +398,7 @@ final class RouteHud implements RouteTapeOverlay.Painter {
                 case NATIVE_LAG, NATIVE_DIVERGED -> c.rect(mx, ruler + 2, Math.max(1, rowWidth), 6, GOLD, 1);
                 case SEARCHED -> c.rect(mx, ruler + 9, (marker.to() - marker.from()) * rowWidth, 2, ACCENT, 1);
                 case KEPT -> c.rect(mx, ruler + 9, (marker.to() - marker.from()) * rowWidth, 2, GOOD, 1);
+                case REFERENCE -> c.rect(mx, ruler + 9, (marker.to() - marker.from()) * rowWidth, 2, TEXT_DIM, 1);
             }
         }
         if (view.tapeRows() < view.first() + view.rows()) {

@@ -65,7 +65,7 @@ public final class RouteTapeWorkspace {
     }
 
     public enum Action {
-        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
+        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, REPAIR, USE_ATTEMPT, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
 
         public String label() {
             return switch (this) {
@@ -74,6 +74,8 @@ public final class RouteTapeWorkspace {
                 case SAVE -> UiMessages.text("editor.route_tape.action_save");
                 case SAVE_DRAFT -> UiMessages.text("editor.route_tape.action_save_draft");
                 case REPLAY -> UiMessages.text("editor.route_tape.action_replay");
+                case REPAIR -> UiMessages.text("editor.route_tape.action_repair");
+                case USE_ATTEMPT -> UiMessages.text("editor.route_tape.action_use_attempt");
                 case CANCEL_JOB -> UiMessages.text("editor.route_tape.action_cancel_job");
                 case EXPORT_BK2 -> UiMessages.text("editor.route_tape.action_export_bk2");
                 case UNDO -> UiMessages.text("editor.route_tape.action_undo");
@@ -125,6 +127,11 @@ public final class RouteTapeWorkspace {
     private InputTape tape = InputTape.empty();
     private RouteTapeJob.Update job;
     private RouteTapeJob.Update result;
+    /** The last replay that observed a path, kept while later edits make it stale. */
+    private RouteTapeJob.Update pathResult;
+    /** The last repair outcome and the working content it started from. */
+    private RouteTapeJob.Update repair;
+    private String repairFrom;
     private boolean active;
     private int cursor;
     private int track;
@@ -221,11 +228,36 @@ public final class RouteTapeWorkspace {
 
     /** The last observed path, which may describe earlier content; see {@link #pathStale()}. */
     public RouteTapeOverlay overlay() {
-        return result == null ? null : result.path();
+        return pathResult == null ? null : pathResult.path();
     }
 
     public boolean pathStale() {
-        return result != null && !Objects.equals(result.content(), workingContent());
+        return pathResult != null && !Objects.equals(pathResult.content(), workingContent());
+    }
+
+    /** The last repair's outcome, or null; a solved repair's spans describe the rows only while they are unchanged. */
+    public RouteTapeJob.RepairOutcome repairOutcome() {
+        return repair == null ? null : repair.repair();
+    }
+
+    /** Whether the working rows are exactly the last solved repair's rows. */
+    public boolean repairCurrent() {
+        var outcome = repairOutcome();
+        return outcome != null && outcome.solved() && outcome.rows().equals(tape);
+    }
+
+    /** One line about the last repair, in the user's words; empty when there is none. */
+    public String repairText() {
+        var outcome = repairOutcome();
+        if (outcome == null) return "";
+        if (!outcome.solved()) return UiMessages.text("editor.route_tape.repair_stopped", Map.of("row",
+                String.valueOf(repair.row()), "reason", outcome.detail()));
+        if (!repairCurrent()) return UiMessages.text("editor.route_tape.repair_edited");
+        long windows = outcome.spans().stream().filter(span -> span.kind() == RouteTapeTimeline.MarkerKind.SEARCHED).count();
+        return UiMessages.text("editor.route_tape.repair_summary", Map.of("kept", String.valueOf(outcome.keptRows()),
+                "original", String.valueOf(outcome.originalRows()), "share",
+                String.valueOf(Math.round(outcome.keptShare() * 100)), "searched", String.valueOf(outcome.searchedRows()),
+                "windows", String.valueOf(windows)));
     }
 
     public Qualification qualification() {
@@ -328,7 +360,27 @@ public final class RouteTapeWorkspace {
                     Map.of("verdict", verdict));
             lines.add(fact(UiMessages.text("editor.route_tape.fact_native_check"), verdict));
         }
+        if (needsNativeCheck()) {
+            lines.add(fact(UiMessages.text("editor.route_tape.fact_native_check"),
+                    UiMessages.text("editor.route_tape.native_check_needed")));
+        }
         return List.copyOf(lines);
+    }
+
+    /**
+     * Whether native observations exist but none describe the working content, so a fresh native
+     * check is needed (after an edit or a repair). Display only.
+     */
+    public boolean needsNativeCheck() {
+        if (loaded == null) return false;
+        var content = working().content();
+        var facts = loaded.manifest().nativeFacts();
+        boolean observed = !facts.lag().isEmpty() || loaded.manifest().qualification().stream()
+                .anyMatch(stamp -> stamp.scope() == ReplayScope.BIZHAWK);
+        boolean current = facts.lag().stream().anyMatch(lag -> lag.content().equals(content))
+                || loaded.manifest().qualification().stream()
+                .anyMatch(stamp -> stamp.scope() == ReplayScope.BIZHAWK && stamp.content().equals(content));
+        return observed && !current;
     }
 
     /** The goal program replay checks, one line per leg, in manifest words. */
@@ -463,6 +515,12 @@ public final class RouteTapeWorkspace {
                 }
             }
         }
+        if (repairCurrent()) {
+            for (var span : repairOutcome().spans()) {
+                if (span.length() > 0) markers.add(new RouteTapeTimeline.Marker(span.kind(), span.outputStart(),
+                        span.outputStart() + span.length()));
+            }
+        }
         int selectionFrom = mark < 0 ? cursor : selectionFrom();
         int selectionTo = mark < 0 ? cursor : selectionTo();
         return RouteTapeTimeline.layout(tape, first, visibleRows, cursor, track, selectionFrom, selectionTo, markers);
@@ -496,6 +554,8 @@ public final class RouteTapeWorkspace {
                 case NEW -> beforeReplace(this::newForm);
                 case SAVE -> save();
                 case SAVE_DRAFT -> saveDraft();
+                case REPAIR -> repairForm();
+                case USE_ATTEMPT -> useAttempt();
                 case REPLAY -> replay();
                 case CANCEL_JOB -> cancelJob();
                 case EXPORT_BK2 -> exportForm();
@@ -694,8 +754,14 @@ public final class RouteTapeWorkspace {
         job = next;
         if (next.running()) return;
         switch (next.phase()) {
+            case SOLVED, STOPPED -> finishRepair(next);
             case PASSED, FAILED, UNSUPPORTED -> {
+                if (next.kind() == RouteTapeJob.Kind.REPAIR) {
+                    status = UiMessages.text("editor.route_tape.status_replay_unsupported", Map.of("reason", next.message()));
+                    return;
+                }
                 result = next;
+                if (next.path() != null) pathResult = next;
                 if (next.saved() != null) {
                     try {
                         reload(next.saved());
@@ -717,6 +783,100 @@ public final class RouteTapeWorkspace {
             case ERROR -> status = UiMessages.text("editor.route_tape.status_job_error", Map.of("reason", next.message()));
             default -> { }
         }
+    }
+
+    private void finishRepair(RouteTapeJob.Update next) {
+        repair = next;
+        var outcome = next.repair();
+        if (!outcome.solved()) {
+            status = repairText();
+            return;
+        }
+        if (!Objects.equals(repairFrom, workingContent())) {
+            repair = null;
+            status = UiMessages.text("editor.route_tape.repair_stale");
+            return;
+        }
+        edit(outcome.rows());
+        // The planner cold-replayed exactly these rows; when the route's own content is the same, that
+        // pass qualifies them in this session. A goal program the planner did not check stays unreplayed.
+        result = new RouteTapeJob.Update(next.generation(), RouteTapeJob.Phase.PASSED, RouteTapeJob.Kind.REPAIR, 1, 1,
+                outcome.rows().size(), outcome.rows().size(), next.message(), next.content(), outcome.rows().size(),
+                null, null);
+        status = repairText();
+    }
+
+    /** Adopts a stopped repair's furthest attempt as the working rows, for inspection; one undo step. */
+    private void useAttempt() {
+        var outcome = repairOutcome();
+        if (outcome == null || outcome.solved() || outcome.rows().size() == 0) {
+            throw new IllegalStateException(UiMessages.text("editor.route_tape.no_attempt"));
+        }
+        edit(outcome.rows());
+        status = UiMessages.text("editor.route_tape.status_attempt", Map.of("rows", String.valueOf(outcome.rows().size())));
+    }
+
+    private void repairForm() {
+        requireRows();
+        String self = UiMessages.text("editor.route_tape.reference_self"), other = UiMessages.text("editor.route_tape.reference_other");
+        menu.showForm(UiMessages.text("editor.route_tape.title_repair"), List.of(
+                new EditorProjectMenu.Field("first", UiMessages.text("editor.route_tape.field_first_editable"),
+                        String.valueOf(cursor), MenuTextEditor.Mode.TEXT, 8),
+                new EditorProjectMenu.Field("reference", UiMessages.text("editor.route_tape.field_reference"),
+                        unsaved ? other : self, List.of(self, other)),
+                new EditorProjectMenu.Field("path", UiMessages.text("editor.route_tape.field_reference_path"),
+                        host.initialDirectory() + "/", MenuTextEditor.Mode.PATH),
+                new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_reference_rows"), "",
+                        MenuTextEditor.Mode.TEXT, 8),
+                new EditorProjectMenu.Field("from", UiMessages.text("editor.route_tape.field_window_from"),
+                        String.valueOf(cursor), MenuTextEditor.Mode.TEXT, 8),
+                new EditorProjectMenu.Field("to", UiMessages.text("editor.route_tape.field_window_to"), "",
+                        MenuTextEditor.Mode.TEXT, 8),
+                // The design's SSZ1 example bounds (360 authored rows, 24 windows); authoring choices, not rules.
+                new EditorProjectMenu.Field("authored", UiMessages.text("editor.route_tape.field_max_authored"), "360",
+                        MenuTextEditor.Mode.TEXT, 7),
+                new EditorProjectMenu.Field("windows", UiMessages.text("editor.route_tape.field_max_windows"), "24",
+                        MenuTextEditor.Mode.TEXT, 4)),
+                UiMessages.text("editor.route_tape.action_repair"), values -> io(() -> {
+                    RouteArtifact reference = values.get("reference").equals(self) ? savedReference()
+                            : reference(Path.of(values.get("path").strip()), values.get("rows").strip());
+                    String to = values.get("to").strip();
+                    startRepair(reference, new RouteTapeJob.RepairBounds(Integer.parseInt(values.get("first").strip()),
+                            Integer.parseInt(values.get("authored").strip()), Integer.parseInt(values.get("windows").strip()),
+                            Integer.parseInt(values.get("from").strip()), to.isEmpty() ? -1 : Integer.parseInt(to)));
+                }));
+        menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_repair"));
+    }
+
+    /** Starts a repair of the working rows against {@code reference}. */
+    public void startRepair(RouteArtifact reference, RouteTapeJob.RepairBounds bounds) throws IOException {
+        requireRows();
+        if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
+        if (bounds.firstEditable() > tape.size()) {
+            throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
+        }
+        repairFrom = workingContent();
+        host.startJob(RouteTapeJob.Request.repair(working(), reference, bounds));
+        job = host.pollJob();
+        status = UiMessages.text("editor.route_tape.status_repairing");
+    }
+
+    /** The route's saved rows and launch, replayed on this engine as the reference to follow. */
+    private RouteArtifact savedReference() {
+        if (unsaved) throw new IllegalStateException(UiMessages.text("editor.route_tape.reference_unsaved"));
+        return loaded;
+    }
+
+    /** A reference from another route manifest (its own launch), a route script or a movie (this route's launch). */
+    private RouteArtifact reference(Path path, String rows) throws IOException {
+        String name = path.getFileName().toString();
+        if (name.endsWith(RouteFiles.MANIFEST_SUFFIX)) return RouteFiles.readDraft(path);
+        var provenance = new com.openggf.route.Provenance("openggf-editor reference", "", path.toString(), List.of());
+        if (name.endsWith(".script")) {
+            return RouteArtifact.of(loaded.launch(), RouteFiles.tapeFromScript(Files.readString(path)), provenance);
+        }
+        if (rows.isEmpty()) throw new IOException(UiMessages.text("editor.route_tape.reference_rows_needed"));
+        return RouteArtifact.of(loaded.launch(), RouteFiles.tapeFromMovie(path, Integer.parseInt(rows)), provenance);
     }
 
     private void exportForm() {
@@ -856,6 +1016,8 @@ public final class RouteTapeWorkspace {
             actions.add(action(Action.SAVE));
             actions.add(action(Action.SAVE_DRAFT));
             actions.add(action(jobRunning() ? Action.CANCEL_JOB : Action.REPLAY));
+            if (!jobRunning()) actions.add(action(Action.REPAIR));
+            if (repairOutcome() != null && !repairOutcome().solved()) actions.add(action(Action.USE_ATTEMPT));
             actions.add(action(Action.EXPORT_BK2));
             actions.add(action(Action.GO_TO_ROW));
         }
@@ -883,6 +1045,7 @@ public final class RouteTapeWorkspace {
                 .append("\n\n").append(qualificationText()).append('\n');
         for (String[] fact : launchFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
         for (String[] fact : goalFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
+        if (!repairText().isEmpty()) text.append(repairText()).append('\n');
         text.append('\n').append(UiMessages.text("editor.route_tape.native_heading")).append('\n');
         for (String[] fact : nativeFacts()) text.append(fact[0]).append(": ").append(fact[1]).append('\n');
         text.append('\n').append(status);
