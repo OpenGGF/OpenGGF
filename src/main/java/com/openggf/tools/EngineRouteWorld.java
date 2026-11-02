@@ -105,7 +105,8 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
                 new RouteSample.Level(level.getCurrentZone(), level.getCurrentAct(), level.getApparentAct(),
                         session.loop().getCurrentGameMode().name()),
                 new RouteSample.Clocks(objects == null ? 0 : objects.getVblaCounter(), level.getFrameCounter()),
-                view(p1), p2, camera.getX() & 0xFFFF, camera.getY() & 0xFFFF);
+                view(p1), p2, camera.getX() & 0xFFFF, camera.getY() & 0xFFFF,
+                camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0);
     }
 
     @Override
@@ -196,7 +197,7 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
     }
 
     private static PlayerView view(AbstractPlayableSprite sprite) {
-        return new PlayerView(sprite.getCentreX() & 0xFFFF, sprite.getCentreY() & 0xFFFF, sprite.getXSubpixelRaw(),
+        return new PlayerView(sprite.getCentreX(), sprite.getCentreY(), sprite.getXSubpixelRaw(),
                 sprite.getYSubpixelRaw(), sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
                 sprite.getAngle() & 0xFF, sprite.getAir(), sprite.getRolling(), sprite.getSpindash(),
                 sprite.getCrouching(), sprite.isHurt(), sprite.getDead(), sprite.getRingCount(), sprite.isOnObject(),

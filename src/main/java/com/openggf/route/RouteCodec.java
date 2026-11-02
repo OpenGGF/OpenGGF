@@ -14,22 +14,81 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-/** Strict manifest codec: unknown keys, missing keys and wrong types are rejected. */
-final class RouteJson {
+/**
+ * The canonical text codec for route value types: manifests, launches, goal programs and whole
+ * artifacts for transport between processes. Parsing is strict: unknown keys, missing keys and
+ * wrong types are rejected.
+ */
+public final class RouteCodec {
     private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
     private static final ObjectMapper COMPACT = new ObjectMapper();
 
-    private RouteJson() {
+    private RouteCodec() {
     }
 
-    static String write(RouteManifest manifest, String scriptName) {
-        ObjectNode root = MAPPER.createObjectNode();
-        root.put("format", RouteManifest.FORMAT);
-        root.set("launch", launch(manifest.launch()));
-        ObjectNode tape = root.putObject("tape");
+    /** The manifest text that binds {@code scriptName} beside it. */
+    public static String formatManifest(RouteManifest manifest, String scriptName) {
+        ObjectNode root = manifestNode(manifest);
+        ObjectNode tape = (ObjectNode) root.get("tape");
         tape.put("script", scriptName);
         tape.put("rows", manifest.rowCount());
         tape.put("sha256", manifest.tapeHash().sha256());
+        return text(root);
+    }
+
+    /** One self-contained text for an in-memory artifact (its rows inline), for handing to a worker. */
+    public static String formatTransport(RouteArtifact artifact) {
+        ObjectNode root = manifestNode(artifact.manifest());
+        ObjectNode tape = (ObjectNode) root.get("tape");
+        tape.put("inline", RouteScript.write(artifact.tape(), java.util.List.of()));
+        tape.put("rows", artifact.tape().size());
+        tape.put("sha256", artifact.tape().hash().sha256());
+        return text(root);
+    }
+
+    /** Parses {@link #formatTransport}; rows and hash must agree. */
+    public static RouteArtifact parseTransport(String text) throws IOException {
+        JsonNode root = COMPACT.readTree(text);
+        RouteManifest manifest = manifest(root, true);
+        InputTape tape = RouteScript.read(text(root.get("tape"), "inline"));
+        if (tape.size() != manifest.rowCount() || !tape.hash().equals(manifest.tapeHash())) {
+            throw new IOException("inline rows (" + tape.size() + ", " + tape.hash().shortForm()
+                    + ") disagree with the declared " + manifest.rowCount() + ", " + manifest.tapeHash().shortForm());
+        }
+        return new RouteArtifact(manifest, tape);
+    }
+
+    public static String formatLaunch(LaunchContract launch) {
+        return text(launch(launch));
+    }
+
+    public static LaunchContract parseLaunch(String text) throws IOException {
+        return launch(COMPACT.readTree(text));
+    }
+
+    public static String formatGoals(GoalProgram goals) {
+        return text(goals(goals));
+    }
+
+    public static GoalProgram parseGoals(String text) throws IOException {
+        return goals(COMPACT.readTree(text));
+    }
+
+    private static String text(ObjectNode node) {
+        try {
+            return MAPPER.writeValueAsString(node) + "\n";
+        } catch (IOException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    private static ObjectNode manifestNode(RouteManifest manifest) {
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("format", RouteManifest.FORMAT);
+        if (manifest.draft()) root.put("draft", true);
+        root.set("launch", launch(manifest.launch()));
+        if (!manifest.checks().isEmpty()) root.set("checks", goals(manifest.checks()));
+        root.putObject("tape");
         ObjectNode provenance = root.putObject("provenance");
         provenance.put("producer", manifest.provenance().producer());
         provenance.put("engine", manifest.provenance().engine());
@@ -40,7 +99,9 @@ final class RouteJson {
         for (QualificationStamp stamp : manifest.qualification()) {
             ObjectNode node = stamps.addObject();
             node.put("scope", stamp.scope().name());
-            node.put("verdict", stamp.verdict());
+            node.put("passed", stamp.passed());
+            stamp.divergedRow().ifPresent(row -> node.put("divergedRow", row));
+            if (!stamp.reason().isEmpty()) node.put("reason", stamp.reason());
             node.put("content", stamp.content().sha256());
             node.put("environment", stamp.environment());
             node.put("rows", stamp.rows());
@@ -59,26 +120,31 @@ final class RouteJson {
             node.put("harness", fact.harness());
             node.put("content", fact.content().sha256());
         }
-        try {
-            return MAPPER.writeValueAsString(root) + "\n";
-        } catch (IOException impossible) {
-            throw new IllegalStateException(impossible);
-        }
+        return root;
     }
 
-    /** Parsed manifest plus the script file name it binds. */
-    record Parsed(RouteManifest manifest, String scriptName) { }
+    /** A parsed manifest plus the script file name it binds. */
+    public record ParsedManifest(RouteManifest manifest, String scriptName) { }
 
-    static Parsed read(String text) throws IOException {
+    /** Parses manifest text that binds a script file beside it. */
+    public static ParsedManifest parseManifest(String text) throws IOException {
         JsonNode root = COMPACT.readTree(text);
-        object(root, "manifest", Set.of("format", "launch", "tape", "provenance", "qualification", "native"),
-                Set.of("format", "launch", "tape"));
+        RouteManifest manifest = manifest(root, false);
+        return new ParsedManifest(manifest, text(root.get("tape"), "script"));
+    }
+
+    private static RouteManifest manifest(JsonNode root, boolean inline) throws IOException {
+        object(root, "manifest", Set.of("format", "draft", "launch", "checks", "tape", "provenance", "qualification",
+                "native"), Set.of("format", "launch", "tape"));
         if (!RouteManifest.FORMAT.equals(text(root, "format"))) {
             throw new IOException("unsupported route format: " + root.get("format"));
         }
         LaunchContract launch = launch(root.get("launch"));
         JsonNode tape = root.get("tape");
-        object(tape, "tape", Set.of("script", "rows", "sha256"), Set.of("script", "rows", "sha256"));
+        String rowsKey = inline ? "inline" : "script";
+        object(tape, "tape", Set.of(rowsKey, "rows", "sha256"), Set.of(rowsKey, "rows", "sha256"));
+        GoalProgram checks = root.has("checks") ? goals(root.get("checks")) : GoalProgram.NONE;
+        boolean draft = root.has("draft") && bool(root, "draft");
         Provenance provenance = new Provenance("unknown", "", "", List.of());
         if (root.has("provenance")) {
             JsonNode node = root.get("provenance");
@@ -91,9 +157,11 @@ final class RouteJson {
         var stamps = new ArrayList<QualificationStamp>();
         if (root.has("qualification")) {
             for (JsonNode node : array(root.get("qualification"), "qualification")) {
-                object(node, "qualification stamp", Set.of("scope", "verdict", "content", "environment", "rows"),
-                        Set.of("scope", "verdict", "content", "environment", "rows"));
-                stamps.add(new QualificationStamp(ReplayScope.valueOf(text(node, "scope")), text(node, "verdict"),
+                object(node, "qualification stamp", Set.of("scope", "passed", "divergedRow", "reason", "content",
+                        "environment", "rows"), Set.of("scope", "passed", "content", "environment", "rows"));
+                stamps.add(new QualificationStamp(ReplayScope.valueOf(text(node, "scope")), bool(node, "passed"),
+                        node.has("divergedRow") ? java.util.OptionalInt.of(integer(node, "divergedRow"))
+                                : java.util.OptionalInt.empty(), optionalText(node, "reason"),
                         new ContentHash(text(node, "content")), text(node, "environment"), integer(node, "rows")));
             }
         }
@@ -118,14 +186,14 @@ final class RouteJson {
             }
             facts = new NativeFacts(entry, lag);
         }
-        var manifest = new RouteManifest(launch, new ContentHash(text(tape, "sha256")), integer(tape, "rows"),
+        return new RouteManifest(launch, new ContentHash(text(tape, "sha256")), integer(tape, "rows"), checks, draft,
                 provenance, stamps, facts);
-        return new Parsed(manifest, text(tape, "script"));
     }
 
-    static ContentHash contentHash(LaunchContract launch, InputTape tape) {
+    static ContentHash contentHash(LaunchContract launch, GoalProgram checks, InputTape tape) {
         try {
-            String canonical = COMPACT.writeValueAsString(launch(launch)) + "\n" + tape.hash().sha256() + "\n" + tape.size();
+            String canonical = COMPACT.writeValueAsString(launch(launch)) + "\n"
+                    + COMPACT.writeValueAsString(goals(checks)) + "\n" + tape.hash().sha256() + "\n" + tape.size();
             return ContentHash.of(canonical.getBytes(StandardCharsets.UTF_8));
         } catch (IOException impossible) {
             throw new IllegalStateException(impossible);
@@ -169,6 +237,7 @@ final class RouteJson {
     }
 
     private static LaunchContract launch(JsonNode node) throws IOException {
+        if (node == null) throw new IOException("launch must be an object");
         object(node, "launch", Set.of("rom", "inlet", "roster", "width", "donor", "initial"),
                 Set.of("rom", "inlet", "roster", "width", "initial"));
         JsonNode rom = node.get("rom");
@@ -201,6 +270,120 @@ final class RouteJson {
         return new LaunchContract(identity, parsedInlet, new Roster(text(roster, "main"), optionalText(roster, "sidekick")),
                 integer(node, "width"), node.has("donor") ? text(node, "donor") : "off",
                 new InitialState(integer(initial, "vIntStart"), seeds));
+    }
+
+    private static ObjectNode goals(GoalProgram program) {
+        ObjectNode node = MAPPER.createObjectNode();
+        node.set("guard", guard(program.routeGuard()));
+        ArrayNode legs = node.putArray("legs");
+        for (Leg leg : program.legs()) {
+            ObjectNode l = legs.addObject();
+            l.put("id", leg.id());
+            l.put("maxRows", leg.maxRows());
+            l.set("guard", guard(leg.guard()));
+            ObjectNode goal = l.putObject("goal");
+            switch (leg.goal()) {
+                case RouteGoal.Achieve achieve -> {
+                    goal.put("kind", "achieve");
+                    goal.set("condition", predicate(achieve.condition()));
+                }
+                case RouteGoal.EnterBoundary ignored -> goal.put("kind", "enter-boundary");
+            }
+        }
+        return node;
+    }
+
+    private static GoalProgram goals(JsonNode node) throws IOException {
+        object(node, "checks", Set.of("guard", "legs"), Set.of("guard", "legs"));
+        var legs = new ArrayList<Leg>();
+        for (JsonNode l : array(node.get("legs"), "legs")) {
+            object(l, "leg", Set.of("id", "maxRows", "guard", "goal"), Set.of("id", "maxRows", "guard", "goal"));
+            JsonNode goal = l.get("goal");
+            RouteGoal parsed = switch (text(goal, "kind")) {
+                case "achieve" -> {
+                    object(goal, "goal", Set.of("kind", "condition"), Set.of("kind", "condition"));
+                    yield new RouteGoal.Achieve(predicate(goal.get("condition")));
+                }
+                case "enter-boundary" -> {
+                    object(goal, "goal", Set.of("kind"), Set.of("kind"));
+                    yield new RouteGoal.EnterBoundary();
+                }
+                default -> throw new IOException("unknown goal kind: " + goal.get("kind"));
+            };
+            legs.add(new Leg(text(l, "id"), parsed, guard(l.get("guard")), integer(l, "maxRows")));
+        }
+        return new GoalProgram(guard(node.get("guard")), legs);
+    }
+
+    private static ObjectNode guard(Guard guard) {
+        ObjectNode node = MAPPER.createObjectNode();
+        node.put("allowHurt", guard.allowHurt());
+        node.put("allowRingLoss", guard.allowRingLoss());
+        node.put("allowDeath", guard.allowDeath());
+        node.put("allowBoundary", guard.allowBoundary());
+        return node;
+    }
+
+    private static Guard guard(JsonNode node) throws IOException {
+        Set<String> keys = Set.of("allowHurt", "allowRingLoss", "allowDeath", "allowBoundary");
+        object(node, "guard", keys, keys);
+        return new Guard(bool(node, "allowHurt"), bool(node, "allowRingLoss"), bool(node, "allowDeath"),
+                bool(node, "allowBoundary"));
+    }
+
+    private static ObjectNode predicate(SamplePredicate predicate) {
+        ObjectNode node = MAPPER.createObjectNode();
+        switch (predicate) {
+            case SamplePredicate.PlayerIn in -> {
+                node.put("kind", "player-in");
+                node.put("player", in.player().name());
+                ArrayNode region = node.putArray("region");
+                region.add(in.region().left()).add(in.region().top()).add(in.region().right()).add(in.region().bottom());
+            }
+            case SamplePredicate.Settled settled -> {
+                node.put("kind", "settled");
+                node.put("player", settled.player().name());
+                node.put("maxSpeed", settled.maxSpeed());
+            }
+            case SamplePredicate.LevelIs level -> {
+                node.put("kind", "level-is");
+                node.put("zone", level.zone());
+                node.put("act", level.act());
+            }
+            case SamplePredicate.All all -> {
+                node.put("kind", "all");
+                ArrayNode clauses = node.putArray("clauses");
+                for (SamplePredicate clause : all.clauses()) clauses.add(predicate(clause));
+            }
+        }
+        return node;
+    }
+
+    private static SamplePredicate predicate(JsonNode node) throws IOException {
+        return switch (text(node, "kind")) {
+            case "player-in" -> {
+                object(node, "condition", Set.of("kind", "player", "region"), Set.of("kind", "player", "region"));
+                ArrayNode r = array(node.get("region"), "region");
+                if (r.size() != 4) throw new IOException("a region is [left, top, right, bottom]");
+                yield new SamplePredicate.PlayerIn(PlayerSlot.valueOf(text(node, "player")),
+                        new Region(r.get(0).asInt(), r.get(1).asInt(), r.get(2).asInt(), r.get(3).asInt()));
+            }
+            case "settled" -> {
+                object(node, "condition", Set.of("kind", "player", "maxSpeed"), Set.of("kind", "player", "maxSpeed"));
+                yield new SamplePredicate.Settled(PlayerSlot.valueOf(text(node, "player")), integer(node, "maxSpeed"));
+            }
+            case "level-is" -> {
+                object(node, "condition", Set.of("kind", "zone", "act"), Set.of("kind", "zone", "act"));
+                yield new SamplePredicate.LevelIs(integer(node, "zone"), integer(node, "act"));
+            }
+            case "all" -> {
+                object(node, "condition", Set.of("kind", "clauses"), Set.of("kind", "clauses"));
+                var clauses = new ArrayList<SamplePredicate>();
+                for (JsonNode clause : array(node.get("clauses"), "clauses")) clauses.add(predicate(clause));
+                yield new SamplePredicate.All(clauses);
+            }
+            default -> throw new IOException("unknown condition kind: " + node.get("kind"));
+        };
     }
 
     private static void object(JsonNode node, String what, Set<String> allowed, Set<String> required) throws IOException {

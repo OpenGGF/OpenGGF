@@ -7,10 +7,11 @@ import java.util.Optional;
  * One immutable observation after {@code rowsOffered} rows (zero is the entry, before row 0).
  * It holds copied values only: no object instance, mutable collection or service handle.
  *
- * @param epoch increments at every boundary (level object, game mode or gameplay context change)
+ * @param epoch        increments at every boundary (level object, game mode or gameplay context change)
+ * @param verticalWrap the camera's vertical wrap range in pixels, or zero when the level does not wrap
  */
 public record RouteSample(int rowsOffered, long epoch, Level level, Clocks clocks, PlayerView p1,
-                          Optional<PlayerView> p2, int cameraX, int cameraY) {
+                          Optional<PlayerView> p2, int cameraX, int cameraY, int verticalWrap) {
     public RouteSample {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(clocks, "clocks");

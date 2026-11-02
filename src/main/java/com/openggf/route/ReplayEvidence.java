@@ -46,7 +46,7 @@ public final class ReplayEvidence {
     }
 
     public QualificationStamp stamp() {
-        return new QualificationStamp(scope, "passed", content, environment, rows);
+        return QualificationStamp.passed(scope, content, environment, rows);
     }
 
     @Override
