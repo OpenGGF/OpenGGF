@@ -113,7 +113,7 @@ public final class S3kDataSelectProfile implements DataSelectGameProfile {
 
     @Override
     public boolean isPayloadValid(Map<String, Object> payload) {
-        if (payload == null) {
+        if (payload == null || !S3kSaveSnapshotProvider.hasValidSpecialStageProgress(payload)) {
             return false;
         }
         try {

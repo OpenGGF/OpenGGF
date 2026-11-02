@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- S3K saves retain collected giant rings and Chaos Special Stage rotation after
+  reload, and resume stock zones at their native starting act.
+
 - AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
   endpoints, and shows staggered explosion puffs when Knuckles breaks it.
 

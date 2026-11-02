@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K saves retain collected giant rings and Chaos Special Stage rotation after
+  reload, and resume stock zones at their native starting act.
+
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
 
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
