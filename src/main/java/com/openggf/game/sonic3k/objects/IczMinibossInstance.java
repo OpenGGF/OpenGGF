@@ -935,7 +935,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
         if (debris != null) {
             boolean active = false;
             for (var piece : debris) { piece.tick(servicesOrNull()); active |= piece.active; }
-            if (!active && explosionFinished) setDestroyed(true);
+            if (!active && explosionFinished) com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         if (--defeatTimer >= 0) return;
@@ -951,6 +951,8 @@ public final class IczMinibossInstance extends AbstractBossInstance
         for (int i=0; i<8; i++) {
             var orb=orbs[i];
             debris[i]=new IczMinibossDebrisChild.Motion(orb.x,orb.y,i,orb.frame,orbBucket(orb),2);
+            debris[i].xSub = orb.xSub;
+            debris[i].ySub = orb.ySub;
         }
         for (int i=0; i<6; i++) {
             var shard=shards[i];

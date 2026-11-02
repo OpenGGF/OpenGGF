@@ -20,7 +20,7 @@ public final class IczMinibossDebrisChild extends AbstractObjectInstance impleme
         // Setup dispatch selects velocity but does not move or draw.
         if (!initialized) { initialized = true; motion.visible = false; return; }
         motion.tick(services());
-        if (!motion.active) setDestroyed(true);
+        if (!motion.active) ObjectLifetimeOps.expireDynamic(this);
     }
     @Override public int getX() { return motion.x; }
     @Override public int getY() { return motion.y; }
