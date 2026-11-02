@@ -3527,7 +3527,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Natural deceleration
 		if (gSpeed != 0) {
-			short naturalDecel = (short) (sprite.getRunAccel() / 2);
+			// Sonic_RollSpeed (sonic3k.asm:22959-22966) and Tails_RollSpeed
+			// replace acceleration/2 with $06 for powered forms, including Hyper.
+			short naturalDecel = sprite.isSuperSonic() && movementRules != null
+					&& movementRules.poweredRollFriction() != 0
+					? movementRules.poweredRollFriction() : (short) (sprite.getRunAccel() / 2);
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 

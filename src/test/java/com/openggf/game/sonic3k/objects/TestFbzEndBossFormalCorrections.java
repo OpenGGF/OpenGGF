@@ -408,6 +408,44 @@ class TestFbzEndBossFormalCorrections {
         }
     }
 
+    @Test
+    void shippedHeadKeepsNeutralExpressionDuringRotationAndDebugShowsArms() throws Exception {
+        var boss = new FbzEndBossInstance(new ObjectSpawn(0x3000, 0x600,
+                Sonic3kObjectIds.FBZ_END_BOSS, 0, 0, false, 0));
+        set(boss, "phaseOrdinal", FbzEndBossInstance.Phase.ROTATION.ordinal());
+        var ship = new FbzEndBossShipChild(boss);
+        var head = new FbzRobotnikHeadChild(boss, ship, com.openggf.game.PlayerCharacter.SONIC_ALONE);
+        var renderer = new RecordingRenderer();
+        var services = new FbzServices(null, List.of(), new Camera(),
+                new GameStateManager(), new LevelGamestate());
+        services.renderManager = new RecordingRenderManager(renderer);
+        head.setServices(services);
+        head.update(0, null);
+        head.appendRenderCommands(new ArrayList<>());
+        assertEquals(0, renderer.draws.getFirst().frame());
+        var ctx = new com.openggf.debug.DebugRenderContext();
+        boss.appendDebugRenderCommands(ctx);
+        new FbzEndBossArmChild(boss, 0, -0x30, 0x48).appendDebugRenderCommands(ctx);
+        assertEquals(2, ctx.getTextEntries().size());
+        assertFalse(ctx.getGeometryCommands().isEmpty());
+    }
+
+    @Test
+    void pilotFlameUsesPaletteZeroDespiteBodySheetPalette() throws Exception {
+        var boss = new FbzEndBossInstance(new ObjectSpawn(0x3000, 0x600,
+                Sonic3kObjectIds.FBZ_END_BOSS, 0, 0, false, 0));
+        var flame = new FbzEndBossFlameChild(boss, new FbzEndBossWeaponChild(boss, 0, -0x28), 8);
+        var renderer = org.mockito.Mockito.mock(PatternSpriteRenderer.class);
+        org.mockito.Mockito.when(renderer.isReady()).thenReturn(true);
+        var services = new FbzServices(null, List.of(), new Camera(),
+                new GameStateManager(), new LevelGamestate());
+        services.renderManager = new RecordingRenderManager(renderer);
+        flame.setServices(services);
+        set(flame, "visibleAndTouching", true);
+        flame.appendRenderCommands(new ArrayList<>());
+        org.mockito.Mockito.verify(renderer).drawFrameIndex(4, flame.getX(), flame.getY(), false, false, 0);
+    }
+
     private static final class FbzServices extends StubObjectServices {
         private final PlayableEntity main;
         private final List<? extends PlayableEntity> sidekicks;

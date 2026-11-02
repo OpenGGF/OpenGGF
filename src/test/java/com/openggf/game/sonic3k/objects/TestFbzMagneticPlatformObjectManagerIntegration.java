@@ -152,6 +152,25 @@ class TestFbzMagneticPlatformObjectManagerIntegration {
         assertTrue(additionalSidekick.isOnObject());
     }
 
+    @Test
+    void groundedPlayerUnderPlatformDiesWithoutLosingRingsOrBlinking() {
+        Harness harness = harness(ONSCREEN_CAMERA_X, ONSCREEN_CAMERA_Y);
+        harness.addPlatform();
+        TestPlayer player = groundedSidePlayer(PLATFORM_X);
+        player.setCentreY((short) (PLATFORM_Y + 12));
+        player.setYSpeed((short) 0);
+        com.openggf.game.GameServices.level().resetLevelGamestate(
+                new Sonic3kGameModule().createLevelState());
+        player.setRingCount(25);
+        assertEquals(25, player.getRingCount(), "fixture must own a live ring ledger");
+        harness.step(player, List.of(), 1);
+        assertTrue(player.getDead(), "the real offset solid pass must enter crush death");
+        assertFalse(player.isHurt());
+        assertEquals(25, player.getRingCount());
+        assertTrue(player.shouldRefreshRenderFlagThisFrame());
+        assertTrue(player.getInvulnerable(), "later object-owned hazards cannot spill rings");
+    }
+
     private static TestPlayer landingPlayer(int x) {
         TestPlayer player = new TestPlayer();
         player.setCentreX((short) x);

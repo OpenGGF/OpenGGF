@@ -5,6 +5,11 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
+- Correct FBZ2 boss pilot-light colors, shipped rotation expression and debug geometry; preserve S3K’s native Super/Hyper revert grace boundary.
+- Death sprites draw without hurt-timer blinking, and crushed players reject further hurt and object-owned ring-loss requests.
+
 - S3K level select uses native zone save-card previews, and data select uses the correct Flying Battery palette.
 
 - Knuckles glide speed halves above the native top boundary, including signed-word wrapping and arithmetic-shift behavior.
@@ -16,6 +21,10 @@ capsule sprite/plane priority, with rewind-safe opening control ownership.
 
 - LBZ2 submits native EggRobo-head art during head initialization.
 - Solo S2 title-card entry records leader history during its native object passes.
+
+- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
+
+- S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
 - Knuckles restores the native animation after non-flat glide landings.
 - LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
 

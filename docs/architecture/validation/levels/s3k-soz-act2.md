@@ -24,6 +24,24 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
 
+## Opening sandfall priority regression (2026-11-02)
+
+The seamless entry retains the player's art priority and places Sonic at centre
+`$0140,$03AC` (`loc_55C84`). The first ROM path marker is at `$0140,$0380`,
+subtype `$01`: `loc_1CD3C` initializes its side with strict `>`, then falls through
+to `sub_1CDDA`, whose crossing test includes equality. That first pass therefore
+clears high priority before the opening sandfalls. Seeding the latch with `>=`
+and returning loses that write, leaving Sonic in front until another marker.
+
+`TestPlaneSwitcherStateIsolation.initialEqualityExecutesNativeCrossing` covers
+this entry with inherited high priority, plus both axes and the shared S2 owner.
+Off-marker starts and grounded-only gates retain their native behavior. The
+existing per-player isolation and rewind cases cover independent crossing
+latches and restoration. The focused class passes 13 tests with zero failures,
+errors or skips on the implementation based on `27a693ef9` (Java 25.0.5). This local trigger check does not certify a new cold
+route, visual parity, donor/viewport breadth, or the inherited matrix gaps below.
+
+
 ## Current Knuckles cold-route limits (2026-10-22)
 
 An exact three-case focused selection on pinned
@@ -977,3 +995,14 @@ player art in the published sprite presentation at the seam. The independent
 and beyond the 2048-pixel period. These are bounded presentation checks;
 manual traversal from the switch at (8607, 414) and the rappel at (12434, 1689),
 pixel acceptance, and the remaining viewport/donor matrix remain separate gaps.
+
+### Rappel wire pulley art (2026-11-02)
+
+`TestSozRapelWireArtWord` checks the production SOZ sheet's stationary pulley,
+links and handle against their level pattern identities. The pulley mapping
+word `$FFC4` must add the full parent art word `$4411`, yielding `$43D5`:
+tile `$3D5`, palette 2, no flips or priority. Resolving only the tile index
+loses this wrap and leaves the pulley blank. Both acts share this art builder.
+The existing `TestSozSwingAndWireProduction` covers placed wires in both acts,
+including extension, ratcheting and graph recreation/forward replay. This local
+art regression does not close inherited viewport, donor or native pixel coverage.

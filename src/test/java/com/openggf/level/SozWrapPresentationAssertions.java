@@ -11,7 +11,11 @@ public final class SozWrapPresentationAssertions {
     public static void assertPlayerArtPresent() {
         var tiles = GameServices.level().spritePresentationRenderer().spriteTables
                 .capture().prepared().tiles();
-        assertTrue(tiles.stream().anyMatch(tile -> tile.layer() == SpritePresentation.Layer.PLAYER),
+        var renderer = GameServices.sprites().getMainPlayable().getSpriteRenderer();
+        int base = renderer.patternBankBase();
+        int end = base + renderer.patternBankCapacity();
+        assertTrue(tiles.stream().anyMatch(tile -> tile.layer() == SpritePresentation.Layer.PLAYER
+                        && tile.patternId() >= base && tile.patternId() < end),
                 "sand carry must retain player art across the vertical seam");
     }
 }

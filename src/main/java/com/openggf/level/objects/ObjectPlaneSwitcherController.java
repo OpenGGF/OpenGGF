@@ -137,12 +137,15 @@ final class ObjectPlaneSwitcherController {
         int sideNow = horizontal
                 ? (playerY >= spawn.y() ? 1 : 0)
                 : (playerX >= spawn.x() ? 1 : 0);
-        int previousSide = state.getSideState(player);
-        if (previousSide < 0) {
-            state.setSideState(player, sideNow);
-            state.setLastSideState(sideNow);
-            return;
-        }
+        int savedSide = state.getSideState(player);
+        // Obj03_Init / Obj03_Init_CheckX (S2) and loc_1CD06 / loc_1CD3C
+        // (S3K) seed with strict >, then fall through to the >= crossing test.
+        // Equality must therefore execute the first-pass path/priority write:
+        // e.g. SOZ2's seamless entry lands exactly on its opening marker.
+        int previousSide = savedSide < 0
+                ? (horizontal ? (playerY > spawn.y() ? 1 : 0)
+                              : (playerX > spawn.x() ? 1 : 0))
+                : savedSide;
 
         int half = state.halfSpanPixels;
         boolean inSpan = horizontal

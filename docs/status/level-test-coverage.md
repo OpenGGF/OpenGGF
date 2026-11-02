@@ -1,5 +1,21 @@
 # Level test coverage backlog
 
+## Shared act-reload shield ownership
+
+The 2026-11-02 shield continuity regression
+`TestS3kActTransitionShieldContinuity` covers AIZ, HCZ, MGZ, CNZ, FBZ,
+ICZ, LBZ, MHZ, SOZ, LRZ and DEZ act-1 to act-2 reloads with their production
+object-survival policies. Each positioned check grants a fire shield with either
+pending or already-registered Insta-Shield state, executes the shared reload
+executor, and checks retained identity and animation progress through normal
+object-manager dispatch. SSZ and DDZ have no act-1 to act-2 reload.
+The separate FBZ event regression covers all three elemental shield types;
+the shared refresh regression covers deferred registration and shield loss for
+every shield type. This checks the reload/registration mechanism, not every
+zone's boss trigger, offset/camera script, donor/team/viewport combination,
+rendered pixels or whole-world replay; those matrix obligations remain inherited.
+
+
 S3K common object ownership (2026-11-02): see the [HCZ2 maintenance record](../architecture/validation/levels/s3k-hcz2.md)
 and [shared routine ownership audit](../architecture/object-implementation-reference.md#shared-rom-routine-ownership).
 Capsule opening/effect rewind, shared cutscene-button bounds/actions and explosion
@@ -538,6 +554,8 @@ records the ROM `$0D3` tile-base correction, a loaded-sheet regression for
 both acts, and 154 focused passes without skips. Gameplay capture is blocked
 by this environment's GLSL support; inherited route/configuration and native
 whole-scene coverage gaps remain open.
+
+SOZ2 opening-priority follow-up (2026-11-02): the [Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#opening-sandfall-priority-regression-2026-11-02) records the exact-entry path-trigger regression and its bounded coverage; broader route and presentation gaps remain.
 
 SOZ1 Knuckles bonus-route follow-up (2026-10-21): the
 [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#natural-knuckles-glowing-sphere-release-2026-10-21)
@@ -2505,6 +2523,23 @@ records exact module admission and initialized graph-rewind ownership. Composed
 checks pass80 controls, zero skips; replay remains232 errors with an identical
 profile. No full-route or roster/donor/viewport/presentation gap is closed.
 
+
+FBZ2 boss display follow-up (2026-11-02): focused regressions cover the shipped
+neutral rotation head, palette-zero pilot flame, and root/arm debug geometry.
+The S3K revert timer now retains invincibility until the next native eight-frame
+boundary. Arms remain harmful until native dismantling; this does not guarantee
+protection throughout the defeat sequence. Full-route, pixel and configuration
+coverage gaps above remain open.
+SOZ rappel-wire art follow-up (2026-11-02):
+`TestSozRapelWireArtWord` checks pulley/link/handle pattern identity and full
+mapping-word resolution. See the [local matrix record](../architecture/validation/levels/s3k-soz-act2.md#rappel-wire-pulley-art-2026-11-02).
+Inherited route breadth and native pixel acceptance remain open.
+
+HCZ1 miniboss release (2026-11-02): the [HCZ1 maintenance matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#miniboss-water-effect-release-2026-11-02)
+records independent native-player tracking and cooldown capture/restore before
+water-effect deletion. This local obligation does not certify broader route,
+character, donor or viewport coverage; inherited matrix gaps remain open.
+
 FBZ2 encounter presentation follow-up (2026-11-02): roof-emitter vertical flips
 and rising-floor entrance-pillar art priority have focused draw/priority checks;
 closure timing and its single impact sound are covered in the
@@ -2515,3 +2550,16 @@ SOZ2 vertical seam presentation follow-up (2026-11-02): the connected sand-carry
 route requires player art at its wrap, with independent SAT admission boundary
 checks. See the [SOZ2 matrix](../architecture/validation/levels/s3k-soz-act2.md#vertical-seam-sprite-admission-2026-11-02)
 for the bounded coverage and remaining manual/pixel obligations.
+
+SOZ push-switch overlap correction (2026-11-02): focused
+`TestSozMechanisms.handlePrecedesRailInSatButFollowsItInPainterOrder` pins
+the native main-handle-before-child-rail emission for both mounting sides and
+the reverse painter order. This local presentation fix changes no movement or
+rewind state; the SOZ matrix's inherited viewport/donor and native presentation
+acceptance gaps remain open.
+
+Iwamodoki self-destruct follow-up (2026-11-02): the
+[LRZ1](../architecture/validation/levels/s3k-lrz-act1.md#iwamodoki-rider-release-2026-11-02)
+and [LRZ2](../architecture/validation/levels/s3k-lrz-act2.md#iwamodoki-rider-release-2026-11-02)
+matrices record the bounded P1/P2 shield/rider regression and inherited route,
+breadth and rewind obligations.

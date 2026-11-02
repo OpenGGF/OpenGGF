@@ -37,6 +37,11 @@ abstract class AbstractFbzEndBossChild extends AbstractObjectInstance
         return com.openggf.game.mutators.ObjectHeadRole.BOSS;
     }
 
+    @Override public void appendDebugRenderCommands(com.openggf.debug.DebugRenderContext ctx) {
+        ctx.drawCross(x, y, 4, 0f, 1f, 1f);
+        ctx.drawWorldLabel(x, y, -1, "FBZ " + role, com.openggf.debug.DebugColor.CYAN);
+    }
+
     @Override public String rewindRole() { return role; }
     @Override public FbzEndBossInstance boss() { return boss; }
     @Override public int getX() { return x; }
