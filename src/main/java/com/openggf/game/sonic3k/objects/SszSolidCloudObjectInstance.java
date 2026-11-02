@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -42,7 +43,7 @@ import java.util.logging.Logger;
  * behaviour is what the platform geometry is.
  */
 public final class SszSolidCloudObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SpawnRewindRecreatable {
+        implements S3kSlopedTopSolidProvider, SpawnRewindRecreatable {
     private static final Logger LOGGER =
             Logger.getLogger(SszSolidCloudObjectInstance.class.getName());
 

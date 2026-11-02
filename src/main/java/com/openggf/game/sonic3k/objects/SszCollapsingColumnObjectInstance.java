@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -10,7 +11,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  * both states, so a collapsing column is still solid while its pieces hang.
  */
 public final class SszCollapsingColumnObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native walkway/column shape and falling debris are terrain geometry without logical horizontal facing.
     private static final Logger LOGGER =

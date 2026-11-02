@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -14,7 +15,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -37,7 +37,7 @@ import java.util.List;
  * is applied here.
  */
 public final class CnzTrapDoorInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     /** ROM {@code move.w #$80,priority(a0)} at Obj_CNZTrapDoor init: bucket 1. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
@@ -157,19 +157,11 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
+        // loc_31CCA (sonic3k.asm:67262-67270) calls SolidObjectTop after the
+        // player slots. loc_1E45A (sonic3k.asm:42038-42063) reads their current
+        // positions. Native zero rejection removes the old previous-position
+        // workaround for the zero-accepting detector.
         return SOLID_PARAMS;
-    }
-
-    @Override
-    public int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        // Obj_CNZTrapDoor runs inside Process_Sprites and immediately calls
-        // SolidObjectTop after checking both players (sonic3k.asm:67257-67265).
-        // The helper then reads x_pos/y_pos/y_radius before RideObject_SetRide
-        // (sonic3k.asm:42022-42055). In the engine's split player/object pass,
-        // using the just-moved player position accepts the exact top boundary
-        // one frame early; sample the previous completed player position for
-        // new top-solid geometry to match the ROM object phase.
-        return 1;
     }
 
     @Override

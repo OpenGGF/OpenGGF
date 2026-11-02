@@ -7,6 +7,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPachinkoPlatformObjectInstance {
@@ -23,6 +24,9 @@ class TestPachinkoPlatformObjectInstance {
         assertEquals(0x0D, params.groundHalfHeight());
         assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
         assertTrue(profile.topSolidOnly());
-        assertTrue(profile.stickyContactBuffer());
+        // SolidObjectTop_1P (sonic3k.asm:41838-41859): exact d1*2 bounds.
+        assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.usesGroundHalfHeightForTopSolidContact());
+        assertTrue(platform.rejectsZeroDistanceTopSolidLanding());
     }
 }

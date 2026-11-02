@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -13,7 +14,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 
 import java.util.List;
@@ -43,7 +43,7 @@ import java.util.List;
  * is no {@code FixBugs} switch near it: this is what the ROM does, and the engine reproduces it.
  */
 public final class LrzDomeLavaPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements S3kTopSolidProvider, SolidObjectListener, RewindRecreatable {
 
     /** {@code move.w #$1E80,x_pos(a0)}: the object ignores where it was allocated. */
     public static final int FIXED_X = 0x1E80;
@@ -211,7 +211,7 @@ public final class LrzDomeLavaPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(false);
+        return SolidRoutineProfile.fromProvider(this);
     }
 
     @Override
