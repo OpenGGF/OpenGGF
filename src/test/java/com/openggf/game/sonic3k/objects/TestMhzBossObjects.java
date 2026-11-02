@@ -100,6 +100,34 @@ class TestMhzBossObjects {
     }
 
     @Test
+    void mhzMinibossFlamesUsePaletteZeroInsteadOfBodyPalette() {
+        Sonic3kObjectArtProvider artProvider = mocks.mock(Sonic3kObjectArtProvider.class);
+        PatternSpriteRenderer renderer = readyRenderer();
+        when(artProvider.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
+        ObjectRenderManager renderManager = new ObjectRenderManager(artProvider);
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        };
+        MhzMinibossInstance boss = new MhzMinibossInstance(new ObjectSpawn(
+                0x4200, 0x0200, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(services);
+        for (int childIndex = 0; childIndex < 2; childIndex++) {
+            MhzMinibossFlameInstance flame = new MhzMinibossFlameInstance(boss, childIndex);
+            flame.setServices(services);
+            flame.update(0, null);
+            flame.appendRenderCommands(new ArrayList<>());
+            verify(renderer).drawFrameIndex(anyInt(), org.mockito.ArgumentMatchers.eq(flame.getX()),
+                    org.mockito.ArgumentMatchers.eq(flame.getY()),
+                    org.mockito.ArgumentMatchers.eq(false), org.mockito.ArgumentMatchers.eq(false),
+                    org.mockito.ArgumentMatchers.eq(0));
+            clearInvocations(renderer);
+        }
+    }
+
+    @Test
     void registryRoutesSklMhzBossSlotsToMhzHandlers() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
 
@@ -3894,8 +3922,8 @@ class TestMhzBossObjects {
 
         // Each flame draws exactly once (raw counter 0 only); raw counter 1 is
         // flicker-hidden, so the default times(1) verify would fail if it drew twice.
-        verify(renderer).drawFrameIndex(0x16, 0x2E1B, 0x04A4, false, false);
-        verify(renderer).drawFrameIndex(0x16, 0x2E11, 0x04A4, false, false);
+        verify(renderer).drawFrameIndex(0x16, 0x2E1B, 0x04A4, false, false, 0);
+        verify(renderer).drawFrameIndex(0x16, 0x2E11, 0x04A4, false, false, 0);
     }
 
     @Test

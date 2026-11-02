@@ -474,3 +474,14 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+## Miniboss flame palette — 2026-11-02
+
+`TestMhzBossObjects.mhzMinibossFlamesUsePaletteZeroInsteadOfBodyPalette`
+checks both child slots submit palette base 0, as `word_75E5E` specifies,
+while the body retains base 1. This local draw selection applies across
+viewport, donor and team configurations; native pixel comparison and complete
+route breadth remain inherited gaps. Flame graph restoration/forward replay
+is covered separately by `TestS3kMhzMinibossFlameGraphRewind`.
+The [damage flash gap](../../../status/s3k-known-bugs.md#mhz1-miniboss-damage-palette-flash--2026-11-02)
+remains open.
