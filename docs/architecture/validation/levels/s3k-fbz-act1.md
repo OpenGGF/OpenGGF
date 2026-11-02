@@ -720,3 +720,24 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## Indoor return tile-ring initialization — 2026-11-02
+
+`TestFbzAct1RomRuntimeLifecycle.indoorReloadSeedsRowsAtRestoredCameraHeight`
+checks the initial indoor Plane-B descriptors at a restored camera Y of `$500`.
+FBZ1 background initialization must fill the physical 256px ring starting at
+its effective background Y, aligned to 16px, rather than source world Y zero.
+The deformation bands index world Y, so a zero-origin fill at an interior
+return pairs the bands with unrelated artwork until ordinary scrolling replaces
+those rows. ROM `loc_528A4` calls `Reset_TileOffsetPositionEff` before
+`Refresh_PlaneFull`; the latter writes sixteen successive 16px rows.
+This descriptor check supplements retained-row and rewind tests; it does not
+certify special-stage gameplay or native pixel parity. Existing route, viewport
+and donor gaps remain as recorded above.
+
+Focused validation: `TestFbzAct1RomRuntimeLifecycle`,
+`TestFbzRetainedPlaneNativeRows`, `TestFbzScrollHandler`, `TestFbzEventsAct1`
+and the four required S3K loading selectors completed 83 tests with no
+failures, errors or skips using the original locked-on ROM. The new test
+failed on the pre-fix implementation at world Y=608. No visual capture was
+performed for this correction.
