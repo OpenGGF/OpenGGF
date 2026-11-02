@@ -1287,3 +1287,12 @@ admission, graph restore, and body/proxy × P1/P2 pending-contact replacement
 identity checks pass in the [lifecycle record](../2026-10-26-tas-accuracy-s3k-lifecycle.md).
 The exact published approach and later auto-scroll route remain outside this
 local proof; existing act/roster/viewport/donor obligations are unchanged.
+
+## Mushroom parachute landing correction — 2026-11-02
+
+`loc_3F678` calls `SonicKnux_DoLevelCollision` after copying the carried
+position and velocity. Terrain responses must survive until the next carry
+pass, where `sub_3F5C2` detects the velocity mismatch and `loc_3F660` releases
+the player with y velocity -$100. The focused parachute regression covers this
+ordering; full cold-route, viewport/donor breadth and carry/landing rewind
+remain inherited obligations rather than certification from this component check.

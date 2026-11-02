@@ -474,3 +474,12 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+## Mushroom parachute landing correction — 2026-11-02
+
+`loc_3F678` calls `SonicKnux_DoLevelCollision` after copying the carried
+position and velocity. Terrain responses must survive until the next carry
+pass, where `sub_3F5C2` detects the velocity mismatch and `loc_3F660` releases
+the player with y velocity -$100. The focused parachute regression covers this
+ordering; full cold-route, viewport/donor breadth and carry/landing rewind
+remain inherited obligations rather than certification from this component check.

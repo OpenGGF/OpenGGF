@@ -2397,3 +2397,9 @@ before creation, and 180 updates of piece replay. The [act matrix](../architectu
 retains the inherited route, donor, roster and viewport gaps.
 
 LBZ1 fresh-entry follow-up (2026-11-01): the [act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records the ICZ2 fade/load/title-to-ground-launch regression witness. Sonic-alone emergence and control release are bounded coverage; broader roster/viewport/donor and transition rewind obligations remain open.
+
+MHZ parachute landing correction (2026-11-02): the focused parachute test
+checks carried-player terrain dispatch and next-pass velocity-mismatch release.
+See the [MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#mushroom-parachute-landing-correction--2026-11-02)
+and [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#mushroom-parachute-landing-correction--2026-11-02)
+for inherited route, configuration and rewind gaps.
