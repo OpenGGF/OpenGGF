@@ -11,6 +11,29 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class TestBonusStageShieldRestore {
 
     @Test
+    void slotsKeepsEveryElementalShieldSavedForReturnWithoutSpawningItInside() {
+        var provider = new com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator();
+        for (var type : new com.openggf.game.BonusStageType[] {
+                com.openggf.game.BonusStageType.SLOT_MACHINE,
+                com.openggf.game.BonusStageType.GUMBALL,
+                com.openggf.game.BonusStageType.GLOWING_SPHERE}) {
+            provider.onEnter(type, null);
+            for (int bit : new int[] {GameLoop.STATUS_FIRE_SHIELD_BIT,
+                    GameLoop.STATUS_LIGHTNING_SHIELD_BIT, GameLoop.STATUS_BUBBLE_SHIELD_BIT}) {
+                var player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+                int saved = 1 << bit;
+                BonusStageShieldRestoration.restoreOnEntry(provider, player, saved);
+                var expected = BonusStageShieldRestoration.savedShieldType(saved);
+                assertEquals(type == com.openggf.game.BonusStageType.SLOT_MACHINE ? null : expected,
+                        player.getShieldType());
+                assertEquals(expected, GameLoop.resolveShieldToRestore(
+                        BonusStageProvider.BonusStageRewards.none(), saved));
+            }
+            provider.onExit();
+        }
+    }
+
+    @Test
     void encodeSavedShieldStatus_tracksElementalShieldBits() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
 
