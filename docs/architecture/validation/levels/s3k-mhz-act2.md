@@ -1386,3 +1386,22 @@ team, donor, viewport or complete defeat-to-FBZ products. Existing viewport chec
 exercise the native camera and ramp arithmetic across the supported widths; the new
 pixel witness covers 320px, Sonic alone, native donor only. Combined smoke belongs
 to the parent integration owner.
+
+### Ending capsule priority — 2026-11-02
+
+The shared upright capsule now consumes `ObjDat_EggCapsule` sprite priority
+$200 (bucket 4) and high tile priority, matching the body/button art word
+(sonic3k.asm:182246-182253). Previously bucket 5 and low tile priority let the
+Flying Battery scenery cover the MHZ2 capsule. CNZ and SOZ representative
+instances share a ROM-free priority regression in `TestCnzEggCapsuleInstance`.
+No new mutable state or rewind contract is introduced. Native pixel comparison,
+cold ending traversal and full viewport/donor/team coverage remain inherited gaps.
+
+Focused queued Maven validation passed 205 tests with zero failures, errors or
+skips: `TestCnzEggCapsuleInstance`, `TestMhzBossObjects`,
+`TestStageplayCapsuleControlRelease`, `TestMgzEndBossKnuxCapsuleFlag`,
+`TestS3kMhzEndBossGraphRewind`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver` and
+`TestSonic3kDecodingUtils`, using the original absolute S3&K ROM path.
+This replaces the disproportionate 3,540-class category selection for this
+immutable draw-attribute change; it is not broad smoke or visual qualification.
