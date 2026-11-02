@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
+
 - Knuckles restores the native animation after non-flat glide landings.
 - LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
 
