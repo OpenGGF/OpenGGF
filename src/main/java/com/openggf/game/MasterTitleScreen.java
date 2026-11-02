@@ -203,6 +203,7 @@ public class MasterTitleScreen {
     /** Please-note dialog asked before starting a game whose support is unfinished, and its game. */
     private GameSupportNoticeDialog supportNotice;
     private MasterTitleEntry.Stock supportNoticeEntry;
+    private com.openggf.util.ExternalBrowser.Launcher supportLinkLauncher = com.openggf.util.ExternalBrowser.SYSTEM;
     private boolean helpShortcutHeld;
     private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
@@ -752,6 +753,10 @@ public class MasterTitleScreen {
         supportNotices = Objects.requireNonNull(notices, "notices");
     }
 
+    void setSupportLinkLauncherForTest(com.openggf.util.ExternalBrowser.Launcher launcher) {
+        supportLinkLauncher = Objects.requireNonNull(launcher, "launcher");
+    }
+
     boolean isEndPromptOpenForTest() {
         return endPrompt;
     }
@@ -1183,6 +1188,11 @@ public class MasterTitleScreen {
                 supportNoticeEntry = null;
                 confirmLaunch(new MasterTitleEntry.Launch(stock, MasterTitleEntry.Action.NEW_GAME), false);
             }
+            // The address stays on screen, so a failed opener still leaves the player a way there.
+            case OPEN_LINK -> supportNotice.focusedLink().ifPresent(link -> {
+                if (com.openggf.util.ExternalBrowser.open(link, supportLinkLauncher)) playConfirmSound();
+                else playErrorSound();
+            });
             case NONE -> { }
         }
     }

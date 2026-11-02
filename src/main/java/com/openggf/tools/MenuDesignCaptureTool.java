@@ -75,7 +75,7 @@ public final class MenuDesignCaptureTool {
         Files.createDirectories(out);
         Path modsCopy = modsSource == null ? null : copyMods(modsSource);
 
-        int up = GLFW_KEY_UP, down = GLFW_KEY_DOWN, right = GLFW_KEY_RIGHT, enter = GLFW_KEY_ENTER;
+        int up = GLFW_KEY_UP, down = GLFW_KEY_DOWN, left = GLFW_KEY_LEFT, right = GLFW_KEY_RIGHT, enter = GLFW_KEY_ENTER;
         int f1 = GLFW_KEY_F1;
         Consumer<Context> none = c -> { };
         Consumer<Context> recordings = c -> c.hub.setPlaybackLibrarySourceForTest(() -> new PlaybackLibrary(
@@ -127,9 +127,11 @@ public final class MenuDesignCaptureTool {
                 new Scene("m09-recordings-row", recordings, List.of(down, down, right, right, enter, down), 20),
                 new Scene("m10-trace-picker", traces, List.of(), 120),
                 new Scene("m11-trace-picker-row", traces, List.of(), 120),
-                // Starting S3K (right of the default S2 card) asks first; the second has Don't show again on.
+                // Starting S3K (right of the default S2 card) asks first; the second has Don't show again on,
+                // the third focuses the issue link (never pressed: that would open a browser).
                 new Scene("m15-support-notice", none, List.of(right, enter), 20),
-                new Scene("m15b-support-notice-dont-show", none, List.of(right, enter, up, enter), 20)));
+                new Scene("m15b-support-notice-dont-show", none, List.of(right, enter, left, enter), 20),
+                new Scene("m15c-support-notice-link", none, List.of(right, enter, up), 20)));
         if (modsCopy != null) {
             hubScenes.add(new Scene("m12-mods", mods, List.of(up, enter), 30));
             hubScenes.add(new Scene("m13-mods-row", mods, List.of(up, enter, down, down), 30));

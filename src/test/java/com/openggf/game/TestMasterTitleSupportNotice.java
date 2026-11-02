@@ -3,13 +3,16 @@ package com.openggf.game;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.launch.GameSupportNotices;
+import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.i18n.UiLanguage;
 import com.openggf.i18n.UiMessages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +33,11 @@ class TestMasterTitleSupportNotice {
     }
 
     private static MasterTitleScreen screen(SonicConfigurationService config) {
-        var screen = new MasterTitleScreen(config);
+        return prepared(new MasterTitleScreen(config));
+    }
+
+    private static MasterTitleScreen prepared(MasterTitleScreen screen) {
+        screen.setSupportLinkLauncherForTest(command -> fail("no test may open a real browser: " + command));
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
             screen.setRomAvailableForTest(game, true);
@@ -101,10 +108,55 @@ class TestMasterTitleSupportNotice {
         var screen = screen(config);
         selectS3k(screen);
         press(screen, GLFW_KEY_ENTER);
-        press(screen, GLFW_KEY_UP);
+        press(screen, GLFW_KEY_LEFT);
         press(screen, GLFW_KEY_ENTER);
         press(screen, GLFW_KEY_ESCAPE);
         assertEquals("", config.getString(SonicConfiguration.HUB_DISMISSED_NOTICES));
+    }
+
+    @Test void theLinksAreFocusableAndOpenInTheBrowserWithoutLeaving() {
+        var screen = screen(config());
+        List<List<String>> opened = new ArrayList<>();
+        screen.setSupportLinkLauncherForTest(opened::add);
+        selectS3k(screen);
+        press(screen, GLFW_KEY_ENTER);
+        var notice = screen.supportNoticeForTest();
+
+        press(screen, GLFW_KEY_UP);
+        assertEquals(GameSupportNoticeDialog.Focus.REPORT_ISSUE, notice.focus(), "Up from the controls reaches the links");
+        press(screen, GLFW_KEY_UP);
+        assertEquals(GameSupportNoticeDialog.Focus.DISCORD, notice.focus());
+        press(screen, GLFW_KEY_UP);
+        assertEquals(GameSupportNoticeDialog.Focus.DISCORD, notice.focus(), "the first link is the top row");
+        press(screen, GLFW_KEY_LEFT);
+        assertEquals(GameSupportNoticeDialog.Focus.DISCORD, notice.focus(), "a link row has nothing beside it");
+        press(screen, GLFW_KEY_ENTER);
+        press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_ENTER);
+        assertEquals(List.of("https://openggf.com/discord", "https://openggf.com/report-issue"),
+                opened.stream().map(List::getLast).toList());
+        assertSame(notice, screen.supportNoticeForTest(), "opening a link keeps the notice open");
+        assertFalse(screen.isGameSelected());
+
+        press(screen, GLFW_KEY_DOWN);
+        assertEquals(GameSupportNoticeDialog.Focus.CONTINUE, notice.focus(), "the controls row lands on Continue");
+        press(screen, GLFW_KEY_ENTER);
+        assertTrue(screen.isGameSelected());
+        assertEquals(2, opened.size());
+    }
+
+    @Test void aMissingBrowserOpenerSignalsAnErrorAndKeepsTheNoticeOpen() {
+        var config = config();
+        List<MasterTitleScreen.AudioCue> cues = new ArrayList<>();
+        var screen = prepared(new MasterTitleScreen(config, new LaunchProfileStore(config), cues::add));
+        screen.setSupportLinkLauncherForTest(command -> { throw new IOException("no opener"); });
+        selectS3k(screen);
+        press(screen, GLFW_KEY_ENTER);
+        press(screen, GLFW_KEY_UP);
+        cues.clear();
+        press(screen, GLFW_KEY_ENTER);
+        assertEquals(List.of(MasterTitleScreen.AudioCue.ERROR), cues);
+        assertNotNull(screen.supportNoticeForTest(), "the address stays readable on screen");
     }
 
     @Test void ungatedGamesStartDirectlyAndTheGateListIsReplaceable() {
@@ -129,11 +181,16 @@ class TestMasterTitleSupportNotice {
         var layout = dialog.layout();
         assertTrue(layout.y() >= 0 && layout.y() + layout.h() <= MenuChrome.FOOTER_Y, "the panel clears the footer");
         assertEquals(1, layout.pages(), "English fits on one page at 320 px");
-        assertEquals(List.of("openggf.com/discord", "openggf.com/report-issue"), GameSupportNoticeDialog.LINKS);
-        for (String link : GameSupportNoticeDialog.LINKS) {
-            assertTrue(MenuChrome.compactWidth(link) <= layout.w() - 24, link + " fits inside the panel");
+        assertEquals(List.of("openggf.com/discord", "openggf.com/report-issue"),
+                GameSupportNoticeDialog.LINKS.stream().map(GameSupportNoticeDialog.Link::address).toList());
+        int linksBottom = layout.bodyY();
+        for (GameSupportNoticeDialog.Link link : GameSupportNoticeDialog.LINKS) {
+            MasterTitleScreen.Rect r = layout.bounds(link.focus());
+            assertTrue(r.w() >= MenuChrome.ICON_SIZE + 4 + MenuChrome.compactWidth(link.address()),
+                    link.address() + " is drawn whole beside its icon");
+            assertTrue(r.y() >= linksBottom, link.address() + " sits below the body and the link above it");
+            linksBottom = r.y() + r.h();
         }
-        int linksBottom = layout.urlY() + GameSupportNoticeDialog.LINKS.size() * MenuChrome.compactLineHeight();
         assertTrue(Math.min(layout.toggle().y(), layout.button().y()) >= linksBottom, "the controls sit below both links");
         for (GameSupportNoticeDialog.Focus focus : GameSupportNoticeDialog.Focus.values()) {
             MasterTitleScreen.Rect r = layout.bounds(focus);

@@ -850,9 +850,10 @@ Unreleased. The earlier development themes remain in
 
 - **Support notices:** Starting Sonic 3 & Knuckles from the hub first shows a
   translated Please note dialog saying its support is in alpha and asking for bug
-  reports on Discord or GitHub. Back returns to the shelf; Continue starts the game,
-  and Don't show again hides that game's notice until its stage changes. Any stock
-  game can be gated or released by editing one table.
+  reports on Discord or GitHub, with both links selectable to open in the browser.
+  Back returns to the shelf; Continue starts the game, and Don't show again hides
+  that game's notice until its stage changes. Any stock game can be gated or
+  released by editing one table.
 
 - **Main menu:** Compact and bold lettering now share one proportional
   pixel-font family, with narrower lowercase, steady digits for counters and
