@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Native replay entries retain their start history; positioned S3K entries retain
+  pre-spawn vertical camera focus and native-object placement of Tails.
+
 - LBZ2 submits native EggRobo-head art during head initialization.
 - Solo S2 title-card entry records leader history during its native object passes.
 - Knuckles restores the native animation after non-flat glide landings.

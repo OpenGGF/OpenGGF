@@ -1428,7 +1428,7 @@ public final class TraceReplaySessionBootstrap {
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
                     GameServices.module(),
-                    level);
+                    level, TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             if ("s2".equals(meta.game()) && meta.hasNativePreludeBootstrap()) {
                 for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
                     SidekickCpuController cpu = sidekick.getCpuController();
@@ -1439,7 +1439,8 @@ public final class TraceReplaySessionBootstrap {
             }
             GroundSensor.setLevelManager(level);
             if (!preserveProductionLoadCamera) {
-                com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+                com.openggf.level.LevelEntryInitialization.initializeCamera(level,
+                        TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             }
             level.initLevelEventsForLevel();
             // Re-apply zone player state after sidekick reposition. ROM's

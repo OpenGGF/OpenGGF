@@ -453,12 +453,22 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean requiresFreshLevelLoadForTraceReplay(TraceData trace) {
-        return hasRecordedPreLevelPrefix(trace)
+        return (hasRecordedPreLevelPrefix(trace) || trace.metadata().hasNativePreludeBootstrap())
                 && replaySeedTraceIndexForTraceReplay(trace) == 0;
     }
 
+    public static com.openggf.game.session.LevelEntryProvenance entryProvenanceForTraceReplay(TraceData trace) {
+        // The declared prelude is an explicit native-load contract. Metadata
+        // coordinates are descriptive there, not a second spawn instruction.
+        return trace.metadata().hasNativePreludeBootstrap() || hasRecordedPreLevelPrefix(trace)
+                ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
+                : com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY;
+    }
+
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
-        return replaySeedTraceIndexForTraceReplay(trace) == 0
+        return entryProvenanceForTraceReplay(trace)
+                == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY
+                && replaySeedTraceIndexForTraceReplay(trace) == 0
                 && !hasRecordedPreLevelPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
     }

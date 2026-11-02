@@ -70,6 +70,29 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     @Override
+    public void initializePositionedLevelStartCamera(Camera camera, AbstractPlayableSprite player,
+                                                     int zone, int act, boolean checkpoint) {
+        // Get_LevelSizeStart loc_1BF74 (sonic3k.asm:38286-38316) precedes
+        // SpawnLevelMainSprites loc_6B42 (sonic3k.asm:8415-8423). A positioned
+        // Tails-alone body already includes that later +4; camera focus does not.
+        boolean tails = com.openggf.game.CharacterKey.TAILS.equals(player.characterKey());
+        // loc_1BEC6 (sonic3k.asm:38202-38231) returns with absolute ICZ1
+        // Tails camera registers, bypassing loc_1BF74. Unknown entry provenance
+        // cannot select that cold branch or a restored generic focus instead.
+        if (tails && zone == Sonic3kZoneIds.ZONE_ICZ && act == 0) return;
+        int focusY = player.getCentreY();
+        if (tails) focusY -= 4;
+        // A declared position does not say whether Last_star_post_hit was set.
+        // Preserve horizontal focus until the caller supplies that entry kind;
+        // never infer it from position or campaign-manifest comparison evidence.
+        short horizontalCamera = camera.getX();
+        Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), focusY,
+                com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
+                zone, act, true, Sonic3kCartridgePolicy.isStandaloneSk());
+        camera.setX(horizontalCamera);
+    }
+
+    @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {
         boolean standaloneSk = Sonic3kCartridgePolicy.isStandaloneSk();

@@ -151,6 +151,37 @@ class TestSonic3kLevelStartCamera {
         assertEquals(0, camera.getMinX(), "Intro focus never rewrites the native minimum");
     }
 
+    @Test
+    void positionedTailsCameraUsesTheFocusBeforeSpawnPlayersAddedFour() {
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x100);
+        tails.setCentreY((short) 0x124);
+        var provider = new Sonic3kZoneFeatureProvider();
+        camera.setX((short) 0x60);
+        provider.initializePositionedLevelStartCamera(camera, tails, Sonic3kZoneIds.ZONE_GUMBALL, 0, false);
+        assertEquals(0xC0, camera.getY());
+        assertEquals(0x60, camera.getX(), "Unclassified positioned entry preserves horizontal focus");
+        assertEquals(0x124, tails.getCentreY(), "Camera reconstruction cannot move the body");
+        camera.setMinY((short) 0x620);
+        tails.setCentreY((short) 0x500);
+        provider.initializePositionedLevelStartCamera(camera, tails, Sonic3kZoneIds.ZONE_MHZ, 1, false);
+        assertEquals(0x49C, camera.getY(), "Get_LevelSizeStart does not clamp to minimum Y");
+        assertEquals(0x620, camera.getMinY());
+    }
+
+    @Test
+    void unclassifiedIczTailsEntryPreservesItsAbsoluteCameraBranch() {
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x200);
+        tails.setCentreY((short) 0x300);
+        camera.setX((short) 123);
+        camera.setY((short) 456);
+        new Sonic3kZoneFeatureProvider().initializePositionedLevelStartCamera(
+                camera, tails, Sonic3kZoneIds.ZONE_ICZ, 0, false);
+        assertEquals(123, camera.getX());
+        assertEquals(456, camera.getY());
+    }
+
     private void start(int x, int y, boolean knuckles, int zone, int act, boolean checkpoint) {
         Sonic3kLevelStartCamera.initialize(camera, x, y, knuckles, zone, act, checkpoint);
     }
