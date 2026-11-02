@@ -175,7 +175,7 @@ class TestS3kIczMinibossObject {
             instance.update(frame, mock(PlayableEntity.class));
         }
 
-        assertEquals(Sonic3kMusic.MINIBOSS.id, services.lastMusicId);
+        assertEquals(Sonic3kMusic.MINIBOSS_S3.id, services.lastMusicId);
         assertTrue((Boolean) boss.getClass().getMethod("isArenaGateCompleteForTesting").invoke(boss));
     }
 

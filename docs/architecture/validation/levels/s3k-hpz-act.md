@@ -593,3 +593,11 @@ Sonic+Tails roundtrip passed 1/0/0/0 at 06:47:35 UTC after that assertion
 was strengthened; the fresh architectural source guard passed 72/0/0/0
 at 06:47:59 UTC. These focused checks retain the inlet and coverage limits
 above.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

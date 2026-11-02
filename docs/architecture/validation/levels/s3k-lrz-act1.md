@@ -1916,3 +1916,11 @@ loop/timing owner is changed. Allocation/rewind/anchor results from the earlier
 timer repair remain historical; no new qualification is claimed. The later
 Act1 death endpoints, Act2 windows, complete route, native pixels and broader
 viewport/donor/roster obligations remain inherited and unmeasured here.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

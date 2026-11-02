@@ -743,7 +743,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         services().playSfx(Sonic3kSfx.BOSS_ACTIVATE.id);
         notifyBoxOpenedChunkSwap();
         spawnFreeChild(() -> new SongFadeTransitionInstance(
-                MINIBOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS.id));
+                MINIBOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS_S3.id));
         spawnChild(() -> new LbzMinibossInstance(new ObjectSpawn(
                 x & 0xFFFF, y & 0xFFFF, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0)));
     }

@@ -254,7 +254,7 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
-    void mhz1FullCutsceneKnucklesQueuesKnucklesThemeOnInit() {
+    void mhz1FullCutsceneKnucklesDoesNotRestartControllerOwnedThemeOnInit() {
         ObjectManager objectManager = mock(ObjectManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();
         doAnswer(invocation -> {
@@ -280,8 +280,35 @@ class TestMhz1CutsceneObjects {
             knuckles.update(0, sonic);
         }
 
-        assertEquals(1, spawned.stream().filter(SongFadeTransitionInstance.class::isInstance).count(),
-                "loc_62B68 calls sub_65DD6, which queues Obj_Song_Fade_Transition for mus_Knuckles");
+        assertEquals(0, spawned.stream().filter(SongFadeTransitionInstance.class::isInstance).count(),
+                "loc_62B68 leaves the theme owned by the earlier controller clamp");
+    }
+
+    @Test
+    void mhz1ControllerQueuesThemeExactlyAtPlayerClamp() {
+        ObjectManager objects = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(call -> { spawned.add(call.getArgument(0)); return null; })
+                .when(objects).addDynamicObject(any(ObjectInstance.class));
+        TestObjectServices services = new TestObjectServices() {
+            @Override public ObjectManager objectManager() { return objects; }
+        };
+        services.withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE));
+        var controller = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+        controller.setServices(services);
+        var player = new TestablePlayableSprite("sonic", (short) 0x0388, (short) 0x0580);
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, 0x0388);
+        controller.update(0, player);
+        controller.update(1, player);
+        assertTrue(spawned.isEmpty());
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, 0x0389);
+        controller.update(2, player);
+        SongFadeTransitionInstance fade = assertInstanceOf(SongFadeTransitionInstance.class, spawned.getFirst());
+        assertEquals(Sonic3kMusic.KNUCKLES.id, fade.getMusicIdForTest());
+        assertEquals(90, fade.nativeWaitWordForTest());
+        controller.update(3, player);
+        assertEquals(1, spawned.size());
     }
 
     @Test

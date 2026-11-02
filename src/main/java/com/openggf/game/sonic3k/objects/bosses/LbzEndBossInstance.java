@@ -913,7 +913,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             if (svc.gameState() != null) {
                 svc.gameState().setCurrentBossId(0);
             }
-            svc.playMusic(Sonic3kMusic.LBZ2.id);
+            svc.playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(svc, Sonic3kMusic.LBZ2.id));
         }
         if (deferredExplosionControllerChild != null) {
             deferredExplosionControllerChild.finishParentWindow();

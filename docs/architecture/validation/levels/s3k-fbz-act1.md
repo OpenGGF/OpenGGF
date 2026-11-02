@@ -730,3 +730,11 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

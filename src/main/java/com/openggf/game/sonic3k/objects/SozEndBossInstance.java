@@ -199,7 +199,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
             default -> throw new IllegalStateException("SOZ end-boss escape "+escapePhase);
         }
     }
-    private void restoreControl(){int music=services().getCurrentLevelMusicId();if(music>=0)services().playMusic(music);for(var entity:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS))
+    private void restoreControl(){int music=services().getCurrentLevelMusicId();if(music>=0)services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), music));for(var entity:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS))
         if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(visualControlOwners.relinquish(p));p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
         if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);visualControlOwners.acquire(p).setControlLocked(true);}}
     private void forcedWalk(PlayableEntity entity){if((services().camera().getMaxYTarget()&65535)>=0x700)services().camera().setMaxY((short)0x800);if(!(entity instanceof AbstractPlayableSprite p))return;

@@ -92,7 +92,7 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
             animation.mappingFrame = 0x16;
             AizIntroArtLoader.loadAllIntroArt(services());
             AizIntroArtLoader.applyKnucklesPalette(services());
-            services().playMusic(Sonic3kMusic.KNUCKLES.id);
+            spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
             Aiz2BossEndSequenceState.armCutsceneKnucklesSlot(getSlotIndex());
             Aiz2BossEndSequenceState.setActiveKnuckles(this);
             // Obj_CutsceneKnuckles installs the AIZ2 routine, then loc_61FC2

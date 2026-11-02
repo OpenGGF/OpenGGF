@@ -679,7 +679,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      */
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
-        services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
         state.routine = ROUTINE_LOOP_INIT;
     }
 
