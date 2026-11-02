@@ -4924,12 +4924,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short standingInertia = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
 				? (short) preFrictionGroundSpeed
 				: sprite.getGSpeed();
+		// Obj01_MdNormal runs Sonic_Move, whose inertia test selects the Wait or
+		// Balance animation, before ObjectMove/AnglePos can set Status_InAir
+		// (s2.asm:36470-36481,36573-36578), so a grounded dispatch owns the write
+		// even when the same frame walks off the floor or an object.
 		boolean groundedMoveDispatchRan = preFrictionGroundSpeed != NO_PRE_FRICTION_SNAPSHOT;
-		boolean terrainMoveDispatchOwnsDetachAnimation = groundedMoveDispatchRan
-				&& !sprite.getOnObjectAtFrameStart()
-				&& !sprite.getOnObjectAtPreviousFrameStart();
 		boolean standingStill = standingInertia == 0 && isOnFlatGround()
-				&& (terrainMoveDispatchOwnsDetachAnimation || !sprite.getAir())
+				&& (groundedMoveDispatchRan || !sprite.getAir())
 				&& !sprite.getRolling() && !sprite.getSpindash();
 
 		// Update balance state (checks for ledge edges)

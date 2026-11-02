@@ -387,7 +387,7 @@ public record PerObjectRewindSnapshot(
             boolean objectPreservedRollVelocityCarry,
             boolean tunnelMode,
             // Surface interaction / collision
-            boolean onObject, boolean onObjectAtFrameStart, boolean onObjectAtPreviousFrameStart,
+            boolean onObject,
             boolean pushingAtFrameStart,
             boolean hurtAtFrameStart,
             boolean hurtRecoveryCompletedThisFrame,

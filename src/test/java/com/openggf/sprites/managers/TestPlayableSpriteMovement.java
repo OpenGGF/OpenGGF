@@ -3265,31 +3265,6 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void releasedObjectSupportDoesNotReuseTerrainDetachBalanceSelection() throws Exception {
-                mockSprite.setOnObject(true);
-                mockSprite.captureOnObjectAtFrameStart();
-                mockSprite.setOnObject(false);
-                mockSprite.captureOnObjectAtFrameStart();
-                mockSprite.setAir(true);
-                mockSprite.setRolling(false);
-                mockSprite.setSpindash(false);
-                mockSprite.setAngle((byte) 0);
-                mockSprite.setGSpeed((short) 0);
-                setMovementField("preFrictionGroundSpeed", 0);
-                setMovementField("preMoveBalanceEvaluated", true);
-                setMovementField("preMoveBalanceState", 1);
-                setMovementField("preMoveBalanceDirection", Direction.RIGHT);
-
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
-                                "updateCrouchState", boolean.class);
-                crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager, false);
-
-                assertEquals(0, mockSprite.getBalanceState(),
-                                "an object-release frame does not use the terrain AnglePos detach bridge");
-        }
-
-        @Test
         public void s3kMoveLockDownKeepsWalkWhileStandingOnObject() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
