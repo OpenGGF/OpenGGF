@@ -1,5 +1,16 @@
 # FBZ Act 1 coverage matrix
 
+Shield transition follow-up (2026-11-02): the exact-SST reload retains the
+collected shield. A dormant Insta-Shield must defer registration while that
+shared fixed slot is occupied. The parameterized
+`TestFbzActTransitionHeadless#carriedShieldContinuesAnimatingAfterReload`
+checks unique slot ownership and advancing fire/lightning/bubble animation
+through the real synchronous reload. `TestShieldRewindRestore` checks deferred
+registration for every collected shield type and registration after shield loss.
+This bounded positioned transition check does not renew full-route, native
+pixel, donor/team/viewport or whole-world replay qualifications; existing gaps
+remain inherited.
+
 Attack-warning eye overlay follow-up (2026-11-02): `loc_6F0CE` installs
 `word_6FA5E` (mapping frame `$11`, priority `$180`) and draws the warning
 child while its palette script changes line 1, color 15. The engine previously
