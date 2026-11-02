@@ -1257,3 +1257,45 @@ results gate, the single music request and subsequent dispatches; existing boss,
 cutscene and rewind checks cover surrounding lifecycle behavior. This bounded
 request check does not certify audible synthesis, whole-route timing, or broader
 donor/team/viewport and rewind matrices; inherited obligations remain open.
+
+
+## Ending drawbridge presentation (2026-11-02)
+
+Native BizHawk 2.11/GPGX screenshots from the original Sonic+Tails complete
+movie show twelve logs between the terrain edges and staggered explosion puffs
+when the button breaks the bridge. The prior engine image included extra logs
+at both endpoints. `AIZDrawBridge_InitUpperSegments` and
+`AIZDrawBridge_InitLowerSegments` create eight plus four logs, each after
+advancing the segment position; the parent mapping frame is empty.
+`AIZDrawBridge_InitPiece` also allocates a delayed `loc_1E6EC` explosion per log.
+
+`TestAizDrawBridgePresentation` covers geometry, per-piece delays, animation
+expiry and non-hurting explosion priority. The AIZ2 transient session-recreation
+check includes waiting and active puffs. Existing bridge rider and object codec
+checks retain the parent countdown/eject obligations. The original movie
+ending is rendered separately for visual comparison; scene/phase matching
+does not certify exact frame parity. Width/donor/team breadth, full placed-route
+allocation failure history and whole-act certification remain inherited gaps.
+
+Focused validation: queued Maven `test -B` with EGL and the absolute original
+S3&K ROM path selected `TestAizDrawBridgePresentation`,
+`TestAiz2BossEndSequenceObjects`, `TestAiz2SelfContainedTransientRewind`,
+`TestAiz2ObjectRewindCodecs`, `TestS3kAizBridgeRiderRewind`,
+`TestObjectManagerCounterBasedDynamicUnload`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, and
+`TestSonic3kDecodingUtils`: 143 tests passed, zero skips. The broad change-based
+plan selected 3,827 smoke classes; the focused selection replaces it for this
+object-local geometry/effect change. This is bounded validation, not a full-suite
+or whole-act pass.
+
+A separate queued `-Pguards` invocation selected
+`TestObjectPriorityBucketGuard`, `TestNativeObjectFacingGuard`,
+`TestRewindFieldDispositionGuard`, `TestRewindCoverageGuard` and
+`TestHelperStateRewindCoverageGuard`: eight tests passed, zero skips.
+
+The refreshed 501-frame `TraceCaptureTool` clip (`aiz_completerun`,
+`--clip frames:25550:26050 --scale 1 --no-ghosts`, surfaceless EGL) shows
+cliff-bounded log endpoints and staggered puffs during collapse. Original
+BizHawk pixels remain the visual reference; character-pose/timing differences
+are not claimed resolved. The capture exits successfully with the existing
+`level-load-preparer` shutdown-thread warning.

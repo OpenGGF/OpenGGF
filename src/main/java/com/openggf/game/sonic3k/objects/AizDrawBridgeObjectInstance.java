@@ -53,13 +53,15 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
 
     private static final int PRIORITY = 5;
-    private static final int SEGMENT_COUNT = 14;
+    // AIZDrawBridge_InitUpperSegments / InitLowerSegments create 8 + 4
+    // children; Map_AIZDrawBridge_Frame0 (the parent) is empty.
+    private static final int SEGMENT_COUNT = 12;
     private static final int SEGMENT_SPACING = 16;
     private static final int HALF_WIDTH = 0x6B;
     private static final int HEIGHT = 8;
     private static final int DROP_DISTANCE = 0x68;
     private static final int COLLAPSE_DELAY = 0x0E;
-    private static final int[] FALL_DELAYS = {8, 0x10, 0x0C, 0x0E, 6, 0x0A, 4, 2, 8, 0x10, 0x0C, 0x0E, 6, 0x0A};
+    private static final int[] FALL_DELAYS = {8, 0x10, 0x0C, 0x0E, 6, 0x0A, 4, 2, 8, 0x10, 0x0C, 0x0E};
 
     private int pivotX;
     private int pivotY;
@@ -334,15 +336,22 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         double stepX = Math.cos(radians) * SEGMENT_SPACING;
         double stepY = Math.sin(radians) * SEGMENT_SPACING;
         for (int i = 0; i < SEGMENT_COUNT; i++) {
-            pieceX[i] = pivotX + (int) Math.round(stepX * i);
-            pieceY[i] = pivotY + (int) Math.round(stepY * i);
+            pieceX[i] = pivotX + (int) Math.round(stepX * (i + 1));
+            pieceY[i] = pivotY + (int) Math.round(stepY * (i + 1));
         }
     }
 
     private void spawnFallingSegments() {
         for (int i = 0; i < SEGMENT_COUNT; i++) {
             final int px = pieceX[i], py = pieceY[i], delay = FALL_DELAYS[i];
-            spawnChild(() -> new FallingBridgeSegment(px, py, delay));
+            if (spawnChild(() -> new FallingBridgeSegment(px, py, delay)) == null) {
+                break;
+            }
+            // AIZDrawBridge_InitPiece allocates loc_1E6EC after each log,
+            // using that log's AIZDrawBridge_PieceTimers byte.
+            if (spawnChild(() -> new BridgeExplosion(px, py, delay)) == null) {
+                break;
+            }
         }
     }
 
@@ -379,6 +388,67 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
         for (int i = 0; i < SEGMENT_COUNT; i++) {
             renderer.drawFrameIndex(1, pieceX[i], pieceY[i], false, false);
+        }
+    }
+
+    /** Delayed, silent Map_Explosion puff: loc_1E6EC -> loc_1E71E -> loc_1E732. */
+    static final class BridgeExplosion extends AbstractObjectInstance
+            implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        private int delay;
+        private boolean active;
+        private int mappingFrame;
+        private int frameTimer;
+
+        BridgeExplosion(int x, int y, int delay) {
+            this(new ObjectSpawn(x, y, 0, 0, 0, false, delay));
+        }
+
+        private BridgeExplosion(ObjectSpawn spawn) {
+            super(spawn, "AIZDrawBridgeExplosion");
+            delay = spawn.rawYWord();
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!active) {
+                // loc_1E71E predecrements the byte and returns until signed underflow.
+                delay = (byte) (delay - 1);
+                if (delay >= 0) {
+                    return;
+                }
+                active = true;
+                frameTimer = 3;
+            }
+            // loc_1E726 falls straight into loc_1E732 on the reveal entry.
+            if (--frameTimer < 0) {
+                frameTimer = 7;
+                if (++mappingFrame == 5) {
+                    ObjectLifetimeOps.expireDynamic(this);
+                }
+            }
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            // loc_1E6EC: move.w #$100,priority(a0).
+            return RenderPriority.fromS3kWord(0x100);
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // loc_1E6EC: make_art_tile(ArtTile_Explosion,0,1).
+            return true;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (!active || isDestroyed() || services().renderManager() == null) {
+                return;
+            }
+            PatternSpriteRenderer renderer = services().renderManager().getExplosionRenderer();
+            if (renderer != null && renderer.isReady()) {
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+            }
         }
     }
 

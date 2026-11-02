@@ -62,7 +62,11 @@ class TestAiz2SelfContainedTransientRewind {
         AizMinibossDebrisChild minibossDebris = objectManager.createDynamicObject(
                 () -> new AizMinibossDebrisChild(baseX - 0x50, baseY - 0x40, 2, 4));
 
+        var bridgePuff = objectManager.createDynamicObject(
+                () -> new AizDrawBridgeObjectInstance.BridgeExplosion(baseX, baseY, 8));
+
         List<AbstractObjectInstance> tracked = List.of(
+                bridgePuff,
                 bombExplosion,
                 endBossDebris,
                 impactFlame,
@@ -106,6 +110,25 @@ class TestAiz2SelfContainedTransientRewind {
                 "diverge step must remove the miniboss debris");
 
         registry.restore(snapshot);
+        assertScalarRoundTrip(objectManager, AizDrawBridgeObjectInstance.BridgeExplosion.class, capturedScalars);
+        var restoredPuff = liveObjects(objectManager, AizDrawBridgeObjectInstance.BridgeExplosion.class).get(0);
+        for (int entry = 0; entry < 12; entry++) {
+            bridgePuff.update(entry, fixture.sprite());
+            restoredPuff.update(entry, fixture.sprite());
+            assertEquals(declaredPrimitiveFieldValues(bridgePuff), declaredPrimitiveFieldValues(restoredPuff));
+        }
+        // Capture after reveal too, then force actual recreation and compare forward expiry.
+        CompositeSnapshot activeSnapshot = registry.capture();
+        objectManager.removeDynamicObject(restoredPuff);
+        registry.restore(activeSnapshot);
+        var activeRestored = liveObjects(objectManager, AizDrawBridgeObjectInstance.BridgeExplosion.class).get(0);
+        for (int entry = 0; entry < 40; entry++) {
+            if (!restoredPuff.isDestroyed()) restoredPuff.update(entry, fixture.sprite());
+            if (!activeRestored.isDestroyed()) activeRestored.update(entry, fixture.sprite());
+            assertEquals(restoredPuff.isDestroyed(), activeRestored.isDestroyed());
+            assertEquals(declaredPrimitiveFieldValues(restoredPuff), declaredPrimitiveFieldValues(activeRestored));
+        }
+
 
         assertScalarRoundTrip(objectManager, AizBombExplosionInstance.class, capturedScalars);
         assertScalarRoundTrip(objectManager, AizEndBossDebrisChild.class, capturedScalars);

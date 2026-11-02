@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+AIZ2 ending drawbridge presentation (2026-11-02): the [act maintenance matrix](../architecture/validation/levels/s3k-aiz2.md#ending-drawbridge-presentation-2026-11-02) records native twelve-log geometry, delayed collapse puffs, focused lifecycle/recreation checks and original-movie visual comparison. Broader configuration and route obligations remain open.
+
 Post-results transition music (2026-11-02): the [ICZ2 corridor](../architecture/validation/levels/s3k-icz-act2.md#post-results-transition-music-2026-11-02)
 and [AIZ2 cutscene](../architecture/validation/levels/s3k-aiz2.md#post-results-transition-music-2026-11-02)
 track single-owner music restoration after results. Request-level checks retain
