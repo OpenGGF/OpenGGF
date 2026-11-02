@@ -123001,3 +123001,20 @@ trace is newly red, and no first error moved earlier. Every r6 case is identical
   an existing divergence (`34da523ea`): Tails MHZ4 411 → 687 (first difference at row 1623, after
   the row-171 movement divergence), Sonic+Tails Pachinko 1638 → 1659 (first addition at row 659,
   after displacement at 658), Sonic+Tails MHZ7 493 → 494.
+
+## 2026-11-02 — SOZ complete-run green again: placement-window retirement (wave 1 of the trace survey)
+
+`TestS3kSozCompleteRunTraceReplay` had 0 errors at `bddbce125` (2026-09-17). At develop it had 3155 errors
+from row 32951 (`tails_y` 0x06AF vs 0x06B1, Tails on a SOZ2 ceiling, angle 0x80 vs 0x86). Lane branch
+`bugfix/ai-trace-soz-complete-run` (`22a873d88`, `c9d9a34cd`) bisected the regression to `d31cc5c44`
+("preserve native ORT exhaustion recovery"), not the survey's suspected `f2cfde91e`. Two-axis layout
+entries leaving the horizontal window were no longer withdrawn, and a stale fallback plane-switch marker
+moved Tails to the wrong collision bank before the ceiling. `ObjectPlacementController` now
+retires those entries as `loc_1B8BC (sonic3k.asm:37671-37681)` / `loc_1B908 (sonic3k.asm:37708-37713)`
+do, while live SSTs keep their own lifetime and the shipped exhaustion-induced ORT drift is preserved.
+`d31cc5c44`'s own controls still pass (260 focused checks).
+
+Integration verification: merge `f3328a72e` vs develop `982b279d5` in separate worktrees, all three
+profiles (forkCount=1, alphabetical, JDK 25, original ROMs, surfaceless EGL). r6 886/13/1/7 identical
+for every case; r7 117 tests: the only change is `TestS3kSozCompleteRunTraceReplay` 3155@32951 → **green**;
+seg 70/48/8/0 identical for every case.
