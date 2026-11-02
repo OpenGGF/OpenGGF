@@ -1,0 +1,88 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s3k",
+      "crc32" : "63522553",
+      "sha1" : "CFBF98C36C776677290A872547AC47C53D2761D6"
+    },
+    "inlet" : {
+      "kind" : "cold-level",
+      "zone" : 10,
+      "act" : 0,
+      "showTitleCard" : false
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "legs" : [ ]
+  },
+  "tape" : {
+    "script" : "ssz1-sonic-tails-cold-first-replica-320.script",
+    "rows" : 5827,
+    "sha256" : "eb8f3d0c3d983ff00b70eac508b80a2a13b204ad664ebaa605d90c3a5578e836"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/2 exact_resync(window 320, horizon 600, edits 4, confirm 120, leader only)",
+    "engine" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "source" : "repair of ab259fdce15e from row 1366 following ReferencePath[5827 rows of ae784ca2a821, window 1366..5826, openggf 36aaddb37 recorded track ssz1-sonic-tails-cold-first-replica-320.csv.gz]",
+    "notes" : [ "kept 5825/5827 original rows (100.0%), 0 reference rows, 2 authored rows, 5827 output rows; unchanged through row 1597" ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41",
+    "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "rows" : 5827
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : false,
+    "divergedRow" : 1969,
+    "reason" : "P1.y native 3064 engine 3067",
+    "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41",
+    "environment" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+    "rows" : 5827
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
+      "prefixRows" : 396719,
+      "inputHash" : "7f3c01bc9916da21eee2a4e7cedf38f6aed7deb3df69880665caf834b1b8f4df"
+    },
+    "lag" : [ {
+      "beforeRow" : 1958,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41"
+    }, {
+      "beforeRow" : 1959,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41"
+    }, {
+      "beforeRow" : 1960,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41"
+    }, {
+      "beforeRow" : 1961,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41"
+    }, {
+      "beforeRow" : 1962,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "784cea005b2668196ad6596fa2c41dd1fb67d8a570df1c3bc6a069a3ebe77f41"
+    } ]
+  }
+}

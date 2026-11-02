@@ -5,7 +5,7 @@ package com.openggf.route;
  * authoring choices, never gameplay rules, and stay private to the planner.
  */
 public final class AuthorHints {
-    enum Preset { REFERENCE_FOLLOWING }
+    enum Preset { REFERENCE_FOLLOWING, EXACT_RESYNC }
 
     final Preset preset;
     /** Reference radius for progress, in pixels. */
@@ -20,8 +20,19 @@ public final class AuthorHints {
     final int stuckLimit;
     /** Tracking tolerance for verbatim source rows, in pixels. */
     final int syncTolerance;
+    /** Exact re-synchronisation: consecutive exactly matching rows that count as re-synchronised. */
+    final int confirm;
+    /** Exact re-synchronisation: whether the sidekick's state must match too. */
+    final boolean sidekick;
 
     private AuthorHints(Preset preset, int radius, int horizon, int commit, int look, int stuckLimit, int syncTolerance) {
+        this(preset, radius, horizon, commit, look, stuckLimit, syncTolerance, 0, false);
+    }
+
+    private AuthorHints(Preset preset, int radius, int horizon, int commit, int look, int stuckLimit, int syncTolerance,
+                        int confirm, boolean sidekick) {
+        this.confirm = confirm;
+        this.sidekick = sidekick;
         this.preset = preset;
         this.radius = radius;
         this.horizon = horizon;
@@ -41,6 +52,19 @@ public final class AuthorHints {
         return new AuthorHints(Preset.REFERENCE_FOLLOWING, 28, 120, 20, 300, 20, 6);
     }
 
+    /**
+     * Repair an engine change by re-synchronising with the route's own recorded run: source rows
+     * are kept only while every tracked player's exact state (centre, subpixels, speeds, air and
+     * roll bits; {@link ReferencePath.PlayerState}) equals the recorded one. Where they part, the
+     * search tries single-row edits of the source rows (a direction held or released, a jump
+     * button toggled) in the next 320 rows, best first by the remaining state distance, up to four
+     * edits per window, until 120 consecutive rows match again within 600 rows of the last edit.
+     * The reference must carry exact states. With {@code sidekick} the sidekick must match too.
+     */
+    public static AuthorHints exactResync(boolean sidekick) {
+        return new AuthorHints(Preset.EXACT_RESYNC, 28, 600, 600, 320, 4, 0, 120, sidekick);
+    }
+
     /** Reference rows past a window's end that progress scoring may look at; extract that many more. */
     public int lookahead() {
         return look;
@@ -48,6 +72,10 @@ public final class AuthorHints {
 
     @Override
     public String toString() {
+        if (preset == Preset.EXACT_RESYNC) {
+            return "exact_resync(window " + look + ", horizon " + horizon + ", edits " + stuckLimit + ", confirm " + confirm
+                    + (sidekick ? ", with sidekick" : ", leader only") + ")";
+        }
         return preset.name().toLowerCase() + "(radius " + radius + ", horizon " + horizon + ", commit " + commit + ")";
     }
 }

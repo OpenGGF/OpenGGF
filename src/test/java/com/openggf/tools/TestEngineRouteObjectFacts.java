@@ -38,8 +38,8 @@ class TestEngineRouteObjectFacts {
         var hosts = EngineRouteHosts.withRoms(Map.of("s3k", rom));
         var launch = LaunchContract.coldLevel(RomIdentity.ofFile("s3k", rom), new LevelId("s3k", 10, 0),
                 new Roster("sonic", "tails"), 320, 0);
-        var rows = RouteFiles.tapeFromMovie(Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"),
-                1360);
+        var rows = RouteFiles.read(Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.route.json"))
+                .tape().slice(0, 1360);
         var route = RouteArtifact.of(launch, rows, new Provenance("test", "", "", List.of()));
         var phases = new ArrayList<String>();
         var bridges = new ArrayList<ObjectView>();

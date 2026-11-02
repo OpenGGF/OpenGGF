@@ -33,8 +33,8 @@ class TestReferencePathInputAuthor {
         var hosts = EngineRouteHosts.withRoms(Map.of("s3k", rom));
         var launch = ReferencePathInputAuthor.launch(RomIdentity.ofFile("s3k", rom), 10, 0, new Roster("sonic", "tails"),
                 320, ReferencePathInputAuthor.DEFAULT_V_INT_START);
-        InputTape movie = RouteFiles.tapeFromMovie(
-                Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"), 2400);
+        InputTape movie = RouteFiles.read(
+                Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.route.json")).tape().slice(0, 2400);
         // Up to the open bridge the run is the reference run itself; then forty held-Left rows
         // the reference never pressed here.
         var prefix = new InputTape.Builder().addAll(movie.slice(0, 1851));

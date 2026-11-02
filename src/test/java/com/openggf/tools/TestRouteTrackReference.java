@@ -44,6 +44,19 @@ class TestRouteTrackReference {
     }
 
     @Test
+    void aRecorderTrackCarriesExactPlayerStates() throws Exception {
+        Path movie = Files.writeString(dir.resolve("route.bk2"), "movie bytes");
+        Path track = Files.writeString(dir.resolve("route.csv"), "# engine 36aaddb37 movie route.bk2 sha256 " + sha(movie)
+                + " zone 10 width 320 roster sonic/tails vint 0\n" + RouteTrackRecorder.COLUMNS + "\n"
+                + "0,256,4014,0,0,0,2048,0,0,0,0,0,224,3076,0,0,0,0,0,0,0\n"
+                + "1,257,4014,0,0,9728,2048,24,0,24,0,0,224,3076,512,0,12,0,12,0,0\n");
+        var path = RouteTrackReference.read(track, movie, LAUNCH, rows(2));
+        assertEquals(2, path.size());
+        assertTrue(path.hasStates());
+        assertEquals(257, path.x(1));
+    }
+
+    @Test
     void refusesATrackRecordedFromOtherRows() throws Exception {
         Path movie = Files.writeString(dir.resolve("route.bk2"), "movie bytes");
         // Bound to another movie's hash: the same rows file edited after recording is not this track's source.

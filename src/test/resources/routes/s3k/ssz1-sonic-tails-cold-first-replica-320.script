@@ -1,6 +1,4 @@
-# Cold SSZ1 arrival, first replica defeat and upper teleporter receiving pad.
-# Sonic + Tails, 320px; no state/ring/emerald seeds. Not full-act completion.
-# First2501 inputs from82EA movie offset396720, remainder authored ordinary controller input.
+# Route rows for ssz1-sonic-tails-cold-first-replica-320.route.json; launch, identity and checks live there.
 137 -
 147 R
 23 -
@@ -53,7 +51,8 @@
 16 -
 25 B
 5 R+B
-3 B
+1 L+B
+2 B
 7 -
 7 L
 16 -
@@ -79,7 +78,9 @@
 5 B
 18 -
 12 L
-307 -
+130 -
+1 R
+176 -
 23 L
 25 -
 4 B

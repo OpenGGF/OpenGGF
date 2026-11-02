@@ -4784,3 +4784,49 @@ solo Tails repair stalls at 3266 while flying 11-16 px off its track. No route w
 the SSZ1 rows remain **inherited gaps**: cold reachability past 1366 is not established for any
 SSZ1 route movie. Next: author the paired segment from 3489 as a goal program, and diagnose the
 solo Tails stall ([design record](../../designs/2026-11-02-shared-route-planner.md#deviations)).
+
+## Exact route repair and native check (2026-11-02)
+
+Branch `feature/ai-shared-route-planner-2` (from `d84b25bd8`). Every SSZ1 route movie still first
+left its `36aaddb37` run at input 1366, but the rows themselves were not stale: with the
+`36aaddb37` state transplanted (solo Tails: `x_sub` at row 2000) the current engine replays the old
+run field for field. The remaining difference was an engine regression: jumping off
+`Obj_SSZRotatingPlatform` or its carrier left `Status_OnObj` set (native clears it the next frame;
+see the [frontier log](../../../status/trace-frontier-log.md)), now fixed.
+
+`RouteRepairTool --exact` / `--exact-leader` then edits single rows until the tracked players'
+states equal the recorded run again; the original rows after the edit replay that run exactly.
+
+| Route | Edited rows | Rejoined | Goals checked on cold replay |
+| --- | --- | --- | --- |
+| `ssz1-tails-solo-cold-complete-320`, `-800` | 1495 | exact P1 | GHZ, MTZ, Mecha defeats; DEZ load |
+| `ssz1-tails-solo-cold-replicas-320`, `-800` | 1495 | exact P1 | GHZ, MTZ defeats |
+| `ssz1-tails-solo-cold-flight-320` | 1495 | exact P1 | clears the raised platform |
+| `ssz1-sonic-solo-cold-complete-320` | 1597, 2297 | exact P1 | GHZ, MTZ, Mecha defeats; DEZ load |
+| `ssz1-sonic-solo-cold-replicas-320` | 1597, 2297 | exact P1 | GHZ, MTZ defeats |
+| `ssz1-sonic-tails-cold-complete-320` | 1597 | exact P1 (P2 differs) | GHZ, MTZ, Mecha defeats; DEZ load |
+| `ssz1-sonic-tails-cold-upper-320` | 1597 | exact P1 (P2 differs) | GHZ, MTZ defeats |
+| `ssz1-sonic-tails-cold-first-replica-320`, `ghz-320`, `staircase-320` | 1597, 2199 | exact P1 (P2 differs) | route guard only (no boss is met on either engine) |
+
+Every route keeps all its other rows and its row count; the twelve are committed as
+`<stem>.route.json` + `<stem>.script` and their movies are derived on demand. Not repaired:
+`middle-320` (P1 died at 6151 on `36aaddb37`), `complete-800` (died at 11664 there),
+`first-replica-800` and `second-replica-800` (the 800-wide GHZ fight parts P1 from its run through
+the CPU Tails' different position; no single-row P1 edit re-synchronises it). Those four keep their
+movies and stay **inherited gaps**.
+
+The solo routes have no native entry movie (the only native SSZ1 entry is the Sonic+Tails
+complete run), so their native check is unsupported. The five Sonic+Tails routes were checked
+natively with `tools/traces/route_native_check.py` (TraceChaser `703bd92`, BizHawk 2.11): the
+complete-run movie's rows `[0, 396719)`, then the route's rows with one filler per observed lag
+frame. Native lags every other frame from route row 1958 (five lag frames, fillers before rows
+1958-1962), and with those fillers native and engine agree in every P1/P2 field through route row
+1968. At 1969 the engine lands P1 on `Obj_SSZFloatingPlatform` (1536, 3104) one frame early:
+P1's bottom plus four is exactly the platform top (`d0 = 0`), which `SolidObjectTop_1P`'s new
+landing check (`loc_1E45A`, sonic3k.asm:42044-42055: `bhi`, then `cmpi.w #-$10,d0 / blo`)
+rejects; native lands at 1970 with `d0 = -2`. The engine accepts `d0 = 0` for this object because
+it does not opt into `rejectsZeroDistanceTopSolidLanding()` (the shared S3K path keeps zero as a
+landing). `36aaddb37` landed at 1969 too, so this is an older engine difference, not part of the
+regression above. The five manifests carry the entry, the five lag facts and a `BIZHAWK` stamp:
+**engine-qualified, native-diverged at row 1969**. Fixing the landing would move the repaired
+routes off their `36aaddb37` run at 1969, so it is left for the solid-contact owner.

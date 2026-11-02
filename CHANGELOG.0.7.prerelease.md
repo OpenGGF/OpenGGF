@@ -14,6 +14,12 @@ Unreleased. The earlier development themes remain in
   player's standing bit on the same frame, as the shipped game does. The bit
   previously lingered for one more frame after the player had left.
 
+- **Sky Sanctuary rotating platforms:** Jumping off a spinning post or its
+  carrier bar clears the player's "standing on an object" status on the next
+  frame, as the shipped game does. The status previously stayed set until
+  another object cleared it, so the player could run flat through the next
+  slopes instead of following them.
+
 - **Death Egg gravity puzzle:** New top landings use the native shaft width,
   allowing edge contacts to establish support before the turbine moves the player.
   Bobbing retains each occupant's rider state until its own solid call consumes an
@@ -1602,8 +1608,11 @@ its original drawing priority.
   tracks (document version 9). Bridges, platforms, updrafts, vines and bosses
   report their phase, attachment or hit points, so route goals can target them.
   Repair keeps a route's original rows and searches only where play drifts from
-  a track recorded on the engine the rows were written for. The Sky Sanctuary
-  Act 1 route repairs are not finished.
+  a track recorded on the engine the rows were written for; an exact repair
+  edits single rows until both runs agree field for field again. Twelve Sky
+  Sanctuary Act 1 cold routes are repaired this way (one or two edited rows
+  each) and replay their original runs. Native checks compose the route after a
+  recorded entry movie with one filler row per observed lag frame.
 
 - **Object service failures:** AIZ intro camera calls, Lava Reef lava-fall clocks
   and launch/drop sound calls propagate service failures instead of silently

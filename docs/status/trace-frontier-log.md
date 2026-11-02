@@ -122773,3 +122773,34 @@ to the Y 2604 floor and the `$74` retracting spring at (2656, 2608). Tracks:
 (`TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`,
 `TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`)
 remain red. [Design record](../architecture/designs/2026-11-02-shared-route-planner.md#deviations).
+
+## 2026-11-02 - SSZ1 cold routes re-synchronised; rotating-platform jump-off regression
+
+Branch `feature/ai-shared-route-planner-2` (from `feature/ai-weakness-pass` `d84b25bd8`), worktree
+`t3-ea26f364`. Not a trace sweep: engine replays of the SSZ1 route movies, P1/P2 state after every
+row, against the same rows recorded on `36aaddb37` (one temporary copy-on-write tree, removed).
+
+| Check | Engine | Result |
+| --- | --- | --- |
+| 16 SSZ1 route movies | `d84b25bd8` | all first leave their `36aaddb37` track at row 1366 (y 3179/3183 -> 3185); deaths: Sonic solo 6137, pair complete 12679, complete-800 11346, middle 6150, second-replica-800 10588, solo Tails 320 5212 / 800 5414 |
+| Solo Tails `complete-320`, `x_sub` at row 2000 set to the `36aaddb37` value | `d84b25bd8` | identical to `36aaddb37` in every recorded field for all 14923 rows (except `Status_OnObj` from 3341) |
+| Same, solo Tails 800 | `d84b25bd8` | parts at 6847 after a stale `Status_OnObj` from the carrier jump at 3340 |
+| Native SSZ1 `hpz_completerun`, Sonic airborne with `Status_OnObj` | native | 13 occurrences, each exactly one frame (3243 and 3314 at the same carrier) |
+| Exact repair, 12 routes | rotating-platform fix | engine-qualified with one or two edited rows; P1 matches `36aaddb37` exactly after the rejoin |
+| Native check, 5 Sonic+Tails routes (`route_native_check.py`, fillers before 1958-1962) | `f00e91ec4` | native == engine in every P1/P2 field through route row 1968; first error row 1969 `P1.y` native 3064 / engine 3067 (engine lands on `Obj_SSZFloatingPlatform` at `d0 = 0`, which `loc_1E45A` rejects) |
+
+The solo-Tails "steady 11-16 px from 2971" is the 1366 bridge residue: 768 `x_sub` units survive
+the wall at x 1141, cross a pixel on the slope at 2879, shift the wall-zeroing phase at 2898-2900,
+delay the landing to 2972 and swallow the 2972 jump. The rotating-platform carrier's jump-off
+(`loc_45E90`/`loc_45FE4`) released the ride at once, so the next `SolidObjectTop` never took its
+airborne release (`loc_1E2E0`) and `Status_OnObj` stayed set; `Player_AnglePos` then ran P1 flat
+through the slope at pair row 3528. Fixed: the ride stays for that release.
+`TestSszRotatingPlatformSolidContacts` pins the next-frame clear (it fails 4 of 12 on the
+pre-fix carrier). The two smoke reds are green on the repaired routes:
+`TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost` and
+`TestSszBossInputAuthorTool#authoredFatalHitReplaysFromColdWithIdenticalObservedState`
+(`python3 tools/testing/maven_queue.py --normal -Dmse=off -Ds3k.rom.path=<s3k.gen> -Dtest=... test`,
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`; 28 tests, 0 failures, 0 skips, with the
+other SSZ1 route consumers and the route guards); `-Pguards` 822 tests, 0 failures, 0 skips.
+[Design record](../architecture/designs/2026-11-02-shared-route-planner.md#deviations),
+[SSZ1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#exact-route-repair-and-native-check-2026-11-02).

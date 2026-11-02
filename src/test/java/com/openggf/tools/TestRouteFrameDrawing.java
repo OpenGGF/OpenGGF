@@ -60,8 +60,10 @@ class TestRouteFrameDrawing {
     @ParameterizedTest
     @MethodSource("routes")
     void drawingPolicyPreservesCheckpointStateAndPixels(Route route) throws Exception {
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/" + route.movie() + ".bk2"));
+        // Manifested routes replay their rows (the donor rows reuse a native route under other settings).
+        var movie = java.nio.file.Files.exists(RouteFixtures.S3K.resolve(route.movie() + ".route.json"))
+                ? RouteFixtures.rowsUnderOtherSettings(route.movie())
+                : new Bk2MovieLoader().loadMovieOrInputLog(Path.of("src/test/resources/routes/s3k/" + route.movie() + ".bk2"));
         var donorRom = switch (route.donor()) {
             case "s1" -> RomTestUtils.ensureSonic1RomAvailable().toPath();
             case "s2" -> RomTestUtils.ensureSonic2RomAvailable().toPath();

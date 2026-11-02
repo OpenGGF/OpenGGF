@@ -320,6 +320,34 @@ final class PrefixSearch {
         }
     }
 
+    /**
+     * Captures the current world outside the node graph (a window's stepping stone between
+     * nodes). Scratch checkpoints are never retained by the search; null when the host refuses.
+     */
+    WorldCheckpoint captureScratch() {
+        try {
+            WorldCheckpoint checkpoint = world.capture();
+            captures++;
+            return checkpoint;
+        } catch (RouteHostException refused) {
+            if (refused.reason() != RouteHostException.Reason.CHECKPOINT_REFUSED) throw refused;
+            return null;
+        }
+    }
+
+    /** Restores a scratch checkpoint taken in this world and epoch; the world then matches no node. */
+    void restoreScratch(WorldCheckpoint checkpoint) {
+        world.restore(checkpoint);
+        restores++;
+        last = world.observe();
+        atNode = null;
+    }
+
+    /** Whether the host has been rebuilt since {@code generation} (scratch checkpoints from it are void). */
+    long hostGeneration() {
+        return freshBoots;
+    }
+
     void dropCheckpoints() {
         for (Node node : retained) node.checkpoint = null;
         retained.clear();

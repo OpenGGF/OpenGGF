@@ -178,7 +178,7 @@ public final class SszRotatingPlatformCarrierObjectInstance extends AbstractObje
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         if (sprite.isLogicalJumpPressActive()) {
             setState(slot, 0);
-            SszRotatingPlatformObjectInstance.jumpOff(sprite, services(), this);
+            SszRotatingPlatformObjectInstance.jumpOff(sprite, services());
             return;
         }
         swing(slot, sprite);
