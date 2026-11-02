@@ -23,6 +23,9 @@ Unreleased. The earlier development themes remain in
 
 - S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
 
+- **MGZ seamless transition:** Keep the shifted camera bounds until the native
+  Act 2 release instead of easing toward the newly loaded level bounds.
+
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
   child-owned break sound, including Hydrocity’s separate capsule owner.
 
