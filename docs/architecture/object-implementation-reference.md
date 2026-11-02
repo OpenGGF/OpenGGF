@@ -30,8 +30,8 @@ button graph. `AbstractS3kCutsceneButtonInstance` owns common button proximity,
 press and presentation; subtype actions remain adapters. `S3kExplosionOffsets`
 owns the low-word X/high-word Y arithmetic used by the real-SST and folded
 explosion controllers. Their timer/parent/lifetime adapters remain distinct. The MHZ following burst
-captures its exact parent reference through the central rewind policy; proximity
-is only a provisional reconstruction lookup.
+captures its exact parent reference through the central rewind policy.
+Recreation builds a pure shell; reference hydration restores the saved owner.
 
 The 2026-11-02 ownership audit scanned 827 S3K object files and triaged 74
 repeated pre-class `Obj_*` citation groups. Camera-boundary workers and Robotnik
