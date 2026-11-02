@@ -1473,6 +1473,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
 
+                // Like tickStatus, defer the dormant Insta-Shield while a
+                // collected shield owns their shared fixed SST. Native
+                // SpawnLevelMainSprites_SpawnPowerup replaces that slot with the
+                // elemental shield (loc_6A02); Load_Level must not reclaim it.
+                if (hasShield()) {
+                        instaShieldRegistered = false;
+                        return;
+                }
                 powerUpSpawner.registerObject(instaShieldObject);
                 instaShieldRegistered = true;
                 instaShieldObject.invalidateDplcCache();
