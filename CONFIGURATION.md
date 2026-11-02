@@ -1257,7 +1257,7 @@ Square/Cross/Circle respectively.
 | `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. In S2 this feeds the configured sidekick/manual-input path; it does not enable native two-player/competition gameplay. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
-| `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
+| `P2_START` | `input.player2.start` | `259` | Backspace | Player 2 Start. |
 | `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable GLFW gamepad/controller input. |
 | `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Left-stick digital direction deadzone. |
 | `CONTROLLER_PLAYER1` | `input.controller.player1` | `"auto"` | auto | Controller assignment for Player 1 (`auto` or `none`). |

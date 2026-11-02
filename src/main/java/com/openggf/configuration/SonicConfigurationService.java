@@ -786,7 +786,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.P2_A, GLFW_KEY_RIGHT_SHIFT);
 		putDefault(SonicConfiguration.P2_B, "");
 		putDefault(SonicConfiguration.P2_C, "");
-		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_RIGHT_CONTROL);
+		putDefaultKey(SonicConfiguration.P2_START, GLFW_KEY_BACKSPACE);
 		putDefault(SonicConfiguration.CONTROLLER_ENABLED, true);
 		putDefault(SonicConfiguration.CONTROLLER_DEADZONE, 0.35);
 		putDefault(SonicConfiguration.CONTROLLER_PLAYER1, "auto");

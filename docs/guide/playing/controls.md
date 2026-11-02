@@ -16,7 +16,7 @@ one.
 | I / K / J / L | Player 2 up / down / left / right (`input.player2.up/down/left/right`) |
 | Right Shift | Player 2 action A / jump |
 | Enter | Player 1 Start / pause / unpause (`input.player1.start`) |
-| Right Control | Player 2 start |
+| Backspace | Player 2 start |
 | Q | Advance one frame (while paused) |
 
 Live Player 1 Start and `input.pause` toggle one visible pause, including audio.

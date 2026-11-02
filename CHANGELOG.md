@@ -5,7 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-- Default Player 1 Start to Enter and unify live Start with the visible pause,
+- Default Player 1 Start to Enter and Player 2 Start to Backspace; unify live Start with the visible pause,
   preventing a second native pause when resuming.
 
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom

@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_Z;
@@ -34,7 +34,7 @@ class TestControllerInputConfig {
         assertEquals(GLFW_KEY_RIGHT_SHIFT, config.getInt(SonicConfiguration.P2_A));
         assertEquals(-1, config.getInt(SonicConfiguration.P2_B));
         assertEquals(-1, config.getInt(SonicConfiguration.P2_C));
-        assertEquals(GLFW_KEY_RIGHT_CONTROL, config.getInt(SonicConfiguration.P2_START));
+        assertEquals(GLFW_KEY_BACKSPACE, config.getInt(SonicConfiguration.P2_START));
         assertTrue(config.getBoolean(SonicConfiguration.CONTROLLER_ENABLED));
         assertEquals(0.35, config.getDouble(SonicConfiguration.CONTROLLER_DEADZONE), 0.0001);
         assertEquals("auto", config.getString(SonicConfiguration.CONTROLLER_PLAYER1));

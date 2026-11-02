@@ -63,7 +63,7 @@ input:
     a: RIGHT_SHIFT   # Player 2: action button A
     b: ""   # Player 2: action button B
     c: ""   # Player 2: action button C
-    start: RIGHT_CONTROL   # Player 2: start
+    start: BACKSPACE   # Player 2: start
 
 # ── Audio ──
 audio:
