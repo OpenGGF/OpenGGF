@@ -423,8 +423,58 @@ provide the discrimination control: the same output assertion rejects the stale
 marker write before the repair and accepts both retired edges afterward.
 
 The culprit's record claimed 186 component/ROM/rewind cases, not a complete-run
-trace pass. This repair preserves all its named controls. Matched full-profile
-post-repair comparisons remain pending at this source checkpoint.
+trace pass. This repair preserves all its named controls. The source checkpoint is `22a873d88c4d457d3a3bedb951c063597027c1f2`.
+Both full post-repair profiles completed at that SHA:
+
+| Profile | Cases | Passed | Assertion failures | Errors | Skipped |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| trace-replay-r7 | 117 | 22 | 83 | 12 | 0 |
+| trace-segments | 70 | 14 | 48 | 8 | 0 |
+
+`TestS3kSozCompleteRunTraceReplay` is the sole changed replay: **3,155 errors
+at row 32951 `tails_y` become zero errors/warnings across all 59,317 compared
+rows**, with one passing Surefire case and zero skips. Its before/after report
+was measured inside the full default `r7` profile as well as the initial
+focused baseline. The check covers both acts and the fixture's exit; it is not
+whole-campaign certification.
+
+The `r7` inventories match (117 case records, 106 replay reports). Only the
+complete-run report metrics changed, and only its case changed failure→pass.
+All 105 other report metric records match: error/warning/bootstrap-error counts,
+compared-row counts, summary and verification-group first spans. All 12 existing
+error identities and messages match exactly. Segments has the same 70 case
+identity/status/message records and 69 report metric records before and after.
+No new/worsened comparison counts, earlier frontiers, new failing cases, or
+skips were found. The profiles remain red for their pre-existing failures;
+this is bounded regression qualification, not a green full-suite claim.
+
+The four requested SOZ classes are unchanged under both profiles. The final
+explicit four-class segments invocation matched the baseline counts and first
+fields exactly, with zero skips:
+
+| Class suffix | Before → after errors | First error before and after |
+| --- | ---: | --- |
+| SozCompleteRunTraceReplay | 3155 → 0 | 32951 / tails_y → none |
+| SonicTailsSozSegmentTraceReplay | 2745 → 2745 | 4868 / player_animation_id |
+| SonicTailsSoz2SegmentTraceReplay | 7834 → 7834 | 0 / tails_y_speed |
+| TailsFullChainSozSegmentTraceReplay | 27 → 27 | 0 / camera_y |
+| TailsFullChainSoz2SegmentTraceReplay | 643 → 643 | 0 / camera_y |
+
+All unchanged `r7` case status/message records also match, including every
+pre-existing assertion failure and error. No production edits followed the
+source checkpoint. The later qualification commit changes this document only.
+
+Citation checking of the changed source and this record against the immutable
+pins found zero new hard/stale findings: baseline/current retain the same two
+stale, one missing-file, one near and 23 unanchored references. Five new explicit
+citations match their labels (14→19 verified references). Inherited citation
+debt was left unchanged. All six ROM paths were identity-checked; the locked-on
+S3K bytes match CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+Queue waiting and execution were distinct throughout. No queue locks, resource
+limits or unrelated jobs were changed. Whole-lane execution/queue totals were
+not aggregated; elapsed delivery timing is not inferred from overlapping fleet
+activity. Consumed transient diagnostics are removed after the final comparison.
 
 ### Correction commands
 
@@ -489,3 +539,22 @@ The four-class SOZ baseline selector was
 with the same replay flags under each profile. Default `r7` already includes all
 four; default segments includes the Sonic/Tails pair. The Tails full-chain pair
 also requires the explicit selector under segments for matched coverage.
+
+
+### Frontier-log handoff text
+
+2026-11-02 — SOZ complete-run regression: bisect identifies `d31cc5c44`
+(ORT exhaustion recovery), rather than the suspected gravity-angle wrapper.
+`TestS3kSozCompleteRunTraceReplay` at base `4311f21c4` has 3,155 errors, first
+row 32951 `tails_y`; source `22a873d88` has 0 errors/warnings over 59,317 compared
+rows, zero skips. Restore horizontal `Load_Sprites` placement-window retirement
+so stale fallback path markers cannot switch off-screen Tails' collision bank;
+retain the shipped ORT exhaustion drift and live SST lifetimes. The full `r7`
+command above measured the source checkpoint. Its sole changed case/report is
+SOZ complete-run; full segments and the four requested SOZ segment classes
+retain their baseline metrics and errors. All 260 focused owner/keep-green/plane
+checks pass, zero skips. No class worsened. Both broad profiles retain their
+pre-existing failures; no whole-campaign or full-suite qualification is claimed.
+Commands, native citations, baseline failure attribution and the intentional
+red control are recorded in
+`docs/architecture/validation/2026-10-28-tas-support-ort.md`.
