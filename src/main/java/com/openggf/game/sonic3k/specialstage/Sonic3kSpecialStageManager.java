@@ -732,15 +732,6 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         int framePressedButtons = bootInput != null ? bootInput.pressedButtons() : pressedButtons;
         int frameP2HeldButtons = bootInput != null ? bootInput.p2HeldButtons() : p2HeldButtons;
 
-        // Banner state machine
-        boolean bannerTriggeredAdvance = banner.update();
-        if (bannerTriggeredAdvance) {
-            if (player.getVelocity() == 0) {
-                player.setAdvancing(true);
-                player.setStarted(true);
-            }
-        }
-
         // Player movement (includes speed timer, input, velocity, position)
         player.update(frameHeldButtons, framePressedButtons);
 
@@ -832,6 +823,17 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
             int tempo = player.calculateMusicTempo();
             GameServices.audio().setSpeedMultiplier(tempo);
             musicSpedUp = true;
+        }
+
+        // loc_8454 (sonic3k.asm:10745-10753) puts Player_1 before the
+        // dynamic banner in Process_Sprites: its start flag affects the next movement.
+        // Banner state machine
+        boolean bannerTriggeredAdvance = banner.update();
+        if (bannerTriggeredAdvance) {
+            if (player.getVelocity() == 0) {
+                player.setAdvancing(true);
+                player.setStarted(true);
+            }
         }
 
         // Collision response queue (ring/sphere animations)

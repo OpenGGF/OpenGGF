@@ -1,5 +1,21 @@
 # Level test coverage backlog
 
+## Shared act-reload shield ownership
+
+The 2026-11-02 shield continuity regression
+`TestS3kActTransitionShieldContinuity` covers AIZ, HCZ, MGZ, CNZ, FBZ,
+ICZ, LBZ, MHZ, SOZ, LRZ and DEZ act-1 to act-2 reloads with their production
+object-survival policies. Each positioned check grants a fire shield with either
+pending or already-registered Insta-Shield state, executes the shared reload
+executor, and checks retained identity and animation progress through normal
+object-manager dispatch. SSZ and DDZ have no act-1 to act-2 reload.
+The separate FBZ event regression covers all three elemental shield types;
+the shared refresh regression covers deferred registration and shield loss for
+every shield type. This checks the reload/registration mechanism, not every
+zone's boss trigger, offset/camera script, donor/team/viewport combination,
+rendered pixels or whole-world replay; those matrix obligations remain inherited.
+
+
 S3K common object ownership (2026-11-02): see the [HCZ2 maintenance record](../architecture/validation/levels/s3k-hcz2.md)
 and [shared routine ownership audit](../architecture/object-implementation-reference.md#shared-rom-routine-ownership).
 Capsule opening/effect rewind, shared cutscene-button bounds/actions and explosion
@@ -2505,8 +2521,25 @@ records exact module admission and initialized graph-rewind ownership. Composed
 checks pass80 controls, zero skips; replay remains232 errors with an identical
 profile. No full-route or roster/donor/viewport/presentation gap is closed.
 
+SOZ rappel-wire art follow-up (2026-11-02):
+`TestSozRapelWireArtWord` checks pulley/link/handle pattern identity and full
+mapping-word resolution. See the [local matrix record](../architecture/validation/levels/s3k-soz-act2.md#rappel-wire-pulley-art-2026-11-02).
+Inherited route breadth and native pixel acceptance remain open.
+
+HCZ1 miniboss release (2026-11-02): the [HCZ1 maintenance matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#miniboss-water-effect-release-2026-11-02)
+records independent native-player tracking and cooldown capture/restore before
+water-effect deletion. This local obligation does not certify broader route,
+character, donor or viewport coverage; inherited matrix gaps remain open.
+
 FBZ2 encounter presentation follow-up (2026-11-02): roof-emitter vertical flips
 and rising-floor entrance-pillar art priority have focused draw/priority checks;
 closure timing and its single impact sound are covered in the
 [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#encounter-presentation-follow-up--2026-11-02).
 Inherited route and native pixel coverage limits remain.
+
+SOZ push-switch overlap correction (2026-11-02): focused
+`TestSozMechanisms.handlePrecedesRailInSatButFollowsItInPainterOrder` pins
+the native main-handle-before-child-rail emission for both mounting sides and
+the reverse painter order. This local presentation fix changes no movement or
+rewind state; the SOZ matrix's inherited viewport/donor and native presentation
+acceptance gaps remain open.
