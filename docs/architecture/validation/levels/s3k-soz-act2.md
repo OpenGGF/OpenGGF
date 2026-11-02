@@ -968,3 +968,12 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+### Vertical seam sprite admission (2026-11-02)
+
+The sand-carry wrap in `TestSozConnectedMechanismsProduction` now requires
+player art in the published sprite presentation at the seam. The independent
+`TestSpriteSatVerticalWrap` exercises SAT admission with cameras below zero
+and beyond the 2048-pixel period. These are bounded presentation checks;
+manual traversal from the switch at (8607, 414) and the rappel at (12434, 1689),
+pixel acceptance, and the remaining viewport/donor matrix remain separate gaps.
