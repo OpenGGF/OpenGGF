@@ -604,27 +604,11 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
 
     /** {@code Gradual_SwingOffset} (sonic3k.asm:92530-92561); returns the offset's high word. */
     int gradualSwingOffset(int speed, int acceleration) {
-        int step = acceleration;
-        if (swingReversed) {
-            step = -step;
-            swingOffset += swingSpeed;
-            if (swingOffset < 0) {
-                swingSpeed -= step;
-            } else {
-                swingSpeed = speed;
-                swingOffset = 0;
-                swingReversed = false;
-            }
-        } else {
-            swingOffset += swingSpeed;
-            if (swingOffset > 0) {
-                swingSpeed -= step;
-            } else {
-                swingSpeed = -speed;
-                swingOffset = 0;
-                swingReversed = true;
-            }
-        }
+        var next = S3kGradualSwing.advance(
+                new S3kGradualSwing.Value(swingSpeed, swingOffset, swingReversed), speed, acceleration);
+        swingSpeed = next.speed();
+        swingOffset = next.offset();
+        swingReversed = next.reversed();
         return (short) (swingOffset >> 16);
     }
 

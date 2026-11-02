@@ -619,7 +619,6 @@ final class DefaultObjectRewindPolicies {
             // ChildObjDat_6EDE4 encodes the signed field offset in the captured spawn subtype;
             // CnzEndBossFieldChild.recreateForRewind() deterministically reconstructs it.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.CnzEndBossFieldChild", "xOffset"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance", "cameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "arenaCameraGate"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance", "effectChildren"), RewindFieldPolicy.CAPTURED),

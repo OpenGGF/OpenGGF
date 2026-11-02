@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+S3K common object ownership (2026-11-02): see the [HCZ2 maintenance record](../architecture/validation/levels/s3k-hcz2.md)
+and [shared routine ownership audit](../architecture/object-implementation-reference.md#shared-rom-routine-ownership).
+Capsule opening/effect rewind, shared cutscene-button bounds/actions and explosion
+allocation/RNG checks are bounded maintenance coverage. Cold routes, pixel/audio
+and broader lifecycle products remain open; HCZ/CNZ button native-pointer
+authority remains an explicit inherited gap.
+
 AIZ2 ending animation (2026-11-02): [Knuckles and shield controls](../architecture/validation/levels/s3k-aiz2.md#ending-knuckles-and-shield-animation-2026-11-02)
 cover native script publication/cadence, deferred switches, elemental freeze,
 actual object recreation and forward replay. Fresh original-movie observations

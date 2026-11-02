@@ -5,6 +5,16 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Shared S3K object behavior:** HCZ reuses common capsule opening, effects,
+  geometry, drawing and rewind-safe opening control ownership while retaining
+  its native button/results handoff. FBZ
+  shares common opening writes and native sprite/plane priority without losing
+  its child-slot graph; its button and final-capsule fragments retain high art priority. Cutscene
+  buttons share proximity and presentation, including native sprite priority.
+  Explosion placement now uses the ROM’s high random word for Y, and failed
+  ICZ explosion allocation consumes no RNG or sound. Teleporter swing arithmetic
+  also uses its common transition without changing rewind storage.
+
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
   child-owned break sound, including Hydrocity’s separate capsule owner.
 

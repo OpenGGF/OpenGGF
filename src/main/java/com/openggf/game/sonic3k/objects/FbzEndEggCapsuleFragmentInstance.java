@@ -47,6 +47,9 @@ public final class FbzEndEggCapsuleFragmentInstance extends AbstractObjectInstan
     @Override public int getX(){return x;}
     @Override public int getY(){return y;}
     @Override public int getPriorityBucket(){return 3;}
+    // ObjDat3_86B44 sets high art. loc_867D6's $0400 low-art exception is FBZ1,
+    // not this final FBZ2 capsule graph (sonic3k.asm:181878-181885,182254-182258).
+    @Override public boolean isHighPriority(){return true;}
     @Override public void appendRenderCommands(List<GLCommand> commands){
         if (!drawVisible) return;
         PatternSpriteRenderer renderer=getRenderer(Sonic3kObjectArtKeys.EGG_CAPSULE);

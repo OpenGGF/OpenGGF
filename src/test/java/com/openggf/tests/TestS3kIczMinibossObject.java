@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -762,6 +763,7 @@ class TestS3kIczMinibossObject {
         private final PaletteOwnershipRegistry paletteOwnershipRegistry = new PaletteOwnershipRegistry();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
+        private int nextReservedSlot;
         private ObjectRenderManager renderManager;
         private Level currentLevel;
         private Rom rom;
@@ -776,10 +778,25 @@ class TestS3kIczMinibossObject {
                 ObjectInstance child = invocation.getArgument(0);
                 if (child instanceof AbstractObjectInstance instance) {
                     instance.setServices(this);
+                    instance.setSlotIndex(nextReservedSlot++);
                 }
                 spawnedChildren.add(child);
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any());
+            when(objectManager.allocateSlotAfter(anyInt())).thenAnswer(invocation -> {
+                int slot = Math.max(nextReservedSlot, (int) invocation.getArgument(0) + 1);
+                nextReservedSlot = slot + 1;
+                return slot;
+            });
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) {
+                    instance.setServices(this);
+                    instance.setSlotIndex(invocation.getArgument(1));
+                }
+                spawnedChildren.add(child);
+                return null;
+            }).when(objectManager).addDynamicObjectAtSlot(any(), anyInt());
         }
 
         private RecordingServices(PatternSpriteRenderer renderer) {

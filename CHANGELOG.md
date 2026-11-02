@@ -7,6 +7,11 @@ readable and historical versions can be referenced directly.
 
 - Knuckles glide speed halves above the native top boundary, including signed-word wrapping and arithmetic-shift behavior.
 - Big Arm submits its ROM art module during native initialization.
+S3K capsule and cutscene-button routines now share their common behavior; the
+object ownership audit also corrected explosion RNG/allocation drift and FBZ
+capsule sprite/plane priority, with rewind-safe opening control ownership.
+
+
 - LBZ2 submits native EggRobo-head art during head initialization.
 - Solo S2 title-card entry records leader history during its native object passes.
 - Knuckles restores the native animation after non-flat glide landings.

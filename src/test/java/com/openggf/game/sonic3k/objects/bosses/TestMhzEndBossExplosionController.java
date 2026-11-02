@@ -145,6 +145,50 @@ class TestMhzEndBossExplosionController {
         }
     }
 
+    @Test void followingBurstRestoresItsExactParentAfterItMovesAwayFromTheBirthPosition() throws ReflectiveOperationException {
+        com.openggf.graphics.GraphicsManager.getInstance().initHeadless();
+        try {
+            var services = new StubObjectServices().withIsolatedObjectManager();
+            var manager = services.objectManager();
+            manager.setRewindInPlaceRestoreEnabledForTest(false);
+            var decoy = manager.createDynamicObject(() -> new MhzEndBossInstance(
+                    new ObjectSpawn(0x4200, 0x2E0, 0x93, 0, 0, false, 0)));
+            var parent = manager.createDynamicObject(() -> new MhzEndBossInstance(
+                    new ObjectSpawn(0x4200, 0x2E0, 0x93, 0, 0, false, 0)));
+            positionBoss(decoy, 0x4200, 0x2E0);
+            positionBoss(parent, 0x4200, 0x2E0);
+            int decoySlot = decoy.getSlotIndex();
+            int parentSlot = parent.getSlotIndex();
+            var controller = manager.createDynamicObject(() -> MhzEndBossExplosionController.following(parent));
+            controller.update(0, null);
+            // The saved controller position is now closer to the decoy; only
+            // the captured native parent identity may choose its restored owner.
+            positionBoss(parent, 0x5200, 0x2E0);
+            var registry = new com.openggf.game.rewind.RewindRegistry();
+            registry.register(manager.rewindSnapshottable());
+            var saved = registry.capture();
+            registry.restore(saved);
+            var restoredDecoy = manager.getActiveObjects().stream().filter(MhzEndBossInstance.class::isInstance)
+                    .map(MhzEndBossInstance.class::cast).filter(x -> x.getSlotIndex() == decoySlot).findFirst().orElseThrow();
+            var restoredParent = manager.getActiveObjects().stream().filter(MhzEndBossInstance.class::isInstance)
+                    .map(MhzEndBossInstance.class::cast).filter(x -> x.getSlotIndex() == parentSlot).findFirst().orElseThrow();
+            var restored = manager.getActiveObjects().stream().filter(MhzEndBossExplosionController.class::isInstance)
+                    .map(MhzEndBossExplosionController.class::cast).findFirst().orElseThrow();
+            assertNotSame(controller, restored);
+            restoredDecoy.setCustomFlag(0x38, 0x20);
+            restored.update(1, null);
+            restored.update(2, null);
+            assertFalse(restored.isDestroyed(), "an unrelated boss at the birth position cannot retire this burst");
+            assertEquals(restoredParent.getX(), restored.getX());
+            restoredParent.setCustomFlag(0x38, 0x20);
+            restored.update(3, null);
+            restored.update(4, null);
+            assertTrue(restored.isDestroyed());
+        } finally {
+            com.openggf.graphics.GraphicsManager.getInstance().resetState();
+        }
+    }
+
     @Test void stationaryBurstEmits31AttemptsEveryThreeFramesAndConsumesFailedAllocation() {
         var manager = mock(ObjectManager.class);
         var rng = mock(GameRng.class);

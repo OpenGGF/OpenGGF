@@ -7,6 +7,15 @@ and release gates. Historical exhaustive qualifications below are unchanged and
 are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
 
 
+Capsule ownership maintenance (2026-11-02): HCZ now shares upright capsule
+opening/effects/drawing/geometry and common rewind state, while retaining its
+real button SST, deferred ending pose and retained boss/results/geyser handoff.
+The common `$40` results wait uses signed pre-decrement underflow, and common
+animal creation supplies the upright count/offset. Focused capsule/effect replay,
+HCZ graph/control and transient recreation checks cover this maintenance;
+whole cold-route/pixel/audio and broader lifecycle/configuration gaps below
+remain inherited obligations.
+
 Canonical binding: `S3K_HYDROCITY_2`, engine zone 1/act 1, ROM `$0101`, S3KL object set.
 Edges: HCZ1 incoming structural act handoff; MGZ1 outgoing full entry.
 Character routes: Knuckles and Sonic/Tails use different native starts and end-route contexts.
