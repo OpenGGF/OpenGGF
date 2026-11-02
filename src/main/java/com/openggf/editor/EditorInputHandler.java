@@ -198,7 +198,8 @@ public final class EditorInputHandler {
         if (inputHandler.isKeyPressed(GLFW_KEY_L)) {
             handleAction(Action.TOGGLE_LAYER);
         }
-        if (rawModeCycle || logical.menuStart()) {
+        // Enter owns descent even when it is also the configured P1 Start key.
+        if (rawModeCycle || (logical.menuStart() && !inputHandler.isKeyPressed(GLFW_KEY_ENTER))) {
             handleAction(Action.CYCLE_SPAWN_EDIT_MODE);
         }
         if (regionDelete) handleAction(Action.DELETE_REGION);

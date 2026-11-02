@@ -273,3 +273,11 @@ bootstrap/load/decode/AIZ checks. The runner's shared-file plan selected 4386
 smoke classes; focused checks replace that disproportionate selection because
 only the destination carry-policy binding changes. This is bounded validation,
 not a full-suite or exhaustive trace qualification.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

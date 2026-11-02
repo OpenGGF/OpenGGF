@@ -457,8 +457,23 @@ python3 tools/testing/maven_queue.py --dashboard --port 8767
 Open `http://127.0.0.1:8766`. Keep the command running and stop it with Ctrl-C.
 The dashboard uses Python's standard library, binds only to loopback, and refreshes
 every two seconds. It shows running jobs, priority-ordered waiters, host resources,
-per-job reservations and sampled usage, plus recent execution history. Pause and
-refresh controls affect only the display. It never submits, cancels or reorders jobs,
+per-job reservations and sampled usage, plus recent execution history. The Queue
+history section adds four charts with shared time-range and job-kind filters:
+mean wait by UTC finish weekday/hour, sampled peak RSS versus mean CPU cores,
+estimated versus actual execution, and wait p50/p95 over UTC finish-time bins.
+Hover or keyboard-focus marks for values and sample counts. Grey heatmap cells
+and gaps in the percentile trend mean no samples, not zero wait.
+
+Charts read the newest 512 KiB / at most 4,096 valid JSON records from the existing
+rolling log, without changing retention. Invalid timestamps and missing fields
+are excluded from affected views. Wait charts include cancelled/interrupted
+requests; resource and estimate charts include only completed positive-duration
+executions. Historical reservation budgets and build-only activity are absent,
+so resource charts show observed usage, not reservation efficiency. Finish-time
+bins do not measure queue occupancy, and overlapping waits are not delivery wall
+time. Small samples make p95 unstable. Job-kind names do not establish suite coverage.
+
+Pause and refresh controls affect only the display. It never submits, cancels or reorders jobs,
 acquires admission slots, or prunes queue files. Completed history entries describe
 the wrapper's execution outcome, not whether tests passed.
 

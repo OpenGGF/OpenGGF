@@ -791,3 +791,11 @@ arena bounds and an injected miniboss. Its declared six-hit test hook at tick
 signpost at tick 900. This skips route traversal and does not compare native
 pixels. The arm mapping frames, offsets and sprite ordering remain source-led;
 no speculative arm shortening is applied.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

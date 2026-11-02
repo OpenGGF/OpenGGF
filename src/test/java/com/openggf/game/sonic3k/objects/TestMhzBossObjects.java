@@ -361,6 +361,10 @@ class TestMhzBossObjects {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
         ObjectServices services = new StubObjectServices() {
             @Override
             public Camera camera() {
@@ -388,7 +392,7 @@ class TestMhzBossObjects {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError(
                         "Obj_MHZMiniboss setup must spawn a SongFadeTransitionInstance (Obj_Song_Fade_Transition)"));
-        assertEquals(Sonic3kMusic.MINIBOSS.id, fade.getMusicIdForTest(),
+        assertEquals(Sonic3kMusic.MINIBOSS_S3.id, fade.getMusicIdForTest(),
                 "fade transition targets mus_Miniboss");
         assertEquals(SongFadeTransitionInstance.TRANSITION_WAIT_WORD, fade.nativeWaitWordForTest(),
                 "Obj_Song_Fade_Transition fades for 90 frames before the swap");
@@ -509,6 +513,10 @@ class TestMhzBossObjects {
             spawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
         ObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
@@ -2731,7 +2739,7 @@ class TestMhzBossObjects {
             afterCurrentSpawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -2782,6 +2790,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
 
         endBoss.update(0, null);
         holdNativeEndBossDefeatWait(endBoss, null, 0);
@@ -2910,7 +2920,7 @@ class TestMhzBossObjects {
             afterCurrentSpawned.add(invocation.getArgument(0));
             return null;
         }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -2946,6 +2956,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
 
         endBoss.update(0, null);
         holdNativeEndBossDefeatWait(endBoss, null, 0);
@@ -3095,7 +3107,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3136,6 +3148,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
 
         endBoss.update(0, null);
         holdNativeEndBossDefeatWait(endBoss, null, 0);
@@ -3203,7 +3217,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3240,6 +3254,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
 
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+
         endBoss.update(0, null);
         holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
@@ -3271,7 +3287,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3312,6 +3328,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
 
         endBoss.update(0, player);
         holdNativeEndBossDefeatWait(endBoss, player, 0);
@@ -3345,7 +3363,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3386,6 +3404,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
 
         endBoss.update(0, player);
         holdNativeEndBossDefeatWait(endBoss, player, 0);
@@ -3421,7 +3441,7 @@ class TestMhzBossObjects {
         MhzZoneRuntimeState runtimeState = new MhzZoneRuntimeState(1, PlayerCharacter.SONIC_ALONE, mhzEvents);
         // The ship signal arrives after the post-capsule reset below.
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3467,6 +3487,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
 
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+
         endBoss.update(0, player);
         holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
@@ -3503,7 +3525,7 @@ class TestMhzBossObjects {
         // The ship signal arrives after the post-capsule reset below.
         int[] lastSfx = {-1};
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3554,6 +3576,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
 
         endBoss.update(0, player);
         holdNativeEndBossDefeatWait(endBoss, player, 0);
@@ -3740,7 +3764,7 @@ class TestMhzBossObjects {
         int[] requestedAct = {-1};
         boolean[] deactivateLevelNow = {false};
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3793,6 +3817,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
 
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+
         endBoss.update(0, player);
         holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
@@ -3832,7 +3858,7 @@ class TestMhzBossObjects {
         camera.setX((short) 0x4598);
         camera.setY((short) 0x0180);
         when(gameState.isEndOfLevelFlag()).thenReturn(true);
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
@@ -3869,6 +3895,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x38, 0x88);
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
+
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
 
         endBoss.update(0, player);
         holdNativeEndBossDefeatWait(endBoss, player, 0);

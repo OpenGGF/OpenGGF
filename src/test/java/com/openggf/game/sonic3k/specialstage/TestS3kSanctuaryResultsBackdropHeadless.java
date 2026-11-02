@@ -57,6 +57,25 @@ class TestS3kSanctuaryResultsBackdropHeadless {
     }
 
     @Test
+    void sanctuaryScreenInitClearsForegroundAboveLeftPedestalsOnLoadAndResultsRebuild() {
+        sanctuary(List.of(3, 3, 2, 2, 2, 2, 2));
+        assertSanctuaryOpenings();
+        var screen = new S3kSpecialStageResultsScreen(30, true, 0, 1, 7,
+                PlayerCharacter.SONIC_ALONE, true, true);
+        assertTrue(screen.drawsLevelBackdrop());
+        assertSanctuaryOpenings();
+    }
+
+    private static void assertSanctuaryOpenings() {
+        var map = GameServices.level().getCurrentLevel().getMap();
+        // HPZS_ScreenInit: row pointers $10/$14, byte columns $29/$2B.
+        assertEquals(0, map.getValue(0, 0x29, 4), "left upper opening");
+        assertEquals(0, map.getValue(0, 0x2B, 4), "right upper opening");
+        assertEquals(0, map.getValue(0, 0x29, 5), "left lower opening");
+        assertTrue(map.getValue(0, 0x2A, 4) != 0, "intervening terrain stays intact");
+    }
+
+    @Test
     void clearedStageRebuildsTheSanctuaryAndClosesTheStarsOnTheNewEmerald() throws Exception {
         HeadlessTestFixture fixture = sanctuary(List.of(3, 3, 2, 2, 2, 2, 2));
         List<RewindBoundary> boundaries = new ArrayList<>();

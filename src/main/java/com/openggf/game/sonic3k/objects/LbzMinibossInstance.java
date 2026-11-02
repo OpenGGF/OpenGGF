@@ -755,7 +755,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
             // ROM loc_72562 allocates Obj_Song_Fade_ToLevelMusic.
-            spawnFreeChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_FRAMES, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
         // ROM loc_72562 restores x_pos from $3C before Obj_EndSignControl, so the
         // signpost falls at the boss's home X. AfterBoss_LBZ shares AfterBoss_MHZ

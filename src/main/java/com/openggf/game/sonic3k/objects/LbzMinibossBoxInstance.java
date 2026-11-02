@@ -92,7 +92,7 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
         boxRig.value = new LbzMinibossBoxRig(getX(), getY());
         // ROM: sub_8D116 fades to the miniboss music as soon as the box stages.
         spawnFreeChild(() -> new SongFadeTransitionInstance(
-                MINIBOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS.id));
+                MINIBOSS_MUSIC_FADE_FRAMES, Sonic3kMusic.MINIBOSS_S3.id));
         phase = Phase.WAIT_PLAYER;
     }
 

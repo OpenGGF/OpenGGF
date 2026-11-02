@@ -559,7 +559,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
             }
         }
         int music = services().getCurrentLevelMusicId();
-        if (music >= 0) services().playMusic(music);
+        if (music >= 0) services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), music));
     }
 
     private void spawnRootDebris() {

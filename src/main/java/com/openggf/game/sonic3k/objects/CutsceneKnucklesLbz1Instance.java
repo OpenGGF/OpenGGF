@@ -187,7 +187,7 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         if (!helperSignal) {
             return;
         }
-        spawnDynamicObject(SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
         timer = WAIT_AFTER_CAPTURE;
         routine = Routine.WAIT_AFTER_SIGNAL;
     }

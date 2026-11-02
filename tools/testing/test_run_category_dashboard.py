@@ -376,6 +376,39 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(.5 * 1024 ** 3, view['recent'][0]['peakRssBytes'])
         self.assertEqual(content, path.read_bytes())
 
+    def test_history_extends_recent_and_preserves_unknown_estimates(self):
+        path = self.common / 'maven-queue-log.jsonl'
+        rows = [dict(end='2026-11-02T12:00:00+00:00', kind='focused',
+                     waitSeconds=i, holdSeconds=10, estimate=30) for i in range(80)]
+        rows[0]['estimate'] = -1
+        rows[1]['estimate'] = True
+        path.write_text(''.join(json.dumps(row) + '\n' for row in rows) + '{partial')
+        before = path.read_bytes()
+        view = self.collect()
+        self.assertEqual(80, len(view['history']))
+        self.assertEqual(view['history'][:20], view['recent'])
+        self.assertEqual(30, view['history'][0]['estimateSeconds'])
+        self.assertIsNone(view['history'][-1]['estimateSeconds'])
+        self.assertIsNone(view['history'][-2]['estimateSeconds'])
+        self.assertEqual(before, path.read_bytes())
+        json.dumps(view, allow_nan=False)
+
+    def test_history_bounds_bytes_and_rows_and_rejects_symlink(self):
+        path = self.common / 'maven-queue-log.jsonl'
+        path.write_text('{}\n' * 5000)
+        self.assertEqual(4096, len(self.collect()['history']))
+        path.write_text(json.dumps(dict(kind='old')) + '\n' + 'x' * (512 * 1024) +
+                        '\n' + json.dumps(dict(kind='new', estimate=float('inf'))) + '\n')
+        view = self.collect()
+        self.assertEqual(['new'], [row['kind'] for row in view['history']])
+        self.assertIsNone(view['history'][0]['estimateSeconds'])
+        path.unlink()
+        outside = self.root / 'outside.jsonl'
+        outside.write_text('{}\n')
+        path.symlink_to(outside)
+        self.assertEqual([], self.collect()['history'])
+        self.assertEqual('{}\n', outside.read_text())
+
     def test_http_has_only_local_read_only_routes(self):
         view = self.collect()
         with dashboard.make_server(lambda: view, port=0, page=b'<title>Queue</title>') as server:
