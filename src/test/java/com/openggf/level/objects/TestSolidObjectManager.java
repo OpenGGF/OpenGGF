@@ -164,41 +164,6 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void topSolidHistoryProviderUsesPreviousPlayerPositionForNewLanding() {
-        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
-        HistoryTopSolidObject object = new HistoryTopSolidObject(100, 100, params);
-        ObjectManager manager = buildManager(object);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.setWidth(20);
-        player.setHeight(38);
-        player.setCentreX((short) 100);
-        int rejectCentreY = 100 - 4 - params.airHalfHeight() - player.getYRadius() - 1;
-        int contactCentreY = rejectCentreY + 2;
-        player.setCentreY((short) rejectCentreY);
-        player.endOfTick();
-
-        player.setCentreY((short) contactCentreY);
-        player.setYSpeed((short) 0x100);
-        player.setAir(true);
-        player.endOfTick();
-
-        manager.update(0, player, List.of(), 0, false, true, false);
-
-        assertTrue(player.getAir());
-        assertFalse(player.isOnObject());
-
-        player.setCentreY((short) (contactCentreY + 1));
-        player.endOfTick();
-
-        manager.update(0, player, List.of(), 0, false, true, false);
-
-        assertFalse(player.getAir());
-        assertTrue(player.isOnObject());
-        assertEquals(0, player.getYSpeed());
-    }
-
-    @Test
     public void compatibilityAutoObjectPreservesPerPlayerCallbackTimingWithSidekickMutation() {
         TestPlayableSprite player = createStandingProbePlayer();
         TestPlayableSprite sidekick = createStandingProbePlayer();
@@ -1933,7 +1898,7 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void cnzTrapDoorSolidObjectTopAcceptsExactSurfaceBoundaryAndLandsOnePixelInside() {
+    public void cnzTrapDoorSolidObjectTopRejectsExactSurfaceBoundaryAndLandsOnePixelInside() {
         ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x44, 0, 0, false, 0);
         CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
         ObjectManager manager = buildManager(object);
@@ -1953,12 +1918,12 @@ public class TestSolidObjectManager {
 
         runObjectPass(manager, exactBoundary);
 
-        assertTrue(exactBoundary.isOnObject(),
-                "S3K SolidObjectTop accepts the ROM d0 == 0 boundary (sonic3k.asm:41996-42015)");
-        assertFalse(exactBoundary.getAir());
-        assertEquals(0, exactBoundary.getYSpeed());
-        assertEquals(100 - params.groundHalfHeight() - exactBoundary.getYRadius() - 1,
-                exactBoundary.getCentreY());
+        assertFalse(exactBoundary.isOnObject(),
+                "S3K SolidObjectTop returns on d0 == 0: loc_1E45A's cmpi.w #-$10,d0 / blo "
+                        + "accepts only [-$10,-1] (sonic3k.asm:42044-42053)");
+        assertTrue(exactBoundary.getAir());
+        assertEquals(0x100, exactBoundary.getYSpeed());
+        assertEquals(100 - 4 - maxTop, exactBoundary.getCentreY());
 
         TestPlayableSprite insideBoundary = new TestPlayableSprite((short) 0, (short) 0);
         insideBoundary.useGameRules(GameRules.SONIC_3K);
@@ -1980,7 +1945,7 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void cnzTrapDoorUsesPreviousPlayerPositionForNewTopSolidLanding() {
+    public void cnzTrapDoorRejectsTheExactSurfaceNewLanding() {
         ObjectSpawn spawn = new ObjectSpawn(0x1560, 0x0284, 0x44, 0, 0, false, 0);
         CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
         ObjectManager manager = buildManager(object);
@@ -1993,16 +1958,14 @@ public class TestSolidObjectManager {
         player.setAir(true);
         player.setYSpeed((short) 0x07A8);
         player.setCentreX((short) 0x1566);
-        player.setCentreY((short) 0x025D);
-        player.resetPositionHistory();
         player.setCentreY((short) 0x0264);
 
         runObjectPass(manager, player);
 
         assertTrue(player.getAir(),
-                "Obj_CNZTrapDoor calls SolidObjectTop before Sonic's current-frame movement; "
-                        + "the previous y_pos is still above the top boundary "
-                        + "(sonic3k.asm:67217-67225,41982-42008)");
+                "CNZ f9801: y $264 + y_radius $13 + 4 meets the door's top ($284 - 9) exactly; "
+                        + "loc_1E45A's cmpi.w #-$10,d0 / blo returns on d0=0 "
+                        + "(sonic3k.asm:42044-42053)");
         assertFalse(player.isOnObject());
         assertEquals(0x07A8, player.getYSpeed() & 0xFFFF);
         assertEquals(0x0264, player.getCentreY() & 0xFFFF);
@@ -3155,17 +3118,6 @@ public class TestSolidObjectManager {
                 forceAirOnRideExit,
                 dropOnFloor,
                 carriesAirborneRiderAfterExitPlatform);
-    }
-
-    private static final class HistoryTopSolidObject extends TestSolidObject {
-        private HistoryTopSolidObject(int x, int y, SolidObjectParams params) {
-            super(x, y, params, true);
-        }
-
-        @Override
-        public int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-            return 1;
-        }
     }
 
     private static final class ManualCheckpointProbeObject extends AbstractObjectInstance

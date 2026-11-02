@@ -2702,20 +2702,6 @@ public final class ObjectSolidContactController {
         boolean inclusiveRightEdge = profile.inclusiveRightEdge();
         int playerCenterX = player.getCentreX();
         int playerCenterY = player.getCentreY();
-        if (instance instanceof SolidObjectProvider provider) {
-            // Provider-specific ROM ports can request a different sampled
-            // player-position phase for top- or full-solid helper geometry.
-            // S3K SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
-            // before RideObject_SetRide (sonic3k.asm:42037-42070); full-solid
-            // callers can likewise model their concrete player-slot phase.
-            int historyFrames = topSolidOnly
-                    ? Math.max(0, InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopSolidPlayerPositionHistoryFrames(player)))
-                    : 0;
-            if (historyFrames > 0) {
-                playerCenterX = player.getCentreX(historyFrames);
-                playerCenterY = player.getCentreY(historyFrames);
-            }
-        }
 
         int width2 = halfWidth * 2;
         int relXRaw = playerCenterX - anchorX + halfWidth;

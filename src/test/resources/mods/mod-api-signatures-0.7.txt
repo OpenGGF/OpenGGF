@@ -11552,7 +11552,6 @@ METHOD com.openggf.level.objects.SolidObjectProvider public  int getContinuedRid
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getMonitorSolidObjectVerticalOffset()
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopLandingHalfWidth(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopLandingSnapAdjustment(com.openggf.game.PlayableEntity,int)
-METHOD com.openggf.level.objects.SolidObjectProvider public  int getTopSolidPlayerPositionHistoryFrames(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidObjectProvider public  int tailCallD4(int)
 METHOD com.openggf.level.objects.SolidObjectProvider public  java.lang.Integer getObjectManagedRideCentreY(com.openggf.game.PlayableEntity,int,com.openggf.level.objects.SolidObjectParams)
 METHOD com.openggf.level.objects.SolidObjectProvider public  void onRejectedZeroDistanceTopSolidLanding(com.openggf.game.PlayableEntity)
