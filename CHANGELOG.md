@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
+
 - Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
 
 - Clear the native sanctuary openings so stray terrain no longer appears above
