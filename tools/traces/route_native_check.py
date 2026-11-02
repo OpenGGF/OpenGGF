@@ -7,10 +7,12 @@ the route's row 0. A native lag VBlank consumes a movie row without polling the 
 finds each one by observation and inserts a filler row there (a copy of the previous row, never
 read by the game), so native polls exactly the route's rows. Each pass composes the movie with
 the fillers known so far (`compose_route_on_movie_prefix.py --filler-before`), captures it with
-TraceChaser's headless harness, and walks the native rows: an unexpected lag frame (a
-`lag_counter` step on a frame that played a route row) adds one filler per consecutive lag
-frame before that row and starts the next pass; otherwise each polled row's players are compared
-field for field with the engine's track of the same rows (`RouteTrackRecorder`). Comparison
+TraceChaser's headless harness, and walks the native rows, comparing each polled row's players
+field for field with the engine's track of the same rows (`RouteTrackRecorder`). A lag frame is a
+row whose `lag_counter` (`Lag_frame_count`) rose; one that consumed a route row instead of a
+filler is a new lag fact. The walk continues past it while the row native then polls holds the
+same buttons as the row it should have read, so one pass can find several; the next pass
+composes them all and captures the aligned run again. Comparison
 only: nothing here reaches the engine, and lag is observed, never predicted.
 
 Inputs: the route's derived movie (`RouteFiles.exportBk2`), its engine track, the entry movie
@@ -82,34 +84,50 @@ def native_rows(directory, offset):
     raise SystemExit(f"no captured segment starts at movie row {offset} in {directory}")
 
 
-def walk(native, track, route_rows, fillers, offset_shift):
-    """Returns ('lag', before_row, count) | ('diverged', row, field, native, engine) | ('agrees', last_row)."""
+def walk(native, track, route, fillers, offset_shift):
+    """Walks one capture of the route composed with `fillers`.
+
+    A native lag frame is a row whose `lag_counter` (`Lag_frame_count`, V-int routine 0 runs)
+    rose. Lag frames that consumed a filler are expected. An unexpected one consumed a route
+    row unpolled, so every later poll of this capture reads one row ahead; while that next row
+    holds the same buttons as the row the game should have read, gameplay is unaffected and the
+    walk continues, recording each such lag as a new filler. Returns
+    ('lags', new_before_rows) when the capture can no longer stand for the aligned run,
+    ('filler-polled', row) when a known filler was polled (a lag that did not recur),
+    ('diverged', row, field, native, engine) or ('agrees', last_row, new_before_rows).
+    """
     sequence = []
     before = {}
     for k in fillers:
         before[k] = before.get(k, 0) + 1
-    for k in range(route_rows):
+    for k in range(len(route)):
         sequence.extend([None] * before.get(k, 0))
         sequence.append(k)
+    new_lags = []
+    intended = None
     last = -1
     for r, row in enumerate(native):
         j = r + offset_shift
         if j >= len(sequence):
             break
-        lag = r > 0 and int(row["lag_counter"], 16) != int(native[r - 1]["lag_counter"], 16)
-        k = sequence[j]
-        if k is None:
-            if not lag:
-                return ("filler-polled", r, j)
-            continue
+        item = sequence[j]
+        if intended is None:
+            if item is None:
+                raise SystemExit("the first traced row is a filler")
+            intended = item
+        lag = r > 0 and int(row["lag_counter"], 16) > int(native[r - 1]["lag_counter"], 16)
         if lag:
-            count = 1
-            while r + count < len(native) and int(native[r + count]["lag_counter"], 16) != int(
-                    native[r + count - 1]["lag_counter"], 16):
-                count += 1
-            return ("lag", k, count)
-        if k >= len(track):
+            if item is not None:
+                new_lags.append(intended)
+            continue
+        if item is None:
+            return ("filler-polled", intended)
+        k = intended
+        intended += 1
+        if k >= len(route) or k >= len(track):
             break
+        if route[item] != route[k]:
+            return ("lags", new_lags)
         engine = track[k]
         for player, prefix, eprefix in (("P1", "player_", ""), ("P2", "sidekick_", "p2")):
             if player == "P2" and (row.get("sidekick_present") != "1" or not engine.get("p2x")):
@@ -118,9 +136,11 @@ def walk(native, track, route_rows, fillers, offset_shift):
                 n = native_value(row, prefix, nfield)
                 e = int(engine[eprefix + efield])
                 if n != e:
+                    if new_lags:
+                        return ("lags", new_lags)
                     return ("diverged", k, f"{player}.{efield}", n, e)
         last = k
-    return ("agrees", last)
+    return ("agrees", last, new_lags)
 
 
 def main(argv):
@@ -144,7 +164,8 @@ def main(argv):
     os.makedirs(work, exist_ok=True)
     track = engine_track(args.engine_track)
     with zipfile.ZipFile(args.route_movie) as z:
-        route_rows = sum(1 for line in z.read("Input Log.txt").decode().splitlines() if line.startswith("|"))
+        route = [line for line in z.read("Input Log.txt").decode().splitlines() if line.startswith("|")]
+    route_rows = len(route)
     fillers = sorted(int(k) for k in args.fillers.split(",") if k.strip())
     revision = subprocess.run(["git", "-C", tracechaser, "rev-parse", "--short", "HEAD"], capture_output=True,
                               text=True, check=True).stdout.strip()
@@ -166,7 +187,7 @@ def main(argv):
                             os.path.join(repository, "src", "test", "resources", "traces"), "--mode", "trace",
                             "--rom", args.rom, "--movie", composite, "--output", output,
                             "--trace-profile", "complete_run"], check=True, env=env, stdout=log, stderr=log)
-        result = walk(native_rows(output, args.trace_offset), track, route_rows, fillers, shift)
+        result = walk(native_rows(output, args.trace_offset), track, route, fillers, shift)
         # Keep only the route's segment; the entry prefix's zones are not evidence for this check.
         for segment in os.listdir(output):
             path = os.path.join(output, segment)
@@ -177,10 +198,13 @@ def main(argv):
                 if not keep:
                     shutil.rmtree(path)
         print(f"pass {attempt}: fillers {len(fillers)} -> {result}", flush=True)
-        if result[0] == "lag":
-            fillers = sorted(fillers + [result[1]] * result[2])
+        if result[0] == "lags" and not result[1]:
+            raise SystemExit("a misaligned poll without a new lag fact")
+        if result[0] == "lags" or (result[0] == "agrees" and result[2]):
+            # New lag facts: capture again with them so the recorded run is the aligned one.
+            fillers = sorted(fillers + result[-1] if result[0] == "agrees" else fillers + result[1])
             continue
-        verdict = result
+        verdict = result[:2] if result[0] == "agrees" else result
         break
     report = {"harness": harness, "entryMovie": os.path.relpath(os.path.realpath(args.movie), repository),
               "prefixRows": args.prefix_rows, "routeRows": route_rows, "fillers": fillers,
