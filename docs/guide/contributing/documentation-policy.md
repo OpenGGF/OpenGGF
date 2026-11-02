@@ -111,8 +111,46 @@ For example:
 Co-authored-by: OpenAI Codex GPT-6 <noreply@openai.com>
 ```
 
-Before committing, run `git interpret-trailers --parse <message-file>` on the
-exact prepared message and verify that every intended co-author appears.
+Use the checked preparation entry point for ordinary AI-assisted commits from an
+existing non-master branch. First stage and review the intended files, then write
+the complete UTF-8 message with LF line endings to a file outside the staged scope. Run from the repository
+root, listing every staged path literally, including deletions and both sides of
+renames:
+
+```bash
+python3 tools/testing/checked_commit.py --message-file /tmp/commit-message.txt \
+  --co-author 'OpenAI Codex GPT-6.1 <noreply@openai.com>' \
+  -- tools/testing/checked_commit.py docs/guide/contributing/documentation-policy.md
+```
+
+Replace the example paths with the complete reviewed staged scope. Repeat
+`--co-author` for each contributor in final-block order. The final block must
+contain only those contiguous `Co-authored-by` lines, preceded by a blank line.
+The seven policy lines belong before that separator. Git's
+`interpret-trailers --parse` can return only the final block, so it is not a
+replacement for policy validation.
+
+The helper snapshots the exact message bytes, compares literal paths with the
+index, checks the final parsed coauthors, and invokes `.githooks/run-policy
+commit-msg`. That existing dispatcher validates the seven policy lines and
+staged content. Any failed prerequisite aborts before `git commit` is invoked.
+It then checks that the message, branch, HEAD, and staged tree did not change and
+runs ordinary `git commit --cleanup=verbatim --file` with the snapshot. Normal
+hooks still run and may reject the commit. The helper does not stage files,
+accept arbitrary Git flags, or support initial, merge, or amend commits.
+
+Install the repository hooks first. Do not run concurrent Git writers in the
+same checkout. Drift checks do not provide atomic isolation against other
+processes, and hooks retain their normal authority to modify the index or
+message during Git's commit lifecycle. Existing policy restrictions on unusual
+filenames still apply. A nonzero result means no successful commit was reported;
+inspect Git status before retrying.
+
+Run the boundary's disposable-repository controls with:
+
+```bash
+python3 -m unittest discover -s tools/testing -p 'test_checked_commit.py' -v
+```
 
 ## Trace Frontier Log
 
