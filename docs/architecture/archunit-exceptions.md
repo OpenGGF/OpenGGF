@@ -376,7 +376,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 161 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 162 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -399,7 +399,9 @@ row codec and script grammar, and `tools -> route` for the trusted engine host a
 giving 158. Stageplay player routes on frozen rows add `route -> sprites` (point goals steer through
 `NativeRouteSteering`, the one numeric owner) and `stageplay -> debug` (frozen tracks reach the live
 world through the recorded-input conversion), giving 160, and `tools -> physics` (the trusted
-engine route host reads native facing into samples), giving 161. The three
+engine route host reads native facing into samples), giving 161. The route tape editors add
+`editor -> route` for the planner facade and value types, giving 162; their worker job's protocol is
+an explicitly owned `editor -> tools` dependency. The three
 matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the

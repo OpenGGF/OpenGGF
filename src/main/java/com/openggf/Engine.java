@@ -165,6 +165,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private boolean editorChromeActive;
 	private final EditorProjectWorkspace editorProjects;
 	private final com.openggf.editor.stageplay.StageplayWorkspace stageplay;
+	private final com.openggf.editor.route.RouteTapeWorkspace routeTapes;
 	private final com.openggf.stageplay.editor.StageplayEditorSession stageplaySession;
 	private Path stageplayInitialAssetRoot;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
@@ -504,6 +505,28 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public com.openggf.stageplay.editor.StageplayRouteJob.Update pollRoute() { return stageplaySession.pollRoute(); }
 			public void requestRouteApply(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.requestRouteApply(document,root); }
 			public void cancelRoute() { stageplaySession.cancelRoute(); }
+			public void editInputRows(com.openggf.editor.route.RouteTapeWorkspace.SceneRows rows) {
+				routeTapes.openSceneRows(rows);
+				stageplay.deactivate();
+			}
+		});
+		this.routeTapes = new com.openggf.editor.route.RouteTapeWorkspace(new com.openggf.editor.route.RouteTapeWorkspace.Host() {
+			private final com.openggf.editor.route.RouteTapeJob job = new com.openggf.editor.route.RouteTapeJob(Engine.this::routeTapeRoms);
+			public void startJob(com.openggf.editor.route.RouteTapeJob.Request request) throws IOException { job.start(request); }
+			public com.openggf.editor.route.RouteTapeJob.Update pollJob() { return job.poll(); }
+			public void cancelJob() { job.cancel(); }
+			public java.util.Optional<com.openggf.route.LevelId> currentLevel() {
+				return levelEditorController.currentLevel() == null ? java.util.Optional.empty() : java.util.Optional.of(new com.openggf.route.LevelId(
+						GameServices.module().getGameId().code(), levelManager.getCurrentZone(), levelManager.getCurrentAct()));
+			}
+			public void focusWorld(int x, int y) { levelEditorController.setWorldCursor(new com.openggf.game.session.EditorCursorState(x, y)); }
+			public java.util.List<com.openggf.editor.route.RouteTapeWorkspace.PlacedObject> placements() {
+				var level = levelEditorController.currentLevel();
+				return level == null ? java.util.List.of() : level.getObjects().stream().filter(spawn -> spawn.layoutIndex() >= 0)
+						.map(spawn -> new com.openggf.editor.route.RouteTapeWorkspace.PlacedObject(spawn.layoutIndex(),
+								spawn.objectId(), spawn.subtype(), spawn.x(), spawn.y())).toList();
+			}
+			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
 		});
 		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
 				ModSubsystem.current().processCatalog().scanned().stream()
@@ -538,7 +561,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
 		var editorPalette = com.openggf.editor.EditorCommandPalette.forController(levelEditorController);
 		editorPalette.setWorkspaceCommands(java.util.List.of(
-				new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate)));
+				new com.openggf.editor.EditorCommandPalette.HostCommand("Stageplay workspace", "F4", stageplay::activate),
+				new com.openggf.editor.EditorCommandPalette.HostCommand("Route tapes workspace", routeTapes::activate)));
 		editorPalette.setHostCommands(editorCommands);
 		editorPalette.setExitAction(this::requestEditorExit);
 
@@ -562,7 +586,16 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private boolean updateEditorFrontEnd(InputHandler input) {
 		boolean owned = editorChromeActive && editorChrome.update(input);
-		return stageplay.tick(input) || owned;
+		return stageplay.tick(input) || routeTapes.tick(input) || owned;
+	}
+
+	/** Whole configured ROM images the isolated route worker may verify against a route's launch hash. */
+	private Map<String, Path> routeTapeRoms() {
+		var roms = new java.util.HashMap<String, Path>();
+		for (var identity : java.util.List.of(com.openggf.data.RomIdentity.S1, com.openggf.data.RomIdentity.S2, com.openggf.data.RomIdentity.S3K))
+			romManager.resolveLogicalRom(identity).flatMap(com.openggf.data.RomImageCatalogue.Resolution::wholeImagePath)
+					.ifPresent(path -> roms.put(identity == com.openggf.data.RomIdentity.S1 ? "s1" : identity == com.openggf.data.RomIdentity.S2 ? "s2" : "s3k", path));
+		return roms;
 	}
 
 	private boolean updateEditorProjectMenus(InputHandler input) {
@@ -571,6 +604,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			if (editorChromeActive && chromeOwnsStageplayMenu()) editorChrome.update(input);
 			else stageplay.tick(input);
 			if (!stageplay.menu().isOpen() && !editorProjects.menu().isOpen() && editorQuitView != null) restoreEditorQuitView();
+			return true;
+		}
+		if (routeTapes.menu().isOpen()) {
+			if (editorChromeActive && chromeOwnsRouteTapeMenu()) editorChrome.update(input);
+			else routeTapes.tick(input);
 			return true;
 		}
 		return editorProjects.update(input);
@@ -1618,18 +1656,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		editorInputHandler.finishPendingEdits();
 		var document = editorProjects.document();
 		if (!hasUnsavedNativeEditorEdits() && (document == null || !document.isModified())
-				&& !stageplay.controller().dirty()) { closeApplicationWindow(); return; }
+				&& !stageplay.controller().dirty() && !routeTapes.dirty()) { closeApplicationWindow(); return; }
 		editorQuitView = new EditorQuitView(getCurrentGameMode(), camera,
 				camera == null ? 0 : camera.getX(), camera == null ? 0 : camera.getY(),
 				camera == null ? 0 : camera.getXCopy(), camera == null ? 0 : camera.getYCopy());
 		gameLoop.setEditorProjectModalMode(GameMode.MASTER_TITLE_SCREEN, true);
-		stageplay.requestQuit(() -> editorProjects.requestQuit(this::closeApplicationWindow));
+		routeTapes.requestQuit(() -> stageplay.requestQuit(() -> editorProjects.requestQuit(this::closeApplicationWindow)));
 	}
 
 	/** Leaves the editor for the master title once Stageplay and the level have settled unsaved work. */
 	private void requestEditorExit() {
 		editorInputHandler.finishPendingEdits();
-		stageplay.requestQuit(editorProjects::requestExit);
+		routeTapes.requestQuit(() -> stageplay.requestQuit(editorProjects::requestExit));
 	}
 
 	private void restoreEditorQuitView() {
@@ -1707,6 +1745,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void resetForGameplayFromMasterTitle() {
 		if (stageplay != null) stageplay.deactivate();
+		if (routeTapes != null) routeTapes.deactivate();
 		if (stageplaySession != null) stageplaySession.release();
 		gameLoop.retireModScene();
 		resetGameplayRuntime();
@@ -2644,6 +2683,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	public void toggleEditorPlaytestMode() {
 		if (getCurrentGameMode() == GameMode.EDITOR) {
 			stageplay.deactivate();
+			routeTapes.deactivate();
 			resumePlaytestFromEditor();
 			return;
 		}
@@ -4009,7 +4049,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private boolean globalShortcutInputClaimed() {
-		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || stageplay.menu().isOpen() || editorQuitView != null
+		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || stageplay.menu().isOpen()
+				|| routeTapes.menu().isOpen() || editorQuitView != null
 				|| (gameLoop != null && gameLoop.modSceneHost.capturesTextInput());
 	}
 
@@ -4123,8 +4164,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void drawMasterTitle() {
 		resetCameraForScreenSpaceIfPresent();
-		if (stageplay.menu().isOpen()) {
-			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+		if (stageplay.menu().isOpen() || routeTapes.menu().isOpen()) {
+			editorProjectMenuRenderer.render(stageplay.menu().isOpen() ? stageplay.menu() : routeTapes.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 			return;
 		}
 		if (contentImportScreen.isOpen()) {
@@ -4174,6 +4215,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		else if (stageplay.menu().isOpen() && !chromeOwnsStageplayMenu())
 			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+		else if (routeTapes.menu().isOpen() && !chromeOwnsRouteTapeMenu())
+			editorProjectMenuRenderer.render(routeTapes.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		graphicsManager.flushScreenSpace();
 	}
 
@@ -4187,6 +4230,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			editorChrome.init(new com.openggf.editor.EditorWindowChrome.Host() {
 				public LevelEditorController controller() { return levelEditorController; }
 				public com.openggf.editor.stageplay.StageplayWorkspace stageplay() { return stageplay; }
+				public com.openggf.editor.route.RouteTapeWorkspace routeTapes() { return routeTapes; }
 				public void dispatch(EditorInputHandler.Action action) { editorInputHandler.handleAction(action); }
 				public java.util.List<com.openggf.editor.EditorCommandPalette.HostCommand> commands() {
 					return com.openggf.editor.EditorCommandPalette.forController(levelEditorController).extraCommands();
@@ -4199,6 +4243,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private boolean chromeOwnsStageplayMenu() {
 		return editorChrome != null && stageplay.active() && editorChrome.handlesMenu(stageplay.menu());
+	}
+
+	private boolean chromeOwnsRouteTapeMenu() {
+		return editorChrome != null && routeTapes.active() && editorChrome.handlesMenu(routeTapes.menu());
 	}
 
 	/** Places the game inside the chrome's canvas while the window chrome owns the editor frame. */
@@ -4493,6 +4541,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
 		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("Stageplay", stageplaySession::close);
+		cleanupStep("route tape job", routeTapes::close);
 		cleanupStep("screenshots", screenshotWriter::close);
 		cleanupStep("live capture", liveCaptureController::close);
 		cleanupStep("pending saves", com.openggf.game.save.SessionSaveRequests::flushPendingSaves);

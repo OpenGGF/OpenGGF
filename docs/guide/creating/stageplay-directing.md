@@ -136,9 +136,17 @@ playing it back from the start of the shot.
 The line shows where the character actually went in the check: cyan on the
 ground, gold in the air, small chevrons at take-off, a square at the start and
 a diamond at the destination. If you like it, choose **Apply route**. The
-route becomes ordinary actions (a move, a stop and perhaps a jump or turn), and
-it undoes in one step. While you play that shot, the line stays visible and a
-white cross follows the character so you can compare.
+route becomes the actor's **input rows** for that stretch of the shot: the exact
+controller buttons, frame by frame, that the check played back. It undoes in one
+step. While you play that shot, the line stays visible and a white cross follows
+the character so you can compare.
+
+Input rows show in the key and cue list as **Inputs** for their actor. **Edit
+input rows** opens them in the route tape timeline ([Edit route tapes](level-editor.md#edit-route-tapes)):
+toggle buttons on P1's tracks, insert or delete rows, then **Apply to scene** to
+bring them back as one undo step, or go back without changes. Playing the scene
+is the check for edited rows. Commands cannot drive the same actor while its rows
+do.
 
 When planning fails, the line stops at a red cross where the attempt ended,
 and the panel says why.

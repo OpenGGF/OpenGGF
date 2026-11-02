@@ -208,6 +208,14 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                     rows.add(new Row(actor.name() + " / " + EditorLabels.value(command.kind().name()), detail, command.frame(),
                             () -> { workspace.selectActor(actor.id()); workspace.seek(command.frame()); }));
                 }
+                for (var track : document.inputTracks()) for (var lane : track.lanes()) {
+                    String name = document.actors().stream().filter(a -> a.id().equals(lane.actorId()))
+                            .map(StageplayDocument.Actor::name).findFirst().orElse(lane.actorId());
+                    rows.add(new Row(UiMessages.text("editor.route_tape.stageplay_rows_cue", Map.of("actor", name)),
+                            UiMessages.text("editor.route_tape.stageplay_rows_detail", Map.of("from",
+                                    String.valueOf(track.startFrame()), "to", String.valueOf(track.endFrame() - 1))),
+                            track.startFrame(), () -> { workspace.selectActor(lane.actorId()); workspace.seek(track.startFrame()); }));
+                }
                 for (var key : document.camera()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.camera_x9ch8l"), EditorLabels.value(key.interpolation().name()), key.frame(), () -> workspace.seek(key.frame())));
                 for (var caption : document.captions()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.caption_10o2v2e"), caption.text(), caption.startFrame(), () -> workspace.seek(caption.startFrame())));
                 for (var cue : document.dialogue()) rows.add(new Row(UiMessages.text("editor.stageplay_hud.dialogue_1m96f18", Map.of("value0", String.valueOf(StageplayDialogue.speakerName(document, cue)))),

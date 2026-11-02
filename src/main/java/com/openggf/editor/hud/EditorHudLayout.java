@@ -22,6 +22,7 @@ public final class EditorHudLayout {
     static final int MIN_WORKBENCH = 300;
 
     private final int uiScale;
+    private final int dockHeight;
     private final int width;
     private final int height;
     private final Rect stage;
@@ -30,7 +31,13 @@ public final class EditorHudLayout {
     private final Rect game;
 
     private EditorHudLayout(int uiScale, int width, int height, Rect stage, Rect workbench, int[] gameViewport) {
+        this(uiScale, DOCK, width, height, stage, workbench, gameViewport);
+    }
+
+    private EditorHudLayout(int uiScale, int dockHeight, int width, int height, Rect stage, Rect workbench,
+                            int[] gameViewport) {
         this.uiScale = uiScale;
+        this.dockHeight = dockHeight;
         this.width = width;
         this.height = height;
         this.stage = stage;
@@ -51,11 +58,17 @@ public final class EditorHudLayout {
      */
     public static EditorHudLayout of(int framebufferWidth, int framebufferHeight, int logicalWidth, int logicalHeight,
                                      boolean workbench) {
+        return of(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight, workbench, DOCK);
+    }
+
+    /** As {@link #of}, with a dock of {@code dockHeight} units (the route tape timeline needs both pads' tracks). */
+    static EditorHudLayout of(int framebufferWidth, int framebufferHeight, int logicalWidth, int logicalHeight,
+                              boolean workbench, int dockHeight) {
         int scale = uiScale(framebufferWidth, framebufferHeight);
         int width = framebufferWidth / scale;
         int height = framebufferHeight / scale;
         float stageTop = TOP_BAR + GAP;
-        float stageBottom = height - PROMPT_BAR - DOCK - GAP;
+        float stageBottom = height - PROMPT_BAR - dockHeight - GAP;
         Rect stage = new Rect(GAP, stageTop, Math.max(1, width - 2 * GAP), Math.max(1, stageBottom - stageTop));
         int maxScale = Math.max(1, Math.min((int) (stage.w() * scale) / Math.max(1, logicalWidth),
                 (int) (stage.h() * scale) / Math.max(1, logicalHeight)));
@@ -80,7 +93,8 @@ public final class EditorHudLayout {
         int gameH = logicalHeight * gameScale;
         int gameX = Math.round(gameAreaX * scale + (gameAreaW * scale - gameW) / 2f);
         int gameY = Math.round(stage.y() * scale + (stage.h() * scale - gameH) / 2f);
-        return new EditorHudLayout(scale, width, height, stage, bench, new int[] {gameX, gameY, gameW, gameH, gameScale});
+        return new EditorHudLayout(scale, dockHeight, width, height, stage, bench,
+                new int[] {gameX, gameY, gameW, gameH, gameScale});
     }
 
     /** A transient position picker gives the level the area normally used by panels and the dock. */
@@ -98,7 +112,7 @@ public final class EditorHudLayout {
     public int width() { return width; }
     public int height() { return height; }
     public Rect topBar() { return new Rect(0, 0, width, TOP_BAR); }
-    public Rect dock() { return new Rect(0, height - PROMPT_BAR - DOCK, width, DOCK); }
+    public Rect dock() { return new Rect(0, height - PROMPT_BAR - dockHeight, width, dockHeight); }
     public Rect promptBar() { return new Rect(0, height - PROMPT_BAR, width, PROMPT_BAR); }
     public Rect stage() { return stage; }
     /** Composition workbench beside the game, or null at world depth. */

@@ -208,6 +208,8 @@ class TestArchUnitRules {
             "tools -> route",
             // The trusted engine route host reads native facing (physics.Direction) into samples.
             "tools -> physics",
+            // Both editors present route tapes through the planner facade and value types only.
+            "editor -> route",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",
@@ -758,6 +760,9 @@ class TestArchUnitRules {
             case "com.openggf.editor.stageplay.StageplayWorkspace" -> Set.of(
                     "com.openggf.tools.StageplayScriptCompiler",
                     "com.openggf.tools.StageplayScriptDecompiler").contains(target);
+            // Route tape jobs speak the isolated worker's line protocol; the worker owns the host.
+            case "com.openggf.editor.route.RouteTapeJob" -> target.equals("com.openggf.tools.RouteEditorProtocol")
+                    || target.startsWith("com.openggf.tools.RouteEditorProtocol$");
             case "com.openggf.editor.project.EditorProjectRuntimeModule" -> Set.of(
                     "com.openggf.mods.code.ModLevelExportStagingValidator",
                     "com.openggf.mods.code.AuthoredStageplayServices",
@@ -787,7 +792,9 @@ class TestArchUnitRules {
             // runtime player, mutable document or playback service is admitted here.
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayMenuPresentation",
                     Set.of("com.openggf.stageplay.StageplayDocument$PuppetCommandKind")),
-            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech")),
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech",
+                    // Frozen input rows open in the route tape editor through Stageplay's own translation.
+                    "com.openggf.stageplay.route.StageplayRoutes")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayObjectAuthoring", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayObjectCatalog", "com.openggf.stageplay.runtime.StageplayObjectInspection")),
             java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
             java.util.Map.entry("com.openggf.tools.StageplayTool", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayLiveWorld", "com.openggf.stageplay.StageplaySpeech")),
