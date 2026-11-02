@@ -64,7 +64,7 @@ public final class LrzChainedPlatformObjectInstance extends AbstractObjectInstan
                 hurtUnderside(player, vIntRunCount);
             }
         });
-        if (services().levelManager() != null && isWithinSolidContactBounds()
+        if (services().levelManager() != null && isWithinOnScreenRenderBounds()
                 && (services().levelManager().getFrameCounter() & 15) == 0) {
             services().playSfx(Sonic3kSfx.CHAIN_TICK.id);
         }

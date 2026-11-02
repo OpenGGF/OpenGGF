@@ -67,14 +67,6 @@ public class TestTornadoObjectInstance {
 
     private GameModule previousModule;
 
-    @Test
-    void sczTornadoDoesNotSuppressFreshLogicalHorizontalInput() {
-        TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x50);
-
-        assertEquals(0, tornado.staleHorizontalLogicalInputFramesWhileRiding(null, 121),
-                "Obj01_MdNormal_Checks must see the fresh logical direction and enter Blink");
-    }
-
     @BeforeEach
     public void setUp() {
         AbstractObjectInstance.resetCameraBoundsForTests();

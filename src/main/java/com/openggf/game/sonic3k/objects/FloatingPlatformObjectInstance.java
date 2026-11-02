@@ -257,7 +257,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         // Obj_FloatingPlatform tests the object render_flags sign bit before
         // calling SolidObjectTop (loc_255F4). Unlike SolidObjectTop itself,
         // this caller-owned gate suppresses both fresh and continued contact.
-        return !isDestroyed() && isWithinSolidContactBounds();
+        return !isDestroyed() && isWithinOnScreenRenderBounds();
     }
 
     // ===== SolidObjectListener =====

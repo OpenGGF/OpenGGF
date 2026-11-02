@@ -64,8 +64,6 @@ public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public int getBalanceWidthPixels(){return 0x0C;}
     @Override public int getOnScreenHalfWidth(){return 0x0C;}
     @Override public int getOnScreenHalfHeight(){return 0x0C;}
-    // SolidObjectFull reads the prior Render_Sprites flag after this object moves.
-    @Override public boolean isWithinSolidContactBounds(){return isWithinBuildSpritesBounds(getPreUpdateX(),getPreUpdateY(),0x0C,0x0C);}
     @Override public int getPriorityBucket(){return 5;}
     @Override public int getOutOfRangeReferenceX(){return anchorX;}
     @Override public int getCollisionFlags(){return special?0x86:0;}@Override public int getCollisionProperty(){return 0;}

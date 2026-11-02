@@ -403,6 +403,18 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    protected boolean usesCustomRenderHeight() {
+        // Obj2F_Init: move.b #$20,y_radius / bset #render_flags.explicit_height
+        // (s2.asm:49158-49159); BuildSprites tests y_radius (s2.asm:30580-30593).
+        return true;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return yRadius;
+    }
+
+    @Override
     protected int getHalfWidth() {
         return HALF_WIDTH;
     }

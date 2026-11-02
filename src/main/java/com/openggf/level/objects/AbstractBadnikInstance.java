@@ -305,7 +305,9 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
                 base.objectSubclassExtra(),
                 base.playerExtra(),
                 base.genericState(),
-                base.compactGenericState()
+                base.compactGenericState(),
+                base.renderFlagPassSeen(),
+                base.renderFlagOnScreen()
         );
     }
 

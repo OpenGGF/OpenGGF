@@ -319,25 +319,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean onObject = false;
 
         /**
-         * Snapshot of {@link #onObject} captured at the START of the current
-         * playable frame (before any player tick has run). Refreshed by
-         * {@link #captureOnObjectAtFrameStart()} from {@code SpriteManager.beginPlayableFrame}.
-         *
-         * <p>ROM analog: in {@code Tails_CPU_Control} (sonic3k.asm:26728-26740,
-         * S2 s2.asm:38933+), the follow-steering logic reads the leader's
-         * {@code Status_OnObj} bit MID-FRAME, before solid-object processing
-         * (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4 sonic3k.asm:44409-44421)
-         * has cleared it for jumpers. {@code Sonic_Jump} (sonic3k.asm:23323-23389)
-         * sets {@code Status_InAir} but does NOT touch {@code Status_OnObj}; the
-         * bit only clears later when objects run. The engine's
-         * {@code PlayableSpriteMovement.doJump} and air-unseat paths clear
-         * {@code onObject} EARLIER in the player tick, so by the time the
-         * Tails CPU runs (next playable in {@code SpriteManager.update}), the
-         * live {@code isOnObject()} value already reflects the leader's
-         * post-tick state. Reading {@link #getOnObjectAtFrameStart()} preserves
-         * the pre-tick (mid-frame, ROM-equivalent) view.
-         */
-        /**
          * ROM-style latched solid interaction object id.
          * Mirrors the object id resolved from the player's SST {@code interact} slot,
          * which persists even after {@code status.on_object} is cleared.
@@ -1033,7 +1014,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
+                        onObject,
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
                         latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(), latchedSolidObjectBound,
@@ -1180,8 +1161,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectPreservedRollVelocityCarry = extra.objectPreservedRollVelocityCarry();
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
-                controller.restoreFrameStartState(extra.onObjectAtFrameStart(),
-                                extra.onObjectAtPreviousFrameStart(), extra.pushingAtFrameStart(),
+                controller.restoreFrameStartState(extra.pushingAtFrameStart(),
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
@@ -2187,37 +2167,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Captures the current {@link #onObject} value into the frame-start
-         * snapshot. Called by {@code SpriteManager.beginPlayableFrame} before
-         * any playable's per-frame tick runs, so consumers reading
-         * {@link #getOnObjectAtFrameStart()} see the value as it was at the
-         * top of the frame, matching the ROM's mid-frame view when one
-         * playable's logic reads another playable's status.
+         * Captures the frame-start push/air/hurt snapshot. Called by
+         * {@code SpriteManager.beginPlayableFrame} before any playable's
+         * per-frame tick runs.
          */
         public void captureOnObjectAtFrameStart() {
                 controller.captureFrameStartState();
                 this.invulnerabilityDisplayTimerDecrementedThisFrame = false;
-        }
-
-        /**
-         * Returns the {@link #onObject} value as it was at the START of the
-         * current playable frame (before any player tick ran). Use this in
-         * cross-playable reads where the ROM accesses another sprite's
-         * {@code Status_OnObj} bit BEFORE solid-object processing has run for
-         * the frame (e.g. {@code Tails_CPU_Control} follow-steering at
-         * sonic3k.asm:26728-26740 / s2.asm:38933+).
-         */
-        public boolean getOnObjectAtFrameStart() {
-                return controller.isOnObjectAtFrameStart();
-        }
-
-        /**
-         * Returns the {@code Status_OnObj} snapshot from the preceding playable
-         * frame. This distinguishes a just-released solid ride from a terrain
-         * AnglePos detach after grounded movement has already selected animation.
-         */
-        public boolean getOnObjectAtPreviousFrameStart() {
-                return controller.isOnObjectAtPreviousFrameStart();
         }
 
         public boolean getPushingAtFrameStart() {

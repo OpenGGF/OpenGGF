@@ -548,7 +548,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // ROM ObjD6 occupied routine tests render_flags.on_screen before the
         // simple countdown or linked-slot handling. If bit 7 is clear, it jumps
         // directly to loc_2BE2E and releases the player (s2.asm:59334-59338).
-        if (isWithinSolidContactBounds()) {
+        if (isWithinOnScreenRenderBounds()) {
             return false;
         }
         ejectPlayer(player);

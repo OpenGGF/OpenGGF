@@ -288,40 +288,6 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
-    void arzBossPillarPostPhysicsSidePushPreservesTailsVelocity() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-        ObjectManager manager = buildSingleObjectManager(pillar);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A73);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setAir(false);
-        tails.setPushing(false);
-        tails.setXSpeed((short) -0x24);
-        tails.setGSpeed((short) -0x24);
-
-        assertTrue(pillar.preservesMovingSideContactVelocity(tails),
-                "The Round 50 Obj89 handoff is only preserved while Tails' integer x_pos is still "
-                        + "at the pillar edge.");
-        manager.processImmediateInlineSolidCheckpoint(pillar, null, List.of(tails));
-
-        assertEquals(0xFFDC, tails.getXSpeed() & 0xFFFF);
-        assertEquals(0xFFDC, tails.getGSpeed() & 0xFFFF,
-                "Obj89's pillar can run an engine-side post-physics checkpoint after Tails has "
-                        + "already applied the ROM-visible CPU/movement velocity. Preserve that "
-                        + "velocity while the integrated trace replay verifies the same side "
-                        + "contact still carries Status_Push "
-                        + "(docs/s2disasm/s2.asm:35424-35436,65330-65374).");
-    }
-
-    @Test
     void arzBossPillarKeepsSolidLatchInItsMovingSstSlot() {
         ARZBossPillar pillar = new ARZBossPillar(
                 new ObjectSpawn(0x2B70, 0x0510, Sonic2ObjectIds.ARZ_BOSS, 0x04, 1, false, 0),
@@ -353,81 +319,6 @@ class TestSonic2ObjectBugFixes {
                 "Obj2A's standard SolidObject BHI gate accepts relX == 2*d1");
         assertTrue(stomper.preservesEdgeSubpixelMotion(),
                 "Obj2A exact-edge AtEdge contact must preserve velocity and x_sub");
-    }
-
-    @Test
-    void arzBossPillarMainPlayerSidePushUsesRomStopPath() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-
-        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        sonic.setGameRulesForTest(GameRules.SONIC_2);
-        sonic.setWidth(18);
-        sonic.setHeight(18);
-        sonic.setCentreX((short) 0x2A73);
-        sonic.setCentreY((short) 0x04BC);
-        sonic.setCpuControlled(false);
-        sonic.setRenderFlagOnScreen(true);
-        sonic.setAir(false);
-        sonic.setPushing(false);
-        sonic.setXSpeed((short) -0x15D);
-        sonic.setGSpeed((short) -0x15D);
-
-        assertFalse(pillar.preservesMovingSideContactVelocity(sonic),
-                "Obj89's temporary-anchor SolidObject call should use SolidObject_StopCharacter "
-                        + "for Sonic because no later sidekick CPU/movement slot overwrites the stop "
-                        + "(docs/s2disasm/s2.asm:35424-35436,65531-65539).");
-    }
-
-    @Test
-    void arzBossPillarInsideSidePushNoLongerPreservesTailsVelocityHandoff() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A72);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setAir(false);
-        tails.setPushing(true);
-        tails.setXSpeed((short) -0x48);
-        tails.setGSpeed((short) -0x48);
-
-        assertFalse(pillar.preservesMovingSideContactVelocity(tails),
-                "Once Tails' integrated x_pos crosses inside Obj89 pillar's right edge, the object-local "
-                        + "handoff no longer suppresses ROM SolidObject_StopCharacter "
-                        + "(docs/s2disasm/s2.asm:35424-35436).");
-    }
-
-    @Test
-    void arzBossPillarOnePixelInsideWithoutPushUsesRomStopPath() {
-        ARZBossPillar pillar = new ARZBossPillar(
-                new ObjectSpawn(0x2A50, 0x0488, Sonic2ObjectIds.ARZ_BOSS, 0x04, 0, false, 0),
-                null);
-
-        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
-        tails.setGameRulesForTest(GameRules.SONIC_2);
-        tails.setWidth(18);
-        tails.setHeight(18);
-        tails.setCentreX((short) 0x2A72);
-        tails.setCentreY((short) 0x04C0);
-        tails.setCpuControlled(true);
-        tails.setRenderFlagOnScreen(true);
-        tails.setAir(false);
-        tails.setPushing(false);
-        tails.setXSpeed((short) -0x57);
-        tails.setGSpeed((short) -0x57);
-
-        assertFalse(pillar.preservesMovingSideContactVelocity(tails),
-                "ARZ2 f5845: after Tails' integrated x_pos crosses one pixel inside Obj89's right edge, "
-                        + "ROM reaches SolidObject_StopCharacter even if Status_Push was not already set "
-                        + "(docs/s2disasm/s2.asm:35424-35436,65531-65539).");
     }
 
     @Test
@@ -528,43 +419,6 @@ class TestSonic2ObjectBugFixes {
                 "ROM Obj65 loc_26E4A only treats $1BC0 as a reverse point outside metropolis_zone_2");
         assertEquals(5, intField(platform, "moveSubtype"),
                 "MTZ3 must continue subtype-5 conveyor motion until $1CC0 or $2940");
-    }
-
-    @Test
-    void mtzLongPlatformSubtype5StalesLogicalHorizontalInputWhileRiding() {
-        MTZLongPlatformObjectInstance conveyor = new MTZLongPlatformObjectInstance(
-                new ObjectSpawn(0x1C86, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
-        MTZLongPlatformObjectInstance secondStopConveyor = new MTZLongPlatformObjectInstance(
-                new ObjectSpawn(0x28AE, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
-        MTZLongPlatformObjectInstance lateSecondStopConveyor = new MTZLongPlatformObjectInstance(
-                new ObjectSpawn(0x28FC, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
-        MTZLongPlatformObjectInstance earlyConveyor = new MTZLongPlatformObjectInstance(
-                new ObjectSpawn(0x1A7E, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x05, 0, false, 0));
-        MTZLongPlatformObjectInstance stationary = new MTZLongPlatformObjectInstance(
-                new ObjectSpawn(0x1C86, 0x04C8, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
-        TestablePlayableSprite facingRight = new TestablePlayableSprite("sonic", (short) 0x1C9F, (short) 0x04A8);
-        TestablePlayableSprite facingLeft = new TestablePlayableSprite("sonic", (short) 0x1A96, (short) 0x04A8);
-        TestablePlayableSprite cpuTails = new TestablePlayableSprite("tails", (short) 0x1C9F, (short) 0x04A8);
-        facingLeft.setDirection(Direction.LEFT);
-        cpuTails.setCpuControlled(true);
-
-        assertEquals(3, conveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
-                "Obj65 loc_26E4A changes x_pos before SolidObject, while Sonic_Move consumes "
-                        + "Ctrl_1_Held_Logical (docs/s2disasm/s2.asm:53159-53220,36552-36567)");
-        assertEquals(3, secondStopConveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
-                "MTZ3's second Obj65 stop at $2940 uses the same loc_26E4A/SolidObject timing "
-                        + "as the $1CC0 stop approach (docs/s2disasm/s2.asm:53159-53220)");
-        assertEquals(0, lateSecondStopConveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
-                "The later MTZ3 right edge at platform X=$28FC is consumed immediately by Sonic_Move");
-        assertEquals(0, conveyor.staleHorizontalLogicalInputFramesWhileRiding(facingLeft, 1, false, true),
-                "Sonic_MoveRight flips status.player.x_flip and accelerates immediately when Sonic starts facing left");
-        assertEquals(0, conveyor.staleHorizontalLogicalInputFramesWhileRiding(cpuTails, 1, false, true),
-                "CPU Tails writes Ctrl_2_Logical before Tails_Move consumes it "
-                        + "(docs/s2disasm/s2.asm:39381,39673-39688)");
-        assertEquals(0, earlyConveyor.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
-                "Earlier subtype-5 movement before the MTZ3 $1CC0 stop approach consumes the right edge immediately");
-        assertEquals(0, stationary.staleHorizontalLogicalInputFramesWhileRiding(facingRight, 1, false, true),
-                "Only the subtype-5 conveyor carry path uses the stale logical-input window");
     }
 
     @Test

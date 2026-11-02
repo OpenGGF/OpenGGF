@@ -2702,20 +2702,6 @@ public final class ObjectSolidContactController {
         boolean inclusiveRightEdge = profile.inclusiveRightEdge();
         int playerCenterX = player.getCentreX();
         int playerCenterY = player.getCentreY();
-        if (instance instanceof SolidObjectProvider provider) {
-            // Provider-specific ROM ports can request a different sampled
-            // player-position phase for top- or full-solid helper geometry.
-            // S3K SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
-            // before RideObject_SetRide (sonic3k.asm:42037-42070); full-solid
-            // callers can likewise model their concrete player-slot phase.
-            int historyFrames = topSolidOnly
-                    ? Math.max(0, InitialObjectDispatchController.afterCallback(initialDispatch, provider.getTopSolidPlayerPositionHistoryFrames(player)))
-                    : 0;
-            if (historyFrames > 0) {
-                playerCenterX = player.getCentreX(historyFrames);
-                playerCenterY = player.getCentreY(historyFrames);
-            }
-        }
 
         int width2 = halfWidth * 2;
         int relXRaw = playerCenterX - anchorX + halfWidth;
@@ -3606,8 +3592,6 @@ public final class ObjectSolidContactController {
             // and obVelX, then falls through to Solid_Centre (position correction).
             // When d0!=0 AND NOT movingInto, ROM goes to Solid_Centre directly
             // (position correction only, no speed zeroing).
-            boolean preserveMovingSideVelocity = instance instanceof SolidObjectProvider solidProvider
-                    && InitialObjectDispatchController.afterCallback(initialDispatch, solidProvider.preservesMovingSideContactVelocity(player));
             if (instance instanceof SolidObjectProvider solidProvider
                     && sideContactProviderReturnsNoContact(player, instance, pieceIndex, solidProvider)) {
                 return null;
@@ -3631,12 +3615,10 @@ public final class ObjectSolidContactController {
                             && player.getAir()
                             && distX == (player.getXSpeed() >> 8);
                     if (distX != 0 && movingInto) {
-                        if (!airborneSpecialTouchEdge && !preserveMovingSideVelocity) {
+                        if (!airborneSpecialTouchEdge) {
                             player.setXSpeed((short) 0);
-                            player.setGSpeed((short) 0);
-                        } else if (airborneSpecialTouchEdge) {
-                            player.setGSpeed((short) 0);
                         }
+                        player.setGSpeed((short) 0);
                     }
                     if (distX != 0) {
                         if (projectedPreMovementX) {
@@ -3654,12 +3636,12 @@ public final class ObjectSolidContactController {
                             && InitialObjectDispatchController.afterCallback(initialDispatch, provider.preservesZeroDistanceSideContactMotion());
                     if (distX == 0 && !preserveSubpixels && !preserveZeroDistanceMotion) {
                         writeNativePlayerCentreX(player, playerCenterX);
-                        if (movingInto && !preserveMovingSideVelocity) {
+                        if (movingInto) {
                             player.setXSpeed((short) 0);
                             player.setGSpeed((short) 0);
                         }
                     }
-                    if (distX != 0 && movingInto && !preserveMovingSideVelocity) {
+                    if (distX != 0 && movingInto) {
                         player.setXSpeed((short) 0);
                         player.setGSpeed((short) 0);
                     }

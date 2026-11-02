@@ -7,6 +7,8 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameModule;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.SpawnRefId;
@@ -746,16 +748,40 @@ public class ObjectManager {
             objectCallbacks.run(inst, inst::snapshotTouchResponseState);
     }
 
+    /**
+     * The end-of-frame BuildSprites / Render_Sprites pass: records every object's
+     * {@code render_flags.on_screen} for the next frame's logic, then lets objects
+     * with their own retained render state refresh it.
+     */
     public void refreshPostCameraRenderState() {
         updateRenderCameraBounds();
+        boolean heightPixelsTest = renderSpritesTestsHeightPixels();
         for (ObjectInstance inst : activeObjects.values()) {
-            if (!ObjectDirectionAccess.suspended(this, inst))
-                objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+            refreshPostCameraRenderState(inst, heightPixelsTest);
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (!ObjectDirectionAccess.suspended(this, inst))
-                objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+            refreshPostCameraRenderState(inst, heightPixelsTest);
         }
+    }
+
+    private void refreshPostCameraRenderState(ObjectInstance inst, boolean heightPixelsTest) {
+        if (ObjectDirectionAccess.suspended(this, inst)) {
+            return;
+        }
+        if (inst instanceof AbstractObjectInstance aoi) {
+            objectCallbacks.run(inst, () -> aoi.captureRenderFlagOnScreen(heightPixelsTest));
+        }
+        objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+    }
+
+    private boolean renderSpritesTestsHeightPixels() {
+        // S3K Render_Sprites always tests height_pixels; S1/S2 BuildSprites
+        // assume a 32-px Y radius unless the object sets the explicit-height flag.
+        // The same rule selects the playable sprite's render-flag Y test
+        // (Camera.isVisibleForRenderFlag).
+        GameModule module = objectServices != null ? objectServices.gameModule() : null;
+        GameRules rules = module != null ? module.getRules() : null;
+        return rules != null && rules.camera().useScreenYWrapValueForVisibility();
     }
 
     public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks,
@@ -3975,12 +4001,15 @@ public class ObjectManager {
     }
 
     private void updateRenderCameraBounds() {
-        // S3K Render_Sprites reads Camera_X_pos_copy/Camera_Y_pos_copy after
-        // ScreenEvents, while object logic and placement use the live camera
-        // words (sonic3k.asm:36364,36383-36401). Keep this phase-specific so
-        // the copied event coordinates do not leak into the next object pass.
-        int left = camera.getXCopy();
-        int top = camera.getYCopy();
+        // BuildSprites / Render_Sprites read Camera_X_pos_copy/Camera_Y_pos_copy
+        // after the zone's scroll/screen-event routine has added the screen-shake
+        // offset (S2 BuildSprites s2.asm:30567,30589-30611, shake e.g. SwScrl_ARZ
+        // s2.asm:17709-17728; S3K sonic3k.asm:36364,36383-36401 after ScreenEvents),
+        // while object logic and placement use the live camera words. Keep this
+        // phase-specific so the copied coordinates do not leak into the next
+        // object pass.
+        int left = (short) (camera.getXCopy() + camera.getShakeOffsetX());
+        int top = (short) (camera.getYCopy() + camera.getShakeOffsetY());
         updateCameraBounds(left, top);
     }
 

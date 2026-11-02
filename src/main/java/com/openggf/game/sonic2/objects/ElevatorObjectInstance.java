@@ -64,7 +64,6 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     // d3 = 9 (platform surface offset for PlatformObjectD5/MvSonicOnPtfm)
     private static final int HALF_WIDTH = 16;
     private static final int PLATFORM_HEIGHT = 9;
-    private static final int STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
 
     // Position tracking
     private int x;              // Current X (constant, same as spawn)
@@ -141,28 +140,6 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         // Elevators are platform objects - only solid from the top
-        return true;
-    }
-
-    @Override
-    public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        // ObjD5 calls PlatformObjectD5 after its state routine
-        // (s2.asm:58435-58443). The helper returns immediately when the
-        // character is already standing on another platform, and otherwise
-        // keeps the rider through MvSonicOnPtfm (s2.asm:35617-35657,
-        // 35402-35420). CNZ traces show BK2 right input in the CSV at f5997
-        // while ROM inertia remains zero until f6000, so replay must not let
-        // the V-int-aligned input row accelerate the rider before the ROM's
-        // ObjD5/PlatformObjectD5 phase consumes it.
-        return STALE_LOGICAL_HORIZONTAL_FRAMES;
-    }
-
-    @Override
-    public boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
-        // ObjD5's PlatformObjectD5 ride helper keeps the same held Ctrl_1_Logical
-        // input path while the elevator can zero Sonic's inertia mid-ride; do
-        // not re-arm the initial stale-input window after that reset
-        // (docs/s2disasm/s2.asm:35860-35874, 58905-58915).
         return true;
     }
 

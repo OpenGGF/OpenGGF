@@ -42,20 +42,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Number of position-history frames to use for this object's new
-     * {@code SolidObjectTop} geometry check.
-     * <p>
-     * Most objects use the player's current engine position. Object-specific
-     * providers may opt into a different sampled phase when porting an inline
-     * ROM top-solid helper. The call site must cite the concrete disassembly
-     * routine; for S3K {@code SolidObjectTop}'s new-landing geometry reads
-     * {@code x_pos/y_pos/y_radius} at sonic3k.asm:42022-42055.
-     */
-    default int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-        return 0;
-    }
-
-    /**
      * Whether this top-solid object rejects the exact surface boundary before landing.
      * <p>
      * Most shared top-solid callers keep the established engine/profile behavior.
@@ -376,19 +362,6 @@ public interface SolidObjectProvider {
     }
 
     /**
-     * Whether a moving side contact should preserve the player's horizontal
-     * velocity while still applying the side position correction and push bits.
-     * <p>
-     * Most shared {@code SolidObject} callers keep the ROM stop-on-side-contact
-     * behavior. Object-local ordering exceptions can opt in when the engine's
-     * inline post-physics checkpoint observes a side contact after the ROM frame
-     * would have already let the player slot overwrite the stopped velocity.
-     */
-    default boolean preservesMovingSideContactVelocity(PlayableEntity player) {
-        return false;
-    }
-
-    /**
      * Whether a zero horizontal velocity on the object's left side still routes
      * through {@code SolidObject_StopCharacter}.
      * <p>
@@ -607,38 +580,6 @@ public interface SolidObjectProvider {
      * object's actual current position or side-contact cleanup.
      */
     default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
-        return false;
-    }
-
-    /**
-     * Number of newly-pressed horizontal-input frames to ignore while this
-     * object is the player's current riding solid.
-     * <p>
-     * Default is zero. Object-specific overrides are for ROM helper timing
-     * quirks where the BK2 input row is aligned to V-int, but the player
-     * movement routine does not consume the new logical horizontal value until
-     * a later gameplay step. Keep this object-local; do not broaden stale input
-     * suppression into shared movement unless all callers of the helper have
-     * been checked.
-     */
-    default int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
-        return 0;
-    }
-
-    default int staleHorizontalLogicalInputFramesWhileRiding(
-            PlayableEntity player, int rideFrames, boolean left, boolean right) {
-        return right && !left ? staleHorizontalLogicalInputFramesWhileRiding(player, rideFrames) : 0;
-    }
-
-    /**
-     * Whether the stale-horizontal-input edge tracker should remain attached to
-     * this riding object while the player has nonzero ground speed.
-     * <p>
-     * Most providers keep the historic reset-while-moving behavior. Concrete
-     * ROM routines may opt in when a mid-ride inertia reset should not make a
-     * still-held horizontal input look newly pressed.
-     */
-    default boolean preservesStaleHorizontalInputEdgeWhileMoving(PlayableEntity player) {
         return false;
     }
 
