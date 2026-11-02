@@ -1,6 +1,7 @@
 package com.openggf.route;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -10,6 +11,10 @@ import java.util.Objects;
  *
  * <p>Index {@code i} is the post-row phase of source row {@code i}. A window {@code [from, to]}
  * names where following starts and the index that completes it.
+ *
+ * <p>A reference may also carry each player's exact post-row kinematic state ({@link PlayerState}).
+ * An exact re-synchronising repair ({@link AuthorHints#exactResync()}) needs them: it keeps source
+ * rows only while the players' states equal the recorded ones, field for field.
  */
 public final class ReferencePath {
     private final LaunchContract launch;
@@ -20,9 +25,50 @@ public final class ReferencePath {
     private final String environment;
     private final int from;
     private final int to;
+    /** Exact recorded states, or null; a P2 entry is null where the reference had no sidekick. */
+    private final PlayerState[] p1States;
+    private final PlayerState[] p2States;
+    private final boolean sidekickStates;
+
+    /**
+     * One player's exact post-row state on the reference's engine: ROM {@code x_pos}/{@code y_pos}
+     * with their 16-bit subpixels, raw 8.8 speeds, and the airborne and rolling status bits.
+     */
+    public record PlayerState(int centreX, int centreY, int xSub, int ySub, int xSpeed, int ySpeed, int groundSpeed,
+                              boolean air, boolean rolling) {
+        public static PlayerState of(PlayerView view) {
+            return new PlayerState(view.centreX(), view.centreY(), view.xSub(), view.ySub(), view.xSpeed(),
+                    view.ySpeed(), view.groundSpeed(), view.air(), view.rolling());
+        }
+
+        /**
+         * How far {@code view} is from this state: position in 1/256 px, speeds in raw units, and a
+         * large step per differing status bit. Zero only when every field is equal.
+         */
+        public long distance(PlayerView view) {
+            long d = Math.abs((((long) view.centreX() << 16) | view.xSub()) - (((long) centreX << 16) | xSub)) / 256
+                    + Math.abs((((long) view.centreY() << 16) | view.ySub()) - (((long) centreY << 16) | ySub)) / 256
+                    + Math.abs(view.xSpeed() - xSpeed) + Math.abs(view.ySpeed() - ySpeed)
+                    + Math.abs(view.groundSpeed() - groundSpeed);
+            if (d == 0 && (view.xSub() != xSub || view.ySub() != ySub)) d = 1;
+            if (view.air() != air) d += 1000;
+            if (view.rolling() != rolling) d += 1000;
+            return d;
+        }
+    }
 
     private ReferencePath(LaunchContract launch, InputTape source, int[] xs, int[] ys, long[] epochs,
                           String environment, int from, int to) {
+        this(launch, source, xs, ys, epochs, environment, from, to, null, null);
+    }
+
+    private ReferencePath(LaunchContract launch, InputTape source, int[] xs, int[] ys, long[] epochs,
+                          String environment, int from, int to, PlayerState[] p1States, PlayerState[] p2States) {
+        this.p1States = p1States;
+        this.p2States = p2States;
+        boolean any = false;
+        if (p2States != null) for (PlayerState state : p2States) any |= state != null;
+        this.sidekickStates = any;
         this.launch = launch;
         this.source = source;
         this.xs = xs;
@@ -48,6 +94,8 @@ public final class ReferencePath {
         int[] xs = new int[count];
         int[] ys = new int[count];
         long[] epochs = new long[count];
+        PlayerState[] p1 = new PlayerState[count];
+        PlayerState[] p2 = new PlayerState[count];
         int n = 0;
         try (ReplayWorld world = hosts.openColdReplay(launch)) {
             for (; n < count; n++) {
@@ -55,6 +103,8 @@ public final class ReferencePath {
                 xs[n] = after.p1().centreX();
                 ys[n] = after.p1().centreY();
                 epochs[n] = after.epoch();
+                p1[n] = PlayerState.of(after.p1());
+                p2[n] = after.p2().map(PlayerState::of).orElse(null);
                 if (after.p1().dead()) {
                     n++;
                     break;
@@ -62,7 +112,7 @@ public final class ReferencePath {
             }
         }
         return new ReferencePath(launch, rows.slice(0, n), Arrays.copyOf(xs, n), Arrays.copyOf(ys, n),
-                Arrays.copyOf(epochs, n), hosts.environment(), 0, n - 1);
+                Arrays.copyOf(epochs, n), hosts.environment(), 0, n - 1, Arrays.copyOf(p1, n), Arrays.copyOf(p2, n));
     }
 
     /**
@@ -82,9 +132,56 @@ public final class ReferencePath {
         return new ReferencePath(launch, rows, xs.clone(), ys.clone(), epochs.clone(), environment, 0, xs.length - 1);
     }
 
+    /**
+     * The same path with each player's exact post-row state, one entry per row. {@code p2} is
+     * empty for a solo reference; otherwise a null entry marks a row without a sidekick. P1's
+     * state must agree with the recorded centre.
+     */
+    public ReferencePath withStates(List<PlayerState> p1, List<PlayerState> p2) {
+        Objects.requireNonNull(p1, "p1");
+        Objects.requireNonNull(p2, "p2");
+        if (p1.size() != xs.length || (!p2.isEmpty() && p2.size() != xs.length)) {
+            throw new IllegalArgumentException("one state per row: " + xs.length + " rows, " + p1.size() + "/" + p2.size());
+        }
+        PlayerState[] a = new PlayerState[xs.length];
+        PlayerState[] b = new PlayerState[xs.length];
+        for (int i = 0; i < xs.length; i++) {
+            a[i] = Objects.requireNonNull(p1.get(i), "p1 state");
+            if (a[i].centreX() != xs[i] || a[i].centreY() != ys[i]) {
+                throw new IllegalArgumentException("P1 state at row " + i + " is not the recorded centre");
+            }
+            b[i] = p2.isEmpty() ? null : p2.get(i);
+        }
+        return new ReferencePath(launch, source, xs, ys, epochs, environment, from, to, a, b);
+    }
+
+    /** Whether the reference carries exact player states. */
+    public boolean hasStates() {
+        return p1States != null;
+    }
+
+    /** Whether the exact states include a sidekick. */
+    boolean hasSidekickStates() {
+        return sidekickStates;
+    }
+
+    /**
+     * Distance of a sample's players from the recorded states at {@code index}: P1, plus P2 when
+     * {@code sidekick} is set and the reference recorded one. Zero means an exact match; a
+     * sidekick present on only one side counts as a mismatch.
+     */
+    long stateDistance(RouteSample sample, int index, boolean sidekick) {
+        if (p1States == null) throw new IllegalStateException("reference has no exact states");
+        long d = p1States[index].distance(sample.p1());
+        if (!sidekick || !sidekickStates) return d;
+        PlayerState p2 = p2States[index];
+        if (p2 != null) return d + sample.p2().map(p2::distance).orElse(1_000_000L);
+        return sample.p2().isPresent() ? d + 1_000_000L : d;
+    }
+
     /** The same path, followed from index {@code from} until index {@code to} is reached. */
     public ReferencePath window(int from, int to) {
-        return new ReferencePath(launch, source, xs, ys, epochs, environment, from, to);
+        return new ReferencePath(launch, source, xs, ys, epochs, environment, from, to, p1States, p2States);
     }
 
     public int size() {

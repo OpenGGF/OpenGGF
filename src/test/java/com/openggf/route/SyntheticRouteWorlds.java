@@ -10,7 +10,8 @@ import java.util.Optional;
  * the previous row (the host's press-edge history), unless built incomplete on purpose. Optional
  * objects: a boss that loses a hit when the player lands on it from a jump and reports its hits
  * (owner facts, as an engine boss's {@code HitPointSource} would), and a placed platform whose
- * phase alternates every forty rows.
+ * phase alternates every forty rows. A nudge (an engine change in miniature) pushes the player one
+ * pixel further right the first time they walk onto it.
  */
 final class SyntheticRouteWorlds implements RouteWorldFactory {
     record Pit(int from, int to) { }
@@ -22,14 +23,17 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
     private final int bossX;
     private final int bossHits;
     private final int platformX;
+    private final int nudgeX;
     int boots;
 
     SyntheticRouteWorlds(List<Pit> pits, int boundaryX, int leftBoundaryX, boolean incompleteCheckpoints) {
-        this(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, Integer.MIN_VALUE, 0, Integer.MIN_VALUE);
+        this(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, Integer.MIN_VALUE, 0, Integer.MIN_VALUE,
+                Integer.MIN_VALUE);
     }
 
     private SyntheticRouteWorlds(List<Pit> pits, int boundaryX, int leftBoundaryX, boolean incompleteCheckpoints,
-                                 int bossX, int bossHits, int platformX) {
+                                 int bossX, int bossHits, int platformX, int nudgeX) {
+        this.nudgeX = nudgeX;
         this.pits = List.copyOf(pits);
         this.boundaryX = boundaryX;
         this.leftBoundaryX = leftBoundaryX;
@@ -40,11 +44,15 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
     }
 
     SyntheticRouteWorlds withBoss(int x, int hits) {
-        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, x, hits, platformX);
+        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, x, hits, platformX, nudgeX);
     }
 
     SyntheticRouteWorlds withPhasePlatform(int x) {
-        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, bossX, bossHits, x);
+        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, bossX, bossHits, x, nudgeX);
+    }
+
+    SyntheticRouteWorlds withNudge(int x) {
+        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, bossX, bossHits, platformX, x);
     }
 
     static SyntheticRouteWorlds flat() {
@@ -76,7 +84,12 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
     }
 
     private record State(int x, int y, int vy, boolean air, boolean dead, int previous, int rows, long epoch,
-                         boolean crossed, boolean crossedLeft, int hits, int cooldown) { }
+                         boolean crossed, boolean crossedLeft, int hits, int cooldown, boolean nudged) {
+        State(int x, int y, int vy, boolean air, boolean dead, int previous, int rows, long epoch, boolean crossed,
+              boolean crossedLeft, int hits, int cooldown) {
+            this(x, y, vy, air, dead, previous, rows, epoch, crossed, crossedLeft, hits, cooldown, false);
+        }
+    }
 
     private final class World implements RouteWorld {
         private State s = new State(0, 0, 0, false, false, 0, 0, 0, false, false, bossHits, 0);
@@ -109,6 +122,7 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
             if (!dead) {
                 if ((lane & PhysicalButton.RIGHT.bit()) != 0) x++;
                 if ((lane & PhysicalButton.LEFT.bit()) != 0) x--;
+                if (!s.nudged && x == nudgeX) x++;
                 boolean press = (lane & PhysicalButton.A.bit()) != 0 && (s.previous & PhysicalButton.A.bit()) == 0;
                 if (press && !air) {
                     air = true;
@@ -139,7 +153,8 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
             boolean crossed = s.crossed, crossedLeft = s.crossedLeft;
             if (!crossed && x >= boundaryX) { crossed = true; epoch++; }
             if (!crossedLeft && x <= leftBoundaryX) { crossedLeft = true; epoch++; }
-            s = new State(x, y, vy, air, dead, lane, s.rows + 1, epoch, crossed, crossedLeft, hits, cooldown);
+            boolean nudged = s.nudged || (nudgeX != Integer.MIN_VALUE && x >= nudgeX);
+            s = new State(x, y, vy, air, dead, lane, s.rows + 1, epoch, crossed, crossedLeft, hits, cooldown, nudged);
             return new RecordedStep(offered, observe());
         }
 
@@ -150,7 +165,7 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
         @Override public WorldCheckpoint capture() {
             // An incomplete token forgets host-owned state the way an unsaved driver counter would.
             State saved = incompleteCheckpoints ? new State(s.x, s.y, s.vy, s.air, s.dead, s.previous, 0, s.epoch,
-                    s.crossed, s.crossedLeft, s.hits, s.cooldown) : s;
+                    s.crossed, s.crossedLeft, s.hits, s.cooldown, s.nudged) : s;
             return new Saved(this, saved);
         }
 

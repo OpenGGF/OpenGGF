@@ -2,6 +2,7 @@ package com.openggf.tools;
 
 import com.openggf.route.AuthorHints;
 import com.openggf.route.Cancellation;
+import com.openggf.route.GoalProgram;
 import com.openggf.route.InputTape;
 import com.openggf.route.LaunchContract;
 import com.openggf.route.PlanProgress;
@@ -12,6 +13,7 @@ import com.openggf.route.RepairScope;
 import com.openggf.route.RomIdentity;
 import com.openggf.route.Roster;
 import com.openggf.route.RouteArtifact;
+import com.openggf.route.RouteCodec;
 import com.openggf.route.RouteFiles;
 import com.openggf.route.RoutePlanner;
 import com.openggf.route.RouteTask;
@@ -36,8 +38,9 @@ import java.util.Map;
  * (unqualified) and {@code result.txt}; exit 2 when stopped.
  *
  * <pre>
- * java ... com.openggf.tools.RouteRepairTool s3k.gen 10:1 320 sonic tails \
- *   src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2 \
+ * # The SSZ1 pair route as it was before its 2026-11-02 repair (the movie is in git at d84b25bd8):
+ * java ... com.openggf.tools.RouteRepairTool --exact-leader --checks complete.json s3k.gen 10:1 320 sonic tails \
+ *   ssz1-sonic-tails-cold-complete-320.bk2 \
  *   src/test/resources/routes/s3k/tracks/ssz1-sonic-tails-cold-complete-320.csv.gz 1366 \
  *   ssz1-sonic-tails-cold-complete-320 target/route-repair/ssz1-pair
  * </pre>
@@ -47,9 +50,30 @@ public final class RouteRepairTool {
     }
 
     public static void main(String[] args) throws Exception {
+        AuthorHints hints = AuthorHints.referenceFollowing();
+        boolean exact = false;
+        GoalProgram checks = GoalProgram.NONE;
+        while (args.length > 0 && args[0].startsWith("--")) {
+            switch (args[0]) {
+                case "--exact" -> {
+                    hints = AuthorHints.exactResync(true);
+                    exact = true;
+                }
+                case "--exact-leader" -> {
+                    hints = AuthorHints.exactResync(false);
+                    exact = true;
+                }
+                case "--checks" -> {
+                    checks = RouteCodec.parseGoals(Files.readString(Path.of(args[1])));
+                    args = java.util.Arrays.copyOfRange(args, 1, args.length);
+                }
+                default -> throw new IllegalArgumentException("Unknown option " + args[0]);
+            }
+            args = java.util.Arrays.copyOfRange(args, 1, args.length);
+        }
         if (args.length != 10) {
-            throw new IllegalArgumentException("Usage: RouteRepairTool ROM ZONE:ACT WIDTH MAIN SIDEKICK|none MOVIE.bk2 "
-                    + "TRACK.csv[.gz] FIRST_EDITABLE STEM OUT_DIR");
+            throw new IllegalArgumentException("Usage: RouteRepairTool [--exact|--exact-leader] [--checks GOALS.json] ROM "
+                    + "ZONE:ACT WIDTH MAIN SIDEKICK|none MOVIE.bk2 TRACK.csv[.gz] FIRST_EDITABLE STEM OUT_DIR");
         }
         Path rom = Path.of(args[0]);
         String[] boot = args[1].split(":");
@@ -70,7 +94,11 @@ public final class RouteRepairTool {
         var hosts = EngineRouteHosts.withRoms(Map.of("s3k", rom));
         ReferencePath reference = RouteTrackReference.read(track, movie, launch, rows);
         long started = System.nanoTime();
-        PlanResult result = repair(hosts, launch, rows, reference, firstEditable, movie.getFileName().toString(),
+        int remaining = reference.to() - firstEditable + 1;
+        // An exact repair edits single rows; a reference-following one may author the whole remainder.
+        RepairScope scope = exact ? new RepairScope(firstEditable, 64, 32)
+                : new RepairScope(firstEditable, Math.max(600, remaining), 256);
+        PlanResult result = repair(hosts, launch, rows, reference, movie.getFileName().toString(), hints, scope, checks,
                 progress -> System.out.println("progress " + progress));
         var report = new StringBuilder(result.getClass().getSimpleName()).append('\n')
                 .append("ROM=").append(rom).append("\nlaunch=").append(launch)
@@ -106,12 +134,22 @@ public final class RouteRepairTool {
      */
     public static PlanResult repair(EngineRouteHosts hosts, LaunchContract launch, InputTape rows, ReferencePath reference,
                                     int firstEditable, String source, PlanProgress.Listener listener) {
-        var original = RouteArtifact.of(launch, rows,
-                new Provenance("RouteRepairTool", hosts.environment(), source, List.of()));
         int remaining = reference.to() - firstEditable + 1;
-        var task = new RouteTask.Repair(original, reference.window(firstEditable, reference.to()),
-                new RepairScope(firstEditable, Math.max(600, remaining), 256),
-                AuthorHints.referenceFollowing(), SearchBudget.referenceRepair());
+        return repair(hosts, launch, rows, reference, source, AuthorHints.referenceFollowing(),
+                new RepairScope(firstEditable, Math.max(600, remaining), 256), GoalProgram.NONE, listener);
+    }
+
+    /**
+     * Repairs {@code rows} within {@code scope} with explicit hints, carrying the goal program the
+     * original declares (the repaired route keeps it and its qualification replay evaluates it).
+     */
+    public static PlanResult repair(EngineRouteHosts hosts, LaunchContract launch, InputTape rows, ReferencePath reference,
+                                    String source, AuthorHints hints, RepairScope scope, GoalProgram checks,
+                                    PlanProgress.Listener listener) {
+        var original = RouteArtifact.of(launch, checks, rows,
+                new Provenance("RouteRepairTool", hosts.environment(), source, List.of()));
+        var task = new RouteTask.Repair(original, reference.window(scope.firstEditable(), reference.to()), scope, hints,
+                SearchBudget.referenceRepair());
         return new RoutePlanner(hosts).plan(task, Cancellation.NONE, listener);
     }
 }

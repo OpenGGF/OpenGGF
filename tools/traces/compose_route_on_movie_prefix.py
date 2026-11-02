@@ -14,22 +14,31 @@ Inputs:
   --movie        the recorded BizHawk movie that owns the prefix (its key must
                  be `#Power|Reset|#P1 ...|#P2 ...|`, Genesis pads UDLRABCS)
   --prefix-rows  rows of the movie to keep; the first route row lands here
-  --route        route `.bk2` or Input Log in OpenGGF's key (UDLRSABC per pad)
+  --route        route `.bk2` or Input Log in OpenGGF's key (UDLRSABC per pad), or a
+                 movie `RouteFiles.exportBk2` derived from a route manifest (BizHawk's
+                 Genesis key, kept as is)
   --route-rows   how many route rows to append (default: all)
+  --filler-before  comma-separated route row indices; before each listed row k one
+                 filler row (a copy of route row k-1) is inserted, once per listing
   --out          output `.bk2`; the name becomes the capture's `source_bk2`
 
-Both pads are re-keyed from the route; no row is repeated or invented. A native
-lag frame consumes a row the engine polls, so the two diverge from the first
-native lag frame on; bound comparisons there rather than editing rows. Bracket
-the prefix by +/-1 before believing an early divergence: a one-row offset fakes
-one hundreds of frames in. Output is byte-deterministic (fixed zip timestamps).
+Both pads are re-keyed from the route; no route row is repeated or invented. A
+native lag frame consumes a movie row without polling the pad, so without
+fillers the two diverge from the first native lag frame on. Each filler stands
+in for one observed lag VBlank (a route manifest's native lag fact): the game
+never reads it, so the polled presses stay the engine's. Fillers are observed,
+never predicted. Bracket the prefix by +/-1 before believing an early
+divergence: a one-row offset fakes one hundreds of frames in. Output is
+byte-deterministic (fixed zip timestamps).
 
 Example (SSZ1: the S&T complete-run arms SSZ at 396720, route row 0 is the
-engine's pre-arm step, so route input k lands on movie row 396719 + k):
+engine's pre-arm step, so route input k lands on movie row 396719 + k; the
+committed native composite used the route movie as it was at fa313dfa3, before
+the route became a manifest whose movie is derived with RouteFiles.exportBk2):
   python3 -I tools/traces/compose_route_on_movie_prefix.py \
       --movie src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2 \
       --prefix-rows 396719 --route-rows 2000 \
-      --route src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2 \
+      --route <ssz1-sonic-tails-cold-complete-320.bk2 at fa313dfa3> \
       --out /tmp/ssz1-native-check/s3k-ssz1-cold-route-composite.bk2
 
 Origin: SSZ1 native route check after the ROM-owned solid-contact change
@@ -63,6 +72,9 @@ def read_route(path):
             text = z.read("Input Log.txt").decode("utf-8")
     else:
         text = open(path, encoding="utf-8").read()
+    if BIZHAWK_KEY in text.splitlines():
+        # A movie derived from a route manifest already carries BizHawk's two-pad key.
+        return input_rows(text)
     rows = []
     for line in input_rows(text):
         parts = line.strip("|").split("|")
@@ -84,6 +96,7 @@ def main(argv):
     parser.add_argument("--prefix-rows", type=int, required=True)
     parser.add_argument("--route", required=True)
     parser.add_argument("--route-rows", type=int)
+    parser.add_argument("--filler-before", default="")
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
 
@@ -100,13 +113,22 @@ def main(argv):
     if not 0 < count <= len(route):
         raise SystemExit(f"route has {len(route)} rows, asked for {count}")
 
-    body = movie_rows[:args.prefix_rows] + route[:count]
+    fillers = sorted(int(k) for k in args.filler_before.split(",") if k.strip())
+    if any(k < 1 or k >= count for k in fillers):
+        raise SystemExit(f"a filler goes before a route row in [1, {count}): {fillers}")
+    before = {}
+    for k in fillers:
+        before[k] = before.get(k, 0) + 1
+    body = list(movie_rows[:args.prefix_rows])
+    for k in range(count):
+        body.extend([route[k - 1]] * before.get(k, 0))
+        body.append(route[k])
     text = "\n".join(["[Input]", BIZHAWK_KEY] + body + ["[/Input]"]) + "\n"
     with zipfile.ZipFile(args.out, "w", zipfile.ZIP_DEFLATED) as out:
         for name in sorted(members):
             out.writestr(entry(name), members[name], zipfile.ZIP_DEFLATED)
         out.writestr(entry("Input Log.txt"), text, zipfile.ZIP_DEFLATED)
-    print(f"wrote {args.out}: {len(body)} rows ({args.prefix_rows} movie + {count} route)")
+    print(f"wrote {args.out}: {len(body)} rows ({args.prefix_rows} movie + {count} route + {len(fillers)} filler)")
     return 0
 
 

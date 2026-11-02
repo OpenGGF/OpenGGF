@@ -11,14 +11,18 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 
 /**
  * Reads a route's recorded engine track (a gzip CSV of P1's centre and boundary epoch after every
  * row, written by an engine replay of the route on the engine its rows were authored against) as
- * a repair {@link ReferencePath}. The header binds the engine revision and the SHA-256 of the
+ * a repair {@link ReferencePath}. A track written by {@link RouteTrackRecorder} also carries each
+ * player's exact state ({@link RouteTrackRecorder#COLUMNS}); the reference then has
+ * {@link ReferencePath.PlayerState}s for an exact re-synchronising repair. The header binds the engine revision and the SHA-256 of the
  * route movie it was recorded from; a track for other rows is refused. A track is a scoring
  * target only: it never boots, seeds or restores a world, and it is never trace data.
  *
@@ -64,24 +68,46 @@ public final class RouteTrackReference {
         var xs = new int[rows.size()];
         var ys = new int[rows.size()];
         var epochs = new long[rows.size()];
+        var p1 = new ArrayList<ReferencePath.PlayerState>();
+        var p2 = new ArrayList<ReferencePath.PlayerState>();
+        boolean rich;
+        boolean sidekick = false;
         int n = 0;
         try (var reader = open(track)) {
             reader.readLine();
-            if (!"row,x,y,epoch,dead".equals(reader.readLine())) throw new IOException(track + " has an unknown column set");
+            String columns = reader.readLine();
+            if ("row,x,y,epoch,dead".equals(columns)) rich = false;
+            else if (RouteTrackRecorder.COLUMNS.equals(columns)) rich = true;
+            else throw new IOException(track + " has an unknown column set");
             String line;
             while ((line = reader.readLine()) != null && n < rows.size()) {
-                String[] f = line.split(",");
+                String[] f = line.split(",", -1);
                 if (Integer.parseInt(f[0]) != n) throw new IOException(track + " skips row " + n);
                 xs[n] = Integer.parseInt(f[1]);
                 ys[n] = Integer.parseInt(f[2]);
                 epochs[n] = Long.parseLong(f[3]);
+                if (rich) {
+                    p1.add(state(f, 1, 5));
+                    ReferencePath.PlayerState second = f[12].isEmpty() ? null : state(f, 12, 14);
+                    sidekick |= second != null;
+                    p2.add(second);
+                }
                 n++;
                 if (f[4].equals("1")) break;
             }
         }
         if (n == 0) throw new IOException(track + " has no rows");
-        return ReferencePath.recorded(launch, rows.slice(0, n), Arrays.copyOf(xs, n), Arrays.copyOf(ys, n),
+        ReferencePath path = ReferencePath.recorded(launch, rows.slice(0, n), Arrays.copyOf(xs, n), Arrays.copyOf(ys, n),
                 Arrays.copyOf(epochs, n), "openggf " + header.engine() + " recorded track " + track.getFileName());
+        return rich ? path.withStates(p1, sidekick ? p2 : List.of()) : path;
+    }
+
+    /** One player's state: centre at {@code centre}, subpixels/speeds/flags from {@code rest}. */
+    private static ReferencePath.PlayerState state(String[] f, int centre, int rest) {
+        return new ReferencePath.PlayerState(Integer.parseInt(f[centre]), Integer.parseInt(f[centre + 1]),
+                Integer.parseInt(f[rest]), Integer.parseInt(f[rest + 1]), Integer.parseInt(f[rest + 2]),
+                Integer.parseInt(f[rest + 3]), Integer.parseInt(f[rest + 4]), f[rest + 5].equals("1"),
+                f[rest + 6].equals("1"));
     }
 
     private static BufferedReader open(Path track) throws IOException {

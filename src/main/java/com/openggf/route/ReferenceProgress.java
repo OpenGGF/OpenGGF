@@ -101,4 +101,29 @@ final class ReferenceProgress {
             }
         };
     }
+
+    /**
+     * Qualification for an exact re-synchronising repair: on every row in {@code rows} the tracked
+     * players' states must equal the recorded ones field for field.
+     */
+    ReplayCheck exactly(java.util.BitSet rows, boolean sidekick) {
+        boolean withSidekick = sidekick && reference.hasSidekickStates();
+        return new ReplayCheck() {
+            @Override public String name() {
+                return "exact-recorded-states(" + rows.cardinality() + " rows" + (withSidekick ? ", with sidekick" : "") + ")";
+            }
+
+            @Override public String afterRow(int row, RouteSample sample) {
+                if (rows.get(row) && row < reference.size()) {
+                    long d = reference.stateDistance(sample, row, withSidekick);
+                    if (d != 0) return "row " + row + " left its recorded state (distance " + d + ")";
+                }
+                return null;
+            }
+
+            @Override public String finish(RouteSample last) {
+                return null;
+            }
+        };
+    }
 }

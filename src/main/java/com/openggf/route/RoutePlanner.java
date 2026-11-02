@@ -61,7 +61,17 @@ public final class RoutePlanner {
 
     private PlanResult repair(RouteTask.Repair task, Cancellation cancellation, PlanProgress.Listener listener,
                               RouteReplay.Observer observer) {
-        var expander = new ReferenceExpander(task);
+        boolean exact = task.hints().preset == AuthorHints.Preset.EXACT_RESYNC;
+        PrefixSearch.Expander expander;
+        boolean sourceIsOriginal;
+        if (exact) {
+            expander = new ResyncExpander(task);
+            sourceIsOriginal = true;
+        } else {
+            var following = new ReferenceExpander(task);
+            expander = following;
+            sourceIsOriginal = following.sourceIsOriginal();
+        }
         var search = new PrefixSearch(draft != null ? draft : hosts, task.original().launch(),
                 task.original().tape().slice(0, task.scope().firstEditable()), expander, task.budget(), cancellation,
                 listener);
@@ -72,10 +82,10 @@ public final class RoutePlanner {
         RouteManifest originalManifest = task.original().manifest();
         boolean nativeEvidence = !originalManifest.nativeFacts().equals(NativeFacts.NONE)
                 || originalManifest.qualification().stream().anyMatch(s -> s.scope() == ReplayScope.BIZHAWK);
-        RepairReport report = PrefixSearch.report(end, task.original().tape().size(), expander.sourceIsOriginal())
+        RepairReport report = PrefixSearch.report(end, task.original().tape().size(), sourceIsOriginal)
                 .comparedWith(task.original().tape(), tape, nativeEvidence);
         var provenance = new Provenance("RoutePlanner " + PLANNER_REVISION + " " + task.hints(), hosts.environment(),
-                (expander.sourceIsOriginal() ? "repair of " : "continuation of ") + task.original().content().shortForm()
+                (sourceIsOriginal ? "repair of " : "continuation of ") + task.original().content().shortForm()
                         + " from row " + task.scope().firstEditable() + " following " + task.reference(),
                 List.of(report.summary().lines().findFirst().orElse("")));
         // The original's goal program travels with its rows and is re-evaluated by the cold replay.
@@ -84,7 +94,9 @@ public final class RoutePlanner {
         var checks = new ArrayList<ReplayCheck>();
         var progress = new ReferenceProgress(task.reference());
         checks.add(progress.reaches(task.scope().firstEditable(), PrefixSearch.rootProgress(end), task.hints()));
-        if (expander.sourceIsOriginal()) {
+        if (exact) {
+            checks.add(progress.exactly(ResyncExpander.exactRows(end), task.hints().sidekick));
+        } else if (sourceIsOriginal) {
             checks.add(progress.tracksPrefix(task.scope().firstEditable(), task.hints().syncTolerance));
         }
         return qualify(route, checks, report, search, end, task.reference().to(), cancellation, listener, observer);
