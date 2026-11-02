@@ -398,8 +398,9 @@ already moved by the screen-shake ripple (e.g. `SwScrl_ARZ`, s2.asm:17709-17728)
 and S3K `Render_Sprites` against the same copies after ScreenEvents has added
 `Screen_shake_offset` (sonic3k.asm:36358-36410). S1/S2 test Y with an assumed
 32-px radius unless the object sets the explicit-height flag
-(`BuildSprites_ApproxYCheck`, s2.asm:30603-30611; S1 `.assumeHeight`, _inc/BuildSprites.asm:62,86-94); S3K always
-uses `height_pixels` (sonic3k.asm:36396-36404).
+(`BuildSprites_ApproxYCheck`, s2.asm:30603-30611; S1 `.assumeHeight`,
+_inc/BuildSprites.asm:62,86-94); S3K always uses `height_pixels`
+(sonic3k.asm:36396-36404).
 
 The engine evaluated a live proxy at the solid call instead: the object's
 current position (post-move for AUTO routines), the live camera without shake,
@@ -433,3 +434,157 @@ unreachable catch in `LrzShootingTriggerObjectInstance.onScreen` with its
 broad-catch baseline row. Residual approximations (display-queue membership,
 multi-sprite boxes, objects registered mid-frame) are in
 [known bugs](../../status/known-bugs.md#solid-on-screen-gate-render-pass-approximations--2026-11-02).
+
+Measured at `a1a9b0619`: no green class turned red. Two reds changed:
+
+- `TestS2CompleteEmeraldRunChain` keeps its failing segments, but segment 19
+  (`seg13_arz2`) now first diverges at f4433 `sidekick_x` ROM `$2B5E` / engine
+  `$2B4D` (was f5084 `sidekick_y`): the engine pushes Tails to the right
+  pillar's left edge one frame before the ROM does. Instrumented: the ROM row
+  f4434 shows the pillar's p2-pushing bit, so its bit was clear at the f4432
+  pass (pillar y `$502`, ripple Y 2 -> y - copy = `$100`, outside the band) and
+  set at f4433 (y `$501`, ripple 2 -> `$FF`). The engine's f4432 pass used
+  ripple Y 3 because `SwScrl_ARZ` indexes `SwScrl_RippleData` with
+  `Level_frame_counter` (s2.asm:17712), and the engine's model
+  (`LevelManager.frameCounter`) is `$115F` on that row while the ROM's is
+  `$1145`; it is already +26 at the pillar's spawn row f4419 (`$1152` vs
+  `$1138`). The ROM clears the counter before the title card (s2.asm:4773) and
+  increments it only in `Level_MainLoop` (s2.asm:5092). This is a pre-existing
+  level-clock desync in the chain's ARZ2 segment that only rendering read until
+  the gate consumed the shake; the standalone `TestS2Arz2LevelSelectTraceReplay`,
+  where the clocks agree, stays green. Kept; recorded in
+  [known bugs](../../status/known-bugs.md#s2-run-chain-arz2-level-clock-runs-26-frames-ahead--2026-11-02).
+- `TestS3kSonicTailsHcz3SegmentTraceReplay`: 1,171 -> 1,172 errors after the
+  unchanged f0 `rings` first error.
+
+### B. ARZ boss pillar at its ROM call sites
+
+`Obj89_Pillar_Sub0` and `Sub2` call `Obj89_Pillar_SolidObject` (d1 `$23`, d2
+`$44`, d3 `$45`, d4 `x_pos`, y temporarily +4) at their head, before the pillar
+rises or shakes (s2.asm:65451,65469,65652-65661). Shipped (FixBugs=0) `Sub4`
+makes no solid call while the pillar sinks, and its `DeleteObject` leaves a
+rider's `Status_OnObj` set (s2.asm:65601-65640). `54b9ebe7d` makes the pillar a
+MANUAL routine with exactly those calls and drops its `dropStandingPlayers`,
+which was the fixed branch. With A in place the rising right pillar resolves at
+f4707 as the ROM does: `TestS2Arz2LevelSelectTraceReplay`,
+`TestS2ArzLevelSelectTraceReplay` and `TestS2Arz1CompleteEmeraldsSegmentTraceReplay`
+stay green, and the 143-class set is byte-identical to A.
+
+Deleted: `SolidObjectProvider.preservesMovingSideContactVelocity` (its only
+override kept CPU Tails' `x_vel` at the pillar's side, citing the AUTO call's
+post-move timing) and its controller branch, the pillar's
+`usesPreUpdatePositionForSolidContact`, `usesPreUpdateYForContinuedRide` and
+`isSolidFor`, and four tests that asserted the deleted hook's values.
+
+### C. Remaining families
+
+| Commit | Family | Change |
+| --- | --- | --- |
+| `b0cfb12ef` | ARZ boss arrow | `Obj89_Arrow_Sub4` (s2.asm:65749) runs `Obj89_Arrow_Platform` (s2.asm:65779,65816-65836, FixBugs=0), which calls `PlatformObject` only while the decay timer is clear; a `p1_standing` result writes `#$1F` and falls through to the decrement in the same call; the countdown frames make no call. The arrow is MANUAL with that call and reads Sonic's checkpoint result. Deleted its `preservesRidingPushStatus`, `suppressSlopeSampleThisFrame`, `isSolidFor` and listener overrides and the `timerStartPending` / `timerExpiredThisFrame` pair. Byte-identical to B. |
+| `c6f80dd7f` | MTZ / conveyor / elevator | `staleHorizontalLogicalInputFramesWhileRiding` let three S2 riding solids hide a newly pressed direction from Sonic for three frames (the MTZ form keyed on two MTZ3 x windows). The player slots already run before the objects and `Sonic_Move` reads `Ctrl_1_Held_Logical` directly (s2.asm:36559-36564). With the window disabled the five S2 MTZ/CNZ level-select traces stayed green; deleted both provider overloads, `preservesStaleHorizontalInputEdgeWhileMoving`, the three overrides, the movement tracker and its four `RewindState` components, and five hook-value tests. |
+| `cc4b53a0a` | CNZ trap door | `loc_31CCA` (sonic3k.asm:67262-67293) checks both players against `sub_31CFA`, then always calls `SolidObjectTop` (d1 `$20`, d3 9), then `Animate_Sprite`. The engine port gated solidity on its open state, missed the trigger box's `$20` bound and read the player's previous-frame position for new landings (`getTopSolidPlayerPositionHistoryFrames`). The real rule behind that hook is the helper's landing band: `loc_1E45A` accepts only d0 in [-`$10`,-1] and returns on d0 = 0 (sonic3k.asm:42044-42053). At `TestS3kCnzTraceReplay` f9801 Sonic's bottom meets the door's top exactly and the ROM lands him at f9802. The door is MANUAL with the ROM call and the zero-distance rejection the other S3K top-solid ports already declare; the hook, its controller branch and its test object are deleted, and the controller test that asserted d0 = 0 landings now asserts the rejection. |
+| `5a6ee4fb0` | Balance frame-start reads | The standing-still test after the ground move let an airborne-at-end frame keep the Wait/Balance write only when `Status_OnObj` was clear at this and the previous frame start (`95806f3a9`, MCZ2). `Obj01_MdNormal` (s2.asm:36469-36481) runs `Sonic_Move` (s2.asm:36551-36578), whose inertia test makes that write, before ObjectMove and AnglePos can set `Status_InAir`. With both reads removed, the S2 level-select and complete-emerald segments, the S1 complete runs and `TestS3kAizTraceReplay` were unchanged; the two `Status_OnObj` frame-start snapshots, their rewind components, their test class and the movement test that asserted the previous-frame veto are deleted. |
+
+Rejected attempt for the trap door: the always-solid MANUAL call without the
+zero-distance rejection moved `TestS3kCnzTraceReplay` from f17322 to f9801
+(`y_speed` `$07A8`/0) and the CNZ zone slice from f14616 to f8327: the engine
+landed Sonic one frame early. With the rejection all three CNZ traces return
+to their exact baseline reports.
+
+### Stopped or deferred
+
+- **CPZ staircase (`preservesRidingPushStatus` stays).** Obj78 is a parent and
+  three `AllocateObjectAfterCurrent` children, each running its own
+  `SolidObject` and ORing the touch result into the parent's `objoff_2E`
+  (s2.asm:56079-56146). The engine folds the four steps into one
+  `MultiPieceSolidProvider` and only reserves the child slots, so there is no
+  per-slot call to move; one checkpoint per ROM piece slot needs real child
+  objects (rendering, rewind recreation, despawn with the parent). Not started.
+- **MGZ top platform and the S3K breakable wall.** The platform (2,290 lines)
+  carries its rider as an object-controlled player with a projected `x_vel`;
+  `projectsPreMovementGroundXForSolidContact` only fires for such carriers
+  (post-movement passes return early), which is why the breakable wall also
+  overrides it. Both hooks and the last `carriesRiderOnHorizontalMove` override
+  go with a MANUAL port of the platform's routine. Not started.
+- **AIZ transition floor and the immediate checkpoints.** The floor's
+  `rejectsZeroDistanceTopSolidLanding` counts 20 or 21 rejected passes by the
+  rider's subpixel phase, a fitted window on the AIZ -> HCZ route, so it was not
+  touched. The three `processImmediateInlineSolidCheckpoint` callers (cork
+  floor, MGZ trigger platform, HCZ2 wall) re-run an object whose engine slot
+  precedes the ROM's; their fix is slot allocation, not the solid call.
+- **ICZ snow pile.** No solid hook; its own retained `render_flags` could now use
+  the base render pass from A. Not changed.
+- **Offscreen-sidekick skips: no change needed.** The controller's P2 gate
+  (`shouldSkipOffscreenSidekickFullSolid`) already applies exactly where the
+  object gate applies: S2 `SolidObject` (s2.asm:35014,35023-35024) and S3K
+  `SolidObjectFull` (sonic3k.asm:41045,41051-41052); `SolidObject_Always`,
+  `SolidObject45`, `SolidObjectFull2`, top-only and sloped helpers have neither.
+  No other offscreen-sidekick skip remains.
+- **Follow-up found on the way: the zero-distance landing rule.** S2
+  `PlatformObject_ChkYRange` (s2.asm:35968-35977) and S3K `loc_1E45A`
+  (sonic3k.asm:42044-42053) both return on d0 = 0, but the engine accepts it
+  unless an object opts into `rejectsZeroDistanceTopSolidLanding` (about 35 do).
+  The CNZ trap door's history hook and the AIZ transition floor's counted
+  rejects both trace back to that default. Making the rejection the top-solid
+  helpers' rule and deleting the opt-ins is the next pruning step; it changes
+  every top-solid object that has not opted in, so it needs its own measurement.
+
+### Transitions per measured commit (each against `fa313dfa3`)
+
+| Measured commit | green->green | green->red | red->red identical | red->red changed | red->green |
+| --- | --- | --- | --- | --- | --- |
+| `a1a9b0619` (A, on-screen gate) | 79 | 0 | 62 | 2 | 0 |
+| `54b9ebe7d` (B, ARZ pillar) | 79 | 0 | 62 | 2 | 0 |
+| `b0cfb12ef` (ARZ arrow) | 79 | 0 | 62 | 2 | 0 |
+| `c6f80dd7f` (stale riding input) | 79 | 0 | 62 | 2 | 0 |
+| `cc4b53a0a` (CNZ trap door) | 79 | 0 | 62 | 2 | 0 |
+| `5a6ee4fb0` (balance reads) | 79 | 0 | 62 | 2 | 0 |
+
+The two changed reds are the ones A introduced (S2 chain segment 19, S3K
+Sonic+Tails HCZ3 +1 error); every commit after A is byte-identical to A.
+215 tests per measurement, no skips. Maven execution per measurement (A / A1 /
+B): 7m09s-8m19s / 1m54s-2m01s / 4m27s-4m39s; the baseline took 7m17s / 1m55s /
+4m31s. Queue waits came on top (shared queue).
+
+### Size
+
+Against `fa313dfa3`: `ObjectSolidContactController` 4,520 -> 4,502 lines;
+`SolidObjectProvider` 843 -> 784; `PlayableSpriteMovement` 6,037 -> 5,939.
+Main sources: 40 files, +309 / -582; the six code commits including tests:
+62 files, +706 / -1,010. Deleted hooks:
+`preservesMovingSideContactVelocity`, `getTopSolidPlayerPositionHistoryFrames`,
+`staleHorizontalLogicalInputFramesWhileRiding` (both overloads),
+`preservesStaleHorizontalInputEdgeWhileMoving`, and the
+`getOnObjectAtFrameStart` / `getOnObjectAtPreviousFrameStart` snapshots; the
+fitted overrides removed with them are listed per item above. Mod API candidate
+pin regenerated at every code commit (net -13 lines).
+
+### Validation
+
+- Per commit, focused `maven_queue.py --normal -Dmse=off` runs with the three
+  ROM paths and surfaceless EGL: A, 1,386 tests over every class that calls or
+  overrides the gate or the render refresh plus the keep-green four,
+  `TestSonic2ObjectBugFixes` and `TestCPZObjectBugs` (fixture fixes in five
+  classes, then 99 re-run tests green); B, the pillar's new
+  `TestArzBossPillarSolidCalls` (fails on the old AUTO routine) with
+  `TestSonic2ObjectBugFixes` and the keep-green four (215 tests; the one error is
+  the known order-dependent `mtzCogHighSpeedLeftwardReleaseStillSkipsFoldedSiblingSideStop`);
+  arrow, 610 tests; stale input and trap door, 1,000 tests then 83 after the
+  trap-door test corrections; balance, 561 tests then 187
+  (`TestPlayableSpriteMovement`) after the last test deletion. The one skip is
+  `TestGroundedDetachNativeProfiles`' KiS2 lock-on ROM assumption.
+- Trace spot checks before each commit: the three S2 ARZ classes (A, B, arrow),
+  the five S2 MTZ/CNZ level-select traces (stale input), the three S3K CNZ
+  traces (trap door), and 61 S1/S2/S3K-AIZ trace tests (balance).
+- `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+  `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`: green at A, B, the
+  stale-input/trap-door tree and C4.
+- `-Pguards`: at A, 820 tests with one failure (`TestBroadCatchSwallowingGuard`:
+  the LRZ trigger's unreachable catch changed hash); the catch and its row were
+  retired and that class re-run green. At B, one failure
+  (`TestObjectPhysicsStandardizationGuard`: the pillar's `updatePillarLower`
+  signature changed); the baseline row was renamed and the class re-run green.
+  Full runs on the stale-input + trap-door tree and on C4: 820 tests,
+  0 failures.
+- No broad `run_categories.py` smoke was run in this lane (the lead runs one
+  combined smoke).

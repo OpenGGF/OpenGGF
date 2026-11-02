@@ -122697,3 +122697,37 @@ there). Everything else is identical to `c81ffaf7c`
 stays green. SSZ1 cold routes still leave their path at input 1366; the
 re-authoring analysis is in the
 [SSZ1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#rom-owned-solid-contact-opening-bridge-jump-2026-10-31).
+
+## 2026-11-02 — ROM-owned solid contact, continuation 3: on-screen gate, ARZ boss, hook pruning
+
+Branch `bugfix/ai-rom-owned-solid-contact-3` (worktree `t3-70efc88c`), base
+`fa313dfa3` (`feature/ai-weakness-pass`), measured head `5a6ee4fb0`. Same 143
+classes, commands and environment as the 2026-10-31 solid-contact entry; each
+measured commit ran in a separate copy-on-write worktree on `/home` with classes
+deleted first. Details and per-item evidence:
+[audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#continuation-3-on-screen-gate-arz-pillar-remaining-families-2026-11-02).
+
+| Measured commit | green→green | green→red | identical red | changed red | red→green |
+| --- | --- | --- | --- | --- | --- |
+| `a1a9b0619` (on-screen gate reads the previous render pass) | 79 | 0 | 62 | 2 | 0 |
+| `54b9ebe7d` (ARZ pillar at its ROM call sites) | 79 | 0 | 62 | 2 | 0 |
+| `b0cfb12ef` (ARZ arrow) | 79 | 0 | 62 | 2 | 0 |
+| `c6f80dd7f` (stale riding-input window deleted) | 79 | 0 | 62 | 2 | 0 |
+| `cc4b53a0a` (CNZ trap door) | 79 | 0 | 62 | 2 | 0 |
+| `5a6ee4fb0` (balance frame-start reads deleted) | 79 | 0 | 62 | 2 | 0 |
+
+Every commit after `a1a9b0619` is byte-identical to it (215 tests, no skips).
+
+| Trace | `fa313dfa3` | Head |
+| --- | --- | --- |
+| `TestS2CompleteEmeraldRunChain` | red, segment 19 (`seg13_arz2`) first error f5084 `sidekick_y` `$048A`/`$0489` | red, same segments; segment 19 first error f4433 `sidekick_x` `$2B5E`/`$2B4D` (`a1a9b0619`) |
+| `TestS3kSonicTailsHcz3SegmentTraceReplay` | 1,171 errors, first f0 `rings` | 1,172 errors, same first error (`a1a9b0619`) |
+
+The chain change is the corrected on-screen gate (it now reads the previous
+render pass with the ARZ ripple shake) meeting a pre-existing level-clock
+desync: on `seg13_arz2` row f4419 the engine's `Level_frame_counter` is
+`$1152`, the ROM's `$1138`, so the ripple index (s2.asm:17712) differs and the
+rising right pillar becomes solid for Tails one frame early. Recorded in
+[known bugs](known-bugs.md#s2-run-chain-arz2-level-clock-runs-26-frames-ahead--2026-11-02).
+`TestS3kAizTraceReplay` and the three S2 ARZ classes stay green; no class
+changed green to red.
