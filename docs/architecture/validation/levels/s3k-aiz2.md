@@ -1307,7 +1307,10 @@ are not claimed resolved. The capture exits successfully with the existing
 `Animate_Raw`. The object now uses the existing ROM-backed `S3kRawAnimation`
 state rather than separate Java frame arrays. Raw cursor preincrement, signed
 countdown and the laugh intro's `$F8` jump are retained across recreation.
-Movement, bounce and floor handling are outside this animation correction.
+The first bounce also retains its native floor penetration. `loc_620AA`
+reverses velocity without correcting Y; only the second-landing branch
+`loc_620D8` applies the floor distance. The prior first-contact clamp caused a
+proven one-pixel rebound offset. Other movement and floor handling is unchanged.
 
 The four S3K shield objects share one `Animate_Sprite` playback owner.
 Publication reads the current cursor before incrementing it; a script delay

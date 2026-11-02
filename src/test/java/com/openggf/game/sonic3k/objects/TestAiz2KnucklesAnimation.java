@@ -49,6 +49,12 @@ class TestAiz2KnucklesAnimation {
         assertEquals(4, state(knux).mappingFrame);
         knux.update(0, fixture.sprite());
         assertEquals(8, state(knux).mappingFrame);
+        for (int entry = 3; entry < 38; entry++) knux.update(entry, fixture.sprite());
+        assertTrue(knux.hasLandedOnButton());
+        assertEquals(0x17E, knux.getY(), "first bounce retains native floor penetration");
+        knux.update(0, fixture.sprite());
+        knux.update(0, fixture.sprite());
+        assertEquals(0x176, knux.getY(), "native rebound retains the first-contact pixel");
     }
 
     @Test

@@ -169,7 +169,8 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
         if (!bounced) {
             // First landing — bounce back the other way
             bounced = true;
-            currentY = FLOOR_Y;
+            // loc_620AA reverses velocity without correcting first-contact penetration.
+            // Only loc_620D8 corrects Y on the second landing.
             xVel = -xVel;
             yVel = -yVel;
             return;
