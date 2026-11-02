@@ -7,6 +7,8 @@ readable and historical versions can be referenced directly.
 
 - Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
   filling the background tile ring at the restored camera height.
+- Knuckles restores the native animation after non-flat glide landings.
+- LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
 
 - Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
 
