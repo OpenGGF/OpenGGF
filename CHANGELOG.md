@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+S3K elemental shields keep animating after returning from Bonus/Special stages.
+
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.
 

@@ -2893,7 +2893,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Lazy-register insta-shield with ObjectManager if not yet done (e.g. created before level load).
                 // When registered, ObjectManager drives update(); explicit call only needed for headless tests.
-                if (instaShieldObject != null && !instaShieldRegistered) {
+                // SpawnLevelMainSprites_SpawnPowerup replaces the initial Insta-Shield
+                // with the saved elemental shield (loc_6A02, sonic3k.asm:8294-8323).
+                // A deferred registration after return must not reclaim that shared
+                // fixed slot; wait until the elemental shield has been removed.
+                if (instaShieldObject != null && !instaShieldRegistered && !hasShield()) {
                         if (powerUpSpawner != null) {
                                 powerUpSpawner.registerObject(instaShieldObject);
                                 instaShieldRegistered = true;
