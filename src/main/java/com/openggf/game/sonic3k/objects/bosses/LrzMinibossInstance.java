@@ -904,7 +904,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         waitTimer = SONG_FADE_FRAMES;
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
-            spawnChild(() -> new SongFadeTransitionInstance(SONG_FADE_FRAMES, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
         loc787E0();
     }

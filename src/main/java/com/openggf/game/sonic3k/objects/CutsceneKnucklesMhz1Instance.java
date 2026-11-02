@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -67,7 +66,6 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
     private int yRadius = BOUNCE_Y_RADIUS;
     private boolean peerSpawned;
     private boolean peerReturned;
-    private boolean themeTransitionSpawned;
 
     public CutsceneKnucklesMhz1Instance(ObjectSpawn spawn) {
         this(spawn, null);
@@ -164,17 +162,8 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
 
     private void routineInit() {
         timer = WAIT_BEFORE_WALK;
-        fadeAndPlayKnucklesThemeOnce();
         AizIntroArtLoader.applyKnucklesPalette(services());
         routine = Routine.WAIT_BEFORE_WALK;
-    }
-
-    private void fadeAndPlayKnucklesThemeOnce() {
-        if (themeTransitionSpawned) {
-            return;
-        }
-        themeTransitionSpawned = true;
-        spawnDynamicObject(SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
     }
 
     private void routineWaitBeforeWalk() {

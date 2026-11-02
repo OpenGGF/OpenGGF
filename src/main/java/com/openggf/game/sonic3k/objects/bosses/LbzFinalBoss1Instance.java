@@ -777,7 +777,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId >= 0) {
-            services().playMusic(levelMusicId);
+            services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), levelMusicId));
         }
         // ROM: Load_PLC_Raw PLC_BossExplosion happens with the music restore.
         loadBossExplosionPlcRaw();
@@ -1443,6 +1443,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private RobotnikHeadChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1RobotnikHead"); }
         private int animTimer;
         private int rawFrame;
+        private boolean headArtInitialized;
 
         private RobotnikHeadChild(LbzFinalBoss1Instance boss) {
             super(boss, "LBZFinalBoss1RobotnikHead", 0, -0x1C);
@@ -1458,6 +1459,25 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             if (boss.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
+            }
+            if (!headArtInitialized) {
+                headArtInitialized = true;
+                // Obj_RobotnikHead3Init -> sub_67B14 submits once, with no
+                // readiness wait (sonic3k.asm:136252-136259, 136125-136132).
+                // Completion belongs to the global queue, beyond this SST's life.
+                var main = boss.services().playerQuery().mainPlayerOrNull();
+                if (main instanceof AbstractPlayableSprite sprite
+                        && com.openggf.game.CharacterKey.KNUCKLES.equals(sprite.characterKey())) {
+                    try {
+                        if (!S3kRuntimeArtCoordinator.queueGlobalPatternModule(boss.services(),
+                                Sonic3kConstants.ART_KOSM_EGG_ROBO_HEAD_ADDR,
+                                Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP * 32)) {
+                            throw new IllegalStateException("LBZ EggRobo head module FIFO is full");
+                        }
+                    } catch (IOException failure) {
+                        throw new java.io.UncheckedIOException("Unable to submit LBZ EggRobo head art", failure);
+                    }
+                }
             }
             // The head rides the defeated ship down (frame 3), no auto-delete.
             refreshFromBoss();

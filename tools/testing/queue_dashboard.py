@@ -282,9 +282,9 @@ def _observe_admission(waiting, running, reservations, held_slots, exclusive_hel
                                     blockedBy=None, backfillAvailable=None)
 
 
-def _recent(common, warnings):
+def _recent(common, warnings, *, limit=20, byte_limit=LOG_TAIL_BYTES):
     try:
-        data, _ = _read(common / LOG_NAME, LOG_TAIL_BYTES, tail=True)
+        data, _ = _read(common / LOG_NAME, byte_limit, tail=True)
     except FileNotFoundError:
         return []
     except (OSError, ValueError):
@@ -301,11 +301,12 @@ def _recent(common, warnings):
                 kind=_label(record.get('kind')), mode=_label(record.get('mode')),
                 outcome=_label(record.get('outcome')), waitSeconds=_number(record.get('waitSeconds')),
                 runSeconds=_number(record.get('holdSeconds')),
+                estimateSeconds=_number(record.get('estimate'), positive=True),
                 peakRssBytes=_number(rss * GIB) if rss is not None else None,
                 meanCores=_number(record.get('meanCores'))))
         except (ValueError, TypeError, RecursionError):
             continue
-        if len(rows) == 20:
+        if len(rows) == limit:
             break
     return rows
 
@@ -412,6 +413,7 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
         warnings.append('Some jobs report newer queue tooling than this dashboard. Restart the dashboard from the updated main workspace; leave queued and running jobs intact.')
     if 'unknown' in statuses:
         warnings.append('Some jobs do not report a usable queue tooling revision. Check their wrapper before assuming they have recent admission fixes; running jobs keep their loaded code.')
+    history = _recent(common, warnings, limit=4096, byte_limit=512 * 1024)
     return dict(version=1, capturedAt=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec='seconds'),
                 refreshSeconds=REFRESH_SECONDS, root=str(root), liveness=liveness, host=host,
                 toolingRevision=TOOLING_REVISION,
@@ -419,7 +421,7 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
                                memoryBytes=SMALL_RESERVATION[0], cpuCores=SMALL_RESERVATION[1]),
                 policy=policy_config, heldSlots=held_slots, exclusiveHeld=exclusive_held,
                 running=running, waiting=waiting, unverified=unverified,
-                recent=_recent(common, warnings), warnings=list(dict.fromkeys(warnings)))
+                recent=history[:20], history=history, warnings=list(dict.fromkeys(warnings)))
 
 
 class SnapshotSource:

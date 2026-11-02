@@ -278,7 +278,8 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             state.yVel = DESCENT_SPEED;
             state.xVel = 0;
             actionTimer = DESCEND_TIMER; // $5A
-            services().fadeOutMusic();
+            // Shipped PlaySound route: SFX admission may crowd out this fade.
+            services().playSfx(0xF9);
             childrenSpawned = true;
             return; // Stay in SPAWN_CHILDREN, wait phase starts next frame
         }

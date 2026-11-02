@@ -141,7 +141,7 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
         if (admissionPhase == STAGING) {
             prepareSharedBossAssetsAfterNativeFade();
             if (cameraGate.update(services().camera(),
-                    () -> services().playMusic(Sonic3kMusic.MINIBOSS.id))) {
+                    () -> services().playMusic(Sonic3kMusic.MINIBOSS_S3.id))) {
                 admissionPhase = ACTIVE;
             }
             // loc_6C6FA changes the code pointer and returns; children belong
@@ -369,7 +369,7 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
     private void updateDefeat() {
         if (!defeatFadeStarted) {
             defeatFadeStarted = true;
-            spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.MGZ2.id));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.MGZ2.id));
             defeatTimer = (2 * 60) - 1;
             return;
         }
@@ -421,7 +421,7 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
 
     private void beginPostResultsContinuation() {
         postResultsContinuation = true;
-        services().playMusic(Sonic3kMusic.MGZ2.id);
+        services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), Sonic3kMusic.MGZ2.id));
         var camera = services().camera();
         if (camera != null) {
             camera.setScrollLocked(true);

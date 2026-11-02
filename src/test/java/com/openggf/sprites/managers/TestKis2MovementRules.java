@@ -57,6 +57,54 @@ class TestKis2MovementRules {
     }
 
     @Test
+    void nonFlatGlideLandingResetsNativeAbilityAnimationsButPreservesLowerOnes() throws Exception {
+        for (GameRules gameRules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(gameRules);
+            for (int angle : new int[]{0x20, 0x40, 0xD8, 0xDF}) {
+                for (int animation : new int[]{0, 0x1F, 0x20, 0x21, 0x24, 0xFF}) {
+                    player.setAir(true);
+                    player.setAngle((byte) angle);
+                    player.setDoubleJumpFlag(1);
+                    player.setAbilityMappingFrameControl(true);
+                    player.setForcedAnimationId(0x20);
+                    player.setAnimationId(animation);
+                    player.setGSpeed((short) 0x600);
+                    player.setXSpeed((short) 0x580);
+                    player.setYSpeed((short) 0x80);
+                    invoke("glideHitFloor");
+                    assertEquals(animation >= 0x20 ? 0 : animation, player.getAnimationId(),
+                            "Native non-flat landing animation " + animation + " at angle " + angle);
+                    assertFalse(player.getAir());
+                    assertEquals(0, player.getDoubleJumpFlag());
+                    assertEquals(-1, player.getForcedAnimationId());
+                    assertEquals(0x600, player.getXSpeed());
+                    assertEquals(0, player.getYSpeed());
+                }
+            }
+        }
+    }
+
+    @Test
+    void flatGlideLandingRetainsAnimationAndEntersAirborneSlide() throws Exception {
+        for (GameRules gameRules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(gameRules);
+            for (int angle : new int[]{0, 0x1F, 0xE0, 0xFF}) {
+                player.setAir(true);
+                player.setAngle((byte) angle);
+                player.setDoubleJumpFlag(1);
+                player.setAnimationId(0x20);
+                player.setForcedAnimationId(0x20);
+                invoke("glideHitFloor");
+                assertEquals(0x20, player.getAnimationId());
+                assertEquals(0x20, player.getForcedAnimationId());
+                assertEquals(3, player.getDoubleJumpFlag());
+                assertTrue(player.getAir());
+                assertEquals(0xCC, player.getMappingFrame());
+            }
+        }
+    }
+
+    @Test
     void airSteeringRetainsExistingSuperspeedBothDirectionsButStockS2Caps() throws Exception {
         for (GameRules rules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_2}) {
             rules(rules);

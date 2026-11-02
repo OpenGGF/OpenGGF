@@ -46,7 +46,6 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
     private static final int CAMERA_RANGE_MIN_Y = 0x0176;
     private static final int CAMERA_RANGE_MAX_Y = 0x0300;
     private static final int MUSIC_FADE_WAIT = 2 * 60;
-    private static final int LEVEL_MUSIC_FADE_FRAMES = 2 * 60 + 1;
     private static final int PRE_JUMP_WAIT = 0x3F;
     private static final int POST_BOUNCE_WAIT = 0x3F;
     private static final int FIRST_JUMP_X_VEL = 0x0140;
@@ -315,8 +314,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
         S3kCnzEventWriteSupport.setWallGrabSuppressed(services(), false);
         restoreStoredCameraBounds();
         restorePaletteLine2Snapshot();
-        spawnFreeChild(() -> new SongFadeTransitionInstance(
-                LEVEL_MUSIC_FADE_FRAMES, Sonic3kMusic.CNZ2.id, true));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.CNZ2.id));
         if (blockingWall != null) {
             // ROM loc_62458 deletes the wall child once the parent's destroyed
             // status bit is set; mirror that immediately on cutscene completion.

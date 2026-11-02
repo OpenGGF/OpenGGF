@@ -533,7 +533,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (roster != null) {
             int slot = roster.slotOf(player);
             if (slot < 0) throw new IllegalArgumentException("Ring collector is not a native slot");
-            roster.levelState(slot).addRings(1);
+            var state = roster.levelState(slot);
+            int previousLifeFlags = state.getRingExtraLifeFlags();
+            state.addRings(1);
+            if ((state.getRingExtraLifeFlags() & ~previousLifeFlags) != 0) {
+                com.openggf.audio.AudioManagerInternalAccess.playRingExtraLife(audioManager);
+            }
         } else player.addRings(1);
         notifyNativeRingPickup(player);
     }

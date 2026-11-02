@@ -5,6 +5,21 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- LBZ2 submits native EggRobo-head art during head initialization.
+- Solo S2 title-card entry records leader history during its native object passes.
+- Knuckles restores the native animation after non-flat glide landings.
+- LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
+
+- Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
+
+- Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
+
+- Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
+  filling the background tile ring at the restored camera height.
+
+- Clear the native sanctuary openings so stray terrain no longer appears above
+  the left Super Emerald pedestals during the results camera descent.
+
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 - Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
 
@@ -24,6 +39,9 @@ Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 S3K elemental shields keep animating after returning from Bonus/Special stages.
 Their frame publication, animation switches and invincibility/blank-player pauses
 follow the native scripts.
+
+Music transitions preserve boss/drowning ownership, native S2 request mailboxes,
+and S3K cutscene fades, miniboss request IDs and apparent-act restoration.
 
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.

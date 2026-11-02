@@ -122582,3 +122582,253 @@ fixture-only normalized camera witness supplies no new engine parity rows.
 Physical-frame, whole-act, campaign, full-route rewind and parent broad-smoke
 qualification remain unclaimed. The branch is retained locally for the lead;
 only owned diagnostic logs/reports are removed after inspection.
+
+
+## 2026-11-02 — KiS2 glide landing and LBZ2 camera-owned art
+
+Worker base: `2557cf5b09c2bc4c4feff41540b3b4d606b3fa39`.
+Lead integration base: `a8f3f8647ed1e0920e7ee5119a8ce11a1d6a2ad6`.
+The two local repairs are combined in `91ea642e5`, plus the lead owner-service
+correction described below. Combined verification is complete. Neither replay
+frontier is green.
+
+- `2832c01cf`: native non-flat Knuckles glide landing resets unsigned animation
+  bytes at or above `$20` to Walk. The flat slide and tested lower animation
+  values are retained. KiS2 EHZ1 advances from 93 to 91 errors across all 1,817
+  compared rows, gate reached, no warnings/skips: the animation row289 and
+  mapping rows289–290 spans disappear. The 91 history-bootstrap errors retain
+  their exact field/count profile (cursor, 26 X entries, 64 Y entries).
+  The worker's 271 focused movement/loading checks pass without skips.
+- `c839a6bde`: LBZ end-boss art `$376542` to VRAM `$84A0` is submitted only after
+  native camera admission, rather than merely because object loading constructed
+  the owner. The worker replay advances 249 to 239 errors: 242 to 232 physics,
+  seven animation in both. Both gates complete: 6,444 planned rows / 6,309 gameplay
+  comparisons, no skips/bootstrap errors. Twenty-four boss/rewind cases pass.
+
+Lead comparison against the survey's completed per-class baseline at `a8f3f8647`
+confirms every non-queue/timing error record is identical to the LBZ worker
+candidate. Direct `active_source` errors split from three spans into eight,
+but covered mismatch frames fall from 6,248 to 13: removing a single long
+spurious source block exposes shorter genuine missing-producer gaps. Do not
+interpret span count alone as regression or hide the new first queue frontier.
+The remaining queue frontier starts at row858, expected EggRobo-head source
+`$15FDDE`, engine absent. The row945 movement/animation disagreement, frame-zero
+rings55/0 and unmatched completions from6313 remain separate work.
+
+Native references:
+
+- KiS2 `Knuckles_BeginSlide` and `Sonic_ResetOnFloor_Part3`: `s2.asm` at
+  reference `c336fed`, lines38217–38234 and40997–41020, respectively.
+- `Knux_Gliding_HitFloor` (`skdisasm/sonic3k.asm:30776-30791`).
+- `Knux_TouchFloor` (`skdisasm/sonic3k.asm:32869-32908`).
+- `Obj_LBZEndBoss` (`skdisasm/sonic3k.asm:153420-153434`).
+- `loc_73906` (`skdisasm/sonic3k.asm:153440-153456`).
+- `Check_CameraInRange` (`skdisasm/sonic3k.asm:180524-180554`).
+
+S3K line ranges use pinned reference `8b2cf3c4178f`; dirty-checkout evidence was
+checked by label and remapped to that reference. The five new S3K anchors pass
+a strict isolated citation check. Existing historical citation debt was not
+rewritten. These are read-only research references; no ROM assets or disassembly
+pins/content were changed.
+
+Worker commands used the queued Maven wrapper, Java25, `-Dmse=off`, surfaceless
+EGL with display variables unset, original absolute supported ROM paths,
+`-Ptrace-replay`, and exact selectors. KiS2 selected
+`TestKis2MovementRules,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`;
+LBZ selected
+`TestS3kKnucklesLbz2BigArmTraceReplay,TestLbzEndBossKosOwnerRewind,TestLbzEndBossInstance`.
+
+The LBZ report still advertises nine unimplemented auxiliary comparators:
+`cage_state_per_frame`, `cage_execution_per_frame`, `velocity_write_per_frame`,
+`position_write_per_frame`, `sonic_record_pos_per_frame`,
+`tails_cpu_normal_step_per_frame`, `sidekick_interact_object_per_frame`,
+`cnz_cylinder_state_per_frame`, `cnz_cylinder_execution_per_frame`.
+No full auxiliary parity, full-suite or complete campaign qualification is
+claimed. Shared timing authority, bootstrap hydration and expected values remain
+unchanged. The lead reproduced a construction-admitted ready owner stranded
+after the camera left range before its first update (one failure, zero skips).
+Servicing now recognizes an existing art ordinal as ownership, independently
+of whether the first ordinary update has latched camera admission. This grants
+no new submission outside camera range.
+
+Combined command: queued Maven with `-Dmse=off`,
+`-Dopenggf.headless.gl=surfaceless-egl`, `-Ptrace-replay`,
+`-Dsurefire.forkCount=1`, `-Dsurefire.reuseForks=true`, the original absolute
+S1/S2/S3K ROM paths, Java25 and unset display variables. Exact `-Dtest` selector:
+
+```text
+TestKis2MovementRules,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kKnucklesLbz2BigArmTraceReplay,TestLbzEndBossKosOwnerRewind,TestLbzEndBossInstance,TestHardwareTimingAuthorityGuard,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits
+```
+
+Outcome: 324 cases, two known replay failures, zero errors/skips. All322
+functional checks pass: 271 movement/loading,25 boss/rewind,25 timing-authority,
+and one art-mapping check. Twelve selectors expand to13 concrete classes because
+both loading classes share a simple name. KiS2 remains91 errors (all bootstrap,
+zero animation) and LBZ remains239 (232 physics/seven animation), with completed
+gates and the same row counts as above. Every LBZ nonqueue/timing error record
+matches the survey baseline; no functional regression is hidden by error totals.
+Root queue wait was659s; Maven execution108s including compilation. The isolated
+owner regression waited139s and executed98s including its clean build. These
+intervals are not added to overlapping worker/survey intervals as elapsed time.
+
+The change-based planner selects all4,395 smoke classes for the shared movement
+file. Focused delivery coverage replaces that disproportionate selection: the
+runtime edits are the Knuckles-only non-flat animation tail and one boss's
+submission/owner-service boundary; ordinary collision, other movement dispatch,
+queue algorithms and timing authority are unchanged. Both native rule profiles,
+flat/lower-animation controls, camera boundaries, forced recreation, art mappings,
+timing guards and all four S3K keep-green classes are exercised. No smoke-suite,
+full-suite, complete-act or complete-run pass is claimed.
+
+### Historical representatives in this fleet
+
+At unchanged base `2557cf5b0`, four exact methods ran without skips:
+
+- `TestFbzAct2RouteHeadless#starpost5WaveExecutesTheLowerMagneticPlatformAndChain`
+  passes. Its historical failing full-route method was removed; this short
+  witness does not renew full-route qualification.
+- `TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions`
+  still dies at input26853, centre($339D,$05B6), with zero rings.
+- `TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo`
+  dies at input19924, airborne near($0E96,$0A2B), with zero rings. The historical
+  death was14721; this observation was made without a fleet code change and
+  is not attributed to these repairs. Neither death identifies a responsible
+  contact or establishes a shipped-ROM mismatch.
+- `TestS2EhzHalfpipeRoundTripChain#ehzHalfpipeRoundTrip` still fails two return-gap
+  timestamp axes: eight fields per return, all65 rows early. All three gameplay
+  segment reports have zero physics/animation/bootstrap errors; represented
+  dynamic-art reports pass5,733 and6,381 comparisons. This was the full method,
+  not a lifecycle-prefix substitute. No correction constant was introduced.
+
+FBZ used its default exact selection, cold methods used the explicit
+`exhaustive-audit` profile, and halfpipe used `trace-replay`. An observation-only
+cold rerun was restored before handoff. Measured test execution was about73s,
+Maven/build execution263s and queue waiting3,008s; no source changes or live
+handles remain in that worker. Four other historical campaign classes and nine
+other cold-route classes remain unmeasured by this fleet. CNZ remains with the
+existing solid-order effort. Broader survey hypotheses and policy questions
+await user priorities and do not authorize additional work or hydration.
+
+
+## 2026-11-02 — Solo S2 title-card leader-history passes
+
+Worker commit `6d8cab5e9`, based on `2832c01cf`, invokes the existing leader
+fallback recorder on solo S2 title-card object passes. Sidekick dispatch keeps
+its existing path. The pass count remains26, now derived as1+5+11+9 from native
+Level/title-card transitions rather than comparison-history contents. No leader
+movement, history reseeding, gameplay-clock increment or snapshot hydration is
+introduced. `AbstractPlayableSprite` and the recorder algorithm are unchanged.
+
+The ROM-backed `TestKis2SoloHistoryPrelude` witness failed before the change
+(latest slot$3F instead of$19), then passed with untouched-slot and gameplay-clock
+controls. The worker's exact selection completed36 cases:35 passes and the known
+KiS2 replay failure, no errors/skips. Ordinary S2 EHZ1 remains green over5,852
+rows. KiS2 advances91→38 bootstrap errors across1,817 rows, gate reached, zero
+warnings and zero gameplay/animation errors. The only remaining differences are
+unwritten Y slots26..63, expected$0293 versus engine$0294. Initialization-anchor
+ordering remains open; no corrective reseed or offset is applied.
+
+Native references use the explicit KiS2 source revision
+`c336fede00092017f48c9d7851e0d3728c4fae2b`, `s2.asm`:
+`Obj01_Init_Continued` lines37808–37826 (offset fill/status clear),
+`Sonic_RecordPos` lines37963–37977 (word writes/low-byte index),
+`Level_FromCheckpoint` lines5330,5381–5389 (pre-loop/exit dispatch), and
+`Obj34_LeftPartOut`, `Obj34_BottomPartOut`, `Obj34_BackgroundOutInit/Out`
+lines28839–28922 (native pass derivation). This optional KiS2 reference is
+separate from the stock S2 gitlink, not a request to move a pin.
+
+Worker fixed selection, with the queued wrapper, Java25, display variables
+unset, surfaceless EGL, `-Dmse=off -Ptrace-replay` and original absolute S2/S3K
+ROM paths:
+
+```text
+TestKis2SoloHistoryPrelude,TestKis2Ehz1TraceReplay,TestS2ReplayBootstrapTailsFrame0,TestS2Ehz1TraceReplay,TestPreludeFramesKnobsZero,TestSonic3kBootstrapResolver,TestS3kAiz1SkipHeadless
+```
+
+Root merged this into `develop`4311f21c4 as `6ec3de1a4`. The cross-entry
+selection completed116 cases:114 passes, the two known replay failures, zero
+errors/skips. All four replay comparison gates completed: KiS2 retains exactly
+38 bootstrap Y errors over1,817 rows; ordinary S1 GHZ1 passes3,905 rows and S2
+EHZ1 passes5,852; LBZ remains239 errors over6,309 gameplay comparisons /6,444
+planned rows. No gameplay or animation error was added to KiS2.
+
+The queued command used Java25, unset display variables, surfaceless EGL,
+`-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`,
+all three original absolute ROM paths, and this exact selection:
+
+```text
+TestKis2SoloHistoryPrelude,TestKis2Ehz1TraceReplay,TestS2ReplayBootstrapTailsFrame0,TestS2Ehz1TraceReplay,TestPreludeFramesKnobsZero,TestSonic3kBootstrapResolver,TestS3kAiz1SkipHeadless,TestSonic2TornadoRidePrelude,TestTraceReplaySessionBootstrapClockParity,TestTraceReplaySessionBootstrapBonus,TestS1Ghz1TraceReplay,TestHardwareTimingAuthorityGuard,TestSonic3kLevelLoading,TestSonic3kDecodingUtils,TestS3kKnucklesLbz2BigArmTraceReplay
+```
+
+Queue wait was400s and Maven execution106s. The change-based plan selected4,395
+smoke classes; these focused checks replace it because the runtime change only
+adds the existing recorder to already-counted solo S2 title-card passes. Recorder
+arithmetic, movement and gameplay clocks are unchanged; cross-entry controls
+cover team, Tornado, bonus, clock, S1/S2 and required S3K consumers. This is bounded
+verification, not a green trace suite or a full-suite result.
+
+A subsequent ROM-backed boundary probe passed without production edits:
+native start Y$028F initializes untouched history to$0293 before the live ground
+snap to$0290; metadata/reanchor initialization instead fills$0294. Both early
+fixture construction and later `GameplayTeamBootstrap.repositionRegisteredSidekicks()`
+(via `LevelManager.spawnSidekicks()`) affect this provenance. The remaining38
+entries need explicit native-versus-positioned entry ownership, not a fitted
+one-pixel adjustment. This shared work is handed to the survey lead's inlet lane;
+parallel anchor edits are stopped. KiS2 glide top-boundary and LBZ producer work
+remain assigned. Carried-state policy and halfpipe return-gap timing are unchanged.
+
+
+## 2026-11-02 — LBZ EggRobo-head native art producer
+
+Worker commit `86ea57690`, parent `c839a6bde`, submits EggRobo-head art once
+from `LbzFinalBoss1Instance.RobotnikHeadChild` initialization. The actual main
+player's character selects the native Knuckles branch; global pattern ownership
+keeps completion independent of the child lifetime. The initialization flag is
+captured by graph rewind. Shared queue/timing/bootstrap code is unchanged.
+Pinned `8b2cf3c4178f` references: `Obj_RobotnikHead3Init`
+(sonic3k.asm:136252–136259) calls `sub_67B14` (sonic3k.asm:136125–136132).
+
+Worker replay advances239→232 errors (225 physics/seven animation), removing
+exactly seven queue records at858–859 with no added or changed records. Both
+gates complete6,444 planned rows /6,309 gameplay comparisons, zero skips. All179
+nonqueue/non-timing records and nine unmatched-completion records remain identical.
+Rings55/0 and movement/animation945 remain open; unmatched completions begin6313.
+Direct-source mismatch coverage shrinks13→12 frames, spans8→7. Twenty-eight
+behavior and ten graph-rewind cases pass across focused runs; two new producer
+cases also pass in the final fixture-only selective rerun. Nine advertised aux
+schemas remain unsupported by comparison.
+
+The worker used queued Java25, unset display variables, surfaceless EGL,
+`-Dmse=off -Ptrace-replay`, the original absolute S3K ROM path and selectors
+`TestS3kKnucklesLbz2BigArmTraceReplay,TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind`.
+Its final selective rerun used
+`TestLbzFinalBoss1Instance#knucklesHeadInitSubmitsItsNativeModuleExactlyOnce+sonicMainDoesNotSubmitEggRoboHeadFromKnucklesZoneState`,
+without the trace profile. Queue waits524/362/472/367s and Maven execution
+approximately338s are worker measurements, not delivery elapsed time.
+
+The next queue frontier is1454, missing Big Arm archive$376874 / direct
+source$376876; producer attribution is required before a repair. A head experiment
+that changed no replay errors was reverted. Lead has merged this repair together
+with the solo-history change and upstream music repairs through`193e1ff58`.
+Composed validation at `578f985cc` completed179 cases:177 passes, two known
+replay failures, zero errors/skips. KiS2 remains exactly38 Y-slot bootstrap errors;
+LBZ remains232 and its complete errors/bootstrap/warnings/group/gate data match
+the worker report exactly. All four replay gates complete; ordinary S1/S2 remain
+green. The command uses the preceding15-selector history selection plus `TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind,TestLbzEndBossKosOwnerRewind,TestLbzEndBossInstance`.
+Queue wait was729s; Maven execution113s. Upstream music fixes through193e1ff58
+merged without conflict in the boss source; both repairs retain their tested
+behavior. Focused verification also covers final-boss behavior/graph rewind and
+the previously delivered camera-admission/rewind owner. No release-only full
+suite or broad trace sweep is claimed.
+
+
+Coordination checkpoint: the inlet lead accepted ownership of explicit entry
+provenance through fixture construction, metadata ordering, sidekick reanchoring
+and `LevelManager.spawnSidekicks()` leader-history refill, including DEZ23 Tails
+placement/camera snap. Its acceptance includes the remaining38 KiS2 Y slots and
+a full trace-replay before/after. Merge order is this solo-history repair first;
+the lane rebases after it reaches `origin/develop`, or lists composed method
+changes if not yet published. It will not edit this repair's pass-count constant
+or `applyBootstrap` solo-history loop. Session50195 already completed116 cases;
+its successor47508 completed the history/LBZ/upstream composition as recorded above. No source footprint
+change accompanies this handoff.

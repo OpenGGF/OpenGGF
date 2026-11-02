@@ -183,12 +183,12 @@ public class DrowningController {
         }
 
         // Check for warning chime
-        if (WARNING_CHIME_LEVELS.contains(remainingAir)) {
+        if (ownsCountdownAudio() && WARNING_CHIME_LEVELS.contains(remainingAir)) {
             audioManager.playSfx(GameSound.AIR_DING);
         }
 
         // Check for drowning music
-        if (remainingAir == DROWNING_MUSIC_LEVEL && !drowningMusicStarted) {
+        if (ownsCountdownAudio() && remainingAir == DROWNING_MUSIC_LEVEL && !drowningMusicStarted) {
             GameAudioProfile audioProfile = audioManager.getAudioProfile();
             if (audioProfile != null) {
                 audioManager.playMusic(audioProfile.getDrowningMusicId());
@@ -406,7 +406,18 @@ public class DrowningController {
      * made by the active audio profile, which already owns the music ids, so
      * this method stays free of any per-game branch.
      */
+    private boolean ownsCountdownAudio() {
+        // S2 Obj0A_Countdown/Obj0A_WarnSound test the countdown's P1/P2
+        // identity; S1 Drown_Countdown addresses only v_player. Secondary
+        // players keep their air/bubble effects without owning shared audio.
+        var sprites = PlayableSpriteRuntimeServices.spritesOrNull(player);
+        var primary = sprites != null ? sprites.getMainPlayable() : null;
+        // Bootstrap probes may construct a sole player before registration.
+        return primary != null ? primary == player : !player.isCpuControlled();
+    }
+
     private void restartZoneMusic() {
+        if (!ownsCountdownAudio()) return;
         LevelManager levelManager = player.currentLevelManagerIfAvailable();
         if (levelManager == null) {
             return;
@@ -480,6 +491,7 @@ public class DrowningController {
     public FixedCountdownAirEvent performFixedCountdownAirEvent(boolean allowAudio) {
         frameTimer = FRAMES_PER_SECOND;
         int airBefore = remainingAir;
+        allowAudio = allowAudio && ownsCountdownAudio();
         if (allowAudio && WARNING_CHIME_LEVELS.contains(airBefore)) {
             audioManager.playSfx(GameSound.AIR_DING);
         }
