@@ -978,7 +978,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     private void applyEndBossCameraX(int cameraX, boolean mirrorMaxX) {
         Camera camera = camera();
         if (mirrorMaxX) {
-            camera.setMaxX((short) cameraX);
+            camera.setMaxXCurrent((short) cameraX);
         }
         // loc_5569E writes one native word to Camera_X/min/max. Keep those
         // boundary words intact and project only the engine display coordinate.

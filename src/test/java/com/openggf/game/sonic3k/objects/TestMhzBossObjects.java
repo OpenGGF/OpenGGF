@@ -488,7 +488,8 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x2E, 0);
 
         endBoss.update(0, null);
-        verifyNoInteractions(artProvider);
+        verify(artProvider).ensureBossExplosionArtLoaded();
+        verifyNoMoreInteractions(artProvider);
 
         camera.setX((short) 0x4010);
         endBoss.update(1, null);
@@ -670,7 +671,7 @@ class TestMhzBossObjects {
                         .count(),
                 "loc_765DE allocates Obj_Song_Fade_Transition with mus_EndBoss when the weather machine breaks");
         assertEquals(1, spawned.stream()
-                        .filter(S3kBossExplosionChild.class::isInstance)
+                        .filter(object -> "MHZEndBossExplosionControl".equals(object.getName()))
                         .count(),
                 "loc_765F2 creates Child6_CreateBossExplosion when the weather machine breaks");
     }
@@ -751,7 +752,7 @@ class TestMhzBossObjects {
     }
 
     @Test
-    void weatherMachineExplosionRetainsWeatherSfxWithoutExplode() {
+    void weatherMachineBurstDefersSoundToExplosionChildren() {
         List<ObjectInstance> spawned = new ArrayList<>();
         List<Integer> playedSfx = new ArrayList<>();
         ObjectManager objectManager = mocks.mock(ObjectManager.class);
@@ -782,15 +783,9 @@ class TestMhzBossObjects {
         ((TouchResponseAttackable) weatherMachine).onPlayerAttack(null, null);
         weatherMachine.update(3, null);
 
-        S3kBossExplosionChild explosion = spawned.stream()
-                .filter(S3kBossExplosionChild.class::isInstance)
-                .map(S3kBossExplosionChild.class::cast)
-                .findFirst()
-                .orElseThrow();
         assertEquals(List.of(Sonic3kSfx.WEATHER_MACHINE.id), playedSfx,
-                "MHZ's caller-owned weather sound must not gain an invented EXPLODE");
-        assertEquals(false, explosion.nativeInitSfxForTest(),
-                "loc_765F2 keeps the legacy audio-silent explosion-child mode");
+                "controller allocation does not play the explosion child's initialization sound");
+        assertEquals(1, spawned.stream().filter(object -> "MHZEndBossExplosionControl".equals(object.getName())).count());
     }
 
     @Test
@@ -1336,6 +1331,7 @@ class TestMhzBossObjects {
         endBoss.setServices(services);
 
         endBoss.update(0, null);
+        clearInvocations(renderManager, renderer);
 
         ObjectInstance hitProxy = spawned.stream()
                 .filter(object -> "MHZEndBossHitProxy".equals(object.getName()))
@@ -1557,6 +1553,7 @@ class TestMhzBossObjects {
                 0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
         endBoss.update(0, null);
+        clearInvocations(renderManager, renderer);
 
         ObjectInstance frontSpike = spawned.stream()
                 .filter(object -> "MHZEndBossSpike".equals(object.getName()))
@@ -1858,9 +1855,51 @@ class TestMhzBossObjects {
     }
 
     @Test
+    void mhzEndBossStumpFallUsesGravityAndReleasesAfterTheNativeArc() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x4420);
+        camera.setY((short) 0x280);
+        camera.setFrozen(true);
+        ObjectServices services = new StubObjectServices() {
+            @Override public Camera camera() { return camera; }
+        };
+        var boss = new MhzEndBossInstance(new ObjectSpawn(0x440C, 0x2E0,
+                Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+        boss.setServices(services);
+        boss.getState().routine = 0x0E;
+        boss.getState().defeated = true;
+        boss.getState().xVel = 0x400;
+        boss.setCustomFlag(0x3E, 0xC0);
+        boss.setCustomFlag(0x40, 0x10);
+        boss.update(0, null);
+        assertEquals(0x3F, boss.getCustomFlag(0x2E));
+        for (int n = 1; n <= 64; n++) boss.update(n, null);
+        assertEquals(-0x200, boss.getState().yVel);
+        int startYFixed = boss.getState().yFixed;
+        for (int n = 1; n <= 52; n++) {
+            boss.update(64 + n, null);
+            assertEquals(startYFixed + ((-0x200 * n + 0x38 * n * (n - 1) / 2) << 8),
+                    boss.getState().yFixed, "MoveSprite integrates old velocity before gravity");
+            assertEquals(0, boss.getCustomFlag(0x38) & 0x20);
+        }
+        boss.update(117, null);
+        assertEquals(0x20, boss.getCustomFlag(0x38) & 0x20, "first y > camera+$120 on arc frame53");
+        for (int n = 0; n < 95; n++) boss.update(118 + n, null);
+        assertTrue(camera.getFrozen());
+        boss.update(213, null);
+        assertFalse(camera.getFrozen(), "96 four-pixel steps from $4420 to $45A0");
+        assertEquals(0x45A0, camera.getX() & 0xFFFF);
+    }
+
+    @Test
     void mhzEndBossDashWaitCallbackAnchorsArenaAndExpandsCameraTarget() {
         Camera camera = new Camera();
+        var manager = mocks.mock(ObjectManager.class);
+        var children = new ArrayList<ObjectInstance>();
+        doAnswer(call -> { children.add(call.getArgument(0)); return null; })
+                .when(manager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return manager; }
             @Override
             public Camera camera() {
                 return camera;
@@ -1889,6 +1928,18 @@ class TestMhzBossObjects {
                 "loc_760C4 clears x_vel after snapping the boss to the arena anchor");
         assertEquals(0xC8, endBoss.getCustomFlag(0x38) & 0xC8,
                 "loc_760C4 sets $38 bits 7 and 3 while preserving the dash-phase bit");
+        var worker = children.stream()
+                .filter(com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance.class::isInstance)
+                .map(com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance.class::cast)
+                .findFirst().orElseThrow();
+        worker.setServices(services);
+        camera.setMaxXCurrent((short) 0x3C90);
+        for (int n = 1; n <= 16; n++) {
+            int before = camera.getMaxX() & 0xFFFF;
+            worker.update(n, null);
+            assertEquals(n / 4, (camera.getMaxX() & 0xFFFF) - before,
+                    "Child6_IncLevX adds $4000 to its fixed-point speed each frame");
+        }
         assertEquals(0x45A0, Short.toUnsignedInt(camera.getMaxXTarget()),
                 "loc_760C4 stores Camera_stored_max_X_pos=$45A0 and Child6_IncLevX drives the target");
     }
@@ -2240,14 +2291,9 @@ class TestMhzBossObjects {
         endBoss.onPlayerAttack(null, null);
         assertFalse(endBoss.isDefeated(), "loc_767B0 keeps the terminal hit flashing before escape");
         for (int flash = 0; flash < 0x20; flash++) endBoss.update(flash, null);
-        endBoss.update(0, null);
-        endBoss.update(1, null);
-        endBoss.update(2, null);
-
-        assertEquals(Sonic3kSfx.EXPLODE.id, lastSfx[0],
-                "loc_76822 creates Child6_CreateBossExplosion with subtype $20 on the fatal hit");
-        assertEquals(1, spawned.stream().filter(S3kBossExplosionChild.class::isInstance).count(),
-                "CreateBossExp20 emits its first explosion after the ROM three-frame wait");
+        assertEquals(Sonic3kSfx.BOSS_HIT.id, lastSfx[0],
+                "loc_76822 only allocates the controller; child initialization owns EXPLODE");
+        assertEquals(1, spawned.stream().filter(object -> "MHZEndBossExplosionControl".equals(object.getName())).count());
     }
 
     @Test
@@ -2305,7 +2351,7 @@ class TestMhzBossObjects {
         assertEquals(0x44D0, endBoss.getX(),
                 "loc_76164 checks the threshold after Swing_UpAndDown/MoveSprite2 moves x_pos to $44D0");
         verify(objectManager).addDynamicObject(any(SongFadeTransitionInstance.class));
-        verify(objectManager, org.mockito.Mockito.times(6)).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        verify(objectManager, org.mockito.Mockito.times(7)).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
         var nativeOrder = org.mockito.Mockito.inOrder(gameState, levelState);
         nativeOrder.verify(gameState).setScreenShakeActive(true);
         nativeOrder.verify(levelState).pauseTimer();
@@ -2378,7 +2424,7 @@ class TestMhzBossObjects {
         assertEquals(true, endBoss.isHighPriority(),
                 "loc_761B2 sets the art_tile high-priority bit");
         verify(artProvider).ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.EGG_CAPSULE);
-        verify(artProvider).ensureBossExplosionArtLoaded();
+        verify(artProvider, org.mockito.Mockito.atLeastOnce()).ensureBossExplosionArtLoaded();
     }
 
     @ParameterizedTest

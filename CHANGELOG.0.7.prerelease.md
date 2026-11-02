@@ -14,6 +14,8 @@ Unreleased. The earlier development themes remain in
   leaf-blower cutscene begins. Restore the end-boss ship, pilot and capsule art,
   the dash flames' palette, and the chase's canopy, pillar and spike-ball layers.
   Correct the pillar archive address so its upload cannot corrupt ring art.
+  Restore the weather-machine and defeat explosion bursts, accelerating chase
+  entry, lost-ring world rebasing, and Robotnik's gravity-driven stump handoff.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.
