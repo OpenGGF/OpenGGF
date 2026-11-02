@@ -9,6 +9,9 @@ S3K capsule and cutscene-button routines now share their common behavior; the
 object ownership audit also corrected explosion RNG/allocation drift and FBZ
 capsule sprite/plane priority, with rewind-safe opening control ownership.
 
+- Knuckles restores the native animation after non-flat glide landings.
+- LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
+
 - Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
 
 - Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.

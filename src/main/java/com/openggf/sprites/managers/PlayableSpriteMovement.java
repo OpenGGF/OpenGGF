@@ -2132,6 +2132,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setForcedAnimationId(-1);
 			sprite.setAir(false);
 			sprite.setJumping(false);
+			// Knux_TouchFloor / KiS2 Sonic_ResetOnFloor_Part3: the unsigned
+			// anim >= $20 tail writes Walk; lower animations remain unchanged.
+			if ((sprite.getAnimationId() & 0xFF) >= 0x20) {
+				sprite.setAnimationId(0);
+			}
 			return;
 		}
 
