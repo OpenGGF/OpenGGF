@@ -1,5 +1,15 @@
 # FBZ Act 1 coverage matrix
 
+Attack-warning eye overlay follow-up (2026-11-02): `loc_6F0CE` installs
+`word_6FA5E` (mapping frame `$11`, priority `$180`) and draws the warning
+child while its palette script changes line 1, color 15. The engine previously
+submitted those colors but omitted the sprite. `TestFbzMinibossChildren` now
+checks the overlay draw, offset and inherited tile priority;
+`TestFbzMinibossArtShape` checks that the ROM-backed overlay actually consumes
+the flashing color. Palette write ownership and attack timing are unchanged.
+These focused checks do not renew full-route, viewport/donor/team, native pixel
+comparison or whole-world rewind qualifications; those gaps remain inherited.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

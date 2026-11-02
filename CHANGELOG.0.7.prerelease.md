@@ -8,7 +8,13 @@ Unreleased. The earlier development themes remain in
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
   child-owned break sound, including Hydrocity’s separate capsule owner.
 
+- S3K saves retain collected giant rings and Chaos Special Stage rotation after
+  reload, and resume stock zones at their native starting act.
+
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
+  Their native playback publishes the first frame on dispatch, defers animation
+  switches, and pauses elemental shields while the player is invincible or blank.
+  AIZ2 cutscene Knuckles uses the ROM standing pose and raw run/jump/laugh scripts.
 
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
   and snow corridor, including ICZ2’s run toward LBZ1.
@@ -17,6 +23,8 @@ Unreleased. The earlier development themes remain in
   leaf-blower cutscene begins. Restore the end-boss ship, pilot and capsule art,
   the dash flames' palette, and the chase's canopy, pillar and spike-ball layers.
   Correct the pillar archive address so its upload cannot corrupt ring art.
+  Restore the weather-machine and defeat explosion bursts, accelerating chase
+  entry, lost-ring world rebasing, and Robotnik's gravity-driven stump handoff.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.

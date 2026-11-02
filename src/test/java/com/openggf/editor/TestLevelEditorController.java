@@ -639,6 +639,8 @@ class TestLevelEditorController {
             gameLoop.step();
 
             assertEquals(EditorHierarchyDepth.BLOCK, controller.depth());
+            assertEquals(EditorSpawnEditMode.TILES, controller.spawnEditMode(),
+                    "Enter must not also cycle spawn mode through the default Start binding");
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_ENTER));
         } finally {
             SessionManager.clear();

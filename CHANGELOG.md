@@ -8,12 +8,22 @@ readable and historical versions can be referenced directly.
 - Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
   filling the background tile ring at the restored camera height.
 
+- Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
+
+- Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
+
+- Clear the native sanctuary openings so stray terrain no longer appears above
+  the left Super Emerald pedestals during the results camera descent.
 
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 - Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
 
+- S3K saves retain collected giant rings and Chaos Special Stage rotation after
+  reload, and resume stock zones at their native starting act.
+
 - AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
   endpoints, and shows staggered explosion puffs when Knuckles breaks it.
+  Knuckles uses the ROM standing pose and run/jump/laugh animation cadence.
 
 - AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
   and snow corridor, including ICZ2’s run toward LBZ1.
@@ -22,6 +32,8 @@ Upright S3K Act 2 capsules now also use normal explosions and the break sound.
   preventing a second native pause when resuming.
 
 S3K elemental shields keep animating after returning from Bonus/Special stages.
+Their frame publication, animation switches and invincibility/blank-player pauses
+follow the native scripts.
 
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.

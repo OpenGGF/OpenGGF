@@ -272,27 +272,22 @@ public class TestDebugOverlayManagerReset {
         manager.resetState();
     }
 
-    /**
-     * RIGHT_CONTROL is player two's default Start ({@code P2_START}), and
-     * {@code isControlDown()} is left OR right -- so matching the copy chord
-     * through it alone means P2 holding Start while P1 presses P clobbers the
-     * system clipboard. Same oversight as RIGHT_SHIFT being P2's jump, one key
-     * over. Right Ctrl+P is not the chord: it toggles, as it always has.
-     */
-    @Test
-    public void playerTwosStartButtonDoesNotTurnPIntoTheStatsCopyChord() {
-        assertEquals(GLFW.GLFW_KEY_RIGHT_CONTROL,
-                SonicConfigurationService.createStandalone(configDir)
-                        .getInt(SonicConfiguration.P2_START),
-                "this guard is about P2's Start; it is no longer RIGHT_CONTROL");
+    /** Both the current default and legacy P2 Start binding must leave P as a toggle. */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {GLFW.GLFW_KEY_BACKSPACE, GLFW.GLFW_KEY_RIGHT_CONTROL})
+    public void playerTwosStartButtonDoesNotTurnPIntoTheStatsCopyChord(int startKey) {
+        var config = SonicConfigurationService.createStandalone(configDir);
+        config.setConfigValue(SonicConfiguration.P2_START, startKey);
 
         DebugOverlayManager manager = DebugOverlayManager.getInstance();
         manager.resetState();
         boolean before = manager.isEnabled(DebugOverlayToggle.PERFORMANCE);
         StringBuilder copied = new StringBuilder();
-        InputHandler handler = new InputHandler();
-        handler.handleKeyEvent(GLFW.GLFW_KEY_RIGHT_CONTROL, GLFW.GLFW_PRESS);
+        InputHandler handler = new InputHandler(com.openggf.InputBindingFactory.supplier(config));
+        handler.handleKeyEvent(startKey, GLFW.GLFW_PRESS);
         handler.handleKeyEvent(GLFW.GLFW_KEY_P, GLFW.GLFW_PRESS);
+        handler.refreshLogicalSnapshot();
+        assertTrue(handler.logical().player2().startPressed(), "The chord must include configured P2 Start");
         try {
             manager.setClipboardWriter(copied::append);
             manager.updateInput(handler, true, captureToggle());
@@ -303,7 +298,7 @@ public class TestDebugOverlayManagerReset {
         assertTrue(copied.isEmpty(),
                 "P2 holding Start must not turn P1's P into a clipboard copy");
         assertNotEquals(before, manager.isEnabled(DebugOverlayToggle.PERFORMANCE),
-                "right Ctrl+P is not the copy chord, so P keeps its toggle");
+                "P2 Start+P is not the copy chord, so P keeps its toggle");
         manager.resetState();
     }
 

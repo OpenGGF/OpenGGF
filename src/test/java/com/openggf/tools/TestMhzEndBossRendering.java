@@ -46,6 +46,8 @@ class TestMhzEndBossRendering {
             var art = (Sonic3kObjectArtProvider) level.getObjectRenderManager().getArtProvider();
             assertNotNull(art.getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP));
             assertNotNull(art.getRenderer(Sonic3kObjectArtKeys.EGG_CAPSULE));
+            assertTrue(level.getObjectRenderManager().getBossExplosionRenderer().isReady(),
+                    "PLC7B's explosion sheet must be uploaded before the antenna is hit");
             assertEquals(54, art.getSheet(Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR).getPatterns().length,
                     "ArtKosM_MHZEndBossPillar's $6C0-byte archive");
             var expectedPalette = new com.openggf.level.Palette();
@@ -59,6 +61,14 @@ class TestMhzEndBossRendering {
                     .findFirst().orElseThrow().onPlayerAttack(session.player(), null);
             for (int n = 0; n < 600; n++) {
                 session.step(null);
+                observe(session, boss, "weather-chase", n + 1);
+                if (n == 3 || n == 30 || n == 63) {
+                    assertTrue(level.getObjectManager().getActiveObjects().stream()
+                            .anyMatch(com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class::isInstance),
+                            "weather-machine burst must still be visible at " + n);
+                    if (n != 30) capture(session, "weather-" + n, 99 + n);
+                    if (n == 30) { verifyReplay(session); boss = liveBoss(); }
+                }
                 if (n == 200) {
                     GameServices.camera().setMaxX((short) 0x45A0);
                     GameServices.camera().setX((short) 0x3F00);
@@ -66,7 +76,7 @@ class TestMhzEndBossRendering {
                     session.player().setCentreX((short) 0x3FA0);
                     session.player().setCentreY((short) 0x320);
                 }
-                if (n == 359) verifyReplay(session);
+                if (n == 359) { verifyReplay(session); boss = liveBoss(); }
                 if (n == 220) level.getRingManager().spawnLostRings(session.player(), 8, n);
                 if (n == 222 || n == 280 || n == 350 || n == 450 || n == 580) capture(session, "chase-" + n, 99 + n);
             }
@@ -80,13 +90,70 @@ class TestMhzEndBossRendering {
             assertEquals(level.getBackgroundTileDescriptorAtWorld(0x280, 0x98),
                     feature.backgroundDescriptorAt(0x1880, 0x198));
             verifyReplay(session);
+            boss = liveBoss();
+            boss.getState().hitCount = 2;
+            boss.onPlayerAttack(session.player(), null);
+            for (int n = 0; n < 32; n++) session.step(null);
+            assertTrue(boss.isDefeated());
+            capture(session, "killing-hit", 730);
+            verifyReplay(session);
+            boss = liveBoss();
+            int defeatSteps = 0;
+            for (int n = 0; n < 900 && (boss.getCustomFlag(0x38) & 0x20) == 0; n++) {
+                session.step(null);
+                defeatSteps++;
+                observe(session, boss, "defeat", defeatSteps);
+                if (n == 15 || n == 80) capture(session, "defeat-" + n, 731 + n);
+                if (n == 15) {
+                    assertTrue(level.getObjectManager().getActiveObjects().stream()
+                            .anyMatch(com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class::isInstance));
+                }
+                if (n == 80) { verifyReplay(session); boss = liveBoss(); }
+            }
+            assertEquals(0x20, boss.getCustomFlag(0x38) & 0x20,
+                    "native gravity must finish the stump handoff without waiting for an upward word wrap");
+            int cameraSteps = 0;
+            while (cameraSteps < 128 && camera.getFrozen()) {
+                session.step(null);
+                cameraSteps++;
+                observe(session, boss, "camera-release", cameraSteps);
+            }
+            assertFalse(camera.getFrozen(), "loc_7623C releases at camera $45A0");
+            assertEquals(0x45A0, camera.getX() & 0xFFFF);
+            capture(session, "camera-release", 730 + defeatSteps + cameraSteps);
+            verifyReplay(session);
+            boss = liveBoss();
             // Asset witness only: completion and capsule handoff have separate boss tests.
             level.getObjectManager().createDynamicObject(() ->
                     new com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance(
                             (GameServices.camera().getX() & 0xFFFF) + 0xA0, 0x320));
             for (int n = 0; n < 4; n++) session.step(null);
-            capture(session, "capsule-sheet", 702);
+            capture(session, "capsule-sheet", 734 + defeatSteps + cameraSteps);
         }
+    }
+
+    private static MhzEndBossInstance liveBoss() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(MhzEndBossInstance.class::isInstance).map(MhzEndBossInstance.class::cast)
+                .findFirst().orElseThrow();
+    }
+
+    private static void observe(GameplayCaptureSession session, MhzEndBossInstance boss,
+                                String phase, int phaseStep) throws Exception {
+        String output = System.getProperty("openggf.tests.mhzRenderOut");
+        if (output == null) return;
+        var path = Path.of(output, "lifecycle.csv");
+        if (phase.equals("weather-chase") && phaseStep == 1) {
+            Files.writeString(path, "phase,phase_step,boss_x,boss_y,boss_vx,boss_vy,routine,flags,timer,camera_max,camera_target,explosions," + GameplayCaptureSession.stateHeader() + "\n");
+        }
+        var camera = GameServices.camera();
+        long explosions = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.S3kBossExplosionChild.class::isInstance).count();
+        Files.writeString(path, String.join(",", phase, "" + phaseStep, "" + boss.getX(), "" + boss.getY(),
+                "" + boss.getState().xVel, "" + boss.getState().yVel, "" + boss.getState().routine,
+                "" + boss.getCustomFlag(0x38), "" + boss.getCustomFlag(0x2E),
+                "" + (camera.getMaxX() & 0xFFFF), "" + (camera.getMaxXTarget() & 0xFFFF),
+                "" + explosions, session.stateLine(phaseStep, null)) + "\n", java.nio.file.StandardOpenOption.APPEND);
     }
 
     private static void verifyReplay(GameplayCaptureSession session) {

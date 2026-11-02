@@ -15,7 +15,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.S3kIncLevelEndXGradualInstance;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
@@ -117,10 +117,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private static final int ROBOTNIK_SHIP_WAIT_FRAMES = 0x1BF;
     private static final int FINAL_TRANSITION_ZONE = Sonic3kZoneIds.ZONE_FBZ;
     private static final int FINAL_TRANSITION_ACT = 0;
-    private static final int FINAL_HIT_EXPLOSION_TIMER = 0x80; // CreateBossExp20
-    private static final int FINAL_HIT_EXPLOSION_RANGE_X = 0x20;
-    private static final int FINAL_HIT_EXPLOSION_RANGE_Y = 0x20;
-    private static final int FINAL_HIT_EXPLOSION_INTERVAL = 3;
     private static final int[] HIT_FLASH_COLOR_INDICES = {4, 10, 11, 13, 14};
     private static final int[][] HIT_FLASH_WORDS = {
             {0x0E42, 0x0228, 0x0000, 0x0C40, 0x0820},
@@ -134,8 +130,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean paletteLoaded;
     private boolean arenaSetupApplied;
     private boolean touchChildrenRetired;
-    private int finalHitExplosionTimer;
-    private int finalHitExplosionIntervalCounter;
     // Native collision_flags is independent of the $20 flash countdown.
     private boolean collisionEnabled = true;
     private MhzEndBossHitProxyChild hitProxy;
@@ -160,8 +154,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         paletteLoaded = false;
         arenaSetupApplied = false;
         touchChildrenRetired = false;
-        finalHitExplosionTimer = -1;
-        finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
     }
 
     @Override
@@ -180,7 +172,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         applyInitialArenaSetup();
         updateMhzSpikeArtQueue();
         if (state.defeated) {
-            tickFinalHitExplosionController();
             updateFinalDefeatDash(player);
             return;
         }
@@ -267,6 +258,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         arenaSetupApplied = true;
+        ensureBossExplosionArtLoaded();
         var services = tryServices();
         if (services == null) {
             return;
@@ -381,6 +373,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         var services = tryServices();
         if (services != null && services.camera() != null) {
             services.camera().setMaxXTarget((short) 0x45A0);
+            spawnChild(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y));
         }
     }
 
@@ -483,37 +476,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         state.xVel = currentPlayerCharacter() == PlayerCharacter.KNUCKLES ? 0x500 : 0x400;
         finalDefeatPhase = FINAL_PHASE_DASH_TO_THRESHOLD;
         setFinalHitHandoff(true);
-        finalHitExplosionTimer = FINAL_HIT_EXPLOSION_TIMER;
-        finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
         spawnFreeChild(() -> new MhzEndBossWalkoffPrepChild(this));
-    }
-
-    private void tickFinalHitExplosionController() {
-        if (finalHitExplosionTimer <= 0) {
-            return;
-        }
-        if ((getCustomFlag(STATE_FLAGS_OFFSET) & 0x20) != 0) {
-            finalHitExplosionTimer = -1;
-            return;
-        }
-        finalHitExplosionIntervalCounter--;
-        if (finalHitExplosionIntervalCounter >= 0) {
-            return;
-        }
-
-        finalHitExplosionTimer--;
-        if (finalHitExplosionTimer <= 0) {
-            return;
-        }
-        var services = tryServices();
-        if (services != null) {
-            int random = services.rng().nextRaw();
-            int xOffset = (random & ((FINAL_HIT_EXPLOSION_RANGE_X * 2) - 1)) - FINAL_HIT_EXPLOSION_RANGE_X;
-            int yOffset = ((random >> 8) & ((FINAL_HIT_EXPLOSION_RANGE_Y * 2) - 1)) - FINAL_HIT_EXPLOSION_RANGE_Y;
-            services.playSfx(Sonic3kSfx.EXPLODE.id);
-            spawnChild(() -> new S3kBossExplosionChild(state.x + xOffset, state.y + yOffset));
-        }
-        finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
+        spawnChild(() -> MhzEndBossExplosionController.following(this));
     }
 
     private void updateFinalDefeatDash(PlayableEntity player) {
@@ -557,6 +521,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         // loc_76164 sets status bit7 at $44D0. Child_AddToTouchList consumes
         // that retirement signal while the parent continues its native escape.
         touchChildrenRetired = true;
+        spawnChild(() -> MhzEndBossExplosionController.stationary(state.x, state.y));
         var services = tryServices();
         var gameState = services == null ? null : services.gameState();
         if (gameState != null) {
@@ -614,7 +579,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     private void updateFinalDefeatClimbAway() {
-        moveSprite2();
+        // loc_761E8 calls MoveSprite, including its $38 gravity word.
+        moveSpriteCustomGravity(0x38);
         var services = tryServices();
         if (services == null || services.camera() == null) {
             return;
@@ -703,6 +669,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             state.xFixed = state.x << 16;
             state.yFixed = state.y << 16;
             services.camera().setMaxXTarget((short) POST_CAPSULE_ESCAPE_CAMERA_TARGET_X);
+            spawnChild(() -> new S3kIncLevelEndXGradualInstance(state.x, state.y));
         }
         int levelMusic = resolveLevelMusicId();
         if (levelMusic >= 0 && services != null) {

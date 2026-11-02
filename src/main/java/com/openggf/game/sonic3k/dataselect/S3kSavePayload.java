@@ -17,6 +17,8 @@ import java.util.List;
  * @param superEmeralds collected super emerald indices
  * @param emeraldStates exact two-bit ROM state for each emerald
  * @param emeraldsConverted whether sanctuary conversion has begun
+ * @param collectedSpecialRings the saved low word of giant-ring collection flags
+ * @param currentSpecialStageIndex the next chaos Special Stage rotation index
  * @param clear         whether this slot represents a completed game
  */
 public record S3kSavePayload(
@@ -30,5 +32,7 @@ public record S3kSavePayload(
         List<Integer> superEmeralds,
         List<Integer> emeraldStates,
         boolean emeraldsConverted,
+        int collectedSpecialRings,
+        int currentSpecialStageIndex,
         boolean clear
 ) {}
