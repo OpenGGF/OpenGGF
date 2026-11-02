@@ -494,7 +494,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
     }
 
     private void spawnMinibossMusicTransition() {
-        spawnChild(() -> new SongFadeTransitionInstance(MINIBOSS_MUSIC_FADE_TIME, Sonic3kMusic.MINIBOSS.id));
+        spawnFreeChild(() -> new SongFadeTransitionInstance(MINIBOSS_MUSIC_FADE_TIME, Sonic3kMusic.MINIBOSS_S3.id));
     }
 
     private void ensureSupportArtReady() {
@@ -690,7 +690,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
-            spawnChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_TIME, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
         // ROM: Obj_EndSignControlDoSign spawns the signpost via CreateChild6_Simple,
         // inheriting the control object's x_pos — the miniboss's X at the moment of

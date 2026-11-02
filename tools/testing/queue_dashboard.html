@@ -158,6 +158,16 @@
     .stat { padding:12px 14px; } .stat small { white-space:normal; } .policy .sep { display:none; }
     .section-head { flex-wrap:wrap; }
   }
+  .history-controls { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:12px; align-items:center; }
+  .history-controls select { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:6px; }
+  .history-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  .history-chart { padding:16px; min-width:0; }
+  .history-chart h3 { margin:0 0 6px; font-size:14px; }
+  .history-chart > div { overflow-x:auto; }
+  .history-chart svg { min-width:480px; width:100%; display:block; font:12px system-ui,sans-serif; color:var(--muted); }
+  .history-chart svg text { fill:currentColor; }
+  .history-chart svg :focus { stroke:var(--ink); stroke-width:2; outline:none; }
+  @media(max-width:850px) { .history-grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -239,6 +249,29 @@
       <th scope="col" class="r" title="Mean CPU cores used during execution">Mean CPU</th>
     </tr></thead><tbody id="recent"><tr class="empty-row"><td colspan="7">Reading recent activity…</td></tr></tbody></table>
     <div class="table-foot" id="recent-foot" hidden><span id="recent-summary"></span><button class="link" id="recent-toggle" type="button">Show all</button></div></div>
+  </section>
+
+  <section aria-labelledby="history-heading">
+    <div class="section-head"><h2 id="history-heading">Queue history</h2></div>
+    <div class="history-controls">
+      <label>Time range <select id="history-range"><option value="all">All retained history</option><option value="24">Last 24 hours</option><option value="6">Last 6 hours</option></select></label>
+      <label>Job kind <select id="history-kind"><option value="">All job kinds</option></select></label>
+      <span class="hint" id="history-summary"></span>
+    </div>
+    <div class="history-grid">
+      <article class="card history-chart"><h3>When requests wait longest</h3><p class="hint">Mean wait by finish weekday and hour, UTC. Grey cells have no samples.</p><div id="history-heatmap"></div></article>
+      <article class="card history-chart"><h3>Memory versus CPU</h3><p class="hint">Completed executions only. Observed usage; historical reservation budgets are unavailable.</p><div id="history-resources"></div></article>
+      <article class="card history-chart"><h3>Estimated versus actual execution</h3><p class="hint">Completed executions with estimates. Above the dashed line took longer than estimated.</p><div id="history-estimates"></div></article>
+      <article class="card history-chart"><h3>Wait-time percentiles</h3><p class="hint" id="trend-caption"></p><div id="history-trend"></div></article>
+    </div>
+    <details class="notes"><summary>History coverage and limits</summary><ul>
+      <li>Newest 512 KiB / at most 4,096 readable records from the shared rolling log. The queue trims its log above 512 KiB; this is not permanent history. Build-only commands are absent.</li>
+      <li>Time filters and bins use request finish times. Heatmap cells aggregate weekdays across the selected dates; they do not measure instantaneous queue occupancy.</li>
+      <li>Wait charts include cancelled and interrupted requests with known waits. Resource and estimate charts use completed executions only; completion does not mean tests passed.</li>
+      <li>Missing or invalid fields are excluded from the affected chart. Empty selections and missing time bins do not imply zero wait. Small samples make p95 unstable.</li>
+      <li>Sampled process-tree RSS can double-count shared pages. Mean CPU is cores used over execution. Neither is a reservation-efficiency measurement.</li>
+      <li>Overlapping waits add together, not elapsed delivery time. Job-kind names (including “full”) do not establish test coverage.</li>
+    </ul></details>
   </section>
 
   <footer><span>Observation only. No jobs are submitted, cancelled or reordered.</span><span>RSS is sampled process-tree memory; shared pages can be counted more than once.</span></footer>
@@ -376,6 +409,110 @@
     byId('recent-summary').textContent = 'Showing ' + shown.length + ' of ' + recent.length + ' recent entries';
     byId('recent-toggle').textContent = showAllRecent ? 'Show fewer' : 'Show all';
   }
+  // Rolling request history; finish times are not occupancy samples.
+  function svgNode(tag, attrs = {}, text) {
+    const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+  function chart(id, label) {
+    const root = byId(id); root.replaceChildren();
+    const svg = svgNode('svg', {viewBox:'0 0 600 300', role:'img', 'aria-label':label});
+    root.append(svg); return svg;
+  }
+  function mark(svg, tag, attrs, label) {
+    const node = svgNode(tag, {...attrs, tabindex:0});
+    node.append(svgNode('title', {}, label)); svg.append(node); return node;
+  }
+  function axes(svg, xMax, yMax, xLabel, yLabel, xFormat = v => number(v), yFormat = v => number(v)) {
+    const x = v => 64 + 510 * v / xMax, y = v => 244 - 204 * v / yMax;
+    for (let i = 0; i <= 4; i++) {
+      const px = x(xMax*i/4), py = y(yMax*i/4);
+      svg.append(svgNode('line', {x1:64,x2:574,y1:py,y2:py,stroke:'var(--line)'}),
+        svgNode('text', {x:54,y:py+4,'text-anchor':'end'}, yFormat(yMax*i/4)),
+        svgNode('text', {x:px,y:265,'text-anchor':'middle'}, xFormat(xMax*i/4)));
+    }
+    svg.append(svgNode('text', {x:320,y:291,'text-anchor':'middle'}, xLabel),
+      svgNode('text', {x:64,y:19}, yLabel));
+    return {x, y};
+  }
+  function quantile(values, p) {
+    const sorted = [...values].sort((a,b) => a-b);
+    return sorted.length ? sorted[Math.min(sorted.length-1, Math.floor(p*sorted.length))] : null;
+  }
+  function historyData(data, range, selectedKind) {
+    const now = Date.parse(data.capturedAt), cutoff = range === 'all' ? -Infinity : now - Number(range)*3600000;
+    return (data.history || []).filter(row => {
+      const end = Date.parse(row.end);
+      return Number.isFinite(end) && end <= now && end >= cutoff && (!selectedKind || row.kind === selectedKind);
+    }).map(row => ({...row, time:Date.parse(row.end)}));
+  }
+  function renderHistory() {
+    if (!snapshot) return;
+    const select = byId('history-kind'), selected = select.value;
+    const kinds = [...new Set((snapshot.history || []).map(row => row.kind).filter(Boolean))].sort();
+    // Keep an open native dropdown intact during the two-second refresh.
+    if (JSON.stringify([...select.options].slice(1).map(option => option.value)) !== JSON.stringify(kinds)) {
+      const all = element('option', '', 'All job kinds'); all.value = '';
+      select.replaceChildren(all, ...kinds.map(value => {
+        const option = element('option', '', value); option.value = value; return option;
+      }));
+      select.value = kinds.includes(selected) ? selected : '';
+    }
+    const rows = historyData(snapshot, byId('history-range').value, select.value);
+    const waits = rows.filter(r => finite(r.waitSeconds)), executed = rows.filter(r => r.outcome === 'completed' && r.runSeconds > 0);
+    byId('history-summary').textContent = `${rows.length} requests with valid finish times · ${waits.length} wait samples · ${executed.length} completed executions`;
+    const identity = r => `${r.kind || 'Unknown kind'} · ${r.worktree || 'Unknown worktree'} · ${r.end}`;
+    const empty = (svg, count) => { if (!count) svg.append(svgNode('text', {x:300,y:140,'text-anchor':'middle'}, 'No eligible samples in this selection')); };
+    // Weekday/hour mean wait, UTC. Empty cells are distinct from zero wait.
+    let svg = chart('history-heatmap', 'Mean request wait by UTC finish weekday and hour');
+    const cells = Array.from({length:168}, () => []);
+    waits.forEach(r => { const date = new Date(r.time); cells[date.getUTCDay()*24+date.getUTCHours()].push(r.waitSeconds); });
+    const means = cells.map(a => a.length ? a.reduce((a,b)=>a+b,0)/a.length : null), max = Math.max(1,...means.filter(finite));
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((day,d) => {
+      svg.append(svgNode('text', {x:46,y:59+d*28,'text-anchor':'end'}, day));
+      for (let h=0;h<24;h++) {
+        const index=d*24+h, mean=means[index];
+        mark(svg,'rect',{x:55+h*22,y:43+d*28,width:19,height:23,rx:3,
+          fill:mean === null ? 'var(--track)' : 'var(--accent)', 'fill-opacity':mean === null ? 1 : .18+.82*mean/max},
+          `${day} ${h}:00 UTC · ${cells[index].length} requests · mean wait ${mean === null ? 'unavailable' : duration(mean)}`);
+      }
+    });
+    for(let h=0;h<24;h+=3) svg.append(svgNode('text',{x:64+h*22,y:31,'text-anchor':'middle'},String(h).padStart(2,'0')));
+    svg.append(svgNode('text',{x:55,y:267},`UTC finish hour · darker = longer mean wait · maximum ${duration(max)}`));
+    empty(svg, waits.length);
+    // Completed executions only: cancelled waiters and interrupted samples bias comparisons.
+    svg = chart('history-resources','Sampled peak RSS versus mean CPU cores for completed executions');
+    const resources = executed.filter(r => finite(r.peakRssBytes) && finite(r.meanCores));
+    let scales = axes(svg, Math.max(1,...resources.map(r=>r.meanCores)), Math.max(1,...resources.map(r=>r.peakRssBytes/GIB)), 'Mean CPU cores', 'Peak RSS (GiB)');
+    resources.forEach(r => mark(svg,'circle',{cx:scales.x(r.meanCores),cy:scales.y(r.peakRssBytes/GIB),r:3,fill:'var(--blue)',opacity:.6},`${identity(r)} · ${number(r.meanCores)} cores · ${memory(r.peakRssBytes)}`));
+    empty(svg, resources.length);
+    svg = chart('history-estimates','Estimated versus actual execution seconds; dashed line means equal');
+    const estimated = executed.filter(r=>finite(r.estimateSeconds) && r.estimateSeconds>0);
+    const extent = Math.max(1,...estimated.flatMap(r=>[r.estimateSeconds,r.runSeconds]));
+    scales = axes(svg,extent,extent,'Estimated execution (s)','Actual execution (s)',v=>number(v,0),v=>number(v,0));
+    svg.append(svgNode('line',{x1:scales.x(0),y1:scales.y(0),x2:scales.x(extent),y2:scales.y(extent),stroke:'var(--muted)','stroke-dasharray':'5 4'}));
+    estimated.forEach(r=>mark(svg,'circle',{cx:scales.x(r.estimateSeconds),cy:scales.y(r.runSeconds),r:3,fill:'var(--violet)',opacity:.6},`${identity(r)} · estimated ${duration(r.estimateSeconds)} · actual ${duration(r.runSeconds)}`));
+    empty(svg,estimated.length);
+    svg = chart('history-trend','Queue wait p50 and p95 by UTC finish time; gaps have no samples');
+    const times = waits.map(r=>r.time), start = times.length ? Math.min(...times) : 0, end = times.length ? Math.max(...times) : 0;
+    const binHours = Math.max(1,Math.ceil((end-start)/3600000/24)), width = binHours*3600000, origin = Math.floor(start/width)*width;
+    const bins = new Map(); waits.forEach(r=>{ const key=Math.floor((r.time-origin)/width); if(!bins.has(key)) bins.set(key,[]); bins.get(key).push(r.waitSeconds); });
+    const points = [...bins].sort((a,b)=>a[0]-b[0]).map(([index,values])=>({index,n:values.length,p50:quantile(values,.5),p95:quantile(values,.95)}));
+    const last = Math.max(1,...points.map(p=>p.index));
+    scales = axes(svg,last,Math.max(1,...points.map(p=>p.p95)),'UTC finish time', 'Queue wait (s)', v=>new Date(origin+v*width).toISOString().slice(5,16).replace('T',' '),v=>number(v,0));
+    [['p50','var(--accent)',''],['p95','var(--amber)','5 4']].forEach(([key,color,dash])=>{
+      points.forEach((p,i)=>{
+        const prev=points[i-1];
+        if(prev && p.index===prev.index+1) svg.append(svgNode('line',{x1:scales.x(prev.index),y1:scales.y(prev[key]),x2:scales.x(p.index),y2:scales.y(p[key]),stroke:color,'stroke-width':2,'stroke-dasharray':dash}));
+        mark(svg,'circle',{cx:scales.x(p.index),cy:scales.y(p[key]),r:4,fill:color},`${new Date(origin+p.index*width).toISOString()} · ${binHours}h bin · n=${p.n} · ${key} ${duration(p[key])}`);
+      });
+    });
+    byId('trend-caption').textContent = `Solid green: p50 · dashed amber: p95 · ${binHours}h bins · hover or focus points for sample counts`;
+    empty(svg,points.length);
+  }
+
   function renderPolicy(data) {
     const policy = data.policy, small = data.smallJobs, parts = [];
     const item = (label, text, title) => { const node = element('span', '', null, title); node.append(element('b', '', label + ' '), document.createTextNode(text)); return node; };
@@ -424,6 +561,7 @@
     byId('running').replaceChildren(...(data.running.length ? data.running.map(jobCard) : [element('div', 'empty', verified ? 'No test jobs are running.' : 'No running jobs could be verified.')]));
     renderWaiting();
     renderRecent();
+    renderHistory();
     const warnings = (data.warnings || []).filter(message => !message.startsWith('Older clients do not publish actual start times.'));
     byId('warning-list').replaceChildren(...warnings.map(message => element('li', '', message)));
     byId('warnings').hidden = warnings.length === 0;
@@ -458,6 +596,8 @@
       if (!paused && !document.hidden) timer = setTimeout(refresh, 2000);
     }
   }
+  byId('history-kind').addEventListener('change', renderHistory);
+  byId('history-range').addEventListener('change', renderHistory);
   byId('filter').addEventListener('input', renderWaiting);
   byId('refresh').addEventListener('click', refresh);
   byId('recent-toggle').addEventListener('click', () => { showAllRecent = !showAllRecent; renderRecent(); });

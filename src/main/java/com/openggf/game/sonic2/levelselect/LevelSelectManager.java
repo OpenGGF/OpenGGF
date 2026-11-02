@@ -295,13 +295,9 @@ public class LevelSelectManager implements LevelSelectProvider {
             int soundId = Sonic2SoundTestCatalog.toSoundId(soundTestValue);
             LOGGER.info("Playing sound test: 0x" + Integer.toHexString(soundTestValue)
                     + " -> soundId 0x" + Integer.toHexString(soundId));
-            if (Sonic2SoundTestCatalog.isMusicId(soundId)) {
-                GameServices.audio().playMusic(soundId);
-            } else if (Sonic2SoundTestCatalog.isSfxId(soundId)) {
-                GameServices.audio().playSfx(soundId);
-            } else {
-                LOGGER.fine("No mapped sound for sound test value: 0x" + Integer.toHexString(soundTestValue));
-            }
+            // MenuScreen_LevelSelect submits sound_test+$80 through PlayMusic.
+            // Native ids include system commands and differ from engine catalog ids.
+            GameServices.audio().playMusicMailboxNativeRequest(soundId);
             onSoundTestPlayed(soundTestValue);
         } else {
             // Signal exit - GameLoop will handle the fade

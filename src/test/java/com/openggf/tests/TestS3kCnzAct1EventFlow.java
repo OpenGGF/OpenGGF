@@ -630,7 +630,7 @@ class TestS3kCnzAct1EventFlow {
             events.update(0, frame);
         }
 
-        assertEquals(List.of(Sonic3kMusic.MINIBOSS.id), commandsOfType(AudioCommand.PlayMusic.class)
+        assertEquals(List.of(Sonic3kMusic.MINIBOSS_S3.id), commandsOfType(AudioCommand.PlayMusic.class)
                         .stream().map(AudioCommand.PlayMusic::musicId).toList(),
                 "The outer gate releases mus_Miniboss after the 120-frame wait");
 
@@ -638,7 +638,7 @@ class TestS3kCnzAct1EventFlow {
             events.update(0, frame);
         }
 
-        assertEquals(List.of(Sonic3kMusic.MINIBOSS.id), commandsOfType(AudioCommand.PlayMusic.class)
+        assertEquals(List.of(Sonic3kMusic.MINIBOSS_S3.id), commandsOfType(AudioCommand.PlayMusic.class)
                         .stream().map(AudioCommand.PlayMusic::musicId).toList(),
                 "The release timer must not replay miniboss music after it fires once");
     }

@@ -49,8 +49,6 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private static final int WALK_RIGHT_STOP_X = 0x4760;
     private static final int PRE_JUMP_WAIT = 0x1F;
     private static final int POST_JUMP_WAIT = 0x7F;
-    private static final int KNUCKLES_MUSIC_FADE_FRAMES = 90 + 1;
-    private static final int LEVEL_MUSIC_FADE_FRAMES = 2 * 60 + 1;
     private static final int JUMP_X_VEL = -0x0100;
     private static final int JUMP_Y_VEL = -0x0400;
     private static final int EXIT_SPEED = 4;
@@ -182,8 +180,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
     private void routineInit(AbstractPlayableSprite player) {
         AizIntroArtLoader.loadAllIntroArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
-        spawnFreeChild(() -> new SongFadeTransitionInstance(
-                KNUCKLES_MUSIC_FADE_FRAMES, Sonic3kMusic.KNUCKLES.id, true, true));
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
 
         if (player != null) {
             player.clearLogicalInputState();
@@ -307,8 +304,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance
             player.clearForcedInputMask();
         }
         restoreCnzPaletteLine1();
-        spawnFreeChild(() -> new SongFadeTransitionInstance(
-                LEVEL_MUSIC_FADE_FRAMES, Sonic3kMusic.CNZ2.id, true));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.CNZ2.id));
         phase = Phase.FORCE_PLAYER_LEFT;
     }
 

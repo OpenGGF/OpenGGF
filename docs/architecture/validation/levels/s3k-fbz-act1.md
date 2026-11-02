@@ -1,5 +1,15 @@
 # FBZ Act 1 coverage matrix
 
+Attack-warning eye overlay follow-up (2026-11-02): `loc_6F0CE` installs
+`word_6FA5E` (mapping frame `$11`, priority `$180`) and draws the warning
+child while its palette script changes line 1, color 15. The engine previously
+submitted those colors but omitted the sprite. `TestFbzMinibossChildren` now
+checks the overlay draw, offset and inherited tile priority;
+`TestFbzMinibossArtShape` checks that the ROM-backed overlay actually consumes
+the flashing color. Palette write ownership and attack timing are unchanged.
+These focused checks do not renew full-route, viewport/donor/team, native pixel
+comparison or whole-world rewind qualifications; those gaps remain inherited.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and
@@ -720,3 +730,32 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## Indoor return tile-ring initialization — 2026-11-02
+
+`TestFbzAct1RomRuntimeLifecycle.indoorReloadSeedsRowsAtRestoredCameraHeight`
+checks the initial indoor Plane-B descriptors at a restored camera Y of `$500`.
+FBZ1 background initialization must fill the physical 256px ring starting at
+its effective background Y, aligned to 16px, rather than source world Y zero.
+The deformation bands index world Y, so a zero-origin fill at an interior
+return pairs the bands with unrelated artwork until ordinary scrolling replaces
+those rows. ROM `loc_528A4` calls `Reset_TileOffsetPositionEff` before
+`Refresh_PlaneFull`; the latter writes sixteen successive 16px rows.
+This descriptor check supplements retained-row and rewind tests; it does not
+certify special-stage gameplay or native pixel parity. Existing route, viewport
+and donor gaps remain as recorded above.
+
+Focused validation: `TestFbzAct1RomRuntimeLifecycle`,
+`TestFbzRetainedPlaneNativeRows`, `TestFbzScrollHandler`, `TestFbzEventsAct1`
+and the four required S3K loading selectors completed 83 tests with no
+failures, errors or skips using the original locked-on ROM. The new test
+failed on the pre-fix implementation at world Y=608. No visual capture was
+performed for this correction.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

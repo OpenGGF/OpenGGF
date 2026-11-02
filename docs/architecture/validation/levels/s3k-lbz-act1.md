@@ -103,3 +103,11 @@ test without errors/skips; the remaining trace is not green. Sixty-eight focused
 object/child-graph and mandatory S3K loading/bootstrap/decoding checks pass,
 without skips. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
 for exact commands, native creation evidence and unexecuted breadth.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

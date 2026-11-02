@@ -7179,3 +7179,7 @@ allocation/initial-animation-domain defects and the separate beam test identity
 context. Cold traversal, product breadth and physical KosM/VRAM/pixel evidence
 remain open. These local results do not widen the earlier producer run or certify
 the entire act.
+
+## Music-transition qualification — 2026-11-02
+
+The restored apparent-act/invincibility selection does not certify all Current_music overlaps or cartridge/driver products. CNZ miniboss retains its collapsed post-helper119-word gameplay wait, releasing boss/control ownership120 entries early. See the [cross-game audit](../architecture/audits/2026-11-02-music-transitions.md) for corrected owners, source revisions and remaining obligations.

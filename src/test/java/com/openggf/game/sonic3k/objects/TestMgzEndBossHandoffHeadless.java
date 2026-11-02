@@ -325,14 +325,14 @@ class TestMgzEndBossHandoffHeadless {
         assertFalse(GameServices.audio().commandTimeline().entries().stream()
                         .map(entry -> entry.command())
                         .anyMatch(command -> command instanceof AudioCommand.PlayMusic music
-                                && music.musicId() == Sonic3kMusic.MINIBOSS.id),
+                                && music.musicId() == Sonic3kMusic.MINIBOSS_S3.id),
                 "the native raw120 wait must expire before miniboss music starts");
         assertTrue(boss.isHidden());
         manager.update(0x3D78, fixture.sprite(), GameServices.sprites().getSidekicks(), objectPass++, false);
         assertTrue(GameServices.audio().commandTimeline().entries().stream()
                         .map(entry -> entry.command())
                         .anyMatch(command -> command instanceof AudioCommand.PlayMusic music
-                                && music.musicId() == Sonic3kMusic.MINIBOSS.id),
+                                && music.musicId() == Sonic3kMusic.MINIBOSS_S3.id),
                 "the placed owner's native admission must start the ROM miniboss music");
         assertTrue(boss.isHidden(), "camera/music completion only installs the next native continuation");
         manager.update(0x3D78, fixture.sprite(), GameServices.sprites().getSidekicks(), objectPass, false);

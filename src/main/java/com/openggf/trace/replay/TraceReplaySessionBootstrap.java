@@ -380,6 +380,13 @@ public final class TraceReplaySessionBootstrap {
             boolean interleaveSidekickPrelude =
                     shouldInterleaveS2TitleCardPrelude(trace, sidekickPreludeFrames, objectPreludeFrames)
                             && gameplayMode.getSpriteManager() != null;
+            // Obj01_Control calls Sonic_RecordPos even when Obj02 is absent.
+            // Reuse the same pre-counted object passes and leader fallback as
+            // the sidekick prelude; this records live state without moving the
+            // leader or importing comparison snapshots (KiS2 c336fed,
+            // Obj01_Control / Sonic_RecordPos).
+            boolean soloLeaderHistoryPrelude = sidekicks.isEmpty()
+                    && TraceReplayBootstrap.s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace) > 0;
             boolean tornadoPreludeOrder =
                     interleaveSidekickPrelude
                             && findRideStartTornado(objectManager) != null;
@@ -396,7 +403,7 @@ public final class TraceReplaySessionBootstrap {
                     ? player.getCentreY() - 4
                     : 0;
             for (int i = consumedPreludeFrames; i < objectDispatchFrames; i++) {
-                if (interleaveSidekickPrelude && !tornadoPreludeOrder) {
+                if ((interleaveSidekickPrelude || soloLeaderHistoryPrelude) && !tornadoPreludeOrder) {
                     gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(1, levelManager, player);
                 }
                 objectManager.update(cameraX, player, sidekicks,

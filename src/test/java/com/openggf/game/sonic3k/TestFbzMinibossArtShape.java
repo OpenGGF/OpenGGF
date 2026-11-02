@@ -45,6 +45,36 @@ class TestFbzMinibossArtShape {
     }
 
     @Test
+    void warningOverlayContainsTheRomPaletteScriptColor() throws Exception {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists());
+        var entry = Sonic3kPlcArtRegistry.getPlan(4, 0).standaloneArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.FBZ_MINIBOSS))
+                .findFirst().orElseThrow();
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()));
+            var sheet = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom))
+                    .loadStandaloneSheet(rom, entry);
+            assertEquals(1, sheet.getPaletteIndex());
+            var warning = sheet.getFrame(17);
+            assertEquals(2, warning.pieces().size());
+            int flashingPixels = 0;
+            for (var piece : warning.pieces()) {
+                assertEquals(0, piece.paletteIndex());
+                for (int tile = piece.tileIndex();
+                     tile < piece.tileIndex() + piece.widthTiles() * piece.heightTiles(); tile++) {
+                    for (int y = 0; y < 8; y++) {
+                        for (int x = 0; x < 8; x++) {
+                            if (sheet.getPatterns()[tile].getPixel(x, y) == 15) flashingPixels++;
+                        }
+                    }
+                }
+            }
+            assertTrue(flashingPixels > 0, "frame $11 must consume line 1, color 15");
+        }
+    }
+
+    @Test
     void paletteIsExactThirtyTwoBytesAndUnusedPlc5eIsNotRuntimeSource() throws Exception {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists());

@@ -20,6 +20,26 @@ import static org.mockito.Mockito.*;
 @org.junit.jupiter.api.parallel.Isolated
 class TestFbzMinibossChildren {
     @Test
+    void attackWarningDrawsNativeEyeOverlayWithRomPriority() {
+        var services = mock(com.openggf.level.objects.ObjectServices.class);
+        var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        when(services.renderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_MINIBOSS))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x2F00, 0x5E0, 0xAA, 0, 0, true, 0));
+        var warning = new FbzMinibossPaletteChild(boss);
+        warning.setServices(services);
+        warning.appendRenderCommands(new java.util.ArrayList<>());
+        // loc_6F0CE installs word_6FA5E: frame $11, priority $180.
+        // ChildObjDat_6FAA8 places it eight pixels above the root.
+        verify(renderer).drawFrameIndex(17, 0x2F00, 0x5D8, false, false);
+        assertEquals(3, warning.getPriorityBucket());
+        assertTrue(warning.isHighPriority());
+    }
+
+    @Test
     void plungerUsesTheSeparateLevelBackedSpringArtwork() {
         var services = mock(com.openggf.level.objects.ObjectServices.class);
         var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
