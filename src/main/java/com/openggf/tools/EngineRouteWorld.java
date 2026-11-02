@@ -9,7 +9,14 @@ import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.Level;
+import com.openggf.route.Capability;
 import com.openggf.route.Inlet;
+import com.openggf.route.InstanceKey;
+import com.openggf.route.InteractionKind;
+import com.openggf.route.InteractionView;
+import com.openggf.route.ObjectView;
+import com.openggf.route.PlacementKey;
+import com.openggf.route.PlayerSlot;
 import com.openggf.route.LaunchContract;
 import com.openggf.route.PadRow;
 import com.openggf.route.PlayerView;
@@ -101,12 +108,23 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
                 break;
             }
         }
+        AbstractPlayableSprite sidekick = null;
+        for (AbstractPlayableSprite registered : GameServices.sprites().getRegisteredSidekicks()) {
+            if (registered != p1) {
+                sidekick = registered;
+                break;
+            }
+        }
+        var observed = new java.util.ArrayList<ObjectView>();
+        var interactions = new java.util.ArrayList<InteractionView>();
+        if (objects != null) observeObjects(objects, level.getCurrentZone(), level.getCurrentAct(), p1, sidekick, observed,
+                interactions);
         return new RouteSample(rowsOffered, epoch,
                 new RouteSample.Level(level.getCurrentZone(), level.getCurrentAct(), level.getApparentAct(),
                         session.loop().getCurrentGameMode().name()),
                 new RouteSample.Clocks(objects == null ? 0 : objects.getVblaCounter(), level.getFrameCounter()),
                 view(p1), p2, camera.getX() & 0xFFFF, camera.getY() & 0xFFFF,
-                camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0);
+                camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0, observed, interactions);
     }
 
     @Override
@@ -194,6 +212,67 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
 
     private void requireOpen() {
         if (closed) throw new IllegalStateException("route host is closed");
+    }
+
+    /**
+     * Copies facts from live objects whose owners implement a read-only capability interface
+     * ({@code instanceof}; no registration list), plus any object a player rides. Values only; no
+     * instance escapes, and nothing is called that could mutate the owner.
+     */
+    private void observeObjects(com.openggf.level.objects.ObjectManager manager, int zone, int act,
+                                AbstractPlayableSprite p1, AbstractPlayableSprite p2, java.util.List<ObjectView> out,
+                                java.util.List<InteractionView> interactions) {
+        var query = manager.objectQuery();
+        var riding1 = p1 == null ? null : manager.getRidingObject(p1);
+        var riding2 = p2 == null ? null : manager.getRidingObject(p2);
+        for (var object : manager.getActiveObjects()) {
+            boolean phase = object instanceof com.openggf.level.objects.observe.PhaseSource;
+            boolean attachment = object instanceof com.openggf.level.objects.observe.AttachmentSource;
+            boolean hits = object instanceof com.openggf.level.objects.observe.HitPointSource;
+            if (!phase && !attachment && !hits && object != riding1 && object != riding2) continue;
+            var identity = query.identityOf(object);
+            if (identity.isEmpty()) continue;
+            var ref = identity.get();
+            var key = new InstanceKey(epoch, ref.slotIndex(), ref.generation(), ref.spawnId(), ref.dynamicId(),
+                    ref.kind().name());
+            var spawn = object.getSpawn();
+            java.util.Optional<PlacementKey> placement = spawn != null && spawn.layoutIndex() >= 0
+                    ? java.util.Optional.of(new PlacementKey(zone, act, spawn.layoutIndex(), spawn.objectId(), spawn.subtype()))
+                    : java.util.Optional.empty();
+            var capabilities = java.util.EnumSet.noneOf(Capability.class);
+            java.util.List<String> phaseNames = java.util.List.of();
+            String current = "";
+            if (object instanceof com.openggf.level.objects.observe.PhaseSource source) {
+                capabilities.add(Capability.PHASE);
+                phaseNames = source.phaseNames();
+                current = source.phase();
+            }
+            int remaining = -1;
+            boolean defeated = false;
+            if (object instanceof com.openggf.level.objects.observe.HitPointSource source) {
+                capabilities.add(Capability.HIT_POINTS);
+                remaining = source.hitsRemaining();
+                defeated = source.defeated();
+            }
+            if (attachment) capabilities.add(Capability.ATTACHMENT);
+            out.add(new ObjectView(key, placement, object.getClass().getSimpleName(), object.getX(), object.getY(),
+                    capabilities, phaseNames, current, remaining, defeated));
+            if (object == riding1) interactions.add(new InteractionView(key, PlayerSlot.P1, InteractionKind.STANDING,
+                    object.getX(), object.getY(), false));
+            if (object == riding2) interactions.add(new InteractionView(key, PlayerSlot.P2, InteractionKind.STANDING,
+                    object.getX(), object.getY(), false));
+            if (object instanceof com.openggf.level.objects.observe.AttachmentSource source) {
+                attach(source, p1, PlayerSlot.P1, key, interactions);
+                attach(source, p2, PlayerSlot.P2, key, interactions);
+            }
+        }
+    }
+
+    private static void attach(com.openggf.level.objects.observe.AttachmentSource source, AbstractPlayableSprite player,
+                               PlayerSlot slot, InstanceKey key, java.util.List<InteractionView> interactions) {
+        if (player == null) return;
+        source.attachmentOf(player).ifPresent(a -> interactions.add(new InteractionView(key, slot,
+                InteractionKind.valueOf(a.kind().name()), a.anchorX(), a.anchorY(), a.releasing())));
     }
 
     private static PlayerView view(AbstractPlayableSprite sprite) {

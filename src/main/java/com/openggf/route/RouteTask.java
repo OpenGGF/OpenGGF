@@ -26,12 +26,27 @@ public sealed interface RouteTask {
     }
 
     /**
-     * Author new rows from {@code launch} that reach and settle at {@code goal}. {@code checks}
-     * are the route's replayed checks (usually the goal's arrival plus a guard); a scene front-end
-     * adds its own shot checks on the replay observer.
+     * Author rows after {@code prefix} (kept verbatim) that complete {@code goals}' legs in order.
+     * The goal program is the route's replayed checks; set its {@code startRow} to the prefix
+     * length so the inherited rows are not checked.
      */
-    record Author(LaunchContract launch, PointGoal goal, GoalProgram checks, SearchBudget budget) implements RouteTask {
+    record Author(LaunchContract launch, InputTape prefix, GoalProgram goals, SearchBudget budget) implements RouteTask {
         public Author {
+            Objects.requireNonNull(launch, "launch");
+            Objects.requireNonNull(prefix, "prefix");
+            Objects.requireNonNull(goals, "goals");
+            Objects.requireNonNull(budget, "budget");
+            if (goals.legs().isEmpty()) throw new IllegalArgumentException("an authored route needs at least one leg");
+        }
+    }
+
+    /**
+     * Author new rows from {@code launch} that reach and settle at {@code goal} (a scene shot).
+     * {@code checks} are the route's replayed checks; a scene front-end adds its own shot checks
+     * on the replay observer.
+     */
+    record Point(LaunchContract launch, PointGoal goal, GoalProgram checks, SearchBudget budget) implements RouteTask {
+        public Point {
             Objects.requireNonNull(launch, "launch");
             Objects.requireNonNull(goal, "goal");
             Objects.requireNonNull(checks, "checks");

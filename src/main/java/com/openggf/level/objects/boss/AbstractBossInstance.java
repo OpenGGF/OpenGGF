@@ -23,7 +23,7 @@ import java.util.Map;
  * Supports multi-component bosses with parent-child relationships.
  */
 public abstract class AbstractBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements com.openggf.level.objects.observe.HitPointSource, TouchResponseProvider, TouchResponseAttackable {
     @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
         return com.openggf.game.mutators.ObjectHeadRole.BOSS;
     }
@@ -818,5 +818,17 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 spawn.renderFlags(),
                 spawn.respawnTracked(),
                 spawn.rawYWord());
+    }
+
+    /** Route observation: the boss's own hit counter ({@code collision_property} by default). */
+    @Override
+    public int hitsRemaining() {
+        return getCollisionProperty();
+    }
+
+    /** Route observation: the boss's own defeat flag; object absence is never defeat. */
+    @Override
+    public boolean defeated() {
+        return state.defeated;
     }
 }

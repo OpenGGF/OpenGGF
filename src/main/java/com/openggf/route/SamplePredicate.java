@@ -51,4 +51,58 @@ public sealed interface SamplePredicate {
             return true;
         }
     }
+
+    /** The player stands on (rides) the target: OnObj with the target as its ride owner. */
+    record Riding(PlayerSlot player, ObjectTarget target) implements SamplePredicate {
+        public Riding {
+            Objects.requireNonNull(player, "player");
+            Objects.requireNonNull(target, "target");
+        }
+
+        @Override public boolean test(RouteSample sample) {
+            return holds(sample, player, target, InteractionKind.STANDING);
+        }
+    }
+
+    /** The target reports custody of the player of this kind (grab, hang, carry, tube, airflow, latch). */
+    record Attached(PlayerSlot player, ObjectTarget target, InteractionKind kind) implements SamplePredicate {
+        public Attached {
+            Objects.requireNonNull(player, "player");
+            Objects.requireNonNull(target, "target");
+            Objects.requireNonNull(kind, "kind");
+        }
+
+        @Override public boolean test(RouteSample sample) {
+            return holds(sample, player, target, kind);
+        }
+    }
+
+    /** The target reports this phase (one of its declared phase names). */
+    record PhaseIs(ObjectTarget target, String phase) implements SamplePredicate {
+        public PhaseIs {
+            Objects.requireNonNull(target, "target");
+            Objects.requireNonNull(phase, "phase");
+        }
+
+        @Override public boolean test(RouteSample sample) {
+            return target.resolve(sample, PlayerSlot.P1).map(o -> o.phase().equals(phase)).orElse(false);
+        }
+    }
+
+    /** The target's owner reports its defeat; absence is never defeat. */
+    record Defeated(ObjectTarget target) implements SamplePredicate {
+        public Defeated {
+            Objects.requireNonNull(target, "target");
+        }
+
+        @Override public boolean test(RouteSample sample) {
+            return target.resolve(sample, PlayerSlot.P1).map(ObjectView::defeated).orElse(false);
+        }
+    }
+
+    private static boolean holds(RouteSample sample, PlayerSlot player, ObjectTarget target, InteractionKind kind) {
+        var owner = target.resolve(sample, player);
+        return owner.isPresent() && sample.interactions().stream().anyMatch(i -> i.participant() == player
+                && i.kind() == kind && i.owner().equals(owner.get().instance()));
+    }
 }

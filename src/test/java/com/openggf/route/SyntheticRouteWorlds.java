@@ -7,7 +7,10 @@ import java.util.Optional;
  * A deterministic one-axis platform world for exercising the route core without a ROM. Right and
  * Left move one pixel a row; a fresh A press on the ground jumps for eleven rows; standing in a
  * pit is death; crossing a boundary x starts a new epoch. Checkpoints hold every field, including
- * the previous row (the host's press-edge history), unless built incomplete on purpose.
+ * the previous row (the host's press-edge history), unless built incomplete on purpose. Optional
+ * objects: a boss that loses a hit when the player lands on it from a jump and reports its hits
+ * (owner facts, as an engine boss's {@code HitPointSource} would), and a placed platform whose
+ * phase alternates every forty rows.
  */
 final class SyntheticRouteWorlds implements RouteWorldFactory {
     record Pit(int from, int to) { }
@@ -16,13 +19,32 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
     private final int boundaryX;
     private final int leftBoundaryX;
     private final boolean incompleteCheckpoints;
+    private final int bossX;
+    private final int bossHits;
+    private final int platformX;
     int boots;
 
     SyntheticRouteWorlds(List<Pit> pits, int boundaryX, int leftBoundaryX, boolean incompleteCheckpoints) {
+        this(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, Integer.MIN_VALUE, 0, Integer.MIN_VALUE);
+    }
+
+    private SyntheticRouteWorlds(List<Pit> pits, int boundaryX, int leftBoundaryX, boolean incompleteCheckpoints,
+                                 int bossX, int bossHits, int platformX) {
         this.pits = List.copyOf(pits);
         this.boundaryX = boundaryX;
         this.leftBoundaryX = leftBoundaryX;
         this.incompleteCheckpoints = incompleteCheckpoints;
+        this.bossX = bossX;
+        this.bossHits = bossHits;
+        this.platformX = platformX;
+    }
+
+    SyntheticRouteWorlds withBoss(int x, int hits) {
+        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, x, hits, platformX);
+    }
+
+    SyntheticRouteWorlds withPhasePlatform(int x) {
+        return new SyntheticRouteWorlds(pits, boundaryX, leftBoundaryX, incompleteCheckpoints, bossX, bossHits, x);
     }
 
     static SyntheticRouteWorlds flat() {
@@ -54,17 +76,29 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
     }
 
     private record State(int x, int y, int vy, boolean air, boolean dead, int previous, int rows, long epoch,
-                         boolean crossed, boolean crossedLeft) { }
+                         boolean crossed, boolean crossedLeft, int hits, int cooldown) { }
 
     private final class World implements RouteWorld {
-        private State s = new State(0, 0, 0, false, false, 0, 0, 0, false, false);
+        private State s = new State(0, 0, 0, false, false, 0, 0, 0, false, false, bossHits, 0);
         private boolean closed;
 
         @Override public RouteSample observe() {
             var p1 = new PlayerView(s.x, 1000 + s.y, 0, 0, 0, 0, 0, 0, s.air, false, false, false, false, s.dead, 10,
                     false, false, false, PlayerView.Motion.NONE);
+            var objects = new java.util.ArrayList<ObjectView>();
+            if (bossX != Integer.MIN_VALUE) {
+                objects.add(new ObjectView(new InstanceKey(s.epoch, 1, 0, 0, 1, "DYNAMIC"), Optional.empty(),
+                        "SyntheticBoss", bossX, 1000, java.util.Set.of(Capability.HIT_POINTS), List.of(), "", s.hits,
+                        s.hits == 0));
+            }
+            if (platformX != Integer.MIN_VALUE) {
+                objects.add(new ObjectView(new InstanceKey(s.epoch, 2, 0, 3, 0, "LAYOUT"),
+                        Optional.of(new PlacementKey(0, 0, 3, 0x51, 0)), "SyntheticPlatform", platformX, 1000,
+                        java.util.Set.of(Capability.PHASE), List.of("solid", "gone"), (s.rows / 40) % 2 == 0 ? "solid" : "gone",
+                        -1, false));
+            }
             return new RouteSample(s.rows, s.epoch, new RouteSample.Level(0, 0, 0, "LEVEL"),
-                    new RouteSample.Clocks(s.rows, s.rows), p1, Optional.empty(), 0, 0, 0);
+                    new RouteSample.Clocks(s.rows, s.rows), p1, Optional.empty(), 0, 0, 0, objects, List.of());
         }
 
         @Override public RecordedStep step(PadRow offered) {
@@ -93,11 +127,19 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
                     if (!air && x >= pit.from() && x < pit.to()) dead = true;
                 }
             }
+            int hits = s.hits;
+            int cooldown = Math.max(0, s.cooldown - 1);
+            if (bossX != Integer.MIN_VALUE && hits > 0 && cooldown == 0 && air && vy > 0 && Math.abs(x - bossX) <= 6
+                    && y >= -8) {
+                hits--;
+                vy = -5;
+                cooldown = 20;
+            }
             long epoch = s.epoch;
             boolean crossed = s.crossed, crossedLeft = s.crossedLeft;
             if (!crossed && x >= boundaryX) { crossed = true; epoch++; }
             if (!crossedLeft && x <= leftBoundaryX) { crossedLeft = true; epoch++; }
-            s = new State(x, y, vy, air, dead, lane, s.rows + 1, epoch, crossed, crossedLeft);
+            s = new State(x, y, vy, air, dead, lane, s.rows + 1, epoch, crossed, crossedLeft, hits, cooldown);
             return new RecordedStep(offered, observe());
         }
 
@@ -108,7 +150,7 @@ final class SyntheticRouteWorlds implements RouteWorldFactory {
         @Override public WorldCheckpoint capture() {
             // An incomplete token forgets host-owned state the way an unsaved driver counter would.
             State saved = incompleteCheckpoints ? new State(s.x, s.y, s.vy, s.air, s.dead, s.previous, 0, s.epoch,
-                    s.crossed, s.crossedLeft) : s;
+                    s.crossed, s.crossedLeft, s.hits, s.cooldown) : s;
             return new Saved(this, saved);
         }
 
