@@ -2495,8 +2495,13 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // and all four bounds; it does not recenter after Load_Level.
                         .preserveOffsetCameraPosition(true)
                         .postTransitionMinX(postTransitionMinX)
+                        .postTransitionMinXTarget(postTransitionMinX)
                         .postTransitionMaxX(postTransitionMaxX)
+                        // MGZ1BGE_Transition (sonic3k.asm:106358-106390) shifts the live lock.
+                        // Keep the engine easing destination at that lock until native release.
+                        .postTransitionMaxXTarget(postTransitionMaxX)
                         .postTransitionMinY(postTransitionMinY)
+                        .postTransitionMinYTarget(postTransitionMinY)
                         .postTransitionMaxY(postTransitionMaxY)
                         .postTransitionMaxYTarget(postTransitionMaxYTarget)
                         .playerOffset(TRANSITION_OFFSET_X, TRANSITION_OFFSET_Y)

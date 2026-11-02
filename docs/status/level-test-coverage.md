@@ -1,5 +1,9 @@
 # Level test coverage backlog
 
+MGZ seamless horizontal lock (2026-11-02): the
+[MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#seamless-horizontal-lock--2026-11-02)
+records the bounded transition correction and inherited wider route/rewind gaps.
+
 AIZ2 ending animation (2026-11-02): [Knuckles and shield controls](../architecture/validation/levels/s3k-aiz2.md#ending-knuckles-and-shield-animation-2026-11-02)
 cover native script publication/cadence, deferred switches, elemental freeze,
 actual object recreation and forward replay. Fresh original-movie observations

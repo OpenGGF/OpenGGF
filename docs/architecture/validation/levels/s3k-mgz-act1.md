@@ -157,3 +157,35 @@ dead-P1 flight/sparkle and converted-bouncer per-SST animation copies.
 This is a bounded ring contract. Other mains, donors, widths, participant teams,
 complete traversal/physics/art and full-campaign incoming arrival remain inherited
 obligations; the act remains uncertified.
+
+## Seamless horizontal lock — 2026-11-02
+
+`MGZ1BGE_Transition` shifts the live horizontal bound during the Act 2 reload.
+The transition request now holds the engine's minimum-X, maximum-X and
+minimum-Y easing destinations at the shifted live bounds until native release. `TestS3kMgzTraceReplay`
+exercises the production handoff; this local correction does not certify all
+viewport/donor/team routes or close the matrix's inherited rewind and route gaps.
+
+At baseline `4311f21c4`, the short replay has 8,469 errors starting at row
+13,939 (`camera_x`, 0 vs 2). With the bound targets retained, its physics
+comparison passes; four strict animation errors remain at rows 14,384–14,385.
+The ROM aux records EndSignControl in slot 7 before results/title in slot 8,
+restoring native control on the following pass. A local native-control bridge
+probe did not change these errors and was removed. No slot-order/title timing
+change or whole-route certification is included here.
+
+The requested Tails full-chain MGZ3 comparison worsens from 3,020 to 3,161
+errors with the same row-zero `y_speed` first error. Its first remaining camera error
+is row 2,035 (ROM X=1, engine X=0). This blocks integration of the candidate;
+the later release disagreement and the four short-trace animation errors
+remain unresolved. CNZ's analogous bound-target candidate
+was rejected (3,112 → 3,941 replay errors), and CNZ code is unchanged.
+
+A source-predicate bisect over `2f5265e3f..4311f21c4` isolates
+`15accb4f426dc61d81e2213faec6f114d09adc97`: transition overrides changed
+from setters synchronizing current/target bounds to current-only setters.
+This was not a historical full-replay bisect. A temporary executed transition
+probe observed max X `0000/6000`, min X `0001/0000` (current/target), followed
+by max/camera X `0,2,4,6,8,10`. Reverting the candidate reproduces the original
+8,469 errors and row-13,939 camera mismatch exactly. The probe and attempted
+control-owner change were removed; trace comparison rules are unchanged.
