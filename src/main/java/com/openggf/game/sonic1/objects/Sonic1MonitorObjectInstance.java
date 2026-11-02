@@ -4,6 +4,8 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.data.RetailRomRevision;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -291,7 +293,18 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
             // Pow_ChkInvinc: invincibility on, play bgm_Invincible
             case 5 -> {
                 player.giveInvincibility();
-                services.playMusic(GameMusic.INVINCIBILITY);
+                // Pow_ChkInvinc: boss music wins in all revisions. REV01 also
+                // retains the drowning track at air <= 12; REV00 lacks that gate.
+                boolean bossActive = services.levelEventProvider() instanceof AbstractLevelEventManager events
+                        && events.isBossActive();
+                RetailRomRevision revision = services.gameModule() != null
+                        ? services.gameModule().getGameService(RetailRomRevision.class) : RetailRomRevision.UNKNOWN;
+                var drowning = player.getDrowningController();
+                boolean lowAir = revision != RetailRomRevision.S1_REV00
+                        && drowning != null && drowning.getRemainingAir() <= 12;
+                if (!bossActive && !lowAir) {
+                    services.playMusic(GameMusic.INVINCIBILITY);
+                }
             }
             // Pow_ChkSonic: v_lives++, play bgm_ExtraLife
             case 2 -> {

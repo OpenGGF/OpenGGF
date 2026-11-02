@@ -677,7 +677,7 @@ class TestS3kCnz1MinibossCompletionEdge {
 
     private static int minibossMusicPlays() {
         return (int) commandsOfType(AudioCommand.PlayMusic.class).stream()
-                .filter(c -> c.musicId() == Sonic3kMusic.MINIBOSS.id).count();
+                .filter(c -> c.musicId() == Sonic3kMusic.MINIBOSS_S3.id).count();
     }
 
     private static <T extends AudioCommand> List<T> commandsOfType(Class<T> type) {

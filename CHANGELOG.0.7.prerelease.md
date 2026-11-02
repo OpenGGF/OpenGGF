@@ -35,6 +35,15 @@ Unreleased. The earlier development themes remain in
   Correct the pillar archive address so its upload cannot corrupt ring art.
   Restore the weather-machine and defeat explosion bursts, accelerating chase
   entry, lost-ring world rebasing, and Robotnik's gravity-driven stump handoff.
+  Explosion controllers restore their exact owner across fresh rewind recreation
+  and retire through the shared lifetime operations.
+
+- **Music ownership:** Invincibility monitors preserve boss/countdown music; P2
+  drowning cannot replace shared music. S2 boss fades and sound test use native
+  mailboxes. S3K restores the apparent act or invincibility at the native restore
+  boundary, corrects Knuckles cutscene fade triggers/timing and lowest-free song
+  allocation, and uses native miniboss IDs. S2 ring-threshold jingles retain the
+  native secondary mailbox in solo and competition play.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.

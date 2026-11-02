@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public class Sonic2AudioProfile extends AbstractAudioProfile implements NativeMailboxMusicRoutes {
+public class Sonic2AudioProfile extends AbstractAudioProfile implements NativeMailboxMusicRoutes, com.openggf.audio.RingExtraLifeRequestOwner {
     private static final RomSoundCatalog.Catalog NATIVE_SOUNDS = new RomSoundCatalog.Catalog(
             Arrays.stream(Sonic2Music.values()).map(music ->
                     new Entry(music.name(), music.displayName, music.nativeId, music.id)).toList(),
@@ -154,6 +154,14 @@ public class Sonic2AudioProfile extends AbstractAudioProfile implements NativeMa
     @Override
     public int getExtraLifeMusicId() {
         return Sonic2Music.EXTRA_LIFE.id;
+    }
+
+    /** CollectRing_Sonic/Tails selects MusID_ExtraLife through PlaySound2/SFX1. */
+    @Override
+    @com.openggf.game.EngineOnly
+    public void playRingExtraLife(com.openggf.audio.AudioManager audio) {
+        com.openggf.audio.AudioManagerInternalAccess.playSecondaryNativeRequest(
+                audio, Sonic2Music.EXTRA_LIFE.nativeId);
     }
 
     @Override

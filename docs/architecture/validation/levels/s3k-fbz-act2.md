@@ -416,3 +416,11 @@ binds the late-parallax redraw case. One and three further draws use the current
 screen projection while preserving native coordinates and the dynamic spawn.
 The update and S3K publication phases are unchanged. This constructed renderer
 check does not close the existing cold-route, viewport, donor, team or native-pixel gaps.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

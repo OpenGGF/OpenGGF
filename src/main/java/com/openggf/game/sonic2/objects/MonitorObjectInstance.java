@@ -690,10 +690,21 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 services.playMusic(Sonic2SmpsConstants.CMD_SPEED_UP);
             }
             case INVINCIBILITY -> {
-                // ROM: tst.b (Super_Sonic_flag).w / bne.s +++ - skip when Super Sonic
-                if (!player.isSuperSonic()) {
+                // invincible_monitor tests the global Super_Sonic_flag even
+                // when the recipient is Tails, rather than Tails' own form.
+                var main = services.playerQuery().mainPlayerOrNull();
+                boolean superActive = main instanceof AbstractPlayableSprite mainSprite
+                        ? mainSprite.isSuperSonic() : player.isSuperSonic();
+                if (!superActive) {
                     player.giveInvincibility();
-                    services.playMusic(GameMusic.INVINCIBILITY);
+                    // invincible_monitor preserves boss/countdown music. Its BLS
+                    // skips at air_left == 12 as well as below (fixBugs = 0).
+                    var gameState = services.gameState();
+                    var drowning = player.getDrowningController();
+                    if ((gameState == null || gameState.getCurrentBossId() == 0)
+                            && (drowning == null || drowning.getRemainingAir() > 12)) {
+                        services.playMusic(GameMusic.INVINCIBILITY);
+                    }
                 }
             }
             case SONIC, TAILS -> {

@@ -229,8 +229,9 @@ class TestCnzMinibossAnimationArt {
                 .drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
     }
 
-    @Test
-    void finalTopHitQueuesFadeBackToAct1Music() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {-1, 0, 2})
+    void finalTopHitWaitsForInheritedWordBeforeQueuingFadeBackToAct1Music(int inheritedWait) throws Exception {
         RenderHarness harness = new RenderHarness();
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -239,6 +240,14 @@ class TestCnzMinibossAnimationArt {
         for (int i = 0; i < 4; i++) {
             boss.simulateHitForTest();
         }
+
+        var wait = CnzMinibossInstance.class.getDeclaredField("waitTimer");
+        wait.setAccessible(true);
+        wait.setInt(boss, inheritedWait);
+        assertTrue(harness.spawnedChildren().stream().noneMatch(SongFadeTransitionInstance.class::isInstance));
+        for (int frame = 0; frame < Math.max(0, inheritedWait); frame++) boss.update(frame, null);
+        assertTrue(harness.spawnedChildren().stream().noneMatch(SongFadeTransitionInstance.class::isInstance));
+        boss.update(Math.max(0, inheritedWait), null); // signed underflow allocates before the callback.
 
         SongFadeTransitionInstance transition = harness.spawnedChildren().stream()
                 .filter(SongFadeTransitionInstance.class::isInstance)
@@ -296,6 +305,7 @@ class TestCnzMinibossAnimationArt {
             when(levelManager.getObjectManager()).thenReturn(objectManager);
             when(levelManager.getCurrentLevel()).thenReturn(level);
             when(levelManager.getCurrentLevelMusicId()).thenReturn(Sonic3kMusic.CNZ1.id);
+            when(levelManager.getApparentLevelMusicId()).thenReturn(Sonic3kMusic.CNZ1.id);
             when(level.getPaletteCount()).thenReturn(4);
             when(level.getPalette(1)).thenReturn(paletteLine1);
             when(renderManager.getRenderer(Sonic3kObjectArtKeys.CNZ_MINIBOSS)).thenReturn(renderer);
@@ -308,6 +318,12 @@ class TestCnzMinibossAnimationArt {
                 spawnedChildren.add(child);
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any());
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof com.openggf.level.objects.AbstractObjectInstance instance) instance.setServices(services());
+                spawnedChildren.add(child);
+                return null;
+            }).when(objectManager).addDynamicObject(any());
         }
 
         private TestObjectServices services() {

@@ -178,7 +178,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
 
     private void startFight() {
         phaseOrdinal = Phase.ACTIVE.ordinal();
-        if (tryServices() != null) services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        if (tryServices() != null) services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
     }
 
     private void consumeAttackPaletteRequest() {
@@ -244,7 +244,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         }
         if (tryServices() == null || services().objectManager() == null) return;
         // AllocateObject is independent from every following CreateChild table.
-        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, 0));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(0));
         // CreateChild6_Simple and the two CreateChild1_Normal tables are independent calls.
         spawnChild(() -> new FbzMinibossPrisonChild(this));
         spawnDefeatPrefix(true);

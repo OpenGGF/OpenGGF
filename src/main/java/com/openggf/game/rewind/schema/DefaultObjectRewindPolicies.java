@@ -131,6 +131,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikFlame", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
+            // MHZ following bursts retain the exact boss even when another graph is nearer.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController", "parent"), RewindFieldPolicy.CAPTURED),
             // Immutable ROM scripts are reloaded through the live slot controller on recreation.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "spinScript"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "sparkleScript"), RewindFieldPolicy.TRANSIENT),
@@ -581,8 +583,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance", "hitProxy"), RewindFieldPolicy.CAPTURED),
             // loc_764C4 follows the exact native parent3; proximity is never reconstruction authority.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild", "parent"), RewindFieldPolicy.CAPTURED),
-            // Both explosion adapters retain the exact native parent3 through reconstruction.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController", "parent"), RewindFieldPolicy.CAPTURED),
             // loc_76674 retires spikes through that same exact parent status owner.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild", "capturedPlayer"), RewindFieldPolicy.CAPTURED),

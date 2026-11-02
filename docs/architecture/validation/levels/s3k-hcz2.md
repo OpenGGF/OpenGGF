@@ -1062,3 +1062,11 @@ collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
 and countdown value for AIZ1 and both HCZ bosses through the public update.
 Existing route, donor/team/viewport and native pixel qualification gaps remain;
 this local correction does not renew whole-act certification.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

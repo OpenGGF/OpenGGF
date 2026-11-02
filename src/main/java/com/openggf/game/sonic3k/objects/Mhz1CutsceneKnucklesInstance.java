@@ -152,6 +152,8 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
             playable.clearLogicalInputState();
             playable.clearForcedInputMask();
         }
+        // loc_62D04 starts the independent theme fade at the P1 clamp, before camera scrolling.
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
         workspaceRoutine = ROUTINE_WAIT_LANDING;
     }
 
@@ -324,7 +326,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
             return;
         }
         levelMusicTransitionSpawned = true;
-        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.MHZ1.id));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.MHZ1.id));
     }
 
     @Override

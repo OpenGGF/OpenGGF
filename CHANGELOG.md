@@ -39,6 +39,9 @@ S3K elemental shields keep animating after returning from Bonus/Special stages.
 Their frame publication, animation switches and invincibility/blank-player pauses
 follow the native scripts.
 
+Music transitions preserve boss/drowning ownership, native S2 request mailboxes,
+and S3K cutscene fades, miniboss request IDs and apparent-act restoration.
+
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.
 

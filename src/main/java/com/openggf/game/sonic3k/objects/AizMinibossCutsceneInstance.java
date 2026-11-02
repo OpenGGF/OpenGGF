@@ -335,7 +335,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         // written here (sonic3k.asm:136961-136966,179237-179240).
         S3kAizEventWriteSupport.setBossFlag(services(), false);
         int musicId = services().getApparentLevelMusicId();
-        if (musicId >= 0) services().playMusic(musicId);
+        if (musicId >= 0) services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), musicId));
         com.openggf.game.sonic3k.Sonic3kPlcLoader.applyRawQuietly(
                 com.openggf.game.sonic3k.Sonic3kPlcLoader.monitorPlcEntries(), services());
         setCustomFlag(FLAG_PARENT_BITS, getCustomFlag(FLAG_PARENT_BITS) | 0x10);

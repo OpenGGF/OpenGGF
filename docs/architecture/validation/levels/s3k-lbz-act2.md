@@ -174,6 +174,14 @@ Root's exact-hash source inspection has no material finding. No full LBZ route,
 new native picture or broader product breadth is certified. [Commands and owner
 limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r13-residency-smoke-regressions-native-row-pointers-and-ddz-fixture-entry--2026-10-17).
 
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
 
 ## Camera-admitted end-boss art ownership — 2026-11-02
 
