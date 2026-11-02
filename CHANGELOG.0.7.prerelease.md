@@ -5,6 +5,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
+
 - S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
 
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and

@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
+
 - S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
 
 - Knuckles restores the native animation after non-flat glide landings.

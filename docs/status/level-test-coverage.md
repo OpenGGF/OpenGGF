@@ -2480,3 +2480,8 @@ Combined integration passes25 boss/rewind checks, including the already-owned
 ready-job camera-exit edge, within322 functional cases with zero skips; both
 known replay frontiers remain red. Inherited cold traversal, roster/donor/viewport
 and presentation gaps remain open.
+
+HCZ1 miniboss release (2026-11-02): the [HCZ1 maintenance matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#miniboss-water-effect-release-2026-11-02)
+records independent native-player tracking and cooldown capture/restore before
+water-effect deletion. This local obligation does not certify broader route,
+character, donor or viewport coverage; inherited matrix gaps remain open.
