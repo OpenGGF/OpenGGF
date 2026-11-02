@@ -149,7 +149,7 @@ inspect Git status before retrying.
 Run the boundary's disposable-repository controls with:
 
 ```bash
-python3 -m unittest discover -s tools/testing -p 'test_checked_commit.py' -v
+python3 -m unittest discover -s tools/testing -p 'test_run_category_checked_commit.py' -v
 ```
 
 ## Trace Frontier Log
