@@ -628,12 +628,17 @@ class TestMhz1CutsceneObjects {
 
         controller.update(0, sonic);
 
+        SongFadeTransitionInstance fade = assertInstanceOf(SongFadeTransitionInstance.class, spawned.getFirst());
+        assertEquals(Sonic3kMusic.KNUCKLES.id, fade.getMusicIdForTest());
+        assertEquals(90, fade.nativeWaitWordForTest());
+        controller.update(1, sonic);
+        assertEquals(2, spawned.size(), "The cutscene starts its music transition only once");
         assertFalse(controller.isDestroyed());
-        assertEquals(1, spawned.size(),
+        assertEquals(2, spawned.size(),
                 "loc_63134 creates ChildObjDat_665BC during normal MHZ2 cutscene initialization");
-        assertEquals(0x03C8, spawned.getFirst().getX(),
+        assertEquals(0x03C8, spawned.get(1).getX(),
                 "ChildObjDat_665BC applies x offset -8 from the subtype $20 controller");
-        assertEquals(0x0748, spawned.getFirst().getY(),
+        assertEquals(0x0748, spawned.get(1).getY(),
                 "ChildObjDat_665BC keeps the controller y position");
     }
 
@@ -669,7 +674,7 @@ class TestMhz1CutsceneObjects {
         sonic.setAir(false);
 
         controller.update(0, sonic);
-        ObjectInstance switchChild = spawned.getFirst();
+        ObjectInstance switchChild = spawned.get(1);
         assertInstanceOf(AbstractObjectInstance.class, switchChild).setServices(services);
         switchChild.appendRenderCommands(new ArrayList<>());
 
@@ -750,7 +755,7 @@ class TestMhz1CutsceneObjects {
                 .withCamera(mhz2TriggerCamera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE)));
         controller.update(0, new TestablePlayableSprite("sonic", (short) 0x052A, (short) 0x0748));
-        ObjectInstance switchChild = spawned.getFirst();
+        ObjectInstance switchChild = spawned.get(1);
         AbstractObjectInstance childObject = assertInstanceOf(AbstractObjectInstance.class, switchChild);
         childObject.setServices(services);
 
@@ -867,7 +872,7 @@ class TestMhz1CutsceneObjects {
         }
         assertTrue(spawned.size() > 1,
                 "sub_65EB4 allocates loc_63324 leaf children once loc_63220 reaches the leaf-blower phase");
-        ObjectInstance leaf = spawned.get(1);
+        ObjectInstance leaf = spawned.get(2);
         assertInstanceOf(AbstractObjectInstance.class, leaf).setServices(services);
 
         int nativeRandom = new GameRng(GameRng.Flavour.S3K, 0x00010001).nextWord() & 0x1FF;
@@ -1441,7 +1446,10 @@ class TestMhz1CutsceneObjects {
         controller.update(frame++, sonic);
         assertTrue(controller.isDestroyed());
         assertEquals(73, palette.getColor(3).r);
-        assertEquals(1, spawned.stream().filter(SongFadeTransitionInstance.class::isInstance).count());
+        assertEquals(List.of(Sonic3kMusic.KNUCKLES.id, Sonic3kMusic.MHZ2.id),
+                spawned.stream().filter(SongFadeTransitionInstance.class::isInstance)
+                        .map(SongFadeTransitionInstance.class::cast)
+                        .map(SongFadeTransitionInstance::getMusicIdForTest).toList());
         for (int n = 0; n < 140 && !carrier.isDestroyed(); n++) carrier.update(frame++, sonic);
         assertTrue(carrier.isDestroyed());
         assertFalse(sonic.isObjectControlled(), "retired Knuckles must not strand the independent carrier");

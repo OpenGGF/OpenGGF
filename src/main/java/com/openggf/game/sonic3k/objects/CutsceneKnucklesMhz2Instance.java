@@ -183,6 +183,8 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
     private void routineInit() {
         initialized = true;
+        // loc_63134 calls sub_65DD6 before creating the switch child.
+        spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
         snapshotPaletteLine2();
         AizIntroArtLoader.applyKnucklesPalette(services());
         spawnSwitchChildOnce();

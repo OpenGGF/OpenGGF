@@ -5,6 +5,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his leaf-blower cutscene begins.
+
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.
   The end-of-act tally now culls whole offscreen elements and individual mapping

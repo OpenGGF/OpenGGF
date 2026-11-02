@@ -1296,3 +1296,14 @@ pass, where `sub_3F5C2` detects the velocity mismatch and `loc_3F660` releases
 the player with y velocity -$100. The focused parachute regression covers this
 ordering; full cold-route, viewport/donor breadth and carry/landing rewind
 remain inherited obligations rather than certification from this component check.
+
+## Cutscene music follow-up (2026-11-02)
+
+The normal-route subtype $20 controller now queues the native 90-word fade to
+Knuckles’ theme during initialization (`loc_63134` → `sub_65DD6`).
+`TestMhz1CutsceneObjects.mhz2CutsceneNormalRouteSpawnsSwitchChildDuringRomInit`
+checks the track, wait word, allocation order and single submission; existing
+Knuckles-route tests retain the switch-only bypass. The existing MHZ2 level-music
+restore remains in place. This bounded change adds no captured state; existing
+cutscene graph rewind checks cover the controller/carrier graph. Broader route,
+viewport/donor/team and audible native comparison obligations remain inherited.

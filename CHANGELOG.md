@@ -14,6 +14,7 @@ Super/Hyper players can collect shields while transformed; shields stay hidden
 until reversion in S3K and S2.
 
 S3K act transitions start Act 2 music once at the title-card wait gate.
+MHZ2 now fades to Knuckles’ theme when his leaf-blower cutscene begins.
 
 Current fixes include the IceCap Act 1 miniboss charge flashes and falling-ice
 destruction/signpost handoff, the normal explosion effect and break sound for

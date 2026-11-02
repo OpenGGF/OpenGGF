@@ -2430,3 +2430,5 @@ records checks and inherited route/pixel coverage limits.
 The same audit corrected custom-flash counter ordering for AIZ1, HCZ1 and HCZ2.
 Their local matrices record the all-32-row output contract; existing route
 qualification limits remain.
+
+MHZ2 cutscene music follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#cutscene-music-follow-up-2026-11-02) records the restored Knuckles-theme fade and bounded regression coverage; inherited route and configuration gaps remain open.
