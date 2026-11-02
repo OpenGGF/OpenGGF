@@ -539,6 +539,8 @@ both acts, and 154 focused passes without skips. Gameplay capture is blocked
 by this environment's GLSL support; inherited route/configuration and native
 whole-scene coverage gaps remain open.
 
+SOZ2 opening-priority follow-up (2026-11-02): the [Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#opening-sandfall-priority-regression-2026-11-02) records the exact-entry path-trigger regression and its bounded coverage; broader route and presentation gaps remain.
+
 SOZ1 Knuckles bonus-route follow-up (2026-10-21): the
 [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#natural-knuckles-glowing-sphere-release-2026-10-21)
 records an independent natural `$1400` title/release/first ordinary input tick
