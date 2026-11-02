@@ -13,14 +13,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSszBossInputAuthorTool {
-    @Test
-    void missingBossAndDeathCannotOutscoreObservedDamage() {
-        double hit = SszBossInputAuthorTool.score(false, 8, 7, 1, false, 20);
-        assertTrue(hit > SszBossInputAuthorTool.score(false, 8, null, 99, false, 0),
-                "losing the target is not proof of defeating it");
-        assertTrue(hit > SszBossInputAuthorTool.score(true, 8, 0, 99, false, 0));
-        assertTrue(SszBossInputAuthorTool.score(false, 1, 0, 0, false, 0) > hit);
-    }
+    // The encounter scoring moved into the shared planner; see TestGoalExpander.
 
     @Test
     @RequiresRom(SonicGame.SONIC_3K)

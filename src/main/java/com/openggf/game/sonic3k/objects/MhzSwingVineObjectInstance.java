@@ -28,7 +28,7 @@ import java.util.List;
  * jump-release behavior; visual child segments use the MHZ misc PLC art.
  */
 public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements com.openggf.level.objects.observe.AttachmentSource, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native segment/handle deformation is vine geometry; captured players own their own facing.
     private static final int PRIORITY_BUCKET_LOW = 4; // priority $200
@@ -317,6 +317,19 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
         if (handleY != oldY) {
             prevHandleY = oldY;
         }
+    }
+
+    /** Route observation: a player the vine has grabbed ($32 set) hangs from the handle. */
+    @Override
+    public java.util.Optional<com.openggf.level.objects.observe.Attachment> attachmentOf(
+            com.openggf.game.PlayableEntity player) {
+        for (PlayerState state : new PlayerState[]{p1, p2}) {
+            if (state.grabFlag != 0 && state.player == player) {
+                return java.util.Optional.of(new com.openggf.level.objects.observe.Attachment(
+                        com.openggf.level.objects.observe.AttachmentKind.HANG, handleX, handleY, false));
+            }
+        }
+        return java.util.Optional.empty();
     }
 
     private void updatePlayer(PlayerState state, AbstractPlayableSprite player) {

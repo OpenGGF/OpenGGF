@@ -16,7 +16,8 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** Obj_DEZMiniboss $A6: independent eye publishes both eight-hit phases. */
-public final class DezMinibossInstance extends DezMinibossSprite implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+public final class DezMinibossInstance extends DezMinibossSprite implements SpawnRewindRecreatable, ObjectVisualFacing.Source,
+        com.openggf.level.objects.observe.HitPointSource {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The eye and its radial ring/phase geometry have no native logical horizontal facing.
         return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
@@ -288,5 +289,23 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
             try { S3kSpriteMaskSupport.submitFrame(services().graphicsManager(),services().rom(),8,getX(),getY()); }
             catch(IOException failure) { throw new UncheckedIOException(failure); }
         }
+    }
+
+    /**
+     * Obj_DEZMiniboss: collision_property counts up, then resets between phases. $7DF8C is the first
+     * phase's transition; $7E0A6 owns the second eight hits; $85668 is the defeat countdown.
+     */
+    public static int remainingHits(int code, int hits) {
+        return code == 0x85668 ? 0 : code == 0x7E0A6 ? 8 - hits : code == 0x7DF8C ? 8 : 16 - hits;
+    }
+
+    @Override
+    public int hitsRemaining() {
+        return remainingHits(codePointer, collisionProperty);
+    }
+
+    @Override
+    public boolean defeated() {
+        return hitsRemaining() == 0;
     }
 }

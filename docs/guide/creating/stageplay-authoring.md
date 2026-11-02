@@ -241,13 +241,17 @@ changed during planning). None of them proves the destination unreachable. A
 failure exits 2 and still returns the result with its diagnostics.
 
 Player searches are limited to 1536 pixels across and 768 up or down from the
-start, and to the given budgets. They search real physics over the level's
-terrain with the same steering as `MOVE_TO`, try direct steering first, then
-64- and 128-pixel run-ups. Jumps that the terrain needs are allowed with a
-penalty. A walk that fails is tried again at a run on the same terrain, if
-budget remains; if running reaches the destination, the message adds `terrain
-near x=…: needs Run`. A passed check describes this exact input; later edits,
-moving objects, water and level events can change the outcome.
+start, and to the given counts: `--nodes` caps expansions and `--ticks` caps
+simulated frames; `--millis` only cancels a search that runs too long. A
+static-terrain probe proposes controller rows with the same steering as
+`MOVE_TO`, trying direct steering first and a run-up detour from the start, with
+jumps where the terrain needs them. The live scene then replays those rows from
+the shot's first frame, and only that replay can verify the route. A verified
+player route is saved in the scene as a frozen input track (`inputTracks`,
+document version 9): the exact controller rows, replayed as recorded, with no
+commands inside its interval. A walk that fails is not retried at a run; plan
+again with `--travel RUN`. A passed check describes this exact input; later
+edits, moving objects, water and level events can change the outcome.
 
 ### Motion details
 
