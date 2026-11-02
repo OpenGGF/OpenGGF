@@ -549,7 +549,12 @@ public final class LiveRewindManager {
     }
 
     /** A drained/disabled held key must not bypass ordinary gameplay pacing. */
-    public boolean canEngageHeldRewind() { return keyEnabled() && !budget.empty(); }
+    public boolean canEngageHeldRewind() {
+        if (!keyEnabled() || budget.empty()) return false;
+        RewindContext context = rewindContextFromSupplier();
+        return context.supported() && (context.stepperKind() == StepperKind.SPECIAL_STAGE
+                || supportsLevelGeometry());
+    }
 
     /** Host pacing must not multiply rewind or release-reconciliation steps. */
     public boolean isRewindingOrReleasing() { return rewinding || releasePending; }
@@ -576,6 +581,7 @@ public final class LiveRewindManager {
         GameplayModeContext gameplayMode = boundOwner;
         if (parked || releasePending || !ready(gameplayMode)) return false;
         StepperKind requiredKind = context.stepperKind();
+        if (requiredKind == StepperKind.LEVEL_FRAME && !supportsLevelGeometry()) return false;
         if (gameplayMode == installedGameplayMode
                 && installedStepperKind == requiredKind
                 && rewindController != null
@@ -720,6 +726,15 @@ public final class LiveRewindManager {
             return new RewindContext(true, StepperKind.SPECIAL_STAGE);
         }
         return new RewindContext(false, StepperKind.LEVEL_FRAME);
+    }
+
+    private boolean supportsLevelGeometry() {
+        if (boundOwner == null || boundOwner.getLevelManager() == null) return true;
+        var level = boundOwner.getLevelManager().getCurrentLevel();
+        // The registered level adapter captures AbstractLevel's COW geometry.
+        // Custom Level implementations (including owner-bound proxies) lack
+        // that contract and must remain playable without live history.
+        return level == null || level instanceof com.openggf.level.AbstractLevel;
     }
 
     private int stepBackward(int steps) {

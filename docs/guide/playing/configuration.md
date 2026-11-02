@@ -253,6 +253,8 @@ Choose **Off**, **Per checkpoint**, **Per act** (default), or **Per zone** to se
 
 **Bonus-stage rewind** and **Special-stage rewind** both default to On. Each supported stage visit gets a fresh allowance using the same maximum; your main-stage balance is preserved until you return. These options and the budget controls are inactive while Rewind is Off. Unlimited still uses the retained gameplay history; it does not remove storage limits. Rewind history resets at committed level and act transition boundaries.
 
+Live rewind currently requires native level geometry. Standalone creator levels using custom geometry run normally without live rewind.
+
 Live rewind also reverses audio presentation from the recent mixed PCM history
 and freezes graphical fade progression to the restored rewind snapshots. The
 game resumes normal forward audio/fade presentation when the key is released.
