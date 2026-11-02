@@ -58,7 +58,8 @@ public class Sonic3kSpecialStageBanner {
                 break;
 
             case SLIDING_OUT:
-                slideOffset += BANNER_SLIDE_SPEED;
+                // loc_8EA4 (sonic3k.asm:11371-11384) tests the old offset;
+                // loc_8ECA only increments it. Reaching $C0 starts on the next update.
                 if (slideOffset >= BANNER_MAX_OFFSET) {
                     slideOffset = BANNER_MAX_OFFSET;
                     phase = Phase.IDLE;
@@ -66,6 +67,8 @@ public class Sonic3kSpecialStageBanner {
                         triggeredAdvance = true;
                         return true; // Signal: trigger player auto-advance
                     }
+                } else {
+                    slideOffset += BANNER_SLIDE_SPEED;
                 }
                 break;
 

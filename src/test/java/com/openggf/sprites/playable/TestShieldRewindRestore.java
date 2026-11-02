@@ -233,6 +233,27 @@ class TestShieldRewindRestore {
         assertEquals(1, instaShield.dplcInvalidations);
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(ShieldType.class)
+    void managerRefreshDefersDormantInstaShieldUntilCollectedShieldIsLost(ShieldType type) {
+        var sprite = instaShieldSprite();
+        var insta = new RecordingInstaShield();
+        var spawner = new RecordingPowerUpSpawner(new RecordingShield(type));
+        spawner.instaShields.add(insta);
+        sprite.setPowerUpSpawner(spawner);
+        sprite.giveShield(type);
+
+        sprite.refreshPersistentInstaShieldRegistration();
+
+        assertEquals(0, spawner.registerObjectCalls,
+                "a dormant insta-shield must not reclaim the collected shield's fixed slot");
+        assertFalse(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        sprite.removeShield();
+        sprite.tickStatus();
+        assertEquals(1, spawner.registerObjectCalls);
+        assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+    }
+
     private static TestablePlayableSprite instaShieldSprite() {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         var sprite = new TestablePlayableSprite("sonic", (short) 100, (short) 200) {

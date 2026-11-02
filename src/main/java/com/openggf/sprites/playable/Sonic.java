@@ -42,10 +42,7 @@ public class Sonic extends AbstractPlayableSprite {
 			if (getSpindashDustController() != null) {
 				getSpindashDustController().draw();
 			}
-			if (getSuperStateController() != null) {
-				PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT,
-						() -> getSuperStateController().renderPoweredTrail());
-			}
+
 			PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.BODY,
 					() -> getSpriteRenderer().drawFrame(
 					getMappingFrame(),
@@ -53,6 +50,12 @@ public class Sonic extends AbstractPlayableSprite {
 					getRenderCentreY(),
 					getRenderHFlip(),
 					getRenderVFlip()));
+			// Native SAT entries are front-to-back: the live body owns overlap
+			// before Obj_HyperSonicKnux_Trail at the same priority.
+			if (getSuperStateController() != null) {
+				PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT,
+						() -> getSuperStateController().renderPoweredTrail());
+			}
 			return;
 		}
 		PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.BODY, () -> {
