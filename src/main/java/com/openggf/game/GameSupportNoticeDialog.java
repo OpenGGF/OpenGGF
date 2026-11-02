@@ -19,8 +19,8 @@ import java.util.Objects;
  * than one page) instead of clipping it; the toggle and Continue stack when they cannot share a row.
  */
 public final class GameSupportNoticeDialog {
-    /** Where the bug-report wording sends players; shown verbatim, never translated. */
-    static final String REPORT_URL = "github.com/OpenGGF/OpenGGF";
+    /** Where the bug-report wording sends players, one per line; shown verbatim, never translated. */
+    static final List<String> LINKS = List.of("openggf.com/discord", "openggf.com/report-issue");
 
     public enum Result { NONE, CONTINUE, BACK }
 
@@ -129,8 +129,12 @@ public final class GameSupportNoticeDialog {
             MenuChrome.compact(font, pageText, l.x() + l.w() - PAD - MenuChrome.compactWidth(pageText),
                     l.urlY() + MenuChrome.compactMetrics().above(), MenuChrome.DIM);
         }
-        MenuChrome.compact(font, REPORT_URL, l.x() + (l.w() - MenuChrome.compactWidth(REPORT_URL)) / 2,
-                l.urlY() + MenuChrome.compactMetrics().above(), MenuChrome.CYAN);
+        int linkY = l.urlY();
+        for (String link : LINKS) {
+            MenuChrome.compact(font, link, l.x() + (l.w() - MenuChrome.compactWidth(link)) / 2,
+                    linkY + MenuChrome.compactMetrics().above(), MenuChrome.CYAN);
+            linkY += bodyPitch();
+        }
 
         MasterTitleScreen.Rect toggle = l.bounds(Focus.DONT_SHOW_AGAIN);
         if (focus == Focus.DONT_SHOW_AGAIN) MenuChrome.focus(font, toggle.x(), toggle.y(), toggle.w(), toggle.h(), frame);
@@ -166,7 +170,7 @@ public final class GameSupportNoticeDialog {
         int buttonW = Math.max(88, MenuChrome.compactWidth(continueLabel()) + 24);
         boolean stacked = toggleW + GAP + buttonW > inner;
         int controlsH = stacked ? 2 * BUTTON_H + GAP : BUTTON_H;
-        int fixed = PAD + MenuChrome.labelLineHeight() + GAP + GAP + bodyPitch() + GAP + controlsH + PAD;
+        int fixed = PAD + MenuChrome.labelLineHeight() + GAP + GAP + LINKS.size() * bodyPitch() + GAP + controlsH + PAD;
         int maxBodyH = MenuChrome.FOOTER_Y - 8 - fixed;
         List<String> lines = MenuStyle.wrap(bodyText(), inner, MenuStyle.COMPACT);
         List<List<String>> pages = paginate(lines, maxBodyH);
@@ -177,7 +181,7 @@ public final class GameSupportNoticeDialog {
         int titleY = y + PAD;
         int bodyY = titleY + MenuChrome.labelLineHeight() + GAP;
         int urlY = bodyY + bodyH + GAP;
-        int controlsY = urlY + bodyPitch() + GAP;
+        int controlsY = urlY + LINKS.size() * bodyPitch() + GAP;
         MasterTitleScreen.Rect toggle;
         MasterTitleScreen.Rect button;
         if (stacked) {

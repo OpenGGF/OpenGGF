@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 import static com.openggf.game.TestMasterTitleHub.press;
@@ -128,6 +129,12 @@ class TestMasterTitleSupportNotice {
         var layout = dialog.layout();
         assertTrue(layout.y() >= 0 && layout.y() + layout.h() <= MenuChrome.FOOTER_Y, "the panel clears the footer");
         assertEquals(1, layout.pages(), "English fits on one page at 320 px");
+        assertEquals(List.of("openggf.com/discord", "openggf.com/report-issue"), GameSupportNoticeDialog.LINKS);
+        for (String link : GameSupportNoticeDialog.LINKS) {
+            assertTrue(MenuChrome.compactWidth(link) <= layout.w() - 24, link + " fits inside the panel");
+        }
+        int linksBottom = layout.urlY() + GameSupportNoticeDialog.LINKS.size() * MenuChrome.compactLineHeight();
+        assertTrue(Math.min(layout.toggle().y(), layout.button().y()) >= linksBottom, "the controls sit below both links");
         for (GameSupportNoticeDialog.Focus focus : GameSupportNoticeDialog.Focus.values()) {
             MasterTitleScreen.Rect r = layout.bounds(focus);
             assertTrue(r.x() >= layout.x() && r.x() + r.w() <= layout.x() + layout.w()

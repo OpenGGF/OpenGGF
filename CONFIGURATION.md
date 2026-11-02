@@ -1442,7 +1442,8 @@ keeps Start, Resume, Restart and Return behind their persistence boundary.
 
 Starting a stock game whose OpenGGF support is unfinished first shows a **Please
 note** dialog naming its stage (currently Sonic 3 & Knuckles, alpha) and asking
-players to report bugs on Discord or GitHub. Back returns to the hub without
+players to report bugs on Discord (`openggf.com/discord`) or GitHub
+(`openggf.com/report-issue`). Back returns to the hub without
 starting; **Continue** starts the game. **Don't show again** hides that game's
 notice for its current stage; the choice is stored in `hub.dismissedNotices`
 as comma-separated `game:stage` tokens (for example `s3k:alpha`). Clear the value
