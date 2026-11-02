@@ -449,7 +449,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // Reused assets have no production load for the new team. Native
             // placement must be initialized once, rather than treated as a reanchor.
             boolean initializeNativeTeam = sharedLevel != null && !needsSharedLevelReload
-                    && entryProvenance != com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY;
+                    && !entryProvenance.isPositioned();
             AbstractPlayableSprite sprite = null;
             if (sharedLevel == null || needsSharedLevelReload) {
                 sprite = GameplayTeamBootstrap.registerActiveTeam(
@@ -525,8 +525,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // sprite roster but not re-run LevelManager.spawnPlayerAtStartPosition();
             // place the freshly registered team at the level's ROM start before
             // sidekick anchoring and ground snap.
-            if (customStartPositionProvided && entryProvenance
-                    == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY) {
+            if (customStartPositionProvided && entryProvenance.isPositioned()) {
                 if (startPositionIsCentre) {
                     sprite.setCentreX(startX);
                     sprite.setCentreY(startY);
@@ -557,10 +556,10 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // 9. Initialize camera via production path
             // A native load already placed the camera before sprite initialization.
             if (initializeNativeTeam
-                    || entryProvenance == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY) {
-                if (customStartPositionProvided
-                        && entryProvenance == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY) {
-                    com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(GameServices.level());
+                    || entryProvenance.isPositioned()) {
+                if (entryProvenance.isPositioned()) {
+                    com.openggf.level.LevelEntryInitialization.initializeCamera(
+                            GameServices.level(), entryProvenance);
                 } else {
                     GameServices.level().initCameraForLevel();
                 }
@@ -568,7 +567,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
             // 10. Initialize level events via production path
             if (initializeNativeTeam
-                    || entryProvenance == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY) {
+                    || entryProvenance.isPositioned()) {
                 GameServices.level().initLevelEventsForLevel();
             }
 
@@ -581,7 +580,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // handler must run again to restore the falling-intro state.
             var levelEventProvider = GameServices.module().getLevelEventProvider();
             if ((initializeNativeTeam
-                    || entryProvenance == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY)
+                    || entryProvenance.isPositioned())
                     && levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
                 s3kLem.applyZonePlayerState();
             }

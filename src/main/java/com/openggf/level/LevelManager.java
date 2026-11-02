@@ -3156,10 +3156,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // Package-private entry used by LevelCameraInitialization for explicit
     // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
     void initCameraForLevel(boolean initializeLoadRegisters) {
-        initCameraForLevel(initializeLoadRegisters, false);
+        initCameraForLevel(initializeLoadRegisters, null);
     }
 
-    void initCameraForLevel(boolean initializeLoadRegisters, boolean alreadySpawned) {
+    void initCameraForLevel(boolean initializeLoadRegisters,
+                            com.openggf.game.session.LevelEntryProvenance entryProvenance) {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3220,9 +3221,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
                 boolean savedEntry = bigRingReturn != null
                         || (checkpoint instanceof CheckpointState state && state.isActive());
-                if (alreadySpawned) {
+                if (entryProvenance != null) {
                     initialCamera.initializePositionedLevelStartCamera(camera, playable,
-                            getFeatureZoneId(), getFeatureActId(), savedEntry);
+                            getFeatureZoneId(), getFeatureActId(), entryProvenance);
                 } else {
                     initialCamera.initializeLevelStartCamera(camera, playable,
                             getFeatureZoneId(), getFeatureActId(), savedEntry);
@@ -3323,7 +3324,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     void repositionSidekicks(int xOffset, int yOffset,
                                    com.openggf.game.session.LevelEntryProvenance provenance) {
         java.util.Objects.requireNonNull(provenance, "provenance");
-        if (provenance != com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY) return;
+        if (!provenance.isPositioned()) return;
         placeSidekicks(xOffset, yOffset, true);
     }
 

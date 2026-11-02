@@ -89,4 +89,18 @@ class TestLevelEntryProvenance {
         assertEquals(0x3A7, tails.getCentreY());
         assertArrayEquals(history, fixture.sprite().copyYHistory());
     }
+
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void explicitPostSpawnFixtureUsesDeclaredBodyAndPreSpawnCamera() {
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_GUMBALL, 0)
+                .withEntryProvenance(LevelEntryProvenance.POSITIONED_FRESH_SPAWN)
+                .startPosition((short) 0x100, (short) 0x124).startPositionIsCentre()
+                .withFreshLevelStartLifecycle().build();
+        assertEquals(0x124, fixture.sprite().getCentreY());
+        assertEquals(0xC0, GameServices.camera().getY());
+    }
 }

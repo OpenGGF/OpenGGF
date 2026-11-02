@@ -9,8 +9,8 @@ public final class LevelEntryInitialization {
 
     public static void initializeCamera(LevelManager level, LevelEntryProvenance provenance) {
         Objects.requireNonNull(provenance, "provenance");
-        if (provenance == LevelEntryProvenance.POSITIONED_ENTRY) {
-            level.initCameraForLevel(true, true);
+        if (provenance.isPositioned()) {
+            level.initCameraForLevel(true, provenance);
         }
     }
 

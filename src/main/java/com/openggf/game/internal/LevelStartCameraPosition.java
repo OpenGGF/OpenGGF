@@ -7,8 +7,11 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public interface LevelStartCameraPosition {
     /** Reconstructs load registers from an explicitly positioned, already spawned player. */
     default void initializePositionedLevelStartCamera(Camera camera, AbstractPlayableSprite player,
-                                                     int zone, int act, boolean checkpoint) {
-        initializeLevelStartCamera(camera, player, zone, act, checkpoint);
+                                                     int zone, int act,
+                                                     com.openggf.game.session.LevelEntryProvenance provenance) {
+        if (provenance.hasPostSpawnCameraOrigin()) {
+            initializeLevelStartCamera(camera, player, zone, act, provenance.isReturn());
+        }
     }
 
     void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,

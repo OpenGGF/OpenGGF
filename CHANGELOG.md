@@ -5,8 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-- Native replay entries retain their start history; positioned S3K entries retain
-  pre-spawn vertical camera focus and initial native-object placement of Tails.
+- Native replay entries retain their start history and initial native-object
+  placement of Tails. Explicit spawn-order provenance enables native S3K camera
+  focus; unclassified positioned entries retain their existing camera behavior.
   Intentional positioned entries re-anchor the whole team without refilling history.
 
 - LBZ2 submits native EggRobo-head art during head initialization.

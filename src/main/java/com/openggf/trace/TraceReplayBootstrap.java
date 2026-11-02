@@ -466,8 +466,7 @@ public final class TraceReplayBootstrap {
     }
 
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
-        return entryProvenanceForTraceReplay(trace)
-                == com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY
+        return entryProvenanceForTraceReplay(trace).isPositioned()
                 && replaySeedTraceIndexForTraceReplay(trace) == 0
                 && !hasRecordedPreLevelPrefix(trace)
                 && !isS2TornadoRideStartMetadataCandidate(trace);
