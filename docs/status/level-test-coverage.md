@@ -2526,3 +2526,10 @@ and rising-floor entrance-pillar art priority have focused draw/priority checks;
 closure timing and its single impact sound are covered in the
 [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#encounter-presentation-follow-up--2026-11-02).
 Inherited route and native pixel coverage limits remain.
+
+SOZ push-switch overlap correction (2026-11-02): focused
+`TestSozMechanisms.handlePrecedesRailInSatButFollowsItInPainterOrder` pins
+the native main-handle-before-child-rail emission for both mounting sides and
+the reverse painter order. This local presentation fix changes no movement or
+rewind state; the SOZ matrix's inherited viewport/donor and native presentation
+acceptance gaps remain open.
