@@ -125,7 +125,14 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractS3kEg
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(5);
+        // ObjDat_EggCapsule supplies priority $200 (sonic3k.asm:182246-182250).
+        return RenderPriority.fromS3kWord(0x200);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat_EggCapsule uses make_art_tile(ArtTile_EggCapsule,0,1).
+        return true;
     }
 
     @Override

@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -123,6 +124,8 @@ class TestS3kSelfContainedTransientRewind {
             capturedShield.update(frame, player);
         }
 
+        for (int entry = 0; entry < 5; entry++) capturedShield.update(entry, player);
+        var capturedPlayback = animationLifecycle(capturedShield).captureRewindStateValue();
         int capturedSlot = capturedShield.getSlotIndex();
         int capturedAnim = animationStateField(capturedShield, "currentAnimId");
         int capturedFrame = animationStateField(capturedShield, "frameIndex");
@@ -325,6 +328,8 @@ class TestS3kSelfContainedTransientRewind {
                     .invoke(capturedShield, 1);
         }
 
+        for (int entry = 0; entry < 5; entry++) capturedShield.update(entry, player);
+        var capturedPlayback = animationLifecycle(capturedShield).captureRewindStateValue();
         int capturedSlot = capturedShield.getSlotIndex();
         int capturedAnim = animationStateField(capturedShield, "currentAnimId");
         assertEquals(1, countLive(objectManager, shieldClass),
@@ -333,6 +338,11 @@ class TestS3kSelfContainedTransientRewind {
         CompositeSnapshot snapshot = registry.capture();
         assertNotNull(snapshot, "capture() must return a snapshot");
 
+        var continuation = new java.util.ArrayList<ShieldAnimationArtLifecycle.RewindState>();
+        for (int entry = 0; entry < 32; entry++) {
+            capturedShield.update(entry, player);
+            continuation.add(animationLifecycle(capturedShield).captureRewindStateValue());
+        }
         objectManager.removeDynamicObject(capturedShield);
         player.removeShield();
         assertEquals(0, countLive(objectManager, shieldClass),
@@ -356,6 +366,13 @@ class TestS3kSelfContainedTransientRewind {
         assertFalse(restoredShield.isDestroyed(), "restored shield must remain live");
         assertTrue(restoredShield.isShieldFor(player, shieldType),
                 "restored concrete shield must be bound to the same live player");
+        assertNotSame(capturedShield, restoredShield, "restore recreates the retired native owner");
+        assertEquals(capturedPlayback, animationLifecycle(restoredShield).captureRewindStateValue());
+        for (int entry = 0; entry < continuation.size(); entry++) {
+            restoredShield.update(entry, player);
+            assertEquals(continuation.get(entry), animationLifecycle(restoredShield).captureRewindStateValue(),
+                    "recreated shield must replay cursor, countdown and FD/loop boundaries");
+        }
     }
 
     @Test
@@ -901,13 +918,13 @@ class TestS3kSelfContainedTransientRewind {
         ShieldAnimationArtLifecycle.RewindState state = lifecycle.captureRewindStateValue();
         ShieldAnimationArtLifecycle.RewindState replacement = switch (fieldName) {
             case "currentAnimId" -> new ShieldAnimationArtLifecycle.RewindState(
-                    value, state.frameIndex(), state.delayCounter(), state.mappingFrame());
+                    value, state.previousAnimationId(), state.frameIndex(), state.delayCounter(), state.mappingFrame());
             case "frameIndex" -> new ShieldAnimationArtLifecycle.RewindState(
-                    state.animationId(), value, state.delayCounter(), state.mappingFrame());
+                    state.animationId(), state.previousAnimationId(), value, state.delayCounter(), state.mappingFrame());
             case "delayCounter" -> new ShieldAnimationArtLifecycle.RewindState(
-                    state.animationId(), state.frameIndex(), value, state.mappingFrame());
+                    state.animationId(), state.previousAnimationId(), state.frameIndex(), value, state.mappingFrame());
             case "currentMappingFrame" -> new ShieldAnimationArtLifecycle.RewindState(
-                    state.animationId(), state.frameIndex(), state.delayCounter(), value);
+                    state.animationId(), state.previousAnimationId(), state.frameIndex(), state.delayCounter(), value);
             default -> throw new IllegalArgumentException("Unknown shield animation field: " + fieldName);
         };
         lifecycle.restoreRewindStateValue(replacement);

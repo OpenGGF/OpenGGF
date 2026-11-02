@@ -7,6 +7,13 @@ allocation/RNG checks are bounded maintenance coverage. Cold routes, pixel/audio
 and broader lifecycle products remain open; HCZ/CNZ button native-pointer
 authority remains an explicit inherited gap.
 
+AIZ2 ending animation (2026-11-02): [Knuckles and shield controls](../architecture/validation/levels/s3k-aiz2.md#ending-knuckles-and-shield-animation-2026-11-02)
+cover native script publication/cadence, deferred switches, elemental freeze,
+actual object recreation and forward replay. Fresh original-movie observations
+match 90 fire-shield and 70 Knuckles animation/position samples at actual V-int
+values, including the native first-bounce penetration. This is bounded evidence; whole-act, native floor/bounce and wider
+viewport/donor/team obligations remain inherited gaps.
+
 Upright S3K capsule effects (2026-11-02):
 `TestStageplayCapsuleControlRelease` checks the shared upright and separate HCZ
 owners for seven normal explosions, priority and child-owned break sound,
@@ -2462,3 +2469,7 @@ records the corrected pillar archive, ship/pilot/capsule sheets, flame palette,
 chase plane sources, helper lifetime and priority, plus the positioned rendering
 and rewind witness. Native pixel parity, intermediate redraw timing and broader
 route/configuration products remain open.
+
+MHZ2 ending capsule priority follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#ending-capsule-priority--2026-11-02)
+records the shared upright capsule sprite/tile attribute correction and bounded
+regression scope. Native pixel and route/configuration breadth remain open.

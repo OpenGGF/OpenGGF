@@ -642,6 +642,15 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         collectedSpecialRings |= (1 << (bitIndex & 0x1F));
     }
 
+    int specialRingCollection() {
+        return collectedSpecialRings;
+    }
+
+    void restoreSpecialStageSaveProgress(int rings, int stageIndex) {
+        collectedSpecialRings = rings & 0xFFFF;
+        currentSpecialStageIndex = stageIndex;
+    }
+
     // Engine-only write; full S3K SaveGame clears this at loc_C4CC, not level load.
     void clearSpecialRingCollection() {
         collectedSpecialRings = 0;

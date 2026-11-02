@@ -97,7 +97,7 @@ class TestS3kSaveSnapshotProvider {
                 com.openggf.game.save.RuntimeSaveCapture.capture(gameplayMode, ctx));
 
         assertEquals(4, payload.get("zone"));
-        assertEquals(1, payload.get("act"));
+        assertEquals(0, payload.get("act"));
         assertEquals(7, payload.get("lives"));
         assertEquals(5, payload.get("continues"));
         assertEquals(List.of(0, 2, 4, 6), payload.get("chaosEmeralds"));
@@ -258,6 +258,7 @@ class TestS3kSaveSnapshotProvider {
         var payload = fullSaveGamePayload(team, zone, act);
         assertEquals(nextZone, payload.get("zone"));
         assertEquals(nextAct, payload.get("act"));
+        assertEquals(0, payload.get("collectedSpecialRings"));
         assertEquals(new com.openggf.game.dataselect.DataSelectDestination(nextZone, nextAct),
                 new S3kDataSelectProfile().resolveLoadDestination(payload));
     }
@@ -279,16 +280,110 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(1, payload.get("act"));
     }
 
+    @Test
+    void specialStageSaveRestoresRingLowWordAndStageRotationInFreshRuntime() {
+        var mode = liveMode(0, 1);
+        var game = mode.getGameStateManager();
+        for (int bit : List.of(0, 15, 16, 31)) game.markSpecialRingCollected(bit);
+        game.consumeCurrentSpecialStageIndexAndAdvance();
+        game.consumeCurrentSpecialStageIndexAndAdvance();
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam("sonic", List.of()), 0, 0);
+        var provider = new S3kSaveSnapshotProvider();
+        var context = com.openggf.game.save.RuntimeSaveCapture.capture(mode, save);
+        game.markSpecialRingCollected(4);
+        game.consumeCurrentSpecialStageIndexAndAdvance();
+        var payload = provider.capture(SaveReason.SPECIAL_STAGE_SAVE, context);
+        assertEquals(0x8001, payload.get("collectedSpecialRings"));
+        assertEquals(2, payload.get("currentSpecialStageIndex"));
+        assertEquals(0, payload.get("act"), "Reload starts at the zone's first act");
+        var restored = new com.openggf.game.GameStateManager();
+        assertTrue(provider.restoreProgress(restored, 3, 0, payload));
+        assertTrue(restored.isSpecialRingCollected(0));
+        assertTrue(restored.isSpecialRingCollected(15));
+        assertFalse(restored.isSpecialRingCollected(16));
+        assertFalse(restored.isSpecialRingCollected(31));
+        assertFalse(restored.isSpecialRingCollected(4));
+        assertEquals(2, restored.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(false));
+    }
+
+    @Test
+    void oldAndCompletedSavesClearRingCollection() {
+        var provider = new S3kSaveSnapshotProvider();
+        var restored = new com.openggf.game.GameStateManager();
+        restored.markSpecialRingCollected(2);
+        restored.consumeCurrentSpecialStageIndexAndAdvance();
+        assertTrue(provider.restoreProgress(restored, 3, 0, Map.of()));
+        assertFalse(restored.isSpecialRingCollected(2));
+        assertEquals(0, restored.getCurrentSpecialStageIndex());
+        assertTrue(provider.restoreProgress(restored, 3, 0,
+                Map.of("clear", true, "collectedSpecialRings", 0xFFFF, "currentSpecialStageIndex", 3)));
+        for (int bit = 0; bit < 32; bit++) assertFalse(restored.isSpecialRingCollected(bit));
+        assertEquals(3, restored.getCurrentSpecialStageIndex());
+    }
+
+    @Test
+    void restoreRejectsInvalidRingMasksAndStageCursorsBeforeMutatingProgress() {
+        var provider = new S3kSaveSnapshotProvider();
+        for (Object invalid : List.of(-1, 65536, 1.5, Double.NaN, "2")) {
+            var restored = new com.openggf.game.GameStateManager();
+            restored.markSpecialRingCollected(2);
+            assertFalse(provider.restoreProgress(restored, 9, 0, Map.of("collectedSpecialRings", invalid)));
+            assertTrue(restored.isSpecialRingCollected(2));
+        }
+        for (Object invalid : List.of(-1, 7, 1.5, Double.POSITIVE_INFINITY, "2")) {
+            assertFalse(provider.restoreProgress(new com.openggf.game.GameStateManager(), 9, 0,
+                    Map.of("currentSpecialStageIndex", invalid)));
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"22,1,sonic,1", "10,1,knuckles,1", "10,0,sonic,0", "7,1,tails,0"})
+    void persistenceSavesResumeAtNativeZoneStart(int zone, int act, String main, int expectedAct) {
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam(main, List.of()), zone, act);
+        for (var reason : List.of(SaveReason.SPECIAL_STAGE_SAVE, SaveReason.LIVES_CONTINUES_SAVE)) {
+            var payload = new S3kSaveSnapshotProvider().capture(reason,
+                    com.openggf.game.save.RuntimeSaveCapture.capture(liveMode(zone, act), save));
+            assertEquals(zone, payload.get("zone"));
+            assertEquals(expectedAct, payload.get("act"));
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"22,0,9,0", "23,0,11,0", "23,1,23,1"})
+    void temporarySegmentsDoNotNormalizeIntoDifferentActs(int zone, int act, int savedZone, int savedAct) {
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam("sonic", List.of()), zone, act);
+        var payload = new S3kSaveSnapshotProvider().capture(SaveReason.SPECIAL_STAGE_SAVE,
+                com.openggf.game.save.RuntimeSaveCapture.capture(liveMode(zone, act), save));
+        assertEquals(savedZone, payload.get("zone"));
+        assertEquals(savedAct, payload.get("act"));
+    }
+
+    @Test
+    void sanctuaryConversionSavesTheImmutableGiantRingOrigin() {
+        var mode = liveMode(23, 1);
+        var origin = new com.openggf.level.BigRingReturnState(0, 0, 0, 0, 0, (byte) 0, (byte) 0,
+                0, 0, 0, 7, 1, -1, -1, 0, 0, 0, 0);
+        when(mode.getLevelManager().getBigRingReturn()).thenReturn(origin);
+        var save = SaveSessionContext.forSlot("s3k", 1, new SelectedTeam("sonic", List.of()), 0, 0);
+        var context = com.openggf.game.save.RuntimeSaveCapture.capture(mode, save);
+        when(mode.getLevelManager().getBigRingReturn()).thenReturn(null);
+        var payload = new S3kSaveSnapshotProvider().capture(SaveReason.SPECIAL_STAGE_SAVE, context);
+        assertEquals(7, payload.get("zone"));
+        assertEquals(0, payload.get("act"));
+    }
+
     private static Map<String, Object> fullSaveGamePayload(SelectedTeam team, int zone, int act) {
         var save = SaveSessionContext.forSlot("s3k", 1, team, zone, act);
         var mode = liveMode(zone, act);
+        var game = mode.getGameStateManager();
+        game.markSpecialRingCollected(4);
         var captured = new java.util.ArrayList<Map<String, Object>>();
         var services = new com.openggf.level.objects.TestObjectServices() {
             @Override public void requestSessionSave(SaveReason reason) {
                 captured.add(new S3kSaveSnapshotProvider().capture(reason,
                         com.openggf.game.save.RuntimeSaveCapture.capture(mode, save)));
             }
-        }.withGameState(new com.openggf.game.GameStateManager());
+        }.withGameState(game);
         com.openggf.game.sonic3k.S3kFullSaveGame.complete(services);
         assertEquals(1, captured.size());
         return captured.getFirst();

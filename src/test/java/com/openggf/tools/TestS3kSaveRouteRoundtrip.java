@@ -198,6 +198,84 @@ class TestS3kSaveRouteRoundtrip {
         }
     }
 
+    @ParameterizedTest(name = "giant ring debug success {0} survives save reload")
+    @ValueSource(booleans = {false, true})
+    void giantRingDebugResultsPersistAcrossFreshSaveLaunch(boolean success) throws Exception {
+        var team = new SelectedTeam("sonic", List.of());
+        writeHpzSlot(team);
+        var payload = new LinkedHashMap<>(new SaveManager(saves).readSlotSummary("s3k", 1).payload());
+        payload.put("zone", 0);
+        payload.put("act", 0);
+        payload.put("chaosEmeralds", List.of());
+        payload.put("emeraldStates", List.of(0, 0, 0, 0, 0, 0, 0));
+        payload.put("currentSpecialStageIndex", 2);
+        payload.put("collectedSpecialRings", 0);
+        new SaveManager(saves).writeSlot("s3k", 1, payload);
+        try (var session = launch(team, new DataSelectDestination(0, 0))) {
+            release(session, 600);
+            positionAtAizRing(session);
+            for (int frame = 0; frame < 360 && session.loop().getCurrentGameMode() == GameMode.LEVEL; frame++) {
+                session.step(frame == 60 ? new Bk2FrameInput(0, AbstractPlayableSprite.INPUT_JUMP, InputActionMasks.ACTION_A, false, "jump into ring") : null);
+                session.renderFrame();
+                assertFalse(session.player().getDead(), () -> "positioned ring entry " + state(session));
+            }
+            assertEquals(GameMode.SPECIAL_STAGE, session.loop().getCurrentGameMode(), () -> "native AIZ ring entry " + state(session));
+            assertTrue(GameServices.gameState().isSpecialRingCollected(1), "entry marks the ring before results");
+            assertEquals(2, session.loop().getActiveSpecialStageProvider().getCurrentStage(), "saved stage rotation");
+            for (int frame = 0; frame < 120; frame++) session.step(null);
+            if (success) session.loop().debugCompleteSpecialStageWithEmerald();
+            else com.openggf.SpecialStageLifecycleTestAccess.invoke(session.loop(),
+                    "enterResultsScreenWithDebugRings", new Class<?>[]{boolean.class, int.class}, false, 15);
+            boolean results = false;
+            for (int frame = 0; frame < 2400; frame++) {
+                session.step(null);
+                results |= session.loop().getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS;
+                if (results && session.loop().getCurrentGameMode() == GameMode.LEVEL) break;
+            }
+            assertTrue(results, "debug completion traverses the results screen");
+            assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "results return to AIZ");
+            SessionSaveRequests.flushPendingSaves();
+            var stored = new SaveManager(saves).readSlotSummary("s3k", 1).payload();
+            assertEquals(2, ((Number) stored.get("collectedSpecialRings")).intValue());
+            assertEquals(3, ((Number) stored.get("currentSpecialStageIndex")).intValue());
+            assertEquals(success, GameServices.gameState().hasEmerald(2));
+        }
+        clearSession();
+        try (var session = launch(team, new DataSelectDestination(0, 0))) {
+            assertTrue(GameServices.gameState().isSpecialRingCollected(1), "fresh save launch restores ring flag");
+            assertEquals(3, GameServices.gameState().getCurrentSpecialStageIndex());
+            assertEquals(-1, GameServices.level().getCheckpointState().getLastCheckpointIndex(), "slot reload has no session checkpoint");
+            release(session, 600);
+            positionAtAizRing(session);
+            for (int frame = 0; frame < 180; frame++) session.step(null);
+            assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode(), "collected ring cannot re-enter a stage");
+            assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance.class).stream()
+                    .noneMatch(ring -> ring.getSpawn() != null && ring.getSpawn().subtype() == 1),
+                    "restored flags suppress the native ring object");
+        }
+    }
+
+    private static void positionAtAizRing(GameplayCaptureSession session) {
+        // AIZ1's ring room uses the secondary collision path. Only this initial position/path is declared setup.
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(session.player(), 0x1BC8);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(session.player(), 0x4AA);
+        session.player().setTopSolidBit((byte) 0x0E);
+        session.player().setLrbSolidBit((byte) 0x0F);
+        var level = GameServices.level();
+        GameServices.camera().updatePosition(true);
+        com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+        level.initLevelEventsForLevel();
+        // Resize_MaxYFromX uses $0430 at Camera_X=$1B28. The start-of-act bound would kill this positioned setup.
+        GameServices.camera().setMaxY((short) 0x430);
+        GameServices.camera().setMaxYTarget((short) 0x430);
+        GameServices.camera().setX((short) (0x1BC8 - 160));
+        GameServices.camera().setY((short) (0x4AA - 96));
+        level.updateObjectPositions();
+        assertTrue(session.player().getCentreY() <= Math.max(GameServices.camera().getMaxY(),
+                GameServices.camera().getMaxYTarget()) + 224, "positioned setup must install the destination kill plane");
+    }
+
     private void writeHpzSlot(SelectedTeam team) throws Exception {
         System.setProperty(SavePaths.ROOT_PROPERTY, saves.toString());
         var payload = new LinkedHashMap<String, Object>();
