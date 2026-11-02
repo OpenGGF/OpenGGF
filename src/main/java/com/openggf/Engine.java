@@ -505,6 +505,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public com.openggf.stageplay.editor.StageplayRouteJob.Update pollRoute() { return stageplaySession.pollRoute(); }
 			public void requestRouteApply(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.requestRouteApply(document,root); }
 			public void cancelRoute() { stageplaySession.cancelRoute(); }
+			public void editInputRows(com.openggf.editor.route.RouteTapeWorkspace.SceneRows rows) {
+				routeTapes.openSceneRows(rows);
+				stageplay.deactivate();
+			}
 		});
 		this.routeTapes = new com.openggf.editor.route.RouteTapeWorkspace(new com.openggf.editor.route.RouteTapeWorkspace.Host() {
 			private final com.openggf.editor.route.RouteTapeJob job = new com.openggf.editor.route.RouteTapeJob(Engine.this::routeTapeRoms);

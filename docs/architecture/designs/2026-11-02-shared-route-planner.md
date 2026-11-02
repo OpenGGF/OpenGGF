@@ -426,6 +426,13 @@ Recorded during implementation; each states what the sketch said, what was built
   the solved artifact with `RouteArtifact.of(launch, tape, provenance)`, which drops the
   original's goal program, so a repaired route that had goals shows as edited until a replay
   checks them (reported to the planner lane). Goal-program authoring waits for an author task.
+- **Stageplay rows in the route tape timeline (editor, step 3).** The plan had the Stageplay
+  review show the frozen rows read-only inside the Stageplay HUD. Built instead: the review names
+  the planned row count, applied rows appear as an **Inputs** cue per bound actor, and **Edit input
+  rows** opens the track in the route tape workspace's scene-rows mode (same timeline, edits and
+  undo; file, replay and repair commands off). Apply returns them through `StageplayRoutes` as one
+  scene undo step, keeping the track's lane bindings; scene playback is the check. One timeline
+  component instead of a second Stageplay-only one.
 - **Shared worker plumbing not extracted yet (editor, step 1).** The plan put
   `StageplayRouteJob`'s process lifecycle into one shared helper. Step 3 replaces the Stageplay
   route job's planning, so the extraction waits for it rather than churning a file the planner

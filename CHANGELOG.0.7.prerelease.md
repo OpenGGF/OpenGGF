@@ -253,6 +253,8 @@ Unreleased. The earlier development themes remain in
   demand. Saving changes the files only after a passing replay; unfinished work
   saves as a draft that tests and native checks refuse. Repair keeps a route's
   rows where play still tracks a reference and reports the share it kept.
+  Stageplay's applied routes are now input rows; **Edit input rows** opens them in
+  the same timeline and applies edits back to the scene as one undo step.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,

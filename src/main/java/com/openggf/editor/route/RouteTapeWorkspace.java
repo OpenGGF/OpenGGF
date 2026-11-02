@@ -65,7 +65,7 @@ public final class RouteTapeWorkspace {
     }
 
     public enum Action {
-        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, REPAIR, USE_ATTEMPT, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
+        OPEN, NEW, SAVE, SAVE_DRAFT, REPLAY, REPAIR, USE_ATTEMPT, APPLY_ROWS, CANCEL_JOB, EXPORT_BK2, UNDO, REDO, TOGGLE, MARK, ROWS, INSERT_ROWS, DELETE_ROWS, DUPLICATE_ROWS, CLEAR_LANE, GO_TO_ROW, NEXT_FACT, MENU, EXIT;
 
         public String label() {
             return switch (this) {
@@ -76,6 +76,7 @@ public final class RouteTapeWorkspace {
                 case REPLAY -> UiMessages.text("editor.route_tape.action_replay");
                 case REPAIR -> UiMessages.text("editor.route_tape.action_repair");
                 case USE_ATTEMPT -> UiMessages.text("editor.route_tape.action_use_attempt");
+                case APPLY_ROWS -> UiMessages.text("editor.route_tape.action_apply_rows");
                 case CANCEL_JOB -> UiMessages.text("editor.route_tape.action_cancel_job");
                 case EXPORT_BK2 -> UiMessages.text("editor.route_tape.action_export_bk2");
                 case UNDO -> UiMessages.text("editor.route_tape.action_undo");
@@ -111,11 +112,28 @@ public final class RouteTapeWorkspace {
         EDITED,
         /** An unqualified draft: editors reopen it, consumers refuse it. */
         DRAFT,
+        /** A Stageplay frozen input track: its scene plays it; it is applied to the scene, not saved as a route. */
+        SCENE,
         /** No engine stamp covers the working content. */
         UNCHECKED
     }
 
     private static final int UNDO_LIMIT = 200;
+
+    /**
+     * A Stageplay frozen input track opened for row editing. {@code apply} returns edited rows to
+     * the scene as one of its own undo steps; {@code back} returns to the scene's workspace.
+     */
+    public record SceneRows(String title, String detail, InputTape original, java.util.function.Consumer<InputTape> apply,
+                            Runnable back) {
+        public SceneRows {
+            Objects.requireNonNull(title, "title");
+            Objects.requireNonNull(detail, "detail");
+            Objects.requireNonNull(original, "original");
+            Objects.requireNonNull(apply, "apply");
+            Objects.requireNonNull(back, "back");
+        }
+    }
 
     private final Host host;
     private final EditorProjectMenu menu = new EditorProjectMenu();
@@ -123,6 +141,7 @@ public final class RouteTapeWorkspace {
     private final Deque<InputTape> redo = new ArrayDeque<>();
     private Path stem;
     private boolean unsaved;
+    private SceneRows scene;
     private RouteArtifact loaded;
     private InputTape tape = InputTape.empty();
     private RouteTapeJob.Update job;
@@ -175,8 +194,14 @@ public final class RouteTapeWorkspace {
 
     // ---------------------------------------------------------------- route state
 
+    /** Whether rows are open: a route file, a new route or a scene's frozen track. */
     public boolean hasRoute() {
-        return loaded != null;
+        return loaded != null || scene != null;
+    }
+
+    /** The scene track being edited, or null for a route file. */
+    public SceneRows sceneRows() {
+        return scene;
     }
 
     /** The route's manifest path, or null for a new route not yet given a file. */
@@ -193,6 +218,7 @@ public final class RouteTapeWorkspace {
     }
 
     public boolean dirty() {
+        if (scene != null) return !tape.equals(scene.original());
         return loaded != null && (unsaved || !tape.equals(loaded.tape()));
     }
 
@@ -261,6 +287,7 @@ public final class RouteTapeWorkspace {
     }
 
     public Qualification qualification() {
+        if (scene != null) return Qualification.SCENE;
         if (loaded == null) return Qualification.EMPTY;
         RouteTapeJob.Update current = result();
         boolean stamped = !unsaved && working().engineQualified();
@@ -298,6 +325,8 @@ public final class RouteTapeWorkspace {
             case UNSUPPORTED -> UiMessages.text("editor.route_tape.qualification_unsupported");
             case EDITED -> UiMessages.text("editor.route_tape.qualification_edited");
             case DRAFT -> UiMessages.text("editor.route_tape.qualification_draft");
+            case SCENE -> UiMessages.text(dirty() ? "editor.route_tape.qualification_scene_edited"
+                    : "editor.route_tape.qualification_scene");
             case UNCHECKED -> UiMessages.text("editor.route_tape.qualification_unchecked");
         };
     }
@@ -311,6 +340,8 @@ public final class RouteTapeWorkspace {
 
     /** Launch facts as label/value pairs, in manifest words. */
     public List<String[]> launchFacts() {
+        if (scene != null) return List.of(fact(UiMessages.text("editor.route_tape.fact_scene_track"), scene.title()),
+                fact(UiMessages.text("editor.route_tape.fact_scene_detail"), scene.detail()));
         if (loaded == null) return List.of();
         LaunchContract launch = loaded.launch();
         var facts = new ArrayList<String[]>();
@@ -551,6 +582,7 @@ public final class RouteTapeWorkspace {
             host.finishPendingEdits();
             switch (action) {
                 case OPEN -> beforeReplace(this::openForm);
+                case APPLY_ROWS -> applySceneRows();
                 case NEW -> beforeReplace(this::newForm);
                 case SAVE -> save();
                 case SAVE_DRAFT -> saveDraft();
@@ -571,7 +603,7 @@ public final class RouteTapeWorkspace {
                 case GO_TO_ROW -> goToForm();
                 case NEXT_FACT -> nextFact();
                 case MENU -> routeMenu();
-                case EXIT -> deactivate();
+                case EXIT -> exit();
             }
         } catch (RuntimeException failure) {
             report(failure);
@@ -599,6 +631,7 @@ public final class RouteTapeWorkspace {
         // Editing reads drafts and unqualified routes too; consumers use RouteFiles.read.
         RouteArtifact candidate = RouteFiles.readDraft(absolute);
         cancelJob();
+        scene = null;
         stem = stemOf(absolute);
         unsaved = false;
         loaded = candidate;
@@ -612,6 +645,64 @@ public final class RouteTapeWorkspace {
         active = true;
         status = UiMessages.text("editor.route_tape.status_opened", Map.of("path", absolute.getFileName().toString(),
                 "rows", String.valueOf(tape.size())));
+    }
+
+    /** Opens a scene's frozen input track in the timeline; route files stay closed until reopened. */
+    public void openSceneRows(SceneRows rows) {
+        if (loaded != null && dirty()) throw new IllegalStateException(UiMessages.text("editor.route_tape.route_unsaved_first"));
+        cancelJob();
+        scene = Objects.requireNonNull(rows, "rows");
+        loaded = null;
+        stem = null;
+        unsaved = false;
+        tape = rows.original();
+        undo.clear();
+        redo.clear();
+        result = null;
+        pathResult = null;
+        repair = null;
+        cursor = 0;
+        first = 0;
+        mark = -1;
+        active = true;
+        status = UiMessages.text("editor.route_tape.status_scene_rows", Map.of("track", rows.title(),
+                "rows", String.valueOf(tape.size())));
+    }
+
+    /** Returns edited scene rows to their scene (one scene undo step), then goes back to it. */
+    private void applySceneRows() {
+        if (scene == null) throw new IllegalStateException(UiMessages.text("editor.route_tape.no_scene_rows"));
+        if (tape.size() == 0) throw new IllegalStateException(UiMessages.text("editor.route_tape.empty_tape"));
+        SceneRows rows = scene;
+        rows.apply().accept(tape);
+        scene = null;
+        deactivate();
+        rows.back().run();
+    }
+
+    /** Leaves for the level editor, or back to the scene; unapplied scene rows ask first. */
+    private void exit() {
+        if (scene == null) {
+            deactivate();
+            return;
+        }
+        SceneRows rows = scene;
+        Runnable back = () -> {
+            scene = null;
+            loaded = null;
+            tape = InputTape.empty();
+            deactivate();
+            rows.back().run();
+        };
+        if (!dirty()) {
+            back.run();
+            return;
+        }
+        menu.showActions(UiMessages.text("editor.route_tape.title_unapplied"), List.of(
+                action(Action.APPLY_ROWS),
+                new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_discard"),
+                        UiMessages.text("editor.route_tape.note_discard"), back),
+                new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_keep_editing"), () -> { })));
     }
 
     /** Re-reads the saved route after a save, keeping cursor and edit history. */
@@ -638,6 +729,7 @@ public final class RouteTapeWorkspace {
         for (int i = 0; i < rows; i++) builder.add(PadRow.NEUTRAL);
         InputTape rowsTape = builder.build();
         cancelJob();
+        scene = null;
         var fresh = RouteArtifact.of(launch, rowsTape, new com.openggf.route.Provenance("openggf-editor", "", "", List.of()));
         loaded = new RouteArtifact(new RouteManifest(launch, rowsTape.hash(), rowsTape.size(), fresh.checks(), true,
                 fresh.manifest().provenance(), List.of(), fresh.manifest().nativeFacts()), rowsTape);
@@ -707,6 +799,13 @@ public final class RouteTapeWorkspace {
 
     /** Called by the host before quitting; cancellation keeps the route open. */
     public void requestQuit(Runnable next) {
+        if (scene != null && dirty()) {
+            menu.showActions(UiMessages.text("editor.route_tape.title_unapplied"), List.of(
+                    new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_discard"),
+                            UiMessages.text("editor.route_tape.note_discard"), next),
+                    new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_keep_editing"), () -> { })));
+            return;
+        }
         beforeReplace(next);
     }
 
@@ -817,6 +916,7 @@ public final class RouteTapeWorkspace {
     }
 
     private void repairForm() {
+        requireRoute();
         requireRows();
         String self = UiMessages.text("editor.route_tape.reference_self"), other = UiMessages.text("editor.route_tape.reference_other");
         menu.showForm(UiMessages.text("editor.route_tape.title_repair"), List.of(
@@ -960,13 +1060,13 @@ public final class RouteTapeWorkspace {
 
     /** Inserts {@code count} rows before the cursor, copying the cursor row (or neutral rows). */
     public void insertRows(int count, boolean neutral) {
-        requireRoute();
+        if (!hasRoute()) throw new IllegalStateException(UiMessages.text("editor.route_tape.no_route"));
         PadRow template = neutral || tape.size() == 0 ? PadRow.NEUTRAL : tape.row(cursor);
         edit(RouteTapeEdits.insert(tape, Math.min(cursor, tape.size()), count, template));
     }
 
     private void insertForm() {
-        requireRoute();
+        if (!hasRoute()) throw new IllegalStateException(UiMessages.text("editor.route_tape.no_route"));
         menu.showForm(UiMessages.text("editor.route_tape.title_insert"), List.of(
                 new EditorProjectMenu.Field("count", UiMessages.text("editor.route_tape.field_count"), "1",
                         MenuTextEditor.Mode.TEXT, 6),
@@ -1010,6 +1110,14 @@ public final class RouteTapeWorkspace {
 
     private void routeMenu() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
+        if (scene != null) {
+            actions.add(action(Action.APPLY_ROWS));
+            actions.add(action(Action.GO_TO_ROW));
+            actions.add(new EditorProjectMenu.Action(UiMessages.text("editor.route_tape.action_back_to_scene"),
+                    () -> invoke(Action.EXIT)));
+            menu.showActions(scene.title(), actions);
+            return;
+        }
         actions.add(action(Action.OPEN));
         actions.add(action(Action.NEW));
         if (loaded != null) {
@@ -1029,12 +1137,14 @@ public final class RouteTapeWorkspace {
         return new EditorProjectMenu.Action(action.label(), () -> invoke(action));
     }
 
+    /** File, replay and repair commands need a route; scene rows go back to their scene instead. */
     private void requireRoute() {
+        if (scene != null) throw new IllegalStateException(UiMessages.text("editor.route_tape.scene_rows_only"));
         if (loaded == null) throw new IllegalStateException(UiMessages.text("editor.route_tape.no_route"));
     }
 
     private void requireRows() {
-        requireRoute();
+        if (!hasRoute()) throw new IllegalStateException(UiMessages.text("editor.route_tape.no_route"));
         if (tape.size() == 0) throw new IllegalStateException(UiMessages.text("editor.route_tape.empty_tape"));
     }
 

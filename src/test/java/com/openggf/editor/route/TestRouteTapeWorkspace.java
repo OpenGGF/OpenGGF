@@ -309,6 +309,30 @@ class TestRouteTapeWorkspace {
     }
 
     @Test
+    void sceneRowsRefuseRouteFileCommandsAndNeverReplaceAnUnsavedRoute() throws IOException {
+        var workspace = new RouteTapeWorkspace(new Host());
+        var applied = new java.util.ArrayList<com.openggf.route.InputTape>();
+        var rows = new RouteTapeWorkspace.SceneRows("Hero inputs", "Frames 10 to 43",
+                RouteFiles.tapeFromScript("34 R\n"), applied::add, () -> { });
+        workspace.open(RouteTapeFixtures.write(dir, "ehz", "10 R\n"));
+        workspace.invoke(RouteTapeWorkspace.Action.TOGGLE);
+        assertThrows(IllegalStateException.class, () -> workspace.openSceneRows(rows),
+                "Unsaved route rows are never discarded by opening scene rows");
+        workspace.invoke(RouteTapeWorkspace.Action.UNDO);
+        workspace.openSceneRows(rows);
+        assertNull(workspace.manifestPath());
+        for (var action : List.of(RouteTapeWorkspace.Action.SAVE, RouteTapeWorkspace.Action.SAVE_DRAFT,
+                RouteTapeWorkspace.Action.REPAIR, RouteTapeWorkspace.Action.EXPORT_BK2)) {
+            workspace.menu().close();
+            workspace.invoke(action);
+            assertTrue(workspace.status().contains("Scene inputs"), action + ": " + workspace.status());
+        }
+        workspace.menu().close();
+        workspace.invoke(RouteTapeWorkspace.Action.APPLY_ROWS);
+        assertEquals(List.of(RouteFiles.tapeFromScript("34 R\n")), applied);
+    }
+
+    @Test
     void pathFollowsTheCursorOnlyOnTheRouteLevelAndExportWritesALoadableMovieWithoutOverwriting() throws IOException {
         Path manifest = RouteTapeFixtures.write(dir, "ehz", "3 R\n2 R+A / L\n");
         var host = new Host();

@@ -459,7 +459,15 @@ searches new rows only where play drifts from it. A solved repair replaces the
 working rows as one undo step, reports how many original rows it kept, and marks
 kept and searched spans on the timeline; it still needs **Save qualified**. A
 stopped repair names the furthest row it reached and offers **Use best attempt**
-to inspect that unqualified attempt. **Export BK2** writes a new BizHawk movie of the rows and never
+to inspect that unqualified attempt.
+
+Stageplay input rows (an applied **Plan route**) open here too, from **Edit input
+rows** in Stageplay. Then the panel names the actor and frames, file, replay and
+repair commands are off, and **Apply to scene** returns the rows to the scene as
+one Stageplay undo step.
+
+Rows are numbered from 0 throughout: the timeline's **Row 156 of 226** is the
+157th of 226 rows, as in replay messages and **Go to row**. **Export BK2** writes a new BizHawk movie of the rows and never
 overwrites a file. The panel lists the manifest's native observations, such as
 lag frames seen on BizHawk; they are display only and never change a replay.
 

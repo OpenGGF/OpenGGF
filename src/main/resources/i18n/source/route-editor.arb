@@ -1,8 +1,16 @@
 {
   "@@locale": "en",
+  "editor.route_tape.action_apply_rows": "Apply to scene",
+  "@editor.route_tape.action_apply_rows": {
+    "description": "Route tape editor: Apply to scene"
+  },
   "editor.route_tape.action_back": "Back",
   "@editor.route_tape.action_back": {
     "description": "Route tape editor: Back"
+  },
+  "editor.route_tape.action_back_to_scene": "Back to Stageplay",
+  "@editor.route_tape.action_back_to_scene": {
+    "description": "Route tape editor: Back to Stageplay"
   },
   "editor.route_tape.action_cancel_job": "Cancel job",
   "@editor.route_tape.action_cancel_job": {
@@ -175,6 +183,14 @@
   "editor.route_tape.fact_roster": "Roster",
   "@editor.route_tape.fact_roster": {
     "description": "Route tape editor: Roster"
+  },
+  "editor.route_tape.fact_scene_detail": "Covers",
+  "@editor.route_tape.fact_scene_detail": {
+    "description": "Route tape editor: Covers"
+  },
+  "editor.route_tape.fact_scene_track": "Scene track",
+  "@editor.route_tape.fact_scene_track": {
+    "description": "Route tape editor: Scene track"
   },
   "editor.route_tape.fact_start": "Start",
   "@editor.route_tape.fact_start": {
@@ -398,15 +414,15 @@
   "@editor.route_tape.hud_released": {
     "description": "Route tape editor: released"
   },
-  "editor.route_tape.hud_row": "Row {row} of {last} · {pad} {button} {state}",
+  "editor.route_tape.hud_row": "Row {row} of {rows} · {pad} {button} {state}",
   "@editor.route_tape.hud_row": {
-    "description": "Route tape editor: Row <row> of <last> · <pad> <button> <state>",
+    "description": "Route tape editor: Row <row> of <rows> · <pad> <button> <state>",
     "placeholders": {
       "row": {
         "type": "String",
         "example": "3"
       },
-      "last": {
+      "rows": {
         "type": "String",
         "example": "3"
       },
@@ -570,6 +586,10 @@
   "@editor.route_tape.no_route": {
     "description": "Route tape editor: Open a route first."
   },
+  "editor.route_tape.no_scene_rows": "No scene inputs are open.",
+  "@editor.route_tape.no_scene_rows": {
+    "description": "Route tape editor: No scene inputs are open."
+  },
   "editor.route_tape.not_a_manifest": "Choose a .route.json manifest.",
   "@editor.route_tape.not_a_manifest": {
     "description": "Route tape editor: Choose a .route.json manifest."
@@ -607,6 +627,14 @@
   "editor.route_tape.qualification_qualified": "Qualified",
   "@editor.route_tape.qualification_qualified": {
     "description": "Route tape editor: Qualified"
+  },
+  "editor.route_tape.qualification_scene": "Scene inputs; play the scene to check them",
+  "@editor.route_tape.qualification_scene": {
+    "description": "Route tape editor: Scene inputs; play the scene to check them"
+  },
+  "editor.route_tape.qualification_scene_edited": "Scene inputs edited; apply to play them",
+  "@editor.route_tape.qualification_scene_edited": {
+    "description": "Route tape editor: Scene inputs edited; apply to play them"
   },
   "editor.route_tape.qualification_unchecked": "Not replayed",
   "@editor.route_tape.qualification_unchecked": {
@@ -683,6 +711,86 @@
         "example": "3"
       }
     }
+  },
+  "editor.route_tape.route_unsaved_first": "Save or discard the open route first.",
+  "@editor.route_tape.route_unsaved_first": {
+    "description": "Route tape editor: Save or discard the open route first."
+  },
+  "editor.route_tape.scene_rows_only": "Scene inputs are applied to their scene, not saved or replayed as a route.",
+  "@editor.route_tape.scene_rows_only": {
+    "description": "Route tape editor: Scene inputs are applied to their scene, not saved or replayed as a route."
+  },
+  "editor.route_tape.stageplay_input_rows": "Edit input rows",
+  "@editor.route_tape.stageplay_input_rows": {
+    "description": "Route tape editor: Edit input rows"
+  },
+  "editor.route_tape.stageplay_no_rows": "This actor has no input rows here; plan a route first.",
+  "@editor.route_tape.stageplay_no_rows": {
+    "description": "Route tape editor: This actor has no input rows here; plan a route first."
+  },
+  "editor.route_tape.stageplay_review_rows": "Planned {rows} controller rows from frame {from}",
+  "@editor.route_tape.stageplay_review_rows": {
+    "description": "Route tape editor: Planned <rows> controller rows from frame <from>",
+    "placeholders": {
+      "rows": {
+        "type": "String",
+        "example": "3"
+      },
+      "from": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.stageplay_rows_applied": "Applied input rows as one undo step; play the scene to check them.",
+  "@editor.route_tape.stageplay_rows_applied": {
+    "description": "Route tape editor: Applied input rows as one undo step; play the scene to check them."
+  },
+  "editor.route_tape.stageplay_rows_cue": "{actor} / Inputs",
+  "@editor.route_tape.stageplay_rows_cue": {
+    "description": "Route tape editor: <actor> / Inputs",
+    "placeholders": {
+      "actor": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.stageplay_rows_detail": "Frames {from} to {to}",
+  "@editor.route_tape.stageplay_rows_detail": {
+    "description": "Route tape editor: Frames <from> to <to>",
+    "placeholders": {
+      "from": {
+        "type": "String",
+        "example": "3"
+      },
+      "to": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.stageplay_rows_stale": "The scene changed while its rows were open; open them again.",
+  "@editor.route_tape.stageplay_rows_stale": {
+    "description": "Route tape editor: The scene changed while its rows were open; open them again."
+  },
+  "editor.route_tape.stageplay_rows_title": "{actor} inputs ({track})",
+  "@editor.route_tape.stageplay_rows_title": {
+    "description": "Route tape editor: <actor> inputs (<track>)",
+    "placeholders": {
+      "actor": {
+        "type": "String",
+        "example": "3"
+      },
+      "track": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "editor.route_tape.stageplay_rows_unavailable": "Input row editing is unavailable in this host.",
+  "@editor.route_tape.stageplay_rows_unavailable": {
+    "description": "Route tape editor: Input row editing is unavailable in this host."
   },
   "editor.route_tape.status_attempt": "Using the repair's best attempt ({rows} rows); it is not qualified.",
   "@editor.route_tape.status_attempt": {
@@ -812,6 +920,20 @@
   "@editor.route_tape.status_saving": {
     "description": "Route tape editor: Replaying before save in a separate worker."
   },
+  "editor.route_tape.status_scene_rows": "Editing {track} ({rows} rows); apply to return them to the scene.",
+  "@editor.route_tape.status_scene_rows": {
+    "description": "Route tape editor: Editing <track> (<rows> rows); apply to return them to the scene.",
+    "placeholders": {
+      "track": {
+        "type": "String",
+        "example": "3"
+      },
+      "rows": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "editor.route_tape.subtitle_export": "Writes a new BizHawk movie of the working rows.",
   "@editor.route_tape.subtitle_export": {
     "description": "Route tape editor: Writes a new BizHawk movie of the working rows."
@@ -877,6 +999,10 @@
         "example": "3"
       }
     }
+  },
+  "editor.route_tape.title_unapplied": "Unapplied scene inputs",
+  "@editor.route_tape.title_unapplied": {
+    "description": "Route tape editor: Unapplied scene inputs"
   },
   "editor.route_tape.title_unsaved": "Unsaved route edits",
   "@editor.route_tape.title_unsaved": {

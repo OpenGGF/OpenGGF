@@ -123,8 +123,9 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             pointer(input);
             return true;
         }
-        if (input.isKeyPressed(GLFW_KEY_R) || pad.pressed(VIEW)) workspace.invoke(workspace.jobRunning()
-                ? Action.CANCEL_JOB : Action.REPLAY);
+        if ((input.isKeyPressed(GLFW_KEY_R) || pad.pressed(VIEW)) && workspace.sceneRows() == null) {
+            workspace.invoke(workspace.jobRunning() ? Action.CANCEL_JOB : Action.REPLAY);
+        }
         if (input.isKeyPressed(GLFW_KEY_SPACE) || input.isKeyPressed(GLFW_KEY_ENTER) || pad.pressed(SOUTH)) {
             workspace.invoke(Action.TOGGLE);
         }
@@ -250,6 +251,7 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             case PASSES_UNSAVED -> ACCENT;
             case NOT_QUALIFIED, UNSUPPORTED -> WARN;
             case EDITED, DRAFT -> GOLD;
+            case SCENE -> workspace.dirty() ? GOLD : ACCENT;
             case EMPTY, UNCHECKED -> TEXT_DIM;
         };
     }
@@ -303,15 +305,27 @@ final class RouteHud implements RouteTapeOverlay.Painter {
             }
         }
         float buttonWidth = (w - 6) / 2;
-        Action[] actions = workspace.hasRoute()
-                ? new Action[] {workspace.jobRunning() ? Action.CANCEL_JOB : Action.REPLAY, Action.SAVE, Action.EXPORT_BK2, Action.OPEN}
-                : new Action[] {Action.OPEN};
-        String[] keys = {"R", "Ctrl S", null, "Ctrl O"};
-        EditorHud.Glyph[] glyphs = {EditorHud.Glyph.VIEW, null, null, null};
+        Action[] actions;
+        String[] keys;
+        EditorHud.Glyph[] glyphs;
+        if (workspace.sceneRows() != null) {
+            actions = new Action[] {Action.APPLY_ROWS, Action.EXIT};
+            keys = new String[] {null, "Esc"};
+            glyphs = new EditorHud.Glyph[] {null, EditorHud.Glyph.EAST};
+        } else if (workspace.hasRoute()) {
+            actions = new Action[] {workspace.jobRunning() ? Action.CANCEL_JOB : Action.REPLAY, Action.SAVE,
+                    Action.EXPORT_BK2, Action.OPEN};
+            keys = new String[] {"R", "Ctrl S", null, "Ctrl O"};
+            glyphs = new EditorHud.Glyph[] {EditorHud.Glyph.VIEW, null, null, null};
+        } else {
+            actions = new Action[] {Action.OPEN};
+            keys = new String[] {"Enter"};
+            glyphs = new EditorHud.Glyph[] {EditorHud.Glyph.SOUTH};
+        }
         for (int i = 0; i < actions.length; i++) {
             Action action = actions[i];
-            String key = workspace.hasRoute() ? keys[i] : "Enter";
-            EditorHud.Glyph glyph = workspace.hasRoute() ? glyphs[i] : EditorHud.Glyph.SOUTH;
+            String key = keys[i];
+            EditorHud.Glyph glyph = glyphs[i];
             button(c, nextHits, new Rect(x + (i % 2) * (buttonWidth + 6), bottom + (i / 2) * 21, buttonWidth, 18),
                     action.label(), controllerPrompts ? null : key, controllerPrompts ? glyph : null,
                     () -> workspace.invoke(action), false);
@@ -351,8 +365,9 @@ final class RouteHud implements RouteTapeOverlay.Painter {
         var view = workspace.timeline();
         var track = RouteTapeTimeline.TRACKS.get(view.track());
         boolean held = workspace.tape().size() > 0 && workspace.tape().row(view.cursor()).held(track.slot(), track.button());
+        // Rows are numbered from 0 everywhere (replay, divergence, Go to row); "of" names the row count.
         String head = UiMessages.text("editor.route_tape.hud_row", Map.of("row", String.valueOf(view.cursor()),
-                "last", String.valueOf(view.tapeRows() - 1), "pad", track.slot().name(), "button", buttonName(track.button()),
+                "rows", String.valueOf(view.tapeRows()), "pad", track.slot().name(), "button", buttonName(track.button()),
                 "state", UiMessages.text(held ? "editor.route_tape.hud_held" : "editor.route_tape.hud_released")));
         c.fittedText(head, dock.x() + 8, header, width * .6f, Size.SMALL, TEXT, 1);
         if (workspace.mark() >= 0) {
