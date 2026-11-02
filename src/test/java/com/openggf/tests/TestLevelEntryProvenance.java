@@ -57,7 +57,7 @@ class TestLevelEntryProvenance {
     }
 
     @Test @RequiresRom(SonicGame.SONIC_3K)
-    void shrineLockSurvivesInitialPlayableAssemblyAndPositionedReanchoring() throws Exception {
+    void shrineLockSurvivesInitialPlayableAssemblyAndNativeReanchoring() throws Exception {
         var trace = TraceData.load(Path.of(
                 "src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/dez23_2"));
         var meta = trace.metadata();
@@ -77,8 +77,16 @@ class TestLevelEntryProvenance {
         assertEquals(0x3A3, tails.getCentreY());
         assertTrue(tails.isObjectControlSuppressesMovement());
         GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), GameServices.level(),
-                LevelEntryProvenance.POSITIONED_ENTRY);
+                LevelEntryProvenance.NATIVE_LEVEL_START);
         assertEquals(0x1640, tails.getCentreX());
         assertEquals(0x3A3, tails.getCentreY());
+        // A caller explicitly choosing positioned entry does move the whole
+        // team, even if a cold intro had acquired the old sidekick body.
+        var history = fixture.sprite().copyYHistory();
+        GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), GameServices.level(),
+                LevelEntryProvenance.POSITIONED_ENTRY);
+        assertEquals(0x1620, tails.getCentreX());
+        assertEquals(0x3A7, tails.getCentreY());
+        assertArrayEquals(history, fixture.sprite().copyYHistory());
     }
 }

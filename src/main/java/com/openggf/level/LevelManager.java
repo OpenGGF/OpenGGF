@@ -3347,11 +3347,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     (short) (leaderInit.getCentreY() + 4));
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            // A positioned entry may follow initial Process_Sprites. For example,
-            // sub_90A4C (sonic3k.asm:197928-197936) has already acquired and placed
-            // both shrine participants. SpawnLevelMainSprites precedes that write;
-            // re-anchoring must not undo the later native owner.
-            if (positionedEntry && sidekick.isObjectControlSuppressesMovement()) continue;
+            // Intentional positioned entries re-anchor the whole team. Native
+            // entries bypass this operation through their explicit provenance.
             // ROM writes only the x_pos/y_pos words here (S2 InitPlayers
             // s2.asm:5191-5195; S3K SpawnLevelMainSprites_SpawnPlayers
             // sonic3k.asm:8396-8399), which on a 68000 leaves the adjacent
