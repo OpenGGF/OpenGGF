@@ -54,7 +54,7 @@ input:
     a: SPACE   # Player 1: action button A
     b: ""   # Player 1: action button B
     c: ""   # Player 1: action button C
-    start: BACKSPACE   # Player 1: start (in-game pause); keyboard-only, gamepad Start toggles input.pause instead
+    start: ENTER   # Player 1: start / pause (same visible pause as input.pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll

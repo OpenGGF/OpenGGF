@@ -778,7 +778,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.P1_A, GLFW_KEY_SPACE);
 		putDefault(SonicConfiguration.P1_B, "");
 		putDefault(SonicConfiguration.P1_C, "");
-		putDefaultKey(SonicConfiguration.START, GLFW_KEY_BACKSPACE);
+		putDefaultKey(SonicConfiguration.START, GLFW_KEY_ENTER);
 		putDefaultKey(SonicConfiguration.P2_UP, GLFW_KEY_I);
 		putDefaultKey(SonicConfiguration.P2_DOWN, GLFW_KEY_K);
 		putDefaultKey(SonicConfiguration.P2_LEFT, GLFW_KEY_J);

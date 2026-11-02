@@ -139,7 +139,7 @@ public final class ConfigCatalog {
         put(JUMP, derived(KEY,
                 "Deprecated flat-key compatibility alias for Player 1 action button A"));
         put(START, of("input.player1", "start", KEY,
-                "Player 1: start (in-game pause). Keyboard-only -- gamepad Start toggles PAUSE_KEY's pause instead"));
+                "Player 1: start / pause (same visible pause as input.pause)"));
         put(P2_UP, of("input.player2", "up", KEY, "Player 2: look up"));
         put(P2_DOWN, of("input.player2", "down", KEY, "Player 2: crouch/roll"));
         put(P2_LEFT, of("input.player2", "left", KEY, "Player 2: move left"));

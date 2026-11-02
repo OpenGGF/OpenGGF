@@ -70,6 +70,44 @@ class TestRecordedInputHostPause {
         }
     }
 
+    @Test
+    void liveStartPausesAndResumesWithoutLeavingANativePauseEdge() {
+        var config = SonicConfigurationService.createStandalone();
+        assertEquals(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, config.getInt(SonicConfiguration.START));
+        var input = new InputHandler(InputBindingFactory.supplier(config));
+        var playback = mock(PlaybackDebugManager.class);
+        boolean paused = false;
+        for (boolean expected : new boolean[]{true, false, true, false}) {
+            input.handleKeyEvent(config.getInt(SonicConfiguration.START), GLFW_PRESS);
+            input.refreshLogicalSnapshot();
+            paused = GameLoopPauseInput.nextUserPaused(GameMode.LEVEL, input, config,
+                    paused, false, false, playback, () -> false);
+            assertEquals(expected, paused);
+            assertFalse(GameLoopPauseInput.nativeStartEdge(input, playback));
+            input.update();
+            input.handleKeyEvent(config.getInt(SonicConfiguration.START), org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+            input.update();
+        }
+    }
+
+    @Test
+    void remappedStartUsesHostPauseAndRecordedStartStillUsesNativePause() {
+        var config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.START, org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE);
+        var input = new InputHandler(InputBindingFactory.supplier(config));
+        var playback = mock(PlaybackDebugManager.class);
+        input.handleKeyEvent(config.getInt(SonicConfiguration.START), GLFW_PRESS);
+        input.refreshLogicalSnapshot();
+        assertTrue(GameLoopPauseInput.nextUserPaused(GameMode.LEVEL, input, config,
+                false, false, false, playback, () -> false));
+        assertFalse(GameLoopPauseInput.nativeStartEdge(input, playback));
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, 0, 0, true, true), PlayerInputState.neutral()));
+        try (var lease = RecordedInputOwnership.acquire(input)) {
+            assertTrue(GameLoopPauseInput.nativeStartEdge(input, playback));
+        }
+    }
+
     private static boolean nextPaused(GameMode mode, InputHandler input) {
         return GameLoopPauseInput.nextUserPaused(mode, input, SonicConfigurationService.createStandalone(),
                 false, false, false, mock(PlaybackDebugManager.class), () -> false);
