@@ -50,8 +50,8 @@ final class MhzMinibossExplosionController extends AbstractObjectInstance
                     () -> S3kBossExplosionChild.createWithNativeInitSfx(getX(), getY()));
             // sub_83E90 uses the low word for X, then SWAP for Y, after allocation.
             int random = services().rng().nextRaw();
-            child.writeNativePositionWords(getX() + (random & 0x3F) - 0x20,
-                    getY() + ((random >>> 16) & 0x3F) - 0x20);
+            child.writeNativePositionWords(getX() + S3kExplosionOffsets.xOffset(random, 0x20),
+                    getY() + S3kExplosionOffsets.yOffset(random, 0x20));
             ObjectLifetimeOps.addDynamicAtReservedSlot(manager, child, slot);
         } catch (RuntimeException | Error failure) {
             manager.releaseDynamicSlot(slot);

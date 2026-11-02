@@ -32,7 +32,7 @@ public final class LrzEndBossExplosion extends AbstractObjectInstance implements
         if(child==null || child.getSlotIndex()<0 || child.isDestroyed()) return;
         int range=getSpawn().subtype()==6?0x10:0x20;
         int random=services().rng().nextRaw();
-        child.writeNativePositionWords(x+(random&(range*2-1))-range,y+((random>>>16)&(range*2-1))-range);
+        child.writeNativePositionWords(x+S3kExplosionOffsets.xOffset(random, range),y+S3kExplosionOffsets.yOffset(random, range));
     }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }

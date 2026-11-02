@@ -14,7 +14,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /** FBZ2's fixed-position {@code Obj_EggCapsule}, kept as its native real-SST graph. */
-public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
+public final class FbzEndEggCapsuleInstance extends AbstractS3kEggCapsuleInstance
         implements SolidObjectProvider, RomObjectCodePointerProvider, SpawnRewindRecreatable {
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
@@ -35,12 +35,9 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
     private boolean initialized;
     private boolean buttonSpawnAttempted;
     private boolean buttonPressed;
-    private boolean opened;
     private boolean releaseGraphAttempted;
     private boolean resultsAllocationAttempted;
     private boolean tailsEndingPoseApplied;
-    private int mappingFrame;
-    private int postOpenTimer;
     private int fragmentAttempts;
     private int firstFragmentSlot = -2;
 
@@ -81,14 +78,7 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
     void signalButtonPressed() { buttonPressed = true; }
 
     private void openOnce() {
-        opened = true;
-        mappingFrame = 1;
-        postOpenTimer = 0x40;
-        PlayableEntity candidate = services().playerQuery().nativeP2OrNull();
-        if (candidate instanceof AbstractPlayableSprite p2 && p2.getCpuController() != null) {
-            // sub_865DE: st Ctrl_2_locked. Check_TailsEndPose owns the later clear.
-            p2.getCpuController().setController2SignedLocked(true);
-        }
+        initializeCapsuleOpening();
         spawnReleaseGraphOnce();
     }
 
@@ -189,10 +179,7 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
     @Override public int getPriorityBucket() { return 4; }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.EGG_CAPSULE);
-        if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
-        }
+        drawCapsuleBody();
     }
 
     static int[] fragmentOffsets() { return FRAGMENT_X.clone(); }

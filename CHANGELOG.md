@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+S3K capsule and cutscene-button routines now share their common behavior; the
+object ownership audit also corrected explosion RNG/allocation drift.
+
 Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 
 - AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping

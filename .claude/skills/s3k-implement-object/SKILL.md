@@ -11,6 +11,12 @@ which behavior is required; derive unspecified details from the requested route.
 
 ## Porting checklist
 
+- Before adding a zone wrapper, identify the owning ROM entrypoint and existing
+  Java owner. Share the routine’s state transitions and arithmetic; preserve native
+  slot graphs and zone continuations through adapters. Rewind field layout is not
+  a reason to copy a common algorithm. See the shared-routine ownership section in
+  `docs/architecture/object-implementation-reference.md`.
+
 - Read the routine dispatch, init fallthrough/return, movement, collision,
   animation, sound, child spawning, and deletion paths that the object can take.
   Preserve 68000 widths, signed comparisons, update order, and timer expiry edges.
