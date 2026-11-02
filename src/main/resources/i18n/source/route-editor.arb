@@ -362,6 +362,10 @@
   "@editor.route_tape.field_template": {
     "description": "Route tape editor: New rows"
   },
+  "editor.route_tape.field_track_movie": "Movie the track was recorded from",
+  "@editor.route_tape.field_track_movie": {
+    "description": "Route tape editor: Movie the track was recorded from"
+  },
   "editor.route_tape.field_vint": "Start V-int",
   "@editor.route_tape.field_vint": {
     "description": "Route tape editor: Start V-int"
@@ -869,6 +873,10 @@
   "editor.route_tape.reference_self": "This route's saved rows",
   "@editor.route_tape.reference_self": {
     "description": "Route tape editor: This route's saved rows"
+  },
+  "editor.route_tape.reference_track": "A recorded track (.csv.gz) of a movie",
+  "@editor.route_tape.reference_track": {
+    "description": "Route tape editor: A recorded track (.csv.gz) of a movie"
   },
   "editor.route_tape.reference_unsaved": "Save the route first, or choose another reference.",
   "@editor.route_tape.reference_unsaved": {

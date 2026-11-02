@@ -454,7 +454,8 @@ draft, tests and native checks refuse it, and a draft never replaces a qualified
 route. The panel lists the route's goals, which replay checks on every row.
 
 **Repair** keeps the rows before the first editable row, then follows a reference
-(the route's saved rows, another route, a route script or a BizHawk movie) and
+(the route's saved rows, another route, a route script, a BizHawk movie, or a
+track recorded on the engine a movie's rows were authored against) and
 searches new rows only where play drifts from it. A solved repair replaces the
 working rows as one undo step, reports how many original rows it kept, and marks
 kept and searched spans on the timeline; it still needs **Save qualified**. A

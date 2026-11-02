@@ -999,15 +999,18 @@ public final class RouteTapeWorkspace {
         requireRoute();
         requireRows();
         String self = UiMessages.text("editor.route_tape.reference_self"), other = UiMessages.text("editor.route_tape.reference_other");
+        String recorded = UiMessages.text("editor.route_tape.reference_track");
         menu.showForm(UiMessages.text("editor.route_tape.title_repair"), List.of(
                 new EditorProjectMenu.Field("first", UiMessages.text("editor.route_tape.field_first_editable"),
                         String.valueOf(cursor), MenuTextEditor.Mode.TEXT, 8),
                 new EditorProjectMenu.Field("reference", UiMessages.text("editor.route_tape.field_reference"),
-                        unsaved ? other : self, List.of(self, other)),
+                        unsaved ? other : self, List.of(self, other, recorded)),
                 new EditorProjectMenu.Field("path", UiMessages.text("editor.route_tape.field_reference_path"),
                         host.initialDirectory() + "/", MenuTextEditor.Mode.PATH),
                 new EditorProjectMenu.Field("rows", UiMessages.text("editor.route_tape.field_reference_rows"), "",
                         MenuTextEditor.Mode.TEXT, 8),
+                new EditorProjectMenu.Field("movie", UiMessages.text("editor.route_tape.field_track_movie"),
+                        host.initialDirectory() + "/", MenuTextEditor.Mode.PATH),
                 new EditorProjectMenu.Field("from", UiMessages.text("editor.route_tape.field_window_from"),
                         String.valueOf(cursor), MenuTextEditor.Mode.TEXT, 8),
                 new EditorProjectMenu.Field("to", UiMessages.text("editor.route_tape.field_window_to"), "",
@@ -1018,25 +1021,39 @@ public final class RouteTapeWorkspace {
                 new EditorProjectMenu.Field("windows", UiMessages.text("editor.route_tape.field_max_windows"), "24",
                         MenuTextEditor.Mode.TEXT, 4)),
                 UiMessages.text("editor.route_tape.action_repair"), values -> io(() -> {
-                    RouteArtifact reference = values.get("reference").equals(self) ? savedReference()
-                            : reference(Path.of(values.get("path").strip()), values.get("rows").strip());
                     String to = values.get("to").strip();
-                    startRepair(reference, new RouteTapeJob.RepairBounds(Integer.parseInt(values.get("first").strip()),
+                    var bounds = new RouteTapeJob.RepairBounds(Integer.parseInt(values.get("first").strip()),
                             Integer.parseInt(values.get("authored").strip()), Integer.parseInt(values.get("windows").strip()),
-                            Integer.parseInt(values.get("from").strip()), to.isEmpty() ? -1 : Integer.parseInt(to)));
+                            Integer.parseInt(values.get("from").strip()), to.isEmpty() ? -1 : Integer.parseInt(to));
+                    if (values.get("reference").equals(recorded)) {
+                        startRepair(new RouteTapeJob.RecordedTrack(Path.of(values.get("path").strip()),
+                                Path.of(values.get("movie").strip())), bounds);
+                        return;
+                    }
+                    startRepair(values.get("reference").equals(self) ? savedReference()
+                            : reference(Path.of(values.get("path").strip()), values.get("rows").strip()), bounds);
                 }));
         menu.setSubtitle(UiMessages.text("editor.route_tape.subtitle_repair"));
     }
 
+    /** Starts a repair of the working rows along a track recorded by an earlier replay of its movie. */
+    public void startRepair(RouteTapeJob.RecordedTrack recorded, RouteTapeJob.RepairBounds bounds) throws IOException {
+        submitRepair(RouteTapeJob.Request.repair(working(), recorded, bounds), bounds);
+    }
+
     /** Starts a repair of the working rows against {@code reference}. */
     public void startRepair(RouteArtifact reference, RouteTapeJob.RepairBounds bounds) throws IOException {
+        submitRepair(RouteTapeJob.Request.repair(working(), reference, bounds), bounds);
+    }
+
+    private void submitRepair(RouteTapeJob.Request request, RouteTapeJob.RepairBounds bounds) throws IOException {
         requireRows();
         if (jobRunning()) throw new IllegalStateException(UiMessages.text("editor.route_tape.job_already_running"));
         if (bounds.firstEditable() > tape.size()) {
             throw new IllegalArgumentException(UiMessages.text("editor.route_tape.repair_first_range"));
         }
         repairFrom = workingContent();
-        host.startJob(RouteTapeJob.Request.repair(working(), reference, bounds));
+        host.startJob(request);
         job = host.pollJob();
         status = UiMessages.text("editor.route_tape.status_repairing");
     }

@@ -260,6 +260,17 @@ class TestRouteTapeWorkspace {
         assertEquals(RouteFiles.readDraft(manifest), request.reference(), "This route's saved rows are the reference");
         String original = workspace.workingContent();
 
+        workspace.invoke(RouteTapeWorkspace.Action.CANCEL_JOB);
+        workspace.invoke(RouteTapeWorkspace.Action.REPAIR);
+        workspace.menu().setValue("reference", "A recorded track (.csv.gz) of a movie");
+        workspace.menu().setValue("path", dir.resolve("route.csv.gz").toString());
+        workspace.menu().setValue("movie", dir.resolve("route.bk2").toString());
+        workspace.menu().submit();
+        var recorded = host.requests.getLast();
+        assertEquals(new RouteTapeJob.RecordedTrack(dir.resolve("route.csv.gz"), dir.resolve("route.bk2")), recorded.recorded());
+        assertNull(recorded.reference(), "A recorded track replaces the replayed reference");
+        host.update.set(new RouteTapeJob.Update(1, RouteTapeJob.Phase.RUNNING, RouteTapeJob.Kind.REPAIR, 1, 2, 0, 40,
+                "running", workspace.workingContent(), -1, null, null));
         var repaired = RouteFiles.tapeFromScript("20 R\n6 R+A\n14 R\n");
         var outcome = new RouteTapeJob.RepairOutcome(true, repaired, List.of(
                 new RouteTapeJob.RepairSpan(RouteTapeTimeline.MarkerKind.KEPT, 0, 0, 20),

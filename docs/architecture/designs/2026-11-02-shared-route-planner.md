@@ -446,6 +446,9 @@ Recorded during implementation; each states what the sketch said, what was built
   undo; file, replay and repair commands off). Apply returns them through `StageplayRoutes` as one
   scene undo step, keeping the track's lane bindings; scene playback is the check. One timeline
   component instead of a second Stageplay-only one.
+- **Recorded-track repair (editor, step 6).** The Repair form's third reference is a recorded
+  track and the exact movie it was recorded from; the worker reads them with
+  `RouteTrackReference` (which refuses a track for other rows) as `RouteRepairTool` does.
 - **Object-goal authoring (editor, step 4).** The plan's per-leg editor became: a goal program
   held in the working route (undo covers rows and goals together), an Add leg form over the
   `RouteGoals` words, Edit goals as text through `RouteCodec.formatGoals`/`parseGoals` for every

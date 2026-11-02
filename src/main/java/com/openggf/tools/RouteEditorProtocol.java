@@ -46,16 +46,22 @@ public final class RouteEditorProtocol {
      *            continue from; for {@link Kind#SCAN}: the row after which live objects are listed
      */
     public record Request(Kind kind, String route, Path target, boolean replace, String reference, Repair repair,
-                          int row, Map<String, Path> roms) {
+                          int row, Path track, Path movie, Map<String, Path> roms) {
         public Request {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(route, "route");
             roms = Map.copyOf(roms);
             if (kind == Kind.SAVE && target == null) throw new IllegalArgumentException("a save names its target stem");
-            if (kind == Kind.REPAIR && (reference == null || repair == null)) {
-                throw new IllegalArgumentException("a repair names its reference and bounds");
+            if (kind == Kind.REPAIR && (repair == null || (reference == null) == (track == null))) {
+                throw new IllegalArgumentException("a repair names its bounds and either a reference or a recorded track");
             }
+            if ((track == null) != (movie == null)) throw new IllegalArgumentException("a recorded track names its movie");
             if ((kind == Kind.PLAN || kind == Kind.SCAN) && row < 0) throw new IllegalArgumentException("negative row");
+        }
+
+        public Request(Kind kind, String route, Path target, boolean replace, String reference, Repair repair, int row,
+                       Map<String, Path> roms) {
+            this(kind, route, target, replace, reference, repair, row, null, null, roms);
         }
 
         public Request(Kind kind, String route, Path target, boolean replace, String reference, Repair repair,
@@ -111,6 +117,10 @@ public final class RouteEditorProtocol {
         if (request.target() != null) out.append("target ").append(text(request.target().toString())).append('\n');
         out.append("replace ").append(request.replace()).append('\n');
         out.append("row ").append(request.row()).append('\n');
+        if (request.track() != null) {
+            out.append("track ").append(text(request.track().toString())).append('\n');
+            out.append("movie ").append(text(request.movie().toString())).append('\n');
+        }
         if (request.reference() != null) out.append("reference ").append(text(request.reference())).append('\n');
         if (request.repair() != null) {
             var r = request.repair();
@@ -125,7 +135,7 @@ public final class RouteEditorProtocol {
     public static Request decodeRequest(LineReader input) throws IOException {
         if (!MAGIC.equals(input.readLine(MAGIC.length()))) throw new IOException("not a route worker request");
         Kind kind = null;
-        Path target = null;
+        Path target = null, track = null, movie = null;
         String route = null, reference = null;
         Repair repair = null;
         boolean replace = false;
@@ -133,7 +143,7 @@ public final class RouteEditorProtocol {
         var roms = new LinkedHashMap<String, Path>();
         for (String line; (line = input.readLine(MAX_RECORD_CHARS)) != null; ) {
             if (line.equals("end")) {
-                return new Request(kind, route, target, replace, reference, repair, row, roms);
+                return new Request(kind, route, target, replace, reference, repair, row, track, movie, roms);
             }
             String[] field = line.split(" ", 3);
             try {
@@ -143,6 +153,8 @@ public final class RouteEditorProtocol {
                     case "target" -> target = Path.of(untext(field[1]));
                     case "replace" -> replace = Boolean.parseBoolean(field[1]);
                     case "row" -> row = Integer.parseInt(field[1]);
+                    case "track" -> track = Path.of(untext(field[1]));
+                    case "movie" -> movie = Path.of(untext(field[1]));
                     case "reference" -> reference = untext(field[1]);
                     case "repair" -> {
                         String[] n = line.split(" ");

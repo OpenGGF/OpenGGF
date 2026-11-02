@@ -186,6 +186,22 @@ class TestRouteEditorWorker {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void aRecordedTrackIsReadAgainstTheExactMovieItWasRecordedFrom() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        var launch = LaunchContract.coldLevel(RomIdentity.ofFile("s3k", rom), new LevelId("s3k", 10, 0),
+                new Roster("tails", ""), 320, 0);
+        var route = RouteArtifact.of(launch, RouteFiles.tapeFromScript("10 -\n"),
+                new com.openggf.route.Provenance("test", "", "", List.of()));
+        var request = new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.REPAIR, RouteCodec.formatTransport(route),
+                null, false, null, new RouteEditorProtocol.Repair(0, 60, 1, 0, -1), 0,
+                Path.of("src/test/resources/routes/s3k/tracks/ssz1-tails-solo-cold-flight-320.csv.gz"),
+                Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"), Map.of("s3k", rom));
+        var refused = assertThrows(java.io.IOException.class, () -> run(request));
+        assertTrue(refused.getMessage().contains("was recorded from movie"), refused.getMessage());
+    }
+
+    @Test
     void aMissingRomIsReportedAsUnsupportedNotAsAPassOrACrash() throws Exception {
         Path manifest = RouteTapeFixtures.write(dir, "ehz", "4 R\n");
         var records = run(RouteEditorProtocol.Kind.SAVE, RouteFiles.readDraft(manifest), dir.resolve("ehz"), true, Map.of());

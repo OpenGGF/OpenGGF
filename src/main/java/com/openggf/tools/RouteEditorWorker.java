@@ -117,13 +117,20 @@ public final class RouteEditorWorker {
      */
     private static void repair(RouteEditorProtocol.Request request, RouteArtifact original, PrintStream output)
             throws IOException {
-        RouteArtifact referenceRoute = RouteCodec.parseTransport(request.reference());
         var hosts = EngineRouteHosts.withRoms(request.roms());
         var bounds = request.repair();
         ReferencePath reference;
         try {
-            reference = ReferencePath.extract(hosts, referenceRoute.launch(), referenceRoute.tape(),
-                    referenceRoute.tape().size());
+            if (request.track() != null) {
+                // A track recorded on the engine the movie's rows were authored against (step 6).
+                int frames = new com.openggf.debug.playback.Bk2MovieLoader().loadMovieOrInputLog(request.movie()).getFrameCount();
+                reference = RouteTrackReference.read(request.track(), request.movie(), original.launch(),
+                        RouteFiles.tapeFromMovie(request.movie(), frames));
+            } else {
+                RouteArtifact referenceRoute = RouteCodec.parseTransport(request.reference());
+                reference = ReferencePath.extract(hosts, referenceRoute.launch(), referenceRoute.tape(),
+                        referenceRoute.tape().size());
+            }
         } catch (RouteHostException refused) {
             output.println(RouteEditorProtocol.result(new RouteEditorProtocol.Result(
                     RouteEditorProtocol.Verdict.UNSUPPORTED, 0, refused.getMessage(), original.content().toString())));

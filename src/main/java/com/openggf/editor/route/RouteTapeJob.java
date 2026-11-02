@@ -99,35 +99,48 @@ public final class RouteTapeJob implements AutoCloseable {
      * @param target  for a save: the stem to write
      * @param replace for a save: replace the existing route rather than write a new one
      */
+    /** A reference recorded by an earlier replay: the track file and the exact movie it was recorded from. */
+    public record RecordedTrack(Path track, Path movie) {
+        public RecordedTrack {
+            Objects.requireNonNull(track, "track");
+            Objects.requireNonNull(movie, "movie");
+        }
+    }
+
     public record Request(Kind kind, RouteArtifact route, Path target, boolean replace, RouteArtifact reference,
-                          RepairBounds repair, int row) {
+                          RepairBounds repair, int row, RecordedTrack recorded) {
         public Request {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(route, "route");
             if (kind == Kind.SAVE && target == null) throw new IllegalArgumentException("a save names its target stem");
-            if (kind == Kind.REPAIR && (reference == null || repair == null)) {
-                throw new IllegalArgumentException("a repair names its reference and bounds");
+            if (kind == Kind.REPAIR && (repair == null || (reference == null) == (recorded == null))) {
+                throw new IllegalArgumentException("a repair names its bounds and either a reference or a recorded track");
             }
             if (row < 0 || row > route.tape().size()) throw new IllegalArgumentException("row outside the route: " + row);
         }
 
         public Request(Kind kind, RouteArtifact route, Path target, boolean replace) {
-            this(kind, route, target, replace, null, null, 0);
+            this(kind, route, target, replace, null, null, 0, null);
         }
 
         /** Repairs {@code route}, keeping its rows where play tracks {@code reference}. */
         public static Request repair(RouteArtifact route, RouteArtifact reference, RepairBounds bounds) {
-            return new Request(Kind.REPAIR, route, null, false, reference, bounds, 0);
+            return new Request(Kind.REPAIR, route, null, false, reference, bounds, 0, null);
+        }
+
+        /** Repairs {@code route} along a track recorded by an earlier replay of its movie. */
+        public static Request repair(RouteArtifact route, RecordedTrack recorded, RepairBounds bounds) {
+            return new Request(Kind.REPAIR, route, null, false, null, bounds, 0, recorded);
         }
 
         /** Plans rows after {@code [0, row)} that complete {@code route}'s goal program. */
         public static Request plan(RouteArtifact route, int row) {
-            return new Request(Kind.PLAN, route, null, false, null, null, row);
+            return new Request(Kind.PLAN, route, null, false, null, null, row, null);
         }
 
         /** Lists the live objects with capabilities after {@code row} rows of {@code route}. */
         public static Request scan(RouteArtifact route, int row) {
-            return new Request(Kind.SCAN, route, null, false, null, null, row);
+            return new Request(Kind.SCAN, route, null, false, null, null, row, null);
         }
     }
 
@@ -241,7 +254,9 @@ public final class RouteTapeJob implements AutoCloseable {
         }, RouteCodec.formatTransport(request.route()), request.target(), request.replace(),
                 request.reference() == null ? null : RouteCodec.formatTransport(request.reference()),
                 bounds == null ? null : new RouteEditorProtocol.Repair(bounds.firstEditable(), bounds.maxAuthoredRows(),
-                        bounds.maxWindows(), bounds.windowFrom(), bounds.windowTo()), request.row(), roms.get());
+                        bounds.maxWindows(), bounds.windowFrom(), bounds.windowTo()), request.row(),
+                request.recorded() == null ? null : request.recorded().track().toAbsolutePath(),
+                request.recorded() == null ? null : request.recorded().movie().toAbsolutePath(), roms.get());
         long token = ++generation;
         update = new Update(token, Phase.RUNNING, request.kind(), 1, 1, 0, rows, "Starting the route worker", content,
                 -1, null, null);
