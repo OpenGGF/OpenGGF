@@ -229,7 +229,7 @@ final class GameLoopBonusStageSession {
         }
         host.level().setBonusStageHudLayout(true);
         if (savedState != null) {
-            applyBonusStageEntryShieldRestore(
+            BonusStageShieldRestoration.restoreOnEntry(activeBonusStageProvider,
                     host.mainPlayable(), savedState.savedStatusSecondary());
         }
         restorePlayableStateForBonusTitleCard();
