@@ -1,5 +1,14 @@
 # FBZ Act 2 coverage matrix
 
+Capsule ownership maintenance (2026-11-02): the fixed capsule shares native
+opening writes, body drawing and body sprite/plane priority. Its separate button,
+five fragments, nine animals and explosion controller retain their native SST
+graph. `TestS3kSharedRoutineOwnership` pins body/button high art priority and the
+five FBZ2 fragment frames; FBZ1’s separate low-art fragment exception remains
+outside this final-capsule graph. `TestFbzFinalEggCapsule` and graph checks cover
+recreation/lifetime behavior. This does not renew whole-route or pixel/audio and
+wider configuration qualifications below.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

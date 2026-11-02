@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.S3kExplosionOffsets;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -74,8 +75,8 @@ public final class MhzEndBossExplosionController extends AbstractObjectInstance 
                     () -> S3kBossExplosionChild.createWithNativeInitSfx(getX(), getY()));
             child.setNativeLevelRepeatOffset(parent != null);
             int random = services().rng().nextRaw();
-            child.writeNativePositionWords(getX() + (random & 0x3F) - 0x20,
-                    getY() + ((random >>> 16) & 0x3F) - 0x20);
+            child.writeNativePositionWords(getX() + S3kExplosionOffsets.xOffset(random, 0x20),
+                    getY() + S3kExplosionOffsets.yOffset(random, 0x20));
             ObjectLifetimeOps.addDynamicAtReservedSlot(manager, child, slot);
         } catch (RuntimeException | Error failure) {
             manager.releaseDynamicSlot(slot);

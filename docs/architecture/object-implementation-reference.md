@@ -22,8 +22,8 @@ adapters. Preserve allocation order, failure semantics and rewind storage when
 sharing an algorithm. Scalar rewind fields can call a pure transition; they do
 not require an inline copy of that transition.
 
-S3K fixed capsules share `AbstractS3kEggCapsuleInstance` opening writes and body
-drawing. HCZ inherits the upright capsule's opening, effects and geometry, retaining
+S3K fixed capsules share `AbstractS3kEggCapsuleInstance` opening writes, native
+sprite/plane priority and body drawing. HCZ inherits the upright capsule's opening, effects and geometry, retaining
 its real button SST and results/geyser handoff. FBZ retains its five fragments,
 nine animals and independent explosion SST instead of being folded into a virtual
 button graph. `AbstractS3kCutsceneButtonInstance` owns common button proximity,
@@ -31,7 +31,12 @@ press and presentation; subtype actions remain adapters. `S3kExplosionOffsets`
 owns the low-word X/high-word Y arithmetic used by the real-SST and folded
 explosion controllers. Their timer/parent/lifetime adapters remain distinct.
 
-The 2026-11-02 ownership audit checked S1/S2 registries and common platform,
+The 2026-11-02 ownership audit scanned 827 S3K object files and triaged 74
+repeated pre-class `Obj_*` citation groups. Camera-boundary workers and Robotnik
+head/flame wrappers remain consolidation candidates; no additional supported-route
+defect was established for them. Repeated helper citations, parent/child roles and
+distinct native entrypoints were rejected as duplication evidence. The audit
+also checked S1/S2 registries and common platform,
 spring, spike, monitor, capsule/results and explosion families; S3K checks covered
 capsules, explosions, cutscene buttons, teleporters, springs and collapsing
 bridges. It found no additional confirmed same-routine owner in those S1/S2

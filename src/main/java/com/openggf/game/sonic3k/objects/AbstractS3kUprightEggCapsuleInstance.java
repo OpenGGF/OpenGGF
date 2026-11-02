@@ -9,7 +9,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
@@ -120,18 +119,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractS3kEg
 
     @Override
     public boolean isPersistent() {
-        return true;
-    }
-
-    @Override
-    public int getPriorityBucket() {
-        // ObjDat_EggCapsule supplies priority $200 (sonic3k.asm:182246-182250).
-        return RenderPriority.fromS3kWord(0x200);
-    }
-
-    @Override
-    public boolean isHighPriority() {
-        // ObjDat_EggCapsule uses make_art_tile(ArtTile_EggCapsule,0,1).
         return true;
     }
 

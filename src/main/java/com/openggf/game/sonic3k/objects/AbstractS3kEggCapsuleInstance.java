@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -15,6 +16,10 @@ public abstract class AbstractS3kEggCapsuleInstance extends AbstractObjectInstan
     protected AbstractS3kEggCapsuleInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
     }
+
+    // ObjDat_EggCapsule (sonic3k.asm:182246-182250) owns both native priorities.
+    @Override public final int getPriorityBucket() { return RenderPriority.fromS3kWord(0x200); }
+    @Override public final boolean isHighPriority() { return true; }
 
     /** sub_865DE (sonic3k.asm:181652-181667): common opening writes before child allocation. */
     protected final void initializeCapsuleOpening() {

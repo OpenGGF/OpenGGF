@@ -22,6 +22,30 @@ class TestS3kSharedRoutineOwnership {
     }
 
     @Test
+    void fixedCapsuleBodiesAndNativeFbzChildrenRetainRomPlanePriority() throws Exception {
+        var spawn = new com.openggf.level.objects.ObjectSpawn(100, 100, 0x2A, 0, 0, false, 0);
+        var fbz = new FbzEndEggCapsuleInstance(spawn);
+        for (var capsule : java.util.List.of(new CnzEggCapsuleInstance(spawn),
+                new HczEndBossEggCapsuleInstance(100, 100), fbz)) {
+            assertEquals(4, capsule.getPriorityBucket());
+            assertTrue(capsule.isHighPriority());
+            assertSame(AbstractS3kEggCapsuleInstance.class,
+                    capsule.getClass().getMethod("getPriorityBucket").getDeclaringClass());
+            assertSame(AbstractS3kEggCapsuleInstance.class,
+                    capsule.getClass().getMethod("isHighPriority").getDeclaringClass());
+        }
+        var button = new FbzEndEggCapsuleButtonInstance(spawn, fbz);
+        assertEquals(4, button.getPriorityBucket());
+        assertTrue(button.isHighPriority());
+        for (int part = 0; part < 5; part++) {
+            var fragment = new FbzEndEggCapsuleFragmentInstance(new com.openggf.level.objects.ObjectSpawn(
+                    100, 92, 0x2A, part << 1, 0, false, 0));
+            assertEquals(3, fragment.getPriorityBucket());
+            assertTrue(fragment.isHighPriority());
+        }
+    }
+
+    @Test
     void cutsceneButtonZonesCannotForkTheCommonDispatchOrPresentation() throws Exception {
         for (var adapter : new Class<?>[]{S3kCutsceneButtonObjectInstance.class,
                 Hcz2CutsceneButtonInstance.class, Cnz2CutsceneButtonInstance.class}) {

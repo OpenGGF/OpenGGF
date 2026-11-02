@@ -176,7 +176,6 @@ public final class FbzEndEggCapsuleInstance extends AbstractS3kEggCapsuleInstanc
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return spawn.y(); }
     @Override public boolean isPersistent() { return true; }
-    @Override public int getPriorityBucket() { return 4; }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         drawCapsuleBody();
