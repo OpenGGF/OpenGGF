@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
+  and snow corridor, including ICZ2’s run toward LBZ1.
+
 - **Mushroom Hill Act 2:** Restore the fade to Knuckles’ theme when his leaf-blower cutscene begins.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit

@@ -8,6 +8,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
@@ -334,6 +335,15 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             sprite.setAnimationFrameIndex(0);
             sprite.setAnimationTick(0);
         }
+        // AIZEndBoss_StartPostDefeatCutscene restores music after results,
+        // before the first walk dispatch (sonic3k.asm:138263-138275).
+        int music = services().levelManager() != null
+                ? services().levelManager().getApparentLevelMusicId()
+                : services().getCurrentLevelMusicId();
+        if (player.getInvincibleFrames() > 0 || player.isSuperSonic()) {
+            music = Sonic3kMusic.INVINCIBILITY.id;
+        }
+        if (music >= 0) services().playMusic(music);
         // Restore_PlayerControl does not clear Ctrl_1_locked; loc_694D4
         // explicitly leaves the main input latch asserted for loc_69526.
         inputLockOwners.add(player);

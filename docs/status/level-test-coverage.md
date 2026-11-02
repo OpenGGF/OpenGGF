@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+Post-results transition music (2026-11-02): the [ICZ2 corridor](../architecture/validation/levels/s3k-icz-act2.md#post-results-transition-music-2026-11-02)
+and [AIZ2 cutscene](../architecture/validation/levels/s3k-aiz2.md#post-results-transition-music-2026-11-02)
+track single-owner music restoration after results. Request-level checks retain
+the existing wider route, audio-output and lifecycle coverage gaps.
+
+
 S3K Act 1 music handoff (2026-11-01): results-owner regressions cover no
 premature music request across Act 1 zones and one request at the carried
 title wait gate. The existing title/transition lifecycle checks remain the

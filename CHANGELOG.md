@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
+  and snow corridor, including ICZ2’s run toward LBZ1.
+
 - Default Player 1 Start to Enter and Player 2 Start to Backspace; unify live Start with the visible pause,
   preventing a second native pause when resuming.
 

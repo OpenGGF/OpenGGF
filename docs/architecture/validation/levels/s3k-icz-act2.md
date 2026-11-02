@@ -383,3 +383,13 @@ removing repeated query/order work. See the [performance evidence](../../audits/
 for exact focused commands, results and structural counts. This local component
 change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
 product beyond the obligations already recorded above.
+
+
+## Post-results transition music (2026-11-02)
+
+The retained post-results owner restores the apparent act's level music once
+before the outgoing corridor/cutscene. `TestS3kPostResultsMusic` checks the
+results gate, the single music request and subsequent dispatches; existing boss,
+cutscene and rewind checks cover surrounding lifecycle behavior. This bounded
+request check does not certify audible synthesis, whole-route timing, or broader
+donor/team/viewport and rewind matrices; inherited obligations remain open.
