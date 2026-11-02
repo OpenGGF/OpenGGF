@@ -238,8 +238,8 @@ public final class StageplayRoutePlanner {
     }
 
     /** The point-goal task for {@code request}, with count budgets taken from it. */
-    static RouteTask.Author task(StageplayDocument document, StageplayRouteRequest request, String character) {
-        return new RouteTask.Author(launch(document, StageplayRouteContract.source(document, request.startFrame()), character,
+    static RouteTask.Point task(StageplayDocument document, StageplayRouteRequest request, String character) {
+        return new RouteTask.Point(launch(document, StageplayRouteContract.source(document, request.startFrame()), character,
                 request.startFrame()), goal(request), GoalProgram.of(new Guard(false, true, false, false)),
                 new SearchBudget(request.maxNodes(), request.maxTicks(), RETAINED_CHECKPOINTS, 0));
     }

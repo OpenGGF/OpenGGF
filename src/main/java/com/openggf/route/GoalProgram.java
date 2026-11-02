@@ -6,14 +6,21 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * The checks a route declares: a route-wide guard and an ordered list of legs. Replay evaluates
+ * The checks a route declares: a route-wide guard and an ordered list of legs, evaluated from
+ * {@code startRow} (rows before it, such as an inherited prefix, are not checked). Replay evaluates
  * it on every post-row sample; a search uses the same evaluator. An empty program checks rows only.
  */
-public record GoalProgram(Guard routeGuard, List<Leg> legs) {
+public record GoalProgram(Guard routeGuard, List<Leg> legs, int startRow) {
     public static final GoalProgram NONE = new GoalProgram(Guard.NONE, List.of());
+
+    /** A program checked from row 0. */
+    public GoalProgram(Guard routeGuard, List<Leg> legs) {
+        this(routeGuard, legs, 0);
+    }
 
     public GoalProgram {
         Objects.requireNonNull(routeGuard, "routeGuard");
+        if (startRow < 0) throw new IllegalArgumentException("negative start row");
         legs = List.copyOf(legs);
         var ids = new HashSet<String>();
         for (Leg leg : legs) {
@@ -29,7 +36,7 @@ public record GoalProgram(Guard routeGuard, List<Leg> legs) {
         return legs.isEmpty() && routeGuard.equals(Guard.NONE);
     }
 
-    /** A replay check evaluating this program; legs complete in order. */
+    /** A replay check evaluating this program from {@link #startRow()}; legs complete in order. */
     ReplayCheck check() {
         return new ReplayCheck() {
             private int leg;
@@ -46,6 +53,12 @@ public record GoalProgram(Guard routeGuard, List<Leg> legs) {
             }
 
             @Override public String afterRow(int row, RouteSample sample) {
+                if (row < startRow) {
+                    // Rows before the program's start (an inherited prefix) are not checked.
+                    previous = sample;
+                    legStart = row + 1;
+                    return null;
+                }
                 Leg current = leg < legs.size() ? legs.get(leg) : null;
                 boolean boundaryGoal = current != null && current.goal() instanceof RouteGoal.EnterBoundary;
                 String failure = routeGuard.violation(previous, sample, boundaryGoal);

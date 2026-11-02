@@ -211,6 +211,10 @@ Rejected:
    that share the opening. Native-check them with filler-row composition.
 7. One combined smoke run, owned by the lead.
 
+The lead reordered delivery to 1-4, 6, then 5a (the `stepFrame` harnesses onto shared replay) and 5b
+(the `RouteSteering` re-planners onto frozen fixtures). The mod rails stay as they are (see the
+creator frame-controller question below).
+
 ## Tradeoffs accepted
 
 - Weaker pruning and more replay work, in exchange for never merging dynamic worlds under guessed
@@ -241,6 +245,15 @@ Rejected:
   entries), which today yield `UNSUPPORTED_INLET`.
 - Whether the full corrected SSZ suffix is repairable within the first declared bounds.
 - Which owner facts the first native grab and phase goals need beyond the bridge and updraft.
+- **Creator frame-controller integration (deferred, needs explicit user approval).** The engine host
+  refuses a launch whose world runs a creator `GameplayFrameController` that substitutes native
+  input or holds the world (`INPUT_NOT_OWNED`), because the frozen rows would no longer own the
+  effective input. Options: keep the refusal (today); let a controller declare that it passes
+  physical input through unchanged, checked per row by the host; or record the controller's
+  effective output as a second tape lane the replay asserts against. Every option except the
+  refusal touches the Mod API surface (a declaration on the controller contract, or a new
+  observation hook), so none is implemented. The Typing of the Hedgehog rail builder keeps its own
+  loop until this is decided.
 
 ## Editor integration
 
@@ -536,6 +549,31 @@ Recorded during implementation; each states what the sketch said, what was built
 - **Arrival tolerance (step 3).** The search accepts arrival at 12 raw speed units (the old search
   tolerance) and the replayed end of the window must be settled within 64 (the old verification
   tolerance), so the two numbers remain, now named in `PointGoal`.
+- **Object capabilities are three engine interfaces (step 4).** `com.openggf.level.objects.observe`
+  holds `PhaseSource`, `AttachmentSource` and `HitPointSource`, implemented by the owning objects and
+  found with `instanceof` by the engine host. First owners: the SSZ `$77` cutscene bridge
+  (waiting/retracting/extended), the FBZ disappearing platform (hidden/appearing/solid/vanishing,
+  `Level_frame_counter`), the updraft (a passive `AIRFLOW` emission set only at its successful
+  lift and cleared each update), the MHZ swing vine (`HANG` while its `$32` grab flag is set),
+  `AbstractBossInstance` (its own hit counter and defeat flag), the DEZ miniboss (both eight-hit
+  phases) and the LRZ end boss. The host copies their facts into `RouteSample.objects()` and
+  `interactions()` (solid rides are `STANDING`); the core sees values only.
+- **Targets are resolved per sample (step 4).** `ObjectTarget.Placement`, `Instance` and `Typed`
+  (nearest live object of a type with a capability) resolve against each sample's object list
+  instead of binding once into the goal cursor, as the sketch proposed. Resolution is
+  deterministic (distance, then identity); a target that moves out of reach is simply absent.
+- **Goal programs start after a prefix (step 4).** `GoalProgram.startRow` leaves inherited prefix
+  rows unchecked, so an encounter authored after a long cold prefix replays with the same leg
+  bounds it was searched with.
+- **`RouteTask.Author` now means goal programs; scene shots are `RouteTask.Point` (step 4).** The
+  step-3 commit named the point-goal task `Author`; B's `Author(launch, goals, ...)` is the general
+  task, so the point task was renamed when the general one arrived.
+- **Encounter scoring moved into the core (step 4).** The boss authors' policies and their damage
+  score are `GoalExpander`'s encounter families; `SszBossInputAuthorTool` and
+  `DezMinibossInputAuthorTool` keep only their encounter tables and the shared
+  `EncounterRouteAuthor` front-end. MECHA2's two-phase ending is now whatever Mecha Sonic's own
+  `defeated()` reports (its hit counter); the zone ending flag the old tool read is not yet an
+  owner fact.
 
 ## Next step
 

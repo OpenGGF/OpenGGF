@@ -55,6 +55,7 @@ public final class RoutePlanner {
         return switch (task) {
             case RouteTask.Repair repair -> repair(repair, cancellation, listener, observer);
             case RouteTask.Author author -> author(author, cancellation, listener, observer);
+            case RouteTask.Point point -> point(point, cancellation, listener, observer);
         };
     }
 
@@ -91,6 +92,25 @@ public final class RoutePlanner {
 
     private PlanResult author(RouteTask.Author task, Cancellation cancellation, PlanProgress.Listener listener,
                               RouteReplay.Observer observer) {
+        var expander = new GoalExpander(task.goals(), task.prefix().size());
+        var search = new PrefixSearch(draft != null ? draft : hosts, task.launch(), task.prefix(), expander,
+                task.budget(), cancellation, listener);
+        PrefixSearch.Draft result = search.run();
+        if (result.stop() != null) return stopped(result, search);
+        PrefixSearch.Node end = result.end();
+        InputTape tape = PrefixSearch.tape(end);
+        RepairReport report = PrefixSearch.report(end, task.prefix().size(), true)
+                .comparedWith(task.prefix(), tape, false);
+        var provenance = new Provenance("RoutePlanner " + PLANNER_REVISION + " goal program", hosts.environment(),
+                "authored after a " + task.prefix().size() + "-row prefix toward legs "
+                        + task.goals().legs().stream().map(Leg::id).toList(), List.of());
+        RouteArtifact route = RouteArtifact.of(task.launch(), task.goals(), tape, provenance);
+        return qualify(route, List.of(), report, search, end, task.goals().legs().size(), cancellation, listener,
+                observer);
+    }
+
+    private PlanResult point(RouteTask.Point task, Cancellation cancellation, PlanProgress.Listener listener,
+                             RouteReplay.Observer observer) {
         var expander = new PointExpander(task.goal());
         var search = new PrefixSearch(draft != null ? draft : hosts, task.launch(), InputTape.empty(), expander,
                 task.budget(), cancellation, listener);

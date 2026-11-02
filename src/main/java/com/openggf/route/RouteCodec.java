@@ -284,6 +284,7 @@ public final class RouteCodec {
     private static ObjectNode goals(GoalProgram program) {
         ObjectNode node = MAPPER.createObjectNode();
         node.set("guard", guard(program.routeGuard()));
+        if (program.startRow() != 0) node.put("startRow", program.startRow());
         ArrayNode legs = node.putArray("legs");
         for (Leg leg : program.legs()) {
             ObjectNode l = legs.addObject();
@@ -303,7 +304,7 @@ public final class RouteCodec {
     }
 
     private static GoalProgram goals(JsonNode node) throws IOException {
-        object(node, "checks", Set.of("guard", "legs"), Set.of("guard", "legs"));
+        object(node, "checks", Set.of("guard", "legs", "startRow"), Set.of("guard", "legs"));
         var legs = new ArrayList<Leg>();
         for (JsonNode l : array(node.get("legs"), "legs")) {
             object(l, "leg", Set.of("id", "maxRows", "guard", "goal"), Set.of("id", "maxRows", "guard", "goal"));
@@ -321,7 +322,7 @@ public final class RouteCodec {
             };
             legs.add(new Leg(text(l, "id"), parsed, guard(l.get("guard")), integer(l, "maxRows")));
         }
-        return new GoalProgram(guard(node.get("guard")), legs);
+        return new GoalProgram(guard(node.get("guard")), legs, node.has("startRow") ? integer(node, "startRow") : 0);
     }
 
     private static ObjectNode guard(Guard guard) {
@@ -330,14 +331,16 @@ public final class RouteCodec {
         node.put("allowRingLoss", guard.allowRingLoss());
         node.put("allowDeath", guard.allowDeath());
         node.put("allowBoundary", guard.allowBoundary());
+        guard.holds().ifPresent(holds -> node.set("holds", predicate(holds)));
         return node;
     }
 
     private static Guard guard(JsonNode node) throws IOException {
         Set<String> keys = Set.of("allowHurt", "allowRingLoss", "allowDeath", "allowBoundary");
-        object(node, "guard", keys, keys);
+        object(node, "guard", Set.of("allowHurt", "allowRingLoss", "allowDeath", "allowBoundary", "holds"), keys);
         return new Guard(bool(node, "allowHurt"), bool(node, "allowRingLoss"), bool(node, "allowDeath"),
-                bool(node, "allowBoundary"));
+                bool(node, "allowBoundary"), node.has("holds") ? java.util.Optional.of(predicate(node.get("holds")))
+                        : java.util.Optional.empty());
     }
 
     private static ObjectNode predicate(SamplePredicate predicate) {
@@ -364,8 +367,88 @@ public final class RouteCodec {
                 ArrayNode clauses = node.putArray("clauses");
                 for (SamplePredicate clause : all.clauses()) clauses.add(predicate(clause));
             }
+            case SamplePredicate.Riding riding -> {
+                node.put("kind", "riding");
+                node.put("player", riding.player().name());
+                node.set("target", target(riding.target()));
+            }
+            case SamplePredicate.Attached attached -> {
+                node.put("kind", "attached");
+                node.put("player", attached.player().name());
+                node.set("target", target(attached.target()));
+                node.put("interaction", attached.kind().name());
+            }
+            case SamplePredicate.PhaseIs phase -> {
+                node.put("kind", "phase-is");
+                node.set("target", target(phase.target()));
+                node.put("phase", phase.phase());
+            }
+            case SamplePredicate.Defeated defeated -> {
+                node.put("kind", "defeated");
+                node.set("target", target(defeated.target()));
+            }
         }
         return node;
+    }
+
+    private static ObjectNode target(ObjectTarget target) {
+        ObjectNode node = MAPPER.createObjectNode();
+        switch (target) {
+            case ObjectTarget.Placement p -> {
+                node.put("kind", "placement");
+                node.put("zone", p.key().zone());
+                node.put("act", p.key().act());
+                node.put("layoutIndex", p.key().layoutIndex());
+                node.put("objectId", p.key().objectId());
+                node.put("subtype", p.key().subtype());
+            }
+            case ObjectTarget.Instance i -> {
+                node.put("kind", "instance");
+                node.put("epoch", i.key().epoch());
+                node.put("slot", i.key().slot());
+                node.put("generation", i.key().generation());
+                node.put("spawnId", i.key().spawnId());
+                node.put("dynamicId", i.key().dynamicId());
+                node.put("refKind", i.key().kind());
+            }
+            case ObjectTarget.Typed t -> {
+                node.put("kind", "typed");
+                node.put("typeKey", t.typeKey());
+                node.put("capability", t.capability().name());
+                t.region().ifPresent(r -> node.putArray("region").add(r.left()).add(r.top()).add(r.right()).add(r.bottom()));
+            }
+        }
+        return node;
+    }
+
+    private static ObjectTarget target(JsonNode node) throws IOException {
+        return switch (text(node, "kind")) {
+            case "placement" -> {
+                Set<String> keys = Set.of("kind", "zone", "act", "layoutIndex", "objectId", "subtype");
+                object(node, "target", keys, keys);
+                yield ObjectTarget.placement(integer(node, "zone"), integer(node, "act"), integer(node, "layoutIndex"),
+                        integer(node, "objectId"), integer(node, "subtype"));
+            }
+            case "instance" -> {
+                Set<String> keys = Set.of("kind", "epoch", "slot", "generation", "spawnId", "dynamicId", "refKind");
+                object(node, "target", keys, keys);
+                if (!node.get("epoch").isIntegralNumber()) throw new IOException("epoch must be an integer");
+                yield new ObjectTarget.Instance(new InstanceKey(node.get("epoch").asLong(), integer(node, "slot"),
+                        integer(node, "generation"), integer(node, "spawnId"), integer(node, "dynamicId"),
+                        text(node, "refKind")));
+            }
+            case "typed" -> {
+                object(node, "target", Set.of("kind", "typeKey", "capability", "region"), Set.of("kind", "typeKey", "capability"));
+                java.util.Optional<Region> region = java.util.Optional.empty();
+                if (node.has("region")) {
+                    ArrayNode r = array(node.get("region"), "region");
+                    if (r.size() != 4) throw new IOException("a region is [left, top, right, bottom]");
+                    region = java.util.Optional.of(new Region(r.get(0).asInt(), r.get(1).asInt(), r.get(2).asInt(), r.get(3).asInt()));
+                }
+                yield new ObjectTarget.Typed(text(node, "typeKey"), Capability.valueOf(text(node, "capability")), region);
+            }
+            default -> throw new IOException("unknown target kind: " + node.get("kind"));
+        };
     }
 
     private static SamplePredicate predicate(JsonNode node) throws IOException {
@@ -390,6 +473,24 @@ public final class RouteCodec {
                 var clauses = new ArrayList<SamplePredicate>();
                 for (JsonNode clause : array(node.get("clauses"), "clauses")) clauses.add(predicate(clause));
                 yield new SamplePredicate.All(clauses);
+            }
+            case "riding" -> {
+                object(node, "condition", Set.of("kind", "player", "target"), Set.of("kind", "player", "target"));
+                yield new SamplePredicate.Riding(PlayerSlot.valueOf(text(node, "player")), target(node.get("target")));
+            }
+            case "attached" -> {
+                Set<String> keys = Set.of("kind", "player", "target", "interaction");
+                object(node, "condition", keys, keys);
+                yield new SamplePredicate.Attached(PlayerSlot.valueOf(text(node, "player")), target(node.get("target")),
+                        InteractionKind.valueOf(text(node, "interaction")));
+            }
+            case "phase-is" -> {
+                object(node, "condition", Set.of("kind", "target", "phase"), Set.of("kind", "target", "phase"));
+                yield new SamplePredicate.PhaseIs(target(node.get("target")), text(node, "phase"));
+            }
+            case "defeated" -> {
+                object(node, "condition", Set.of("kind", "target"), Set.of("kind", "target"));
+                yield new SamplePredicate.Defeated(target(node.get("target")));
             }
             default -> throw new IOException("unknown condition kind: " + node.get("kind"));
         };

@@ -44,7 +44,7 @@ import java.util.List;
  * positions three child sprites, each drawing mapping frame zero at X-$40, X and X+$40.
  */
 public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        implements com.openggf.level.objects.observe.PhaseSource, RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
 
     // Native cutscene bridge/button art is geometric scenery; the cutscene character is separately owned.
     /** {@code move.w #$C0,$2E(a0)}. */
@@ -154,6 +154,19 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
 
     private SszZoneRuntimeState state() {
         return S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
+    }
+
+    /** Route observation phases: waiting for the cutscene, retracting toward rest, extended (at rest). */
+    private static final java.util.List<String> PHASES = java.util.List.of("waiting", "retracting", "extended");
+
+    @Override public java.util.List<String> phaseNames() { return PHASES; }
+
+    @Override public String phase() {
+        return extended ? "extended" : offset == START_OFFSET ? "waiting" : "retracting";
+    }
+
+    @Override public com.openggf.level.objects.observe.PhaseClock phaseClock() {
+        return com.openggf.level.objects.observe.PhaseClock.OWN_TIMER;
     }
 
     public int offsetForTest() { return offset; }
