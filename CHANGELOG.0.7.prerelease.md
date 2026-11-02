@@ -5,6 +5,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Powered shields:** Super/Hyper players can collect shields in S3K and S2.
+  Shields remain hidden while transformed and reappear after reverting.
+
 - **IceCap Act 1 miniboss:** Restore the accelerating ice-charge flashes,
   native ice-piece spread timing, falling/flickering destruction debris and
   independent palette/signpost handoff while explosions finish.

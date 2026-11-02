@@ -1403,7 +1403,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
                         if (liveShield != null) {
                                 shieldObject = liveShield;
-                                if (invincibleFrames > 0) {
+                                if (invincibleFrames > 0 || superSonic) {
                                         shieldObject.setVisible(false);
                                 }
                                 shieldObject.refreshArtAfterRewindRestore();
@@ -1414,7 +1414,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 shieldObject = null;
                                 if (powerUpSpawner != null) {
                                         shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                                        if (shieldObject != null && invincibleFrames > 0) {
+                                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
                                                 shieldObject.setVisible(false);
                                         }
                                         if (shieldObject != null) {
@@ -1426,6 +1426,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 refreshPersistentInstaShieldRegistration(instaShieldRegistered);
                 refreshInvincibilityStarsAfterRewindRestore();
+                if (superSonic) {
+                        setShieldVisible(false);
+                }
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -1524,10 +1527,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveShield(ShieldType type) {
-                // S2: Super Sonic cannot pick up shields
-                if (superSonic) {
-                        return;
-                }
+                // Monitor shield rewards set shield status even while transformed (S2 and S3K).
                 // Remove existing shield before granting new one
                 if (hasShield()) {
                         if (shieldObject != null) {
@@ -1547,8 +1547,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 ? powerUpSpawner.spawnShield(this, type)
                                 : null;
                         LOGGER.fine("DEBUG: ShieldObjectInstance created successfully: " + shieldObject);
-                        // If picked up while invincible, hide shield until invincibility ends
-                        if (shieldObject != null && invincibleFrames > 0) {
+                        // Retain the shield while powered up, but suppress its visual.
+                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
                                 shieldObject.setVisible(false);
                         }
                 } catch (Exception e) {
@@ -2862,7 +2862,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                         invincibilityObject = null;
                                 }
                                 if (shieldObject != null) {
-                                        shieldObject.setVisible(true);
+                                        shieldObject.setVisible(!superSonic);
                                 }
                                 restoreLevelMusicAfterInvincibility();
                         }

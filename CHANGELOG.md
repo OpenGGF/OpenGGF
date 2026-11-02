@@ -5,6 +5,9 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+Super/Hyper players can collect shields while transformed; shields stay hidden
+until reversion in S3K and S2.
+
 S3K act transitions start Act 2 music once at the title-card wait gate.
 
 Current fixes include the IceCap Act 1 miniboss charge flashes and falling-ice
