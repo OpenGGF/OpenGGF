@@ -1329,3 +1329,111 @@ also replay the recreated owner through subsequent script boundaries. These
 short checks do not depend on completing the original movie. Whole-act,
 viewport/donor/team breadth and the full native floor/bounce path remain
 inherited obligations.
+
+The reproduction commit is `77c2d603e`. Its queued
+`-Dtest=TestShieldAnimationArtLifecycle test -B` ran four cases with three
+expected failures and zero skips before the runtime change. `24c1a2e99`
+corrects playback; `25467ec26` supplies a missing test assertion import.
+The first fresh capture at that state matched all 90 available fire-shield and
+70 Knuckles mapping/cursor/countdown/script samples, but retained eight
+one-pixel rebound position differences. `5bf6a0f02` removes the proven extra
+first-bounce clamp and adds the independent landing-edge control. No trace
+comparison data supplies gameplay state.
+
+Focused commands use the existing original ROMs through absolute paths.
+Set `OPENGGF_REFERENCE_ROOT` to their existing checkout directory:
+
+```bash
+S3_ROM="$OPENGGF_REFERENCE_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+S1_ROM="$OPENGGF_REFERENCE_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen"
+S2_ROM="$OPENGGF_REFERENCE_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3_ROM" \
+  '-Dtest=TestShieldAnimationArtLifecycle,TestAiz2KnucklesAnimation,TestS3kShieldPriorityParity,TestShieldPublicationBanks,TestS3kSelfContainedTransientRewind,TestSonic3kLightningShieldObjectInstance,TestShieldRewindRestore' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3_ROM" \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
+  '-Dtest=TestS3kSelfContainedTransientRewind,TestShieldPublicationBanks#nativeElementalShieldKeepsDonatedMainBodyPixels,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Pguards '-Dtest=TestObjectPriorityBucketGuard,TestNativeObjectFacingGuard,TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestHelperStateRewindCoverageGuard' test -B
+```
+
+The first selection ran 70 cases, zero failures/errors, 12 skips at the
+animation-only state. The skips were the twelve donor-body cases requiring the
+S1/S2 properties. The second selection, after the clamp correction, passed
+80 cases with zero skips, including those twelve cases and the strengthened
+32-dispatch actual shield-recreation continuation. The simple
+`TestSonic3kLevelLoading` selector selects both matching test classes. Guards
+passed eight cases with zero skips. Earlier fix attempts stopped during test
+compilation for the added state constructor and then the missing assertion
+import; neither was an executed test failure or an attributed base failure.
+The actual Java 25/Lua 5.4 category preflight passed. No broad smoke or release
+full suite was run by this implementation delegate; combined validation and
+integration remain parent-owned.
+
+The final independent landing/cadence/recreation command, on
+`5bf6a0f0259bc814c7722fbc549600e991484572`, passed two cases with zero skips:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3_ROM" \
+  '-Dtest=TestAiz2KnucklesAnimation' test -B
+```
+
+### Fresh original-movie evidence
+
+Final runtime source is `5bf6a0f0259bc814c7722fbc549600e991484572`.
+The final durable external directory is `aiz2-animation-20261102-final/`.
+Set `ANIMATION_EVIDENCE` to its absolute path, as supplied in the implementation
+handoff; the capture provenance records the concrete paths.
+The preceding `aiz2-animation-20261102/` directory is explicitly the
+animation-only, pre-clamp diagnostic, not the final result.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3_ROM" compile exec:java \
+  -Dexec.mainClass=com.openggf.tools.TraceCaptureTool \
+  "-Dexec.args=--trace aiz_completerun --scale 1 --clip frames:25550:26050 --no-ghosts --out-dir $ANIMATION_EVIDENCE/original-tool-engine"
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off \
+  exec:exec -Dexec.executable=python3 \
+  "-Dexec.args=$ANIMATION_EVIDENCE/run_observed_capture.py %classpath"
+python3 "$ANIMATION_EVIDENCE/compare_observations.py"
+```
+
+The original tool produced
+`original-tool-engine/capture-aiz_completerun-20261102T122900Z.mov`.
+The rerunnable external diagnostic compiles an observing copy of the same tool;
+it reads live object state after the consumed production row and before render,
+without another update or any comparison-data writes. It records actual
+`EngineTiming` V-int, `ObjectManager` object clock, level clock, object slot,
+phase, position, mapping, script cursor and countdown in
+`engine-observations.csv`. Its independent 501-frame clip is pixel-identical to
+the original tool at every frame (frame-hash sequence SHA-256
+`f32fc5825dabb69487e3b2d34cc0a8ca03a70f0f7b38580682b1470e8c0155a4`).
+Both runs retain the existing `level-load-preparer` shutdown-thread warning and
+exit successfully. The original native BizHawk 2.11/GPGX observations are reused
+from `aiz2-priority-20261102/native`, with the original movie SHA-256 verified
+against the current BK2. Native active pixels are crop `(14,8)-(334,232)` of
+the 348×240 publication; the engine is 320×224 at scale 1.
+
+`matched-states.csv` joins actual V-int values, not trace-labelled clocks.
+All 90 fire-shield and 70 Knuckles snapshots match mapping, cursor, countdown,
+script/animation and X/Y. All 70 native Knuckles routines agree with the
+observed engine lifecycle phase. For example:
+
+| Native snapshot | Input ordinal / completed frame | Actual V-int | Trace row / clip frame | Knuckles mapping | Fire mapping |
+| --- | --- | --- | --- | --- | --- |
+| 40 | 26699 / 26700 | `$6826` | 25758 / 208 | `$16` | `$15` |
+| 60 | 26799 / 26800 | `$688A` | 25858 / 308 | `$1F` | `$13` |
+| 80 | 26899 / 26900 | `$68EE` | 25958 / 408 | `$07` | `$11` |
+| 85 | 26924 / 26925 | `$6907` | 25983 / 433 | `$05` | `$00` |
+
+`fresh-matched-comparison.png` shows snapshots 60 and 80 with Knuckles visibly
+laughing and airborne alongside the shield. Individual unresized frame pairs,
+additional run/laugh/bounce samples, source provenance and the machine-readable
+comparison are retained in that directory. The corrected comparison is frame
+408 for snapshot 80; snapshot 40 is frame 208, not the earlier misaligned 200. These are bounded animation/position samples, not full-scene
+BizHawk pixel equality or a graded trace-parity pass. Bubble/Lightning native
+movie evidence, wider route/configuration coverage and full terrain/floor
+breadth remain unqualified; their shared playback and freeze gates have focused
+controls and ROM routine evidence.
