@@ -1405,3 +1405,164 @@ skips: `TestCnzEggCapsuleInstance`, `TestMhzBossObjects`,
 `TestSonic3kDecodingUtils`, using the original absolute S3&K ROM path.
 This replaces the disproportionate 3,540-class category selection for this
 immutable draw-attribute change; it is not broad smoke or visual qualification.
+
+## End-boss lifecycle follow-up — 2026-11-02
+
+Base `08207f974`; local branch `mhz2-end-boss-rom-parity` in `t3-62fd9762`.
+This follow-up owns all six reported symptoms. It does not certify the whole act.
+The original locked-on ROM has CRC32 `63522553` and SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`; no ROM was copied or linked.
+
+| Report | ROM owner and implementation result |
+| --- | --- |
+| Antenna/weather destruction | `loc_76574` / `loc_765F2` (sonic3k.asm:157431-157475) installs a `$3F` Wait_Draw and creates a **controller**, not one explosion. `CreateBossExp00` / `Obj_BossExpControl1` (sonic3k.asm:176798-176861) makes 31 allocation attempts, three object passes apart, at the machine's fixed position. The old implementation made one silent explosion. A separate controller now owns the burst and survives the machine's retirement. The signal pass no longer consumes the first wait tick. |
+| Slow scroll after the opening flee | `loc_760F4` (sonic3k.asm:157092-157098) allocates `Child6_IncLevX`. `Obj_IncLevEndXGradual` (sonic3k.asm:178250-178271) adds `$4000` to a 16.16 accumulator each pass, then adds its integer part to the current boundary. The old code set only the target and inherited constant 2px easing. It now allocates the existing captured boundary worker. Chase max-X writes preserve the stored target instead of resetting it to the current camera word. `loc_76270` also allocates this worker for the later ship escape. |
+| Absent defeat explosions | `loc_76854` (sonic3k.asm:157710-157717) creates the parent-following subtype `$20` controller. Its explosions use `Obj_BossExplosionOffset` (sonic3k.asm:176942-176955), including world-repeat subtraction. The old embedded controller used the wrong random byte for Y, played sound on allocation and omitted the offset contract. `loc_76164` (sonic3k.asm:157132-157150) also creates a separate stationary burst at the stump; that burst was absent. Initial `PLC_78_79_7A_7B` (sonic3k.asm:200137-200140) includes explosion art, but the engine only ensured it after the defeat fade. Art is now uploaded at boss admission, before either burst. |
+| Long journey to the final stump | `loc_5560C` / `loc_5564A` (sonic3k.asm:113327-113386) advances 4px per object frame for Sonic/Tails, 5px for Knuckles, and subtracts `$200` at camera `$4280`. That is an intentional loop. `loc_55686` clears the killing-hit signal at a wrap; `loc_768B6` / `loc_768D2` (sonic3k.asm:157745-157770) then waits for a grounded player before setting Events_fg_5. Only then does the camera proceed to `$4420`. These gates remain intact. |
+| Rings leave left and return right | `loc_1A7B0` (sonic3k.asm:35692-35697) and `loc_1A83C` (sonic3k.asm:35743-35748) explicitly subtract Level_repeat_offset from every bouncing ring after movement/probing, then call Draw_Sprite. Collected sparkles use a different tail. Draw_Sprite (sonic3k.asm:36171-36191) only queues the sprite; it adds no repeated ring draw. The engine omitted the subtraction, so a backward camera wrap exposed old rings. Rings now consume the existing semantic runtime offset at their native movement tail, retaining fractions and velocities. |
+| Delay after the stump collision | `BossDefeated` (sonic3k.asm:180913-180919) seeds `$3F`, giving 64 subsequent Wait_FadeToLevelMusic passes. `loc_761B2` seeds Y velocity `-$200`; `loc_761E8` (sonic3k.asm:157152-157198) calls **MoveSprite**, which integrates old velocity and adds `$38` gravity (sonic3k.asm:36072-36084). The old code called its no-gravity movement and rose until an unsigned position wrap. The fixed arc falls past camera Y + `$120`; the next routine scrolls 4px per pass to `$45A0`, then unlocks. The 120-frame music fade runs independently and is not an extra boss wait. |
+
+The new burst controller preserves AllocateObject/FindNextFreeObj ordering,
+failed-attempt consumption without RNG, high-word Y randomness, native child-init
+sound, parent-bit-5 cancellation and independent stationary lifetime. The data shape
+is an independent burst object with an optional structural parent; the existing
+boss phase machine remains the gameplay owner. Fix Root Causes led to restoring
+these native owners rather than shortening waits or changing the loop boundary.
+
+One source-byte check found `$761E8 = 4E B9 00 01 AB 32` (JSR MoveSprite),
+`$765F2 = 45 F9 00 08 3F EE` (LEA Child6_CreateBossExplosion),
+`$760F4 = 31 FC 45 A0 FA 92 45 F9 00 08 4B 00` (target and worker),
+and `$1A7B0 = 4E B9 00 01 04 0C 30 38 EE BC 91 68 00 10`
+(touch submission followed by repeat subtraction). These are bytes from the
+verified original ROM, not addresses inferred from a matching duplicate.
+
+### Native observation
+
+An owned C# observer used the pinned TraceChaser GPGX video API and official
+BizHawk 2.11. It replayed the original complete Sonic/Tails BK2 from power-on.
+It made no RAM writes and loaded no save. It observed completed hardware frames
+234104 through 237747 inclusive, 3,644 continuous rows with zero lag in this
+window, then FBZ at 237748. CSV rows explicitly equal CompletedFrame.
+This is native execution evidence, not a matched engine trajectory or pixel comparator.
+
+| Native boundary | Completed hardware frame and observed result |
+| --- | --- |
+| Weather destruction | 234402 installs the weather wait and creates the first explosion. Parent routine 4 starts at 234403. Exactly 31 stationary explosions are born at 234402, 234405, …, 234492. |
+| Opening launch and chase | Routine 6 begins at 234467, 8 at 234503, `$A` at 234567, `$C` and its boundary worker at 234631. Max X is `$3C90` for the first three worker passes, `$3C91` at 234634, then `$3C92`, `$3C93`, `$3C94`, `$3C96`; stored target remains `$45A0`. Special auto-scroll begins at 234730. |
+| Killing-hit handoff | Escape and the first following explosion start at 235500 after the terminal hit flash. Exactly 127 offset explosions are born every three frames through 235878. |
+| Arena loop | Six wraps occur at 234953, 235081, 235209, 235337, 235465 and 235593. Each subtracts 512, producing camera `$4081` from the pre-wrap `$427D` plus 4. The kill signal clears on the last wrap; the grounded walkoff owner writes `$55` in that same frame. It is acknowledged at 235721 and the camera reaches `$4420` at 235825. No arbitrary fight-duration timer was found. |
+| Stump collision | At 235836 the boss crosses `$44D0` to `$44D1`, sets status bit 7 and `$2E=$3F`, and starts the second 31-explosion stationary burst, through 235926. |
+| Gravity arc and unlock | At 235900, exactly 64 passes later, the boss starts the arc at Y740 and velocity -512. After 53 movement passes it is Y935, velocity2456, and installs the camera-scroll routine at 235953. After 96 more passes the camera reaches `$45A0` and Scroll_lock clears at 236049. **213 native frames from stump collision to unlock.** |
+| Rings | The original movie uses Super Sonic here and loses no rings. No native bouncing-ring SST is observed in this window. The no-repeat conclusion is source/ROM-byte backed; the subtraction is covered in engine regressions. A native spill picture remains unobserved. `Render_Sprites` (sonic3k.asm:36378-36406) also culls the object against the camera before mapping expansion; it does not repeat the spilled ring at another X. |
+
+Artifacts are retained under the external `$TASK_ROOT` named in the implementation handoff.
+`Probe.cs`, `Probe.exe` and `run.py` reproduce the explicit observer;
+`native2/provenance.json` binds source, executable, ROM/movie and core hashes.
+`native2/frames.csv`, `objects.csv` and `summary.json` contain the observations.
+Selected native PNGs are `f234403.png` (weather hit), `f234463.png` (continued antenna burst), `f235500.png` (terminal
+handoff), `f235836.png` (stump burst), `f235953.png` (capsule handoff) and
+`f236049.png` (unlock). Inspected native pixels are real 348×240 published frames.
+
+Native launch used `python3 "$TASK_ROOT/run.py"`
+from this worktree, with DISPLAY/WAYLAND_DISPLAY/XAUTHORITY removed. The launcher
+built a private pinned host under the worktree build/activity leases, then
+acquired shared native admission. Official-installation preflight passed.
+The first launch failed before core execution because the diagnostic launcher
+omitted BIZHAWK_HOME; that failure is retained in `native.log`. The corrected
+launch exited0 after 409s queue wait. Native execution wall time was not measured.
+No engine state was read from these native observations.
+
+### Focused verification
+
+All Maven commands below used the queue from this worktree. `$S3K_ROM` named
+the absolute original locked-on ROM path supplied by the parent. `$OUT` was
+`$TASK_ROOT/engine`.
+DISPLAY and WAYLAND_DISPLAY were removed. No smoke/full suite or category-run
+was submitted; the parent owns combined integration validation.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestMhzEndBossExplosionController,TestMhzBossObjects,TestLostRingObjectInstance,TestMhzEndBossWeatherMachineRewind' test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestMhzEndBossRendering,TestMhzEndBossNativeDamage,TestS3kMhzEndBossGraphRewind,TestLostRingRewindGenericRestore,TestBossExplosionRewind,TestS3kMhzEndBossViewport,TestS3kMhzEndBossAdmission,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dopenggf.tests.mhzRenderOut=$OUT" test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestS3kBossExplosionChild,TestSonic3kMHZEvents' test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestMhzBossObjects#mhzEndBossDashWaitCallbackAnchorsArenaAndExpandsCameraTarget+mhzEndBossHitProxyQueuesTouchResponseWithoutDrawing+mhzEndBossQueuesSpikeArtWhenCameraReachesRomThreshold+mhzEndBossDefeatDashThresholdStartsFadeShakeAndTimerStop+mhzEndBossSpikeDrawsOnlyOnRomActiveCollisionFrames' test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestLostRingObjectInstance#bouncingRingRebasesWithTheArenaAndKeepsItsFractionAndVelocity' test
+# Same exact check after the lean compiler OOM:
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestLostRingObjectInstance#bouncingRingRebasesWithTheArenaAndKeepsItsFractionAndVelocity' test
+
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestMhzEndBossRendering,TestMhzEndBossExplosionController' "-Dopenggf.tests.mhzRenderOut=$OUT" test
+```
+
+The first command initially failed test compilation because a new Mockito
+verification omitted its static import (687s queue, Maven1m26s, zero tests).
+After qualification, it ran170 tests with4 failures and1 error, zero skips
+(401s queue, Maven38.358s). All3 new burst-controller cases, both weather-recreation
+cases, all37 ring cases and the new per-step gravity/stump case passed.
+The5 failed old fixtures assumed no art load at admission, omitted the newly
+restored stationary burst from their child count, or omitted service injection
+on the mocked camera-worker allocation. The fourth command repairs only those
+fixtures and passes5/0F/0E/0S (446s queue, Maven37.076s).
+
+The second command ran114 tests, one rendering-fixture failure, no errors/skips
+(470s queue, Maven1m39s). All113 other cases passed, including both identically
+named loading classes, required AIZ/bootstrap/decoding, all viewport/admission
+cases, damage and graph/ring recreation. The failed image was at the intentional
+white flash. Image acceptance moved outside that flash; strict world/pixel replay
+still runs there. A one-class rerun then reached the entire600-step chase but
+staged the terminal hit on a retired Java reference after restore (453s queue,
+Maven35.948s,1F/0E/0S). Reacquiring the actual live boss fixes the fixture without
+changing runtime state or reducing snapshot/pixel assertions.
+
+The third command passes70/0F/0E/0S (494s queue, Maven1m33s), including the
+ROM-backed offset-explosion first-entry/rewind control and64 MHZ event cases.
+The explicit lean ring rerun failed in whole-project test compilation with
+`java.lang.OutOfMemoryError: Java heap space` (195s queue, Maven2m19s, zero
+tests). The later deprecation diagnostics are compiler fallout, not test failures.
+The same exact method is rerun with `--normal`; no heap or resource policy was
+changed. A subsequent rendering rerun reached the defeat burst and rejected a changed
+spawn.rawYWord (739 versus744) after restore (531s queue, Maven39.434s,
+1F/0E/0S). This was a real bug in the new following-controller factory, which
+rebuilt raw spawn metadata from the current followed position. It now passes the
+captured ObjectSpawn through unchanged. The fresh-recreation regression moves
+the parent before capture and checks every snapshot key through two restore/
+forward cycles. The final rendering command adds
+`TestMhzEndBossExplosionController` to rerun this corrected factory.
+The normal ring rerun passes1/0F/0E/0S (370s queue, Maven37.033s), including
+complete restore/forward equality after rebasing with fractional position and
+velocity retained. The final rendering/controller command passes4/0F/0E/0S
+(100s queue, Maven1m33s). This includes all3 corrected controller cases and the
+entire positioned scene through capsule-camera release, strict whole-world
+restore/forward replay and identical replayed pixels at the weather fade,
+chase, killing handoff, defeat burst and camera release. Skips in the actual
+completed XML were inspected, all zero.
+
+Across these completed runs,354 distinct test cases in18 classes are qualified,
+with the failed identities above replaced by their successful focused reruns.
+This is a union of bounded checks, not one354-case green lifecycle or a
+smoke/full-suite claim. Passing unaffected checks were reused. Java was25.0.5.0.3.
+No category diagnostics were generated. Consumed task Maven logs/XML were removed.
+Queue wait and Maven execution are reported separately; their sums are not elapsed
+delivery time, and total delivery wall time was not measured.
+
+Final engine artifacts are in `$OUT`: `lifecycle.csv`, `state.csv`,
+`weather-3.png`, `weather-63.png`, the existing chase pictures, `killing-hit.png`,
+`defeat-15.png`, `defeat-80.png`, `camera-release.png` and `capsule-sheet.png`.
+CSV phase_step labels are declared fixture object steps, not native movie rows.
+The staged defeat crosses the stump at defeat step285 (Y736), starts the arc at349,
+hands off at402 (Y931), and releases after96 camera steps. It independently uses
+64+53+96=213 passes. These starting coordinates differ from the native movie;
+this is a phase/timing witness rather than a fitted trajectory comparison.
+The final antenna, burst and release PNGs were visually inspected.
+
+`git diff --check` and strict disassembly citation validation pass. No PR,
+integration or push belongs to this implementation handoff.
+
+Coverage limits remain native-width Sonic alone for the positioned engine pixel
+witness, original native donor, staged weather/terminal hits, and a real native
+Sonic/Tails movie for observation. This does not qualify a cold engine route,
+other donor/roster/viewport products, audible waveform parity or a matched native
+pixel/trajectory comparison. Native lost-ring loss remains unobserved in the
+supplied movie. Existing broader route/matrix obligations remain inherited.

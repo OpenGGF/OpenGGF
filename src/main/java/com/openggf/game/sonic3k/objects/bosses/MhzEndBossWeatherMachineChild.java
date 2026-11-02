@@ -7,7 +7,6 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -104,8 +103,11 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity player) {
         spawnVisualChildrenOnce();
         if (collisionFlags == 0) {
-            signalDestructionOnce();
-            updateDestructionWait();
+            if (!destructionSignalled) {
+                signalDestructionOnce();
+            } else {
+                updateDestructionWait();
+            }
         } else {
             updateWeatherMachineSound();
         }
@@ -138,7 +140,7 @@ public final class MhzEndBossWeatherMachineChild extends AbstractObjectInstance
         byte[][] targetPalette = buildPostWeatherMachineTargetPalette();
         spawnFreeChild(() -> new MhzEndBossPaletteFadeController(targetPalette));
         spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.BOSS.id));
-        spawnChild(() -> new S3kBossExplosionChild(x, y));
+        spawnChild(() -> MhzEndBossExplosionController.stationary(x, y));
         clearSeasonFlag();
     }
 

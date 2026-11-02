@@ -41,7 +41,9 @@ class TestS3kMhzEndBossViewport {
             assertTrue(com.openggf.game.internal.NativeArenaCameraFraming.current().centerNativeArenaCamera());
         }
         int playerX = fixture.sprite().getCentreX();
+        camera.setMaxXTarget((short) 0x45A0);
         events.updateSpecialEvents(1);
+        assertEquals(0x45A0, camera.getMaxXTarget() & 0xFFFF, "special camera writes retain the ROM stored target");
         assertEquals(NativeViewportFraming.visibleLeft(0x3F04, aspect.pixelWidth()), camera.getX() & 0xFFFF);
         assertEquals(0x3F04, camera.getMinX() & 0xFFFF);
         assertEquals(0x3F04, camera.getMaxX() & 0xFFFF);

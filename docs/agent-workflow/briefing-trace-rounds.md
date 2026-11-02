@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A Java object reference can become stale after whole-world restore (2026-11-02,
+MHZ2 boss capture). The captured world and replayed pixels matched, but a local
+boss reference still pointed at the retired instance. Sampling it logged a frozen
+routine/timer, and a later staged hit changed that retired object. Reacquire live
+objects from ObjectManager after restore before sampling or staging another action.
+The [MHZ2 lifecycle record](../architecture/validation/levels/s3k-mhz-act2.md#end-boss-lifecycle-follow-up--2026-11-02)
+records the fixture correction; no runtime timer was changed to accommodate it.
+
 A callback's row label does not establish its sampling boundary (2026-10-29,
 starpost continuation). `productionOutputRowObserver` is called by
 `stateMovieLogicalRow()` before `loop.step()`, with upcoming movie row + 1.
