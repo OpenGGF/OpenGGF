@@ -2041,6 +2041,9 @@ class TestLbzFinalBoss2Instance {
         @Override public ObjectRenderManager renderManager() { return renderManager; }
         @Override public AudioManager audioManager() { return audioManager; }
         @Override public LevelEventProvider levelEventProvider() { return transitionBridge; }
+        @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue() {
+            return TestEnvironment.objectServices().kosinskiModuleQueue();
+        }
         @Override public Rom rom() { return TestEnvironment.currentRom(); }
         @Override public RomByteReader romReader() {
             try {

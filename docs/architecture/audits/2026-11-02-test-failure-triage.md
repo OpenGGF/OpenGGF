@@ -56,14 +56,14 @@ entries below require reproduction before being called current defects.
 
 | Remaining group | Evidence/status | Severity | Fix complexity |
 | --- | --- | --- | --- |
-| KiS2 EHZ1 (`TestKis2Ehz1TraceReplay`) | Fleet replay advances 93→91 errors; animation now matches. All 91 remaining errors are history bootstrap: first `player_history.pos`, expected `$0068`/slot `$19`, actual `$003F`. | High for parity qualification | Large: native bootstrap/history evidence |
-| Knuckles LBZ2/Big Arm (`TestS3kKnucklesLbz2BigArmTraceReplay`) | Fleet replay advances 249→239 errors after camera-owned art submission. Rings remain 55/0; next queue frontier is row858, missing EggRobo-head source `$15FDDE`. | High for parity qualification | Large: progression, remaining producers and movement |
+| KiS2 EHZ1 (`TestKis2Ehz1TraceReplay`) | Delivered replay advances93→38 errors; animation/cursor/X history now match. Remaining Y slots26–63 expect$0293 versus$0294. Explicit entry provenance/reanchor repair is assigned to the inlet lane. | High for parity qualification | Large: native bootstrap/history evidence |
+| Knuckles LBZ2/Big Arm (`TestS3kKnucklesLbz2BigArmTraceReplay`) | Delivered replay advances249→232 after camera admission and EggRobo-head submission. Rings55/0 and movement945 remain. Queue frontier1454 expects$376876; the proved Big Arm INIT omission is repaired locally but leaves every replay record unchanged. | High for parity qualification | Large: progression, remaining producers and movement |
 | S3K CNZ (`TestS3kCnzTraceReplay`) | The independent pinned-a8 survey reproduces 3,112 errors, first row17322 `camera_x`; active solid-order effort owns this frontier. No fleet rerun. | High | Large: current camera/slot causes require attribution |
-| Whole-run chains and S2 halfpipe return | Full halfpipe return is freshly red on two timestamp axes, uniformly65 rows early; represented gameplay/art comparisons pass. Four other listed classes are unmeasured by this fleet. | High | Large: production handoffs, progression and timing |
+| Whole-run chains and S2 halfpipe return | Full halfpipe return is freshly red on two timestamp axes, uniformly65 rows early; represented gameplay/art comparisons pass. KiS2 chain freshly reproduces its terminal boundary at65856; the glide repair advances CPZ1 from35,443 to23,755 errors, frontier2051→3490. Three other listed classes are unmeasured by this fleet. | High | Large: production handoffs, progression and timing |
 | S3K cold routes/campaigns | MHZ Knuckles and DEZ solo Sonic deaths freshly reproduced. Nine other listed classes are unmeasured. FBZ’s current short witness passes and its removed historical method is not a current failure. | High | Large: route-specific reproduction and ROM-backed diagnosis |
 
 The two fresh red replays reached their prescribed comparison gates and skipped
-no tests. Their first assertions match the old local reports. Neither repair may
+no tests. LBZ retains its carried-rings first assertion; KiS2 now reaches only the remaining Y-slot initialization mismatch. Neither repair may
 hydrate gameplay from expected trace rows or make an assertion weaker. See the
 [bootstrap boundary](../../status/known-discrepancies.md#s3k-complete-run-segment-start-position-bootstrap-debt).
 
@@ -200,3 +200,23 @@ row858–859 records; its complete error profile matches the worker candidate.
 Next producer frontier is1454 (Big Arm archive$376874). KiS2 remains38 untouched
 Y slots, handed to the inlet lane under the accepted merge-order boundary.
 These two test classes remain red; this delivery does not claim trace-suite parity.
+
+
+## Glide boundary and Big Arm INIT follow-up
+
+Glide worker `491be466c` is preserved in integration merge `1f328a17d`. Native
+signed-word boundary and arithmetic shifts pass both-rule adversarial controls;
+composed validation completes275 cases:273 passes, known chain/EHZ1 failures,
+zero errors/skips. CPZ1 compares5,574 rows and retains the worker's23,755 errors,
+with first non-camera mismatch3490 Y speed. The chain still stops at65856; six
+dynamic-art gaps remain. This repair does not qualify the complete run.
+
+Big Arm worker `f0862ebaf` repairs native INIT module submission with a red/green
+descriptor and rewind witness. Its55 controls pass, but every LBZ replay record
+remains identical at232 errors. Native object creation/INIT dispatch at row1454
+is still unattributed. The component correction must not be credited with trace
+advancement. Composed boss validation at `526f8ba24` completes81 cases:80 passes, the
+known LBZ failure, zero errors/skips. Its complete replay profile matches the
+worker exactly. Exact commands and limits are in the frontier log. Remaining high-severity groups above are large campaigns,
+with separately bounded implementation slices assigned where evidence supports
+them. Carried-state policy remains a user decision.

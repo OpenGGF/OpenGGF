@@ -91,6 +91,39 @@ class TestLbzFinalBoss2ProductionRoute {
     }
 
     @Test
+    void nativeInitSubmitsBigArmModuleOnceAndRewindRetainsIt() {
+        var timing = GameServices.hardwareTiming();
+        var kind = com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE;
+        long before = timing.capture().nextOrdinals().getOrDefault(kind, 0L);
+        LbzFinalBoss2Instance boss = GameServices.level().getObjectManager()
+                .createDynamicObject(() -> new LbzFinalBoss2Instance(new ObjectSpawn(
+                        CAMERA_X + 0xA0, CAMERA_Y - 0x50,
+                        Sonic3kObjectIds.LBZ_FINAL_BOSS_2, 0, 0, false, 0)));
+        assertEquals(before, timing.capture().nextOrdinals().getOrDefault(kind, 0L),
+                "allocation precedes the native init dispatch");
+        boss.update(0, fixture.sprite());
+        assertEquals(before + 1, timing.capture().nextOrdinals().getOrDefault(kind, 0L),
+                "loc_742A8 queues Big Arm art before allocating its head");
+        var handle = timing.pendingHandle(kind, before).orElseThrow();
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator
+                .from(GameServices.runtimeArtCoordinator()).moduleQueue();
+        var descriptor = queue.descriptor(handle);
+        assertEquals(com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_KOSM_LBZ_FINAL_BOSS_2_ADDR,
+                descriptor.sourceAddress());
+        assertEquals(com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_TILE_LBZ_FINAL_BOSS_2 * 32,
+                descriptor.destinationAddress());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var snapshot = registry.capture();
+        boss.update(1, fixture.sprite());
+        registry.restore(snapshot);
+        boss = onlyLive(GameServices.level().getObjectManager(), LbzFinalBoss2Instance.class);
+        boss.update(1, fixture.sprite());
+        assertEquals(handle, timing.pendingHandle(kind, before).orElseThrow());
+        assertEquals(before + 1, timing.capture().nextOrdinals().getOrDefault(kind, 0L),
+                "restored initialized owner must not resubmit its global job");
+    }
+
+    @Test
     void realCapsuleResultsFloorAndCarrierCompleteTheKnucklesRoute() {
         ObjectManager objectManager = GameServices.level().getObjectManager();
         GameServices.water().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1, true);

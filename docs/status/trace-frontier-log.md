@@ -122832,3 +122832,80 @@ changes if not yet published. It will not edit this repair's pass-count constant
 or `applyBootstrap` solo-history loop. Session50195 already completed116 cases;
 its successor47508 completed the history/LBZ/upstream composition as recorded above. No source footprint
 change accompanies this handoff.
+
+
+## 2026-11-02 — Knuckles glide top-boundary speed control
+
+Worker `491be466c`, based on `6d8cab5e9`, restores the native active-glide
+top-boundary branch in `PlayableSpriteMovement.updateGliding()`. Minimum Y-$100
+bypasses it; otherwise signed-word player Y below `(short)(minimumY+$10)`
+triggers arithmetic right shifts of X and ground velocity after gravity/convergence.
+KiS2 `c336fede0009`, `Knuckles_GlideSpeedControl .fallingFast`
+(s2.asm:38991–39006), agrees with pinned S3K `8b2cf3c4178f`,
+`Knuckles_Move_Glide .fallingFast` (sonic3k.asm:31733–31746). No game-name gate,
+fixture offset, history change or timing input was added.
+
+New red witnesses pass after repair under both rules, covering below/at/above
+boundary, sentinel, signed-word wrapping, negative odd X, gravity ordering and
+inactive glide states. Matched CPZ1 reports compare all5,574 rows: total errors
+35,443→23,755, physics31,847→21,293, animation3,596→2,462. First non-camera
+frontier moves from2051 X ($10E2/$10E4) to3490 Y speed (-$00E3/-$00CC).
+The chain still fails level advancement at cursor65,856. Earlier segment0's
+38 history Y errors plus one ring error, segment2's ring error, segment13's
+1,068 errors and six dynamic-art gaps are unchanged. This is advancement, not
+chain qualification. Worker fixed validation:273 passes, one known-red chain,
+zero skips/test errors; two earlier attempts stopped at test compilation and
+were corrected. Maven execution approximately207s, queue waiting separate.
+
+Lead merge `1f328a17d` composes this with current develop506c653a0, including
+the independent FBZ indoor-return alignment fix. Its queued integration command
+uses Java25, unset displays, surfaceless EGL, original absolute S2/S3K ROM paths,
+`-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true`,
+and these exact selectors:
+
+```text
+TestKis2MovementRules,TestPlayableSpriteMovement,TestKis2CompleteEmeraldRunChain#ehz1ThroughAllEmeraldsToDeathEgg,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestKis2Ehz1TraceReplay
+```
+
+Integration at `1f328a17d` completed275 cases:273 passes, known standalone
+EHZ1/chain failures, zero errors/skips. CPZ1 retains23,755 errors and the row3490
+Y-speed frontier; standalone EHZ1 retains exactly38 bootstrap Y errors over1,817
+rows, gate reached. Queue wait662s, Maven execution118s. The change-based plan selects4,403 smoke
+classes due to the shared file. Focused verification replaces this selection
+because only the already-active Knuckles glide speed-control branch changes;
+both consuming rule profiles, signed arithmetic adversaries, inactive-state
+controls, shared movement regressions, actual chain and required S3K controls
+cover the affected behavior. It is bounded verification, not a full-suite result.
+Entry provenance remains with the inlet lane; this patch does not edit its files.
+
+
+## 2026-11-02 — Big Arm native INIT module submission
+
+Worker `f0862ebaf`, composed on `e62f57e7d`, restores the unconditional Big Arm
+module submission after palette loading and before head creation. Native
+`loc_742A8` (pinned8b2cf3c4178f sonic3k.asm:154352–154358) owns this order.
+Global pattern ownership supplies completion independently of the boss lifetime;
+initialization does not wait for readiness. The new descriptor/rewind witness
+fails before repair (one submission expected, zero actual) and passes afterward.
+Worker controls55 pass, zero errors/skips. Its full LBZ replay remains exactly
+232 errors, every record and comparison coverage identical:225 physics/seven
+animation,6,444 planned rows /6,309 comparisons, gate reached. The nine unsupported
+advertised aux schemas remain unsupported.
+
+This repairs a proved component omission, but does not explain the replay's
+row1454 missing direct source$376876. Actual Big Arm creation/INIT dispatch must
+be observed before attributing that frontier. Rings55/0, movement945 and nine
+unmatched completions from6313 remain unchanged; no shared-owner edit or policy
+change was attempted. Red/changed selectors were respectively
+`TestLbzFinalBoss2ProductionRoute#nativeInitSubmitsBigArmModuleOnceAndRewindRetainsIt`
+and `TestLbzFinalBoss2Instance,TestLbzFinalBoss2ProductionRoute,TestS3kLbzFinalBoss2GraphRewind,TestS3kKnucklesLbz2BigArmTraceReplay`
+(the latter with `-Ptrace-replay`). Both used queued Java25/EGL/unset displays,
+`-Dmse=off` and the original absolute S3K ROM. Queue waits524/776s; Maven execution
+86/102s. The glide candidate completed as recorded above. This producer patch
+then merged cleanly as `526f8ba24`. Its separate composition check completed
+81 cases:80 passes, the known LBZ replay failure, zero errors/skips, using
+the changed selection above plus `TestHardwareTimingAuthorityGuard` (session
+75939). LBZ complete errors/bootstrap/warnings/group/gate data match the worker
+report exactly at232 errors,6,444 planned rows /6,309 comparisons, gate reached.
+Queue wait949s, Maven execution112s. No unchanged glide chain rerun is required for
+this independent boss initialization change.

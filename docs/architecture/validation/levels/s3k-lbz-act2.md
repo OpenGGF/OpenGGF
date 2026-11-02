@@ -225,3 +225,21 @@ the complete232-error LBZ profile matches the worker candidate. Row1454's missin
 Big Arm archive$376874 is the next queue frontier. Rings55/0, movement945 and
 unmatched completions6313 remain open. Inherited route, roster/team, donor,
 viewport and presentation gaps remain; this is not full-act qualification.
+
+
+### Big Arm INIT producer follow-up — 2026-11-02
+
+`f0862ebaf` restores native module submission after palette loading and before
+head creation. A production-route witness pins allocation-before-INIT, exact
+source/destination, and restored initialized ownership without resubmission.
+Worker55 controls pass with zero skips; full replay stays232 errors, every
+record and coverage unchanged. This proves the component omission without
+explaining row1454's absent source$376876. Actual Big Arm creation/INIT dispatch
+needs observation; carried rings, movement945 and completion6313 remain open.
+Inherited full-route and roster/donor/viewport/presentation gaps remain.
+
+Composed candidate `526f8ba24` passes80 controls, including timing-authority
+guards, with the known LBZ replay failure and zero errors/skips. Its complete
+232-error profile matches the worker, including fields, values, spans and gate.
+The independent glide candidate passes273 controls with its two known replay
+failures; no unchanged broad suite or chain was repeated for Big Arm admission.

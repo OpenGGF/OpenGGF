@@ -25,7 +25,7 @@ Confirm the requested concrete test exists and which fixture/segments it drives.
 Example focused run (set the variables to discovered paths and a real class):
 
 ```bash
-mvn -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
   -Dsurefire.runOrder=alphabetical "-Dtest=$TRACE_TEST" \
   "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
   "-Ds3k.rom.path=$S3K_ROM" test

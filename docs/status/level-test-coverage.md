@@ -2491,3 +2491,9 @@ LBZ2 EggRobo-head follow-up (2026-11-02): the [Act 2 matrix](../architecture/val
 adds native one-time module admission, actual-main identity controls and graph
 rewind coverage. Standalone replay advances239→232 errors; composed functional
 checks pass with zero skips. Existing full-route and breadth gaps remain open.
+
+
+Big Arm INIT follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#big-arm-init-producer-follow-up--2026-11-02)
+records exact module admission and initialized graph-rewind ownership. Composed
+checks pass80 controls, zero skips; replay remains232 errors with an identical
+profile. No full-route or roster/donor/viewport/presentation gap is closed.

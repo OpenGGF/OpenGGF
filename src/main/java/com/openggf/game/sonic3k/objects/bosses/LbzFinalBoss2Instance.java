@@ -37,6 +37,7 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -371,6 +372,19 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         waitTarget = WaitTarget.ARM_GRAPH;
         ensureBossArtLoaded();
         loadFinalBossPalette();
+        // loc_742A8 submits the native module before creating its head,
+        // without waiting for readiness (sonic3k.asm:154352-154358).
+        // The global pattern owner retains completion beyond this SST's life.
+        try {
+            if (!com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator
+                    .queueGlobalPatternModule(services(),
+                            Sonic3kConstants.ART_KOSM_LBZ_FINAL_BOSS_2_ADDR,
+                            Sonic3kConstants.ART_TILE_LBZ_FINAL_BOSS_2 * 32)) {
+                throw new IllegalStateException("Big Arm module FIFO is full");
+            }
+        } catch (IOException failure) {
+            throw new UncheckedIOException("Unable to submit Big Arm art", failure);
+        }
         // Obj_LBZFinalBoss2's first CreateChild1_Normal is the Robotnik head.
         recordChild(ChildKind.ROBOTNIK_HEAD,
                 spawnChild(() -> new RobotnikHead4Child(
