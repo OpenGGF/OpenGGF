@@ -63,7 +63,7 @@ class TestSpriteSatPixels {
                         pixel(overflow, 144, 80, 1 + ((h ? 0 : 6) + (v ? 0 : 1)) % 3);
                     }
                     ByteBuffer carry = draw(graphics, () -> {
-                        submit(graphics, -128, 108, 1, 1, 1, false, false, false);
+                        graphics.submitSpriteSatControlEntry(-128, 108, 1, 1, 1);
                         for (int i = 0; i < 10; i++) submit(graphics, -80, 100, 4, 1, 1, false, false, false);
                         submit(graphics, 220, 108, 1, 1, 2, false, false, true);
                     });
@@ -91,6 +91,16 @@ class TestSpriteSatPixels {
                         submit(graphics, 240, 180, 1, 1, 2, false, false, false);
                     });
                     pixel(unlimited, 240, 180, 2);
+                    for (boolean limits : new boolean[]{false, true}) {
+                        SpriteSatInternalAccess.bindLineLimitSource(graphics, () -> limits);
+                        ByteBuffer ordinaryOffscreen = draw(graphics, () -> {
+                            submit(graphics, 8, 192, 1, 1, 1, false, false, false);
+                            submit(graphics, -128, 192, 1, 1, 1, false, false, false);
+                            submit(graphics, 384, 192, 1, 1, 1, false, false, false);
+                            submit(graphics, 80, 192, 1, 1, 2, false, false, false);
+                        });
+                        pixel(ordinaryOffscreen, 80, 192, 2);
+                    }
                     SpriteSatInternalAccess.bindLineLimitSource(graphics, () -> true);
                     assertEquals(GL_NO_ERROR, glGetError());
                 }
@@ -142,7 +152,7 @@ class TestSpriteSatPixels {
                             for (int i = 0; i < 20; i++) submit(graphics, 350, 140, 1, 1, 0, false, false, false);
                             submit(graphics, 344, 140, 1, 1, 10, h, v, true); // Count overflow cannot borrow the wider presentation.
                             for (int i = 0; i < 10; i++) submit(graphics, 350, 152, 4, 1, 0, false, false, false);
-                            submit(graphics, -128, 160, 1, 1, 0, false, false, false);
+                            graphics.submitSpriteSatControlEntry(-128, 160, 1, 1, 0);
                             submit(graphics, 344, 160, 1, 1, 10, h, v, false);
                             graphics.requestSpriteMask();
                             graphics.submitSpriteSatControlEntry(0, 180, 1, 1, 0x7C0);

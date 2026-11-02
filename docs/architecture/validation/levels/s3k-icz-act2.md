@@ -1,5 +1,41 @@
 # S3K IceCap Act 2 coverage matrix
 
+## Native sprite submission maintenance (2026-11-02)
+
+The committed 2,292-row solo-Sonic native320 cube/button/bridge movie was replayed
+with native sprite limits enabled. A read-only observer at SAT collection teardown
+sampled raw submitted mapping pieces every 60 tables, before count/pixel/table
+admission. The 39 matched samples show peaks falling from 114 to 62 entries,
+26 to 18 entries on a row, and 504 to 304 declared pixels on a row. These are sampled
+peaks, not the all-frame maxima or a native emulator measurement. Player centres,
+camera positions, level clocks and live-object counts match in every sampled row.
+
+At the original 114-entry sample, a wholly offscreen collapsing bridge contributed 22
+pieces, an offscreen crushing column and its separate decoration contributed 14+8,
+and 14 lost rings were outside their native bounds. A later row additionally exposed
+12 offscreen tension-bridge segments. Drawing now applies the existing native
+whole-object extents for those producers and the normal collapsing-platform/wall/
+freezer paths. Tension bridge groups retain their own $40/$08 bounds and their
+one-piece segment mappings use the native multi-draw origin checks. Simulation,
+retirement flags, native piece geometry and captured fields are unchanged.
+
+`TestIcz2NativeSpriteBudget` follows every production table along this actual
+controller route with native limits enabled and asserts that raw submissions fit
+the 80-entry table, before evaluator clipping can conceal an excess. It also checks
+that the route reaches the cube/button/bridge area and observes over 2,000 tables.
+The existing route test retains its rewind/forward witnesses; component tests
+cover ring half-width boundaries across all three games, independent column/
+decoration bounds, and partial tension-bridge admission. The native table limit
+does not imply that every legitimate ring-loss cloud must fit a per-row budget.
+
+The longer canonical ICZ replay was diagnostic only: it stayed in act1 and reported
+2,430 strict errors, first at raw frame 11989. Untouched-base and final-runtime
+reruns produce identical complete divergence-report payloads. It supplies no ICZ2 or full-route
+qualification; the cold act2 movie above supplies the bounded ICZ2 witness. Later
+act2 routes, other teams/donors/viewports, native pixel comparison and a whole-act
+certificate remain inherited gaps. Final combined test outcomes are delivery
+observations, not an expansion of this route matrix.
+
 Selection update (2026-10-27): routine canonical entry/reload checks cover supported
 axis pairs; bonus transitions retain their existing pilots. Full Cartesian
 products are explicitly manual `exhaustive-audit` coverage, excluded from routine

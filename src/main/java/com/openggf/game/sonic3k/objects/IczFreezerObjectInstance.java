@@ -271,6 +271,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // ObjDat_ICZFreezer (sonic3k.asm:188718-188722): ordinary $10/$0C bounds.
+        if (!isWithinRenderSpriteBounds(HALF_WIDTH, HALF_HEIGHT)) return;
         PatternSpriteRenderer renderer = getRenderer(ART_KEY);
         if (renderer != null) {
             renderer.drawFrameIndex(MAPPING_FRAME, x, y, hFlip, verticalFlip, 1);

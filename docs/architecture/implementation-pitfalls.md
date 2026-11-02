@@ -943,6 +943,31 @@ it to true for native image comparisons and restores it even on failure. Other
 ROM image probes must enable it explicitly and restore their caller preference;
 physics/aux trace comparisons do not depend on this presentation setting.
 
+**Reserve zero-X masking for explicit controls.** Normal mapping expansion uses
+`loc_1AF76` (sonic3k.asm:36604-36618) to replace a zero SAT X with one.
+`GraphicsManager.submitSpriteSatPiece` applies this protection; explicit control
+entries retain zero. Disabling count/pixel/table limits does not disable masks,
+so omitting the producer step can still erase later sprites. Low-level evaluator
+tests may use raw zero-X entries, while production pixel probes that intentionally
+exercise masking must submit control entries.
+
+**Multi-draw has two admission stages.** Every end-of-act tally element has
+render flag `$40`. `loc_1AE58` (sonic3k.asm:36481-36518) rejects whole offscreen
+elements; `loc_1B07A` (sonic3k.asm:36743-36766) also rejects mapping-piece origins
+at or beyond the padded raster boundaries (-32 exclusive through screen width /
+224 exclusive). Results retirement bounds alone do not implement drawing
+admission. Retain native piece dimensions and count accepted mapping pieces once.
+The same omission affected loaded world objects in ICZ2: being in the active
+placement window does not imply being inside Render_Sprites bounds. Ring loss,
+columns/decorations and collapsing bridges retain their own native extents.
+Tension bridge child groups use $40/$08, then cull their one-piece segment origins.
+Observe raw submissions before evaluator clipping; a plausible final table capped
+at 80 can hide a much larger producer excess. The ICZ2 route budget test does this
+without supplying any gameplay or admission values.
+Native picture/admission tests explicitly opt into budgets with the test-only
+`NativeSpriteLimits` scope and restore their caller's preference. Normal play's
+relaxed default is not a valid implicit setup for a ROM budget comparison.
+
 **Follower priority inheritance must be field-specific.** Hyper stars illustrate
 this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
 `loc_19458` inherits only Sonic's art-word high bit. Copying both properties

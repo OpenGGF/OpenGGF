@@ -7,7 +7,8 @@ readable and historical versions can be referenced directly.
 
 Current fixes include the normal explosion effect and break sound for
 upside-down S3K capsules, crowded-scene sprite retention with sprite limits
-disabled, and Tails carrying Sonic into CNZ1 after the MGZ2 rescue. See the
+disabled, native tally culling and accidental-mask prevention, and Tails
+carrying Sonic into CNZ1 after the MGZ2 rescue. See the
 development changelog below.
 
 Both development branches currently share the same commit and release line.

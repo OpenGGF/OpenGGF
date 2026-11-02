@@ -1995,7 +1995,13 @@ public class GraphicsManager {
 		String presentationSource = spritePresentationBuilder == null ? currentSpriteSatDebugSource
 				: spritePresentationBuilder.layer.name();
 		// The pinned producer type is copied only at this compatibility ingress.
-		SpritePiece admitted = new SpritePiece(piece.x(), piece.y(), piece.widthTiles(), piece.heightTiles(),
+        // Normal mapping expansion reserves X=0 for explicit mask controls:
+        // loc_1AF76 (sonic3k.asm:36604-36618).
+        // Expanded viewports retain their logical coordinates instead of nine-bit wrapping.
+        int admittedX = piece.x();
+        int biasedX = admittedX - spriteSatViewport.x() + 128;
+        if ((spriteSatViewport.width() <= 320 ? biasedX & 0x1FF : biasedX) == 0) admittedX++;
+		SpritePiece admitted = new SpritePiece(admittedX, piece.y(), piece.widthTiles(), piece.heightTiles(),
 				piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
 				piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
 				piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),

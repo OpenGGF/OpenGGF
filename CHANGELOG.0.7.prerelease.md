@@ -5,6 +5,15 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
+  an X=0 mask and hide later sprites, with limits either enabled or disabled.
+  The end-of-act tally now culls whole offscreen elements and individual mapping
+  pieces using the ROM multi-draw bounds before charging sprite budgets.
+  Loaded offscreen rings, collapsing bridges/platforms, ICZ columns, walls,
+  freezers and tension-bridge child groups also stop consuming sprite capacity.
+  The committed ICZ2 cube/button/bridge route now guards raw table submissions
+  with native limits enabled.
+
 - **Upside-down S3K capsules:** Use seven normal explosion effects and their
   break sound instead of the long boss-explosion sequence.
 

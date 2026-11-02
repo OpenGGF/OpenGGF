@@ -49,13 +49,14 @@ class TestSonic2InterlacePixels {
         for (var key : new SonicConfiguration[]{SonicConfiguration.AUDIO_ENABLED,
                 SonicConfiguration.TEST_MODE_ENABLED, SonicConfiguration.MAIN_CHARACTER_CODE,
                 SonicConfiguration.SIDEKICK_CHARACTER_CODE, SonicConfiguration.SCREEN_WIDTH,
-                SonicConfiguration.SCREEN_HEIGHT}) saved.put(key, config.getConfigValue(key));
+                SonicConfiguration.SCREEN_HEIGHT, SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT}) saved.put(key, config.getConfigValue(key));
         config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         config.setConfigValue(SonicConfiguration.SCREEN_WIDTH, 320);
         config.setConfigValue(SonicConfiguration.SCREEN_HEIGHT, 224);
+        config.setConfigValue(SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT, true);
         try (var boot = new HeadlessGameBoot(320, 224)) {
             boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0);
             var graphics = GameServices.graphics();

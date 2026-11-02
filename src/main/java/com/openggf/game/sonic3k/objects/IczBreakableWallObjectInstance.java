@@ -227,7 +227,8 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (broken || isDestroyed()) {
+        // ObjDat_ICZBreakableWall (sonic3k.asm:187990-187994): $20/$40 bounds.
+        if (broken || isDestroyed() || !isWithinRenderSpriteBounds(0x20, 0x40)) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(ART_KEY);

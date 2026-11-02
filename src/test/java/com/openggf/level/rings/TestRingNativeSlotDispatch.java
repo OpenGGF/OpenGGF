@@ -329,7 +329,7 @@ class TestRingNativeSlotDispatch {
         }
     }
 
-    @Test void coarseRangeIncludes280AndSpinRunsOnItsLastAdmittedNativeInvocation() {
+    @Test void coarseRangeIncludes280AndSpinRunsOnItsLastAdmittedNativeInvocation() throws Exception {
         NativePositionOps.writeXPosResetSubpixel(player, 0x500);
         for (boolean shieldLost : List.of(false, true)) {
             for (int x : new int[]{0x200, 0x280}) {
@@ -346,7 +346,11 @@ class TestRingNativeSlotDispatch {
                         var converted = objects.activeObjectsOfType(LostRingObjectInstance.class).getFirst();
                         var art = SpritePresentationRenderer.prepare(graphics, 0, 0,
                                 () -> converted.appendRenderCommands(new ArrayList<>()));
-                        assertEquals(BASE, art.tiles().getFirst().patternId(),
+                        assertTrue(art.tiles().isEmpty(),
+                                "the coarse-range Draw_Sprite call survives, but its offscreen mappings do not");
+                        var mapping = LostRingObjectInstance.class.getDeclaredField("retainedMappingFrame");
+                        mapping.setAccessible(true);
+                        assertEquals(0, mapping.getInt(converted),
                                 "conversion retains spin3->0 from this same native invocation");
                         assertEquals(2, converted.getPriorityBucket());
                     } else {

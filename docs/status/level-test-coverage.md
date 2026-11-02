@@ -2370,3 +2370,16 @@ and [CNZ1 matrix](../architecture/validation/levels/s3k-cnz-act1.md#mgz2-to-cnz1
 record the solo/configured-Tails rescue-to-entry regression and its bounded
 pickup, landing, control-release and destination replay scope. Automatic
 exit-route composition, donor/viewport breadth and cross-load rewind remain open.
+
+Native sprite producer maintenance (2026-11-01): ordinary mapping submission
+now reserves zero-X for explicit masks. End-of-act tally drawing applies native
+whole-element and mapping-piece culling before admission. The local regressions
+and remaining scene/route limits are recorded in the
+[AIZ1 maintenance matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#native-sprite-producer-maintenance-2026-11-01).
+
+ICZ2 sprite submission maintenance (2026-11-02): the
+[act2 matrix](../architecture/validation/levels/s3k-icz-act2.md#native-sprite-submission-maintenance-2026-11-02)
+records the actual cold controller replay, matched before/after samples, native
+whole-object and multi-draw culling corrections, and the permanent raw-table
+budget regression. This is a partial route witness with inherited breadth gaps;
+the longer strict-red act1 replay does not certify ICZ2.

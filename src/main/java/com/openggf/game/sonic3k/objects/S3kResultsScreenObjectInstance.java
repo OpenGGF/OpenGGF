@@ -1657,7 +1657,20 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void renderMappingFrame(int frameIndex, int worldX, int worldY) {
         if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount()) return;
-        renderer.drawFrameIndex(frameIndex, worldX, worldY, false, false);
+        // Results use render_flags=$40, including the main mapping. The multi-draw
+        // expander rejects piece origins outside the padded raster before SAT admission:
+        // loc_1B07A (sonic3k.asm:36743-36766). Normal mapping expansion does not.
+        var camera = services().camera();
+        int width = Math.max(320, services().graphicsManager().getProjectionWidth());
+        var pieces = spriteSheet.getFrame(frameIndex).pieces();
+        for (int i = 0; i < pieces.size(); i++) {
+            var piece = pieces.get(i);
+            int screenX = worldX - camera.getX() + piece.xOffset();
+            int screenY = worldY - camera.getY() + piece.yOffset();
+            if (screenX > -32 && screenX < width && screenY > -32 && screenY < 224) {
+                renderer.drawFramePieceByIndex(frameIndex, i, worldX, worldY, false, false);
+            }
+        }
     }
 
     /**
