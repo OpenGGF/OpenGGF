@@ -48,14 +48,14 @@ class TestStageplayRouteMotionRom {
                     result=StageplayRoutePlanner.plan(resources,library,source,request,"0".repeat(64),()->false);
                 }
                 assertTrue(result.success(),entry.getKey()+": "+result.message());
-                assertEquals(1,result.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).count());
-                if(motion.startingAction()==StartAction.WALK)
-                    assertTrue(result.commands().stream().noneMatch(c->c.kind()==PuppetCommandKind.JUMP),entry.getKey());
-                if(motion.startingAction()==StartAction.JUMP)
-                    assertEquals(result.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).findFirst().orElseThrow().frame(),
-                            result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).findFirst().orElseThrow().frame());
+                assertTrue(result.commands().isEmpty(),"player routes install frozen rows, not commands");
+                var rows=StageplayRoutes.tape(result.track());
+                assertEquals(request.maxFrames(),rows.size(),entry.getKey());
+                boolean jumped=rows.rows().stream().anyMatch(r->r.held(com.openggf.route.PlayerSlot.P1,com.openggf.route.PhysicalButton.C));
+                if(motion.startingAction()==StartAction.WALK) assertFalse(jumped,entry.getKey());
+                if(motion.startingAction()==StartAction.JUMP) assertTrue(jumped,entry.getKey());
                 var candidate=StageplayStore.decode(StageplayStore.encode(result.candidate()));
-                assertEquals(motion,candidate.puppets().getFirst().commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).findFirst().orElseThrow().motion());
+                assertEquals(List.of(result.track()),candidate.inputTracks(),"the frozen track survives the document codec");
                 boolean charged=false,chargedOnSlope=false,skidded=false;double farthest=0,least=Double.POSITIVE_INFINITY;
                 var states=new StringBuilder();
                 try(var resources=new StageplayResources(library,false);var world=StageplayLiveWorld.openOffline(library)) {
@@ -101,13 +101,14 @@ class TestStageplayRouteMotionRom {
             var probe=com.openggf.sprites.playable.PlayablePuppet.createNativeWorldProbe(terrain.level(),
                     library.module("s2"),0,0,library.module("s2"),"sonic",library.characterArt("s2","sonic"),224,237,0,true,false)) {
             var entry=probe.capture();
-            assertFalse(StageplayRoutePlanner.searchPass(scene("detour"),request,probe,()->false,Long.MAX_VALUE,false).found());
+            var direct=TestStageplayRoutePlanner.replay(probe,request,List.of(new PuppetCommand("direct",0,PuppetCommandKind.MOVE_TO,512,237,1,0)));
+            assertFalse(Math.abs(direct.getLast().x()-512)<=6 && direct.getLast().onGround(),"Fixture must require a run-up");
             probe.restore(entry);
-            var result=StageplayRoutePlanner.search(scene("detour"),request,probe,()->false,Long.MAX_VALUE);
-            assertTrue(result.found(),result.message());
-            assertTrue(result.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.MOVE_TO && c.x()<224));
+            var plan=StageplayRoutePlanner.draft(scene("detour"),request,probe,()->false);
+            var rows=assertInstanceOf(com.openggf.route.PlanResult.Solved.class,plan,plan.toString()).route().tape();
             probe.restore(entry);
-            var replay=TestStageplayRoutePlanner.replay(probe,request,result.commands());
+            var replay=TestStageplayRoutePlanner.replayRows(probe,request,rows);
+            assertTrue(replay.stream().anyMatch(o->o.x()<224-32),"the rows perform the penalised back-up run-up");
             assertTrue(Math.abs(replay.getLast().x()-512)<=6);
             assertTrue(replay.getLast().onGround());
         }

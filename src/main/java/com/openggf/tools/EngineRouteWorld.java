@@ -197,12 +197,17 @@ final class EngineRouteWorld implements RouteWorld, EngineRouteHosts.EngineView 
     }
 
     private static PlayerView view(AbstractPlayableSprite sprite) {
+        // The same native motion facts the Stageplay probe and live route controls read.
+        var o = com.openggf.sprites.playable.PlayablePuppet.observe(sprite);
         return new PlayerView(sprite.getCentreX(), sprite.getCentreY(), sprite.getXSubpixelRaw(),
                 sprite.getYSubpixelRaw(), sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
                 sprite.getAngle() & 0xFF, sprite.getAir(), sprite.getRolling(), sprite.getSpindash(),
                 sprite.getCrouching(), sprite.isHurt(), sprite.getDead(), sprite.getRingCount(), sprite.isOnObject(),
-                sprite.isObjectControlled());
+                sprite.isObjectControlled(), sprite.getDirection() == com.openggf.physics.Direction.LEFT,
+                new PlayerView.Motion(o.maxSpeed(), o.runAccel(), o.runDecel(), o.friction(), o.slopeImpulse(),
+                        o.skidding()));
     }
+
 
     private record Checkpoint(EngineRouteWorld owner, long epoch, Level level, GameMode mode,
                               GameplayModeContext context, RewindRegistry registry, long layoutVersion,

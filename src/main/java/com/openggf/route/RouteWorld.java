@@ -7,4 +7,13 @@ public interface RouteWorld extends ReplayWorld {
 
     /** Restores a checkpoint this host captured in its current epoch. */
     void restore(WorldCheckpoint checkpoint);
+
+    /**
+     * A key the host certifies as complete: two states with equal keys (and equal search
+     * controller state) have the same future under the same rows. Static terrain probes can
+     * certify one; live worlds with objects, RNG and timers certify none, and are never merged.
+     */
+    default java.util.Optional<Object> equivalenceKey() {
+        return java.util.Optional.empty();
+    }
 }

@@ -24,6 +24,14 @@ import java.util.function.UnaryOperator;
  * ROMs come from a local resolver and must match the launch's hash before boot. One world at
  * a time per process: sessions are process-global. This is the trusted composition point that
  * joins the route core to the capture session; the core itself never reaches the gameplay runtime.
+ *
+ * <p>Every world needs an OpenGL context: {@code GameplayCaptureSession} boots through
+ * {@code HeadlessGameBoot}, which creates one. On Linux, any process that opens these hosts (an
+ * isolated planning or replay worker JVM, a test fork, native-check tooling that replays the
+ * engine side) must select surfaceless EGL with
+ * {@code JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl} and {@code DISPLAY},
+ * {@code WAYLAND_DISPLAY} and {@code LD_LIBRARY_PATH} unset; it must never fall back to the shared
+ * desktop.
  */
 public final class EngineRouteHosts implements RouteWorldFactory {
     /** Bumped when host stepping, observation or checkpoint semantics change. */

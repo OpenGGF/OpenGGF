@@ -18,8 +18,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
         List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
         List<PuppetTrack> puppets, List<ObjectActor> objectActors, List<WorldCommand> worldCommands,
-        List<SpeakerVoice> voices) {
-    public static final int VERSION = 8;
+        List<SpeakerVoice> voices, List<FrozenInputTrack> inputTracks) {
+    public static final int VERSION = 9;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
@@ -45,6 +45,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         objectActors = boundedCopy(objectActors, 1024, "objectActors");
         worldCommands = boundedCopy(worldCommands, 4096, "worldCommands");
         voices = boundedCopy(voices, 1088, "voices");
+        inputTracks = boundedCopy(inputTracks, 256, "inputTracks");
         require(!camera.isEmpty(), "camera must start at frame zero");
         Set<String> ids = new HashSet<>();
         int totalKeys = camera.size();
@@ -213,6 +214,36 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                     StageplayDialogue.resolveSkin(dialogueSkins, cue.skinId()),
                     StageplayDialogue.resolveTyper(dialogueTypers, cue.typerId()));
         }
+        for (FrozenInputTrack track : inputTracks) {
+            require(ids.add(track.id()), "Duplicate id: " + track.id());
+            require(track.endFrame() <= durationFrames, "Frozen input track exceeds scene duration: " + track.id());
+            for (LaneBinding binding : track.lanes()) {
+                var puppet = puppets.stream().filter(p -> p.actorId().equals(binding.actorId())).findFirst();
+                require(puppet.isPresent(), "A frozen input track binds a physical Puppet actor: " + binding.actorId());
+                require(puppet.get().commands().stream().noneMatch(c -> c.frame() >= track.startFrame()
+                                && c.frame() < track.endFrame()),
+                        "Commands and a frozen input track cannot both drive " + binding.actorId() + " in one interval");
+            }
+        }
+        for (int a = 0; a < inputTracks.size(); a++) {
+            for (int b = a + 1; b < inputTracks.size(); b++) {
+                FrozenInputTrack x = inputTracks.get(a), y = inputTracks.get(b);
+                boolean shared = x.lanes().stream().anyMatch(l -> y.binds(l.actorId()));
+                require(!shared || x.endFrame() <= y.startFrame() || y.endFrame() <= x.startFrame(),
+                        "Frozen input tracks overlap for one actor: " + x.id() + ", " + y.id());
+            }
+        }
+    }
+
+    /** Convenience constructor without frozen input tracks. */
+    public StageplayDocument(int version, String name, int durationFrames, int width, int height,
+            SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
+            List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
+            List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
+            List<PuppetTrack> puppets, List<ObjectActor> objectActors, List<WorldCommand> worldCommands,
+            List<SpeakerVoice> voices) {
+        this(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects,
+                sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, List.of());
     }
 
     /** Convenience constructor using each speaker's built-in voice. */
@@ -268,81 +299,88 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     public StageplayDocument withName(String value) {
-        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     /** Shortening a scene rejects remaining keys/cues beyond its new end. */
     public StageplayDocument withDurationFrames(int value) {
-        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withSize(int newWidth, int newHeight) {
-        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withSet(SetSource value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withActors(List<Actor> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withCamera(List<CameraKey> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withCaptions(List<Caption> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withAudio(List<AudioCue> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withCameraEffects(List<CameraEffect> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     /** Changes and their required actor/camera anchors must be published as one valid document. */
     public StageplayDocument withSceneChanges(List<SceneChange> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withDialogueTypers(List<DialogueTyper> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, value, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices);
+                cameraEffects, sceneChanges, value, dialogueSkins, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withDialogueSkins(List<DialogueSkin> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, value, dialogue, puppets, objectActors, worldCommands, voices);
+                cameraEffects, sceneChanges, dialogueTypers, value, dialogue, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withDialogue(List<DialogueCue> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value, puppets, objectActors, worldCommands, voices);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value, puppets, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withPuppets(List<PuppetTrack> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, value, objectActors, worldCommands, voices);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, value, objectActors, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withObjectActors(List<ObjectActor> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, value, worldCommands, voices);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, value, worldCommands, voices, inputTracks);
     }
 
     public StageplayDocument withWorldCommands(List<WorldCommand> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, value, voices);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, value, voices, inputTracks);
+    }
+
+    /** Replaces the frozen input tracks; each must bind physical actors whose commands leave its interval. */
+    public StageplayDocument withInputTracks(List<FrozenInputTrack> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands,
+                voices, value);
     }
 
     /** Replaces explicit per-speaker overrides; an absent override uses the character default. */
     public StageplayDocument withVoices(List<SpeakerVoice> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, value);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands, value, inputTracks);
     }
 
     @ModApi public enum VoiceTone { OFF, SQUARE, CHIME, HOLLOW, BUZZ }
@@ -538,6 +576,58 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                     movement = command.frame();
                 }
             }
+        }
+    }
+
+    /** A controller lane of a frozen input track. */
+    @ModApi public enum ControllerLane { P1, P2 }
+
+    /** One physical actor driven by a lane of a frozen input track. */
+    @ModApi
+    public record LaneBinding(String actorId, ControllerLane lane) {
+        public LaneBinding {
+            actorId = identifier(actorId);
+            require(lane != null, "lane is required");
+        }
+    }
+
+    /**
+     * Frozen physical controller rows for {@code [startFrame, startFrame + frameCount)}. Each row
+     * is a held two-pad level; while the track covers a frame its bound actors read only these
+     * rows, never their commands. {@code rows} are route-script lines ({@code N BUTTONS[ / P2]})
+     * and {@code sha256} binds the decoded rows (see {@code com.openggf.route.InputTape#hash}).
+     */
+    @ModApi
+    public record FrozenInputTrack(String id, int startFrame, List<LaneBinding> lanes, List<String> rows,
+                                   String sha256) {
+        public FrozenInputTrack {
+            id = identifier(id);
+            range(startFrame, 0, MAX_DURATION_FRAMES - 1, "frozen track start");
+            lanes = boundedCopy(lanes, 2, "frozen track lanes");
+            require(!lanes.isEmpty(), "A frozen input track binds at least one actor");
+            require(lanes.stream().map(LaneBinding::lane).distinct().count() == lanes.size(),
+                    "A frozen input track binds each lane once");
+            require(lanes.stream().map(LaneBinding::actorId).distinct().count() == lanes.size(),
+                    "A frozen input track binds each actor once");
+            rows = boundedCopy(rows, MAX_DURATION_FRAMES, "frozen track rows");
+            for (String row : rows) require(row != null && row.length() <= 64 && row.matches("[1-9][0-9]* [-A-Z+/ ]+"),
+                    "Frozen track rows are 'N BUTTONS[ / P2]' lines");
+            require(sha256 != null && sha256.matches("[0-9a-f]{64}"), "Frozen track rows need their SHA-256");
+        }
+
+        /** Rows the track covers. */
+        public int frameCount() {
+            int total = 0;
+            for (String row : rows) total += Integer.parseInt(row.substring(0, row.indexOf(' ')));
+            return total;
+        }
+
+        public int endFrame() {
+            return startFrame + frameCount();
+        }
+
+        public boolean binds(String actorId) {
+            return lanes.stream().anyMatch(binding -> binding.actorId().equals(actorId));
         }
     }
 

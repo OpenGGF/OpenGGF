@@ -107,9 +107,10 @@ class TestStageplayRouteJob {
                 input.readLine(1024);var envelope=StageplayRouteProtocol.decodeEnvelope(input.readLine(StageplayRouteProtocol.MAX_REQUEST_CHARS));
                 if(args[0].equals("wait")) {Thread.sleep(60000);return;}
                 if(args[0].equals("oversized")) {System.out.print("x".repeat(StageplayRouteProtocol.MAX_RESULT_CHARS+1));return;}
-                var commands=List.of(new PuppetCommand("route.go",0,PuppetCommandKind.MOVE_TO,150,200,1,0),new PuppetCommand("route.stop",29,PuppetCommandKind.STOP,0,0,0,0));
-                var candidate=source.withPuppets(List.of(new PuppetTrack("hero",false,0,commands)));
-                var result=new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"fixture worker",envelope.fingerprint(),envelope.request(),candidate,commands,List.of(),List.of(new StageplayRoutePoint(29,150,200,true)),1,30,true);
+                var rows=com.openggf.route.RouteFiles.tapeFromScript(envelope.request().maxFrames()+" R");
+                var track=com.openggf.stageplay.route.StageplayRoutes.track("route.rows.1","hero",envelope.request().startFrame(),rows);
+                var candidate=com.openggf.stageplay.route.StageplayRoutes.install(source,track);
+                var result=new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"fixture worker",envelope.fingerprint(),envelope.request(),candidate,List.of(),List.of(),List.of(new StageplayRoutePoint(29,150,200,true)),1,30,true,track);
                 System.out.println(StageplayRouteProtocol.encodeResult(result));
                 if(args[0].equals("trailing")) System.out.println("{}");
             }

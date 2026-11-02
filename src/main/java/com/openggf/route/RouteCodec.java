@@ -214,6 +214,11 @@ public final class RouteCodec {
                 inlet.put("act", cold.level().act());
                 inlet.put("showTitleCard", cold.showTitleCard());
             }
+            case Inlet.Scene scene -> {
+                inlet.put("kind", "scene");
+                inlet.put("sceneSha256", scene.sceneSha256());
+                inlet.put("startFrame", scene.startFrame());
+            }
         }
         ObjectNode roster = node.putObject("roster");
         roster.put("main", launch.roster().main());
@@ -250,6 +255,10 @@ public final class RouteCodec {
                 object(inlet, "inlet", Set.of("kind", "zone", "act", "showTitleCard"), Set.of("kind", "zone", "act"));
                 yield new Inlet.ColdLevel(new LevelId(game, integer(inlet, "zone"), integer(inlet, "act")),
                         inlet.has("showTitleCard") && bool(inlet, "showTitleCard"));
+            }
+            case "scene" -> {
+                object(inlet, "inlet", Set.of("kind", "sceneSha256", "startFrame"), Set.of("kind", "sceneSha256", "startFrame"));
+                yield new Inlet.Scene(text(inlet, "sceneSha256"), integer(inlet, "startFrame"));
             }
             default -> throw new IOException("unknown inlet kind: " + inlet.get("kind"));
         };

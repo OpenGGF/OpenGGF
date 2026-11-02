@@ -24,4 +24,18 @@ public sealed interface RouteTask {
             }
         }
     }
+
+    /**
+     * Author new rows from {@code launch} that reach and settle at {@code goal}. {@code checks}
+     * are the route's replayed checks (usually the goal's arrival plus a guard); a scene front-end
+     * adds its own shot checks on the replay observer.
+     */
+    record Author(LaunchContract launch, PointGoal goal, GoalProgram checks, SearchBudget budget) implements RouteTask {
+        public Author {
+            Objects.requireNonNull(launch, "launch");
+            Objects.requireNonNull(goal, "goal");
+            Objects.requireNonNull(checks, "checks");
+            Objects.requireNonNull(budget, "budget");
+        }
+    }
 }

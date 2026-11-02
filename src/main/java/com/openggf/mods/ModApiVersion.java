@@ -50,6 +50,8 @@ public final class ModApiVersion {
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
      * Scene audio also starts supplied-ROM music live, preserving native intros/loops
      * with bounded packet buffering and scene-owned stop/fade/close lifetime.
+     * Stageplay documents (version 9) carry frozen physical controller input tracks bound to
+     * Puppet actors' lanes; a covered interval reads only those rows, never commands.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      * Scene clipboard writes consume bounded foreground user activation, and owner-bounded
