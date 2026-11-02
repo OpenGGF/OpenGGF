@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
+  palette, with debug geometry for its body and children. S3K Super/Hyper reversion
+  retains invincibility until the next native eight-frame boundary.
+
 - **Shared S3K object behavior:** HCZ reuses common capsule opening, effects,
   geometry, drawing and rewind-safe opening control ownership while retaining
   its native button/results handoff. FBZ
