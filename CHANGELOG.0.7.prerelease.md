@@ -5,6 +5,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
 - FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
   palette, with debug geometry for its body and children. S3K Super/Hyper reversion
   retains invincibility until the next native eight-frame boundary.

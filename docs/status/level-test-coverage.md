@@ -2552,3 +2552,9 @@ the native main-handle-before-child-rail emission for both mounting sides and
 the reverse painter order. This local presentation fix changes no movement or
 rewind state; the SOZ matrix's inherited viewport/donor and native presentation
 acceptance gaps remain open.
+
+Iwamodoki self-destruct follow-up (2026-11-02): the
+[LRZ1](../architecture/validation/levels/s3k-lrz-act1.md#iwamodoki-rider-release-2026-11-02)
+and [LRZ2](../architecture/validation/levels/s3k-lrz-act2.md#iwamodoki-rider-release-2026-11-02)
+matrices record the bounded P1/P2 shield/rider regression and inherited route,
+breadth and rewind obligations.
