@@ -2449,7 +2449,7 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SWINGING_PLATFORM,
                 Sonic3kConstants.MAP_SOZ_SWINGING_PLATFORM_ADDR, 1, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RAPEL_WIRE,
-                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 2, null));
+                0, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 0, "buildSozRapelWireSheet"));
         if (actIndex == 0) {
             levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_ACT1_END_DOOR,0x5611E,0x29,2,null));
             standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_MINIBOSS,

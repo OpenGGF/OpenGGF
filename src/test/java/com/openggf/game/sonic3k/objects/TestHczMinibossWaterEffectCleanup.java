@@ -57,6 +57,57 @@ class TestHczMinibossWaterEffectCleanup {
     }
 
     @Test
+    void cooldownRetainsNativePlayersForLaterWaterEffectDeletion() throws Exception {
+        Camera camera = GameServices.camera();
+        var sonic = new TestablePlayableSprite("sonic", (short) 0x36E9, (short) 0x0800);
+        var tails = new TestablePlayableSprite("tails", (short) 0x36E9, (short) 0x0800);
+        camera.setFocusedSprite(sonic);
+        HczMinibossInstance boss = buildBoss(new NativePlayerServices(camera, sonic, tails));
+        Method pull = HczMinibossInstance.class.getDeclaredMethod("applyVortexPull",
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        pull.setAccessible(true);
+        pull.invoke(boss, sonic);
+        Method end = HczMinibossInstance.class.getDeclaredMethod("endVortex");
+        end.setAccessible(true);
+        end.invoke(boss);
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        identities.registerPlayer(sonic, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
+        identities.registerPlayer(tails, com.openggf.game.rewind.identity.PlayerRefId.sidekick(0));
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(identities);
+        var snapshot = boss.captureRewindState(context);
+        boss.releaseTrackedVortexPlayersOnWaterEffectDelete();
+        boss.restoreRewindState(snapshot, context);
+        // Both players can land after the ordinary release and before deletion.
+        sonic.setAir(false);
+        tails.setAir(false);
+        boss.releaseTrackedVortexPlayersOnWaterEffectDelete();
+        assertTrue(sonic.getAir());
+        assertTrue(tails.getAir());
+    }
+
+    @Test
+    void tracksNativeSlotsIndependentlyOfCaptureOwnership() throws Exception {
+        Camera camera = GameServices.camera();
+        var sonic = new TestablePlayableSprite("sonic", (short) 0x36E9, (short) 0x0800);
+        var tails = new TestablePlayableSprite("tails", (short) 0x36E9, (short) 0x0800);
+        camera.setFocusedSprite(sonic);
+        HczMinibossInstance boss = buildBoss(new NativePlayerServices(camera, sonic, tails));
+        sonic.setObjectControlled(true);
+        tails.setObjectControlled(true);
+        Method pull = HczMinibossInstance.class.getDeclaredMethod("applyVortexPull",
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        pull.setAccessible(true);
+        pull.invoke(boss, sonic);
+        sonic.setAir(false);
+        tails.setAir(false);
+        boss.releaseTrackedVortexPlayersOnWaterEffectDelete();
+        assertTrue(sonic.getAir());
+        assertTrue(tails.getAir());
+        assertFalse(sonic.isObjectControlled());
+        assertFalse(tails.isObjectControlled());
+    }
+
+    @Test
     void firstVortexContactUsesNativeBit0ObjectControlPolicy() throws Exception {
         Camera camera = GameServices.camera();
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x3720, (short) 0x0800);
