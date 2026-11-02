@@ -246,8 +246,8 @@ boxes for graphics to today, including the sound slowly getting less garbled.
 
 ### What licence is OpenGGF under? Do mods have to be GPL?
 
-OpenGGF is under GPL-3. Mods don't have to be: the [OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt)
-lets a mod that uses only the Mod API take any licence, or none. See [Licence](#licence).
+OpenGGF is under GPL-3.0-only. Mods don't have to be: the [OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt)
+lets a mod that doesn't copy engine code take any licence, or none. See [Licence](#licence).
 
 ### How can I contribute?
 
@@ -272,11 +272,13 @@ goal is finishing and testing the three original games. See the
 
 ## Licence
 
-OpenGGF is free software under the [GNU General Public License, version 3](LICENSE).
+OpenGGF is free software under the [GNU General Public License, version 3 only](LICENSE)
+(`GPL-3.0-only`).
 
 Mods do not have to use the GPL. The [OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt)
-lets a mod that uses OpenGGF only through the Mod API be released under any terms,
-alone or with OpenGGF. `ggfmod init` adds no licence: what it writes is under
+lets a mod that uses OpenGGF's mod interface, including engine types beyond the
+`@ModApi` set, be released under any terms, alone or with OpenGGF, as long as it
+doesn't copy engine code. `ggfmod init` adds no licence: what it writes is under
 [MIT No Attribution](LICENSES/MIT-0.txt), so a new project is yours to license or not.
 The example mods in `examples/`, the bundled Time Attack mod in `racing/time-attack/`
 and the creator kit's sample campaign are under the [MIT License](examples/hello-scene/LICENSE),
@@ -286,8 +288,8 @@ file, and the creator kit exports it with the source.
 The YM2612 sound code in `src/main/java/com/openggf/audio/synth/nuked/` is a Java port
 of [Nuked OPN2](https://github.com/nukeykt/Nuked-OPN2) by Alexey Khokholov (Nuke.YKT).
 It stays under the [GNU Lesser General Public License, version 2.1 or later](LICENSES/LGPL-2.1.txt),
-and you may take it out and reuse it under that licence on its own. We distribute the
-combined program under GPL-3 through LGPL section 3. [NOTICE.md](NOTICE.md) records
+and you may take it out and reuse it under that licence on its own. The rest of OpenGGF
+uses it as a library; we do not convert it to the GPL. [NOTICE.md](NOTICE.md) records
 where that code came from and what we changed. [CREDITS.md](CREDITS.md) lists every
 contributor, reference and library. The JAR includes these files under
 `META-INF/openggf/`, and release downloads include them next to the program.
