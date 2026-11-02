@@ -189,3 +189,121 @@ probe observed max X `0000/6000`, min X `0001/0000` (current/target), followed
 by max/camera X `0,2,4,6,8,10`. Reverting the candidate reproduces the original
 8,469 errors and row-13,939 camera mismatch exactly. The probe and attempted
 control-owner change were removed; trace comparison rules are unchanged.
+
+## Follow-up attribution — 2026-11-02
+
+Matched, observationally instrumented runs of the original transition request
+and `9d3fe74c9` reproduce 3,020 and 3,161 MGZ3 error groups. These totals count
+contiguous divergence groups, not mismatching frames. No comparison is suppressed,
+demoted or re-baselined.
+
+The first difference is a **removed** `camera_x` error at row 1,279: ROM X=0,
+original engine X=2, corrected engine X=0. P1 X/Y are `0105/08C0` in ROM and
+both engines. Post-step bounds and targets, in minimum-X, maximum-X, minimum-Y,
+maximum-Y order, are:
+
+| Build | Bounds | Targets |
+| --- | --- | --- |
+| Original | `0000,0004,080C,0810` | `0000,6000,0000,0810` |
+| Corrected | `0001,0000,0810,0810` | `0001,0000,0810,0810` |
+
+`MGZ1BGE_Transition (sonic3k.asm:106358-106390)` offsets the live lock; it
+does not expand it toward the loaded level sizes. The corrected request models
+that behavior. The original engine has already started its unrelated generic
+2-pixel easing by this post-step sample.
+
+The first newly added row/field error is `camera_x` at row 2,061: ROM X=`0065`,
+original engine X=`0065`, corrected engine X=0. This is already a divergent
+release state in **both** builds. From row 1,889, ROM has restored P1 control
+(`object_control=00`, WAIT animation), while both engines retain object control,
+victory animation and active results. At row 2,033, both engines already have
+camera Y=`0810` versus ROM `0813`; at row 2,061 both have Y=`0810` versus ROM
+`0860`. Both still report `End_of_level_flag=false`, results active and control
+locked. Original bounds/targets then are `0000,0620,01F0,0810` /
+`0000,6000,0000,0810`; corrected bounds/targets remain
+`0001,0000,0810,0810` / `0001,0000,0810,0810`.
+
+`Obj_EndSignControlDoStart (sonic3k.asm:180511-180515)` waits for the completion
+flag before `Change_Act2Sizes (sonic3k.asm:180671-180706)` creates the gradual
+boundary workers. Holding the corrected bound while that engine flag remains
+false is correct. The original stale target accidentally permits camera following
+without that owner. Its later agreement in X masks the existing results/title
+release desync, rather than establishing a correct release path. Entry-state debt
+is also explicit: row-zero y speed is `0038` versus ROM 0, camera Y is `0E16`
+versus `0E12`, and rings are 0 versus ROM 161. The exact cause of the delayed
+release is not assigned to any one entry-state field here.
+
+The MGZ3 group-count increase is therefore **not an attributable regression in
+the transition correction**. The initial integration block based on that count
+alone is superseded by this matched row/state attribution. The short MGZ trace's
+four strict animation errors remain a separate frontier pending owner diagnosis.
+
+### Remaining short-trace animation owner
+
+A temporary VICTORY-to-WAIT setter stack probe and post-comparison slot snapshots
+reproduce all four errors. On rows 14,382–14,383 the engine flow is
+`AWAIT_RESULTS` in slot 21, while results occupy slot 7. The last results child
+retires at 14,383; results clear the active latch at 14,384. In that same object
+pass, the later slot-21 `S3kBossDefeatSignpostFlow.updateAwaitResults()` calls
+`restoreNativePlayerControl()` for P1/P2 and writes WAIT. No inference from the
+numbers is needed: both setter call stacks reach that owner. Row 14,384 is
+expected animation `13`, actual `05`; row 14,385 has the two resulting mapping
+mismatches (`B2/BA` for P1 and `A6/AD` for P2).
+
+ROM aux has `Obj_EndSignControlAwaitStart` in slot 7 before results/title in
+slot 8. `loc_2DD06 (sonic3k.asm:62753-62764)` clears `_unkFAA8`; the lower
+slot observes that on the following pass. Then
+`Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508)` calls
+`Restore_PlayerControl2 (sonic3k.asm:180455-180461)`, which writes WAIT to
+animation and previous-animation and clears the animation counters. Native
+control therefore restores at 14,385, not 14,384.
+
+This cause predates the camera fix: the reverted-target control also reports its
+first animation error at 14,384 (`13` versus `05`), and neither the miniboss nor
+the defeat-flow implementation changed in `9d3fe74c9`. The engine
+`MgzMinibossInstance.queuePostDefeatFlow()` allocates an auxiliary flow instead
+of the native in-place `loc_887CA (sonic3k.asm:185107-185110)` handoff. A proper
+slot correction must also separate the boss's still-running embedded explosion
+controller lifetime; deleting/transferring the boss immediately would truncate
+that work. This is not treated as a safe isolated timing adjustment. The four
+strict animation errors remain the new frontier; no delay, comparison exception
+or slot/lifetime rewrite is included in this camera-bound correction.
+
+### Original current-only setter intent
+
+`15accb4f4` ports FBZ's synchronous reload, native SST survival and independent
+camera-copy/target words. It deliberately changes shared transition overrides
+from synchronized setters to current-only setters and adds explicit target
+fields. FBZ rebases its live X bounds and its independently stored X targets,
+while retaining the independent Y targets. Its transition test asserts current
+max-X `00A0` versus target `01B0`, and current min-X `0020` versus target
+`FF10`; synchronizing the shared setters again would destroy that contract.
+
+The MGZ correction leaves those shared setters and FBZ's request unchanged.
+Only MGZ supplies targets matching its shifted held bounds. The original
+`TestFbzActTransitionHeadless#screenEventReloadPreservesLiveTeamStateAndUsesShiftedWindows`,
+`TestFbzTransitionRewind` and `TestS3kScreenEventCameraCopies` are the focused
+intent checks for this follow-up.
+
+### Follow-up validation and merge assessment
+
+The fresh matched MGZ3 runs compare 22,934 rows each with no skips and reproduce
+3,020 / 3,161 groups. The short MGZ owner probe compares 35,861 rows and
+reproduces exactly four animation errors, no physics errors and no skips.
+After removing every probe, the original FBZ intent checks above plus the required
+S3K keep-green set and camera snapshot checks pass **69 tests, zero failures,
+errors or skips** in the ordinary smoke profile. All added ROM citations resolve;
+the one pre-existing unverifiable citation is unchanged, and whitespace checks pass.
+
+This follow-up changes documentation only. Java, test sources, POM and resources
+remain identical to `9d3fe74c9`; the other requested r6, segment and r7 results
+from that runtime state remain applicable. Their strict error totals and first
+errors are unchanged, not re-baselined. No broad smoke or release full suite is
+claimed.
+
+The branch is safe to merge as the bounded camera-regression fix that advances
+the short MGZ frontier from row 13,939 `camera_x` to row 14,384
+`player_animation_id`. It is **not** a green strict MGZ replay or whole-route
+certification. The larger MGZ3 group count is attributed to its already-divergent
+results/control release, and the remaining four short-trace animation errors
+have the independent pre-existing slot-order owner described above.
