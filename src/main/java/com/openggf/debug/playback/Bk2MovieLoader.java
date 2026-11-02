@@ -134,7 +134,10 @@ public final class Bk2MovieLoader {
             if (trimmed.isEmpty() || trimmed.startsWith("[")) {
                 continue;
             }
-            int sep = trimmed.indexOf(':');
+            // BizHawk writes "Key value" (first whitespace); OpenGGF recordings wrote "Key: value".
+            int space = indexOfWhitespace(trimmed);
+            int colon = trimmed.indexOf(':');
+            int sep = colon > 0 && (space < 0 || colon < space) ? colon : space;
             if (sep <= 0 || sep >= trimmed.length() - 1) {
                 continue;
             }
@@ -145,6 +148,13 @@ public final class Bk2MovieLoader {
             }
         }
         return metadata;
+    }
+
+    private static int indexOfWhitespace(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            if (Character.isWhitespace(text.charAt(i))) return i;
+        }
+        return -1;
     }
 
     @FunctionalInterface

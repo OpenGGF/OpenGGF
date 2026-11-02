@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.route.InputScriptCompiler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshotDiff;

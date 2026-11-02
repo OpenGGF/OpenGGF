@@ -197,6 +197,13 @@ class TestArchUnitRules {
             // any runtime dependency back on editor or the offline capture tool.
             "editor -> stageplay",
             "tools -> stageplay",
+            // Route tapes (shared route planner, 2026-11-02): the core owns the lossless row
+            // codec and script grammar at the controller boundary, so it reads the recorded
+            // input records. tools composes the engine host and the authoring front-ends; the
+            // core never reaches the gameplay runtime.
+            "route -> debug",
+            "route -> game",
+            "tools -> route",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",

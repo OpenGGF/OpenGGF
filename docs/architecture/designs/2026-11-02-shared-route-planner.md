@@ -398,6 +398,30 @@ declares. `defeat` needs a hit-point target.
 
 Recorded during implementation; each states what the sketch said, what was built, and why.
 
+- **Engine host lives in `com.openggf.tools`, not package-private in `com.openggf.route` (step 1).**
+  The sketch put hosts beside the search. The engine host wraps `GameplayCaptureSession` (a
+  `tools` class), and `TestArchUnitRules` forbids a new slice joining the core-runtime cycle,
+  so `route -> tools` plus `tools -> route` was rejected. `EngineRouteHosts` (public composition
+  point) and `EngineRouteWorld` (package-private) sit in `tools`; the core depends only on the
+  recorded-input record and loader (`debug`) and the script output record (`game.recording`).
+  The core stays game-, trace- and front-end-neutral; a guard pins that.
+- **`InputScriptCompiler` moved into `com.openggf.route` (step 1).** Same cycle rule: the script
+  grammar is the row codec's, so the codec owner holds it and `tools` consumes it.
+- **Boundaries are detected by identity, not `RewindBoundary` events (step 1).** Capture hosts
+  disable live rewind, so the boundary reporter is a no-op there. The engine host starts a new
+  epoch when the `Level` object, the `GameMode` or the gameplay context changes, which covers the
+  same loads, seamless transitions and mode exits for the purposes of checkpoint admission.
+- **`RoutePlayback` added beside `RouteReplay.replay` (step 1).** Route tests need the live world
+  for domain and rewind assertions as rows play. `RoutePlayback` offers only tape-index stepping
+  (no clamping, no controller) and a typed read view (`view(EngineRouteHosts.EngineView.class)`)
+  of the host; the guard forbids driving the host SPI from outside the core and host owners.
+- **Positioned entries are `Seeds` on a `ColdLevel` inlet (step 1).** The capture host applies a
+  start position as declared setup after a cold boot, so a separate `Positioned` inlet would
+  duplicate the same boot. The initial `V_int_run_count` is always declared and always written.
+- **The BK2 header fix is in the loader (step 1).** BizHawk's own headers are `Key value`, which
+  the exporter already wrote; `Bk2MovieLoader` only parsed `Key: value`. It now accepts both. The
+  derived movie also carries BizHawk's Genesis key, `SyncSettings.json` and the ROM SHA1.
+
 ## Next step
 
 Step 1: the typed two-lane tape and launch artefact, plus the shared replay-only driver. Pin it
