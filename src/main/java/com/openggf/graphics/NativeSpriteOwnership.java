@@ -119,7 +119,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private final int vertexArray = glGetInteger(GL_VERTEX_ARRAY_BINDING);
     private final int arrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING);
     private final int activeTexture = glGetInteger(GL_ACTIVE_TEXTURE);
-    private final int shadowSampler = glGetIntegeri(GL_SAMPLER_BINDING, 6);
+    private final int shadowSampler;
     private final int[] textures = new int[7];
     private final int[] viewport = integers(GL_VIEWPORT, 4);
     private final int[] scissor = integers(GL_SCISSOR_BOX, 4);
@@ -156,6 +156,9 @@ final class NativeSpriteOwnership implements AutoCloseable {
             glActiveTexture(GL_TEXTURE0 + unit);
             textures[unit] = glGetInteger(GL_TEXTURE_BINDING_2D);
         }
+        // Unit 6 is active here. OpenGL 4.1 exposes SAMPLER_BINDING through
+        // the active texture unit, not the indexed query supported by newer GL.
+        shadowSampler = glGetInteger(GL_SAMPLER_BINDING);
         glActiveTexture(activeTexture);
     }
 

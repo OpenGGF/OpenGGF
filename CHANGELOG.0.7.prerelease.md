@@ -1463,6 +1463,8 @@ Unreleased. The earlier development themes remain in
   host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
   allocation and immediate rewind redraws. SAT replay preserves default-framebuffer
   stencil contents independently of the host depth format, including 32-bit depth.
+  Sampler-state capture uses an OpenGL 4.1-compatible query so macOS level entry
+  does not fail with an invalid-enum error during SAT replay.
   SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Captured sprites
