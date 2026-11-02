@@ -211,3 +211,17 @@ work out of range. Combined verification passes all25 boss/rewind cases within
 (232 physics/seven animation), gate reached. Cold traversal, full roster/team,
 donor/viewport and native presentation breadth remain inherited gaps; this
 does not certify the complete act.
+
+
+### EggRobo-head producer follow-up — 2026-11-02
+
+Native head initialization now submits the Knuckles-only module once via the
+global pattern owner, selected by actual main-player identity. Behavior tests
+cover one-time submission and a Sonic-main adversarial control; graph rewind
+includes the initialized child flag. Worker `86ea57690` removes exactly seven
+queue records at858–859, advancing239→232 errors. Composed candidate `578f985cc`
+passes177 functional cases with zero skips and the two known replay failures;
+the complete232-error LBZ profile matches the worker candidate. Row1454's missing
+Big Arm archive$376874 is the next queue frontier. Rings55/0, movement945 and
+unmatched completions6313 remain open. Inherited route, roster/team, donor,
+viewport and presentation gaps remain; this is not full-act qualification.

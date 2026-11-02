@@ -191,3 +191,12 @@ shared inlet lane to avoid overlap. The KiS2 worker instead owns native glide
 top-boundary speed halving; LBZ owns the missing EggRobo-head art producer.
 These newer assignments supersede the earlier hold on those survey hypotheses.
 Carried-run-state policy and unrelated survey work remain outside this repair.
+
+
+The composed history/EggRobo producer candidate `578f985cc`, including upstream
+music changes through `193e1ff58`, completes179 cases:177 passes, known KiS2/LBZ
+replay failures, zero errors/skips. LBZ advances239→232 by removing exactly seven
+row858–859 records; its complete error profile matches the worker candidate.
+Next producer frontier is1454 (Big Arm archive$376874). KiS2 remains38 untouched
+Y slots, handed to the inlet lane under the accepted merge-order boundary.
+These two test classes remain red; this delivery does not claim trace-suite parity.

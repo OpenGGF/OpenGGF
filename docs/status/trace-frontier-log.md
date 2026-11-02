@@ -122776,3 +122776,59 @@ entries need explicit native-versus-positioned entry ownership, not a fitted
 one-pixel adjustment. This shared work is handed to the survey lead's inlet lane;
 parallel anchor edits are stopped. KiS2 glide top-boundary and LBZ producer work
 remain assigned. Carried-state policy and halfpipe return-gap timing are unchanged.
+
+
+## 2026-11-02 — LBZ EggRobo-head native art producer
+
+Worker commit `86ea57690`, parent `c839a6bde`, submits EggRobo-head art once
+from `LbzFinalBoss1Instance.RobotnikHeadChild` initialization. The actual main
+player's character selects the native Knuckles branch; global pattern ownership
+keeps completion independent of the child lifetime. The initialization flag is
+captured by graph rewind. Shared queue/timing/bootstrap code is unchanged.
+Pinned `8b2cf3c4178f` references: `Obj_RobotnikHead3Init`
+(sonic3k.asm:136252–136259) calls `sub_67B14` (sonic3k.asm:136125–136132).
+
+Worker replay advances239→232 errors (225 physics/seven animation), removing
+exactly seven queue records at858–859 with no added or changed records. Both
+gates complete6,444 planned rows /6,309 gameplay comparisons, zero skips. All179
+nonqueue/non-timing records and nine unmatched-completion records remain identical.
+Rings55/0 and movement/animation945 remain open; unmatched completions begin6313.
+Direct-source mismatch coverage shrinks13→12 frames, spans8→7. Twenty-eight
+behavior and ten graph-rewind cases pass across focused runs; two new producer
+cases also pass in the final fixture-only selective rerun. Nine advertised aux
+schemas remain unsupported by comparison.
+
+The worker used queued Java25, unset display variables, surfaceless EGL,
+`-Dmse=off -Ptrace-replay`, the original absolute S3K ROM path and selectors
+`TestS3kKnucklesLbz2BigArmTraceReplay,TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind`.
+Its final selective rerun used
+`TestLbzFinalBoss1Instance#knucklesHeadInitSubmitsItsNativeModuleExactlyOnce+sonicMainDoesNotSubmitEggRoboHeadFromKnucklesZoneState`,
+without the trace profile. Queue waits524/362/472/367s and Maven execution
+approximately338s are worker measurements, not delivery elapsed time.
+
+The next queue frontier is1454, missing Big Arm archive$376874 / direct
+source$376876; producer attribution is required before a repair. A head experiment
+that changed no replay errors was reverted. Lead has merged this repair together
+with the solo-history change and upstream music repairs through`193e1ff58`.
+Composed validation at `578f985cc` completed179 cases:177 passes, two known
+replay failures, zero errors/skips. KiS2 remains exactly38 Y-slot bootstrap errors;
+LBZ remains232 and its complete errors/bootstrap/warnings/group/gate data match
+the worker report exactly. All four replay gates complete; ordinary S1/S2 remain
+green. The command uses the preceding15-selector history selection plus `TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind,TestLbzEndBossKosOwnerRewind,TestLbzEndBossInstance`.
+Queue wait was729s; Maven execution113s. Upstream music fixes through193e1ff58
+merged without conflict in the boss source; both repairs retain their tested
+behavior. Focused verification also covers final-boss behavior/graph rewind and
+the previously delivered camera-admission/rewind owner. No release-only full
+suite or broad trace sweep is claimed.
+
+
+Coordination checkpoint: the inlet lead accepted ownership of explicit entry
+provenance through fixture construction, metadata ordering, sidekick reanchoring
+and `LevelManager.spawnSidekicks()` leader-history refill, including DEZ23 Tails
+placement/camera snap. Its acceptance includes the remaining38 KiS2 Y slots and
+a full trace-replay before/after. Merge order is this solo-history repair first;
+the lane rebases after it reaches `origin/develop`, or lists composed method
+changes if not yet published. It will not edit this repair's pass-count constant
+or `applyBootstrap` solo-history loop. Session50195 already completed116 cases;
+its successor47508 completed the history/LBZ/upstream composition as recorded above. No source footprint
+change accompanies this handoff.
