@@ -262,6 +262,39 @@ Recorded during implementation; each states what the sketch said, what was built
   the exporter already wrote; `Bk2MovieLoader` only parsed `Key: value`. It now accepts both. The
   derived movie also carries BizHawk's Genesis key, `SyncSettings.json` and the ROM SHA1.
 
+- **Lead-requested facade additions (step 1, second commit).** For the editor lane:
+  `RouteReplay.replay(route, cancellation, observer)` reports every post-row sample of the same
+  evidence-minting run; `RouteFiles.writeDraft`/`readDraft` save unqualified work with a `draft`
+  flag and no stamp, `RouteFiles.read` refuses drafts and any manifest without a passed engine
+  stamp for its exact content, and `TestCommittedRoutesQualifiedGuard` rejects committed drafts;
+  `RouteCodec` is the public canonical text codec (manifest, transport text with inline rows,
+  launch, goal program); the manifest carries the `GoalProgram` (`checks`), which is content;
+  `QualificationStamp` carries `passed`, `divergedRow` and `reason` instead of a verdict string.
+  The goal vocabulary at this point is the object-free part (`Achieve` over `PlayerIn`,
+  `Settled`, `LevelIs`, `All`; `EnterBoundary`; per-leg and route-wide `Guard`). Object goals join
+  it in step 4.
+- **Rejoin is nearest-within-tolerance, not reference progress (step 2).** Reference progress is
+  the latest index within the 28 px scoring radius, so after an authored window it runs ahead of
+  the matching source row by up to the radius. Fast-following source rows from there never tracks
+  again (the synthetic witness showed a repair that never resumed original rows). An authored
+  node now rejoins at the nearest source index within the six-pixel tracking tolerance, after the
+  last source row the path used, whose source row holds the same A/B/C/Start buttons as the
+  node's last row (the seam check). Literal rows must then keep tracking, and the final cold
+  replay decides.
+- **Incomplete checkpoints fail loudly (step 2).** Every restore compares the anchor's recorded
+  observation, and every replayed edge compares its end observation, with what the host
+  reproduces. A mismatch throws (an incomplete host token is a host bug), rather than returning a
+  stop reason a caller might retry.
+- **A rebuilt host recaptures its node (step 2).** After a trial crosses an unexpected boundary the
+  host is closed and rebuilt by replaying every recorded row; the rebuilt node captures a fresh
+  checkpoint, otherwise every later sibling trial would rebuild again.
+- **Qualification steps are reported, not budgeted (step 2).** The search budget counts search
+  steps (trials and reconstruction). The final cold replay is always run in full and reported in
+  `WorkReport.qualificationSteps`.
+- **Repair takes an explicit `ReferencePath` (step 2).** It doubles as the tracking contract: for
+  a route repair it is the route's own rows replayed on the engine it was authored against. It is
+  not yet persisted in the manifest.
+
 ## Next step
 
 Step 1: the typed two-lane tape and launch artefact, plus the shared replay-only driver. Pin it
