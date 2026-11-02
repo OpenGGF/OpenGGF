@@ -80,6 +80,12 @@ final class GameLoopPlcLifecycle {
                                       Supplier<TitleCardProvider> provider) {
         enter.accept(level.get().getTitleCardZone(), level.get().getTitleCardAct());
         TitleCardProvider titleCard = provider.get();
+        if (level.get().hasPendingFreshLevelTransitionBoundary()
+                && titleCard instanceof FreshLevelTitleBoundaryPublication boundary
+                && boundary.installsImmediateFreshLevelPalette()) {
+            // The new title now owns the black field; line 0 can be shown.
+            context.getFadeManager().clearOverlayForImmediatePaletteLoad();
+        }
         if (titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase()) {
             LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(context),
                     frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });

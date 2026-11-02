@@ -939,6 +939,9 @@ Unreleased. The earlier development themes remain in
   data select, restarts, special and bonus stage returns, and loads without a card.
   The level submits its queued art during the load and prepares the first item
   in the first title-loop step, keeping destination setup on the original frame.
+  Destination setup stays black until the new card takes over presentation, and
+  new zone and bonus cards discard the previous card's published picture so level
+  art cannot flash through before their black backdrop appears.
   Bonus title cards load the complete native art batch, including the unused act
   number, then submit the stage's terrain art once the title is ready and Nemesis
   work clears, while retaining the bonus card's own layout.

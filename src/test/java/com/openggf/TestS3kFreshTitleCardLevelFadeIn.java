@@ -64,6 +64,10 @@ class TestS3kFreshTitleCardLevelFadeIn {
         for (int step = 0; step < 900 && !released.containsKey(23); step++) {
             loop.step();
             boolean atDestination = level.getCurrentZone() == zone && level.getCurrentAct() == act;
+            if (atDestination && !presented && loop.getCurrentGameMode() == GameMode.LEVEL) {
+                assertEquals(FadeManager.FadeState.HOLD_BLACK, GameServices.fade().getState(),
+                        "destination setup must stay black until the title card owns presentation");
+            }
             presented |= atDestination && loop.getCurrentGameMode() == GameMode.TITLE_CARD;
             // Counter 0 is the loc_64DC release and the held first boundary, before LevelLoop.
             if (!presented || loop.getCurrentGameMode() != GameMode.LEVEL) {

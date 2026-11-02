@@ -879,6 +879,8 @@ public class Sonic3kTitleCardManager
     public void initializeBonus() {
         // Obj_TitleCardInit queues the archives again on every Level: entry.
         artLoaded = false;
+        publishedCard = null;
+        preparedCard = null;
         this.bonusMode = true;
         this.inLevelMode = false;
         this.freshLevelTransitionMode = false;
@@ -920,6 +922,10 @@ public class Sonic3kTitleCardManager
 
     private void initInternal(
             int zoneIndex, int actIndex, boolean inLevel, int displayHoldFrames) {
+        // A new title owns a new sprite-table generation. Never redraw or
+        // republish the preceding card across the level-load boundary.
+        publishedCard = null;
+        preparedCard = null;
         this.currentZone = zoneIndex;
         this.currentAct = actIndex;
         this.bonusMode = false;

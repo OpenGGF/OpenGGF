@@ -3211,7 +3211,10 @@ public class GameLoop {
         } else if (levelManager.hasPendingFreshLevelTransitionBoundary()
                 && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
                 && boundary.installsImmediateFreshLevelPalette()) {
-            fadeManager.clearOverlayForImmediatePaletteLoad();
+            // This row still belongs to the outgoing fade. The pending title
+            // request is consumed next iteration; keep destination setup hidden
+            // until that card has installed its own black field.
+            fadeManager.holdBlack();
         } else {
             GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
         }
