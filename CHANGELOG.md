@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Knuckles glide speed halves above the native top boundary, including signed-word wrapping and arithmetic-shift behavior.
+- Big Arm submits its ROM art module during native initialization.
 - LBZ2 submits native EggRobo-head art during head initialization.
 - Solo S2 title-card entry records leader history during its native object passes.
 - Knuckles restores the native animation after non-flat glide landings.
