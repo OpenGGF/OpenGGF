@@ -1,0 +1,245 @@
+# Shared route planner: route tapes
+
+Status: accepted design, implementation in progress on `feature/ai-shared-route-planner`
+(based on `feature/ai-weakness-pass` at `0baca6ee4`). Produced by the architect workflow:
+grounding, two candidates (base "B" and graft source "A"), a cross-judge, and a lead synthesis.
+This file condenses those artefacts; it is the contract the implementation follows. Deviations
+found while implementing are recorded in [Deviations](#deviations).
+
+## Problem
+
+OpenGGF has several route authors and no shared core:
+
+- **Stageplay** (`com.openggf.stageplay.route`) runs a best-first search on a static-terrain
+  probe, throws away the buttons it ticked, emits `PuppetCommand`s, and "qualifies" by re-running
+  the steering policy in a live world. A `VERIFIED` Stageplay route has no button sequence that
+  BizHawk could replay.
+- **`ReferencePathInputAuthor`** runs a receding-horizon search in the production gameplay world
+  and writes frozen rows, but its loop is ad hoc: raw registry restore with no admission guard,
+  Start dropped, trial rows kept after a load, an S3K class imported into a shared tool.
+- **The SSZ/DEZ boss authors** repeat the same capture → trial → score → restore → commit loop.
+  `tests/route/RouteSteering` re-plans inside tests, and the Typing of the Hedgehog rail builder
+  has its own beam search.
+- **Route artefacts** (`src/test/resources/routes/s3k`, 117 `.bk2` and 112 `.script`) carry their
+  launch contract (boot level, roster, width, donor, seeds, initial `V_int_run_count`) in Java
+  tests and `#` comments. Eight consumers replay them through a lossy P1-only adapter.
+- **Native lag.** Native S3K sometimes runs a VBlank without polling the pad. Identical rows can
+  therefore diverge natively, and the engine may not model CPU timing to predict it.
+
+The user's requirements: one planner used by Stageplay and reference pathing; heavy extension
+for object goals (target, latch, ride, phase waits); routes translated into button presses that
+compare against BizHawk; repair that keeps original rows where play still tracks; planning as a
+fast way to author level completions, not a replacement for identical-input comparison.
+
+## Usage
+
+A route is a **launch contract plus an immutable tape of physical two-controller rows**. Plan
+once, replay many times. Front-ends submit typed tasks to `RoutePlanner.plan`; nothing re-plans
+at test time. `RouteReplay.replay` is the only qualifier: a fresh host, the frozen rows, no
+correction authority.
+
+```java
+// Tests and tools: open the manifest, replay the tape.
+RouteArtifact route = RouteFiles.read(Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.route.json"));
+ReplayResult result = new RouteReplay(EngineRouteHosts.withRom(rom)).replay(route, observer);
+
+// Repair an existing route from input 1366, keeping original rows wherever play still tracks.
+var repair = new RouteTask.Repair(route, reference, new RepairScope(1366, 360, 240, 24),
+        AuthorHints.referenceFollowing(), SearchBudget.referenceRepair());
+PlanResult plan = new RoutePlanner(EngineRouteHosts.withRom(rom)).plan(repair, Cancellation.NONE);
+if (plan instanceof PlanResult.Solved solved) {
+    RouteFiles.writeNew(stem, solved.route(), solved.engineEvidence());
+    System.out.println(solved.repair().summary()); // kept/original rows, changed spans
+}
+
+// Author a level completion with object goals.
+var bridge = ObjectTarget.select("arrival-bridge", Capability.ATTACHMENT, region, SpatialOrder.RIGHTWARD);
+var program = GoalProgram.of(Guard.safe(PlayerSlot.P1),
+        RouteGoals.board(PlayerSlot.P1, bridge).maxRows(1800),
+        RouteGoals.ride(PlayerSlot.P1, bridge, RouteGoals.phaseIs(bridge, "resting")).maxRows(240),
+        RouteGoals.cross(BoundaryKind.LEVEL_LOAD).maxRows(9000));
+plan = planner.plan(new RouteTask.Author(launch, program, AuthorHints.levelRoute(), SearchBudget.levelRoute()),
+        Cancellation.NONE);
+```
+
+The SSZ1 example object is the placed `$77` cutscene bridge (`SszCutsceneBridgeObjectInstance`,
+placement index 12 in `Levels/SSZ/Object Pos/1.bin`, `03 20 0c 88 77 00`). It retracts and comes
+to rest; it does not collapse, and it is not dynamically spawned. Both candidates' examples got
+this wrong.
+
+Files per route: `<stem>.route.json` (manifest, the single authority for launch identity) and
+`<stem>.script` (the editable row source with explicit physical letters, both lanes). A `.bk2`
+is derived on demand by `RouteFiles.exportBk2` or the native composer; a committed `.bk2` would be a
+third copy that can drift.
+
+## Shape
+
+**Tape.** `PadRow(p1, p2)` holds two unsigned 8-bit physical masks (U, D, L, R, Start, A, B, C).
+There is no logical jump bit and no debug or system channel. Row *i* is the *i*-th controller
+poll, which is the *i*-th engine step. `InputTape` is immutable, packed and content-hashed. One
+lossless conversion turns a row into the engine's recorded input at the host boundary
+(`GameplayCaptureSession.step` → `RecordedInputSnapshots`). Press edges come from the previous
+held row, which the host driver owns.
+
+**Manifest.** `RouteManifest(launch, tapeHash, rowCount, checks, tracking, provenance,
+qualification, nativeFacts)`. `LaunchContract` covers ROM identity by hash (never a path),
+inlet (cold level, incoming prefix, positioned seed, scene entry, recording join), roster,
+viewport, donor, explicit initial `V_int_run_count` and seeds. A route's content identity
+excludes its qualification stamps and native facts, so adding a verdict does not change it.
+
+**One search, one replay.** `RoutePlanner.plan(task)` runs one deterministic prefix search over a
+row journal. Each node owns a parent, an immutable edge of exactly the rows the host accepted,
+and an observation. Sparse checkpoints accelerate reconstruction. A chosen prefix is committed by
+replaying its saved rows, never by invoking its policy again. Repair is a restriction on the same
+search: original spans are mandatory edges while tracking holds, and a drift opens a bounded
+editable window. `plan` returns `Solved` only after a complete cold replay of the frozen output
+succeeds. `RouteReplay` is forward-only and mints `ReplayEvidence`, which has no public
+constructor. `RouteFiles.writeNew` requires matching evidence.
+
+**Goals are data.** `GoalProgram(routeGuard, legs)`; each `Leg(goal, guard, hints, maxRows)`
+(graft from A). The goal is the completion test. The guard is enforced on every row of the leg,
+in search and in replay: hurt, death, ring loss, unexpected boundaries, overshoot. Goals are
+`Reach`, `Acquire`, `Maintain`, `WaitFor`, `Achieve`, `EnterBoundary` and `Follow`; `RouteGoals`
+provides the user's words (`board`, `ride(until)`, `attach`, `hold(until)`, `awaitPhase`,
+`defeat`, `cross`). Steering numbers stay private to `NativeRouteSteering`.
+
+**Objects.** Owning objects implement read-only capability interfaces (graft from A), found by
+`instanceof`: `AttachmentSource`, `PhaseSource` and `HitPointSource`. Facts are immutable copies
+with participant, piece and generation. This covers directly constructed dynamic objects such as
+the SSZ GHZ/MTZ replica bosses, which come from `Sonic3kSSZEvents`, not from the layout. Updraft
+and airflow emit a passive per-tick effect at their successful effect site. Proximity,
+animation or speed never prove attachment. Unknown phase stays unknown.
+
+**Hidden tiering.** The static-terrain probe can propose cheap rows for scene shots. Those rows
+are a draft for the live host, which repairs them; only the live host qualifies.
+
+**Hosts.** A small trusted SPI: `ReplayWorld` (`observe`, `step(PadRow)`, `close`) and
+`RouteWorld` (adds `capture`, `restore`, `epoch`). The opaque host checkpoint token holds the
+engine snapshot, the driver's previous row and every post-boot host write, including
+`GameplayCaptureSession`'s sidekick seed window. Admission combines `CourseControl`'s
+owner/Level/key-layout discipline with `GameplayInputBranchTool`'s pending-assembly and
+poisoned-fade refusal. A boundary invalidates every outgoing checkpoint. The row that crossed it
+lives only in that trial's edge, and the contaminated host is closed and rebuilt from the cold
+prefix. The host proves that its rows own the effective gameplay input. If a mod
+`GameplayFrameController` could substitute input or hold the world, the launch is rejected.
+
+**Visibility.** Search, journal, frontier and checkpoint envelope are package-private in
+`com.openggf.route`. A `.internal` subpackage cannot express that in Java. Host SPI construction
+is trusted composition only. A bytecode guard checks that tests and front-ends reference only
+`RoutePlanner`, `RouteReplay`, `RouteFiles` and value types.
+
+**Determinism.** Budgets are counts (expansions, steps, captures, fresh boots, retained
+checkpoints), never wall clock. A wall watchdog can cancel a search; it never selects a result.
+Ties break by a stable ordinal. Live worlds have no state-equivalence merge.
+
+## Native composition (lead override)
+
+The judge preferred B's offer-indexed native movie. The lead overrode that with repository evidence,
+taking A's composition:
+
+- On native, a CPU-overrun lag VBlank consumes a movie row without polling the pad
+  (`Level_frame_counter` repeats). If tape row *i* is offered at native movie frame *i*, every
+  later poll lands one row early, permanently. That is the hazard behind
+  `TestS3kHpzColdRoutes.NATIVE_LAG_FRAMES`. The SSZ1 native check on 2026-11-01 aligned exactly
+  until its first lag at input 1957 and could go no further.
+- `NativeCheck` therefore composes the native entry prefix, then the tape rows, plus one
+  **filler row** (a copy of the previous row) at each lag VBlank a native run observed. The game
+  never reads a filler row, so the polled presses are identical to the engine's.
+- Observed lag VBlanks are recorded in the manifest as native facts, each stamped with its
+  harness version and content hash. They are never fed to the engine, never used to plan, and
+  never predicted.
+- Lag phase effects remain real divergences: `V_int_run_count` advances on a lag VBlank and the
+  engine's does not. Such mismatches go through B's `RequiredEdit` repair. If bounded repair
+  cannot clear them, the verdict is "engine-qualified, native-diverged at row *r*".
+- The per-test `NATIVE_LAG_FRAMES` lists are deleted as their routes migrate.
+
+## Synthesis decision
+
+Base: candidate B (`candidate-sol`), judged 23/25 against 13/25. Grafts from A: owner-implemented
+capability interfaces; goal plus guard per leg; the convenience goal factories; hidden tiering.
+Corrections: the SSZ bridge facts above; two committed files per route; host-owned mutable state
+(sidekick seed) in the checkpoint token; mod frame-controller arbitration; package-private
+internals in `com.openggf.route`; repair witnesses (`TrackingContract`). Each existing route's
+track is recorded once, on the engine its rows were authored against (SSZ1: `36aaddb37`, with
+the native fixture `ssz1_cold_route_native` independently confirming rows before 1366). A route
+with no trustworthy track is repaired against goals or an explicit engine reference, never
+against a fabricated trajectory.
+
+Rejected:
+
+- A's live dedup key, because hidden state makes it unsound.
+- A's placed-only targets, because dynamic objects exist.
+- A's `Stage.Scene(StageplayDocument)`, because it couples the core to a front-end type.
+- A's `.internal` package-private split, because Java cannot express it.
+- B's offer-indexed native movie, because it goes permanently off by one after any lag.
+- B's registration bridge, because it has no owner and misses dynamic objects.
+- B's committed `.bk2`, because it is a drift-prone third copy.
+
+## Invariants
+
+1. Planning never mutates gameplay, never reads trace data, never keys on game or zone names in
+   shared code.
+2. Rows are recorded where they are pressed; qualification is a cold replay of the frozen rows.
+3. Budgets are counts. Native lag is observed, never simulated or fed to the engine.
+4. Repair keeps original rows wherever play still tracks, searches only where it drifts, and
+   reports the kept share against the original length.
+5. Engine behaviour never changes to suit a route.
+
+## Migration order
+
+1. Tape, manifest, codec and replay-only driver: lossless two-lane round trip, a BK2 export that
+   BizHawk can load, and host token completeness, including the sidekick seed and a hostile mod
+   controller.
+2. One prefix search with the guarded host. `ReferencePathInputAuthor` becomes a front-end and its
+   loop is deleted. Pinned by `TestReferencePathInputAuthor`.
+3. Stageplay player routes move onto rows with a `FrozenInputTrack`, updating the document version
+   and Mod API pins together. Stageplay search, proposal and verification are deleted; numeric
+   steering keeps one owner. Pinned by the Stageplay route tests.
+4. Object capabilities and goals: the SSZ `$77` bridge, the updraft, one grab owner, one phase
+   platform. The SSZ/DEZ boss authors move onto `defeat` legs.
+5. Remaining loops: mod rails, the `tests/route/RouteSteering` re-planners and the lossy
+   `stepFrame` route adapter.
+6. Manifest the route consumers. Repair the SSZ1 routes from 1366 and the `lrz-*-hpz-ssz1*` routes
+   that share the opening. Native-check them with filler-row composition.
+7. One combined smoke run, owned by the lead.
+
+## Tradeoffs accepted
+
+- Weaker pruning and more replay work, in exchange for never merging dynamic worlds under guessed
+  keys.
+- Separate engine and native verdicts, in exchange for truthful claims without CPU timing.
+- Explicit goal/target recipes and owner adapters, in exchange for reliable grab, ride and phase
+  semantics.
+- An SSZ repair may extend through bosses to the route end and keep fewer rows, in exchange for
+  validating the actual suffix rather than a short apparent reconvergence.
+- Process isolation and bounded snapshot retention, in exchange for protecting the editor's
+  session.
+
+## Alternatives considered
+
+- **Keep Stageplay's planner and extract a checkpoint helper for the gameplay tools.** Too
+  shallow. Every caller keeps ranking, commit and qualification policy, so duplicate loops survive.
+- **A public generic search framework** with pluggable frontier, dedup and snapshot strategies.
+  Callers would assemble safety policy themselves, and the shortest compiling author would skip
+  the guards.
+- **A predictive object and lag model.** Cheaper search, but a second copy of the collision and
+  phase algorithms, plus native CPU timing promises the reimplementation boundary forbids.
+
+## Open questions
+
+- Snapshot capture/restore cost on AIZ→HCZ and SSZ/LRZ worlds, which should decide the production
+  presets.
+- Native boot witnesses for inlets other than a complete-run prefix (widths, donors, scene
+  entries), which today yield `UNSUPPORTED_INLET`.
+- Whether the full corrected SSZ suffix is repairable within the first declared bounds.
+- Which owner facts the first native grab and phase goals need beyond the bridge and updraft.
+
+## Deviations
+
+Recorded during implementation; each states what the sketch said, what was built, and why.
+
+## Next step
+
+Step 1: the typed two-lane tape and launch artefact, plus the shared replay-only driver. Pin it
+with the existing codec tests and a hostile all-buttons, held-edge round trip before extracting
+any search.

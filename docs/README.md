@@ -40,6 +40,9 @@ Maintainers publishing a release should start with
 Architecture artifacts are classified by the question they answer:
 
 - [Designs](architecture/designs/) — what should be built?
+  The [shared route planner](architecture/designs/2026-11-02-shared-route-planner.md)
+  makes frozen two-controller route tapes the one product of Stageplay, reference and
+  level-completion authoring.
 - [Plans](architecture/plans/) — how will it be built?
 - [Research](architecture/research/) — how does the system or source material
   work?
