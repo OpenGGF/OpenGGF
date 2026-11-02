@@ -311,29 +311,20 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * Frame count of the ROM title-card object prelude that S2 traces sampled
-     * at {@code frame -1}. The recorded {@code player_history_snapshot}
-     * {@code history_pos=0x68 = 104} is the raw byte index of
-     * {@code Sonic_Pos_Record_Index} (s2.asm:36043-36048). Each
-     * {@code Sonic_RecordPos} call advances the index by 4 (one 4-byte
-     * Pos_table entry), so {@code history_pos = 4 * frames_recorded}.
-     * Therefore the actual prelude length is {@code 104 / 4 = 26} frames of
-     * the ROM title-card {@code RunObjects} loop running Obj01_Control after
-     * Obj01_Init has completed its 64-entry pre-fill.
+     * Native object dispatches between player initialization and Level_MainLoop.
+     * Level_FromCheckpoint performs one RunObjects before arming the exit.
+     * Obj34_LeftPartOut takes five passes ($A,6,2,0,-4), BottomPartOut
+     * takes eleven (0 through $28 in steps of 4), and BackgroundOutInit/Out
+     * takes nine ($F0 through the computed -$30 in steps of $20).
+     * These are object-dispatch counts, not Level_frame_counter ticks or a
+     * count inferred from comparison history. See KiS2 c336fed Level_FromCheckpoint,
+     * Obj34_LeftPartOut, Obj34_BottomPartOut and Obj34_BackgroundOutInit/Out;
+     * stock S2 retains the same title-card state transitions.
      */
-    private static final int S2_TITLE_CARD_PRELUDE_FRAMES = 26;
+    private static final int S2_TITLE_CARD_PRELUDE_FRAMES = 1 + 5 + 11 + 9;
 
-    /**
-     * S2 native-prelude traces start comparison at the first gameplay row, but
-     * headless replay does not run the ROM title-card object loop before that
-     * row. Obj01_Control records Sonic's position before Obj02_Control advances
-     * Tails during that loop; ten native sidekick-only ticks put Tails at the
-     * same control/speed phase that frame 0 then advances and compares. The
-     * recorder's frame -1 {@code Sonic_Pos_Record_Index} is {@code 0x68}; S2
-     * advances the byte index by 4 per {@code Sonic_RecordPos} call, so the
-     * native title-card window contributes 26 leader-history writes.
-     */
-    private static final int S2_SIDEKICK_TITLE_CARD_PRELUDE_FRAMES = 26;
+    /** Leader recording and sidekick dispatch share the native RunObjects passes. */
+    private static final int S2_SIDEKICK_TITLE_CARD_PRELUDE_FRAMES = S2_TITLE_CARD_PRELUDE_FRAMES;
 
     private static final int S1_LEVEL_START_OBJECT_PRELUDE_FRAMES = 1;
 
