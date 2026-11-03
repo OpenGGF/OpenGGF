@@ -111,16 +111,17 @@ class TestHczEndBossWaterColumnControlPolicy {
     }
 
     @Test
-    void bladeSlowdownRetainsEntryTickBeforeAdvancingRawAnimation() throws Exception {
+    void bladeSlowdownAdvancesRawAnimationOnItsFirstDispatch() throws Exception {
         HczEndBossBlade blade = newBlade();
         invokeNoArgPrivate(blade, "transitionToSpinDown");
 
         invokeNoArgPrivate(blade, "updateSpinDown");
-        assertEquals(6, getIntField(blade, "mappingFrame"));
+        assertEquals(7, getIntField(blade, "mappingFrame"),
+                "Animate_RawGetFaster advances from cleared timer/anim_frame to script frame 7 immediately");
 
         invokeNoArgPrivate(blade, "updateSpinDown");
         assertEquals(7, getIntField(blade, "mappingFrame"),
-                "Animate_RawGetFaster advances from anim_frame 0 to script frame 7");
+                "subsequent dispatches retain the script's delay");
     }
 
     @Test

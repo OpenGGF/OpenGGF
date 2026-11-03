@@ -1198,3 +1198,21 @@ keep-green cases pass without skips. The slice advances from 549 errors at
 from 230 to 229 groups by removing the previous split. The next frontier is
 blade-water-chute activation. Existing breadth and pending-main restore gaps
 remain open.
+
+
+## Blade completion and water-chute activation — 2026-11-03
+
+`HCZEndBossBomb_StartExplosion` (sonic3k.asm:141562-141566) only installs
+animation/callback pointers. `Child_DrawTouch_Sprite`
+(sonic3k.asm:178144-178150) publishes collision and draws without animation;
+the new raw-acceleration script therefore starts with the cleared timer.
+Executed probes show the old timer `1` on each first spin-down dispatch and
+chute setup/wait-callback/first-animation at 29529/29530/29531, compared with
+native 29528/29529/29530. The unsupported timer seed is removed; chute setup
+and wait dispatch separation remain intact. The older blade control is
+corrected to assert immediate first animation advancement and retained delay.
+
+The 86 focused boss/rewind/keep-green cases pass without skips. The slice
+advances from 404 errors at 29530 to 71 at 30646 `player_animation_id`, with
+all ten sibling error lists unchanged. The remaining frontier is the local
+capsule/results adapter; inherited breadth and pending-main restore gaps remain.
