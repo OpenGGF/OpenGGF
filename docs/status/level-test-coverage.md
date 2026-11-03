@@ -2585,3 +2585,5 @@ Iwamodoki self-destruct follow-up (2026-11-02): the
 and [LRZ2](../architecture/validation/levels/s3k-lrz-act2.md#iwamodoki-rider-release-2026-11-02)
 matrices record the bounded P1/P2 shield/rider regression and inherited route,
 breadth and rewind obligations.
+
+S2 ARZ2 producer-clock follow-up (2026-11-03): the [clock-selection route matrix](../architecture/research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03) records native Sonic+Tails continuous/standalone controls, an independent halfpipe movie, KiS2 campaign limits, clock-word boundaries and actual restore/forward RNG checks. The row5084 frontier moves to inherited5512; newly admitted CNZ1 remains incomplete. Wider viewports, donor/team breadth and complete-act certification remain inherited gaps. Full-profile qualification is recorded in that artifact.

@@ -802,3 +802,179 @@ No trace/native capture, broad smoke or input/movement work was run for this
 private extraction. Earlier aliases, source-qualified cases and route/timing
 limits above remain unchanged. Consumed Surefire/trace diagnostics were inspected
 and removed after the bounded result was recorded.
+
+## Obj2C clock selection and ARZ2 RNG (2026-11-03)
+
+Implementation lane `bugfix/ai-trace-s2-arz2-rng`, based on `origin/develop`
+fetched at `cff5686b490c0f5b5ef3cf02adf26b59cc55a9e5`. No trace payload,
+manifest, comparator contract, RNG recurrence or shared frame executor changes.
+
+### Executed cause and owning correction
+
+The fresh original-source chain reproduces fourteen axes: twelve art gaps,
+ARZ2 segment19 with 13,495 errors (first row5084 `sidekick_y`, ROM `$048A` /
+engine `$0489`), and CNZ1 admission113342/113340. The complete release-6 baseline
+repeats this result. No ROM-dependent case is silently skipped.
+
+A temporary read-only GameRng caller inventory finds490 engine calls before the
+first boss arrow against476 native calls. The chain row observer announces the
+upcoming movie row+1; subtract1 when labelling the step being executed.
+
+The first lasting excess is four primary-player leaf draws at movie109445.
+At the preceding shared burst109437, native and engine player state agrees:
+`x=$1AC8,y=$05C3,vx=$F69D,vy=$FE2B`. Native seeds Obj2C phase2674 (`$0A72`),
+but the engine reads its execution counter2700 (`$0A8C`). At109445, native
+`($0A72+$0A7A)&$F=$C` disallows the primary burst. Engine
+`($0A8C+$0A94)&$F=0` executes it. Both have a primary-only pending touch.
+The executed engine branch and four RNG calls were observed, not inferred only
+from a later seed.
+
+S2's player gameplay counter resets at title release; LevelManager's counter
+includes26 title object passes. Obj2C was consuming the latter. Its private clock
+read now uses the injected player gameplay counter after release and zero while
+the title owns control. `Level (s2.asm:4757-4773)` clears the native word before
+the leave loop (s2.asm:5060-5066); `Level_MainLoop (s2.asm:5088-5094)` starts its
+increments. `Obj2C_Main (s2.asm:52078-52124)` reads that word for the burst phase.
+Shared execution timing, object scheduling and all allocation paths stay intact.
+No offset26, seed adjustment, fixture key or new captured state is introduced.
+
+The corrected observation reads2674 versus execution2700 at109437, and2682
+with phase2674 at109445. It matches every producer count below. The first arrow
+is draw477 at movie111535 with seed `$F9BA0D1A`; the second is draw478 at111791
+with seed `$17F6192A`, matching native rows, ordinals and seeds.
+
+Native corroboration uses a read-only GPGX diagnostic, original ROM/movie hash
+checks and natural playback from row0 through111839. All478 RNG entries pair
+with returns. Its RNG TSV matches the independently preserved capture exactly:
+SHA256 `3ca8b861fe5503cc323ee16415235191b67278a945a20381304f0332b4ce8d92`.
+External task directory `s2-arz2-native-20261103`, observation
+`capture-v2/leaves.tsv`, retains the probe and provenance note. The reused
+harness binary SHA256 is
+`5e455b0cb3fa52d6415ef64677b8079b088204eefe971a37573667bb59efe917`;
+its copied legacy source-pin string is explicitly unverified. Stale a2 fields
+outside Obj2C_CreateLeaves and the old frames.tsv slot columns using an incorrect
+S1 base are excluded. This reference does not publish a replacement fixture.
+
+### Producer counts before the first arrow
+
+| Caller / object | Native | Original engine | Corrected engine |
+| --- | ---: | ---: | ---: |
+| Fixed Obj0A air event | 69 | 69 | 69 |
+| Fixed Obj0A mouth timer | 110 | 107 | 110 |
+| Fixed Obj0A number chance | 8 | 6 | 8 |
+| Obj24 burst choice, including retries | 23 | 23 | 23 |
+| Obj24 inter-bubble timer | 65 | 70 | 65 |
+| Obj24 child X | 65 | 70 | 65 |
+| Obj24 child initialization | 65 | 70 | 65 |
+| Obj24 large-bubble chance | 8 | 8 | 8 |
+| Obj24 inter-burst delay | 14 | 14 | 14 |
+| Obj2C leaves | 44 | 48 | 44 |
+| Animals | 5 | 5 | 5 |
+| Total | 476 | 490 | 476 |
+
+The survey's engine mouth-timer total108 is superseded by the measured107.
+Correcting the four extra leaf draws also restores later consumer counts; this
+is not fourteen redundant instructions in a bubble routine.
+
+### Rejected controls
+
+The earliest transient caller-order difference is movie107182: an Obj24 child
+initializes after a mouth-timer draw instead of before it. Slot/deletion probes
+show Obj22 arrows freed by a rectangular visibility check while still within
+ROM's horizontal range: slot18 at107147 `(1324,889)`, slot24 at107153
+`(1008,928)`. An arrow-only coarse-X candidate moves the first caller-order
+difference from draw22 to316, but retains490 pre-arrow draws, fourteen axes and
+the row5084/13,495-error frontier. It is insufficient for this producer-count
+problem and was removed, along with its temporary test.
+
+A shared title-phase clock-hold candidate is also rejected. Despite reducing
+the axis total to four, it introduces earlier EHZ1 segment2 row788 `sidekick_y`
+`$0226/$0225` (281 errors), CPZ row1275 `x` `$1EA4/$1EA5`, and loses production
+ownership before ARZ2. The execution counter has other consumers; changing that
+owner is not justified by one producer's native-clock read. The shared executor
+and its temporary diagnostic test were restored. Lower axis totals alone did
+not pass the gate.
+
+### Added-error attribution
+
+Matched original/corrected target runs recorded every ERROR field after the
+ARZ2 comparison row5067, plus compared player/sidekick/camera state. Recorded
+counts equal the normal reports: original ARZ2 13,495; corrected ARZ2 4,442,
+and newly reached CNZ1 166,318. No comparison or severity was changed.
+
+The first differing row is ARZ2 row5084 (movie111837), removing all eight errors
+there, including `sidekick_y`. Player `(x.xsub,y.ysub)` is
+`(2AE7.6F00,0479.8A00)` throughout; native Tails is
+`(2ABC.F900,048A.6D00)`, original is `(2ABC.F900,0489.6D00)`, corrected matches
+native. Camera is `(2A40,0400)` throughout.
+
+ARZ2 removes9,060 errors and adds seven: `sidekick_x` at5596-5601 and5688.
+All follow the inherited row5512 `x` error: ROM `$2C71`, engine `$2C72`.
+The player/camera positions, fractions and velocities at5512 are identical in
+original and corrected runs. Thus this surviving frontier was already present.
+
+First added error: ARZ2 row5596, movie112349. Fractions matter here:
+
+| State | ROM | Original engine | Corrected engine |
+| --- | --- | --- | --- |
+| Player x.xsub, y.ysub | 2C9F.CC00,0476.B600 | 2C9F.2400,0476.6300 | 2C9F.2400,0476.6300 |
+| Tails x.xsub, y.ysub | 2CAD.AC00,046C.E200 | 2CAD.8000,046C.EE00 | 2CAC.AC00,046C.E200 |
+| Camera x,y | 2BF6,0400 | 2BF6,0400 | 2BF6,0400 |
+
+Every one of the seven added ARZ2 rows already has original player-subpixel
+errors, and follows the corrected run's existing5512 divergence. These are real
+one-pixel Tails errors after a prior divergence, not errors on an agreeing state.
+
+The other166,318 additions are newly covered CNZ1, which the original walk
+never admits. First is row1876, movie115216, `rings` ROM26/engine25. Both player
+poses match there: Sonic `(06C0.E500,01E0.D000)`, Tails
+`(4000.5D00,0000.0900)`, camera `(0620,017B)`; ring inventory does not agree.
+No added error field has equal expected/actual values. The CNZ1 report remains
+incomplete: production ownership is lost at cursor120236 when the engine
+returns to TITLE_CARD in CNZ1. Its cause is not diagnosed by this fix.
+
+The target now reports15 axes: the same twelve art gaps, surviving ARZ2 physics,
+newly reached CNZ1 physics and the later walk failure. ARZ2 is fully compared,
+first5512 and4,442 errors; CNZ1 is newly admitted but incomplete. This is frontier
+progress, not a green complete campaign.
+
+### Validation and affected route matrix
+
+All commands use Java25.0.5.0.3, Lua5.4, unset DISPLAY/WAYLAND and inherited JVM
+options as specified in the lane brief, surfaceless EGL through JAVA_TOOL_OPTIONS,
+and all six original absolute ROM properties. `ROM_FLAGS` below denotes exactly
+those six properties from the lane brief, not default ROM discovery.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain "${ROM_FLAGS[@]}" test
+python3 tools/testing/maven_queue.py --normal -Dmse=off -B -Dtest=TestLeavesGeneratorTouchPhase "${ROM_FLAGS[@]}" test
+python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical "${ROM_FLAGS[@]}" test
+```
+
+The original getter fails both new component cases, while the five existing
+phase controls pass: seven cases, two intended failures, zero errors/skips.
+The corrected getter passes all seven, including distinct gameplay/execution/VInt
+clocks, locked-title zero, released visual overlay, word wrap, pause and actual
+world restore/forward RNG reproduction. Positive wait22s, Maven1m35s, cases1.037s.
+All observation code was removed before this positive run.
+
+| Baseline profile at cff5686b490c | Cases | Failures | Errors | Skips | Queue wait | Maven execution |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| trace-replay | 886 | 10 | 1 | 7 | 249s | 10m54s |
+| trace-replay-r7 | 117 | 84 | 11 | 0 | 221s | 5m57s |
+| trace-segments | 70 | 47 | 8 | 0 | 347s | 4m32s |
+
+The latter two baselines were measured for the rejected shared-clock candidate.
+The final runtime change is confined to the S2 object, so release-6 is the
+required full before/after gate. Post-fix release-6 qualification is pending.
+The seven baseline skips are five opt-in audits/measurements and two absent S3K
+bonus round-trip fixtures, not missing ROMs.
+
+| Route / obligation | Evidence and limit |
+| --- | --- |
+| S2 ARZ2, Sonic+Tails, native320 continuous route | First5084 removed; inherited5512 remains; all6409 ARZ2 rows compared. CNZ1 is reached but incomplete. |
+| S2 standalone trace routes | All35 classes pass in the full baseline; post-fix full-profile check pending. |
+| S2 EHZ halfpipe, independent BK2 | Two inherited65-row-early return-gap axes in baseline; post-fix check pending. |
+| KiS2 Knuckles campaign | Ten inherited axes in baseline, including CPZ1 walk stop; ARZ is not reached. Post-fix check pending. |
+| Native clock phase and rewind | Seven focused component cases, actual registry restore and forward RNG reproduction; no new snapshot fields. |
+| Other viewports, donor/team breadth and full-act certification | Inherited gaps; this local producer correction certifies no complete act. |

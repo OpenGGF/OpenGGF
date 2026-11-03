@@ -5,9 +5,12 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
+import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /** Obj2C_Main reseeds its phase even when Obj2C_CreateLeaves returns without leaves. */
 @RequiresRom(SonicGame.SONIC_2)
@@ -58,6 +62,7 @@ class TestLeavesGeneratorTouchPhase {
     private static void touch(LeavesGeneratorObjectInstance generator,
                               AbstractPlayableSprite player, int levelFrame, int vIntRunCount) {
         GameServices.level().setFrameCounter(levelFrame);
+        GameServices.sprites().setFrameCounter(levelFrame);
         generator.onTouchResponse(player, null, vIntRunCount);
         generator.update(vIntRunCount, player);
     }
@@ -70,6 +75,54 @@ class TestLeavesGeneratorTouchPhase {
         var control = new GameRng(GameRng.Flavour.S1_S2, initialSeed);
         for (int leaf = 0; leaf < leaves; leaf++) control.nextRaw();
         return control.getSeed();
+    }
+
+
+    @Test
+    void gameplayClockOwnsThePhaseWhenExecutionAndVintClocksDisagree() {
+        var fixture = ready();
+        var player = fixture.sprite();
+        var generator = generator(player);
+        long initialSeed = GameServices.rng().getSeed();
+        int[] gameplay = {5, 6, 11};
+        for (int i = 0; i < gameplay.length; i++) {
+            GameServices.sprites().setFrameCounter(gameplay[i]);
+            GameServices.level().setFrameCounter(0x40 + i);
+            speed(player, i == 0 ? 0 : 0x200, 0);
+            generator.onTouchResponse(player, null, 0xA2 + i);
+            generator.update(0xA2 + i, player);
+            assertEquals(i == 2 ? 4 : 0, leaves().size());
+        }
+        assertEquals(seedAfterLeaves(initialSeed, 4), GameServices.rng().getSeed());
+    }
+
+    @Test
+    void lockedTitleReadsZeroThenReleasedOverlayUsesTheGameplayClock() {
+        var fixture = ready();
+        var player = fixture.sprite();
+        var generator = generator(player);
+        var title = mock(TitleCardProvider.class);
+        generator.setServices(new TestObjectServices() {
+            @Override public TitleCardProvider titleCardProvider() { return title; }
+            @Override public ObjectPlayerQuery playerQuery() {
+                return ObjectPlayerQuery.from(GameServices.sprites(), player);
+            }
+        }.withSpriteManager(GameServices.sprites()).withLevelManager(GameServices.level())
+                .withDirectObjectManager(objects()).withRng(GameServices.rng()));
+        long initialSeed = GameServices.rng().getSeed();
+        int[] gameplay = {5, 6, 7, 8, 9};
+        int[] expected = {0, 4, 8, 8, 12};
+        for (int i = 0; i < gameplay.length; i++) {
+            when(title.shouldReleaseControl()).thenReturn(i >= 2);
+            when(title.isOverlayActive()).thenReturn(i >= 2);
+            GameServices.sprites().setFrameCounter(gameplay[i]);
+            GameServices.level().setFrameCounter(0x40 + i);
+            speed(player, i == 0 ? 0 : 0x200, 0);
+            generator.onTouchResponse(player, null, 0xB2 + i);
+            generator.update(0xB2 + i, player);
+            assertEquals(expected[i], leaves().size(), "title iteration " + i);
+        }
+        assertEquals(seedAfterLeaves(initialSeed, 12), GameServices.rng().getSeed());
     }
 
     @Test
@@ -122,6 +175,7 @@ class TestLeavesGeneratorTouchPhase {
         touch(generator, player, 5, 0x90);
         speed(player, 0x200, 0);
         GameServices.level().setFrameCounter(10);
+        GameServices.sprites().setFrameCounter(10);
         generator.onTouchResponse(player, null, 0x95);
         var pending = generator.captureRewindState();
         var registry = fixture.gameplayMode().getRewindRegistry();
@@ -129,12 +183,14 @@ class TestLeavesGeneratorTouchPhase {
         long beforeSeed = GameServices.rng().getSeed();
 
         GameServices.level().setFrameCounter(11);
+        GameServices.sprites().setFrameCounter(11);
         generator.update(0x96, player);
         var expected = leaves().stream().map(LeafParticleObjectInstance::captureRewindState).toList();
         assertEquals(4, expected.size());
         long expectedSeed = GameServices.rng().getSeed();
 
         registry.restore(before);
+        assertEquals(10, GameServices.sprites().getFrameCounter(), "restore retains the producer clock");
         assertTrue(leaves().isEmpty());
         assertEquals(beforeSeed, GameServices.rng().getSeed());
         var restored = objects().activeObjectsOfType(LeavesGeneratorObjectInstance.class).stream()
@@ -142,6 +198,7 @@ class TestLeavesGeneratorTouchPhase {
                 .findFirst().orElseThrow();
         assertEquals(pending, restored.captureRewindState());
         GameServices.level().setFrameCounter(11);
+        GameServices.sprites().setFrameCounter(11);
         restored.update(0xE6, fixture.sprite());
         assertEquals(expectedSeed, GameServices.rng().getSeed());
         assertEquals(expected, leaves().stream().map(LeafParticleObjectInstance::captureRewindState).toList());
