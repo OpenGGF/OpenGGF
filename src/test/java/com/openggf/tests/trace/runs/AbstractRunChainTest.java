@@ -1685,9 +1685,9 @@ abstract class AbstractRunChainTest {
                 // row by running it, which is the sole footing on which an
                 // opening row can be adopted. Production's
                 // destinationRowsConsumedForAdmission() is cursor-derived and
-                // therefore always organic; OPTION B below re-anchors the
-                // cursor past rows the engine never ran, so its "1" names no
-                // executed row zero.
+                // therefore always organic. OPTION B below re-anchors a
+                // non-row-matched transition at its still-pending row zero;
+                // it supplies no executed opening row to adopt.
                 boolean returnCursorArrivedOrganically;
                 if (uncomparedInterior) {
                     // Pre-seeked SS interior: its single title-card-exit fall-through
@@ -1781,23 +1781,25 @@ abstract class AbstractRunChainTest {
                     // rows. The engine reproduces the fade and shows the title card, but
                     // its S3K title-card/load span is not row-matched to that tail, so the
                     // cursor cannot organically reach returnOffset (see
-                    // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography). The
-                    // BONUS->LEVEL title-card-exit fall-through already ran the return
-                    // segment's frame 0. Re-anchor the cursor to returnOffset+1 and
-                    // compare the return level from frame 1. Input-cursor alignment only.
-                    playback.startSession(movie, returnOffset + 1);
+                    // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography).
+                    // Title release completes only loc_6468's initial Process_Sprites
+                    // and loc_64DC setup (sonic3k.asm:7880-7915). LevelLoop's first
+                    // Wait_VSync/object dispatch is still pending. Re-anchor BEFORE
+                    // row zero: skipping it also skips a real Obj_TitleCardWait2
+                    // dispatch, submitting LoadEnemyArt after its completion edge.
+                    playback.startSession(movie, returnOffset);
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
-                            loop.getCurrentGameMode(), 1, false,
+                            loop.getCurrentGameMode(), 0, false,
                             runCoordinator.latestLoadReceipt());
                     int destinationIndex = i + 1;
                     activeComparator = openAndAttachHeadlessPayload(
                             returnSegment, destinationIndex,
                             payload -> attachReturnedLevelSegment(
-                                    probe, returnSegment, fixture, 1,
+                                    probe, returnSegment, fixture, 0,
                                     destinationIndex));
                     activeSegmentInitialCursor = cursorOrZero(activeComparator);
-                    returnRowsConsumed = 1;
+                    returnRowsConsumed = 0;
                     returnCursorArrivedOrganically = false;
                 }
                 dynamicArtSegments.beginSegment();
@@ -3609,13 +3611,12 @@ abstract class AbstractRunChainTest {
      *   <li><b>0</b> — a compared bonus interior ENTRY: title-card release
      *       completes setup only. The first gameplay tick and its input are
      *       still pending when the comparator attaches.</li>
-     *   <li><b>1</b> — a level RETURN after a special-stage (uncompared) interior
-     *       (this method): the pre-seeked frozen cursor's one fall-through frame
-     *       consumed the return segment's frame 0.</li>
-     *   <li><b>1</b> — a level RETURN after a compared bonus interior (this
-     *       method): Option B has already run the return segment's frame 0, then
-     *       explicitly re-seeks the input cursor to {@code returnOffset + 1}
-     *       before attaching the comparator at frame 1.</li>
+     *   <li><b>0 or 1</b> — a level RETURN after an uncompared special stage:
+     *       the organic input cursor determines whether a real destination
+     *       gameplay iteration has already executed.</li>
+     *   <li><b>0</b> — a level RETURN after a compared bonus interior: title
+     *       release completes setup only. Option B re-seeks to
+     *       {@code returnOffset} and compares the first gameplay tick too.</li>
      * </ul>
      */
     private LiveTraceComparator attachReturnedLevelSegment(

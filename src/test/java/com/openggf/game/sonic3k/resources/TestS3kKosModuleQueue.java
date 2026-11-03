@@ -46,6 +46,30 @@ class TestS3kKosModuleQueue {
     Path tempDir;
 
     @Test
+    void overflowDescribesActualOccupantsWithoutSubmittingOrServicingWork() throws Exception {
+        Path romPath = tempDir.resolve("diagnostic-capacity.gen");
+        Files.write(romPath, ABC_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosModuleQueue modules = new S3kKosModuleQueue(
+                    timing, new S3kKosDecompressionQueue(timing));
+            for (int index = 0; index < 4; index++) modules.queue(rom, 0, index);
+            var before = timing.pendingHandles();
+            var error = assertThrows(IllegalStateException.class, () -> modules.queue(rom, 0, 4));
+            assertEquals(before, timing.pendingHandles());
+            for (var handle : before) {
+                assertTrue(error.getMessage().contains(handle.toString()));
+                assertFalse(modules.isReady(handle));
+            }
+            assertTrue(error.getMessage().contains("sourceAddress=0"));
+            assertTrue(error.getMessage().contains("completedModules=0"));
+            assertTrue(error.getMessage().contains("submittedAt="));
+            assertTrue(error.getMessage().contains("overflowDescribesActualOccupants"));
+        }
+    }
+
+    @Test
     void sequentialBatchPreflightsEveryArchiveBeforeSubmitting() throws Exception {
         byte[] fixture = new byte[ABC_KOSM.length + 2];
         System.arraycopy(ABC_KOSM, 0, fixture, 0, ABC_KOSM.length);
