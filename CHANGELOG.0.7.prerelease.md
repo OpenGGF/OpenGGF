@@ -7,6 +7,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- LRZ grinding boulders retain the native coarse-camera lifetime, preserving their contact with both players.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 

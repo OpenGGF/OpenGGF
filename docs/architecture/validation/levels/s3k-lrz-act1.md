@@ -1944,3 +1944,13 @@ base. This corrects the missing object-owned release; general destroyed-support 
 bugs remain unchanged. This short object check does not qualify cold routes,
 viewport/donor breadth, or whole-world rewind and forward replay; those inherited
 matrix obligations remain open.
+
+## Grinding boulder lifetime (2026-11-03)
+
+`loc_1B666` uses the placed X and coarse-back camera. The local regression now
+checks both unsigned boundaries and a camera crossing inside the placed-X block.
+The four LRZ r7 replays and 69 object/keep-green tests were measured on
+`e6a8b4a34`; see the [audit](../../audits/2026-11-03-lrz-boulder-lifetime.md).
+This repairs the Sonic+Tails row-2726 hurt and solo-Tails row-2592 cascade.
+Solo row2120 ring collection and bonus-return LRZ2/LRZ3 inlet debt remain distinct;
+viewport/donor breadth, whole-route rewind and complete-act certification remain inherited gaps.
