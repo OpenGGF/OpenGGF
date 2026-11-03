@@ -47,6 +47,28 @@ class TestS3kKosModuleQueue {
 
     @Test
     void overflowDescribesActualOccupantsWithoutSubmittingOrServicingWork() throws Exception {
+        String previous = System.getProperty("openggf.debug.kosm");
+        System.setProperty("openggf.debug.kosm", "true");
+        try {
+            assertOverflowDescribesOccupants(true);
+        } finally {
+            if (previous == null) System.clearProperty("openggf.debug.kosm");
+            else System.setProperty("openggf.debug.kosm", previous);
+        }
+    }
+
+    @Test
+    void overflowOmitsCallerReceiptsUnlessKosmDebuggingIsEnabled() throws Exception {
+        String previous = System.getProperty("openggf.debug.kosm");
+        System.clearProperty("openggf.debug.kosm");
+        try {
+            assertOverflowDescribesOccupants(false);
+        } finally {
+            if (previous != null) System.setProperty("openggf.debug.kosm", previous);
+        }
+    }
+
+    private void assertOverflowDescribesOccupants(boolean receipts) throws Exception {
         Path romPath = tempDir.resolve("diagnostic-capacity.gen");
         Files.write(romPath, ABC_KOSM);
         try (Rom rom = new Rom()) {
@@ -64,8 +86,13 @@ class TestS3kKosModuleQueue {
             }
             assertTrue(error.getMessage().contains("sourceAddress=0"));
             assertTrue(error.getMessage().contains("completedModules=0"));
-            assertTrue(error.getMessage().contains("submittedAt="));
-            assertTrue(error.getMessage().contains("overflowDescribesActualOccupants"));
+            if (receipts) {
+                assertTrue(error.getMessage().contains("submittedAt="));
+                assertTrue(error.getMessage().contains("assertOverflowDescribesOccupants"));
+            } else {
+                assertFalse(error.getMessage().contains("submittedAt="));
+                assertTrue(error.getMessage().contains("submission receipt unavailable"));
+            }
         }
     }
 

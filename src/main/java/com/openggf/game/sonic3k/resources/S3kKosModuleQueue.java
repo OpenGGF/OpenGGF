@@ -268,14 +268,17 @@ public final class S3kKosModuleQueue {
                 prepared.preparation()));
         descriptors.put(handle, descriptor);
         submissionDiagnostics.keySet().retainAll(timing.pendingHandles());
-        String receipt = "submittedAt=" + java.time.Instant.now()
-                + " represented=" + timing.recordedAuthorityRepresentsRow()
-                + " caller=" + StackWalker.getInstance().walk(frames -> frames
-                        .filter(frame -> !frame.getClassName().equals(S3kKosModuleQueue.class.getName()))
-                        .limit(6).map(Object::toString)
-                        .collect(java.util.stream.Collectors.joining(" <- ")));
-        submissionDiagnostics.put(handle, receipt);
+        // Caller receipts cost a stack walk per submission, so they are only
+        // collected under openggf.debug.kosm; overflow messages still list
+        // every pending job's descriptor and preparation state without them.
         if (Boolean.getBoolean("openggf.debug.kosm")) {
+            String receipt = "submittedAt=" + java.time.Instant.now()
+                    + " represented=" + timing.recordedAuthorityRepresentsRow()
+                    + " caller=" + StackWalker.getInstance().walk(frames -> frames
+                            .filter(frame -> !frame.getClassName().equals(S3kKosModuleQueue.class.getName()))
+                            .limit(6).map(Object::toString)
+                            .collect(java.util.stream.Collectors.joining(" <- ")));
+            submissionDiagnostics.put(handle, receipt);
             LOG.info("KosM submit " + handle + " " + descriptor + " " + receipt);
         }
         return handle;
