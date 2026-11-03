@@ -123054,3 +123054,33 @@ Integration results vs `e4b8857a8` (SOZ merge run): r6 886 tests, 13 → 9 failu
 the other cases are identical); r7 117, only Mega (error → later failure) and Sonic+Tails LRZ change; seg 70, HCZ slice / MGZ slice /
 Sonic+Tails MGZ / Sonic+Tails LRZ as above. Ordinary: 219 touched-class + keep-green pass; rewind sweep/inventory/ratchet +
 MGZ miniboss 1361 pass, zero skips.
+
+## 2026-11-03 — Wave 3 of the trace survey: HCZ slice green, S2 ARZ2 RNG, Sky Sanctuary bridges, held-fade V-ints
+
+Four lane branches on base develop `2698596fc`, integrated as `e3ee23cde`. Wave-3 batch `7c485e356` (first three
+branches) vs develop, all three profiles, forkCount=1, alphabetical, JDK 25, original ROMs, surfaceless EGL, per-testcase
+comparison including run-chain messages: no newly red class, no earlier first error. HCZ was added afterwards with
+focused validation (HczEndBoss* classes only).
+
+- `bugfix/ai-trace-hcz-slice-28814` (7 commits, `8a641c9f0`..`4e200eeec`): HCZ end boss startup/platform
+  dispatch, paired suction displacement (`HCZEndBossColumn_PushPlayersFromWater (sonic3k.asm:141825-141854)`),
+  paired grab range cursor, swing resume from live motion, attack/spray release dispatch, blade completion timer,
+  and capsule results on native dispatches. **`TestS3kHczZoneSliceTraceReplay` 608 @28814 → green**
+  (29285 frames). The other HCZ classes are unchanged (Sonic+Tails Hcz2/3/4, Tails Hcz2-6 keep their row-0 start-state).
+- `bugfix/ai-trace-s2-arz2-rng` (`45071223e`, `339b2052c`): Obj2C read the execution clock, which includes 26 title-card
+  object passes. Native `Obj2C_Main (s2.asm:52078-52124)` reads the gameplay clock. Pre-arrow RNG calls 490 → 476 = native.
+  `TestS2CompleteEmeraldRunChain` ARZ2 13495 errors @5084 `sidekick_y` → 4442 @5512 (an inherited divergence); CNZ1
+  admission clears (axes 14 → 15 as the walk reaches segment 20; additions attributed). All 35 standalone S2 classes stay green;
+  the halfpipe and KiS2 chains are unchanged.
+- `bugfix/ai-trace-ssz-next-frontier` (`fb82b0086`): restores the SSZ diagonal-bridge post-solid re-grounding branch
+  (`loc_44D98 (sonic3k.asm:90279-90304)`, `loc_44EF6 (sonic3k.asm:90420-90448)`) and `Obj_57DCC`'s control-1 write.
+  Tails Hpz 740 @2159 → 729 @2451; Sonic+Tails Hpz 1808 @121 → 2201 @2056 (P1 1948 → 2253; mismatching cells
+  137906 → 121548; additions attributed after the existing divergence).
+- `bugfix/ai-trace-mega-chain-segment3` (`347b695dc`, `6f09632e0`, `8a9a678ad`): Mega segment 3 is Slots. Its reel
+  clock started 95 V-ints behind (Gumball entry +32, AIZ return +22, Slots +41), paying 0 rings and releasing the cage at
+  row 172 rather than 332. 42 were proven lost: `LevelIterationAdmissionController.consumeTransitionFreezeRow` skipped
+  VBlank service during held fade steps once the comparator was exhausted (`Pal_FadeToBlack (sonic3k.asm:5074-5085)`).
+  With that repaired the deficit is 95 → 53, and segment-3 physics 172 → 268. The walk now fails at the Slots stage_exit
+  boundary instead of a premature exit. The remaining 53 sit in load/title spans. Pricing synchronous load work is
+  held pending a ruling on the reimplementation boundary: see
+  `docs/architecture/designs/2026-11-03-synchronous-load-vint-accounting.md`.
