@@ -8,43 +8,92 @@ Approved design: consumable 10-second allowance (or Unlimited), refill scope Off
 - [x] Settings: catalog/defaults/timing, Gameplay selector and indented dependent rows, English ARB labels/help, ordered positive budgets plus Unlimited. Retain legacy enable gate for launch profiles and tools.
 - [x] Opus HUD: extend existing `TransportHud` plate and `LiveRewindHudOverlay`, one row plus 2 px meter, empty response with shape/border distinction, captures at 320/400 and rubric evidence.
 - [x] Focused behavior tests: policy pools, boundary repeat prevention, life-loss refill, speed/coast exhaustion, denied press duration, settings persistence/ordering/dependencies, HUD states.
-- [ ] Inspect change-based smoke selection, run appropriate combined smoke and required affected checks once. Inspect skips and exact failures, acknowledge diagnostics.
-- [ ] Review final diff, integrate into main workspace develop without switching branch, push develop only, account for and remove merged task worktree/branch.
+- [x] Complete change-based smoke and affected focused checks; inspect skips and attribute exact failures.
+Delivery follows the repository flow: integrate into the main workspace’s current develop branch, push develop only, and remove fully accounted task worktrees and branches. The final task response records that delivery outcome.
 
 ## Review focus
 
 Preserve legacy disabled preferences and per-game overrides; unlimited is not unlimited history storage. No refill from rewind restoration, repeat checkpoints, generic reloads, or death animation. A settings edit cannot silently grant a pool through incidental history reinstall. Stage transitions must preserve the main allowance even when rewind is disabled for the visited stage. UI must remain clear of native HUD and simultaneous recording/status plates.
 
-## Validation checkpoint
+## Verification record (2026-11-03)
 
-Pre-task integration base: `92dd2135fb9ac376644e8001c268a21d1c6c2cea`. Feature commit `acc1db940f27a01f708b88bfcaadbde261f22c87` and upstream reconciliation `57b41127a` are frozen for the change-based smoke run. Upstream through `a8f3f8647ed1e0920e7ee5119a8ce11a1d6a2ad6` is incorporated. The changelog conflict preserved both additions; subsequent guidance merged without a code conflict.
+Pre-task destination: `92dd2135fb9ac376644e8001c268a21d1c6c2cea`. Feature `acc1db940f27a01f708b88bfcaadbde261f22c87` and upstream merge `57b41127a` were frozen for the broad run. Repairs are `b7508d43e` and `9836772f1`. The combined source tested at `3640a70f42b0f75de1aab9ce2f4b469c8ddd8b5b` incorporates develop `e4b8857a839e7d63e18f6b2cfa79db71190b4184`.
 
-Completed focused selections passed 71, 126 and 47 tests respectively, with zero failures/errors/skips. They cover policy/real-manager boundaries, settings persistence and dependencies, stage toggles, HUD pixels and widths, audio cleanup, localization catalog usage, and host pacing. An explicit lean retry exhausted its 1 GiB compiler heap before tests ran; the required normal-memory rerun passed. The API snapshot adds exactly five appended configuration fields and removes none. Opus reviewed actual S2 320/400 HUD captures and scored overall 9 with no criterion regression; the dated HUD audit records settings, cross-game and real-loop witnesses separately.
+Upstream merged without conflicts. Against develop, LevelManager retains only the completed FULL_DEATH_RELOAD refill hook, after successful load/cleanup. The candidate API pin retains exactly the five appended configuration fields alongside upstream signatures, with no removals. The descriptor remains unchanged. The combined API signature checks passed.
 
-The combined smoke command is:
+### Completed selections
+
+- Initial policy/manager/settings/HUD selection: 71 passed, zero skips.
+- Expanded settings/stage/audio/localization/HUD selection: 126 passed, zero skips.
+- Final original budget/ownership/pacing selection: 47 passed, zero skips. An earlier explicit lean attempt exhausted the 1 GiB compiler heap before tests ran; its normal-memory rerun passed.
+- Bootstrap/pacing mock repairs: 48 passed; hub chips: six passed. Original failing method identities were checked in Surefire XML, with zero skips.
+- Corrected display environment: eight S2 native competition/interlace/halfpipe EGL cases passed, zero skips. The broad invocation mistakenly inherited DISPLAY; these eight cases stopped at its absent-DISPLAY assertion. The corrected command used `env -u DISPLAY -u WAYLAND_DISPLAY`, the explicit EGL backend and the absolute original S2 ROM path.
+- Final standalone/native-fixture repair selection: 58 passed, zero skips. Queue wait 557 seconds; Maven execution 1m42s.
+- Combined-source lifecycle/API/native selection: **125 passed, zero failures/errors/skips** at `3640a70f4`. Queue wait 609 seconds; Maven execution 1m49s.
+- Combined-source `TestRewindArchitectureGuard,TestObjectPhysicsStandardizationGuard`, under `-Pguards`: **36 passed, zero failures/errors/skips** at `3640a70f4`. Queue wait 33 seconds; Maven execution 35.122 seconds.
+
+The 125-case command used the following exact selection, with `env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, all three absolute original ROM properties, and Maven `test`:
+
+```text
+TestLevelEntryProvenance,TestSonic3kLevelStartCamera,TestLiveRewindOwnerLifetime,TestLiveRewindBoundaryPolicy,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzNativeConfiguration,TestPhase3StandaloneSampleIntegration#realPackagedStandaloneLoadsWithoutRomAndExercisesCharacterLevelObjectAudioAndTerminalTopology,TestSamplePlatformerIntegration#realPackagedPlatformerLoadsWithoutRomAndExercisesCharacterLevelAudioAndTerminalTopology
+```
+
+Surefire XML confirms the required S3K classes ran with zero skips: AIZ skip eight cases, both LevelLoading classes (36 and seven), BootstrapResolver six and DecodingUtils three. The API surface class passed 12 cases. No unchanged broad run was repeated after the bounded repairs or upstream reconciliation.
+
+### Repair decisions
+
+Twelve failures were fixture assumptions about the old disabled default. Bootstrap/pacing mocks without capture payloads now explicitly opt out after configuration reset; the hub chip expects REWIND ON; FBZ native parity uses typed LaunchToggle.OFF because legacy boolean false means DEFAULT.
+
+Two failures were real standalone launch regressions exposed by enabling live history by default. The native level adapter requires AbstractLevel COW geometry, whereas creator-owned custom Levels can be owner-bound proxies. Native live-history admission now checks that geometry contract; unsupported custom geometry remains playable without a native controller. Held-rewind pacing uses the same support check. Both real packaged startup tests explicitly exercise the enabled default. An initial gate placement touched level state while disabled; the ownership regression caught it, and moving the check into enabled history admission preserved that invariant. The corrected 58-case run passed.
+
+### Broad smoke
+
+Actual Java 25/Lua 5.4 preflight passed. The command was:
 
 ```bash
 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 92dd2135fb9ac376644e8001c268a21d1c6c2cea --workers 2 --headless-gl surfaceless-egl --rom-directory <main-workspace> --run
 ```
 
-Actual preflight passed. Selection is 4,397 candidate classes in 89 ordinary batches, followed by guards. Expected execution is about 30 minutes on the qualified two-worker host; shared admission has added substantial queue waiting. Full-suite is release-only and is not selected. Run `20261102T151818Z-9913df0f` remains active against `57b41127a`; this is pending coverage, not a pass claim.
+Run `20261102T151818Z-9913df0f`, source fingerprint `b63aadc27b2a8c3ed77f43577e513e916a885d92ac6dbc7d6e8de80de9bc7e83`, selected 4,397 candidate classes. All 89 ordinary batches and the separate guard batch completed:
 
-Eight broad-run failures caused by the newly enabled default are repaired in the separate fixture branch `bugfix/ai-rewind-budget-fixtures` (`b7508d43e`). Mock Engine/GameLoop/native-stage fixtures explicitly disable rewind after their configuration reset because they supply no capture payload; the hub-chip assertion includes the approved default REWIND ON chip. Focused checks passed 48 tests across the four mock-related classes and six hub-chip tests, zero skips. Surefire XML confirms all eight original failing method identities passed. The repair is not yet merged into the frozen smoke tree.
+| Lane | Tests | Failures | Errors | Skips | Execution |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary | 36,618 | 36 | 6 | 50 | 1,599.08 s |
+| Guards | 820 | 2 | 0 | 0 | 149.67 s |
 
-Three other exact failures reproduce on unchanged baseline `a8f3f8647ed1e0920e7ee5119a8ce11a1d6a2ad6`, each with one test, one failure and zero skips:
+Preparation took 37.76 seconds. Total recorded execution including preparation was **29m46.51s**. Shared admission waiting is excluded from those execution figures and dominated wall time; aggregate queue waiting was not collected for this record.
 
-- `TestGameLoopFreshLevelHandoff.realFadeCallbackKeepsItsOwnerAndDefersTheFourTitleArchives`: expected NONE but HOLD_BLACK remains. The native title-entry contract intentionally retains that state until the following entry.
-- `TestEditorProjectLifecycle.cancellingNativeExitModalRestoresTheSameHeadlessPlaytestAndEditorView`: expected zero fade callbacks, observed one. Its input helper retains the pressed logical snapshot after physical release.
-- `TestMasterTitleScreenAudio.cancellingRomLocationEmitsCancel`: expected UI_NAVIGATE/UI_CONFIRM/UI_CANCEL, observed UI_NAVIGATE/UI_CONFIRM.
+The broad run was red. Its 42 ordinary failed cases are fully accounted for: 14 repaired and narrowly rechecked feature regressions, eight environment cases that passed corrected invocations, and 20 exact baseline failures. The two guard failures also reproduce on baseline, and their full classes pass after upstream reconciliation. All failed cases and skips were inspected; neither list omitted cases. This is bounded smoke/focused validation. Full-suite is release-only.
 
-Candidate and baseline assertion messages match. These unrelated failures are preserved. Final broad results, skips, guard coverage, diagnostic acknowledgment, integration, push and cleanup remain pending.
+The 50 skips include explicit capture/profiling/soak/native-context/mod-artifact switches, isolated-display reel checks, and local audio reference/capture prerequisites. `TestCPZObjectBugs.testSpinTubeForcesRolling` skipped because its spin-tube capture/release assumption was not reached; that remains a coverage gap. There were no missing-ROM-path skips. Cross-game stills, Settings review, NTSC/PAL live-loop witnesses and the Opus overall-9 HUD rubric are recorded in the [HUD audit](../audits/2026-11-02-rewind-budget-hud-design.md).
 
-Batch 28 exposed an invocation prerequisite error: despite the explicit surfaceless EGL backend, the broad process inherited `DISPLAY=:0`. Eight cases in `TestSonic2NativeCompetitionHost`, `TestSonic2InterlacePixels` and `TestCompetitiveHalfpipeEgl` stop at their absent-DISPLAY assertion. A focused rerun in the verified repair tree explicitly removes DISPLAY and WAYLAND_DISPLAY; it is pending. These failures are not attributed to the feature or counted as passes. Any further affected cases require the same bounded environment-corrected verification.
+Diagnostics acknowledged; the entire category-run directory was deleted after inspection.
 
-The environment-corrected selection passed all eight cases, zero skips, on `b7508d43e` (documentation edits only beyond that source). Original failing method identities were checked in Surefire XML. Queue wait was 573 seconds; Maven execution was 39.935 seconds. Command: `env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestSonic2NativeCompetitionHost,TestSonic2InterlacePixels,TestCompetitiveHalfpipeEgl -Dsonic2.rom.path=<absolute-original-S2-ROM> test`.
+### Exact pinned-baseline failures
 
-Later mod checks found two tower-defense input assertions and nine Three Islands/lobby assertions that also reproduce on baseline. The exact tower-defense pair ran 2 tests/2 failures/zero skips (296-second queue wait; 32.134-second Maven execution). The next exact selection ran 11 tests/9 failures/zero skips (6-second wait; 43.198-second execution): all eight Three Islands failures and the lobby pixel failure match, normalizing only JVM object-identity suffixes in one expected-FieldScreen/actual-StoryScreen assertion. Both standalone startup methods passed on baseline. Total inherited failure identities are now 14; they remain unchanged.
+All rows below reproduced on unchanged `a8f3f8647ed1e0920e7ee5119a8ce11a1d6a2ad6`, matching the frozen candidate by test identity and assertion. Only JVM object-identity suffixes and a diagnostic worktree root were normalized. Every matched baseline invocation skipped zero tests. The two final guard rows pass on the merged candidate; the unrelated ordinary cases were preserved.
 
-The two standalone startup failures are feature regressions: enabling live rewind by default exposed the native level adapter's existing AbstractLevel COW-geometry requirement when a creator-owned Level is wrapped in an owner-bound proxy. A focused candidate reproduction failed both methods with that exact capture stack. The repair gates native live history on compatible level geometry, preserving the creator boundary and allowing those games to launch; unsupported custom geometry does not get a native history controller. Held-rewind pacing uses the same support gate. Both real packaged startup tests now explicitly exercise the enabled default and assert that unsupported geometry leaves the native controller absent. Their focused regression plus manager ownership, budget/boundary and host-pacing checks is pending.
-
-The first capability-gate regression run passed both standalone starts but failed one ownership invariant: disabled binding must not inspect the object world. The gate moved from mode classification into enabled history admission, with held-key pacing using the same compatibility test. A later native FBZ fixture still used the legacy boolean false profile constructor, whose defined meaning is DEFAULT; it now explicitly selects LaunchToggle.OFF for native parity. The corrected combined selection passed 58 tests, zero failures/errors/skips (557-second queue wait; Maven execution 1m42s), including the two real packaged startups, all four FBZ native teams, TestLiveRewindOwnerLifetime, TestGameLoopMutatorPacing, TestLiveRewindBudget and TestLiveRewindBoundaryPolicy. Source changes remain isolated from the frozen broad tree.
+| Test identity | Matching assertion |
+| --- | --- |
+| `com.openggf.TestGameLoopFreshLevelHandoff.realFadeCallbackKeepsItsOwnerAndDefersTheFourTitleArchives` | `LoadPalette_Immediate must clear HOLD_BLACK before deferred title init ==> expected: <NONE> but was: <HOLD_BLACK>` |
+| `com.openggf.editor.project.TestEditorProjectLifecycle.cancellingNativeExitModalRestoresTheSameHeadlessPlaytestAndEditorView` | `the quit modal must suspend callbacks behind the native PLC/fade wrapper ==> expected: <0> but was: <1>` |
+| `com.openggf.game.TestMasterTitleScreenAudio.cancellingRomLocationEmitsCancel` | `expected: <[UI_NAVIGATE, UI_CONFIRM, UI_CANCEL]> but was: <[UI_NAVIGATE, UI_CONFIRM]>` |
+| `com.openggf.mods.code.TestRobotnikTowerDefenseScene.keyboardBuildsAndPauseAndHelpFreezeEveryGameplayTimer` | `expected: <120> but was: <150>` |
+| `com.openggf.mods.code.TestRobotnikTowerDefenseScene.backspaceCancelsTheShopBeforeItsMappedStartCanPause` | `expected: <120> but was: <150>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.tailsJoinsInTheFieldAndTheTravellingShopReturnsToTheSameSpot` | `expected: <true> but was: <false>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches` | `expected: <DUNGEON> but was: <MENU_ROOT>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.startupIsPlayableAndArrivalDialogueAndRestStayInTheField` | `expected: <FIELD> but was: <STORY>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.greenHillMysteriesUseRealInteractionsAndPersistThroughContinue` | `expected: <STORY> but was: <MENU_ROOT>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.physicalTrailsConnectFieldsAndBattleUsesTheEncounterField` | `cannot walk straight into Star Light ==> expected: <threeislands.screen.FieldScreen@<identity>> but was: <threeislands.screen.StoryScreen@<identity>>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.allStoryLandmarksHavePlayableInteriorsWithIndependentGatesSavesAndRewards` | `ghz enters through its actual doorway ==> expected: <DUNGEON> but was: <MENU_ROOT>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.travellerDialogueWaitsForTheDiscoveryOrRescueItDescribes` | `expected: <STORY> but was: <MENU_ROOT>` |
+| `com.openggf.mods.code.TestThreeIslandsScene.explorationUsesTwoAxesAndStoryDiscoveriesPersistAcrossContinue` | `shield is explained by the party ==> expected: <STORY> but was: <MENU_ROOT>` |
+| `com.openggf.mods.scene.host.TestPrivateLobbyScreenRendering.actualLobbyAndFullTextPixelsSupportMultipleReadablePages` | `Right reaches new full-text pixels ==> expected: <false> but was: <true>` |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute.incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[1]` | `cold route death at 20958 ==> expected: <false> but was: <true>` |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute.incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | `cold route death at 32674 ==> expected: <false> but was: <true>` |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute.incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | `cold route death at 38950 ==> expected: <false> but was: <true>` |
+| `com.openggf.tests.TestS3kMhzAct2EntryHeadless.coldEntryPressesLiftsAndReleasesNativeTeamWithReplay(WidescreenAspect, String, String)[12]` | `level event must preserve the cutscene-owned minimum ==> expected: <872> but was: <896>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | `actual ending load follows the source request ==> expected: <13> but was: <12>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | `actual ending load follows the source request ==> expected: <13> but was: <12>` |
+| `com.openggf.game.rewind.TestRewindArchitectureGuard.objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage` | `Object packages should prefer central rewind policies/codecs. New @RewindTransient/@RewindDeferred annotations need explicit triage.; Unexpected growth:; src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossExplosionController.java#@RewindTransient = 1` |
+| `com.openggf.level.objects.TestObjectPhysicsStandardizationGuard.productionObjectLifecycleRawCallsMatchTheirCallerBaselines` | `Object lifecycle debt changed by caller/operation. Prefer ObjectLifetimeOps deletion or spawnChild/spawnFreeChild; tighten resolved baseline entries.;   com/openggf/game/sonic3k/objects/bosses/MhzEndBossExplosionController.java#MhzEndBossExplosionController#update(int,PlayableEntity)->setDestroyed(true) observed=1 baseline=0 (new/increased debt); Current inventory: <worktree>/target/diagnostics/architecture/object-lifecycle-call-current.txt ==> expected: <true> but was: <false>` |
