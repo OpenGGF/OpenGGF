@@ -65,8 +65,8 @@ import java.util.List;
  * Player 1's standing bit to Player 2's with {@code addq.b}, which leaves the high half of
  * {@code d6} dirty after Player 1's {@code Perform_Player_DPLC} has run; the fixed branch would
  * {@code moveq} the whole register. The dirty value is what the shipped game does, and
- * {@code CnzWireCageObjectInstance} already models the same bug for its own object, so the standing
- * bit is kept per player here rather than derived from a shared register.
+ * {@code CnzWireCageObjectInstance} already models the same bug for its own object, so the native status
+ * bits and the direct P1 DPLC frame transition are retained here.
  */
 public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
@@ -124,8 +124,9 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     private int p1Accumulator;
     private int p2Accumulator;
     /** The object's own {@code status} standing bits, one per player. */
-    private boolean p1Riding;
-    private boolean p2Riding;
+    private int standingBits;
+    /** Last mapping submitted by this ride's direct P1 DPLC tail, not the intervening animation. */
+    private int p1RideDplcFrame = -1;
 
     public LrzCorkscrewObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LRZCorkscrew");
@@ -135,9 +136,11 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     public void releasePlayersForVisualDirection() {
         var query = services().playerQuery();
         if (isRiding(true) && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player)
-            releaseControl(player, true);
-        if (isRiding(false) && query.nativeP2OrNull() instanceof AbstractPlayableSprite player)
-            releaseControl(player, false);
+            releaseControl(player, true, 3);
+        if (isRiding(false) && query.nativeP2OrNull() instanceof AbstractPlayableSprite player) {
+            releaseControl(player, false, 4);
+            releaseControl(player, false, 1);
+        }
     }
 
     /**
@@ -160,23 +163,33 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // sub_42262 (sonic3k.asm:87551-87565): Player 1 against $30(a0), then Player 2 against
         // $34(a0). Delete_Sprite_If_Not_In_Range is the engine's generic off-screen handling.
-        stepPlayer(playerEntity, true);
-        stepPlayer(nativeP2OrNull(), false);
+        int previousDplcFrame = p1RideDplcFrame;
+        boolean wasP1Riding = isRiding(true);
+        stepPlayer(playerEntity, true, 3);
+        // FixBugs=0: sub_42262 (sonic3k.asm:87551-87565) increments only
+        // d6's byte after P1. A new ride frame reaches Sonic_Load_PLC2
+        // (sonic3k.asm:25255-25296), whose aligned art source leaves the
+        // subsequent P2 memory-bit index at 1 instead of 4. The fixed branch
+        // reloads 4 and advances P2 every pass. Preserve the shipped status
+        // bits, including captures made under bit 1; no CPU/register emulator.
+        boolean newP1Dplc = wasP1Riding && isRiding(true)
+                && p1RideDplcFrame != previousDplcFrame;
+        stepPlayer(nativeP2OrNull(), false, newP1Dplc ? 1 : 4);
     }
 
-    private void stepPlayer(PlayableEntity entity, boolean isPlayerOne) {
+    private void stepPlayer(PlayableEntity entity, boolean isPlayerOne, int standingBit) {
         if (!(entity instanceof AbstractPlayableSprite player)) {
             return;
         }
-        if (isRiding(isPlayerOne)) {
-            advanceRide(player, isPlayerOne);
+        if ((standingBits & (1 << standingBit)) != 0) {
+            advanceRide(player, isPlayerOne, standingBit);
         } else {
-            tryCapture(player, isPlayerOne);
+            tryCapture(player, isPlayerOne, standingBit);
         }
     }
 
     /** {@code sub_42278} head (sonic3k.asm:87571-87621). */
-    private void tryCapture(AbstractPlayableSprite player, boolean isPlayerOne) {
+    private void tryCapture(AbstractPlayableSprite player, boolean isPlayerOne, int standingBit) {
         // move.w x_pos(a1),d0 / addi.w #$10,d0 / sub.w x_pos(a0),d0 / bcs -> an unsigned borrow,
         // then a signed bge against $20.
         int dx = (player.getCentreX() + CAPTURE_HALF_SPAN) - getCentreX();
@@ -202,7 +215,8 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         }
 
         // loc_422E6 (:87600-87621).
-        setRiding(isPlayerOne, true);
+        setRiding(standingBit, true);
+        if (isPlayerOne) p1RideDplcFrame = -1;
         setAccumulator(isPlayerOne, 0);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
@@ -227,25 +241,28 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         player.setDoubleJumpFlag(0);
         player.setDirection(Direction.RIGHT);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // loc_138C8 (sonic3k.asm:26290-26300) skips Animate_Tails under
+        // object_control bit1; retain the last direct ride pose on a skipped P2 pass.
+        player.setObjectMappingFrameControl(true);
         player.setAnimationId(Sonic3kAnimationIds.WALK.id());
         setInteractSlot(player);
     }
 
     /** {@code loc_423D0} through {@code loc_42438} (sonic3k.asm:87659-87706). */
-    private void advanceRide(AbstractPlayableSprite player, boolean isPlayerOne) {
+    private void advanceRide(AbstractPlayableSprite player, boolean isPlayerOne, int standingBit) {
         int accumulator = accumulator(isPlayerOne);
         // move.w ground_vel(a1),d0 / ext.l d0 / lsl.l #8,d0 / add.l d0,(a2).
         accumulator += ((int) (short) player.getGSpeed()) << 8;
         if (accumulator < 0) {
             // bmi.s loc_42368: the long went negative, so the rider is leaving the way it came.
-            releaseBackwards(player, isPlayerOne);
+            releaseBackwards(player, isPlayerOne, standingBit);
             return;
         }
         int parameter = (accumulator >>> 16) & 0xFFFF;
         if (parameter >= RIDE_END) {
             // cmpi.w #$700,(a2) / bhs.s loc_42396 reads the accumulator's HIGH word.
             setAccumulator(isPlayerOne, accumulator);
-            releaseForwards(player, isPlayerOne);
+            releaseForwards(player, isPlayerOne, standingBit);
             return;
         }
         setAccumulator(isPlayerOne, accumulator);
@@ -256,6 +273,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         }
 
         applyRidePosition(player, parameter);
+        if (isPlayerOne) p1RideDplcFrame = player.getMappingFrame();
     }
 
     /** {@code loc_423F0} onwards (sonic3k.asm:87668-87706). */
@@ -293,16 +311,16 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     }
 
     /** {@code loc_42368} (sonic3k.asm:87628-87639). */
-    private void releaseBackwards(AbstractPlayableSprite player, boolean isPlayerOne) {
-        releaseCommon(player, isPlayerOne);
+    private void releaseBackwards(AbstractPlayableSprite player, boolean isPlayerOne, int standingBit) {
+        releaseCommon(player, isPlayerOne, standingBit);
         player.setAir(true);
     }
 
     /** {@code loc_42396} (sonic3k.asm:87645-87656). */
-    private void releaseForwards(AbstractPlayableSprite player, boolean isPlayerOne) {
+    private void releaseForwards(AbstractPlayableSprite player, boolean isPlayerOne, int standingBit) {
         player.setTopSolidBit((byte) EXIT_TOP_SOLID_BIT);
         player.setLrbSolidBit((byte) EXIT_LRB_SOLID_BIT);
-        releaseCommon(player, isPlayerOne);
+        releaseCommon(player, isPlayerOne, standingBit);
         player.setDirection(Direction.LEFT);
     }
 
@@ -310,11 +328,11 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
      * The tail both exits share. {@code neg.w ground_vel(a1)} on a speed that was positive for the
      * whole ride is what turns the rider around at either end.
      */
-    private void releaseCommon(AbstractPlayableSprite player, boolean isPlayerOne) {
-        setRiding(isPlayerOne, false);
+    private void releaseCommon(AbstractPlayableSprite player, boolean isPlayerOne, int standingBit) {
+        setRiding(standingBit, false);
         setAccumulator(isPlayerOne, 0);
         player.setOnObject(false);
-        releaseControl(player, isPlayerOne);
+        releaseControl(player, isPlayerOne, standingBit);
         // move.w #1,anim(a1) is a WORD write, so anim becomes 0 and prev_anim 1.
         player.setAnimationId(Sonic3kAnimationIds.WALK.id());
         int reversed = -player.getGSpeed();
@@ -324,10 +342,11 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     }
 
     /** {@code move.w a0,interact(a1)} (sonic3k.asm:87600). */
-    private void releaseControl(AbstractPlayableSprite player, boolean playerOne) {
-        setRiding(playerOne, false);
+    private void releaseControl(AbstractPlayableSprite player, boolean playerOne, int standingBit) {
+        setRiding(standingBit, false);
         player.setOnObject(false);
         ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
     }
 
     private void setInteractSlot(AbstractPlayableSprite player) {
@@ -347,15 +366,12 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isRiding(boolean isPlayerOne) {
-        return isPlayerOne ? p1Riding : p2Riding;
+        return (standingBits & (isPlayerOne ? 0x08 : 0x12)) != 0;
     }
 
-    private void setRiding(boolean isPlayerOne, boolean riding) {
-        if (isPlayerOne) {
-            p1Riding = riding;
-        } else {
-            p2Riding = riding;
-        }
+    private void setRiding(int standingBit, boolean riding) {
+        if (riding) standingBits |= 1 << standingBit;
+        else standingBits &= ~(1 << standingBit);
     }
 
     private int accumulator(boolean isPlayerOne) {

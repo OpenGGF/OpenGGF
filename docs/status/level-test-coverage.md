@@ -2602,3 +2602,7 @@ S2 ARZ2 producer-clock follow-up (2026-11-03): the [clock-selection route matrix
 LRZ Act1 local follow-up (2026-11-03): the [boulder lifetime audit](../architecture/audits/2026-11-03-lrz-boulder-lifetime.md)
 records unsigned coarse-camera boundary checks and LRZ trace/keep-green results.
 This is a local lifetime obligation; the Act1 matrix's broader route/rewind gaps remain open.
+
+LRZ Act1 corkscrew follow-up (2026-11-03): [P2 dispatch audit](../architecture/audits/2026-11-03-lrz-corkscrew-p2.md)
+adds a two-player held/resumed-pass witness and exercises the existing three
+rewind spots; comprehensive two-player route/rewind breadth remains open.

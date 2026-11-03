@@ -1954,3 +1954,11 @@ The four LRZ r7 replays and 69 object/keep-green tests were measured on
 This repairs the Sonic+Tails row-2726 hurt and solo-Tails row-2592 cascade.
 Solo row2120 ring collection and bonus-return LRZ2/LRZ3 inlet debt remain distinct;
 viewport/donor breadth, whole-route rewind and complete-act certification remain inherited gaps.
+
+## Corkscrew P2 dispatch (2026-11-03)
+
+The [corkscrew audit](../../audits/2026-11-03-lrz-corkscrew-p2.md) records the
+executed P1 DPLC frame transition, native held P2 pass, two-player unit witness
+and three existing capture/restore/forward-replay spots. The S+T frontier moves
+3415 ->3791; solo LRZ and both bonus-return reports are identical. The 83-test
+object/keep-green selection passes without skips. Broader matrix gaps remain inherited.
