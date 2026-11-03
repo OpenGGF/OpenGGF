@@ -109,6 +109,21 @@ class TestGameLoopBonusStageSession {
         enter(loop, BonusStageType.GUMBALL);
         verify(context).getRunPolicy(); verifyNoInteractions(module, fade, levels, audio, sprites);
     }
+    @Test void entryFadeReservesTheCompletionIterationBeforeTitleWork() throws Exception {
+        var context = spy(SessionManager.getCurrentGameplayMode());
+        doReturn(true).when(context).isGameplayRuntimeReady();
+        write(loop, "gameplayMode", context);
+        entryFade();
+        enter(loop, BonusStageType.GUMBALL);
+        var frame = context.plcFrameLifecycle().latchBeforeFadeUpdate();
+        try {
+            assertTrue(frame.isOwnedBy(
+                    com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE),
+                    "Level's blocking entry fade must retain its completion token");
+        } finally {
+            frame.finish();
+        }
+    }
     @Test void entryCaptureAndMusicPrecedePendingAndFade() throws Exception {
         var callback = entryFade();
         doAnswer(c -> { assertFalse(pending(loop)); return null; }).when(audio).fadeOutMusic();

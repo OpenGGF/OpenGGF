@@ -303,6 +303,103 @@ Upstream adds opt-in network tests and verified-ROM discovery tooling; it change
 none of the gameplay or replay-owner Java measured by these probes. The rejected
 experiments remain attributed to `278401593` plus their diagnostic patches.
 
+## Bonus-entry blocking-fade correction
+
+Follow-up base `12a6febc5`. Bonus entry used raw
+`FadeManager.startFadeToBlack`, whereas bonus return used
+`GameLoopPlcLifecycle.startToBlack`. The latter registers an existing native
+blocking fade: `latchBeforeFadeUpdate()` reserves `PALETTE_FADE` before the
+completion callback can install `TITLE_CARD`. Both paths initialize title art
+synchronously; immediate initialization alone does not explain the asymmetry.
+
+Native `loc_5FF6 (sonic3k.asm:7555-7562)` completes
+`Pal_FadeToBlack (sonic3k.asm:5074-5085)` before the locked title loop at
+`loc_62CC (sonic3k.asm:7769-7781)`. The correction uses the existing blocking-fade
+owner at bonus entry, matching return. It introduces no counter, wait budget,
+readiness policy or trace-adapter change. The losing external title scan may
+still execute its body; the reserved token prevents it from taking the fresh
+phase's preparation tail on the completion iteration.
+
+A new real-token regression in `TestGameLoopBonusStageSession` fails against
+unchanged production: 23 tests, one new assertion failure, no errors/skips; the
+22 existing controls pass. With the wrapper correction, that class and
+`TestPlcFrameLifecycleCoordinator` pass all 54 tests with no failures/errors/skips.
+
+The original Mega replay, with the same read-only phase observer, now measures:
+
+| Explicit span | Native | Corrected engine |
+| --- | ---: | ---: |
+| Gumball locked title | 70 | 70 |
+| Returned AIZ locked title | 80 | 80 |
+| Slots locked title | 83 | 83 |
+| Gumball / AIZ / Slots terrain | 10 / 26 / 26 | 5 / 26 / 13 |
+
+Terrain markers remain pre-tick: printed 5513/6898/9032 means completed
+handoffs 5514/6899/9033. Release clocks are 5519/6925/9046. The fade remains
+22 ticks per load. The two missing title ticks are corrected independently;
+remaining cumulative admission deficits are 10/32/51, comprising the previously
+measured 33 synchronous interrupts and 18 shorter terrain waits. Bonus terrain
+submissions still observe inactive recorded-row authority; this correction does
+not include the rejected readiness-handoff experiment.
+
+Mega completes with its existing `stage_exit` boundary assertion failure,
+no errors/skips. Slots still reports `errorCount=7891`, complete comparison,
+and first noncamera row268 `y_speed` ROM0 / engine -$0400. These match the
+recorded baseline's failure identity, first mismatch and count; they do not
+prove complete per-row error-vector equivalence or a green campaign. The phase
+probe's Maven execution is 106s; its last printed queue wait was 241s, with exact
+queue and total wall time unknown. Temporary observer prints were removed.
+
+Commands use the display-free JDK25/EGL environment below. Focused baseline:
+`python3 tools/testing/maven_queue.py -Dmse=off -B -Dtest=TestGameLoopBonusStageSession test`.
+Candidate contract check:
+`python3 tools/testing/maven_queue.py -Dmse=off -B '-Dtest=TestGameLoopBonusStageSession,TestPlcFrameLifecycleCoordinator' test`.
+The phase probe uses the original Mega command below, with wrapper-discovered
+verified ROMs (found all, missing none), one test/one known failure, 0 errors/skips.
+
+The change-based planner selects all 4419 smoke classes because the caller lives
+under shared `GameLoop`. Focused coverage replaces that broad run: this reuses
+an unchanged owner at one bonus-entry call site, with real-token lifecycle,
+admission/timing-authority, required S3K loading and actual Mega phase witnesses.
+It does not qualify another continuous campaign or resolve the remaining timing
+owners identified above.
+
+After removing all probe prints, the final command was
+`python3 tools/testing/maven_queue.py -Dmse=off -B '-Dtest=TestLevelIterationHardwareTimingAdmissionOrder,TestHardwareTimingAuthorityGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test`
+in the same display-free JDK25/EGL environment. All92 tests pass,0 failures,
+errors or skips; verified-ROM discovery reports missing none. The loading
+selector includes both same-named loading classes. Together with the54 contract
+checks this is146 passing focused tests, not full smoke or campaign parity.
+
+### Updated-base delivery qualification
+
+During qualification, destination `develop` advanced to `e07b75a90`, including
+shared player/physics changes from the weakness-pass merge. The six task files
+reapplied cleanly; the blocking-fade caller and coordinator were unchanged by
+upstream. The native reference pin is unchanged. Old-base results above were
+not treated as qualification of that merged state.
+
+Matched updated-base runs use the original Mega environment/profile below,
+with `-Dtest=TestGameLoopBonusStageSession,TestS3kMegaRunChain`. Baseline keeps
+production unchanged and adds only the new regression:24 tests,2 failures
+(the token assertion and known Mega stage-exit assertion),0 errors/skips.
+With the wrapper correction:24 tests,1 known Mega failure,0 errors/skips;
+all23 bonus-session tests pass. The phase observations remain exactly those
+listed above. All four reached segment reports compare equal as parsed JSON,
+including verification groups and retained recent mismatches. That is equality
+of the report projection, not proof of every unsaved per-row field vector.
+Both Maven executions reported107s; their last printed queue-wait message was0s.
+Exact queue and total wall times are not independently measured.
+
+After removing the prints, updated-base final validation was:
+`python3 tools/testing/maven_queue.py -Dmse=off -B '-Dtest=TestPlcFrameLifecycleCoordinator,TestLevelIterationHardwareTimingAdmissionOrder,TestHardwareTimingAuthorityGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test`.
+All123 tests pass,0 failures/errors/skips; verified-ROM discovery finds all
+inputs and reports missing none. With the23 bonus-session cases, this is146
+passing focused checks on the updated base. Final Maven execution reported104s.
+The updated change-based smoke plan contains4438 classes; the same bounded
+caller/unchanged-owner rationale above applies. No full-smoke or campaign pass
+is claimed. The only delivered runtime edit is the blocking-fade entry call.
+
 ## Reproduction and verification
 
 The engine probes only add prints at `GameLoopPlcLifecycle.runLogicalIteration`
