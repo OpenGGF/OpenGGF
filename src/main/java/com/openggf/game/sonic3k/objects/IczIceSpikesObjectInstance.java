@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * Object 0xB7 - ICZ ice spikes.
  * <p>
- * ROM reference: {@code Obj_ICZIceSpikes} at sonic3k.asm:189628
+ * ROM reference: {@code Obj_ICZIceSpikes} at sonic3k.asm:189633
  * ({@code loc_8B2A8}). Subtype 0 is a solid spike base with a separate
  * {@code collision_flags=$98} hurt child. Nonzero subtypes use
  * {@code collision_flags=$92}, arm when the nearest player is within 0x40 px on

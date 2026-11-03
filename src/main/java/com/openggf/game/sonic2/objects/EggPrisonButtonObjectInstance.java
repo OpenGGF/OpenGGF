@@ -68,7 +68,7 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // ROM loc_3F354 (docs/s2disasm/s2.asm:84937-84950) is, in order:
+        // ROM loc_3F354 (docs/s2disasm/s2.asm:85052-85065) is, in order:
         //   move.w #$1B,d1 / move.w #8,d2 / move.w #8,d3
         //   move.w x_pos(a0),d4 / jsr (SolidObject).l
         //   move.w objoff_30(a0),y_pos(a0)   ; restore the stored base y
@@ -76,7 +76,7 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         //   addq.w #8,y_pos(a0)              ; press ONLY while someone stands
         //   clr.b (Update_HUD_timer).w / move.w #1,objoff_32(a0)
         // Only objoff_32 -- the "prison opened" flag the body's routine 2 polls
-        // at loc_3F2B4 (:84884-84886) -- latches. The 8-pixel depression itself
+        // at loc_3F2B4 (:85016-85018) -- latches. The 8-pixel depression itself
         // is recomputed from objoff_30 and the CURRENT standing bit every frame,
         // so the button rises back to its base y the frame the player steps off.
         // SolidObject runs BEFORE the restore, so the surface a player collides
@@ -156,33 +156,6 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         // d1=$1B. Its BHI range gate keeps relX == 2*d1 as the grounded
         // zero-distance side contact that publishes Status_Push.
         return true;
-    }
-
-    @Override
-    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
-        // The button is Obj3E's routine-4 child and owns a normal SolidObject
-        // status byte when TailsCPU_Normal samples interact(a0).
-        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
-    }
-
-    @Override
-    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
-        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
-    }
-
-    @Override
-    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
-        return isGroundedCpuSidekickAtCapsuleBodyEdge(player);
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MIN_VALUE;
     }
 
     private boolean isGroundedCpuSidekickAtCapsuleBodyEdge(PlayableEntity player) {

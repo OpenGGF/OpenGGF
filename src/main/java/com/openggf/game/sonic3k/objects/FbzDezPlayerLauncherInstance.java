@@ -132,7 +132,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         p2Standing = false;
 
         if (returningHome) {
-            // loc_3BA4A (sonic3k.asm:79515-79524): step one pixel per frame back
+            // loc_3BA4A (sonic3k.asm:79520-79529): step one pixel per frame back
             // toward $44, then hand the routine back to loc_3B97A. sub_3B9D8 is not
             // called on this path, so riders are untouched while the pad returns.
             if (motion.x == homeX) {
@@ -164,7 +164,7 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
             }
         }
 
-        // loc_3B9AC (sonic3k.asm:79465-79466): sub_3B9D8 for each standing player.
+        // loc_3B9AC (sonic3k.asm:79470-79471): sub_3B9D8 for each standing player.
         if (ridingP1) {
             applyRider(playerEntity);
         }
@@ -210,19 +210,11 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
         motion.xVel = armSpeed;
         runTimer = RUN_FRAMES;
         doublingTimer = DOUBLING_FRAMES;
-        try {
-            services().playSfx(Sonic3kSfx.FLOOR_LAUNCHER.id);
-        } catch (Exception ignored) {
-            // Headless replays can omit the audio backend; the launch still runs.
-        }
+        services().playSfx(Sonic3kSfx.FLOOR_LAUNCHER.id);
     }
 
     private PlayableEntity nativeP2OrNull() {
-        try {
-            return services().playerQuery().nativeP2OrNull();
-        } catch (IllegalStateException e) {
-            return null;
-        }
+        return services().playerQuery().nativeP2OrNull();
     }
 
     @Override
@@ -238,8 +230,8 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        return carryRiderThisFrame;
+    public int tailCallD4(int routineEntryX) {
+        return carryRiderThisFrame ? routineEntryX : getX();
     }
 
     @Override

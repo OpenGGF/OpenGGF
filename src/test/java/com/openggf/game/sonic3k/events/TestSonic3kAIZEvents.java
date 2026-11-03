@@ -1399,7 +1399,7 @@ public class TestSonic3kAIZEvents {
         Camera camera = GameServices.camera();
 
         Sonic3kAIZEvents.resetGlobalState();
-        // ROM: AIZ1_AIZ2_Transition (sonic3k.asm:104673) does not write
+        // ROM: AIZ1_AIZ2_Transition (sonic3k.asm:104678) does not write
         // Apparent_zone_and_act; it stays at AIZ1=$0000 across the
         // continuation.  The engine's seamless transition coordinator
         // preserves apparentAct, matching this.

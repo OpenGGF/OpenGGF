@@ -259,7 +259,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
             // The ROM does not fade back in here. `Level:` runs
             // ClearPLC + Pal_FadeToBlack (docs/s2disasm/s2.asm:4764-4765) and
             // then, with no Pal_FadeFromBlack anywhere between `Level:`
-            // (:4757) and `Level_MainLoop` (:5087), writes the level palette
+            // (:4757) and `Level_MainLoop` (:5091), writes the level palette
             // straight to the active palette with `bsr.w PalLoad_Now` (:4881).
             // So the title card appears at full intensity on the first V-blank
             // of `Level_TtlCard`'s loop (:4914-4915). Running a reveal fade

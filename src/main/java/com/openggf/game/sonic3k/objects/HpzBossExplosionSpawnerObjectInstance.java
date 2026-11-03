@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * ROM {@code Obj_CreateBossExplosion} subtype {@code $14} ({@code CreateBossExp14}: timer 8,
  * X range {@code $80}, Y range {@code $20}, routine set {@code $10} = {@code Obj_Wait} +
- * {@code Obj_NormalExpControl}, sonic3k.asm:176765-176779), created by {@code loc_64930} at
+ * {@code Obj_NormalExpControl}, sonic3k.asm:176862-176876), created by {@code loc_64930} at
  * {@code ($1880,$3D0)}.
  *
  * <p>{@code Obj_Wait} never looks at the parent, so the spawner stays at {@code ($1880,$3D0)} and

@@ -37,6 +37,21 @@ class TestUncomparedInteriorPhysicalRows {
     }
 
     @Test
+    void synchronousLoadIsTheLastMultiRowNonAdmittedRun() {
+        // admitted, load (3 lag rows), admitted, lone overrun lag row, admitted
+        boolean[] gap = {false, false, true, true, true, false, false, true, false};
+        assertEquals(4, AbstractRunChainTest.lastSynchronousLoadRow(gap),
+                "a lone leave-loop overrun row cannot hold InitPlayers");
+        assertEquals(3, AbstractRunChainTest.lastSynchronousLoadRow(
+                new boolean[]{false, true, true, true}),
+                "a gap ending in its load run releases on the final row");
+        assertEquals(-1, AbstractRunChainTest.lastSynchronousLoadRow(
+                new boolean[]{false, true, false, true, false}),
+                "single-row lag runs locate no synchronous load");
+        assertEquals(-1, AbstractRunChainTest.lastSynchronousLoadRow(new boolean[0]));
+    }
+
+    @Test
     void productionLevelEntryTimingContainsNoMeasuredRowOrRouteIdentity()
             throws IOException {
         for (Path source : List.of(

@@ -48,7 +48,7 @@ public class BridgeObjectInstance extends BoxObjectInstance
     private static final int ROM_BALANCE_WIDTH_PIXELS = 0x80;
     /**
      * {@code Obj11_Init}: {@code move.w #8,d1} before the first
-     * {@code Obj11_MakeBdgSegment} call (docs/s2disasm/s2.asm:21969-21970).
+     * {@code Obj11_MakeBdgSegment} call (docs/s2disasm/s2.asm:21987-21988).
      */
     private static final int ROM_FIRST_SEGMENT_LOGS = 8;
     private static final int MAX_DEPRESSION_ANGLE = 0x40;
@@ -209,7 +209,7 @@ public class BridgeObjectInstance extends BoxObjectInstance
     @Override
     public boolean usesSlopeForNewLanding() {
         // ROM parity: Obj11_EHZ computes/depresses the log child Y values before
-        // sub_F872 (docs/s2disasm/s2.asm:21995-22032), but non-standing players
+        // sub_F872 (docs/s2disasm/s2.asm:22126-22163), but non-standing players
         // enter PlatformObject11_cont (22160-22172). That helper lands against
         // y_pos(a0)-d3 (35692-35712), not the child log Y table. The depressed
         // child Y is used only after the standing bit is already set (22120-22155).

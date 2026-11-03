@@ -37,7 +37,7 @@ import java.util.List;
  * (:88898-88899). {@code sfx_MechaLand} plays whenever the boulder was drawn last frame and
  * {@code Level_frame_counter+1 & $F} is zero (:89031-89036).
  *
- * <h2>Subtype {@code $C0} -- the swinging boulder that breaks loose ({@code loc_437FE}, :88904)</h2>
+ * <h2>Subtype {@code $C0} -- the swinging boulder that breaks loose ({@code loc_437FE}, :88909)</h2>
  * <ul>
  *   <li>Every frame it takes the same {@code cos(angle) asr 2} X, then clears
  *       {@code collision_flags} and the priority bit and puts BOTH back only while
@@ -359,9 +359,10 @@ public final class LrzSpikeBallObjectInstance extends AbstractObjectInstance
         if (routine == Routine.ROLL && armed) {
             return false;
         }
-        // andi.w #$FF80,d0 / sub.w (Camera_X_pos_coarse_back).w,d0 / cmpi.w #$280,d0 / bhi.
-        int delta = ((baseX & 0xFF80) - cameraX) & 0xFFFF;
-        return delta > 0x280;
+        // loc_1B666 (sonic3k.asm:37412-37417) subtracts the coarse-back camera,
+        // not raw Camera_X_pos. loc_1B7F2 (sonic3k.asm:37591-37598) derives it
+        // as (cameraX - $80) & $FF80; preserve the placed-X anchor in $44(a0).
+        return isCoarseXOutOfRange(baseX, cameraX, 0x280);
     }
 
     // ===== Accessors =====

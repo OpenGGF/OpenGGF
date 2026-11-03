@@ -219,7 +219,7 @@ Decoded: Tails → spin → edge → spin_flip → Knuckles → spin → edge �
 
 ### ROM Reference
 
-`Obj_HiddenMonitor` at sonic3k.asm line 176121. Object ID **0x80** in both zone sets (S3KL and SKL). Note: 0xC5 is `LBZMinibossBoxKnux` in S3KL — do NOT register hidden monitor there.
+`Obj_HiddenMonitor` at sonic3k.asm line 176126. Object ID **0x80** in both zone sets (S3KL and SKL). Note: 0xC5 is `LBZMinibossBoxKnux` in S3KL — do NOT register hidden monitor there.
 
 ### New Class: `S3kHiddenMonitorInstance`
 
@@ -254,7 +254,7 @@ Register in `Sonic3kObjectRegistry`:
 
 ### ROM Reference
 
-`Obj_EndSignControl` at sonic3k.asm line 180463. Reused by all S3K minibosses that end with a signpost.
+`Obj_EndSignControl` at sonic3k.asm line 180468. Reused by all S3K minibosses that end with a signpost.
 
 ### New Class: `S3kBossDefeatSignpostFlow` (extends `AbstractObjectInstance`)
 

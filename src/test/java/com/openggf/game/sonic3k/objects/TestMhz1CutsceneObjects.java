@@ -2474,7 +2474,7 @@ class TestMhz1CutsceneObjects {
                         + "relX == width*2 is still a valid zero-distance side contact");
 
         solidExecution.beginFrame(0, List.of(sonic));
-        solidExecution.beginObject(button, () -> {
+        solidExecution.beginObject(button, call -> {
             sonic.setPushing(true);
             return new SolidCheckpointBatch(button, Map.of(sonic, new PlayerSolidContactResult(
                     ContactKind.SIDE,

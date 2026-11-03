@@ -15,6 +15,7 @@ import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
+import com.openggf.trace.replay.TraceSegmentCarriedStateImport;
 import com.openggf.trace.timing.HardwareTimingStreamLoader;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -198,10 +199,9 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
         GraphicsManager.getInstance().initHeadless();
 
         int offset = trace.metadata().bk2FrameOffset();
-        int ssIndex = specialStageIndex(trace);
         Path bk2 = resolveSourceBk2(dir, trace.metadata().sourceBk2());
-        S3kSpecialStageReplayHarness harness =
-                new S3kSpecialStageReplayHarness(bk2, offset, ssIndex);
+        S3kSpecialStageReplayHarness harness = new S3kSpecialStageReplayHarness(
+                bk2, offset, TraceSegmentCarriedStateImport.resolve(dir, trace.metadata()));
         harness.installHardwareTiming(
                 HardwareTimingStreamLoader.load(dir, trace.metadata()));
         return harness;

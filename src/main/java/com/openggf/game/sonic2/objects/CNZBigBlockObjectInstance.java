@@ -154,7 +154,7 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
      * ROM: loc_2B7E0 - Accelerate toward target Y, apply velocity to position.
      */
     private void updateVerticalMovement() {
-        // Same `bhi.s` equality-negative rule as ObjD4_Horizontal (s2.asm:58375-58384).
+        // Same `bhi.s` equality-negative rule as ObjD4_Horizontal (s2.asm:58956-58965).
         int accel = ACCELERATION;
         if (targetY <= y) {
             accel = -accel;

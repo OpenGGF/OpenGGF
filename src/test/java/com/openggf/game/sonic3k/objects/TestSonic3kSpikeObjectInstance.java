@@ -305,7 +305,7 @@ class TestSonic3kSpikeObjectInstance {
                 new ObjectSpawn(0x1170, 0x08B0, Sonic3kObjectIds.SPIKES, 0x31, 0, false, 0));
         AbstractObjectInstance.updateCameraBounds(0x10CE, 0x07C0,
                 0x10CE + 320, 0x07C0 + 224, 0);
-        spikes.snapshotPreUpdatePosition();
+        com.openggf.level.objects.RenderFlagPassTestSupport.pass(spikes, true);
         spikes.setCurrentYForTest(0x08AF);
 
         assertFalse(spikes.isWithinSolidContactBounds(),

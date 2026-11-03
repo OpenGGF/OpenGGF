@@ -91,7 +91,9 @@ class TestStageplayLateHolderRelease {
                 set(hold, "grabbed", true); set(hold, "player", player);
             }
             case "mhz-parachute" -> { set(object, "grabbed", true); set(object, "grabbedPlayer", player); }
-            case "lrz-wall", "lrz-corkscrew" -> set(object, "p1Riding", true);
+            case "lrz-wall" -> set(object, "p1Riding", true);
+            // The corkscrew keeps its native standing byte; bit 3 is Player 1.
+            case "lrz-corkscrew" -> set(object, "standingBits", 0x08);
             case "dez-hang" -> ((boolean[]) get(object, "grabbed"))[0] = true;
             case "dez-tube" -> set(get(object, "playerOneState"), "riding", true);
             case "dez-hub" -> set(get(object, "playerOneState"), "state", 2);

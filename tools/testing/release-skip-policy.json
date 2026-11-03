@@ -328,6 +328,90 @@
       "evidence": "src/test/java/com/openggf/tools/audio/parity/s3k/TestS3kRequestObservationSidecar.java:141",
       "allowed_when_absent": "s3k_observations",
       "note": "observations sidecar property"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureDayoffAudioCue",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:52",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureReadabilityCheckpoint",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:69",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureCompleteMenuSurvey",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:87",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureCollisionRouteAndVisualFootprintForms",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:99",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureScreenplayImportRefineAndExportForms",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:131",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureAnimatedCameraFormForNativeWorld",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:177",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureObjectCastArenaRestrictionAndModeForm",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:200",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayHudPictures#captureStageplayCastTimelineAndCommands",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java:240",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestEditorHudPictures#captureControllerHud",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestEditorHudPictures.java:75",
+      "allowed_when_absent": null,
+      "note": "openggf.editor.hudPictures=true; explicit guide-picture refresh (docs/agent-workflow/README.md)"
+    },
+    {
+      "match": "com.openggf.editor.project.TestStageplayRouteOverlayPictures#captureProposedFailedAndAppliedRoutePlayback",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/editor/project/TestStageplayRouteOverlayPictures.java:40",
+      "allowed_when_absent": null,
+      "note": "openggf.stageplay.hudPictures=true; explicit guide-picture refresh"
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestS3kAiz1CompatibilityRoutes#axisRouteCompletes(int, String)",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1CompatibilityRoutes.java:21",
+      "allowed_when_absent": null,
+      "note": "class-level openggf.aiz1.routes=true; explicit AIZ1 route-breadth run (docs/architecture/validation/levels/s3k-aiz1-sonic.md)"
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestS3kAiz1SpringRecovery#liveSpringJumpCrossesAndReplaysWhileWalkingIsRejected(int, String)",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1SpringRecovery.java:22",
+      "allowed_when_absent": null,
+      "note": "class-level openggf.aiz1.recovery=true; explicit AIZ1 spring-recovery run (docs/architecture/validation/levels/s3k-aiz1-sonic.md)"
     }
   ]
 }

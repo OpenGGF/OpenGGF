@@ -62,7 +62,7 @@ public class TestTodo12_WFZEventSpecs {
 
     /**
      * WFZ Routine 0: Initialize BG scrolling.
-     * ROM reference: LevEvents_WFZ_Routine1 (s2.asm:20583-20592)
+     * ROM reference: LevEvents_WFZ_Routine1 (s2.asm:20601-20610)
      * <pre>
      *   move.l (Camera_X_pos).w,(Camera_BG_X_pos).w    ; sync BG X to camera
      *   move.l (Camera_Y_pos).w,(Camera_BG_Y_pos).w    ; sync BG Y to camera
@@ -89,7 +89,7 @@ public class TestTodo12_WFZEventSpecs {
 
     /**
      * WFZ Routine 2: Normal scrolling until platform ride trigger.
-     * ROM reference: LevEvents_WFZ_Routine2 (s2.asm:20595-20607)
+     * ROM reference: LevEvents_WFZ_Routine2 (s2.asm:20613-20625)
      * <pre>
      *   cmpi.w #$2BC0,(Camera_X_pos).w       ; trigger X
      *   blo.s  +
@@ -210,7 +210,7 @@ public class TestTodo12_WFZEventSpecs {
 
     /**
      * WFZ Routine 6: Descent with BG scroll deceleration.
-     * ROM reference: LevEvents_WFZ_Routine4 (s2.asm:20635-20656)
+     * ROM reference: LevEvents_WFZ_Routine4 (s2.asm:20653-20674)
      *
      * <p>Note: The primary routine does not auto-advance from 4 to 6;
      * an external trigger (boss event) would set eventRoutine=6.
@@ -236,7 +236,7 @@ public class TestTodo12_WFZEventSpecs {
 
     /**
      * WFZ SubRoutine 0: Load WFZ boss PLC at camera ($2880, $400).
-     * ROM reference: LevEvents_WFZ_Routine5 (s2.asm:20659-20669)
+     * ROM reference: LevEvents_WFZ_Routine5 (s2.asm:20677-20687)
      *
      * <p>The secondary routine locks Camera_Min_X_pos to $2880 when triggered.
      * We verify this via camera bounds since wfzSubRoutine is private.
@@ -327,7 +327,7 @@ public class TestTodo12_WFZEventSpecs {
 
     /**
      * Verify the WFZ dual-dispatch architecture.
-     * ROM reference: LevEvents_WFZ (s2.asm:20560-20567)
+     * ROM reference: LevEvents_WFZ (s2.asm:20578-20585)
      *
      * WFZ uniquely runs TWO routine tables per frame:
      * 1. Dynamic_Resize_Routine controls BG scroll behavior (4 states: 0,2,4,6)

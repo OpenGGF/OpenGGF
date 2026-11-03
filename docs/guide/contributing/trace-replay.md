@@ -26,6 +26,14 @@ harnesses.
 - **Pre-trace bootstrap is fine.** Setting starting position, RNG seed, oscillation pre-advance,
   and frame counter once at frame 0 is "load a save state at the BK2 starting point". The
   prohibition is on per-frame write-back during the comparison loop.
+- **Carried run state enters once, through one mechanism.** A standalone run segment starts
+  with the run state the ROM carried in from the previous segment: rings, emerald progress,
+  used giant rings, Player 1's shield and path bits. `TraceSegmentCarriedStateImport` resolves
+  these from the run manifest and the segment's own recorded entry row and imports them at
+  segment entry. Special-stage segments pick their stage from the same state through the ROM's
+  `sub_85B0` search. A variable no recording establishes is reported as unresolved, not
+  guessed. State is never invented mid-run, and run-chain continuations never import. See
+  [segment carried run state](../../architecture/designs/2026-11-03-segment-carried-run-state.md).
 
 If a trace replay test passes only because engine state is snapped back to ROM-correct values
 each frame, the engine has not been verified — it has been masked. Honest tests force honest
@@ -145,7 +153,8 @@ the ROM-observed index for importing carried segment state.
 
 Trace replay tests require:
 
-- the matching ROM for the game(s) you want to replay, in the repo root or via system property:
+- the matching ROM for the game(s) you want to replay, in the repo root or main checkout
+  (the queue discovers it by SHA-1) or via system property:
   - Sonic 1: `s1.gen`, World REV01, CRC32 `AFE05EEE` (or `-Dsonic1.rom.path=...`)
   - Sonic 2: `s2.gen`, World REV01, CRC32 `7B905383` (or `-Dsonic2.rom.path=...`)
   - Sonic 3 & Knuckles: `s3k.gen`, World lock-on combined ROM, CRC32 `63522553` (or `-Ds3k.rom.path=...`)
@@ -159,8 +168,7 @@ selection, when shared physics/timing changes require it, is:
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay' \
-  -Dsonic1.rom.path=/absolute/s1.gen -Dsonic2.rom.path=/absolute/s2.gen \
-  -Ds3k.rom.path=/absolute/s3k.gen test
+  test
 ```
 
 Run one trace:
@@ -200,7 +208,7 @@ ROM-vs-engine columns.
 > if it points into `ObjectManager.SolidContacts.resolveContactInternal`,
 > the offender is a solid object whose state machine has drifted from ROM
 > (e.g. AIZ F7127 was the AIZ collapsing platform stuck in
-> `state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44890-44894
+> `state==2`/solid-stay forever; ROM's `loc_205DE` at sonic3k.asm:44895-44899
 > unconditionally promotes to the falling state when its post-fragment
 > timer underflows, but the engine had been gating that promotion on a
 > still-standing player). The correct fix touches the object's state
@@ -328,7 +336,7 @@ Current capabilities are semantic names advertised in `aux_schema_extras`:
 | `cage_execution_per_frame` | `cage_execution` | M68K execution-hook hits inside CNZ cage routines (BizHawk Lua `event.onmemoryexecute`) |
 | `velocity_write_per_frame` | `velocity_write` | Per-frame writer-PC trace for Tails `x_vel` / `y_vel` (BizHawk Lua `event.onmemorywrite`, frame-window-gated) |
 | `position_write_per_frame` | `position_write` | Per-frame writer-PC trace for Tails `x_pos` / `y_pos` with the captured `(a1)`/`(a0)` registers (v6.11-s3k recorder; BizHawk Lua `event.onmemorywrite`, frame-window-gated). Used to disambiguate Player_1 vs Player_2 targeting in routines like `SolidObjectFull2_1P` that loop both players |
-| `solid_object_cont_entry_per_frame` | `solid_object_cont_entry` | Per-frame snapshot of `(a0)`/`(a1)`/d1/d2 plus `y_radius`/`default_y_radius` and pixel x/y on entry to `SolidObject_cont` (sonic3k.asm:41434 / ROM 0x1DF90; v6.11-s3k recorder; BizHawk Lua `event.onmemoryexecute`, frame-window-gated). Used to reconstruct the `loc_1DFD6+`/`loc_1E154` push-up branch d3/d4 conditional after the fact |
+| `solid_object_cont_entry_per_frame` | `solid_object_cont_entry` | Per-frame snapshot of `(a0)`/`(a1)`/d1/d2 plus `y_radius`/`default_y_radius` and pixel x/y on entry to `SolidObject_cont` (sonic3k.asm:41439 / ROM 0x1DF90; v6.11-s3k recorder; BizHawk Lua `event.onmemoryexecute`, frame-window-gated). Used to reconstruct the `loc_1DFD6+`/`loc_1E154` push-up branch d3/d4 conditional after the fact |
 
 All event types are **diagnostic only** — they feed the divergence comparator and the
 divergence report's context window. They are never written into engine state by the test
@@ -549,7 +557,7 @@ ROM-citation requirements and per-game parity rules.
   is `ObjectInteractionRules.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity`, which enables
   ROM `loc_1E154` (sonic3k.asm:41646-41672) writing the top-branch position lift before the
   `tst.w y_vel(a1) / bmi.s loc_1E198` test only on S3K; S1 `Solid_Landed`
-  (s1disasm/_incObj/sub SolidObject.asm:278) and S2 `SolidObject_Landed` (s2.asm:35379-35380)
+  (s1disasm/_incObj/sub SolidObject.asm:278) and S2 `SolidObject_Landed` (s2.asm:35589-35590)
   bail on upward y_vel BEFORE any lift, so the rule stays false there.
 - **Edit-tool BOM/CRLF silent failure.** Some files (e.g. `CnzCylinderInstance.java`,
   `AbstractTraceReplayTest.java`) have UTF-8 BOM + CRLF endings. The Claude Code Edit tool

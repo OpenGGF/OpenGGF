@@ -15,14 +15,19 @@ import subprocess
 import sys
 import time
 import math
+import os
+import shlex
 import uuid
 import xml.etree.ElementTree as ET
 
 from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_run
+from classify_surefire_skips import PolicyError, classify, load_policy, read_skips
 from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
 from maven_queue import maven_slot, worktree_build_slot, handle_termination, needs_exclusive
 from maven_schedule import ServiceCredit, plan_estimate
 from maven_small import batch_lean, qualified_candidates, batch_backfill_eligible
+# Reexported for existing callers; rom_inputs owns discovery for both queue routes.
+from rom_inputs import ROM_PROPERTIES, caller_rom_properties, describe, rom_args, rom_properties, without_caller
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
@@ -30,15 +35,16 @@ PACKAGE = 'com/openggf/'
 ORDINARY_BATCH_CLASSES = 50
 SLOWEST_LIMIT = 20
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
-ROM_PROPERTIES = {
-    '6ddb7de1e17e7f6cdb88927bd906352030daa194': 'sonic1.rev00.rom.path',
-    '14dd06fc3aa19a59a818ea1f6de150c9061b14d4': 'sonic2.rev00.rom.path',
-    '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
-    '8bca5dcef1af3e00098666fd892dc1c2a76333f9': 'sonic2.rom.path',
-    'cfbf98c36c776677290a872547ac47c53d2761d6': 's3k.rom.path',
-    # User-supplied lock-on dump documented in the KiS2 fidelity-tier design.
-    '6cd0537a3aee0e012bb86d5837ddff9342595004': 'kis2.rom.path',
-}
+# The release workflow's exact skip policy; every ordinary and guard skip is classified.
+SKIP_POLICY = Path(__file__).resolve().parent / 'release-skip-policy.json'
+# Test JVMs see -D properties only from these variables: the runner forwards no other.
+SKIP_INPUT_PROPERTIES = {'s2_bk2': 's2.request.bk2.path',
+                         's3k_observations': 's3k.request.observations'}
+JVM_OPTION_VARIABLES = ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', '_JAVA_OPTIONS', 'MAVEN_ARGS')
+# Generated local references (BizHawk capture, AudioReferenceGenerator WAVs) are never supplied.
+LOCAL_REFERENCE_INPUTS = {'s1_bizhawk_reference', 'audio_reference_files'}
+UNEXPLAINED_SKIPS = ('unclassified', 'required_skipped', 'undeclared_input', 'unidentified')
+CASE_LIMIT = 1000
 
 
 def policy(root=ROOT):
@@ -260,24 +266,83 @@ def make_plan(root, data, base, requested, guards=False, workers=1):
             'scope': 'bounded smoke suite and guards; full-suite is public-release-only; trace/native profiles are separate'}
 
 
-def rom_args(root, rom_directory=None):
-    directories = [root]
-    if rom_directory is not None:
-        rom_directory = rom_directory.resolve()
-        if not rom_directory.is_dir():
-            raise ValueError(f'ROM directory does not exist or is not a directory: {rom_directory}')
-        if rom_directory != root.resolve():
-            directories.append(rom_directory)
-    found = {}
-    for directory in directories:
-        for path in sorted(directory.glob('*.gen')):
-            if not path.is_file():
-                continue
-            with path.open('rb') as stream:
-                digest = hashlib.file_digest(stream, 'sha1').hexdigest()
-            if digest in ROM_PROPERTIES:
-                found.setdefault(ROM_PROPERTIES[digest], str(path.resolve()))
-    return [f'-D{key}={value}' for key, value in sorted(found.items())]
+def skip_capabilities(skip_policy, environment):
+    """Declare only inputs this launch demonstrably supplies or never supplies.
+
+    gl mirrors the release gate's display check. Property inputs reach test JVMs
+    only through JVM/Maven option variables. Generated local references are never
+    supplied. Unknown or unparseable inputs stay undeclared, so their skips fail closed.
+    """
+    try:
+        tokens = [token for key in JVM_OPTION_VARIABLES
+                  for token in shlex.split(environment.get(key, ''))]
+    except ValueError:
+        tokens = None
+    capabilities = {}
+    for name in skip_policy.get('inputs') or {}:
+        if name == 'gl':
+            capabilities[name] = bool(environment.get('DISPLAY') or environment.get('WAYLAND_DISPLAY'))
+        elif name in SKIP_INPUT_PROPERTIES and tokens is not None:
+            prefix = f'-D{SKIP_INPUT_PROPERTIES[name]}='
+            capabilities[name] = any(token.startswith(prefix) and token != prefix for token in tokens)
+        elif name in LOCAL_REFERENCE_INPUTS:
+            capabilities[name] = False
+    return capabilities
+
+
+def classify_skips(reports, skipped, skip_policy, capabilities):
+    """Classify one batch's skip identities with the release classifier.
+
+    A skip count that unique report identities cannot account for, including a
+    repeated identity, is unexplained.
+    """
+    try:
+        identities = read_skips(reports)
+    except PolicyError:
+        identities = {}
+    result = classify(identities, skip_policy, capabilities)
+    counts = {kind: len(result[kind]) for kind in ('allowed', *UNEXPLAINED_SKIPS[:3])}
+    counts['unidentified'] = max(0, skipped - len(identities))
+    unexplained = [dict(entry, kind=kind) for kind in UNEXPLAINED_SKIPS[:3] for entry in result[kind]]
+    if counts['unidentified']:
+        unexplained.append({'identity': '<no report identity>', 'kind': 'unidentified',
+                            'message': f"{counts['unidentified']} skipped cases lack a unique report identity"})
+    return counts, unexplained
+
+
+def merge_skips(total, counts, unexplained):
+    for kind, count in counts.items():
+        total['skip_classification'][kind] += count
+    cases = total['unexplained_skips']
+    available = CASE_LIMIT - len(cases)
+    cases.extend(unexplained[:max(0, available)])
+    total['unexplained_skips_omitted'] += max(0, len(unexplained) - max(0, available))
+
+
+def verdict(status, plan, results, stopped=None):
+    """One bounded line: identity, executed coverage, skip classification and limits."""
+    lanes = ('ordinary', 'guards') if plan.get('guards') else ('ordinary',)
+    by_lane = {result['lane']: result for result in results}
+    coverage = '; '.join(
+        f"{lane} {by_lane[lane]['batches_completed']}/{by_lane[lane]['batches_planned']} batches"
+        if lane in by_lane else f'{lane} not run' for lane in lanes)
+    totals = {key: sum(result.get(key, 0) for result in results)
+              for key in ('tests', 'failures', 'errors', 'skipped')}
+    skips = Counter()
+    for result in results:
+        skips.update(result.get('skip_classification', {}))
+    roms = plan.get('rom_properties', {})
+    inputs = ','.join(f'{name}={str(value).lower()}'
+                      for name, value in sorted(plan.get('skip_capabilities', {}).items())) or '-'
+    return (f"VERDICT {status.upper()}: head={str(plan.get('head') or 'unknown')[:12]} "
+            f"source={str(plan.get('working_tree_fingerprint') or 'unknown')[:12]} "
+            f"{plan.get('mode', 'focused')} {len(plan['tests'])}/{plan.get('inventory_count', '?')} "
+            f"candidate classes; {coverage}; tests={totals['tests']} failures={totals['failures']} "
+            f"errors={totals['errors']} skipped={totals['skipped']} (allowed={skips['allowed']} "
+            f"unexplained={sum(skips[kind] for kind in UNEXPLAINED_SKIPS)}); "
+            f"missing ROM properties={','.join(roms.get('missing', [])) or 'none'}; skip inputs {inputs}"
+            + (f'; stopped: {stopped}' if stopped else '')
+            + '; bounded smoke selection, not a full-suite pass')
 
 
 def summarize_skip_reason(reason):
@@ -406,13 +471,15 @@ def merge_summary(total, summary):
 
 
 def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, queue_fd=None,
-             rom_directory=None, admission=None, tree_fd=None):
+             rom_directory=None, admission=None, tree_fd=None, skip_policy=None, clean_passed=False):
     """Run batches under a retained worktree lock, releasing shared admission between jobs.
 
     admission(batch_plan, lane) yields that job's shared queue descriptor. Direct
     callers may instead supply a trusted, already-held queue_fd as before.
     The plan has passed validate_preparation_contract. Preparation inherits only
     tree_fd, retaining local build ownership without requesting shared admission.
+    Skips outside the release skip policy leave the run incomplete. The CLI sets
+    clean_passed, deleting a passing run after its verdict; direct callers keep it.
     """
     workers = plan.get('workers', 1)
     if workers not in (1, 2):
@@ -423,10 +490,14 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
     headless_gl_args = [] if headless_gl is None else ['-Dopenggf.headless.gl=surfaceless-egl']
     if not plan['tests']:
         raise ValueError('No tests selected')
+    if skip_policy is None:
+        skip_policy = load_policy(SKIP_POLICY)
+    capabilities = skip_capabilities(skip_policy, os.environ)
     target = root / 'target'
     target.mkdir(exist_ok=True)
     run = None
     status = 'incomplete'
+    stopped = None
     results = []
     elapsed = 0.0
     try:
@@ -444,9 +515,17 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
               f"{len(batches)} ordinary batches (at most {ORDINARY_BATCH_CLASSES} classes); "
               f"ordinary workers={workers}; guards={'on (1 worker)' if plan['guards'] else 'off'}", flush=True)
         initial_state = tree_state(root)
+        # The runner forwards launch variables; a ROM property set there stays the caller's.
+        caller = caller_rom_properties((), root)
+        roms = without_caller(rom_args(root, rom_directory), caller)
         plan['working_tree_fingerprint'] = initial_state
         plan['max_minutes'] = max_minutes
         plan['ordinary_batch_classes'] = ORDINARY_BATCH_CLASSES
+        plan['rom_properties'] = rom_properties(roms, caller)
+        # A wrapper invoked by absolute path from another worktree has its own policy file.
+        plan['skip_policy'] = (SKIP_POLICY.relative_to(root.resolve()).as_posix()
+                               if SKIP_POLICY.is_relative_to(root.resolve()) else str(SKIP_POLICY))
+        plan['skip_capabilities'] = capabilities
         (run / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n')
         (run / 'results.json').write_text('[]\n')
         preparation = dict(status='incomplete', exit_code=None, elapsed_seconds=0.0,
@@ -481,12 +560,14 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         if preparation['exit_code']:
             return 1
         includes = run / 'includes.txt'
-        failed = False
+        failed = incomplete = False
         for lane in (('ordinary', 'guards') if plan['guards'] else ('ordinary',)):
             lane_batches = batches if lane == 'ordinary' else [[]]
             total = dict(lane=lane, workers=workers if lane == 'ordinary' else 1,
                          batches_planned=len(lane_batches), batches_completed=0,
-                         batches=[], exit_code=0, elapsed_seconds=0.0, status='incomplete')
+                         batches=[], exit_code=0, elapsed_seconds=0.0, status='incomplete',
+                         skip_classification=dict.fromkeys(('allowed', *UNEXPLAINED_SKIPS), 0),
+                         unexplained_skips=[], unexplained_skips_omitted=0)
             merge_summary(total, dict(reports=0, tests=0, failures=0, errors=0, skipped=0))
             results.append(total)
             (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
@@ -534,7 +615,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                                     '-Dsurefire.failIfNoSpecifiedTests=false', '-DfailIfNoTests=false']
                         if batch_workers == 2 and lean is None:
                             command.append('-Ptest-concurrent')
-                    command.extend(rom_args(root, rom_directory))
+                    command.extend(roms)
                     if lean is not None:
                         # Keep the original includes selection and profile. Only
                         # apply the bounded JVM shape from the qualified command.
@@ -568,6 +649,8 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                             batch_result['status'] = ('failed' if exit_code or batch_summary['failures']
                                                       or batch_summary['errors'] else 'passed')
                         merge_summary(total, batch_summary)
+                        merge_skips(total, *classify_skips(reports, batch_summary['skipped'],
+                                                           skip_policy, capabilities))
                         timing = batch_summary.get('slowest_classes', [])[:3]
                         if timing:
                             print(f'{lane} batch {index}/{len(lane_batches)}: {duration:.2f}s execution; '
@@ -598,28 +681,47 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
             # or entirely skipped lane cannot demonstrate executed coverage.
             empty = not total['reports'] or total['tests'] == total['skipped']
             lane_failed = bool(empty or total['exit_code'] or total['failures'] or total['errors'])
-            total['status'] = 'failed' if lane_failed else 'passed'
+            # Failures take precedence; a skip the release policy cannot explain is
+            # missing coverage, so the lane is incomplete rather than passed.
+            unexplained = any(total['skip_classification'][kind] for kind in UNEXPLAINED_SKIPS)
+            total['status'] = 'failed' if lane_failed else 'incomplete' if unexplained else 'passed'
             (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
             print(json.dumps({k: v for k, v in total.items()
-                              if k not in ('skipped_cases', 'failed_cases',
+                              if k not in ('skipped_cases', 'failed_cases', 'unexplained_skips',
                                            'slowest_classes', 'slowest_cases', 'batches')}), flush=True)
             if empty:
                 status = 'failed'
                 return 1
             failed |= lane_failed
-        status = 'failed' if failed else 'passed'
-        print('Selected checks ' + status + '. Inspect results.json for skips/failures; '
-              'a category pass is not full-suite certification.')
-        return int(failed)
+            incomplete |= unexplained
+        status = 'failed' if failed else 'incomplete' if incomplete else 'passed'
+        return int(status != 'passed')
+    except BaseException as error:
+        stopped = str(error) or type(error).__name__
+        raise
     finally:
         if run is not None:
             (run / 'status.json').write_text(json.dumps({'status': status}) + '\n')
             compact_run(run, failed=(status != 'passed' or keep_diagnostics))
-            # Current results remain only until consumed. The next launch removes
-            # abandoned results; explicit opt-in retention is separately bounded.
-            prune_runs(run.parent, active=None if keep_diagnostics else run)
-            print(f'After inspecting results, delete diagnostics: python3 tools/testing/run_categories.py '
-                  f'--acknowledge {run.name}', flush=True)
+            for result in results:
+                for skip in result.get('unexplained_skips', [])[:20]:
+                    print(f"Unexplained {result['lane']} skip [{skip['kind']}"
+                          + (f" {skip['input']}" if skip.get('input') else '') + f"]: {skip['identity']}"
+                          + (f" -- {skip['message']}" if skip.get('message') else ''), flush=True)
+            print(verdict(status, plan, results, stopped), flush=True)
+            if status == 'passed' and clean_passed and not keep_diagnostics:
+                # The verdict above is the consumed result; nothing remains to acknowledge.
+                shutil.rmtree(run)
+                prune_runs(run.parent)
+                if not any(run.parent.iterdir()):
+                    run.parent.rmdir()
+                print('Passing diagnostics removed.', flush=True)
+            else:
+                # Failed/incomplete results remain until acknowledged or the next
+                # launch; explicit opt-in retention is separately bounded.
+                prune_runs(run.parent, active=None if keep_diagnostics else run)
+                print(f'Diagnostics retained in {run}; after reading results.json, delete them: '
+                      f'python3 tools/testing/run_categories.py --acknowledge {run.name}', flush=True)
 
 
 def main(argv=None):
@@ -639,7 +741,7 @@ def main(argv=None):
     parser.add_argument('--keep-diagnostics', action='store_true', help='explicitly retain bounded diagnostics across runs until acknowledged')
     parser.add_argument('--json', action='store_true', help='print the complete dry-run plan, including every class')
     parser.add_argument('--rom-directory', type=Path,
-                        help='also discover verified original ROMs in this directory; pass absolute paths without creating links')
+                        help='also discover verified original ROMs in this directory before the main checkout; never creates links')
     args = parser.parse_args(argv)
     try:
         if not math.isfinite(args.max_minutes) or args.max_minutes <= 0:
@@ -682,9 +784,17 @@ def main(argv=None):
             if sys.platform == 'darwin':
                 print('Native tests need macOS display/service access. Launch in the known working '
                       'native environment; tool preflight does not prove GLFW access.', flush=True)
+            # A malformed skip policy stops before any tool or Maven launch.
+            skip_policy = load_policy(SKIP_POLICY)
             if args.preflight and not args.run:
                 preflight(ROOT, plan)
-                print('Tool prerequisites passed; no tests executed.')
+                caller = caller_rom_properties((), ROOT)
+                roms = rom_properties(without_caller(rom_args(ROOT, args.rom_directory), caller), caller)
+                inputs = skip_capabilities(skip_policy, os.environ)
+                print(f"Skip policy: {len(skip_policy['rules'])} exact rules; skip inputs "
+                      + (','.join(f'{k}={str(v).lower()}' for k, v in sorted(inputs.items())) or '-')
+                      + f'; {describe(roms)}')
+                print('Tool prerequisites passed; no tests executed. --run repeats this check.')
                 return 0
             # Keep target/ and diagnostics exclusively owned while shared CPU/RAM
             # admission is released between bounded batches and the guard lane.
@@ -704,7 +814,8 @@ def main(argv=None):
                                       service_credit=service_credit)
 
                 return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics,
-                                rom_directory=args.rom_directory, admission=admission, tree_fd=tree_fd)
+                                rom_directory=args.rom_directory, admission=admission, tree_fd=tree_fd,
+                                skip_policy=skip_policy, clean_passed=True)
         display = plan if args.json else {
             **{k: v for k, v in plan.items() if k not in ('tests', 'reasons')},
             'selected_classes': len(plan['tests']), 'reasons': plan['reasons'][:50],

@@ -368,7 +368,7 @@ public class TestTouchResponseManager {
 
     @Test
     public void testSidekickTouchResponseSkippedWhenObjectControlSuppresses() {
-        // ROM Tails_Display (sonic3k.asm:26303-26306) skips TouchResponse for
+        // ROM Tails_Display (sonic3k.asm:26318-26321) skips TouchResponse for
         // Tails when object_control bit 7 is set. This is the path
         // Tails_Catch_Up_Flying (sonic3k.asm:26551) and Tails_FlySwim_Unknown
         // (sonic3k.asm:26582) take when entering CATCH_UP_FLIGHT and

@@ -54,7 +54,7 @@ import java.util.List;
 public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj71 animates lava-surface scenery without a horizontally facing body.
 
-    // Animation scripts from Ani_obj71 (s2.asm lines 24028-24040)
+    // Animation scripts from Ani_obj71 (s2.asm lines 24146-24158)
     private static final SpriteAnimationSet ANIMATIONS;
 
     static {

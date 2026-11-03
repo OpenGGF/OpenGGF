@@ -317,7 +317,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             // the ball self-polls Check_PlayerInRange every frame -- not the standard
             // touch/collision-response-list path (getCollisionFlags() is 0 in this mode).
             // loc_60EFC calls sub_610E0 UNCONDITIONALLY on every dock-eligible frame; the
-            // only per-poll gate in sub_610E0/loc_6115C (sonic3k.asm:127840-127863,
+            // only per-poll gate in sub_610E0/loc_6115C (sonic3k.asm:127894-127917,
             // 127849-127868) is Check_PlayerInRange's own box test -- there is no ROM
             // flag that permanently disables re-polling a still-alive (d2=0, not
             // deleted) subtype-4 push ball after its first push. loc_6116E's
@@ -528,7 +528,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
 
     private void handlePachinkoReward(PlayableEntity player, int frameCounter) {
         if (!ringRewardAllowed()) return;
-        // ROM sub_4A384 (sonic3k.asm:96934): move.l #Delete_Current_Sprite,(a0) runs
+        // ROM sub_4A384 (sonic3k.asm:96944): move.l #Delete_Current_Sprite,(a0) runs
         // UNCONDITIONALLY, ahead of the subtype dispatch. This is where the Pachinko orb
         // path differs from the gumball-machine path (loc_60F28), whose delete is skipped
         // when the handler returns d2 = 0 -- sub_4A384's callers never inspect d2, so even

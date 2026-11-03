@@ -16,7 +16,6 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.PlayerInputState;
-import com.openggf.game.CollisionModel;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.timer.TimerManager;
@@ -36,9 +35,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
-import com.openggf.physics.FrameCollisionPlan;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.CustomPlayablePhysics;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -950,7 +947,6 @@ public class SpriteManager implements PlayableSstDispatcher {
                     }
 
 					boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
-					boolean skipCpuPhysicsThisFrame = false;
 					SidekickCpuController cpuControllerForDiagnostics = null;
 
 					if (scriptedActorInputs == null && context.runCpuControllers()
@@ -959,9 +955,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// CPU-controlled sprite: run AI to generate virtual input
 						var cpuController = playable.getCpuController();
 						cpuControllerForDiagnostics = cpuController;
-						playable.capturePreCpuControlSnapshot();
 						cpuController.update(cadence);
-						skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
 						boolean aiUp = cpuController.getInputUp();
 						boolean aiDown = cpuController.getInputDown();
@@ -991,14 +985,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 						// If approaching (respawn in progress) and the strategy handles movement
 						// directly (Tails fly-in, Knuckles glide), skip normal physics.
 						// Strategies that need physics (Sonic walk/spindash) fall through.
-						if (skipCpuPhysicsThisFrame) {
-							applyScreenYWrapValueAfterControl(playable);
-							playable.getAnimationManager().update(cadence);
-							tickDisplayPhaseTimers(playable);
-							playable.tickStatus();
-							playable.endOfTick();
-							continue;
-						}
 						if (cpuController.isApproaching()
 								&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 							applyScreenYWrapValueAfterControl(playable);
@@ -1497,7 +1483,6 @@ public class SpriteManager implements PlayableSstDispatcher {
                             }
                             var cpuController = playable.getCpuController();
 							cpuController.update(frameCounter);
-							boolean skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
 							boolean aiUp = cpuController.getInputUp();
 							boolean aiDown = cpuController.getInputDown();
@@ -1521,13 +1506,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 									aiUp, aiDown, aiLeft, aiRight, aiJump, aiJumpPress,
 									effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
 									true, aiJumpPress);
-							if (skipCpuPhysicsThisFrame) {
-								playable.getAnimationManager().update(frameCounter);
-								tickDisplayPhaseTimers(playable);
-								playable.tickStatus();
-								playable.endOfTick();
-								continue;
-							}
 							if (cpuController.isApproaching()
 									&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 								playable.getAnimationManager().update(frameCounter);
@@ -2275,8 +2253,6 @@ public class SpriteManager implements PlayableSstDispatcher {
             playable.endOfTick();
             return;
         }
-		boolean isUnified = requiresPostMovementSolidPass(playable);
-		boolean usesInlineSolidResolution = levelManager != null && levelManager.objectsExecuteAfterPlayerPhysics();
 		// Capture the hurt-routine membership BEFORE movement runs, because the
 		// landing-from-hurt step clears the hurt flag mid-tick (calculateLanding ->
 		// resetOnFloor). The ROM hurt routine owns the whole frame and never calls
@@ -2288,7 +2264,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// acknowledged during a hurt state", docs/s1disasm/_incObj/01 Sonic.asm:1814-1817),
 		// and S3K Tails hurt loc_156D6 likewise omits it (docs/skdisasm/sonic3k.asm:29234-29250).
 		// Only the next, first normal-control frame's Obj02_Control reaches Tails_Water,
-		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:38973 move, :38981 water),
+		// and it runs AFTER Tails_Move (docs/s2disasm/s2.asm:39673 move, :39676 water),
 		// so the underwater acceleration switch (Tails_acceleration $C->$6,
 		// docs/s2disasm/s2.asm:39550 vs dry $C at :38902/:39045) is first observed by the
 		// frame after that move. Skipping the water update on the hurt-landing frame keeps
@@ -2303,15 +2279,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean deadAtTickStart = playable.getDead();
 		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(playable);
 		boolean nativeDeathDispatch = nativeDeath != null && nativeDeath.ownsDispatch(playable);
-		// For S1 UNIFIED: skip pre-movement solid pass. ROM processes all solid
-		// objects AFTER Sonic's movement (his slot runs first in ExecuteObjects),
-		// so only the post-movement pass is ROM-accurate. Running both creates
-		// double-correction artifacts.
-		// For S2/S3K: solid contacts now resolve inline during the object exec loop
-		// after movement, so the old pre-movement batched pass must be skipped.
-		if (!nativeDeathDispatch && !isUnified && !usesInlineSolidResolution) {
-			applySolidContacts(levelManager, playable, false, false);
-		}
 		// ROM Obj01_Modes dispatches the movement mode BEFORE the move itself
 		// runs, and the Super transformation gate is the first thing inside the
 		// jump mode: Obj01_MdJump calls Sonic_JumpHeight, which ends
@@ -2372,7 +2339,7 @@ public class SpriteManager implements PlayableSstDispatcher {
                     playable.getSuperStateController()).updateNativeControlBeforeAnimation();
 		}
 		playable.recordFollowerHistoryForTick();
-		if (usesInlineSolidResolution && !hurtAtTickStart && !deadAtTickStart) {
+		if (levelManager != null && !hurtAtTickStart && !deadAtTickStart) {
 			// S2/S3K run Sonic_Water/Tails_Water after movement and the
 			// position-history write, but before animation and TouchResponse
 			// (sonic3k.asm:22031-22058). Object launchers touched on a water-entry
@@ -2405,15 +2372,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (!hurtAtTickStart && !playable.getDead()) {
 			levelManager.applyTouchResponses(playable);
 		}
-		// S1 (UNIFIED): Post-movement solid pass matches ROM timing — solid objects
-		// check Sonic's position after he has moved in the ROM's ExecuteObjects loop.
-		// postMovement=true disables velocity classification adjustment.
-		// Skip this legacy batched pass when the active module resolves solids inline
-		// during the object execution loop (currently S1 trace-parity mode), otherwise
-		// S1 gets double-resolution (inline + post-movement) and the slot layout drifts.
-		if (isUnified && !usesInlineSolidResolution) {
-			applySolidContacts(levelManager, playable, true, false);
-		}
 		levelManager.applyPlaneSwitchers(playable);
 		playable.tickStatus();
 		playable.endOfTick();
@@ -2440,34 +2398,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
-	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,
-										   boolean postMovement, boolean deferSideToPostMovement) {
-		ObjectManager objectManager = levelManager.getObjectManager();
-		if (objectManager == null) {
-			return;
-		}
-		CollisionSystem collisionSystem = playable.currentCollisionSystemOrNull();
-		if (collisionSystem != null) {
-			collisionSystem.setObjectManager(objectManager);
-			collisionSystem.runSolidObjectResolution(
-					FrameCollisionPlan.objectResolutionOnly(), playable, postMovement, deferSideToPostMovement);
-			return;
-		}
-		objectManager.updateSolidContacts(playable, postMovement, deferSideToPostMovement);
-	}
-
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
 		if (playable.getDead() && !playable.isCpuControlled()) {
 			// Main routine-6 owners use raw gravity primitives, not the control
 			// mask; preserve the same native dispatch as PlayableSpriteMovement.
 			return;
 		}
-		// ROM Obj02_Dead (docs/s2disasm/s2.asm:40736-40742) runs the dead CPU
+		// ROM Obj02_Dead (docs/s2disasm/s2.asm:41131-41137) runs the dead CPU
 		// sidekick's fall through jsr (ObjectMoveAndFall).l directly and never
 		// applies the Screen_Y_wrap mask that the live control/hurt paths use, so
 		// the falling body's y_pos keeps climbing past the wrap boundary until
-		// Obj02_CheckGameOver (s2.asm:40747-40759) crosses Tails_Max_Y_pos+$100 and
-		// branches to TailsCPU_Despawn (s2.asm:39043-39052). Mirror that by skipping
+		// Obj02_CheckGameOver (s2.asm:41135-41147) crosses Tails_Max_Y_pos+$100 and
+		// branches to TailsCPU_Despawn (s2.asm:39390-39399). Mirror that by skipping
 		// the wrap for a dead CPU sidekick on the dead-fall path — matching the
 		// existing bypass in PlayableSpriteMovement.applyScreenYWrapValueAfterControl().
 		// Without this, the engine masked the dead Tails' y_pos at 0x800
@@ -2486,15 +2428,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
-
-	static boolean requiresPostMovementSolidPass(AbstractPlayableSprite playable) {
-		if (playable == null) {
-			return false;
-		}
-		GameRules rules = playable.getGameRules();
-		return rules != null && rules.collision() != null
-				&& rules.collision().collisionModel() == CollisionModel.UNIFIED;
-	}
 
 	static List<AbstractPlayableSprite> buildPlayableUpdateOrder(Collection<Sprite> sprites,
 			List<AbstractPlayableSprite> sidekicks,

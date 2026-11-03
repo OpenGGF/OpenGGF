@@ -320,7 +320,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
 
     /**
      * Checks if this object should be deleted due to being off-screen.
-     * Replicates ROM's MarkObjGone behavior (s2.asm lines 29993-30011).
+     * Replicates ROM's MarkObjGone behavior (s2.asm lines 30200-30218).
      * <p>
      * ROM logic:
      * <pre>
@@ -386,7 +386,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      * advances the routine by +2 (here: into MOVE_STRAIGHT), reloads the timer
      * with $3B, and plays the gloop sound. After this one-time wait the ball
      * enters MOVE_STRAIGHT and NEVER returns to a Wait routine -- ROM
-     * {@code Obj1D_MoveStraight} (s2.asm:48370-48392) bounces continuously with
+     * {@code Obj1D_MoveStraight} (s2.asm:48423-48445) bounces continuously with
      * no routine change.
      */
     private void updateWaitStraight() {
@@ -395,7 +395,7 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
             return; // Still waiting
         }
         // Timer underflowed - advance into straight motion.
-        // ROM Obj1D_Wait reloads $3B and plays gloop (s2.asm:48343-48345).
+        // ROM Obj1D_Wait reloads $3B and plays gloop (s2.asm:48396-48398).
         waitTimer = WAIT_DURATION;
         playGloopSound();
         state = STATE_MOVE_STRAIGHT;

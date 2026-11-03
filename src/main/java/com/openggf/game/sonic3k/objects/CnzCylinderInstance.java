@@ -614,7 +614,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         boolean latchedContact = slot.contactLatched;
         slot.contactLatched = false;
 
-        // ROM sub_324C0 loc_32538 (sonic3k.asm:68059-68062): when the captured
+        // ROM sub_324C0 loc_32538 (sonic3k.asm:68064-68067): when the captured
         // rider is offscreen (`tst.b render_flags(a1); bpl.w loc_325F2`), the
         // cylinder takes the release branch every frame. ROM SolidObjectFull
         // (sonic3k.asm:41046-41048) ALSO skips Player_2 when his render_flags
@@ -715,7 +715,6 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // for both on-screen and offscreen riders.
         if (playerOnScreen) {
             beginPlayerTwoDiagnostic(slot, "capture", player);
-            applyP2CpuNudgeBeforeFirstCapture(slot, player);
         } else {
             beginPlayerTwoDiagnostic(slot, "capture_offscreen", player);
         }
@@ -736,34 +735,6 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     private boolean hasStandingBit(AbstractPlayableSprite player) {
         int bit = standingMaskBitFor(player);
         return bit != 0 && (standingMask & bit) != 0;
-    }
-
-    private void applyP2CpuNudgeBeforeFirstCapture(RiderSlot slot, AbstractPlayableSprite player) {
-        if (slot != playerTwoSlot || player == null || !player.isCpuControlled()
-                || player.getAir() || player.getGSpeed() == 0) {
-            return;
-        }
-        var cpu = player.getCpuController();
-        if (cpu == null) {
-            return;
-        }
-        int nudge = cpu.consumePendingGroundedFollowNudge(1);
-        if (nudge == 0) {
-            return;
-        }
-
-        // ROM Tails CPU runs before Obj_CNZCylinder's P2 sub_324C0 pass
-        // (sonic3k.asm:26235-26248, 67696-67712). Its FollowLeft/FollowRight
-        // branches nudge x_pos by one pixel when the delayed target is on the
-        // facing side and ground_vel is nonzero (sonic3k.asm:26757-26764,
-        // 26734-26741). The engine discovers this cylinder standing contact
-        // after the CPU pass, so apply only the CPU-recorded pending nudge
-        // immediately before the first P2 capture consumes the standing bit.
-        if (nudge < 0 && player.getDirection() == Direction.LEFT) {
-            player.shiftX(-1);
-        } else if (nudge > 0 && player.getDirection() == Direction.RIGHT) {
-            player.shiftX(1);
-        }
     }
 
     private void primeDefaultRiderSlots(PlayableEntity playerEntity) {

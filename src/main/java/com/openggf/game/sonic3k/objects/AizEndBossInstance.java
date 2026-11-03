@@ -37,7 +37,7 @@ import java.util.logging.Logger;
 /**
  * AIZ Act 2 end boss (Object 0x92) — Eggman's fire-breathing machine.
  *
- * <p>ROM: Obj_AIZEndBoss (sonic3k.asm:138062).
+ * <p>ROM: Obj_AIZEndBoss (sonic3k.asm:138067).
  * Emerges from the waterfall, fires flamethrower projectiles via arm/propeller children,
  * then submerges, repositions to one of 4 random positions, and re-emerges. After two
  * attack cycles the boss is defeated, spawning an Egg Capsule.
@@ -1158,7 +1158,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     }
 
     /**
-     * ROM: AfterBoss_AIZ2 (sonic3k.asm:176654-176658).
+     * ROM: AfterBoss_AIZ2 (sonic3k.asm:176659-176663).
      * Restores the fire palette to palette line 1 and reloads the
      * PLC_AfterMiniboss_AIZ art (ArtNem_AIZMisc2 etc.) to refresh
      * level patterns that may have been overwritten by boss art.

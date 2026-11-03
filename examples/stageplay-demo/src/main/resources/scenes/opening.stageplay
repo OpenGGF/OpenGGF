@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "name": "A scene in Emerald Hill",
   "durationFrames": 900,
   "width": 320,
@@ -235,4 +235,6 @@
         "offsetY": 0
       }
     }
-  ],"voices":[]}
+  ],"voices":[],
+  "inputTracks": []
+}

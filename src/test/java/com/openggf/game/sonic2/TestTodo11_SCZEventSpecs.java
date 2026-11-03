@@ -83,7 +83,7 @@ public class TestTodo11_SCZEventSpecs {
 
     /**
      * SCZ Routine 0: Set initial Tornado velocity.
-     * ROM reference: LevEvents_SCZ_Routine1 (s2.asm:21820-21824)
+     * ROM reference: LevEvents_SCZ_Routine1 (s2.asm:21838-21842)
      * <pre>
      *   move.w #1,(Tornado_Velocity_X).w    ; move right at speed 1
      *   move.w #0,(Tornado_Velocity_Y).w    ; no vertical movement
@@ -101,7 +101,7 @@ public class TestTodo11_SCZEventSpecs {
 
     /**
      * SCZ Routine 1 (fly right): At X >= $1180, begin descent.
-     * ROM reference: LevEvents_SCZ_Routine2 (s2.asm:21827-21835)
+     * ROM reference: LevEvents_SCZ_Routine2 (s2.asm:21845-21853)
      * <pre>
      *   cmpi.w #$1180,(Camera_X_pos).w
      *   blo.s  +
@@ -135,7 +135,7 @@ public class TestTodo11_SCZEventSpecs {
 
     /**
      * SCZ Routine 2 (descend): At Y >= $500, resume rightward movement.
-     * ROM reference: LevEvents_SCZ_Routine3 (s2.asm:21838-21845)
+     * ROM reference: LevEvents_SCZ_Routine3 (s2.asm:21856-21863)
      * <pre>
      *   cmpi.w #$500,(Camera_Y_pos).w
      *   blo.s  +
@@ -160,7 +160,7 @@ public class TestTodo11_SCZEventSpecs {
 
     /**
      * SCZ Routine 3 (resume right): At X >= $1400, stop Tornado.
-     * ROM reference: LevEvents_SCZ_Routine4 (s2.asm:21848-21856)
+     * ROM reference: LevEvents_SCZ_Routine4 (s2.asm:21866-21874)
      * <pre>
      *   cmpi.w #$1400,(Camera_X_pos).w
      *   blo.s  LevEvents_SCZ_RoutineNull

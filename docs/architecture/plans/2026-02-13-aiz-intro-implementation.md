@@ -372,7 +372,7 @@ Expected: FAIL
 package uk.co.jamesj999.sonic.physics;
 
 /**
- * Port of Swing_UpAndDown (sonic3k.asm:177942).
+ * Port of Swing_UpAndDown (sonic3k.asm:177947).
  * Oscillating motion utility for pendulum/bobbing objects.
  *
  * The object swings between +max and -max velocity, reversing direction

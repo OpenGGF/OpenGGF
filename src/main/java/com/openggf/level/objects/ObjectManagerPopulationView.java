@@ -20,20 +20,17 @@ final class ObjectManagerPopulationView {
     private final Map<ObjectSpawn, int[]> reservedChildren;
     private final Map<ObjectSpawn, ObjectInstance> placed;
     private final List<ObjectInstance> dynamic;
-    private final List<ObjectInstance> postPlayerScratch;
 
     ObjectManagerPopulationView(ObjectCallbackRouter callbacks, ObjectSlotLayout slots,
                                 SlotAllocator allocator, Map<ObjectSpawn, int[]> reservedChildren,
                                 Map<ObjectSpawn, ObjectInstance> placed,
-                                List<ObjectInstance> dynamic,
-                                List<ObjectInstance> postPlayerScratch) {
+                                List<ObjectInstance> dynamic) {
         this.callbacks = callbacks;
         this.slots = slots;
         this.allocator = allocator;
         this.reservedChildren = reservedChildren;
         this.placed = placed;
         this.dynamic = dynamic;
-        this.postPlayerScratch = postPlayerScratch;
     }
 
     Map<Integer, Integer> occupiedDynamicSlotIds(Collection<ObjectInstance> active) {
@@ -126,22 +123,6 @@ final class ObjectManagerPopulationView {
         if (instance instanceof AbstractObjectInstance object) {
             int slot = callbacks.call(instance, object::getSlotIndex);
             if (slots.isDynamicSlot(slot)) owned.set(slots.toExecIndex(slot));
-        }
-    }
-
-    void runPostPlayerHooks(Collection<ObjectInstance> active, PlayableEntity player, int vIntRunCount) {
-        if (player == null) return;
-        postPlayerScratch.clear();
-        postPlayerScratch.addAll(active);
-        try {
-            for (ObjectInstance instance : postPlayerScratch) {
-                if (instance != null && !callbacks.call(instance, instance::isDestroyed)
-                        && instance instanceof PostPlayerUpdateHook hook) {
-                    callbacks.run(instance, () -> hook.updatePostPlayer(vIntRunCount, player));
-                }
-            }
-        } finally {
-            postPlayerScratch.clear();
         }
     }
 

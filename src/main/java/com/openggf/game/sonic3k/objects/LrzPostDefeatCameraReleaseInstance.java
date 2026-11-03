@@ -113,7 +113,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (awaitingEndOfLevel) {
-            // tst.b (End_of_level_flag).w / beq.w locret_78536 (sonic3k.asm:160582-160583).
+            // tst.b (End_of_level_flag).w / beq.w locret_78536 (sonic3k.asm:160097-160098).
             if (!services().gameState().isEndOfLevelFlag()) {
                 return;
             }
@@ -121,7 +121,7 @@ public final class LrzPostDefeatCameraReleaseInstance extends AbstractObjectInst
             startPaletteRotation();
             writePrimaryPaletteTimer(0x7FFF);
             if (!siblingAllocated) {
-                // jsr (AllocateObject) / move.l #loc_78B08,(a1) (:160593-160595).
+                // jsr (AllocateObject) / move.l #loc_78B08,(a1) (:160610-160612).
                 siblingAllocated = true;
                 spawnFreeChild(
                         () -> new LrzPostDefeatCameraReleaseInstance(Gate.SIBLING));

@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * S3K S3KL Obj $BF - Ribot (LBZ).
  *
- * <p>ROM reference: {@code Obj_Ribot} at {@code sonic3k.asm:191347}. The
+ * <p>ROM reference: {@code Obj_Ribot} at {@code sonic3k.asm:191352}. The
  * parent is the defeatable body; subtype chooses the child layout:
  * downward legs ({@code 0}), side legs ({@code 2}), or a single top appendage
  * ({@code >= 4}). Children use the ROM hurt collision byte {@code $97}.

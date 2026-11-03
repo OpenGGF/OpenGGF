@@ -26,6 +26,9 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -57,7 +60,8 @@ class TestLevelFrameHardwareTimingBoundaries {
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
-        }).when(level).updateObjectPositionsWithoutTouches(false);
+        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(
+                any(), org.mockito.ArgumentMatchers.eq(false));
         doAnswer(ignored -> {
             events.add("oscillation-tail");
             return null;
@@ -83,16 +87,16 @@ class TestLevelFrameHardwareTimingBoundaries {
 
         assertEquals(List.of(
                         "observer:VINT_SERVICE:ready=false",
-                        "objects:ready=false",
                         "physics",
+                        "objects:ready=false",
                         "camera",
                         "screen-events:ready=false",
                         "oscillation-tail",
                         "observer:POST_OBJECTS:ready=false",
                         "observer:PRE_MAIN_LOOP:ready=true",
                         "observer:VINT_SERVICE:ready=true",
-                        "objects:ready=true",
                         "physics",
+                        "objects:ready=true",
                         "camera",
                         "screen-events:ready=true",
                         "oscillation-tail",
@@ -125,7 +129,6 @@ class TestLevelFrameHardwareTimingBoundaries {
         LevelFrameContext context = context(timing, levelEvents, boundary ->
                 events.add("observer:" + boundary + ":ready=" + timing.isReady(handle)));
         LevelManager level = mock(LevelManager.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
@@ -248,6 +251,63 @@ class TestLevelFrameHardwareTimingBoundaries {
 
         assertEquals(LevelFrameResult.PAUSED, result);
         assertEquals(List.of(HardwareServiceBoundary.VINT_SERVICE), boundaries);
+    }
+
+    @Test
+    void heldStepsRepeatResourceServiceAndClockButPublishGameVblankOnce() {
+        List<String> events = new ArrayList<>();
+        HardwareTimingService timing = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(HardwareServiceBoundary.VINT_SERVICE));
+        HardwareWorkHandle handle = timing.submit(submission(3));
+        LevelEventProvider levelEvents = mock(LevelEventProvider.class);
+        LevelFrameContext context = context(timing, levelEvents,
+                boundary -> events.add("service:" + boundary + ":ready=" + timing.isReady(handle)));
+        var profile = mock(com.openggf.game.LevelInitProfile.class);
+        when(context.gameModule().getLevelInitProfile()).thenReturn(profile);
+        doAnswer(ignored -> { events.add("game-vblank"); return null; })
+                .when(profile).serviceLevelLoadVBlank();
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                (com.openggf.game.resources.PlcLifecycleService) null);
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        frame.claim(com.openggf.game.resources.PlcLifecyclePhase.LAG);
+        var clock = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            for (int tick = 0; tick < 3; tick++) {
+                LevelFrameStep.serviceHeldVBlank(context, frame,
+                        () -> events.add("clock:" + clock.incrementAndGet()));
+            }
+        } finally {
+            frame.finish();
+        }
+
+        assertEquals(List.of(
+                "game-vblank",
+                "service:VINT_SERVICE:ready=false", "clock:1",
+                "service:VINT_SERVICE:ready=false", "clock:2",
+                "service:VINT_SERVICE:ready=true", "clock:3"), events);
+        assertTrue(timing.isReady(handle));
+        verify(profile).serviceLevelLoadVBlank();
+        verifyNoInteractions(levelEvents);
+    }
+
+    @Test
+    void failedHeldServiceDoesNotSpendItsClockTick() {
+        var failure = new IllegalStateException("service failed");
+        LevelFrameContext context = context(new HardwareTimingService(), boundary -> {
+            throw failure;
+        });
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                (com.openggf.game.resources.PlcLifecycleService) null);
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        frame.claim(com.openggf.game.resources.PlcLifecyclePhase.LAG);
+        var clock = mock(Runnable.class);
+        try {
+            assertSame(failure, assertThrows(IllegalStateException.class,
+                    () -> LevelFrameStep.serviceHeldVBlank(context, frame, clock)));
+        } finally {
+            frame.finish();
+        }
+        verifyNoInteractions(clock);
     }
 
     private static LevelFrameContext context(

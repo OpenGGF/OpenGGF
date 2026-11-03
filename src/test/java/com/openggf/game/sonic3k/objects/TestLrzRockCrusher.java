@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@code Obj_LRZRockCrusher} (sonic3k.asm:197095-197507, ROM {@code $900E4}) and its timer child
- * {@code loc_90502} (:197322-197367).
+ * {@code loc_90502} (:197429-197474).
  *
  * <p>Every number here is a ROM table entry or a ROM comparison: the two {@code Check_CameraInRange}
  * windows {@code word_901B8}/{@code word_901C4}, the new camera limits those tables' entries 4 and
@@ -301,7 +301,7 @@ class TestLrzRockCrusher {
                 "Camera_stored_max_Y_pos handed back");
     }
 
-    /** {@code word_902EC} entry 1 is the other subtype's drop target (:197245). */
+    /** {@code word_902EC} entry 1 is the other subtype's drop target (:197250). */
     @Test
     void theOtherSubtypeDropsToItsOwnTarget() {
         LrzRockCrusher harness = harness(2, 0x500, 0x700);
@@ -311,7 +311,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_90502}/{@code loc_90512} (:197322-197352): {@code (3*60)-1} frames, then the
+     * {@code loc_90502}/{@code loc_90512} (:197429-197459): {@code (3*60)-1} frames, then the
      * NEGATIVE request for subtype 0 -- {@code st (Events_bg+$0C)} writes its high byte -- and the
      * screen shake cleared.
      */
@@ -340,7 +340,7 @@ class TestLrzRockCrusher {
     }
 
     /**
-     * {@code loc_9056E} (:197355-197363): the other subtype writes the LOW byte only, so the same
+     * {@code loc_9056E} (:197469-197477): the other subtype writes the LOW byte only, so the same
      * word reads POSITIVE and {@code LRZ1_ScreenEvent} takes its other branch, and the shake is
      * left running.
      */

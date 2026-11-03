@@ -151,12 +151,12 @@ public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInst
             routineFlag = 0;
             if (anim == 0) {
                 // loc_448B6: the charging half of the cycle only makes a sound.
-                if (isWithinSolidContactBounds()) {
+                if (isWithinOnScreenRenderBounds()) {
                     playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.CHARGING.id);
                 }
             } else {
                 // loc_448D4: the launch.
-                if (isWithinSolidContactBounds()) {
+                if (isWithinOnScreenRenderBounds()) {
                     playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.BOSS_HIT.id);
                 }
                 fireBall();

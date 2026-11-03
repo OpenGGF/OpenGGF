@@ -101,11 +101,12 @@ class TestPlcVBlankOrdering {
         org.mockito.Mockito.doAnswer(ignored -> {
             calls.add("objects");
             return null;
-        }).when(level).updateObjectPositionsWithoutTouches(false);
+        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(false));
 
         LevelFrameTestStep.execute(context(module, calls), level, mock(Camera.class), () -> calls.add("physics"));
 
-        assertEquals(List.of("vblank-service", "vint", "objects", "physics", "prepare"), calls);
+        assertEquals(List.of("vblank-service", "vint", "physics", "objects", "prepare"), calls);
     }
 
     @Test

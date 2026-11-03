@@ -64,6 +64,7 @@ public class TestProductionSingletonClosureGuard {
     // JDK static factories, not closed process/game singletons. Owner-scoped so a
     // single crypto call is exempt without exempting a whole file.
     private static final Set<String> NON_SINGLETON_GET_INSTANCE_OWNERS = Set.of(
+            "java.lang.StackWalker",
             "java.security.MessageDigest",
             "java.security.KeyFactory",
             "java.security.KeyPairGenerator",
@@ -1022,11 +1023,14 @@ public class TestProductionSingletonClosureGuard {
         Files.writeString(source, """
                 package sample;
 
+                import java.lang.StackWalker;
                 import java.security.MessageDigest;
                 import javax.crypto.SecretKeyFactory;
 
                 class ImportedFactory {
                     void hash() throws Exception {
+                        StackWalker.getInstance();
+                        java.lang.StackWalker.getInstance();
                         MessageDigest.getInstance("SHA-256");
                         MessageDigest
                                 .
@@ -1042,6 +1046,21 @@ public class TestProductionSingletonClosureGuard {
         scanRawGetInstanceCalls(tempDir, source, violations);
 
         assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    public void rawGetInstanceGuardRejectsProjectStackWalkerLookalike(@TempDir Path tempDir)
+            throws IOException {
+        Path source = tempDir.resolve("ProjectWalker.java");
+        Files.writeString(source, """
+                class ProjectWalker { void use() { StackWalker.getInstance(); } }
+                class StackWalker {
+                    static StackWalker getInstance() { return new StackWalker(); }
+                }
+                """);
+        List<String> violations = new ArrayList<>();
+        scanRawGetInstanceCalls(tempDir, source, violations);
+        assertEquals(1, violations.size());
     }
 
     @Test

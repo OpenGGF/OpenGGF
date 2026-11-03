@@ -19,7 +19,7 @@ import java.util.List;
  * Turtloid Jet Exhaust (0x9C) - Animated jet flame on the back of the Turtloid.
  * Follows parent Turtloid position and animates between two flame frames.
  *
- * Based on disassembly Obj9C (s2.asm:74480-74523).
+ * Based on disassembly Obj9C (s2.asm:75110-75153).
  * Animation: Ani_obj9A = dc.b 1, 6, 7, $FF (alternates frames 6 and 7, speed 1).
  */
 public class TurtloidJetInstance extends AbstractObjectInstance implements RewindRecreatable {

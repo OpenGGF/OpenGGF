@@ -22,13 +22,12 @@ Before reporting suite numbers, read the measurement-hazard table in
 [briefing-trace-rounds.md](../../../docs/agent-workflow/briefing-trace-rounds.md).
 Confirm the requested concrete test exists and which fixture/segments it drives.
 
-Example focused run (set the variables to discovered paths and a real class):
+Example focused run (a real class; the wrapper discovers verified ROMs and prints which
+properties it found):
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
-  -Dsurefire.runOrder=alphabetical "-Dtest=$TRACE_TEST" \
-  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
-  "-Ds3k.rom.path=$S3K_ROM" test
+  -Dsurefire.runOrder=alphabetical "-Dtest=$TRACE_TEST" test
 ```
 
 The ordinary suite excludes replay tests. `trace-replay` covers the release-6
@@ -73,6 +72,12 @@ A fix must hold for another BK2: no fixture-fitted constants, tolerances,
 zone/route/frame exceptions, or trace-to-engine state hydration. Bootstrap
 snapshots are comparison data too. A local reseeding probe must be removed before
 committing. Do not force a green result when the causal evidence is incomplete.
+The one sanctioned entry import is a run segment's carried run state (rings,
+emerald progress, used giant rings, shield, path bits) through
+`TraceSegmentCarriedStateImport`. It runs once at segment entry, from recorder
+observations. Extend that mechanism with a recorder-observed source; never add a
+second import or write anything after entry. See the
+[carried-state design](../../../docs/architecture/designs/2026-11-03-segment-carried-run-state.md).
 
 ## Hardware timing boundary
 

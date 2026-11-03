@@ -52,6 +52,24 @@ import static org.mockito.Mockito.when;
 class TestSonic3kSpringObjectInstance {
 
     @Test
+    void verticalLaunchRestartsAnimationOnTheSameNativePass() throws Exception {
+        TestableSprite main = new TestableSprite("sonic");
+        ScriptedCheckpointSpring spring = new ScriptedCheckpointSpring(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0, 0, false, 0));
+        spring.setServices(new QueryBackedServices(main, List.of())
+                .withGameState(new GameStateManager()));
+        spring.update(-1, main); // Obj_Spring initializes; the variant starts next pass.
+        spring.setResults(Map.of(main, new PlayerSolidContactResult(
+                ContactKind.TOP, true, false, false, false, null, null, 0)));
+        spring.update(0, main);
+        assertEquals(0xF000, main.getYSpeed() & 0xFFFF);
+        Field mapping = Sonic3kSpringObjectInstance.class.getDeclaredField("mappingFrame");
+        mapping.setAccessible(true);
+        assertEquals(1, mapping.getInt(spring),
+                "the triggered script executes after the native solid reaction, on this pass");
+    }
+
+    @Test
     void exposesNativeRoutinePointerWordForSidekickDespawnWatchdog() {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x2D48, 0x0630, 0x07, 0x10, 0, false, 0));

@@ -100,7 +100,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         int subtype = spawn.subtype() & 0xFF;
         int highBitOffset = 0;
         int startOffset = 0;
-        // move.b subtype(a0),d0 / bpl.s loc_42F54 (sonic3k.asm:88436-88439).
+        // move.b subtype(a0),d0 / bpl.s loc_42F54 (sonic3k.asm:88441-88444).
         if ((subtype & 0x80) != 0) {
             highBitOffset = HIGH_BIT_START_OFFSET;
             startOffset = HIGH_BIT_START_OFFSET;
@@ -110,7 +110,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         this.maxPosition = range << 16;
 
         int base = spawn.y() & 0xFFFF;
-        // bclr #0,status(a0) / beq.s loc_42F72 (:88444-88449): a flipped placement starts at the
+        // bclr #0,status(a0) / beq.s loc_42F72 (:88449-88454): a flipped placement starts at the
         // far end of the travel and hangs its base Y a whole range higher.
         if ((spawn.renderFlags() & 0x1) != 0) {
             startOffset = range - highBitOffset;
@@ -145,7 +145,7 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         p1Standing = false;
         p2Standing = false;
 
-        // moveq #0,d5 and the two sub_4301C calls (sonic3k.asm:88452-88459). Only the low word of
+        // moveq #0,d5 and the two sub_4301C calls (sonic3k.asm:88520-88527). Only the low word of
         // d5 is written by add.w, so the accumulator is a 16-bit quantity.
         int accumulator = 0;
         accumulator += riderPush(playerEntity, true);
@@ -157,12 +157,12 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
         int delta = (accumulator << 16) >> 3;
 
         int next = position + delta;
-        // bpl.s loc_42FA4 (:88464-88467).
+        // bpl.s loc_42FA4 (:88469-88472).
         if (next < 0) {
             next = 0;
             delta = 0;
         }
-        // cmp.l d1,d0 / blo.s loc_42FB0 (:88470-88474). Both operands are non-negative here, so
+        // cmp.l d1,d0 / blo.s loc_42FB0 (:88475-88479). Both operands are non-negative here, so
         // the ROM's unsigned compare and this signed one agree.
         if (next >= maxPosition) {
             next = maxPosition;
@@ -339,16 +339,9 @@ public final class LrzDashElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        // loc_1DC98 belongs to this elevator's SolidObjectFull call. Earlier
-        // objects must not consume its ride record before that early return.
-        return true;
-    }
-
-    @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // d4 = x_pos(a0) (sonic3k.asm:88512); the platform only ever moves vertically.
-        return false;
+        return getX();
     }
 
     /** ROM x_pos/y_pos are object centres. */

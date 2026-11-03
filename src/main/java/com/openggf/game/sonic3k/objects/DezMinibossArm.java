@@ -137,7 +137,8 @@ final class DezMinibossArm extends DezMinibossSprite implements S3kTopSolidProvi
             status|=0x80; debris=true;
             xVelocity=(short)romWord(0x852F4+spawn.subtype()*2);
             yVelocity=(short)romWord(0x852F6+spawn.subtype()*2);
-        } else services().solidExecution().resolveSolidNowAll();
+        } else if (carryX) services().solidExecution().resolveSolidNowAll();
+        else services().solidExecution().solidWithD4(getX());
         visible=true;
     }
     private void normalState() { state=spawn.subtype()==0?0x7E566:0x7E54C; }
@@ -176,7 +177,6 @@ final class DezMinibossArm extends DezMinibossSprite implements S3kTopSolidProvi
     @Override public SolidRoutineProfile getSolidRoutineProfile() { return SolidRoutineProfile.fromProvider(this); }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !debris && !pendingDelete; }
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return carryX; }
     DezMinibossSprite parentForTest() { return parent; }
     DezMinibossSprite crossLinkForTest() { return crossLink; }
     int stateForTest() { return state; }

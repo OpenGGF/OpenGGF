@@ -125,6 +125,13 @@ non-obvious placements:
 | `tools` | Compression utilities (Kosinski, Nemesis, Saxman), `ObjectDiscoveryTool`, disassembly tools incl. `RomOffsetFinder` |
 | `LevelFrameStep` | Lives at the `com.openggf` package **root**, not under `level` |
 
+Held fade and bonus VBlank service uses the package-private
+`LevelFrameStep.serviceHeldVBlank(context, frame, advanceClock)`: resource service
+precedes the supplied clock; playback consumption remains caller-owned. Game
+VBlank publication is once per token, while bonus lag may request several
+service/clock steps under one token. Pause retains its separate first-claim
+policy. See the [ownership design](designs/2026-11-03-held-vblank-ownership.md).
+
 `RewindRecreateConstructors` owns the permitted default-argument types and
 placeholder values used by the four default-argument marker interfaces. The
 markers retain their own constructor prefixes and diagnostic identities.

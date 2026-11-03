@@ -99,7 +99,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [Disassembly citation checker](../../tools/disasm/disasm_citations.py): `check` verifies
   `file.asm:N-M` citations in code, tests and docs against the pinned (or `--rev checkout`/any)
   disassembly revision, using the label named beside each citation; `remap` carries citations
-  through a disassembly diff when a pin moves, refusing ranges that touch edited lines.
+  through a disassembly diff when a pin moves; `repair [paths] --write` recovers stale labelled
+  citations from local history, refusing ranges that touch edited lines. The pre-commit
+  `check-staged` guard rejects per-file increases in stale/out-of-range index citations.
   Origin: citation audit, 2026-10-09; evidence in the
   [audit](../architecture/audits/2026-10-09-disassembly-line-citations.md).
 
@@ -186,11 +188,15 @@ The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` proper
 | `DezFinalRouteAuthorTool` | Observes the final DEZ encounter and authors controller-only input through hands, core and escape. Declared solo Sonic boot: 200 rings, seven Super Emeralds. Optional DEZ2 input starts at ($34B0,$300), traverses its boss/real final-arena load and continues without reseeding. A fifth argument (`cold-solo`, `cold-team`, `cold-team-emeralds`) instead plays an input prefix from the real DEZ1 start without position/ring seeds. Writes input script/state CSV; no post-boot gameplay-state injection or parity claim. | `DezFinalRouteAuthorTool <ROM> <width> <output-prefix> [input [cold-solo\|cold-team\|cold-team-emeralds]]` (same Java classpath as gameplay capture) |
 | `DdzIncomingRouteAuthorTool` | Replays an actual DEZ incoming movie, then authors controller-only DDZ ring collection and both boss phases. The complete native movie supplies input buttons only; no state hydration. Declared positioned or cold-team boot; complete input script and observed state CSV. | `DdzIncomingRouteAuthorTool <ROM> <width> <incoming.bk2> <reference.bk2> <output-prefix> [cold-team]` |
 | `GameplayInputBranchTool` | Cold-replays one input prefix, then tries controller-only scripts from its engine-owned rewind state. Writes full-prefix BK2/scripts/state CSVs, nearby object inventory, per-input riding/standing contact owners, read-only boss routine/health/position CSVs and sampled PNGs. Preserves both controllers and input-edge history; refuses existing outputs, cross-load restores, callback-bearing fade checkpoints and pending fresh assembly. Chosen routes require fresh uninterrupted verification. Origin: LRZ2 bring-up, 2026-09-24. | `GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> <prefix> <output-dir> '30 R+A;60 R' '12 R;30 R+A;60 R'` (gameplay-capture Java classpath) |
-| `SszBossInputAuthorTool` | Cold-replays an SSZ input prefix, then tries controller policies from whole-registry rewind snapshots with held-input restoration. Supports GHZ/MTZ/Mecha (and LRZ1/LRZ3 bosses, `lrz1`/`lrz3`), selectable width and roster; writes complete script/BK2/state CSV and an explicit defeat/death/limit result. Refuses existing outputs and cross-load restore; selected inputs require fresh uninterrupted replay. `--boot ZONE:ACT` lets the prefix cross real loads (restores stay inside the last world); `mecha2` authors Knuckles' two-phase SSZ2 fight until `loc_7BCB0`. Origin: solo Tails S&K campaign,75c9caf16; cold LRZ→SSZ2 campaign 2026-10-15. | `SszBossInputAuthorTool [--boot 9:1] <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> ghz\|mtz\|mecha\|mecha2\|lrz1\|lrz3 <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
-| `ReferencePathInputAuthor` | Authors controller-only input along a reference run's P1 path where the reference inputs drift (RNG/V_int-phased platforms, clouds, columns). Plays the reference inputs while P1 tracks within 6 px; otherwise scores time-shifted/delayed reference inputs, reactive steer/jump policies, wait-then-jump and spin-dash variants from whole-registry snapshots by reference-path progress (hurt, ring loss and getting lost penalised), commits the best slice and repeats. Restores never cross a real load and touched giant rings count as deaths; the reference only scores positions and never seeds the world; selected inputs need a fresh uninterrupted replay. Origin: cold LRZ→HPZ→SSZ campaign (lane cold3, 2026-10-15), which carried the cold pair through SSZ1's cloud/wrap section to Mecha. | `ReferencePathInputAuthor [--boot 10:1] <ROM> <width> <main> <sidekick-or-none> <prefix.bk2> <prefix-length> <reference.bk2> <ref-zone:act>[/main/sidekick] <from-index> <to-index> <new-output-dir>` (gameplay-capture Java classpath) |
+| `SszBossInputAuthorTool` | Front-end of the shared route planner (`EncounterRouteAuthor`, since 2026-11-02). Cold-replays an SSZ input prefix, then tries controller policies from whole-registry rewind snapshots with held-input restoration. Supports GHZ/MTZ/Mecha (and LRZ1/LRZ3 bosses, `lrz1`/`lrz3`), selectable width and roster; writes complete script/BK2/state CSV and an explicit defeat/death/limit result. Refuses existing outputs and cross-load restore; selected inputs require fresh uninterrupted replay. `--boot ZONE:ACT` lets the prefix cross real loads (restores stay inside the last world); `mecha2` authors Knuckles' two-phase SSZ2 fight until `loc_7BCB0`. Origin: solo Tails S&K campaign,75c9caf16; cold LRZ→SSZ2 campaign 2026-10-15. | `SszBossInputAuthorTool [--boot 9:1] <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> ghz\|mtz\|mecha\|mecha2\|lrz1\|lrz3 <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
+| `ReferencePathInputAuthor` | Authors controller-only input along a reference run's P1 path where the reference inputs drift (RNG/V_int-phased platforms, clouds, columns). Plays the reference inputs while P1 tracks within 6 px; otherwise scores time-shifted/delayed reference inputs, reactive steer/jump policies, wait-then-jump and spin-dash variants from whole-registry snapshots by reference-path progress (hurt, ring loss and getting lost penalised), commits the best slice and repeats. Restores never cross a real load and touched giant rings count as deaths; the reference only scores positions and never seeds the world; selected inputs need a fresh uninterrupted replay. Origin: cold LRZ→HPZ→SSZ campaign (lane cold3, 2026-10-15), which carried the cold pair through SSZ1's cloud/wrap section to Mecha. Since 2026-11-02 a front-end of the shared route planner (`com.openggf.route`); writes `route.route.json` + `route.script` when solved, otherwise an unqualified `draft.script`. | `ReferencePathInputAuthor [--boot 10:1] <ROM> <width> <main> <sidekick-or-none> <prefix.bk2> <prefix-length> <reference.bk2> <ref-zone:act>[/main/sidekick] <from-index> <to-index> <new-output-dir>` (gameplay-capture Java classpath) |
+| `RouteRepairTool` | Repairs a route movie with the shared route planner: keeps rows before the first editable row, then follows the route's own recorded track (`src/test/resources/routes/s3k/tracks/*.csv.gz`, header-bound to the movie's SHA-256). `--exact` / `--exact-leader` re-synchronise exactly against a `RouteTrackRecorder` track (single-row edits until every tracked player state matches again); `--checks GOALS.json` attaches a goal program. Writes `<stem>.route.json` + `.script` only after a passing cold replay. | `RouteRepairTool [--exact\|--exact-leader] [--checks <goals.json>] <ROM> 10:1 <width> <main> <sidekick-or-none> <movie.bk2> <track.csv.gz> <first-editable> <stem> <new-output-dir>` (gameplay-capture Java classpath, surfaceless EGL) |
+| `RouteTrackRecorder` | Records a route movie's engine track (each player's centre, subpixels, speeds, air/roll bits and the boundary epoch per row) for exact repair. One source file that also compiles in a temporary checkout of an older engine, where routes are recorded on the revision they were authored against. | `RouteTrackRecorder <ROM> <movie.bk2> <out.csv.gz> <zone> <act0> <width> <main> <sidekick-or-none> <engine-rev>` (surfaceless EGL) |
 | `RewindFidelitySweep` | Dense rewind-fidelity sweep over a controller-only route movie in the production capture harness: every STRIDE inputs it captures the whole registry, plays HORIZON inputs, restores (checking the restore reproduces the capture), replays and compares P1 rows plus every registry key. Never restores across act/level/manager/mode/pending-fade boundaries. Found the MHZ rider/cap restore gaps, the Mushmeanie shell parent and the lost act-carried shield that 45-frame spot checks missed. Origin: mhzrewind lane 2026-10-16 (`902ba8a10`); `TestMhzRewindFidelitySweep` pins the fixed MHZ1 sites. | `RewindFidelitySweep <ROM> <width> <main> <sidekick-or-none> <movie.bk2> <zone:act> <from> <to> <stride> <horizon>` (gameplay-capture Java classpath) |
 | `FadeWindowRetimeTool` | Retimes a controller movie authored before 8179ccd80, when direct-level captures advanced FadeManager twice per frame. Replays from a fresh boot with the production single fade owner, measures each frozen fade window (fade active, object VInt unchanged), inserts the remaining native window frames as repeats of the last authored window input, re-measures from boot per window, and ends with one uninterrupted verification replay reporting loads, death and endpoint. Writes BK2 plus `.script` (source provenance kept). Fade-ins that run with live gameplay are never edited; a death or a route-invariant mismatch afterwards needs real re-authoring. Origin: S3K cold LRZ→HPZ→SSZ lane, 2026-10-15. | `FadeWindowRetimeTool <ROM> s3k lrz 1 320 sonic tails <old.bk2> <new.bk2> [--emeralds DDDDDDD] [--authored-fade-advances 2]` (gameplay-capture Java classpath) |
-| `DezMinibossInputAuthorTool` | Cold-prefix controller search for both native eight-hit DEZ1 phases. Reads the eye and native hit counter, restores held input with whole-world snapshots, and records complete script/BK2/state CSV. Includes jump release/repress policies; no position/ring/health seeds. A result requires independent uninterrupted replay. Origin: 2026-09-28 widescreen campaign. | `DezMinibossInputAuthorTool <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
+| `tools/traces/compose_route_on_movie_prefix.py` | Splices a cold engine route's controller rows onto a recorded movie's prefix (route row k becomes movie row prefix+k), so native BizHawk plays the route from the level the prefix reaches and TraceChaser can capture it. Comparison only; `--filler-before` inserts one filler row per observed native lag frame so native polls exactly the route's rows. Origin: SSZ1 native route check, `bugfix/ai-ssz1-native-routes` (2026-11-02); regenerates `traces/s3k/_movies/s3k-ssz1-cold-route-composite.bk2`. | `python3 -I tools/traces/compose_route_on_movie_prefix.py --movie src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2 --prefix-rows 396719 --route-rows 2000 --route <route.bk2> --out <composite.bk2>` |
+| `tools/traces/route_native_check.py` | Native check of a cold route: composes it after a recorded entry movie, observes native lag VBlanks pass by pass and inserts one filler row per lag frame (`compose_route_on_movie_prefix.py --filler-before`), then compares both players with the route's engine track. Writes the lag facts and the verdict (`agrees` or `diverged` at a route row) as JSON. Origin: shared route planner step 6 (2026-11-02). | `python3 -I tools/traces/route_native_check.py --route-movie <exported.bk2> --engine-track <track.csv.gz> --movie src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2 --prefix-rows 396719 --trace-offset 396720 --rom <s3k.gen> --work <dir>` (`BIZHAWK_HOME` set) |
+| `DezMinibossInputAuthorTool` | Front-end of the shared route planner (`EncounterRouteAuthor`, since 2026-11-02). Cold-prefix controller search for both native eight-hit DEZ1 phases. Reads the eye and native hit counter, restores held input with whole-world snapshots, and records complete script/BK2/state CSV. Includes jump release/repress policies; no position/ring/health seeds. A result requires independent uninterrupted replay. Origin: 2026-09-28 widescreen campaign. | `DezMinibossInputAuthorTool <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
 | `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags; `--mod <jar>` applies a packaged patch mod (via `DevelopmentPatchLoader`) to film mod gameplay. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
 | `LevelTileUsageLocatorTool` | Lists the 128px layout cells (foreground and background) that place given 8x8 tiles or palette-line colours, so a capture can be aimed at AniPLC destination tiles or an AnPal-cycled colour that is off screen from the level start. Origin: HPZ bring-up demo captures. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.LevelTileUsageLocatorTool" "-Dexec.args=--game s3k --zone hpz --act 2 --tiles 0x2D0-0x2DB --colors 3:1,2"` |
 | `S3kLoadTimeProfileSupplement` | Appends exact native FIFO v2 (`load-time-measurement-v2`) costs for selected missing fingerprints to an existing S3K manifest without retraining it: verifies the executed BK2, frozen setup SHA-256 and recorder commit, keeps every existing row/estimator byte-for-byte, and writes a hash audit TSV. Contract: [measurement stream](../architecture/designs/2026-07-29-native-load-time-measurement-stream.md#exact-fifo-v2-supplemental-authority-2026-10-15). Origin: S3K ending reunion, 2026-10-15. | `java -cp "$OPENGGF_RUNTIME_CLASSPATH" com.openggf.tools.timing.S3kLoadTimeProfileSupplement BASE.json EXECUTED.bk2 V2.jsonl INVENTORY.tsv SETUP.json SETUP_SHA256 RECORDER_COMMIT NEW.json NEW.tsv` |
@@ -431,8 +437,8 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.
 
-- [Starpost placeholder generator](../../examples/starpost-valley/generate_resources.py): authors the flat town placeholder
-  into packaging output, without ROM bytes (Starpost Act Bridge, 2026-10-09).
+- [Starpost placeholder generator](../../examples/starpost-valley/tools/make_placeholder.py): authors the flat Real Valley /
+  Real Ruins placeholder level records without ROM bytes (Starpost Valley P1, 2026-10-09).
 
 - `GameplayCaptureTool --title-screen --audio` (Mutator Lab, 2026-10-07) observes
   production title-to-play initialization and exactly one final SMPS PCM packet per
@@ -489,3 +495,69 @@ and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan
 - [Default native mod build](../../tools/native-image/README.md): generated API/service retention, pinned Community toolchains and native qualification commands.
 - [Native/JVM gameplay comparison](../../tools/native-image/GameplayBenchmark.java) and [sequential matrix driver](../../tools/performance/native_matrix.py): committed level-local BK2 input through the production GameLoop and completed offscreen rendering, process CPU/wall distributions, startup marker, JIT discard passes and trajectory/pixel controls; run only prebuilt artifacts under `run_isolated.py` (2026-10-27 native optimization study).
 - [Native gdb PC sampler](../../tools/performance/gdb_native_sample.py): runs a prebuilt native-image child under gdb, interrupts through an external timer process, and records each thread’s PC/symbol; use symbol-only sidecars and `run_isolated.py`. PC frequencies are wall-time evidence, not exact method CPU costs (2026-10-27 runtime-loading/retention ablation).
+
+## Preserving how the work was done
+
+OpenGGF is an early large-scale AI-agent reimplementation. The method is
+part of what the project preserves, for future contributors and for anyone
+studying how it was done. Keep the record light and put things where they
+already belong; do not create new document types.
+
+- **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
+  oracle, comparator, or sampler that answered a question likely to recur,
+  or that took more than an hour to get right, is promoted: engine-facing
+  tools to `com.openggf.tools`, analysis scripts to the matching `tools/`
+  subdirectory, trace production to TraceChaser. Give it a header stating
+  purpose, inputs, and the originating commit or task, and a one-line entry
+  in `docs/agent-workflow/README.md`.
+- **Methods and lessons.** A measurement protocol, hazard, or ROM pitfall
+  learned during a task goes into the existing catalogue it belongs to
+  (pitfall catalogue, measurement-hazard table, implementation pitfalls),
+  not a new file.
+- **Decisions and evidence.** Record what was tried and rejected as well as
+  what landed, with commit hashes, in the dated `docs/architecture/`
+  artifact for the task. A rejected approach with its kill evidence saves
+  the next agent from repeating it.
+- **Narrative.** `docs/project/ai-journey.md` grows only at milestones, not
+  per task.
+
+Test: keep it if a future agent would otherwise re-derive it; delete it if
+it can be regenerated from committed inputs in minutes. Raw logs, run
+directories, fitted constants, and rejected code on merged branches are
+never preserved.
+
+## Find the owning reference
+
+
+- Release publication/skipped jobs: `release-publishing` and
+  [publishing guide](../project/release-publishing.md).
+- Architecture/services: [engine map](../architecture/engine-map.md).
+- Objects/bosses: matching `s1-`, `s2-`, or `s3k-implement-*` skill and
+  [implementation reference](../architecture/object-implementation-reference.md).
+- Disassembly lookup: matching `s1disasm-guide`, `s2disasm-guide`, or
+  `s3k-disasm-guide` skill.
+- Trace failures: `trace-replay-bug-fixing`; multiple independent traces:
+  `trace-green-fleet`; video: `trace-capture`; recording: `bizhawk-headless-trace`.
+- Native BizHawk screenshots or state observations for ROM corroboration:
+  `bizhawk-native-reference-capture`.
+- Picture or movie of any gameplay section: `gameplay-capture`; scripted
+  controller input for it or for a probe: `bk2-input-authoring`.
+- Promo, trailer or mod-showcase creative direction: `promo-direction`, composed
+  with `tools/media/promo_kit.py`; evidence reels and archiving: `gameplay-highlights`.
+- PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
+- Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
+  whole-zone delivery: `s3k-zone-bring-up`.
+- Offscreen engine rendering for tests, captures and tools: `headless-rendering`.
+- Menus, dialogs and in-game overlays: `ui-design-language`.
+- Stageplay cutscene/animatic authoring: `stageplay-authoring`; [CLI reference](../guide/creating/stageplay-authoring.md).
+- Headless tests: [headless testing](../guide/contributing/headless-testing.md).
+- Current gaps: [general](../status/known-discrepancies.md),
+  [S3K](../S3K_KNOWN_DISCREPANCIES.md). Configuration: [CONFIGURATION.md](../../CONFIGURATION.md).
+
+- Mod authoring: [mod-authoring skill](../../.agents/skills/mod-authoring/SKILL.md)
+  and [task recipes](../modding/task-recipes.md) route creator work to supported
+  helpers, lifecycle contracts and focused verification.
+
+- Next-line Mod API and multiplayer contracts: [subsystem reference](../architecture/next-line-subsystems.md),
+  [creator handbook](../modding/index.md), and
+  [API compatibility](../architecture/mod-api-compatibility.md).

@@ -128,7 +128,7 @@ public class FlasherBadnikInstance extends AbstractBadnikInstance implements Rew
     }
 
     private void updateInit() {
-        // ObjA3 loc_3875A (s2.asm:76027-76030): routine 0 only sets the wait
+        // ObjA3 loc_3875A (s2.asm:76234-76237): routine 0 only sets the wait
         // timer (objoff_2A=$40) and returns; the routine advances to 2 so the
         // countdown begins on the NEXT frame. No position/timer change here.
         stateTimer = WAIT_TIMER_INIT;

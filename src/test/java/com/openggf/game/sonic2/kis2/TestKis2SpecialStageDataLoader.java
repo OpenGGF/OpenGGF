@@ -65,13 +65,12 @@ class TestKis2SpecialStageDataLoader {
     @Test
     void everySpecialStageDescriptorUsesNativeTileOffsetsRatherThanStockEncoding() throws Exception {
         var dump = Kis2TestRoms.lockOnDumpOrNull();
-        var lifecycle = new com.openggf.game.resources.DynamicArtLifecycleService();
+        var lifecycle = new com.openggf.game.resources.DynamicArtLifecycleService(new com.openggf.game.sonic2.Sonic2GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         var plans = loader.getPlayerDplcPlans().sonic();
         for (int frame = 0; frame < plans.size(); frame++) {
-            lifecycle.observeRamDplc(com.openggf.game.GameId.S2,
-                    loader.mainPlayerDynamicArtOwner(), frame, plans.get(frame).requests(),
+            lifecycle.observeRamDplc(loader.mainPlayerDynamicArtOwner(), frame, plans.get(frame).requests(),
                     0xFF0000, 0x5CA0);
             var edges = lifecycle.publishRow(frame, false).edges();
             int cue = Kis2SpecialStageDataLoader.PLAYER_DPLC

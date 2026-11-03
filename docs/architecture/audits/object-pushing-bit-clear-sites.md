@@ -161,7 +161,7 @@ does **not** fire on a mere side touch. A port that fires it on every
 
 The same scan is the way to settle every remaining site. On
 `src/test/resources/traces/s3k/mgz` it finds objects that genuinely do clear their
-own bit mid-push, including `loc_21692` (docs/skdisasm/sonic3k.asm:45797), the
+own bit mid-push, including `loc_21692` (docs/skdisasm/sonic3k.asm:45802), the
 `Obj_BreakableWall` break routine already landed in `8cd07b700` — so the method
 distinguishes real sites from mis-derived ones rather than rejecting all of them.
 

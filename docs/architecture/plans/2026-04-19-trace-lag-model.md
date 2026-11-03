@@ -53,7 +53,7 @@
 ### Sonic 1
 
 - `v_framecount` advances only in `Level_MainLoop` after `WaitForVBla`, in `docs/s1disasm/sonic.asm:3198-3226`.
-- `v_vbla_count` advances every VBlank in `docs/s1disasm/sonic.asm:615-643`.
+- `v_vbla_count` advances every VBlank in `docs/s1disasm/sonic.asm:626-654`.
 - Lag VBlank uses `VBla_00`, which still performs interrupt-side work and then falls through to music update in `docs/s1disasm/sonic.asm:662-700` and `docs/s1disasm/sonic.asm:637-643`.
 
 ### Sonic 2

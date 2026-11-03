@@ -41,7 +41,7 @@ import java.util.List;
  *   <li>TRIGGER_COLLAPSE: Collapses when level trigger fires (non-ICZ negative subtype)
  * </ul>
  *
- * <p>ROM reference: Obj_TensionBridge (sonic3k.asm:75537+)
+ * <p>ROM reference: Obj_TensionBridge (sonic3k.asm:75542+)
  */
 public class TensionBridgeObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider,

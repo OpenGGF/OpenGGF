@@ -83,7 +83,7 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
         // tst.b render_flags(a0) / bpl.s loc_42F00 -> Delete_Current_Sprite (sonic3k.asm:88383,
         // 88345). The engine's own off-screen self-delete keeps the spawn respawnable, which is
         // right here: the parent re-allocates a fresh shot every period.
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             setDestroyedByOffscreen();
             return;
         }

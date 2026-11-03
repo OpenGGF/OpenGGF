@@ -449,7 +449,7 @@ class TestSonic3kMonitorObjectInstance {
         player.setYSpeed((short) 0x01C0);
         player.setAir(true);
 
-        objectManager.updateSolidContacts(player);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(objectManager, player);
 
         assertEquals(0x06C5, player.getCentreY() & 0xFFFF);
         assertEquals(0, player.getYSpeed());

@@ -726,7 +726,7 @@ failure, then restored.
   byte-identical, and so are `AnPal_PalDEZ1` frames 1/5 and 2/4 — which the first version of the
   test tripped over; the check now tries every alignment a matching colour set allows.
 - *Animated tiles.* `AniPLC_DEZ` is at `$28AEE`, and it is data, not a function: `Offs_AniFunc`
-  and `Offs_AniPLC` are one interleaved table (:53881), and Death Egg's entries 22 and 23 pair
+  and `Offs_AniPLC` are one interleaved table (:53882), and Death Egg's entries 22 and 23 pair
   `AnimateTiles_DoAniPLC` with `AniPLC_DEZ`. Nothing gates the eight scripts. Durations
   `0,1,3,-1,4,4,1,0` as the plan says; script 7 really is `$84` = 132 one-byte frames, every odd
   one tile `$2D` and the even ones stepping `0,5,$A,$F,$14,$19,$1E,$23` six frames each before

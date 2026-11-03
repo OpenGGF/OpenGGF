@@ -231,7 +231,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     @Override
     protected void initializeBossState() {
-        // ROM: Obj57_Init (s2.asm:65285-65327)
+        // ROM: Obj57_Init (s2.asm:65914-65956)
         state.x = SPAWN_X;
         state.y = SPAWN_Y;
         state.xFixed = state.x << 16;
@@ -253,7 +253,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
         countdown = INITIAL_COUNTDOWN;
 
         // Initialize animation state
-        // ROM: Obj57_InitAnimationData (s2.asm:65330-65342)
+        // ROM: Obj57_InitAnimationData (s2.asm:65965-65977)
         // Animation 0: hover thingies (fire on) - starts with frames 5,6 alternating
         hoverFrame = FRAME_HOVER_FIRE_ON_1;
         hoverAnimTimer = 1;
@@ -301,7 +301,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUB0: Boss ascending / countdown before repositioning and descending.
-     * ROM: Obj57_Main_Sub0 (s2.asm:65362-65413)
+     * ROM: Obj57_Main_Sub0 (s2.asm:65964-66015)
      */
     private void updateSub0Rising(AbstractPlayableSprite player) {
         countdown--;
@@ -362,7 +362,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUB2: Boss descending with rocks/spikes falling.
-     * ROM: Obj57_Main_Sub2 (s2.asm:65416-65440)
+     * ROM: Obj57_Main_Sub2 (s2.asm:66045-66069)
      */
     private void updateSub2Descending() {
         applyBossMovement();
@@ -380,7 +380,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUB4: Reaching ground level, digger rotation to horizontal.
-     * ROM: Obj57_Main_Sub4 (s2.asm:65443-65487)
+     * ROM: Obj57_Main_Sub4 (s2.asm:66045-66089)
      */
     private void updateSub4Ground(AbstractPlayableSprite player) {
         applyBossMovement();
@@ -432,7 +432,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUB6: Horizontal battle phase - moving back and forth, hittable.
-     * ROM: Obj57_Main_Sub6 (s2.asm:65490-65550)
+     * ROM: Obj57_Main_Sub6 (s2.asm:66092-66152)
      */
     private void updateSub6Horizontal(AbstractPlayableSprite player) {
         countdown--;
@@ -455,7 +455,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
             // Timer expired - check for hurt sonic flag
             if (bossHurtSonic) {
                 bossHurtSonic = false;
-                // ROM: Obj57_Main_Sub6_ReAscend1 (s2.asm:65516-65518)
+                // ROM: Obj57_Main_Sub6_ReAscend1 (s2.asm:66162-66164)
                 // move.b #$30,7(a1) sets anim_frame=3, timer=0. Frame 3 in anim D's data
                 // starts the grin subanimation: alternating $10/$11 for 8 occurrences
                 // at speed 7. Total: 64 ticks of grinning.
@@ -490,7 +490,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * Transition from horizontal phase back to rising (Sub0).
-     * ROM: Obj57_Main_Sub6_ReAscend2 (s2.asm:65520-65532)
+     * ROM: Obj57_Main_Sub6_ReAscend2 (s2.asm:66155-66167)
      */
     private void reascend() {
         state.xVel = 0;
@@ -523,7 +523,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUB8: Boss defeated - explosions.
-     * ROM: Obj57_Main_Sub8 (s2.asm:65725-65757)
+     * ROM: Obj57_Main_Sub8 (s2.asm:66354-66386)
      */
     private void updateSub8Defeated() {
         // ROM: st.b boss_defeated(a0) - state.defeated already set by triggerDefeat()
@@ -562,7 +562,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUBA: Slowly hovering down after defeat, no explosions.
-     * ROM: Obj57_Main_SubA (s2.asm:65759-65817)
+     * ROM: Obj57_Main_SubA (s2.asm:66361-66419)
      */
     private void updateSubAHoverDown() {
         countdown++;
@@ -600,7 +600,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * SUBC: Escape right at high speed.
-     * ROM: Obj57_Main_SubC (s2.asm:65820-65854)
+     * ROM: Obj57_Main_SubC (s2.asm:66449-66483)
      */
     private void updateSubCEscape() {
         state.xVel = ESCAPE_X_VEL;
@@ -636,7 +636,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * Apply sine wave offset to Y position.
-     * ROM: Obj57_AddSinusOffset (s2.asm:65678-65685)
+     * ROM: Obj57_AddSinusOffset (s2.asm:66320-66327)
      */
     private void applySineOffset() {
         int sine = TrigLookupTable.sinHex(sineCounter & 0xFF);
@@ -647,7 +647,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * Transfer positions for digger sub-sprites during defeat fall-apart.
-     * ROM: Obj57_TransferPositions / Obj57_FallApart (s2.asm:65553-65629)
+     * ROM: Obj57_TransferPositions / Obj57_FallApart (s2.asm:66155-66231)
      */
     private void transferDiggerPositions() {
         if (!state.defeated) {
@@ -695,7 +695,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * Spawn a stone or spike at random position.
-     * ROM: Obj57_SpawnStoneSpike (s2.asm:65632-65665)
+     * ROM: Obj57_SpawnStoneSpike (s2.asm:66261-66294)
      */
     private void spawnStoneOrSpike() {
         if (services().objectManager() == null) {
@@ -704,7 +704,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
         // ROM: move.b (Vint_runcount+3).w,d1 - use the global gameplay frame
         // counter, not a boss-local phase, so stone/spike selection stays aligned
-        // with Obj57_SpawnStoneSpike (s2.asm:66128-66160).
+        // with Obj57_SpawnStoneSpike (s2.asm:66279-66311).
         int d1 = currentVIntRunCount & 0xFF;
         boolean isSpike;
 
@@ -727,7 +727,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     /**
      * Handle hit detection - delegates to parent but also checks for face animation.
-     * ROM: Obj57_HandleHits (s2.asm:65668-65675)
+     * ROM: Obj57_HandleHits (s2.asm:66310-66317)
      */
     private void handleHits() {
         // The parent's hitHandler manages invulnerability/flash
@@ -937,7 +937,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     @Override
     protected boolean defeatDeferralAppliesToThisBoss() {
         // Obj57_Main reads boss_routine(a0) ONCE at the top of the object's update and
-        // jumps through Obj57_Main_Index (docs/s2disasm/s2.asm:65876-65890). The hit
+        // jumps through Obj57_Main_Index (docs/s2disasm/s2.asm:65991-66005). The hit
         // handler Obj57_HandleHits_Main runs from inside the already-selected routine
         // (docs/s2disasm/s2.asm:66223-66226), and Obj57_FinalDefeat sets
         // Boss_Countdown=$B3 / boss_routine=8 (docs/s2disasm/s2.asm:66249-66254), so
@@ -949,7 +949,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     @Override
     protected void onDefeatStarted() {
         if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
-        // ROM: Obj57_FinalDefeat (s2.asm:65715-65722)
+        // ROM: Obj57_FinalDefeat (s2.asm:66357-66364)
         countdown = DEFEAT_COUNTDOWN;
         state.routineSecondary = SUB8_DEFEATED;
     }

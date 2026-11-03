@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests S3K physics constants for normal single-player mode.
- * <p>The {@code Character_Speeds} table (sonic3k.asm:202403) is only used in
+ * <p>The {@code Character_Speeds} table (sonic3k.asm:202408) is only used in
  * Competition mode ({@code Sonic2P_Index}, line 21457). Normal single-player
  * uses the same canonical $600/$C/$80 values as S2.
  * <p>The competition-mode profiles ({@code SONIC_3K_SONIC_INIT}, {@code SONIC_3K_TAILS_INIT})

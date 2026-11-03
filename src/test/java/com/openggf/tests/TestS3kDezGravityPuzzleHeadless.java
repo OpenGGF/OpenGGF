@@ -65,7 +65,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code loc_49986} :96150-96156. The sine of the <em>current</em> angle is taken and the
+     * {@code loc_49986} :96187-96193. The sine of the <em>current</em> angle is taken and the
      * angle is advanced afterwards, so the first update sits at the stored centre. The ROM sine
      * table's first entries are 0, 6, 12, 18, 25, 31 (Levels/Misc/sine.bin), and
      * {@code asr.w #2} floors each of them: 0, 1, 3, 4, 6, 7.
@@ -109,7 +109,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code cmpi.w #$60,d0 / blo.s loc_49A34 / moveq #$40,d0} (:96258-96260). The replacement
+     * {@code cmpi.w #$60,d0 / blo.s loc_49A34 / moveq #$40,d0} (:96263-96265). The replacement
      * is {@code $40}, <em>not</em> the limit: {@code $60 >> 5} would be 3, which is the right
      * column's first panel, so a low player on the left would mark a right-hand panel.
      */
@@ -231,7 +231,7 @@ class TestS3kDezGravityPuzzleHeadless {
     }
 
     /**
-     * {@code tst.b flip_angle(a1) / bne.s loc_498A2} (:96111-96112): a player already part way
+     * {@code tst.b flip_angle(a1) / bne.s loc_498A2} (:96116-96117): a player already part way
      * through a tumble keeps the angle they had rather than restarting it from upright.
      */
     @Test

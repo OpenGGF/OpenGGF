@@ -14,7 +14,6 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -29,7 +28,7 @@ import java.util.List;
  * Obj_AIZGiantRideVine (sonic3k.asm:46789-47003).
  */
 public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
-        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
@@ -162,13 +161,6 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        AbstractPlayableSprite sidekick = firstTrackedSidekick();
-        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
-    }
-
-    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null) {
@@ -278,9 +270,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
         // grab byte at $32/$33 and player fields (docs/skdisasm/sonic3k.asm:
         // 46731-46743). It does not alter the first child; loc_2248A continues
         // to read AIZ_vine_angle on subsequent frames (sonic3k.asm:46880-46894).
-        if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
-            AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
-        }
+        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     private void reserveRomChildSlots() {

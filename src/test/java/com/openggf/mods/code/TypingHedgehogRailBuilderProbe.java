@@ -30,6 +30,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.route.RouteFiles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -179,7 +180,7 @@ class TypingHedgehogRailBuilderProbe {
         // MHZ/DDZ routes were authored on HeadlessTestFixture; the others on GameplayCaptureSession,
         // which omits the initial title card and skips intros (its SOZ tests keep them).
         boolean capture = !route.startsWith("mhz") && !route.startsWith("ddz");
-        return new Target(name, SonicGame.SONIC_3K, "s3k", ROUTES.resolve(route + ".bk2"), true, firstFrame,
+        return new Target(name, SonicGame.SONIC_3K, "s3k", routeMovie(route), true, firstFrame,
                 zone, act, sidekick, emeralds, capture);
     }
 
@@ -1086,5 +1087,24 @@ class TypingHedgehogRailBuilderProbe {
             message += " @" + stack[i].getClassName().replaceAll(".*\\.", "") + ":" + stack[i].getLineNumber();
         }
         return message.replace('\n', ' ');
+    }
+
+    /**
+     * A cold route's movie: its committed {@code .bk2}, or one derived from its route manifest for
+     * routes that carry only {@code .route.json} + {@code .script} (the SSZ1 routes since bdbc4096f).
+     */
+    private static Path routeMovie(String name) {
+        Path bk2 = ROUTES.resolve(name + ".bk2");
+        Path manifest = ROUTES.resolve(name + RouteFiles.MANIFEST_SUFFIX);
+        if (Files.exists(bk2) || !Files.exists(manifest)) {
+            return bk2;
+        }
+        try {
+            Path out = Path.of("target", "route-bk2", name + ".bk2");
+            Files.createDirectories(out.getParent());
+            return RouteFiles.exportBk2(RouteFiles.read(manifest), out);
+        } catch (IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
     }
 }

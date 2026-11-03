@@ -626,7 +626,7 @@ composition delivery remain separate.
 ## Tails Flying-With-Cargo Physics
 
 **Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
-**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27593` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
+**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27633` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
 
@@ -2095,3 +2095,12 @@ only at that section's own `SolidObjectFull` checkpoint. The native return
 clears support without a position lift. See the [frontier evidence](status/trace-frontier-log.md#2026-10-30--dez-staircase-airborne-standing-decision-at-original-row-6797)
 for matched old/new checks and the bounded original-input continuation; expanded
 viewport/donor/roster, whole-act and campaign qualification remain separate.
+
+
+MGZ swinging-platform fractional input (2026-11-03): the fitted slot/angle carry
+table is replaced by the per-link arithmetic in `sub_34074
+(sonic3k.asm:70569-70602)`, with ordinary native input ownership and rewind
+capture. Spring solid reactions precede animation, preserving the fractional
+input on timer-only passes. See the [current discrepancy record](status/s3k-known-bugs.md#mgz-swinging-platform-endpoint-fractional-input-ownership)
+and [MGZ1 coverage](architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03).
+The independent carried-emerald bootstrap remains policy A.

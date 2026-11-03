@@ -487,6 +487,7 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
                     player.setAir(true);
                     // bclr #3,obStatus(a1) - clear player standing-on-object
                     // bclr #3,obStatus(a0) - clear object standing flag
+                    player.setOnObject(false);
                     var objectManager = services().objectManager();
                     if (objectManager != null) {
                         objectManager.clearRidingObject(player);

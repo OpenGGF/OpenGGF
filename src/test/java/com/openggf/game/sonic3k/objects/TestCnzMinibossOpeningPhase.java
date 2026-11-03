@@ -20,13 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * ROM dispatch table at sonic3k.asm:144939:
  * <ul>
  *   <li>routine 6 — duplicate Move slot, entered by
- *       {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144987), where
- *       {@code Obj_CNZMinibossChangeDir} (sonic3k.asm:145000) periodically
+ *       {@code Obj_CNZMinibossCloseGo} (sonic3k.asm:144992), where
+ *       {@code Obj_CNZMinibossChangeDir} (sonic3k.asm:145005) periodically
  *       flips {@code x_vel} via {@code neg.w x_vel(a0)}.</li>
- *   <li>routine 8 — {@code Obj_CNZMinibossOpening} (sonic3k.asm:145006),
+ *   <li>routine 8 — {@code Obj_CNZMinibossOpening} (sonic3k.asm:145011),
  *       Animate_RawMultiDelay body whose animation-complete callback is
- *       {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:145010).</li>
- *   <li>routine A — {@code Obj_CNZMinibossWaitHit} (sonic3k.asm:145019),
+ *       {@code Obj_CNZMinibossOpenGo} (sonic3k.asm:145015).</li>
+ *   <li>routine A — {@code Obj_CNZMinibossWaitHit} (sonic3k.asm:145024),
  *       gates on {@code btst #6,status(a0)}; on hit, {@code loc_6DB4E}
  *       (sonic3k.asm:145025) advances routine to C.</li>
  * </ul>
@@ -76,7 +76,7 @@ class TestCnzMinibossOpeningPhase {
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
         CnzMinibossPhaseFixture.releasedStart(boss, fixture);
-        // ROM dispatch: routine A == Obj_CNZMinibossWaitHit (sonic3k.asm:144959).
+        // ROM dispatch: routine A == Obj_CNZMinibossWaitHit (sonic3k.asm:145024).
         boss.forceRoutineForTest(0xA);
         int routineBefore = boss.getCurrentRoutine();
         for (int i = 0; i < 30; i++) boss.update(i, fixture.sprite());

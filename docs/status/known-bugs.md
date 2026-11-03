@@ -17,6 +17,69 @@ Entries should include:
 
 ---
 
+## Solid on-screen gate: render-pass approximations — 2026-11-02
+
+The gate now reads `render_flags.on_screen` as the previous frame's BuildSprites /
+Render_Sprites pass wrote it, against the camera copy including the screen-shake
+offset ([solid-contact audit](../architecture/audits/2026-10-31-rom-owned-solid-contact.md#a-the-on-screen-gate-reads-the-previous-render-pass)).
+Three parts of that pass are still approximated.
+
+- **Location** — `AbstractObjectInstance.captureRenderFlagOnScreen` /
+  `isWithinSolidContactBounds`, `ObjectManager.refreshPostCameraRenderState`.
+- **Symptom** — none measured; each differs from the ROM only in the case named.
+  1. BuildSprites rewrites the bit only for objects queued through
+     `DisplaySprite` that frame (s2.asm:30560, sonic3k.asm:36378); the engine pass
+     rewrites it for every live, unsuspended object. An object that stops
+     displaying while crossing a screen edge keeps a stale bit in the ROM.
+  2. Multi-sprite objects (`render_flags.multi_sprite`) take S2
+     `BuildSprites_MultiDraw` (s2.asm:30664) / S3K `loc_1AE58`
+     (sonic3k.asm:36481) with `mainspr_width` /
+     `mainspr_height`; the engine tests the object's single render box.
+  3. Before the first pass has seen an object, the gate tests its current render
+     box against the cached camera. That models the level-init BuildSprites for
+     objects present at level start, but a child registered mid-frame into a later
+     slot reads its init `render_flags` (bit 7 clear) in the ROM.
+- **Suspected cause** — the engine has no per-object display queue.
+- **Removal condition** — the render pass consumes the objects' display requests,
+  multi-sprite boxes and a cleared bit for objects created after a pass.
+
+## S2 run-chain ARZ2 level clock runs 26 frames ahead — 2026-11-02
+
+- **Location** — `LevelManager.frameCounter` (the engine's `Level_frame_counter`)
+  across the `s2-sonic-tails-complete-emeralds` chain's `seg12_arz1 -> seg13_arz2`
+  load.
+- **Symptom** — `TestS2CompleteEmeraldRunChain` segment 19 (`seg13_arz2`) first
+  diverges at f4433 `sidekick_x` (ROM `$2B5E`, engine `$2B4D`). The engine clock is
+  `$1152` on row f4419 where the ROM's is `$1138`, so `SwScrl_ARZ`'s ripple index
+  (s2.asm:17712) and the shake it adds to `Camera_Y_pos_copy` are out of phase;
+  the on-screen gate turns the ARZ boss pillar solid for Tails one frame early.
+  The standalone `TestS2Arz2LevelSelectTraceReplay` keeps the clocks in step and
+  is green.
+- **Suspected cause** — the ROM clears the counter before the title card
+  (s2.asm:4773) and increments it only in `Level_MainLoop` (s2.asm:5092); the
+  engine's reload path counts frames the ROM does not (title-card or lag rows)
+  for this act-2 load. Not yet instrumented past the offset.
+- **Removal condition** — the engine clock equals the ROM's
+  `gameplay_frame_counter` column through the chain's ARZ2 segment.
+
+## Bottom kill plane runs the FixBugs branch — 2026-10-31
+
+- **Location:** `PlayableSpriteMovement.doLevelBoundary` and
+  `applyHurtStopBottomKill`, which compute `max(camera maxY, maxY target)`.
+- **Symptom:** shipped S2 `Sonic_Boundary_CheckBottom` (s2.asm:37254-37270) and
+  S3K `Player_Boundary_CheckBottom` (sonic3k.asm:23223-23231) read the live
+  `Camera_Max_Y_pos` alone. Taking the target as well is the S2 `if fixBugs`
+  block, so a player who outruns a lowering boundary survives where the
+  shipped game kills them. The S1 hurt-stop test also differs: it should read
+  only the target (`v_limitbtm2`).
+- **Suspected cause:** removing the expression regresses
+  `TestS2SczLevelSelectTraceReplay`. That suggests the engine's eased
+  `Camera_Max_Y_pos` lags or leads the ROM's somewhere on that route, and the
+  fixed branch hides it. Not yet measured.
+- **Removal condition:** the shipped branch is restored at both kill planes
+  together, with the SCZ trace green because the camera easing that feeds it
+  matches the ROM.
+
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
 **Resolved representative mechanism (2026-10-28):** the first successful native

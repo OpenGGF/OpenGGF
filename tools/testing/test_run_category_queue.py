@@ -790,29 +790,55 @@ with queue.worktree_build_slot(root) as tree_fd:
     def test_normal_cli_opt_out_and_auto_lean_share_the_expected_budget_contract(self):
         from contextlib import nullcontext
         import maven_queue as queue
+        import maven_activity
         import maven_small
+        import run_categories
         with patch.object(queue, 'maven_slot', return_value=nullcontext(None)) as slot, \
-                patch.object(maven_small, 'automatic_lean', return_value=(['bounded', 'test'], {'SMALL': '1'})) as automatic, \
+                patch.object(queue, 'worktree_build_slot', return_value=nullcontext(41)) as tree, \
+                patch.object(maven_activity, 'build_activity_slot', return_value=nullcontext(())), \
+                patch.object(run_categories, 'tree_state', return_value='unchanged'), \
+                patch.object(run_categories, 'validate_preparation_contract') as contract, \
+                patch.object(maven_small, 'automatic_lean', return_value=(['-Dtest=One', 'test', 'bounded'], {'SMALL': '1'})) as automatic, \
+                patch('rom_inputs.rom_args', return_value=[]), \
                 patch('category_artifacts.stop_process_tree'), \
-                patch.object(queue.subprocess, 'Popen') as popen:
+                patch.object(queue.subprocess, 'Popen') as popen, redirect_stdout(StringIO()):
             popen.return_value.__enter__.return_value.wait.return_value = 0
-            self.assertEqual(0, queue.main(['-Dtest=One', 'test']))
+            self.assertEqual(0, queue.main(['-Dtest=One', 'clean', 'test']))
             self.assertTrue(slot.call_args.kwargs['small_job'])
             self.assertEqual((4 * 1024 ** 3, 4), slot.call_args.kwargs['reservation'])
             self.assertEqual('focused-auto-lean', slot.call_args.kwargs['kind'])
-            self.assertEqual(['mvn', 'bounded', 'test'], popen.call_args.args[0])
-            self.assertEqual({'SMALL': '1'}, popen.call_args.kwargs['env'])
+            # One admission, entered with the worktree lease retained from compilation.
+            self.assertEqual(1, slot.call_count)
+            self.assertEqual(41, slot.call_args.kwargs['tree_fd'])
+            self.assertEqual([['mvn', '-Dtest=One', 'clean', 'test-compile'],
+                              ['mvn', '-Dtest=One', 'surefire:test', 'bounded']],
+                             [call.args[0] for call in popen.call_args_list])
+            self.assertEqual([None, {'SMALL': '1'}], [call.kwargs['env'] for call in popen.call_args_list])
             automatic.reset_mock()
+            popen.reset_mock()
+            tree.reset_mock()
             self.assertEqual(0, queue.main(['--normal', '-Dtest=One', 'test']))
             automatic.assert_not_called()
+            tree.assert_not_called()
             self.assertFalse(slot.call_args.kwargs['small_job'])
             self.assertIsNone(slot.call_args.kwargs['reservation'])
             self.assertEqual(['mvn', '-Dtest=One', 'test'], popen.call_args.args[0])
+            # An unsupported lifecycle keeps automatic qualification on the normal lane.
+            contract.side_effect = ValueError('custom bound execution')
+            popen.reset_mock()
+            self.assertEqual(0, queue.main(['-Dtest=One', 'test']))
+            self.assertEqual([['mvn', '-Dtest=One', 'test']], [call.args[0] for call in popen.call_args_list])
+            self.assertIsNone(slot.call_args.kwargs['reservation'])
+            self.assertFalse(slot.call_args.kwargs['small_job'])
+            with self.assertRaisesRegex(ValueError, 'custom bound execution'):
+                queue.main(['--lean', '-Dtest=One', 'test'])
+            contract.side_effect = None
             automatic.return_value = None
-            with patch.object(queue, 'lean_command', return_value=(['bounded', 'test'], {'SMALL': '1'})):
+            with patch.object(queue, 'lean_command', return_value=(['-Dtest=Heavy', 'test', 'bounded'], {'SMALL': '1'})):
                 self.assertEqual(0, queue.main(['--lean', '-Dtest=Heavy', 'test']))
             self.assertFalse(slot.call_args.kwargs['small_job'])
             self.assertEqual((4 * 1024 ** 3, 4), slot.call_args.kwargs['reservation'])
+            self.assertEqual(['mvn', '-Dtest=Heavy', 'surefire:test', 'bounded'], popen.call_args.args[0])
             with self.assertRaisesRegex(ValueError, 'mutually exclusive'):
                 queue.main(['--normal', '--lean', '-Dtest=One', 'test'])
             with self.assertRaisesRegex(ValueError, 'mutually exclusive'):
@@ -1058,9 +1084,14 @@ with queue.worktree_build_slot(root) as tree_fd:
 import json, os, sys, time
 from pathlib import Path
 marker = Path(sys.argv[1])
-if sys.argv[3] == 'yes' and 'test-compile' in sys.argv[4:]:
-    marker.with_suffix('.prepared').touch()
-    sys.exit(0)
+if sys.argv[3] in ('yes', 'lean') and 'test-compile' in sys.argv[4:]:
+    marker.with_suffix('.prepared').write_text(json.dumps({'args': sys.argv[4:], 'pid': os.getpid(),
+                                                          'mavenOpts': os.environ.get('MAVEN_OPTS')}))
+    while marker.with_suffix('.hold-prep').exists():
+        time.sleep(.02)
+    print('preparation output', flush=True)
+    failure = marker.with_suffix('.prep-exit')
+    sys.exit(int(failure.read_text()) if failure.exists() else 0)
 marker.with_suffix('.args').write_text(json.dumps({'cwd': str(Path.cwd()), 'args': sys.argv[4:],
                                                   'mavenOpts': os.environ.get('MAVEN_OPTS')}))
 marker.with_suffix('.started').touch()
@@ -1087,7 +1118,8 @@ original = subprocess.Popen
 marker, fake, code, category, lean, supplied_args = sys.argv[2:]
 def probe(command, *args, **kwargs):
     if command[0] == 'mvn':
-        command = [sys.executable, '-u', '-c', fake, marker, code, category, *command[1:]]
+        command = [sys.executable, '-u', '-c', fake, marker, code,
+                   'lean' if lean == 'yes' else category, *command[1:]]
     return original(command, *args, **kwargs)
 try:
     with queue.handle_termination(), patch.object(subprocess, 'Popen', probe):
@@ -1212,13 +1244,38 @@ except KeyboardInterrupt:
                 last.with_suffix('.release').touch()
                 later.wait(timeout=5)
 
-    def test_lean_cli_passes_bounded_heaps_and_records_its_own_budget(self):
+    def write_pom(self, root=None, build=''):
+        (root or self.linked).joinpath('pom.xml').write_text(
+            '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+            f'{build}</project>')
+
+    def lock_free(self, path, shared=False):
+        """Probe an OS lease from this process, releasing it immediately."""
+        import fcntl
+        with path.open('a+b') as stream:
+            try:
+                fcntl.flock(stream, (fcntl.LOCK_SH if shared else fcntl.LOCK_EX) | fcntl.LOCK_NB)
+            except OSError:
+                return False
+            fcntl.flock(stream, fcntl.LOCK_UN)
+            return True
+
+    def test_lean_cli_compiles_normally_then_runs_prepared_tests_with_bounded_heaps(self):
         from maven_schedule import TOOLING_REVISION
-        process, marker = self.launch_command('lean-cli', lean=True)
+        self.write_pom()
+        rom = '-Ds3k.rom.path=/roms with spaces/S3 & K [!].gen'
+        caller = ['-Dmse=off', '-Dprobe=spaces and $literal', rom, 'clean', 'test']
+        process, marker = self.launch_command('lean-cli', lean=True, args=caller)
         self.wait_started(process, marker)
+        prepared = json.loads(marker.with_suffix('.prepared').read_text())
+        # Compilation is the caller's command and normal Maven environment.
+        self.assertEqual(['-Dtest=TestProbe', *caller[:-1], 'test-compile'], prepared['args'])
+        self.assertEqual(os.environ.get('MAVEN_OPTS'), prepared['mavenOpts'])
         invoked = json.loads(marker.with_suffix('.args').read_text())
         self.assertEqual('-Xmx1g', invoked['mavenOpts'])
-        self.assertIn('-Dprobe=spaces and $literal', invoked['args'])
+        self.assertEqual(['-Dtest=TestProbe', *caller[:3], 'surefire:test'], invoked['args'][:5])
+        self.assertNotIn('clean', invoked['args'])
+        self.assertNotIn('test-compile', invoked['args'])
         self.assertIn('-Dsurefire.argLine=--enable-native-access=ALL-UNNAMED ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g', invoked['args'])
         self.assertIn('-Dsurefire.forkCount=1', invoked['args'])
         self.assertIn('-Dsurefire.reuseForks=true', invoked['args'])
@@ -1230,8 +1287,133 @@ except KeyboardInterrupt:
         output = process.communicate(timeout=5)[0]
         self.assertEqual(0, process.returncode, output)
         self.assertIn('budget 4 GiB/4 cores', output)
-        row = json.loads((self.root / '.git/maven-queue-log.jsonl').read_text())
-        self.assertEqual('focused-lean', row['kind'])
+        self.assertIn('Compiling tests with normal Maven memory', output)
+        rows = (self.root / '.git/maven-queue-log.jsonl').read_text().splitlines()
+        self.assertEqual(['focused-lean'], [json.loads(row)['kind'] for row in rows])
+
+    def test_lean_preparation_failure_launches_and_queues_nothing(self):
+        self.write_pom()
+        marker = Path(self.temp.name) / 'lean-fails'
+        marker.with_suffix('.prep-exit').write_text('5')
+        process, _ = self.launch_command('lean-fails', lean=True, exit_code=0)
+        output = process.communicate(timeout=10)[0]
+        self.assertEqual(5, process.returncode, output)
+        self.assertIn('no tests launched', output)
+        self.assertFalse(marker.with_suffix('.args').exists())
+        self.assertFalse((self.root / '.git/maven-queue-log.jsonl').exists())
+
+    def test_lean_failing_tests_return_their_status(self):
+        self.write_pom()
+        process, marker = self.launch_command('lean-red', lean=True, exit_code=7)
+        self.wait_started(process, marker)
+        marker.with_suffix('.release').touch()
+        output = process.communicate(timeout=5)[0]
+        self.assertEqual(7, process.returncode, output)
+        self.assertIn('probe output', output)
+
+    def test_lean_rejects_lifecycles_it_cannot_split(self):
+        self.write_pom(build='<build><plugins><plugin><artifactId>custom</artifactId><executions><execution>'
+                             '<id>bound</id><phase>process-test-classes</phase><goals><goal>x</goal></goals>'
+                             '</execution></executions></plugin></plugins></build>')
+        process, marker = self.launch_command('lean-bound', lean=True)
+        output = process.communicate(timeout=10)[0]
+        self.assertNotEqual(0, process.returncode)
+        self.assertIn('--lean compiles before its bounded tests', output)
+        self.assertFalse(marker.with_suffix('.prepared').exists())
+        self.assertFalse(marker.with_suffix('.args').exists())
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX flock probes')
+    def test_lean_retains_worktree_across_stages_and_releases_activity_before_queueing(self):
+        self.write_pom()
+        holder, first = self.launch('holder')
+        self.wait_started(holder, first)
+        marker = Path(self.temp.name) / 'lean-staged'
+        marker.with_suffix('.hold-prep').touch()
+        process, _ = self.launch_command('lean-staged', lean=True)
+        tree = self.root / '.git/worktrees/linked/maven-worktree.lock'
+        activity = self.root / '.git/maven-build-activity.lock'
+        deadline = time.monotonic() + 5
+        while not marker.with_suffix('.prepared').exists():
+            self.assertLess(time.monotonic(), deadline, 'preparation did not start')
+            time.sleep(.02)
+        # Compiling: own tree and shared build activity, but no test admission request.
+        self.assertFalse(self.lock_free(tree))
+        self.assertFalse(self.lock_free(activity))
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+        competitor, rival = self.launch_command('competitor', args=['compile'])
+        # Ignored build output and Git metadata are not source edits.
+        (self.linked / 'target').mkdir(exist_ok=True)
+        (self.linked / 'target/generated.txt').write_text('output')
+        (self.root / '.git/probe-output.txt').write_text('output')
+        marker.with_suffix('.hold-prep').unlink()
+        self.wait_queued(1)
+        time.sleep(.3)
+        self.assertEqual(1, len(list((self.root / '.git/maven-waiters').glob('*.request'))))
+        self.assertTrue(self.lock_free(activity))
+        self.assertFalse(self.lock_free(tree))
+        self.assertFalse(rival.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(process, marker)
+        self.assertFalse(rival.with_suffix('.started').exists())
+        marker.with_suffix('.release').touch()
+        output = process.communicate(timeout=5)[0]
+        self.assertEqual(0, process.returncode, output)
+        self.wait_started(competitor, rival)
+        rival.with_suffix('.release').touch()
+        self.assertEqual(0, competitor.wait(timeout=5))
+
+    def test_lean_source_edits_during_preparation_or_admission_launch_no_tests(self):
+        self.write_pom()
+        for stage in ('preparation', 'admission'):
+            with self.subTest(stage=stage):
+                holder, first = self.launch(f'holder-{stage}')
+                self.wait_started(holder, first)
+                marker = Path(self.temp.name) / f'lean-edit-{stage}'
+                marker.with_suffix('.hold-prep').touch()
+                process, _ = self.launch_command(f'lean-edit-{stage}', lean=True)
+                deadline = time.monotonic() + 5
+                while not marker.with_suffix('.prepared').exists():
+                    self.assertLess(time.monotonic(), deadline, 'preparation did not start')
+                    time.sleep(.02)
+                if stage == 'preparation':
+                    (self.linked / 'Edited.java').write_text('edited while compiling')
+                    marker.with_suffix('.hold-prep').unlink()
+                else:
+                    marker.with_suffix('.hold-prep').unlink()
+                    self.wait_queued(1)
+                    (self.linked / 'Edited.java').write_text('edited while waiting')
+                    first.with_suffix('.release').touch()
+                output = process.communicate(timeout=10)[0]
+                # The CLI maps this ValueError to exit 2; this launcher exits 1.
+                self.assertNotEqual(0, process.returncode, output)
+                self.assertIn(f'Working tree changed {"during test preparation" if stage == "preparation" else "while waiting for test admission"}', output)
+                self.assertFalse(marker.with_suffix('.args').exists())
+                first.with_suffix('.release').touch()
+                holder.wait(timeout=5)
+                (self.linked / 'Edited.java').unlink()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX SIGTERM and process-group contract')
+    def test_cancelling_lean_preparation_reaps_compiler_and_releases_worktree(self):
+        self.write_pom()
+        marker = Path(self.temp.name) / 'lean-cancel'
+        marker.with_suffix('.hold-prep').touch()
+        process, _ = self.launch_command('lean-cancel', lean=True)
+        deadline = time.monotonic() + 5
+        while not marker.with_suffix('.prepared').exists():
+            self.assertLess(time.monotonic(), deadline, 'preparation did not start')
+            time.sleep(.02)
+        compiler = json.loads(marker.with_suffix('.prepared').read_text())['pid']
+        process.terminate()
+        output = process.communicate(timeout=15)[0]
+        self.assertEqual(130, process.returncode, output)
+        with self.assertRaises(ProcessLookupError):
+            os.kill(compiler, 0)
+        self.assertFalse(marker.with_suffix('.args').exists())
+        later, last = self.launch_command('after-lean-cancel', args=['compile'])
+        self.wait_started(later, last)
+        last.with_suffix('.release').touch()
+        self.assertEqual(0, later.wait(timeout=5))
 
     def test_maven_wrapper_waits_for_same_slot_preserves_args_cwd_output_and_failure(self):
         holder, first = self.launch('holder')
@@ -1275,11 +1457,11 @@ except KeyboardInterrupt:
         marker.with_suffix('.release').touch()
         output = command.communicate(timeout=5)[0]
         self.assertEqual(0, command.returncode, output)
-        self.assertIn('Selected checks passed', output)
+        self.assertIn('VERDICT PASSED', output)
         self.assertIn('Waiting', output)
-        runs = list((self.linked / 'target/category-tests').iterdir())
-        self.assertEqual(1, len(runs))
-        self.assertEqual('passed', json.loads((runs[0] / 'status.json').read_text())['status'])
+        # The CLI consumes a passing result through its verdict and leaves nothing to acknowledge.
+        self.assertIn('Passing diagnostics removed.', output)
+        self.assertFalse((self.linked / 'target/category-tests').exists())
         self.assertFalse((self.linked / 'target/category-tests-last-broad.json').exists())
         self.assertEqual('not a new queue lock', (legacy / 'task.lock').read_text())
 

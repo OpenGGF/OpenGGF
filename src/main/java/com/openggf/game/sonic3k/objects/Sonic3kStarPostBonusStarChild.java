@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 /**
  * S3K bonus star child - spirals around StarPost when player has 20+ rings.
  * <p>
- * ROM: sub_2D3C8 (sonic3k.asm line 61868) creates 4 star children,
+ * ROM: sub_2D3C8 (sonic3k.asm line 61873) creates 4 star children,
  * loc_2D47E (routine 8) handles their orbital motion and collision.
  * <p>
  * Setup (sub_2D3C8):

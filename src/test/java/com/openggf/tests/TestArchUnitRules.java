@@ -198,6 +198,19 @@ class TestArchUnitRules {
             // any runtime dependency back on editor or the offline capture tool.
             "editor -> stageplay",
             "tools -> stageplay",
+            // Route tapes (shared route planner, 2026-11-02): the core owns the lossless row
+            // codec and script grammar at the controller boundary, so it reads the recorded
+            // input records. tools composes the engine host and the authoring front-ends; the
+            // core never reaches the gameplay runtime.
+            "route -> debug",
+            "route -> game",
+            // Point goals steer through the one numeric owner, NativeRouteSteering.
+            "route -> sprites",
+            "tools -> route",
+            // The trusted engine route host reads native facing (physics.Direction) into samples.
+            "tools -> physics",
+            // Both editors present route tapes through the planner facade and value types only.
+            "editor -> route",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",
@@ -207,6 +220,8 @@ class TestArchUnitRules {
             "stageplay -> graphics",
             "stageplay -> level",
             "stageplay -> sprites",
+            // Frozen input tracks reach the live world through the lossless recorded-input conversion.
+            "stageplay -> debug",
             // Only the bounded world presenter consumes the shared FBO binding helper.
             "stageplay -> util",
             "game -> architecture",
@@ -755,6 +770,9 @@ class TestArchUnitRules {
             case "com.openggf.editor.stageplay.StageplayWorkspace" -> Set.of(
                     "com.openggf.tools.StageplayScriptCompiler",
                     "com.openggf.tools.StageplayScriptDecompiler").contains(target);
+            // Route tape jobs speak the isolated worker's line protocol; the worker owns the host.
+            case "com.openggf.editor.route.RouteTapeJob" -> target.equals("com.openggf.tools.RouteEditorProtocol")
+                    || target.startsWith("com.openggf.tools.RouteEditorProtocol$");
             case "com.openggf.editor.project.EditorProjectRuntimeModule" -> Set.of(
                     "com.openggf.mods.code.ModLevelExportStagingValidator",
                     "com.openggf.mods.code.AuthoredStageplayServices",
@@ -784,7 +802,9 @@ class TestArchUnitRules {
             // runtime player, mutable document or playback service is admitted here.
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayMenuPresentation",
                     Set.of("com.openggf.stageplay.StageplayDocument$PuppetCommandKind")),
-            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech")),
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult", "com.openggf.stageplay.StageplaySpeech",
+                    // Frozen input rows open in the route tape editor through Stageplay's own translation.
+                    "com.openggf.stageplay.route.StageplayRoutes")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayObjectAuthoring", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayObjectCatalog", "com.openggf.stageplay.runtime.StageplayObjectInspection")),
             java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
             java.util.Map.entry("com.openggf.tools.StageplayTool", Set.of("com.openggf.stageplay.StageplayGround", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayLiveWorld", "com.openggf.stageplay.StageplaySpeech")),
@@ -801,7 +821,8 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplaySpeechSynth", Set.of("audio")),
             java.util.Map.entry("com.openggf.stageplay.StageplayPlayback", Set.of("audio", "control", "data", "game", "graphics", "io", "level", "mods")),
             java.util.Map.entry("com.openggf.stageplay.StageplayObjectCatalog", Set.of("game", "level")),
-            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayLiveWorld", Set.of("audio", "camera", "configuration", "control", "data", "game", "graphics", "level", "mods", "physics", "sprites")),
+            // Frozen input tracks: route rows through the recorded-input conversion (route, debug).
+            java.util.Map.entry("com.openggf.stageplay.runtime.StageplayLiveWorld", Set.of("audio", "camera", "configuration", "control", "data", "debug", "game", "graphics", "level", "mods", "physics", "route", "sprites")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayOfflinePreview", Set.of("audio", "data", "game", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayAudio", Set.of("audio", "data", "game", "io", "mods")),
             java.util.Map.entry("com.openggf.stageplay.runtime.StageplayGroundSurvey", Set.of("physics", "sprites")),
@@ -826,7 +847,15 @@ class TestArchUnitRules {
             java.util.Map.entry("com.openggf.stageplay.route.StageplayObjectRoutePlanner", Set.of("level", "physics")),
             java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteAssets", Set.of("io")),
             java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteInputs", Set.of("data")),
-            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutePlanner", Set.of("game", "level", "mods", "sprites")));
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutePlanner", Set.of("game", "level", "mods", "route", "sprites")),
+            // Stageplay's route front-end (shared route planner, 2026-11-02): probe and scene hosts,
+            // track/tape translation and the shot checks on the qualification replay.
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteHosts", Set.of("game", "level", "mods", "physics", "route", "sprites")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRoutes", Set.of("route")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayShotChecks", Set.of("game", "level", "route", "sprites")),
+            // One numeric steering owner: the live command kernel delegates to NativeRouteSteering.
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayRouteSteering", Set.of("sprites")),
+            java.util.Map.entry("com.openggf.stageplay.route.StageplayMovementIntent", Set.of("sprites")));
 
     private static boolean approvedStageplayConsumer(String origin, String target) {
         if (typeOrNested(origin, "com.openggf.mods.code.AuthoredStageplayServices"))

@@ -104,7 +104,7 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
     /**
      * Collision box half-width = 16 pixels.
      * <p>
-     * ROM Reference: Touch_Sizes[0x0A] at s2.asm line 84574
+     * ROM Reference: Touch_Sizes[0x0A] at s2.asm line 85271
      * Touch_Sizes values are half-width, half-height = $10, 8 = 32x16 total box.
      */
     private static final int COLLISION_HALF_WIDTH = 16;
@@ -112,7 +112,7 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
     /**
      * Collision box half-height = 8 pixels.
      * <p>
-     * ROM Reference: Touch_Sizes[0x0A] at s2.asm line 84574
+     * ROM Reference: Touch_Sizes[0x0A] at s2.asm line 85271
      */
     private static final int COLLISION_HALF_HEIGHT = 8;
 

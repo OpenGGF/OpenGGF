@@ -56,7 +56,8 @@ public record TraceMetadata(
     @JsonProperty("bonus_stage_type") String bonusStageType,
     @JsonProperty("fresh_load") Boolean freshLoad,
     @JsonProperty("v_int_run_count") Integer vIntRunCount,
-    @JsonProperty("level_entry_placement_source") String levelEntryPlacementSourceWire
+    @JsonProperty("level_entry_placement_source") String levelEntryPlacementSourceWire,
+    @JsonProperty("last_star_post_hit") Integer lastStarPostHit
 ) {
     private static final List<String> REMOVED_VERSION_FIELDS = List.of(
             "lua_script_version", "csv_version", "ss_csv_version",
@@ -88,6 +89,17 @@ public record TraceMetadata(
      */
     public LevelEntryPlacementSource levelEntryPlacementSource() {
         return LevelEntryPlacementSource.fromWire(levelEntryPlacementSourceWire);
+    }
+
+    /**
+     * The raw star-post byte ({@code Last_star_post_hit} {@code $FFFE2A} in S3K,
+     * {@code Last_star_pole_hit} {@code $FFFE30} in S2/KiS2) the recorder latched
+     * at the first PreLevel frame of this segment's load; {@code null} when not
+     * recorded. Bit 7 marks a special-stage return; loc_9D02 (sonic3k.asm:12708-12712) sets it. It is carried run
+     * state, consumed only by the segment-entry import.
+     */
+    public Integer lastStarPostHit() {
+        return lastStarPostHit;
     }
 
     /** Whether the fixture includes frame-zero native-prelude evidence. */
@@ -505,6 +517,12 @@ public record TraceMetadata(
             if (traceSchema == null || !traceSchema.isInt() || traceSchema.intValue() != 5) {
                 throw new IllegalArgumentException(metadataFile.getFileName()
                         + ": trace_schema must be integer 5");
+            }
+            JsonNode starPost = root.get("last_star_post_hit");
+            if (starPost != null && (!starPost.isInt()
+                    || starPost.intValue() < 0 || starPost.intValue() > 0xFF)) {
+                throw new IllegalArgumentException(metadataFile.getFileName()
+                        + ": last_star_post_hit must be an integer byte");
             }
             JsonNode placement = root.get("level_entry_placement_source");
             if (placement != null && !placement.isTextual()) {

@@ -48,7 +48,7 @@ class TestS3kDezBumperWallHeadless {
     }
 
     /**
-     * {@code loc_497C2} :96029-96031 for subtype 0, and {@code loc_49804} :96059-96063 for a
+     * {@code loc_497C2} :96034-96036 for subtype 0, and {@code loc_49804} :96059-96063 for a
      * positive one, where {@code height_pixels} is the subtype itself (:96014) and
      * {@code d3 = d2 + 1}.
      */
@@ -77,7 +77,7 @@ class TestS3kDezBumperWallHeadless {
     }
 
     /**
-     * {@code loc_497AE} / {@code loc_497B4} :96020-96027. A negative subtype is the full-height
+     * {@code loc_497AE} / {@code loc_497B4} :96025-96032. A negative subtype is the full-height
      * wall plus one test: {@code cmpi.b #$3F,(MHZ_pollen_counter).w}, and only all six panel
      * bits move it to {@code $7F00}.
      */

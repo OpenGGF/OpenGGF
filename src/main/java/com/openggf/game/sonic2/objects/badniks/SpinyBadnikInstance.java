@@ -24,7 +24,7 @@ import java.util.List;
  *
  * Behavior from s2.asm disassembly (ObjA5, s2.asm:75909-75976):
  * - Patrol: Moves at x_vel = -0x40, reverses every 0x80 frames (128)
- * - Detection: ROM Obj_GetOrientationToPlayer (s2.asm:72320-72346) picks the
+ * - Detection: ROM Obj_GetOrientationToPlayer (s2.asm:72949-72975) picks the
  *   closest player by |x_pos delta| (MainCharacter vs Sidekick), then computes
  *   d2 = obj.x - player.x. The Spiny test (s2.asm:75939-75941) is:
  *       addi.w #$60, d2
@@ -131,7 +131,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     /**
-     * Mirrors ROM loc_38B10 (s2.asm:75930-75953). The order is critical for
+     * Mirrors ROM loc_38B10 (s2.asm:76560-76583). The order is critical for
      * matching ROM timing of attack entry:
      *   1. If lockout non-zero, decrement and skip to step 4 (movement).
      *   2. Otherwise run detection against the closest player. If in range,
@@ -161,7 +161,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
 
         // Step 3: decrement direction timer (objoff_2A), possibly reverse x_vel.
-        // ROM loc_38B2C (s2.asm:76379-76383): subq.b #1,objoff_2A ; bne + ;
+        // ROM loc_38B2C (s2.asm:76586-76590): subq.b #1,objoff_2A ; bne + ;
         // move.w #$80,objoff_2A ; neg.w x_vel. The reversal's `move.w #$80` is
         // the same word-write quirk as Init: it reseeds objoff_2A's reversal
         // period to 256 AND reseeds objoff_2B (attackLockout) to $80 (128),
@@ -255,7 +255,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     private void fireSpike(AbstractPlayableSprite player) {
-        // ROM loc_38C22 (s2.asm:76050-76070): spike spawned at the Spiny's
+        // ROM loc_38C22 (s2.asm:76680-76700): spike spawned at the Spiny's
         // x_pos/y_pos, y_vel = -0x300, x_vel = +/-0x100 toward MainCharacter
         // (NOT the closest player). ROM cmp.w x_pos(a2),d0 ; blo.s + ; neg.w d1
         // where d0 = obj.x, a2 = MainCharacter. The engine passes MainCharacter

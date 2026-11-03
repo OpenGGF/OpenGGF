@@ -29,7 +29,7 @@ import java.util.List;
  * Walks back and forth on platforms, detects the player, and throws
  * its pincers as homing projectiles.
  *
- * Based on disassembly ObjA1 (s2.asm:75322).
+ * Based on disassembly ObjA1 (s2.asm:75969).
  *
  * State machine:
  *   Routine 0 (INIT): Set velocity, radius, transition to WALKING
@@ -132,7 +132,7 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance implements Rewi
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             // Routine 0 -> 2 transition consumes a frame without moving, matching
-            // ObjA1_Init's addq.b #2,routine then rts (s2.asm:75777-75788).
+            // ObjA1_Init's addq.b #2,routine then rts (s2.asm:75975-75986).
             case INIT -> state = State.WALKING;
             case WALKING -> updateWalking(player);
             case EDGE_WAIT -> updateEdgeWait();

@@ -23,7 +23,7 @@ import java.util.List;
  * Shellcracker's claw piece (ObjA0) - spawned dynamically by the Shellcracker body.
  * 8 pieces are spawned to form the extending arm.
  *
- * Based on disassembly ObjA0 (s2.asm:75106).
+ * Based on disassembly ObjA0 (s2.asm:75753).
  *
  * Piece index (objoff_2E): 0 = first piece (closest to body), 2,4,...14 = successive pieces.
  * The claw extends outward and retracts. Piece 0 signals the parent when done.
@@ -39,7 +39,7 @@ import java.util.List;
  */
 public class ShellcrackerClawInstance extends AbstractObjectInstance
         implements TouchResponseProvider, RewindRecreatable {
-    // From ObjA0_SubObjData (s2.asm:75308): collision_flags = $9A
+    // From ObjA0_SubObjData (s2.asm:75951): collision_flags = $9A
     // = 0x80 (HURT category) | $1A (x_radius=$C → size index $1A).
     // The claw hurts the player every frame it exists (ENEMY/HURT poll rule —
     // no consumed-once "already hit" latch).

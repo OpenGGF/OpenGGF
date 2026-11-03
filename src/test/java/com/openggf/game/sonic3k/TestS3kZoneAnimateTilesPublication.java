@@ -383,7 +383,7 @@ class TestS3kZoneAnimateTilesPublication {
 
     @Test
     void hcz1BeyondSixtyLinesKeepsTheLastComposedStrip() throws IOException {
-        // addi.w #$60 / bcc loc_2797A (sonic3k.asm:54041-54042, 54082-54084): past +-$60 the routine
+        // addi.w #$60 / bcc loc_2797A (sonic3k.asm:54107-54108, 54107-54109): past +-$60 the routine
         // queues nothing and VRAM keeps the strip composed on the last pass inside the range.
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();

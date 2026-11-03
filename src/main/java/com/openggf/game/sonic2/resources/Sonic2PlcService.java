@@ -24,6 +24,14 @@ public final class Sonic2PlcService
     public static final String REWIND_KEY = "sonic2-plc-service";
     private static final int SAFE_QUEUE_CAPACITY = 15;
 
+    /** A submission can be retried after the existing FIFO work drains; no work was committed. */
+    public static final class QueueCapacityException extends IllegalStateException {
+        private QueueCapacityException() {
+            super("Sonic 2 PLC queue cannot use the retail-retained sixteenth slot");
+        }
+    }
+
+
     private final Rom rom;
     private final int tableAddress;
     private final NemesisPlcServiceQueue queue;
@@ -76,7 +84,7 @@ public final class Sonic2PlcService
             submissions.add(submission);
         }
         if (descriptorCount > SAFE_QUEUE_CAPACITY) {
-            throw new IllegalStateException("Sonic 2 PLC queue cannot use the retail-retained sixteenth slot");
+            throw new QueueCapacityException();
         }
         return new PreparedAppendBatch(List.copyOf(submissions));
     }
@@ -105,7 +113,7 @@ public final class Sonic2PlcService
                 case REPLACE -> { if (active) throw new IllegalStateException("cannot mutate queued PLC entries while the decoder is active"); occupied = submission.definition().entries().size(); }
                 case APPEND -> occupied += submission.definition().entries().size();
             }
-            if (occupied > SAFE_QUEUE_CAPACITY) throw new IllegalStateException("Sonic 2 PLC queue cannot use the retail-retained sixteenth slot");
+            if (occupied > SAFE_QUEUE_CAPACITY) throw new QueueCapacityException();
             prepared.add(new PreparedOperation(operation.kind(), submission));
         }
         for (PreparedOperation operation : prepared) {
@@ -214,7 +222,7 @@ public final class Sonic2PlcService
 
     private void requireAppendFits(PlcDefinition definition) {
         if (occupiedDescriptorCount() + definition.entries().size() > SAFE_QUEUE_CAPACITY) {
-            throw new IllegalStateException("Sonic 2 PLC queue cannot use the retail-retained sixteenth slot");
+            throw new QueueCapacityException();
         }
     }
 

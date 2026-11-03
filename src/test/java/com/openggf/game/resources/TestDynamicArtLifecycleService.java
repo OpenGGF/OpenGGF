@@ -1,6 +1,5 @@
 package com.openggf.game.resources;
 
-import com.openggf.game.GameId;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.TileLoadRequest;
 import org.junit.jupiter.api.Test;
@@ -13,18 +12,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestDynamicArtLifecycleService {
+    private static final PlayerArtTransferPlan PLAYER_ART_1 =
+            new com.openggf.game.sonic1.Sonic1GameModule().getGameService(PlayerArtTransferPlan.class);
+    private static final PlayerArtTransferPlan PLAYER_ART_2 =
+            new com.openggf.game.sonic2.Sonic2GameModule().getGameService(PlayerArtTransferPlan.class);
+
 
     @Test
     void selectedSourceBanksStaySessionOwnedThroughRewind() {
         DynamicArtLifecycleService revision00 = new DynamicArtLifecycleService(
-                (game, owner, address) -> game == GameId.S1 && owner.equals("sonic")
-                        ? 0x21AFE : address);
-        DynamicArtLifecycleService revision01 = new DynamicArtLifecycleService();
+                new PlayerArtTransferPlan(java.util.Map.of("sonic",
+                        new PlayerArtBank(0x21AFE, 0xF000, 0xC800, 0x2E0, -1)),
+                        PlayerArtTransferPlan.TransferModel.STAGED_FOR_VINT));
+        DynamicArtLifecycleService revision01 = new DynamicArtLifecycleService(PLAYER_ART_1);
         var frame = new SpriteDplcFrame(List.of(new TileLoadRequest(2, 3)));
         for (var service : List.of(revision00, revision01)) {
             service.beginRun();
             service.openComparisonSegment();
-            service.observePlayerDplc(GameId.S1, "sonic", 1, frame);
+            service.observePlayerDplc("sonic", 1, frame);
         }
         var saved00 = revision00.capture();
         revision01.serviceProductionVBlank();
@@ -43,10 +48,10 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void rewindRestoresUnclaimedPreMainLoopTransferBoundary() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_1);
         service.beginRun();
         service.setMovieLogicalFrame(100);
-        service.observePlayerDplc(GameId.S1, "sonic", 1,
+        service.observePlayerDplc("sonic", 1,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(0, 3))));
         service.holdPendingPlayerPreparationForPreMainLoopTail(26);
         var original = service.capture();
@@ -65,16 +70,17 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void convertedBankAggregatesDisjointRunsAndRewindsPendingDma() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(new PlayerArtTransferPlan(
+                java.util.Map.of("knuckles", new PlayerArtBank(-1, 0xF000, -1, 0, 0xFFF100)),
+                PlayerArtTransferPlan.TransferModel.QUEUED_FOR_VBLANK));
         startOpen(service);
-        var bank = new PlayerArtTransferProfile.ConvertedBank(0xFFF100, 0xF000);
         var frame = new SpriteDplcFrame(List.of(
                 new TileLoadRequest(7, 3), new TileLoadRequest(90, 2)));
-        var update = service.observePlayerDplc(GameId.S2, "knuckles", 4, frame,
-                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank);
+        var update = service.observePlayerDplc("knuckles", 4, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT);
         assertEquals(frame.requests(), update.tileRequests(), "renderer retains ROM tile selection");
-        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 4, frame,
-                DynamicArtLifecycleService.DecisionKind.DIRECT_PART2, bank).submitted());
+        assertFalse(service.observePlayerDplc("knuckles", 4, frame,
+                DynamicArtLifecycleService.DecisionKind.DIRECT_PART2).submitted());
         var saved = service.capture();
         var submitted = service.publishRow(0, false);
         var expected = List.of(DynamicArtDiagnosticsSnapshot.Request.ram(0xFFF100, 0xF000, 160));
@@ -83,8 +89,8 @@ class TestDynamicArtLifecycleService {
         service.serviceProductionVBlank();
         assertEquals(expected, service.publishRow(1, false).edges().getFirst().requests());
         service.restore(saved);
-        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 4, frame,
-                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+        assertFalse(service.observePlayerDplc("knuckles", 4, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT).submitted());
         service.serviceProductionVBlank();
         var replayed = service.publishRow(0, false);
         assertEquals(List.of("submitted", "completed"), replayed.edges().stream()
@@ -94,16 +100,17 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void convertedBankHoldAndPrimePreserveOriginalRequestsAndSharedSpecialStageDedup() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(new PlayerArtTransferPlan(
+                java.util.Map.of("knuckles", new PlayerArtBank(-1, 0xF000, -1, 0, 0xFFF100)),
+                PlayerArtTransferPlan.TransferModel.QUEUED_FOR_VBLANK));
         startOpen(service);
-        var bank = new PlayerArtTransferProfile.ConvertedBank(0xFFF100, 0xF000);
         var frame = new SpriteDplcFrame(List.of(new TileLoadRequest(12, 2), new TileLoadRequest(3, 1)));
-        assertEquals(frame.requests(), service.primePlayerDplc(GameId.S2, "knuckles", 1, frame, bank).tileRequests());
-        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 1, frame,
-                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+        assertEquals(frame.requests(), service.primePlayerDplc("knuckles", 1, frame).tileRequests());
+        assertFalse(service.observePlayerDplc("knuckles", 1, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT).submitted());
         service.holdPlayerArtDuringLevelEntryLoad();
-        assertEquals(frame.requests(), service.observePlayerDplc(GameId.S2, "knuckles", 2, frame,
-                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).tileRequests());
+        assertEquals(frame.requests(), service.observePlayerDplc("knuckles", 2, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT).tileRequests());
         var held = service.capture();
         service.releasePlayerArtHeldDuringLevelEntryLoad();
         assertEquals(List.of(DynamicArtDiagnosticsSnapshot.Request.ram(0xFFF100, 0xF000, 96)),
@@ -112,25 +119,25 @@ class TestDynamicArtLifecycleService {
         service.releasePlayerArtHeldDuringLevelEntryLoad();
         assertEquals(1, service.publishRow(0, false).edges().size());
         service.primeDplcDedupBaseline("ss-knuckles", 3);
-        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 3, frame,
-                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
-        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 4,
-                new SpriteDplcFrame(List.of()), DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+        assertFalse(service.observePlayerDplc("knuckles", 3, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT).submitted());
+        assertFalse(service.observePlayerDplc("knuckles", 4,
+                new SpriteDplcFrame(List.of()), DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT).submitted());
     }
 
     @Test
     void freshPlayablePrimeUpdatesTheDedupeBankWithoutPublishingAnEdge() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_1);
         startOpen(service);
         SpriteDplcFrame frame = new SpriteDplcFrame(
                 List.of(new TileLoadRequest(0, 3)));
 
         DynamicArtLifecycleService.ArtUpdate prime =
                 service.primePlayerDplc(
-                        GameId.S1, "sonic", 1, frame);
+                        "sonic", 1, frame);
         DynamicArtLifecycleService.ArtUpdate repeated =
                 service.observePlayerDplc(
-                        GameId.S1, "sonic", 1, frame);
+                        "sonic", 1, frame);
         service.finishProductionIteration(false);
 
         assertTrue(prime.mappingChanged());
@@ -141,7 +148,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void consumedDestinationRowsAdvanceOnlyTheComparisonCursor() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         int movieFrameBefore = service.gapSnapshot().movieLogicalFrame();
 
@@ -156,7 +163,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void reservedComparisonSegmentOwnsGenerationBeforeActivation() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         service.finishProductionIteration(false);
         service.closeComparisonSegment();
@@ -185,7 +192,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void reservedComparisonSegmentRejectsInvalidTransitionsAtomically() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         service.beginRun();
         service.reserveComparisonSegment();
         long generation = service.latestSnapshot().segmentGeneration();
@@ -206,7 +213,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void cancellingAndRewindingReservedComparisonSegmentNeverPublishesIt() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         service.beginRun();
         service.reserveComparisonSegment();
         DynamicArtLifecycleService.RewindState reserved = service.capture();
@@ -239,7 +246,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void duplicateAndEmptyDplcsAdvanceTheOwnerCursorWithoutSubmittingWork() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
 
         DynamicArtLifecycleService.ArtUpdate empty =
@@ -263,7 +270,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void multipleDplcRunsRemainOneOrderedSubmissionBatch() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
 
         DynamicArtLifecycleService.ArtUpdate update =
@@ -285,7 +292,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void completionIsPublishedOnlyAfterRuntimeArtApplication() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate update =
                 service.observeRomDplc("sonic", 4,
@@ -303,7 +310,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void sonicOneCompletionUsesThePhysicalStagingTransfer() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate update =
                 service.observeRomDplc("sonic", 4,
@@ -322,7 +329,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void specialStageRamOwnersHaveIndependentDuplicateCursors() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
 
         DynamicArtLifecycleService.ArtUpdate sonic =
@@ -348,7 +355,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void lagRowsKeepThePublishedLedgerAndForwardEdgesToTheNextNonLagRow() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate update =
                 service.observeRomDplc("sonic", 1,
@@ -367,7 +374,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void terminalPublicationForwardsBufferedEdgesOnTheFinalRow() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         service.observeRomDplc("sonic", 1,
                 List.of(new TileLoadRequest(0, 1)), SONIC_ART, SONIC_VRAM);
@@ -381,10 +388,10 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void terminalVblankCompletionExtendsTheLastPublishedRow() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate pending =
-                service.observePlayerDplc(GameId.S2, "sonic", 1,
+                service.observePlayerDplc("sonic", 1,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
         service.finishProductionIteration(false);
 
@@ -411,9 +418,9 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void terminalVblankLeavesStagedArtUnsubmitted() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_1);
         startOpen(service);
-        service.observePlayerDplc(GameId.S1, "sonic", 1,
+        service.observePlayerDplc("sonic", 1,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
         service.finishProductionIteration(false);
 
@@ -430,7 +437,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void closingCannotInventATerminalRowBeforeAnyProductionIteration() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         service.observeRomDplc("sonic", 1,
                 List.of(new TileLoadRequest(0, 1)), SONIC_ART, SONIC_VRAM);
@@ -441,17 +448,17 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void abandoningUnpublishedWindowPreservesProductionIdentityAndPendingWork() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate pending = service.observeRamDplc(
-                GameId.S2, "sonic", 1,
+                "sonic", 1,
                 List.of(new TileLoadRequest(0, 1)), 0x1000, SONIC_VRAM);
 
         service.abandonComparisonSegment();
 
         assertFalse(service.isComparisonSegmentOpen());
         assertFalse(service.observeRamDplc(
-                GameId.S2, "sonic", 1,
+                "sonic", 1,
                 List.of(new TileLoadRequest(0, 1)), 0x1000, SONIC_VRAM)
                 .submitted(), "mapping identity must prevent duplicate submission");
         assertEquals(List.of(pending.transferId()),
@@ -464,7 +471,7 @@ class TestDynamicArtLifecycleService {
                 "pre-abort pending work must retire at its normal VBlank");
         service.openComparisonSegment();
         DynamicArtLifecycleService.ArtUpdate next = service.observeRamDplc(
-                GameId.S2, "sonic", 2,
+                "sonic", 2,
                 List.of(new TileLoadRequest(1, 1)), 0x1000, SONIC_VRAM);
         assertEquals(pending.transferId() + 1, next.transferId(),
                 "abandon must preserve stable monotonic transfer identities");
@@ -472,7 +479,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void comparisonSegmentOpenRejectsPendingWorkSubmittedByPriorSegment() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         service.observeRomDplc("sonic", 1,
                 List.of(new TileLoadRequest(0, 1)), SONIC_ART, SONIC_VRAM);
@@ -490,7 +497,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void rewindRestoresLedgerBufferAndPublicationCursorTogether() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate first =
                 service.observeRomDplc("sonic", 1,
@@ -509,7 +516,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void deliverySerialSurvivesRewindAndAdvancesOnRepublish() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         DynamicArtLifecycleService.RewindState beforePublication =
                 service.capture();
@@ -534,7 +541,7 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void deliverySerialSurvivesFinishBeginAndFirstPublication() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(null);
         startOpen(service);
         DynamicArtDiagnosticsSnapshot first = service.publishRow(0, false);
         service.closeComparisonSegment();
@@ -551,14 +558,14 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void s2PendingBatchesCompleteFifoAtTheNextProductionVblank() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         startOpen(service);
 
         DynamicArtLifecycleService.ArtUpdate sonic =
-                service.observePlayerDplc(GameId.S2, "sonic", 1,
+                service.observePlayerDplc("sonic", 1,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
         DynamicArtLifecycleService.ArtUpdate tails =
-                service.observePlayerDplc(GameId.S2, "tails", 2,
+                service.observePlayerDplc("tails", 2,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(3, 2))));
         DynamicArtDiagnosticsSnapshot submitted =
                 service.publishRow(0, false);
@@ -570,7 +577,7 @@ class TestDynamicArtLifecycleService {
                 submitted.outstandingTransferIds());
 
         service.serviceProductionVBlank();
-        service.observePlayerDplc(GameId.S2, "sonic", 3,
+        service.observePlayerDplc("sonic", 3,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(7, 1))));
         DynamicArtDiagnosticsSnapshot next = service.publishRow(1, false);
 
@@ -584,10 +591,10 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void terminalTransferCompletesInClosedGapAndNextSegmentCanOpen() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         startOpen(service);
         DynamicArtLifecycleService.ArtUpdate terminal =
-                service.observePlayerDplc(GameId.S2, "sonic", 1,
+                service.observePlayerDplc("sonic", 1,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
         service.publishRow(0, false);
         service.closeComparisonSegment();
@@ -604,10 +611,10 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void unpublishedS1PreparationSurvivesArmAndPromotesAtVblank() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_1);
         service.beginRun();
         DynamicArtLifecycleService.ArtUpdate pending =
-                service.observePlayerDplc(GameId.S1, "sonic", 48,
+                service.observePlayerDplc("sonic", 48,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(700, 16))));
 
         assertFalse(pending.submitted());
@@ -628,12 +635,12 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void s1PreparationReplacementIsRewindAtomic() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_1);
         service.beginRun();
-        service.observePlayerDplc(GameId.S1, "sonic", 9,
+        service.observePlayerDplc("sonic", 9,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(84, 6))));
         DynamicArtLifecycleService.RewindState snapshot = service.capture();
-        service.observePlayerDplc(GameId.S1, "sonic", 1,
+        service.observePlayerDplc("sonic", 1,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(0, 3))));
 
         service.restore(snapshot);
@@ -647,9 +654,9 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void s1PreparationCannotLeakAcrossMissingSnapshotOrRunReset() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_1);
         service.beginRun();
-        service.observePlayerDplc(GameId.S1, "sonic", 9,
+        service.observePlayerDplc("sonic", 9,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(84, 6))));
         service.resetForMissingSnapshot();
 
@@ -667,11 +674,11 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void completeLifecycleInGapIsJournaledWithoutResettingOwnerCursor() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         service.beginRun();
 
         DynamicArtLifecycleService.ArtUpdate first =
-                service.observePlayerDplc(GameId.S2, "tails", 5,
+                service.observePlayerDplc("tails", 5,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(1, 1))));
         service.serviceProductionVBlank();
 
@@ -684,17 +691,17 @@ class TestDynamicArtLifecycleService {
 
         service.openComparisonSegment();
         DynamicArtLifecycleService.ArtUpdate duplicate =
-                service.observePlayerDplc(GameId.S2, "tails", 5,
+                service.observePlayerDplc("tails", 5,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(1, 1))));
         assertFalse(duplicate.mappingChanged());
     }
 
     @Test
     void immutableGapLedgerPreservesProductionSubmissionOrigin() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         service.beginRun();
 
-        service.observePlayerDplc(GameId.S2, "sonic", 9,
+        service.observePlayerDplc("sonic", 9,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1))));
 
         DynamicArtGapDiagnosticsSnapshot.Descriptor pending =
@@ -709,10 +716,10 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void rewindRestoresClosedGapFifoLedgerAndRunCursorsAtomically() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         service.beginRun();
         DynamicArtLifecycleService.ArtUpdate pending =
-                service.observePlayerDplc(GameId.S2, "sonic", 9,
+                service.observePlayerDplc("sonic", 9,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1))));
         DynamicArtLifecycleService.RewindState saved = service.capture();
 
@@ -732,16 +739,16 @@ class TestDynamicArtLifecycleService {
 
     @Test
     void finishRunAllowsNativePendingWorkButRejectsFurtherDecisions() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(PLAYER_ART_2);
         service.beginRun();
-        service.observePlayerDplc(GameId.S2, "sonic", 1,
+        service.observePlayerDplc("sonic", 1,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
 
         service.finishRun();
 
         assertFalse(service.isRunActive());
         assertThrows(IllegalStateException.class,
-                () -> service.observePlayerDplc(GameId.S2, "sonic", 2,
+                () -> service.observePlayerDplc("sonic", 2,
                         new SpriteDplcFrame(List.of(new TileLoadRequest(1, 1)))));
     }
 

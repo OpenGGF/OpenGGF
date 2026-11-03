@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.route.InputScriptCompiler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.recording.RecordedFrameInput;

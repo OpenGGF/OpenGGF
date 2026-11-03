@@ -31,13 +31,13 @@ Key disassembly anchors:
 
 - S1: `ExecuteObjects:` at `docs/s1disasm/sonic.asm:5495`
 - S1: `PlatformObject:` at `docs/s1disasm/sonic.asm:4567`
-- S1: `SolidObject:` at `docs/s1disasm/_incObj/sub SolidObject.asm:14`
-- S2: `SolidObject:` at `docs/s2disasm/s2.asm:34813`
-- S2: `SlopedSolid_SingleCharacter:` at `docs/s2disasm/s2.asm:34923`
-- S2: `PlatformObject:` at `docs/s2disasm/s2.asm:35485`
-- S3K: `SolidObjectFull:` at `docs/skdisasm/sonic3k.asm:41040`
-- S3K: `SolidObjectTop:` at `docs/skdisasm/sonic3k.asm:41819`
-- S3K: `SolidObjectTopSloped2:` at `docs/skdisasm/sonic3k.asm:41866`
+- S1: `SolidObject:` at `docs/s1disasm/_incObj/sub SolidObject.asm:21`
+- S2: `SolidObject:` at `docs/s2disasm/s2.asm:35014`
+- S2: `SlopedSolid_SingleCharacter:` at `docs/s2disasm/s2.asm:35124`
+- S2: `PlatformObject:` at `docs/s2disasm/s2.asm:35728`
+- S3K: `SolidObjectFull:` at `docs/skdisasm/sonic3k.asm:41045`
+- S3K: `SolidObjectTop:` at `docs/skdisasm/sonic3k.asm:41824`
+- S3K: `SolidObjectTopSloped2:` at `docs/skdisasm/sonic3k.asm:41871`
 
 What is proven from those references:
 

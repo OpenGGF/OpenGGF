@@ -126,7 +126,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
      */
     private void updatePatrolling(int vIntRunCount, AbstractPlayableSprite player) {
         if (initFrame) {
-            // Obj91_Init (s2.asm:73672-73684) sets timers/x_vel and returns.
+            // Obj91_Init (s2.asm:73823-73835) sets timers/x_vel and returns.
             // Obj91_Main's ObjectMove starts on the following ExecuteObjects pass.
             initFrame = false;
             return;
@@ -141,7 +141,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
         applyXVelocitySubpixel();
 
         // ROM Obj91_Main pre-decrements the byte at Obj91_bubble_timer and
-        // calls Obj91_MakeBubble when it reaches zero (s2.asm:73687-73769).
+        // calls Obj91_MakeBubble when it reaches zero (s2.asm:73838-73920).
         bubbleTimer = (bubbleTimer - 1) & 0xFF;
         if (bubbleTimer == 0) {
             spawnPatrolBubble();
@@ -199,7 +199,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     private void updateWaiting(int vIntRunCount, AbstractPlayableSprite player) {
         waitTimer--;
         if (waitTimer < 0) {
-            // Obj91_MoveTowardsPlayer (s2.asm:73664-73675) runs ONCE at the
+            // Obj91_MoveTowardsPlayer (s2.asm:73862-73873) runs ONCE at the
             // Waiting->Charge transition. It latches x_vel and (conditionally)
             // y_vel, then control falls into Obj91_Charge which from then on
             // only re-integrates those latched velocities via ObjectMove.
@@ -209,7 +209,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     /**
-     * Obj91_MoveTowardsPlayer (s2.asm:73664-73684) — latch charge velocities ONCE.
+     * Obj91_MoveTowardsPlayer (s2.asm:73862-73882) — latch charge velocities ONCE.
      *
      * Horizontal: x_vel = Obj91_HorizontalSpeeds[d0>>1] = -2/+2 whole pixels,
      * i.e. +-0x200 in 16.8 (d0 carries +2 when the player is to the object's
@@ -255,7 +255,7 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
             int banded = (d3 + 0x10) & 0xFFFF;        // addi.w #$10,d3 (16-bit)
             verticalSpeed = banded >= 0x20;           // cmpi.w #$20,d3 ; NOT blo
         }
-        // Obj91_VerticalSpeeds (s2.asm:73682-73684): both entries are $80 (down).
+        // Obj91_VerticalSpeeds (s2.asm:73889-73891): both entries are $80 (down).
         yVelocity = verticalSpeed ? CHARGE_SPEED_Y_SUBPIXEL : 0;
     }
 

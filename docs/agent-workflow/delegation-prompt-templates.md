@@ -158,10 +158,10 @@ RULES (see RULE BLOCK): 1, 2, 4, 6, 7, 8, 9, 11. Specifically:
 
 TESTS: Add a focused JUnit 5 test (HeadlessTestRunner where physics is involved; StubObjectServices
 for service doubles). Keep these green: TestSonic3kPlcArtRegistry, TestS3kAiz1SkipHeadless,
-TestSonic3kLevelLoading. Select the changed object's regressions and those required checks;
-discover the existing ROM and supply its absolute path. Queue the focused run (PowerShell,
-quote -D props):
-  python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=<OBJECT-REGRESSION>,TestSonic3kPlcArtRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading" "-Ds3k.rom.path=<absolute-S3K-ROM>" test
+TestSonic3kLevelLoading. Select the changed object's regressions and those required checks.
+Queue the focused run; the wrapper discovers the verified ROM and must report s3k.rom.path
+found (PowerShell, quote -D props):
+  python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=<OBJECT-REGRESSION>,TestSonic3kPlcArtRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading" test
 The lead owns combined delivery validation under current root AGENTS.md. Check the task's
 existing jobs before submitting an equivalent run; retain one command session/observer.
 Do not launch a broad package/test run for each worker. Required ROM/trace checks still apply.

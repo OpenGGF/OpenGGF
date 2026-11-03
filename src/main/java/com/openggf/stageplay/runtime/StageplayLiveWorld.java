@@ -265,7 +265,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 sprite.setTopSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0C : 0x0E));
                 sprite.setLrbSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0D : 0x0F));
                 sprite.setAir(true);
-                if (performer.track.snapToFloor()) owned.getCollisionSystem().resolveGroundAttachment(sprite, 14, () -> false);
+                if (performer.track.snapToFloor()) owned.getCollisionSystem().placeOnTerrain(sprite, 14);
                 while (performer.index < performer.track.commands().size()
                         && performer.track.commands().get(performer.index).frame() < first) performer.index++;
                 performer.lastProgress = first;
@@ -355,7 +355,46 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 jump, returning, approach, targetX);
     }
 
+    /**
+     * Rows of a frozen input track drive a bound performer for every frame the track covers:
+     * the row's lane becomes this frame's held input, with presses from the previous row (the
+     * performer's own held state before the track's first row), through the same lossless
+     * conversion route replay uses. Commands never act inside the interval.
+     */
+    private PlayerInputState frozenInput(Performer p, int frame) {
+        for (var track : document.inputTracks()) {
+            if (frame < track.startFrame() || frame >= track.endFrame()) continue;
+            for (var binding : track.lanes()) {
+                if (!binding.actorId().equals(p.actor.id())) continue;
+                var tape = frozenTapes.computeIfAbsent(track.id(), id -> com.openggf.stageplay.route.StageplayRoutes.tape(track));
+                int row = frame - track.startFrame();
+                var current = tape.row(row);
+                var previous = row > 0 ? tape.row(row - 1) : heldRow(p.previousHeld, binding.lane());
+                var snapshot = com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(current.toEngine(row),
+                        previous.toEngine(row - 1));
+                var state = binding.lane() == ControllerLane.P1 ? snapshot.player1() : snapshot.player2();
+                if (row == 0) { p.goal = null; p.wait = null; }
+                p.previousHeld = state.heldMask();
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /** The physical row a command-driven held mask represents; the live controller's jump button is C. */
+    private static com.openggf.route.PadRow heldRow(int held, ControllerLane lane) {
+        int buttons = 0;
+        if ((held & AbstractPlayableSprite.INPUT_UP) != 0) buttons |= com.openggf.route.PhysicalButton.UP.bit();
+        if ((held & AbstractPlayableSprite.INPUT_DOWN) != 0) buttons |= com.openggf.route.PhysicalButton.DOWN.bit();
+        if ((held & AbstractPlayableSprite.INPUT_LEFT) != 0) buttons |= com.openggf.route.PhysicalButton.LEFT.bit();
+        if ((held & AbstractPlayableSprite.INPUT_RIGHT) != 0) buttons |= com.openggf.route.PhysicalButton.RIGHT.bit();
+        if ((held & AbstractPlayableSprite.INPUT_JUMP) != 0) buttons |= com.openggf.route.PhysicalButton.C.bit();
+        return lane == ControllerLane.P1 ? new com.openggf.route.PadRow(buttons, 0) : new com.openggf.route.PadRow(0, buttons);
+    }
+
     private PlayerInputState input(Performer p, int frame) {
+        var frozen = frozenInput(p, frame);
+        if (frozen != null) return frozen;
         if (p.wait != null && waitSatisfied(p)) { event(p, frame, "WAIT_SATISFIED", p.wait.condition().name()); p.wait = null; p.status = PuppetStatus.SATISFIED; }
         if (p.wait != null && frame >= p.deadline) { event(p, frame, "WAIT_TIMED_OUT", p.wait.condition().name()); p.wait = null; p.status = PuppetStatus.TIMED_OUT; }
         var commands = p.track.commands();
@@ -693,6 +732,11 @@ public final class StageplayLiveWorld implements AutoCloseable {
     /** Read-only diagnostics for native route qualification and focused authoring checks. */
     public record MotionState(int groundSpeed, int xSpeed, int maxSpeed, boolean skidding,
                               boolean spindash, boolean facingLeft, int angle) { }
+    /** The routed performer's native sprite, read-only, for route hosts' observations. */
+    public AbstractPlayableSprite routeSprite(String actorId) {
+        return cast.stream().filter(p -> p.actor.id().equals(actorId)).findFirst().orElseThrow().sprite;
+    }
+
     public MotionState routeMotionState(String actorId) {
         var sprite=cast.stream().filter(p->p.actor.id().equals(actorId)).findFirst().orElseThrow().sprite;
         return new MotionState(sprite.getGSpeed(),sprite.getXSpeed(),sprite.getMax(),sprite.getSkidding(),
@@ -704,7 +748,8 @@ public final class StageplayLiveWorld implements AutoCloseable {
         return objectCast == null ? null : objectCast.routePosition(actorId, cursor);
     }
 
-    public void reset() { closeOwned(); document=null; start=-1; cursor=-1; last=null; checkpoints.clear(); cast=List.of(); }
+    public void reset() { closeOwned(); document=null; start=-1; cursor=-1; last=null; checkpoints.clear(); cast=List.of(); frozenTapes.clear(); }
+    private final Map<String, com.openggf.route.InputTape> frozenTapes = new HashMap<>();
     private void closeOwned() {
         if (owned != null) {
             if (SessionManager.getCurrentGameplayMode() == owned) {

@@ -159,7 +159,7 @@ public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstan
             releaseRiders();
             on = false;
         }
-        // loc_47EBE :93991-93999. Both the switch-off frame and an ordinary on frame reach
+        // loc_47EBE :94006-94014. Both the switch-off frame and an ordinary on frame reach
         // this: only the SolidObjectTop call is skipped.
         drawPublished = true; // expiry still reaches Sprite_OnScreen_Test
         mappingFrame = levelFrameCounter & MAPPING_FRAME_MASK;

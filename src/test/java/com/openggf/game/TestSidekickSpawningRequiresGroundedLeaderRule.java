@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * feature-flag values match the disassembly references documented on
  * {@link GameRules}.
  *
- * <p>S2 ({@code TailsCPU_Spawning}, s2.asm:38751-38762): checks
+ * <p>S2 ({@code TailsCPU_Spawning}, s2.asm:39098-39109): checks
  * {@code Status_OnGround}, {@code Status_Underwater}, {@code Status_RollJump}
  * and skips respawn while any are blocking. Engine-side gate: {@code true}.
  *

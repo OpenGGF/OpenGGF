@@ -66,7 +66,7 @@ public final class LrzFlameObjectInstance extends AbstractObjectInstance
     private static final int FRAME_STEP_REPEAT = 7;
     /** {@code move.b #2,$25(a0)} on the flicker (:89487). */
     private static final int FLICKER_RELOAD = 2;
-    /** {@code cmpi.b #6,mapping_frame(a0) / bhs.s loc_44084} (:89484-89485). */
+    /** {@code cmpi.b #6,mapping_frame(a0) / bhs.s loc_44084} (:89491-89492). */
     private static final int FRAME_LIMIT = 6;
 
     /** ROM {@code x_vel}/{@code y_vel}, 8.8 pixels a frame. */

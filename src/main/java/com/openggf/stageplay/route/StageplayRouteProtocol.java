@@ -53,7 +53,8 @@ public final class StageplayRouteProtocol {
             List<StageplayRoutePoint> path,
             int expandedNodes,
             int simulatedTicks,
-            boolean nativeVerified) {}
+            boolean nativeVerified,
+            StageplayDocument.FrozenInputTrack track) {}
 
     public static String encodeRequest(StageplayRouteRequest request) throws IOException {
         return JSON.writeValueAsString(request);
@@ -88,7 +89,7 @@ public final class StageplayRouteProtocol {
         String line =
                 JSON.writeValueAsString(
                         new Response(
-                                1,
+                                2,
                                 result.status(),
                                 result.message(),
                                 result.fingerprint(),
@@ -99,7 +100,8 @@ public final class StageplayRouteProtocol {
                                 result.path(),
                                 result.expandedNodes(),
                                 result.simulatedTicks(),
-                                result.nativeVerified()));
+                                result.nativeVerified(),
+                                result.track()));
         if (line.length() > MAX_RESULT_CHARS)
             throw new IOException("Route response exceeds 16 MiB");
         return line;
@@ -109,7 +111,7 @@ public final class StageplayRouteProtocol {
         if (line == null || line.length() > MAX_RESULT_CHARS)
             throw new IOException("Missing or oversized route response");
         var response = JSON.readValue(line, Response.class);
-        if (response.version() != 1 || response.candidate() == null)
+        if (response.version() != 2 || response.candidate() == null)
             throw new IOException("Invalid route response version/candidate");
         StageplayDocument candidate = null;
         if (!response.candidate().isEmpty()) {
@@ -130,7 +132,8 @@ public final class StageplayRouteProtocol {
                 response.path(),
                 response.expandedNodes(),
                 response.simulatedTicks(),
-                response.nativeVerified());
+                response.nativeVerified(),
+                response.track());
     }
 
     /**
@@ -152,7 +155,8 @@ public final class StageplayRouteProtocol {
         if (!success) {
             if (result.candidate() != null
                     || !result.commands().isEmpty()
-                    || !result.objectCommands().isEmpty())
+                    || !result.objectCommands().isEmpty()
+                    || result.track() != null)
                 throw new IOException("Failed route returned an applicable command patch");
             return;
         }
@@ -160,6 +164,9 @@ public final class StageplayRouteProtocol {
                 || player != (result.status() == StageplayRouteResult.Status.VERIFIED)
                 || player != result.nativeVerified()
                 || player && !result.objectCommands().isEmpty()
+                || player && !result.commands().isEmpty()
+                || player && result.track() == null
+                || !player && result.track() != null
                 || !player && !result.commands().isEmpty())
             throw new IOException("Route verification kind does not match performer");
         StageplayDocument stripped = result.candidate();
@@ -176,6 +183,22 @@ public final class StageplayRouteProtocol {
                             .orElseThrow(() -> new IOException("Route removed performer track"));
             validateCommandInterval(
                     original.commands(), changed.commands(), result.commands(), request);
+            var track = result.track();
+            if (track.startFrame() != request.startFrame()
+                    || track.endFrame() != request.startFrame() + request.maxFrames()
+                    || track.lanes().size() != 1
+                    || !track.binds(request.actorId()))
+                throw new IOException("Frozen route rows do not cover exactly the requested interval and actor");
+            var expectedTracks = new java.util.ArrayList<StageplayDocument.FrozenInputTrack>();
+            for (var existing : source.inputTracks()) {
+                if (!(existing.binds(request.actorId()) && existing.startFrame() < track.endFrame()
+                        && track.startFrame() < existing.endFrame())) expectedTracks.add(existing);
+            }
+            expectedTracks.add(track);
+            expectedTracks.sort(java.util.Comparator.comparingInt(StageplayDocument.FrozenInputTrack::startFrame));
+            if (!expectedTracks.equals(stripped.inputTracks()))
+                throw new IOException("Route changed unrelated frozen input tracks");
+            stripped = stripped.withInputTracks(source.inputTracks());
             var restored =
                     new StageplayDocument.PuppetTrack(
                             changed.actorId(),

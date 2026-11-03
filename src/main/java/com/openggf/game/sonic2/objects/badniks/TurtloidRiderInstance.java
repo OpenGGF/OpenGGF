@@ -30,7 +30,7 @@ import java.util.List;
  * Turtloid Rider (0x9B) - Rides on the Turtloid turtle in Sky Chase Zone.
  * Follows parent Turtloid at offset (+4, -$18). Has enemy touch response.
  *
- * Based on disassembly Obj9B (s2.asm:74420-74477).
+ * Based on disassembly Obj9B (s2.asm:75022-75079).
  */
 public class TurtloidRiderInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {

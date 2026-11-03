@@ -39,7 +39,7 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
         return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
     }
 
-    // Collision size from Obj94_SubObjData (s2.asm:74061)
+    // Collision size from Obj94_SubObjData (s2.asm:74729)
     // Body has collision 0, not 0x0B - heads have their own collision
     private static final int COLLISION_SIZE_INDEX = 0x00;
 
@@ -129,7 +129,7 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
 
     /**
      * Check if player is within detection range using Obj_GetOrientationToPlayer's
-     * horizontal distance result. ROM Obj94_WaitForPlayer (docs/s2disasm/s2.asm:73716-73722):
+     * horizontal distance result. ROM Obj94_WaitForPlayer (docs/s2disasm/s2.asm:74362-74368):
      *   bsr.w  Obj_GetOrientationToPlayer
      *   addi.w #$60,d2          ; d2 = (obj.x - player.x) + 0x60 (signed-word arithmetic)
      *   cmpi.w #$100,d2

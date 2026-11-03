@@ -1,6 +1,5 @@
 package com.openggf.game;
 
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -163,46 +162,6 @@ public interface LevelEventProvider {
      */
     default boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
         return ownsFixedDrowningBubbleCadence();
-    }
-
-    /**
-     * Returns true when an event/object-order bridge should treat a sidekick
-     * follow step as still inside a ROM-visible push/on-object context.
-     */
-    default boolean isSidekickObjectOrderFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return false;
-    }
-
-    /**
-     * Returns true when an event/object-order bridge should use the alternate
-     * ROM-visible follow target for the immediate +/-1 sidekick x_pos nudge.
-     * This can be narrower than the steering bridge above.
-     */
-    default boolean isSidekickObjectOrderFollowNudgeContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return isSidekickObjectOrderFollowSteeringContext(sidekick, effectiveLeader);
-    }
-
-    /**
-     * Returns true when a ROM door/platform support context should suppress
-     * stale push-grace handling during sidekick follow steering.
-     */
-    default boolean isSidekickDoorSupportGraceFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            ObjectInstance ridingObject) {
-        return false;
-    }
-
-    /**
-     * Returns true when an event marker path reaches Tails_Catch_Up_Flying
-     * with the stored engine counter one tick behind the ROM-visible sidekick
-     * CPU slot. This is separate from normal follow/auto-jump cadence.
-     */
-    default boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(AbstractPlayableSprite sidekick) {
-        return false;
     }
 
     /**

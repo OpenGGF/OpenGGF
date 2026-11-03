@@ -84,7 +84,7 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
         }
 
         if (!playerOnRight) {
-            // sub_49228 (:95535-95537): cmp.w x_pos(a1),d1 / bhi.s locret — the player is
+            // sub_49228 (:95540-95542): cmp.w x_pos(a1),d1 / bhi.s locret — the player is
             // still on the left while the object's x is strictly greater.
             if (objectX > playerX) {
                 return;

@@ -66,6 +66,39 @@ public final class ObjectAnimationState {
         pendingSwitchAnimId = -1;
     }
 
+    /**
+     * Animate_Sprite (sonic3k.asm:36198-36215): a changed script clears the
+     * timer, then the byte decrement borrows on zero. A timer-only pass does
+     * not read a frame index or publish a mapping. The callback exposes that
+     * actual read to callers which retain the native fractional math input.
+     */
+    public void updateNativeSprite(Runnable frameIndexRead) {
+        if (animationSet == null) return;
+        SpriteAnimationScript script = animationSet.getScript(animId);
+        if (script == null || script.frames().isEmpty()) return;
+        if (animId != lastAnimId) {
+            lastAnimId = animId;
+            frameIndex = 0;
+            frameTick = 0;
+            pendingSwitchAnimId = -1;
+        }
+        if (frameTick != 0) {
+            frameTick = (frameTick - 1) & 0xFF;
+            return;
+        }
+        frameTick = script.delay() & 0xFF;
+        frameIndexRead.run();
+        if (frameIndex >= script.frames().size()) {
+            switch (script.endAction()) {
+                case SWITCH -> { animId = script.endParam(); return; }
+                case LOOP_BACK -> frameIndex = resolveLoopBackIndex(script);
+                case HOLD -> frameIndex = script.frames().size() - 1;
+                default -> frameIndex = 0;
+            }
+        }
+        mappingFrame = script.frames().get(frameIndex++);
+    }
+
     public void update() {
         if (animationSet == null) {
             return;

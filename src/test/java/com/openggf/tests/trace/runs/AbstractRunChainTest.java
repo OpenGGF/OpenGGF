@@ -2467,7 +2467,10 @@ abstract class AbstractRunChainTest {
         private final ReplayPrefixTarget prefixTarget;
         private final List<UncomparedInteriorPhysicalRow> physicalRows;
         private final int destinationOffset;
+        // Census index of the gap's last non-admitted row (InitPlayers), or -1.
+        private final int levelEntryLoadCompletionIndex;
         private int physicalRowIndex;
+        private boolean levelEntryPlayerArtHoldArmed;
         private TraceRunSpecialStageRows specialRows;
         private TraceRunSpecialStageRowDriver rowDriver;
         private SpecialStageRunObjectsPassBinder passBinder;
@@ -2519,10 +2522,17 @@ abstract class AbstractRunChainTest {
             driveInterior = uncomparedInteriorStep(
                     loop, inputHandler, movie, segment, specialRows,
                     passBinder);
+            boolean[] gapLag = expandGapAdmissionCensus(segment.exitBoundary());
             physicalRows = uncomparedInteriorPhysicalRows(
                     segment.segment().bk2FrameOffset(), specialRows.rowCount(),
-                    destinationOffset,
-                    expandGapAdmissionCensus(segment.exitBoundary()));
+                    destinationOffset, gapLag);
+            // The same CONTRACT 1 ordering as admitLevelWhenReady: the return's
+            // Level: load creates the playables at InitPlayers
+            // (docs/s2disasm/s2.asm:4946), at the end of its synchronous load.
+            // A return gap can also carry lone lag rows from passes of the
+            // title-card leave loop (s2.asm:5060-5066) that overran their wait, so the load is
+            // located as the last non-admitted run spanning more than one V-int.
+            levelEntryLoadCompletionIndex = lastSynchronousLoadRow(gapLag);
         }
 
         @Override
@@ -2670,9 +2680,29 @@ abstract class AbstractRunChainTest {
             assertEquals(physicalRow.movieRow(), playback.getCursorFrame(),
                     "interstitial physical cursor");
             fixture.enterHardwareTimingGap();
+            if (!levelEntryPlayerArtHoldArmed) {
+                // Engine-created playable art stays invisible until the census
+                // row the ROM's load completes on; this moves only WHEN it
+                // publishes and carries no recorded value.
+                holdPlayerArtForLevelEntryLoad(levelEntryLoadCompletionIndex >= 0);
+                levelEntryPlayerArtHoldArmed = true;
+            }
+            int gapIndex = physicalRow.movieRow() - destinationOffset
+                    + interstitialRowCount();
             stepEngineFrameInTransitionGap(
                     gameplayMode, loop, playback, physicalRow.movieRow(),
-                    physicalRow.lagGapRow());
+                    physicalRow.lagGapRow(),
+                    gapIndex == levelEntryLoadCompletionIndex);
+        }
+
+        private int interstitialRowCount() {
+            int rows = 0;
+            for (UncomparedInteriorPhysicalRow row : physicalRows) {
+                if (!row.representedSpecialRow()) {
+                    rows++;
+                }
+            }
+            return rows;
         }
 
         private UncomparedInteriorPhysicalRow nextPhysicalRow(
@@ -2700,6 +2730,9 @@ abstract class AbstractRunChainTest {
                 }
                 driveInterstitialRow();
             }
+            // Fail-safe: a census without a load-completion row publishes the
+            // held decisions here rather than leaking them into the destination.
+            releasePlayerArtForLevelEntryLoad();
             assertEquals(destinationOffset, playback.getCursorFrame(),
                     "uncompared-interior walk must stop at destination offset");
         }
@@ -3580,9 +3613,9 @@ abstract class AbstractRunChainTest {
      *
      * <p>Unlike {@link #attachLevelSegment}, this method does not itself re-seek
      * the BK2 cursor. Its caller first establishes the required alignment: an
-     * uncompared special-stage return keeps the pre-seeked cursor advanced by its
-     * fall-through frame, while the bonus/Option-B return explicitly re-anchors
-     * to {@code returnOffset + 1}. In both cases the cursor reaches
+     * uncompared special-stage return retains its organically advanced cursor,
+     * while a setup-only compared-bonus return explicitly re-anchors to
+     * {@code returnOffset}, with {@code framesConsumed == 0}. The cursor reaches
      * {@code returnOffset + framesConsumed} before this method attaches.
      * Starting the comparator at {@code framesConsumed} keeps the recording-frame
      * index and the BK2 cursor in lockstep, so the already-run leading frame(s)
@@ -4568,7 +4601,7 @@ abstract class AbstractRunChainTest {
      * ordinary logical iteration, because a lag V-blank does not run the mode's
      * handler at all: {@code V_Int} branches to {@code Vint_Lag} while
      * {@code Vint_routine} is still 0 (docs/s2disasm/s2.asm:483-484, 529) —
-     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:709) has the same shape
+     * S1's {@code VBlank_Lag} (docs/s1disasm/sonic.asm:712) has the same shape
      * — so an in-progress blocking fade's per-V-blank work
      * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482, whose body runs in the main
      * loop between its own {@code WaitForVint}s) does not advance on that
@@ -4899,7 +4932,7 @@ abstract class AbstractRunChainTest {
 
     /**
      * The whole of a lag row's engine-visible V-int work: the ROM's
-     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:505-506) on
+     * {@code VintRet} increments {@code Vint_runcount} (s2.asm:507-508) on
      * every dispatch, lag included, and that counter is what
      * {@code ObjectInstance.update} sees as {@code vblaCounter}. Everything
      * else {@code Vint_Lag} does on the in-level path (sound-driver input,
@@ -4991,7 +5024,7 @@ abstract class AbstractRunChainTest {
      *
      * <p>{@code VintRet: addq.l #1,(Vint_runcount).w}
      * (docs/s2disasm/s2.asm:507-508) sits AFTER the
-     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:504) and is reached by
+     * {@code jsr Vint_SwitchTbl(pc,d0.w)} dispatch (:515) and is reached by
      * every V-int the ROM takes, whichever routine the dispatch selected —
      * {@code Vint_Lag}, {@code Vint_Level}, {@code Vint_TitleCard} or
      * {@code Vint_Fade}. The object-visible clock therefore advances exactly
@@ -5099,6 +5132,32 @@ abstract class AbstractRunChainTest {
      * (docs/s2disasm/s2.asm:4946): every span after it waits on V-int per pass
      * (the leave loop, :5060-5066) and so admits the main loop.
      */
+    /**
+     * Index of the last row of the gap's synchronous level load, or {@code -1}.
+     * The load holds the main loop across consecutive V-ints, so it is a
+     * non-admitted run longer than one row; a single lag row between admitted
+     * rows is one pass of the title-card leave loop
+     * (docs/s2disasm/s2.asm:5060-5066) that overran its wait, and cannot
+     * contain {@code InitPlayers}.
+     */
+    static int lastSynchronousLoadRow(boolean[] gapLag) {
+        int index = gapLag.length - 1;
+        while (index >= 0) {
+            if (!gapLag[index]) {
+                index--;
+                continue;
+            }
+            int end = index;
+            while (index >= 0 && gapLag[index]) {
+                index--;
+            }
+            if (end - index > 1) {
+                return end;
+            }
+        }
+        return -1;
+    }
+
     private static int lastNonAdmittedRow(boolean[] gapLag) {
         for (int index = gapLag.length - 1; index >= 0; index--) {
             if (gapLag[index]) {

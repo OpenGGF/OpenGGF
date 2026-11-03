@@ -39,13 +39,11 @@ class TestStageplayObjectDirection {
                 .execute(child, null, List.of(), false, false);
         fixture.objects.snapshotTouchResponseState();
         fixture.objects.refreshPostCameraRenderState();
-        fixture.objects.runPostPlayerHooks(null, 100);
         assertTrue(fixture.objects.getSolidProviderObjects().isEmpty());
         assertTrue(fixture.objects.getTouchResponseObjects().isEmpty());
         assertTrue(
-                fixture.objects
-                        .solidContacts()
-                        .processParticipantCheckpoint(root, mock(PlayableEntity.class), false)
+                SolidObjectPassTestSupport.participantCheckpoint(
+                                fixture.objects, root, mock(PlayableEntity.class), false)
                         .perPlayer()
                         .isEmpty());
         fixture.objects.update(60000, null, List.of(), 0, false);

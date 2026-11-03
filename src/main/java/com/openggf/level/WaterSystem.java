@@ -586,7 +586,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
-     * ROM's SwScrl_RippleData table (s2.asm:15408-15413, label byte_C682).
+     * ROM's SwScrl_RippleData table (s2.asm:15414-15419, label byte_C682).
      * 66 bytes of horizontal pixel offsets per scanline for water ripple.
      * Values range 0-3 representing pixel displacement.
      */
@@ -600,7 +600,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
 
     /**
      * Get water distortion table for underwater ripple effect.
-     * Uses the ROM's hand-tuned SwScrl_RippleData table (s2.asm:15408).
+     * Uses the ROM's hand-tuned SwScrl_RippleData table (s2.asm:15418).
      *
      * @return Array of horizontal pixel offsets (per scanline)
      */

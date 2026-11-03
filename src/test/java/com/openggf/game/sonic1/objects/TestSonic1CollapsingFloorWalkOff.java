@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SolidContact;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,12 +26,12 @@ class TestSonic1CollapsingFloorWalkOff {
         TestPlayableSprite player = new TestPlayableSprite();
 
         assertFalse(floor.airborneStaleStandingBitReturnsNoContact(player));
-        floor.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        floor.platformObjectLanded();
         player.setAir(true);
 
         assertTrue(floor.airborneStaleStandingBitReturnsNoContact(player),
                 "routine 4 calls ExitPlatform, which returns before PlatformObject can re-land");
-        floor.onSolidContactCleared(player, 1);
+        floor.exitedPlatform();
         assertFalse(floor.airborneStaleStandingBitReturnsNoContact(player),
                 "ExitPlatform resets the object to routine 2");
     }

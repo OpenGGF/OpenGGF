@@ -37,7 +37,7 @@ import java.util.List;
  * </ul>
  * When crossing from right to left, the OPPOSITE action is applied.
  * <p>
- * Based on Obj8B from the Sonic 2 disassembly (s2.asm:46519-46625).
+ * Based on Obj8B from the Sonic 2 disassembly (s2.asm:46884-46990).
  *
  * <h3>Subtype Encoding:</h3>
  * <ul>
@@ -55,7 +55,7 @@ import java.util.List;
 public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj8B is an invisible palette crossing trigger; xFlipped selects the toggle, not facing.
 
-    // Width lookup table from disassembly word_213AA (s2.asm:46534-46538)
+    // Width lookup table from disassembly word_213AA (s2.asm:46986-46990)
     private static final int[] WIDTH_TABLE = {0x20, 0x40, 0x80, 0x100};
 
     // Debug colors: cyan for unflipped (fire->belt), magenta for flipped (belt->fire)
@@ -82,7 +82,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
 
     public WFZPalSwitcherObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name,
-                0x10,  // width_pixels from Obj8B_Init (s2.asm:46547): move.b #$10,width_pixels(a0)
+                0x10,  // width_pixels from Obj8B_Init (s2.asm:46999): move.b #$10,width_pixels(a0)
                 WIDTH_TABLE[spawn.subtype() & 0x03],  // Y half-height from subtype index
                 (spawn.renderFlags() & 0x01) == 0 ? UNFLIPPED_R : FLIPPED_R,
                 (spawn.renderFlags() & 0x01) == 0 ? UNFLIPPED_G : FLIPPED_G,
@@ -109,13 +109,13 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
         extraPlayerPastTrigger.keySet().removeIf(player -> !containsIdentity(participants, player));
 
         // Initialize crossing state based on current player positions
-        // ROM: Obj8B_Init checks MainCharacter and Sidekick against x_pos (s2.asm:46554-46564)
+        // ROM: Obj8B_Init checks MainCharacter and Sidekick against x_pos (s2.asm:46999-47009)
         if (!initialized) {
             initializeCrossingState(participants);
             initialized = true;
         }
 
-        // ROM: Obj8B_Main (s2.asm:46566-46622)
+        // ROM: Obj8B_Main (s2.asm:46993-47049)
         // Skip processing when in debug placement mode
         // ROM: tst.w (Debug_placement_mode).w / bne.s return_2146A
         // (Engine handles this by not calling update in debug mode)
@@ -159,7 +159,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
 
     /**
      * Initializes crossing state for both characters.
-     * ROM: Obj8B_Init (s2.asm:46554-46564) checks if each character's x_pos
+     * ROM: Obj8B_Init (s2.asm:46999-47009) checks if each character's x_pos
      * is past the object's x_pos at initialization time.
      */
     private void initializeCrossingState(List<PlayableEntity> participants) {
@@ -174,7 +174,7 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements R
 
         // Same check for sidekick(s)
         for (int i = 1; i < participants.size(); i++) {
-            // ROM: cmp.w x_pos(a1),d1 / bhs.s Obj8B_Main (s2.asm:46562-46563)
+            // ROM: cmp.w x_pos(a1),d1 / bhs.s Obj8B_Main (s2.asm:47023-47024)
             setPastTrigger(participants.get(i), i, participants.get(i).getCentreX() > objX);
         }
     }

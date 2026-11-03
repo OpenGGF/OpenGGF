@@ -250,9 +250,11 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
             if (playerStanding) {
                 var objectManager = services().objectManager();
                 if (objectManager != null && player != null) {
+                    // VanP .notSolid (_incObj/6C SBZ Vanishing Platforms.asm:110-118):
                     // bclr #3,obStatus(a1) - clear player standing-on-object
                     // bclr #3,obStatus(a0) - clear object standing flag
                     objectManager.clearRidingObject(player);
+                    player.setOnObject(false);
                 }
                 playerStanding = false;
                 // move.b #2,obRoutine(a0) - ensure routine is 2

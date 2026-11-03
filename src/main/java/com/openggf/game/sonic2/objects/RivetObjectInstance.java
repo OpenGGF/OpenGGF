@@ -133,7 +133,7 @@ public class RivetObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM: ObjC2_Main (s2.asm line 80588)
+        // ROM: ObjC2_Main (s2.asm line 81256)
         // move.b (MainCharacter+anim).w,objoff_30(a0)
         AbstractPlayableSprite player = nativeMainPlayer(playerEntity);
         lastNativeMainPlayer = player;
@@ -181,7 +181,7 @@ public class RivetObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM: ObjC2_Bust (s2.asm line 80600)
+        // ROM: ObjC2_Bust (s2.asm line 81268)
         // cmpi.b #2,objoff_30(a0) - check if player was rolling (anim == 2)
         // bne.s + (skip if not rolling)
         if (cachedMainAnimationId != Sonic2AnimationIds.ROLL.id()) {
@@ -201,7 +201,7 @@ public class RivetObjectInstance extends AbstractObjectInstance
 
     /**
      * Busts the rivet open, modifying the level layout and spawning an explosion.
-     * ROM: ObjC2_Bust (s2.asm lines 80600-80617)
+     * ROM: ObjC2_Bust (s2.asm lines 81251-81268)
      */
     private void bustRivet(AbstractPlayableSprite player) {
         busted = true;
