@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
@@ -3883,7 +3884,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Sonic_LevelBound (_incObj/01 Sonic.asm:1057-1079; s2.asm:37233-37251),
 		// Player_LevelBound (sonic3k.asm:23207-23221).
 		int xPosition = (sprite.getCentreX() << 16) | (sprite.getXSubpixelRaw() & 0xFFFF);
-		int predictedX = (xPosition + (sprite.getXSpeed() << 8)) >>> 16;
+		int predictedPosition = xPosition + (sprite.getXSpeed() << 8);
+        int predictedX = predictedPosition >>> 16;
+        // Player_LevelBound (sonic3k.asm:23207-23213) passes the projected
+        // fraction to later sine/cosine arithmetic through its word swap.
+        var objects = levelManager() != null ? levelManager().getObjectManager() : null;
+        if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, sprite, predictedPosition);
 
 		int minX = camera.getMinX();
 		int maxX = camera.getMaxX();

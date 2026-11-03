@@ -1,5 +1,6 @@
 package com.openggf.level.rings;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.ModApi;
 import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.audio.AudioManager;
@@ -338,13 +339,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             return;
         }
         for (AttractedRing ring : activeAttractedRingsInSlotOrder()) {
-            if (!ring.listedForTouchThisFrame || ring.collected
-                    || !attractedRingOverlapsPlayerTouchBox(ring, player)) {
+            if (!ring.listedForTouchThisFrame) {
                 continue;
             }
+            // Touch_Width (sonic3k.asm:20710-20715) clears the width
+            // accumulator even when this retained attracted-ring entry misses.
+            var objects = nativeSlotObjectManager();
+            if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, player, 0);
+            if (ring.collected || !attractedRingOverlapsPlayerTouchBox(ring, player)) continue;
             // Touch_ChkValue writes routine=4; the next actual ring SST pass owns GiveRing.
             ring.collected = true;
-            ring.listedForTouchThisFrame = false;
+            // The native collision flag survives until the actual ring slot;
+            // P2 can still read its width without accepting a second pickup.
             // Acceptance attribution stays with the actual collector, including P2.
             notifyNativeRingPickup(player);
             return;

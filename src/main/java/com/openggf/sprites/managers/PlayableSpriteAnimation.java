@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.rules.GameRules;
@@ -242,6 +243,12 @@ public class PlayableSpriteAnimation {
         }
     }
 
+    private void clearSineCosineInputFraction() {
+        var level = sprite.currentLevelManagerIfAvailable();
+        var objects = level != null ? level.getObjectManager() : null;
+        if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, sprite, 0);
+    }
+
     private void publishMappingFrame(int frame) {
         sprite.setMappingFrame(frame);
         mappingPublishedThisUpdate = true;
@@ -463,6 +470,8 @@ public class PlayableSpriteAnimation {
     }
 
     private void updateWalkRun(SpriteAnimationScript baseScript, int remaining) {
+        clearSineCosineInputFraction(); // loc_126C8/loc_12724 (sonic3k.asm:24852-24904)
+
         int flipAngle = sprite.getFlipAngle();
         // S3K tests signed flip_type before flip_angle. Obj31 deliberately
         // captures a rider with flip_type=$80 and flip_angle=0 after the
@@ -752,6 +761,9 @@ public class PlayableSpriteAnimation {
             return;
         }
 
+        // loc_1265A (sonic3k.asm:24802-24804): reading an animation index
+        // replaces the whole arithmetic input; a timer-only return preserves it.
+        clearSineCosineInputFraction();
         sprite.setAnimationTick(delay);
 
         int frameIndex = sprite.getAnimationFrameIndex();

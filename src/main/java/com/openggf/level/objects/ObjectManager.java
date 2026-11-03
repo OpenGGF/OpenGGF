@@ -245,6 +245,11 @@ public class ObjectManager {
     // objects in the same order, re-minting the same ids. Captured in the snapshot
     // and restored so the counter never accidentally aliases a pre-restore id.
     private int dynamicObjectIdCounter = 0;
+    // Position projection and native word-index/width operations publish this
+    // input for later sine/cosine chain arithmetic. Capture it with the world
+    // so rewind repeats the same producer and consumer ordering.
+    private int sineCosineInputFraction;
+
     // Per-object id registry: maps every live ObjectInstance to its assigned ObjectRefId
     // so capture can build the identity table without re-scanning or re-allocating ids.
     // Cleared on reset() and pruned when objects are removed.
@@ -4241,7 +4246,8 @@ public class ObjectManager {
                                 ? touchResponses.captureRewindState()
                                 : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty(),
                         dynamicObjectIdCounter,
-                        collisionResponseList.captureRewindState(rewindObjectIds::get)
+                        collisionResponseList.captureRewindState(rewindObjectIds::get),
+                        sineCosineInputFraction
                 );
             }
 
@@ -4249,6 +4255,7 @@ public class ObjectManager {
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
                 initialDispatch.retireState();
                 playerBoundRewind.clear();
+                sineCosineInputFraction = s.sineCosineInputFraction();
                 // The restore is TWO-PHASE so object-reference resolution is order-independent.
                 //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
                 //           captured object — active and dynamic — and registers each under its
@@ -5020,6 +5027,24 @@ public class ObjectManager {
             }
         }
         return fifoFallbackIndex >= 0 ? rewindReconstructionChildren.remove(fifoFallbackIndex) : null;
+    }
+
+    /** Unsigned fractional input passed between native game arithmetic owners in execution order. */
+    int sineCosineInputFraction() {
+        return sineCosineInputFraction;
+    }
+
+    /** Presentation-only playables cannot publish live native arithmetic. */
+    void publishSineCosineInputFraction(
+            com.openggf.sprites.playable.AbstractPlayableSprite producer, int fraction) {
+        var sprites = producer.currentSpriteManagerOrNull();
+        if (sprites != null && sprites.getAllSprites().contains(producer)) {
+            publishSineCosineInputFraction(fraction);
+        }
+    }
+
+    void publishSineCosineInputFraction(int fraction) {
+        sineCosineInputFraction = fraction & 0xFFFF;
     }
 
     ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {

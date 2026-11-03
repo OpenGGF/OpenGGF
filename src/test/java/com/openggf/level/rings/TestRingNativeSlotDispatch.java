@@ -74,6 +74,23 @@ class TestRingNativeSlotDispatch {
 
     @AfterEach void cleanup() { TestEnvironment.resetAll(); }
 
+    @Test void retainedAttractedRingMissClearsFractionOnlyDuringAnAdmittedTouchPass() {
+        GameServices.sprites().addSprite(player);
+        restoreRings(attracted(0, 9, 300, false, 0, 0, 0));
+        rings.prepareAttractedRingTouchSnapshot();
+        ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, 0xFD00);
+        rings.collectAttractedRing(player, 100);
+        assertEquals(0, ObjectManagerInternalAccess.sineCosineInputFraction(objects));
+        assertFalse(rings.capture().attractedRings()[0].collected());
+        assertEquals(0, player.getRingCount());
+
+        ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, 0xFD00);
+        player.setObjectControlled(true);
+        rings.collectAttractedRing(player, 100);
+        assertEquals(0xFD00, ObjectManagerInternalAccess.sineCosineInputFraction(objects),
+                "object control returns before Touch_Width");
+    }
+
     @Test void pendingDeadPlayerAwardWaitsForItsVisitedNativeSlot() {
         assertPendingAwardWaitsForItsNativeSlot(true);
     }
