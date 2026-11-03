@@ -26,6 +26,8 @@ from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
 from maven_queue import maven_slot, worktree_build_slot, handle_termination, needs_exclusive
 from maven_schedule import ServiceCredit, plan_estimate
 from maven_small import batch_lean, qualified_candidates, batch_backfill_eligible
+# Reexported for existing callers; rom_inputs owns discovery for both queue routes.
+from rom_inputs import ROM_PROPERTIES, caller_rom_properties, describe, rom_args, rom_properties, without_caller
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
@@ -33,15 +35,6 @@ PACKAGE = 'com/openggf/'
 ORDINARY_BATCH_CLASSES = 50
 SLOWEST_LIMIT = 20
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
-ROM_PROPERTIES = {
-    '6ddb7de1e17e7f6cdb88927bd906352030daa194': 'sonic1.rev00.rom.path',
-    '14dd06fc3aa19a59a818ea1f6de150c9061b14d4': 'sonic2.rev00.rom.path',
-    '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
-    '8bca5dcef1af3e00098666fd892dc1c2a76333f9': 'sonic2.rom.path',
-    'cfbf98c36c776677290a872547ac47c53d2761d6': 's3k.rom.path',
-    # User-supplied lock-on dump documented in the KiS2 fidelity-tier design.
-    '6cd0537a3aee0e012bb86d5837ddff9342595004': 'kis2.rom.path',
-}
 # The release workflow's exact skip policy; every ordinary and guard skip is classified.
 SKIP_POLICY = Path(__file__).resolve().parent / 'release-skip-policy.json'
 # Test JVMs see -D properties only from these variables: the runner forwards no other.
@@ -271,32 +264,6 @@ def make_plan(root, data, base, requested, guards=False, workers=1):
             'workers': workers,
             'suite': 'smoke',
             'scope': 'bounded smoke suite and guards; full-suite is public-release-only; trace/native profiles are separate'}
-
-
-def rom_args(root, rom_directory=None):
-    directories = [root]
-    if rom_directory is not None:
-        rom_directory = rom_directory.resolve()
-        if not rom_directory.is_dir():
-            raise ValueError(f'ROM directory does not exist or is not a directory: {rom_directory}')
-        if rom_directory != root.resolve():
-            directories.append(rom_directory)
-    found = {}
-    for directory in directories:
-        for path in sorted(directory.glob('*.gen')):
-            if not path.is_file():
-                continue
-            with path.open('rb') as stream:
-                digest = hashlib.file_digest(stream, 'sha1').hexdigest()
-            if digest in ROM_PROPERTIES:
-                found.setdefault(ROM_PROPERTIES[digest], str(path.resolve()))
-    return [f'-D{key}={value}' for key, value in sorted(found.items())]
-
-
-def rom_properties(arguments):
-    """Name discovered and missing ROM properties; paths stay in commands, contents nowhere."""
-    found = sorted(argument[2:].split('=', 1)[0] for argument in arguments)
-    return {'found': found, 'missing': sorted(set(ROM_PROPERTIES.values()) - set(found))}
 
 
 def skip_capabilities(skip_policy, environment):
@@ -548,11 +515,13 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
               f"{len(batches)} ordinary batches (at most {ORDINARY_BATCH_CLASSES} classes); "
               f"ordinary workers={workers}; guards={'on (1 worker)' if plan['guards'] else 'off'}", flush=True)
         initial_state = tree_state(root)
-        roms = rom_args(root, rom_directory)
+        # The runner forwards launch variables; a ROM property set there stays the caller's.
+        caller = caller_rom_properties((), root)
+        roms = without_caller(rom_args(root, rom_directory), caller)
         plan['working_tree_fingerprint'] = initial_state
         plan['max_minutes'] = max_minutes
         plan['ordinary_batch_classes'] = ORDINARY_BATCH_CLASSES
-        plan['rom_properties'] = rom_properties(roms)
+        plan['rom_properties'] = rom_properties(roms, caller)
         # A wrapper invoked by absolute path from another worktree has its own policy file.
         plan['skip_policy'] = (SKIP_POLICY.relative_to(root.resolve()).as_posix()
                                if SKIP_POLICY.is_relative_to(root.resolve()) else str(SKIP_POLICY))
@@ -772,7 +741,7 @@ def main(argv=None):
     parser.add_argument('--keep-diagnostics', action='store_true', help='explicitly retain bounded diagnostics across runs until acknowledged')
     parser.add_argument('--json', action='store_true', help='print the complete dry-run plan, including every class')
     parser.add_argument('--rom-directory', type=Path,
-                        help='also discover verified original ROMs in this directory; pass absolute paths without creating links')
+                        help='also discover verified original ROMs in this directory before the main checkout; never creates links')
     args = parser.parse_args(argv)
     try:
         if not math.isfinite(args.max_minutes) or args.max_minutes <= 0:
@@ -819,12 +788,12 @@ def main(argv=None):
             skip_policy = load_policy(SKIP_POLICY)
             if args.preflight and not args.run:
                 preflight(ROOT, plan)
-                roms = rom_properties(rom_args(ROOT, args.rom_directory))
+                caller = caller_rom_properties((), ROOT)
+                roms = rom_properties(without_caller(rom_args(ROOT, args.rom_directory), caller), caller)
                 inputs = skip_capabilities(skip_policy, os.environ)
                 print(f"Skip policy: {len(skip_policy['rules'])} exact rules; skip inputs "
                       + (','.join(f'{k}={str(v).lower()}' for k, v in sorted(inputs.items())) or '-')
-                      + f"; ROM properties found={','.join(roms['found']) or 'none'} "
-                      f"missing={','.join(roms['missing']) or 'none'}")
+                      + f'; {describe(roms)}')
                 print('Tool prerequisites passed; no tests executed. --run repeats this check.')
                 return 0
             # Keep target/ and diagnostics exclusively owned while shared CPU/RAM

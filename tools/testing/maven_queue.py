@@ -5,6 +5,8 @@ Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
 Build without shared admission: python3 tools/testing/maven_queue.py -DskipTests package
 Qualified focused checks use 1 GiB JVM heaps automatically. Use --normal to opt out.
 Explicit low-memory lane: add --lean before the Maven arguments.
+Test lifecycles add verified original ROM properties the caller did not set
+(see rom_inputs.py); build, custom-goal and alternate-POM commands run as written.
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
 `maven_queue.py --stats` summarises recorded wait/hold/memory telemetry.
@@ -475,6 +477,29 @@ def build_only(args):
     return bool(goals) and (skip or all(goal in before_tests for goal in goals))
 
 
+# Lifecycle phases whose default bindings run Surefire. Plugin goals, alternate
+# POMs, custom launch arguments and option values that look like goals keep the
+# caller's exact command; discovered ROM properties are never added to them.
+SUREFIRE_PHASES = frozenset({'test', 'package', 'verify'})
+_FAIL_SWITCHES = {'-fae', '-ff', '-fn', '--fail-at-end', '--fail-fast', '--fail-never'}
+
+
+def runs_surefire_lifecycle(args):
+    if os.environ.get('MAVEN_ARGS'):
+        return False
+    goals = []
+    tokens = iter(args)
+    for token in tokens:
+        if token in ('-D', '--define', '-P', '--activate-profiles', '-T', '--threads'):
+            if next(tokens, None) is None:
+                return False
+        elif token.startswith(('-f', '--file')) and token not in _FAIL_SWITCHES:
+            return False
+        elif not token.startswith('-'):
+            goals.append(token)
+    return bool(SUREFIRE_PHASES & set(goals)) and set(goals) <= SUREFIRE_PHASES | {'clean'}
+
+
 def _jvm_environment_requires_exclusive():
     # This exact runtime flag selects the supported isolated graphics backend;
     # it changes neither JVM heaps nor fork/thread counts. Keep all unmeasured
@@ -562,6 +587,7 @@ def main(argv=None):
         raise ValueError('--lean and --normal are mutually exclusive')
     if not args:
         raise ValueError('Supply Maven arguments after --')
+    requested = list(args)
     # Use the caller's worktree, including when this script lives in another one.
     exclusive = needs_exclusive(args)
     environment = None
@@ -581,6 +607,18 @@ def main(argv=None):
             print('Qualified small job: 1 GiB JVM heaps; 4 GiB/4-core reservation. '
                   'Use --normal if this check needs the larger heap.', flush=True)
     building = not lean and build_only(args)
+    if not building and runs_surefire_lifecycle(requested):
+        # Admission, lean qualification and estimates above use the caller's
+        # command; ROM paths can neither widen nor narrow them.
+        from rom_inputs import (ROM_PROPERTIES, caller_rom_properties, describe, rom_args,
+                                rom_properties, without_caller)
+        caller = caller_rom_properties(requested, Path.cwd())
+        # A command naming any ROM property chose its ROM set (the route gate's
+        # strict inputs, an empty value proving a skip); keep it hermetic.
+        named = any(key in token for key in ROM_PROPERTIES.values() for token in requested)
+        roms = [] if named else without_caller(rom_args(Path.cwd()), caller)
+        print(describe(rom_properties(roms, caller)) + '; tests for missing ROMs skip.', flush=True)
+        args = [*args, *roms]
     slot = (worktree_build_slot(Path.cwd()) if building else
             maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
                        kind=kind, reservation=reservation,

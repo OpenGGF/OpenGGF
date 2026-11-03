@@ -316,19 +316,21 @@ void testEHZCollision() {
 
 ### ROM Path Configuration
 
-ROM files are found automatically by filename in the working directory. You can also
-specify paths via system properties or environment variables:
+Queued test commands identify verified original `.gen` files by SHA-1 in the worktree
+root, then (from a linked worktree) the main checkout, and pass their absolute paths. The
+wrapper prints the found, caller-supplied and missing properties:
 
 ```bash
-# System properties on a focused selection
-python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestS1Ghz1TraceReplay \
-  -Dsonic1.rom.path=/absolute/s1.gen test
-python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic \
-  -Dsonic2.rom.path=/absolute/s2.gen test
-python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading \
-  -Ds3k.rom.path=/absolute/s3k.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading test
+```
 
-# Environment variables
+To pin a different dump, name the property yourself; a command that names any ROM property
+keeps exactly its own ROM set, and an empty value such as `-Ds3k.rom.path=` proves a skip.
+Environment variables also take precedence over discovery:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestS1Ghz1TraceReplay \
+  -Dsonic1.rom.path=/absolute/other-s1.gen test
 export SONIC_1_ROM_PATH="/absolute/s1.gen"
 export SONIC_2_ROM_PATH="/absolute/s2.gen"
 export SONIC_3K_ROM_PATH="/absolute/s3k.gen"
@@ -494,8 +496,7 @@ Run them with:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
-  -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay \
-  -Dsonic1.rom.path=/absolute/s1.gen test
+  -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay test
 ```
 
 For the full workflow, including recording traces and reading divergence reports, see

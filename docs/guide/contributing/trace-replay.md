@@ -128,7 +128,8 @@ for the current capture blocker; do not fill missing observations by hand.
 
 Trace replay tests require:
 
-- the matching ROM for the game(s) you want to replay, in the repo root or via system property:
+- the matching ROM for the game(s) you want to replay, in the repo root or main checkout
+  (the queue discovers it by SHA-1) or via system property:
   - Sonic 1: `s1.gen`, World REV01, CRC32 `AFE05EEE` (or `-Dsonic1.rom.path=...`)
   - Sonic 2: `s2.gen`, World REV01, CRC32 `7B905383` (or `-Dsonic2.rom.path=...`)
   - Sonic 3 & Knuckles: `s3k.gen`, World lock-on combined ROM, CRC32 `63522553` (or `-Ds3k.rom.path=...`)
@@ -142,8 +143,7 @@ selection, when shared physics/timing changes require it, is:
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay' \
-  -Dsonic1.rom.path=/absolute/s1.gen -Dsonic2.rom.path=/absolute/s2.gen \
-  -Ds3k.rom.path=/absolute/s3k.gen test
+  test
 ```
 
 Run one trace:

@@ -258,8 +258,10 @@ already installed. Existing validation scope and delivery policy still apply.
 
 ## ROM and reference setup
 
-Discover existing root `.gen` files and pass absolute paths to ROM-backed
-tests. Missing/wrong paths silently skip `@RequiresRom` tests. Do not rename,
+Queued test commands and category runs discover verified root `.gen` files
+(then a linked worktree's main checkout) by SHA-1 and pass absolute paths;
+pass a property only to pin another dump. Read the wrapper's found/missing
+line: missing/wrong paths silently skip `@RequiresRom` tests. Do not rename,
 copy, delete, or create ROM links to satisfy an example. Verify identity when
 it matters:
 
