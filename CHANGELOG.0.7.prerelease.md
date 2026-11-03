@@ -1734,6 +1734,10 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- S3K bonus-return chain replay retains the first destination gameplay row,
+  preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
+  diagnostics now identify pending archive jobs, direct children and submitters.
+
 - Trace entry placement distinguishes native level boots from intentional
   positioned entries. Explicit native loads retain their ROM start history;
   positioned S3K camera focus follows declared SpawnPlayers ordering. Unknown
