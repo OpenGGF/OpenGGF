@@ -78,7 +78,7 @@ public class Sonic3kSpecialStageCollisionQueue {
 
     /**
      * Add a blue sphere collection entry.
-     * ROM: Find_SStageCollisionResponseSlot + move.b #2,(a2) (sonic3k.asm:12172)
+     * ROM: Find_SStageCollisionResponseSlot + move.b #2,(a2) (sonic3k.asm:12781)
      * <p>
      * Deduplicated: only one entry per grid index to prevent queue saturation.
      * The ROM creates entries every frame but clears them fast enough to avoid

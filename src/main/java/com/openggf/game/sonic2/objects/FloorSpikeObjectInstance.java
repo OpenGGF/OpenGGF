@@ -110,7 +110,7 @@ public class FloorSpikeObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj6D_Action (s2.asm line 53442-53477)
+     * ROM: Obj6D_Action (s2.asm line 53890-53925)
      * Handles the expand/retract/wait cycle.
      */
     private void updateAction(int vIntRunCount) {

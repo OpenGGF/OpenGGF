@@ -195,8 +195,10 @@ class TestSpiralObjectInstance {
         sonic.setOnObject(true);
         sonic.setLatchedSolidObject(Sonic2ObjectIds.SPIRAL, spiral);
 
-        assertTrue(GameServices.collision().hasObjectSupport(sonic),
-                "AnglePos support should honor active non-solid controller latches");
+        sonic.setAir(false);
+        GameServices.collision().resolveGroundAttachment(sonic, 14);
+        assertFalse(sonic.getAir(), "AnglePos returns on the Status_OnObj the non-solid spiral owns");
+        assertTrue(sonic.isOnObject());
     }
 
     @Test
@@ -256,7 +258,7 @@ class TestSpiralObjectInstance {
     }
 
     @Test
-    void mtzCylinderPostPlayerHookCapturesAfterPlayerMovement() {
+    void mtzCylinderCapturesFromThePlayersPostMovementPosition() {
         ObjectSpawn spawn = new ObjectSpawn(0x0C40, 0x03C0, Sonic2ObjectIds.SPIRAL, 0x80, 0, false, 0);
         ObjectManager objectManager = newSpiralManager(List.of(spawn));
         objectManager.reset(0x0B80);
@@ -272,19 +274,16 @@ class TestSpiralObjectInstance {
         sonic.setYSpeed((short) 0x0450);
         sonic.setGSpeed((short) 0xFBFB);
 
-        objectManager.update(0x0B80, sonic, List.of(), 11277, false);
-        assertFalse(sonic.isOnObject(),
-                "Pre-physics Obj06_Cylinder sees the pre-move foot at delta 0 and should not capture");
-
+        // Obj06_Cylinder runs in its SST slot after Obj01 has moved Sonic.
         sonic.setCentreY((short) 0x03ED);
-        objectManager.runPostPlayerHooks(sonic, 11277);
+        objectManager.update(0x0B80, sonic, List.of(), 11277, false);
 
         assertTrue(sonic.isOnObject(),
-                "Later SST-slot Obj06_Cylinder must re-check Sonic's post-movement position");
-        assertFalse(sonic.getAir(), "Post-player cylinder capture should clear status.player.in_air");
-        assertFalse(sonic.getRolling(), "Post-player cylinder capture should run ResetOnFloor_Part2");
+                "Obj06_Cylinder checks Sonic's post-movement position");
+        assertFalse(sonic.getAir(), "Cylinder capture should clear status.player.in_air");
+        assertFalse(sonic.getRolling(), "Cylinder capture should run ResetOnFloor_Part2");
         assertEquals(0x03E8, sonic.getCentreY() & 0xFFFF,
-                "Post-player capture should match the ROM's snap followed by Sonic's -5 lift");
+                "Capture should match the ROM's snap followed by Sonic's -5 lift");
     }
 
     @Test

@@ -450,7 +450,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance", "sidekickLockOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZPoppingPlatformObjectInstance", "extensionLockedPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionPendingHorizontalLaunch"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionFreshOrderedCarry"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "extensionHorizontalPushingThisFrame"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "mainHorizontalStateOwner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.OOZSpringObjectInstance", "sidekickHorizontalStateOwner"), RewindFieldPolicy.CAPTURED),
@@ -775,7 +774,6 @@ final class DefaultObjectRewindPolicies {
             // renderer. Pattern[] and renderer fields already use declared-type transient policy.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "airZoomCueSourceRaster"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance", "endBossDefeatExplosionController"), RewindFieldPolicy.DEFERRED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$DrillArmChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MgzMinibossInstance$KnucklesSpikePlatformChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MGZTopLauncherObjectInstance", "child"), RewindFieldPolicy.CAPTURED),

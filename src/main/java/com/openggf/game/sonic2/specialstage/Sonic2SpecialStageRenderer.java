@@ -315,7 +315,7 @@ public class Sonic2SpecialStageRenderer {
      * Renders the background plane (Plane B).
      *
      * The background mapping buffer is 32 tiles wide × 32 tiles tall.
-     * From disassembly SSPlaneB_Background (s2.asm line 9155):
+     * From disassembly SSPlaneB_Background (s2.asm line 9159):
      * - Rows 0-15: MapEng_SpecialBackBottom (top of screen)
      * - Rows 16-31: MapEng_SpecialBack (bottom of screen)
      *

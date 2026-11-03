@@ -88,24 +88,6 @@ class TestOOZSpringMultiSidekick {
         spring.update(2, main);
 
         assertFalse(stateSet(spring, "extensionPendingHorizontalLaunch").containsKey(omitted));
-        assertFalse(stateSet(spring, "extensionFreshOrderedCarry").containsKey(omitted));
-    }
-
-    @Test
-    void freshOrderedCarryFollowsIdentityAcrossPromotionAndDemotion() throws Exception {
-        TestablePlayableSprite main = player("sonic");
-        TestablePlayableSprite first = player("tails");
-        TestablePlayableSprite promoted = player("knuckles");
-        MutableServices services = new MutableServices(main, List.of(first, promoted), mock(SolidExecutionRegistry.class));
-        OOZSpringObjectInstance spring = horizontalSpring(services);
-        spring.update(0, main);
-        setBooleanField(spring, "sidekickFreshOrderedCarry", true);
-
-        services.sidekicks = List.of(promoted, first);
-        spring.update(1, main);
-
-        assertTrue(stateSet(spring, "extensionFreshOrderedCarry").containsKey(first));
-        assertFalse(booleanField(spring, "sidekickFreshOrderedCarry"));
     }
 
     @Test

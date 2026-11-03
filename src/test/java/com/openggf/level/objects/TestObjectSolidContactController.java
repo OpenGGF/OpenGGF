@@ -52,7 +52,7 @@ class TestObjectSolidContactController {
         int top = owner.getPieceParams(0).groundHalfHeight() + player.getYRadius();
         player.setCentreY((short) (owner.getPieceY(0) - 4 - top + 8));
         player.setYSpeed((short) 0x100);
-        manager.updateSolidContacts(player);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         assertSame(owner, manager.getRidingObject(player));
         assertFalse(player.getAir());
         assertEquals(0, player.getDoubleJumpFlag());
@@ -68,40 +68,6 @@ class TestObjectSolidContactController {
         }
     }
 
-
-    @Test
-    void resetClearsInlineSupportAndStaleSupportLossState() {
-        ObjectSolidContactController controller =
-                new ObjectSolidContactController(mock(ObjectManager.class));
-        PlayableEntity player = mock(PlayableEntity.class);
-
-        controller.markObjectSupportThisFrame(player);
-        controller.forceAirOnStaleObjectSupportLoss(player);
-        ObjectManagerSnapshot.SolidContactState before = controller.captureRewindState();
-        assertEquals(1, before.inlineSupportedPlayers().size());
-        assertEquals(1, before.forceAirOnStaleSupportLoss().size());
-
-        controller.reset();
-
-        ObjectManagerSnapshot.SolidContactState after = controller.captureRewindState();
-        assertTrue(after.inlineSupportedPlayers().isEmpty(),
-                "reset must clear per-frame inline support players");
-        assertTrue(after.forceAirOnStaleSupportLoss().isEmpty(),
-                "reset must clear stale-support force-air players");
-    }
-
-    @Test
-    void globalSolidProviderGetterRunsInsideCreatorFaultBoundary() {
-        HostileSolidObject hostile = new HostileSolidObject(true, false);
-        ObjectManager manager = boundaryEnabledManager(hostile);
-
-        ModFaultBoundary.CallbackAborted aborted = assertThrows(
-                ModFaultBoundary.CallbackAborted.class,
-                () -> manager.hasStandingContact(mock(PlayableEntity.class)));
-
-        assertEquals("solid-owner", aborted.owner());
-        assertTrue(aborted.getCause() instanceof IllegalStateException);
-    }
 
     @Test
     void compatibilitySolidListenerRunsInsideCreatorFaultBoundary() {
@@ -152,7 +118,6 @@ class TestObjectSolidContactController {
         controller.restoreRewindState(contactState(player, owner, List.of(second, first), List.of(second, first)));
         var captured = controller.captureRewindState();
         assertEquals(List.of(first, second), keysFor(captured.standingBits(), player));
-        assertEquals(List.of(first, second), keysFor(captured.standingBitSnapshots(), player));
         assertFalse(controller.hasStandingLatch(player, owner), "piece keys never become an aggregate key");
 
         controller.restoreRewindState(contactState(player, owner, List.of(first, second), List.of(first, second)));
@@ -200,8 +165,6 @@ class TestObjectSolidContactController {
             controller.releaseObjectStandingLatchForAllPlayers(freshOwner);
             var released = controller.captureRewindState(context);
             assertTrue(released.standingBits().isEmpty(), "the fresh raw owner owns both restored sibling bits");
-            assertEquals(captured.standingBitSnapshots(), released.standingBitSnapshots(),
-                    "object-owned release does not erase the independent pre-clear snapshot");
         }
     }
 
@@ -219,7 +182,6 @@ class TestObjectSolidContactController {
         assertSame(owner, controller.getRidingObject(player));
         assertEquals(0, controller.getRidingPieceIndex(player));
         assertTrue(captured.standingBits().isEmpty(), "riding membership is not authority to recreate a live bit");
-        assertEquals(List.of(cleared), keysFor(captured.standingBitSnapshots(), player));
     }
 
     @Test
@@ -236,7 +198,6 @@ class TestObjectSolidContactController {
         var captured = controller.captureRewindState();
         assertEquals(-1, captured.standingBits().getFirst().keys().getFirst().pieceIndex());
         assertEquals(List.of(legacy), keysFor(captured.standingBits(), player));
-        assertEquals(List.of(legacy), keysFor(captured.standingBitSnapshots(), player));
     }
 
     private static ObjectSpawn spawn() {
@@ -257,7 +218,7 @@ class TestObjectSolidContactController {
         player.setCentreY((short) (owner.getPieceY(piece) - 4 - maxTop + 8));
         player.setAir(true);
         player.setYSpeed((short) 0x100);
-        manager.updateSolidContacts(player);
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         assertSame(owner, manager.getRidingObject(player), "ordinary solid resolution established the ride");
         return player;
     }
@@ -271,13 +232,12 @@ class TestObjectSolidContactController {
     private static ObjectManagerSnapshot.SolidContactState contactState(PlayableEntity player, PieceSolid owner,
             List<ObjectManagerSnapshot.SolidContactLatchKey> live,
             List<ObjectManagerSnapshot.SolidContactLatchKey> cleared) {
+        // The per-frame pre-clear snapshot (cleared) is rebuilt every frame and not rewound.
         return new ObjectManagerSnapshot.SolidContactState(17,
                 List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(player, owner.getSpawn(),
-                        owner.getSlotIndex(), 100, 100, 0)),
-                List.of(), List.of(), List.of(), List.of(),
+                        owner.getSlotIndex(), 0)),
                 live.isEmpty() ? List.of() : List.of(new ObjectManagerSnapshot.SolidContactLatchEntry(player, live)),
-                List.of(),
-                cleared.isEmpty() ? List.of() : List.of(new ObjectManagerSnapshot.SolidContactLatchEntry(player, cleared)));
+                List.of());
     }
 
     private static final class PieceSolid extends AbstractObjectInstance implements MultiPieceSolidProvider {

@@ -270,8 +270,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean prePhysicsAir = false;
         protected byte prePhysicsAngle = 0;
         protected short prePhysicsGSpeed = 0;
-        /** Ground velocity after player physics but before late zone-feature updates. */
-        protected short preZoneFeatureGSpeed = 0;
         protected short prePhysicsXSpeed = 0;
         protected short prePhysicsYSpeed = 0;
         protected short prePhysicsCentreX = 0;
@@ -320,25 +318,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected boolean onObject = false;
 
-        /**
-         * Snapshot of {@link #onObject} captured at the START of the current
-         * playable frame (before any player tick has run). Refreshed by
-         * {@link #captureOnObjectAtFrameStart()} from {@code SpriteManager.beginPlayableFrame}.
-         *
-         * <p>ROM analog: in {@code Tails_CPU_Control} (sonic3k.asm:26728-26740,
-         * S2 s2.asm:38933+), the follow-steering logic reads the leader's
-         * {@code Status_OnObj} bit MID-FRAME, before solid-object processing
-         * (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4 sonic3k.asm:44409-44421)
-         * has cleared it for jumpers. {@code Sonic_Jump} (sonic3k.asm:23323-23389)
-         * sets {@code Status_InAir} but does NOT touch {@code Status_OnObj}; the
-         * bit only clears later when objects run. The engine's
-         * {@code PlayableSpriteMovement.doJump} and air-unseat paths clear
-         * {@code onObject} EARLIER in the player tick, so by the time the
-         * Tails CPU runs (next playable in {@code SpriteManager.update}), the
-         * live {@code isOnObject()} value already reflects the leader's
-         * post-tick state. Reading {@link #getOnObjectAtFrameStart()} preserves
-         * the pre-tick (mid-frame, ROM-equivalent) view.
-         */
         /**
          * ROM-style latched solid interaction object id.
          * Mirrors the object id resolved from the player's SST {@code interact} slot,
@@ -1030,13 +1009,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         topSolidBit, lrbSolidBit,
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
-                        preZoneFeatureGSpeed,
                         prePhysicsCentreX, prePhysicsCentreY,
                         air, rolling, jumping, rollingJump,
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
                         preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
                         objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
-                        onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
+                        onObject,
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
                         latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(), latchedSolidObjectBound,
@@ -1168,7 +1146,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
                 this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
                 this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
-                this.preZoneFeatureGSpeed = extra.preZoneFeatureGSpeed();
                 this.prePhysicsCentreX = extra.prePhysicsCentreX();
                 this.prePhysicsCentreY = extra.prePhysicsCentreY();
                 this.air = extra.air();
@@ -1184,8 +1161,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectPreservedRollVelocityCarry = extra.objectPreservedRollVelocityCarry();
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
-                controller.restoreFrameStartState(extra.onObjectAtFrameStart(),
-                                extra.onObjectAtPreviousFrameStart(), extra.pushingAtFrameStart(),
+                controller.restoreFrameStartState(extra.pushingAtFrameStart(),
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
                 this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
@@ -2201,37 +2177,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Captures the current {@link #onObject} value into the frame-start
-         * snapshot. Called by {@code SpriteManager.beginPlayableFrame} before
-         * any playable's per-frame tick runs, so consumers reading
-         * {@link #getOnObjectAtFrameStart()} see the value as it was at the
-         * top of the frame, matching the ROM's mid-frame view when one
-         * playable's logic reads another playable's status.
+         * Captures the frame-start push/air/hurt snapshot. Called by
+         * {@code SpriteManager.beginPlayableFrame} before any playable's
+         * per-frame tick runs.
          */
         public void captureOnObjectAtFrameStart() {
                 controller.captureFrameStartState();
                 this.invulnerabilityDisplayTimerDecrementedThisFrame = false;
-        }
-
-        /**
-         * Returns the {@link #onObject} value as it was at the START of the
-         * current playable frame (before any player tick ran). Use this in
-         * cross-playable reads where the ROM accesses another sprite's
-         * {@code Status_OnObj} bit BEFORE solid-object processing has run for
-         * the frame (e.g. {@code Tails_CPU_Control} follow-steering at
-         * sonic3k.asm:26728-26740 / s2.asm:38933+).
-         */
-        public boolean getOnObjectAtFrameStart() {
-                return controller.isOnObjectAtFrameStart();
-        }
-
-        /**
-         * Returns the {@code Status_OnObj} snapshot from the preceding playable
-         * frame. This distinguishes a just-released solid ride from a terrain
-         * AnglePos detach after grounded movement has already selected animation.
-         */
-        public boolean getOnObjectAtPreviousFrameStart() {
-                return controller.isOnObjectAtPreviousFrameStart();
         }
 
         public boolean getPushingAtFrameStart() {
@@ -2385,16 +2337,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return prePhysicsGSpeed;
         }
 
-        /** Captures the phase immediately before late zone-feature velocity writes. */
-        public void capturePreZoneFeatureSnapshot() {
-                this.preZoneFeatureGSpeed = this.gSpeed;
-        }
-
-        /** Ground velocity after player physics and before late zone-feature updates. */
-        public short getPreZoneFeatureGSpeed() {
-                return preZoneFeatureGSpeed;
-        }
-
         /** Pre-physics X velocity from {@link #capturePrePhysicsSnapshot()}. */
         public short getPrePhysicsXSpeed() {
                 return prePhysicsXSpeed;
@@ -2414,12 +2356,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getPrePhysicsCentreY() {
                 return prePhysicsCentreY;
         }
-
-        /** Captures CPU-sidekick state before {@code SidekickCpuController.update}. */
-        public void capturePreCpuControlSnapshot() { groundWallResponse.capturePreControlGSpeed(this.gSpeed); }
-
-        /** Ground speed captured before the CPU controller ran this frame. */
-        public short getPreCpuControlGSpeed() { return groundWallResponse.preControlGSpeed(); }
 
         public void deferGroundWallVelocityResponse(int mode, int distance) { groundWallResponse.defer(mode, distance); }
 
@@ -2457,7 +2393,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (currentAngle == 0) {
                         return; // Already at 0
                 }
-                // ROM: Sonic_JumpAngle (s2.asm:37465-37486)
+                // ROM: Sonic_JumpAngle (s2.asm:37793-37814)
                 // ROM uses bpl (branch if positive, i.e., bit 7 clear) to determine direction
                 // Angles 0x01-0x7F (1-127): bit 7 clear = positive, subtract 2
                 // Angles 0x80-0xFF (128-255): bit 7 set = negative, add 2
@@ -2646,16 +2582,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setPushing(boolean pushing) {
                 this.pushing = pushing;
-                if (!pushing) {
-                        groundWallResponse.clearPushState();
-                }
         }
-
-        /** Marks the live push bit as set this cycle by a terrain ground-wall collision. */
-        public void markPushFromGroundWallCollision() { groundWallResponse.markPushFromGroundWallCollision(); }
-
-        /** @return true when the live push bit came from a terrain ground-wall collision. */
-        public boolean isPushFromGroundWallCollision() { return groundWallResponse.isPushFromGroundWallCollision(); }
 
         public boolean getSkidding() {
                 return skidding;
@@ -3218,7 +3145,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 PlayableHurtRadiusTransition.applyDeath(this);
                 setCrouching(false);
                 setPushing(false);
-                setAir(true); setOnObject(onObject || controller.isOnObjectAtFrameStart());
+                // Kill_Character sets Status_InAir and leaves Status_OnObj alone
+                // (sonic3k.asm:21172-21193; Player_TouchFloor clears no OnObj either).
+                setAir(true);
                 setGSpeed((short) 0);
                 setXSpeed((short) 0);
                 setYSpeed((short) -0x700);

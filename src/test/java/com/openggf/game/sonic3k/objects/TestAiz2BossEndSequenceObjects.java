@@ -2064,7 +2064,7 @@ class TestAiz2BossEndSequenceObjects {
 
         @Override
         public ObjectSolidExecutionContext currentObject() {
-            return new ObjectSolidExecutionContext(this, object, () -> {
+            return new ObjectSolidExecutionContext(this, object, call -> {
                 resolved = true;
                 playerToStop.setYSpeed((short) 0);
                 return new SolidCheckpointBatch(object, Map.of());

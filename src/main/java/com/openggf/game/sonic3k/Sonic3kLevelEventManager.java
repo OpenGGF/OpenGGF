@@ -43,7 +43,6 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
-import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -84,7 +83,7 @@ import java.util.logging.Logger;
 
 /**
  * Sonic 3&K implementation of dynamic level events.
- * ROM equivalent: ScreenEvents (sonic3k.asm:102274)
+ * ROM equivalent: ScreenEvents (sonic3k.asm:102279)
  *
  * S3K uses dual foreground/background event routines (Events_routine_fg
  * and Events_routine_bg) with a stride of 4 per state transition.
@@ -455,32 +454,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
         return fixedAirCountdownManager.ownsCadenceFor(player);
-    }
-
-    @Override
-    public boolean isSidekickObjectOrderFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return Sonic3kSidekickFollowContext.isObjectOrderFollowSteeringContext(sidekick, effectiveLeader);
-    }
-
-    @Override
-    public boolean isSidekickObjectOrderFollowNudgeContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return Sonic3kSidekickFollowContext.isObjectOrderFollowNudgeContext(sidekick, effectiveLeader);
-    }
-
-    @Override
-    public boolean isSidekickDoorSupportGraceFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            ObjectInstance ridingObject) {
-        return Sonic3kSidekickFollowContext.isDoorSupportGraceFollowSteeringContext(sidekick, ridingObject);
-    }
-
-    @Override
-    public boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(AbstractPlayableSprite sidekick) {
-        return Sonic3kSidekickFollowContext.usesRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
     }
 
     @Override

@@ -324,7 +324,7 @@ class TestLostRingTouchOrdering {
 - [ ] **Step 3: Implement the branch.** In `processCollisionLoop`, in the dispatch block (after `if (!overlap) continue; buildingSet.add(instance);`, before the `shouldTrigger` SPECIAL edge-trigger logic at ObjectManager.java:5392), add:
 
 ```java
-// Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch (s2.asm:85196-85219).
+// Type-keyed lost-ring collectible: ROM Touch_ChkValue ring branch (s2.asm:85405-85428).
 // Evaluated EVERY frame on overlap (not edge-triggered) so the ring collects the frame
 // invulnerable_time drops below 90 while the player is still continuously overlapping.
 // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape — so S1 placed

@@ -192,7 +192,7 @@ public class CheckpointStarInstance extends AbstractObjectInstance
     @Override
     public int getCollisionFlags() {
         // AllocateObjectAfterCurrent clears the SST, so collision_flags is 0 until
-        // loc_1F5BE writes $D8 at objoff_36 == $80 (docs/s2disasm/s2.asm:44926-44927).
+        // loc_1F5BE writes $D8 at objoff_36 == $80 (docs/s2disasm/s2.asm:44932-44933).
         // $D8 decodes as Touch_Special ($C0) with Touch_Sizes index $18 = (4,4)
         // (s2.asm:85286-85292, 85141-85196).
         return collisionEnabled ? 0xD8 : 0;

@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.route.InputScriptCompiler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2Movie;

@@ -60,7 +60,8 @@ class TestLevelFrameHardwareTimingBoundaries {
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;
-        }).when(level).updateObjectPositionsWithoutTouches(false);
+        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(
+                any(), org.mockito.ArgumentMatchers.eq(false));
         doAnswer(ignored -> {
             events.add("oscillation-tail");
             return null;
@@ -86,16 +87,16 @@ class TestLevelFrameHardwareTimingBoundaries {
 
         assertEquals(List.of(
                         "observer:VINT_SERVICE:ready=false",
-                        "objects:ready=false",
                         "physics",
+                        "objects:ready=false",
                         "camera",
                         "screen-events:ready=false",
                         "oscillation-tail",
                         "observer:POST_OBJECTS:ready=false",
                         "observer:PRE_MAIN_LOOP:ready=true",
                         "observer:VINT_SERVICE:ready=true",
-                        "objects:ready=true",
                         "physics",
+                        "objects:ready=true",
                         "camera",
                         "screen-events:ready=true",
                         "oscillation-tail",
@@ -128,7 +129,6 @@ class TestLevelFrameHardwareTimingBoundaries {
         LevelFrameContext context = context(timing, levelEvents, boundary ->
                 events.add("observer:" + boundary + ":ready=" + timing.isReady(handle)));
         LevelManager level = mock(LevelManager.class);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         doAnswer(ignored -> {
             events.add("objects:ready=" + timing.isReady(handle));
             return null;

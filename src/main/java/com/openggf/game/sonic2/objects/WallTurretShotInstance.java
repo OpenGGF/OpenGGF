@@ -145,7 +145,7 @@ public class WallTurretShotInstance extends AbstractObjectInstance
         // have written the bit -- but the ROM does not read a cleared bit there
         // either: ObjB8's subObjData row seeds render_flags with
         // 1<<render_flags.on_screen (s2.asm:74763), applied by
-        // LoadSubObject_Part3's or.b d0,render_flags(a0) (s2.asm:72719-72720).
+        // LoadSubObject_Part3's or.b d0,render_flags(a0) (s2.asm:72834-72835).
         // So the shot survives its creation frame regardless of position, and a
         // missing snapshot must not be read as "not drawn".
         if (hasPreUpdateSnapshot()

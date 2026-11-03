@@ -144,7 +144,7 @@ public final class GameplayInputBranchTool {
     }
 
     /** Match the production rewind exclusion before any raw candidate restore. */
-    static void requireRestorableCheckpoint(CompositeSnapshot checkpoint, boolean pendingFreshAssembly) {
+    public static void requireRestorableCheckpoint(CompositeSnapshot checkpoint, boolean pendingFreshAssembly) {
         if (pendingFreshAssembly) {
             throw new IllegalStateException("Branch checkpoint has pending fresh level assembly; "
                     + "continue ordinary input until destination ownership is released");

@@ -34,10 +34,6 @@ class TestSolidRoutineProfiles {
         assertTrue(profile.forceAirOnRideExit());
         assertFalse(profile.dropOnFloor());
         assertFalse(profile.carriesAirborneRiderAfterExitPlatform());
-
-        SolidRoutineAdapter adapter = SolidRoutineProfile.adapt(provider);
-        assertEquals(profile, adapter.profile());
-        assertSame(params, adapter.getSolidParams());
     }
 
     @Test
@@ -179,26 +175,6 @@ class TestSolidRoutineProfiles {
         assertTrue(profile.bypassesOffscreenSolidGate());
         assertFalse(profile.stickyContactBuffer());
         assertFalse(profile.usesPlatformLandingSnap());
-    }
-
-    @Test
-    void solidAdapterDelegatesRiskyHooksInsteadOfOwningThem() {
-        SpySolidProvider provider = new SpySolidProvider();
-        SolidRoutineAdapter adapter = SolidRoutineProfile.adapt(provider);
-
-        assertSame(provider.params, adapter.getSolidParams());
-        assertFalse(adapter.isSolidFor(null));
-        assertTrue(adapter.allowsZeroDistanceTopSolidLanding(null));
-        assertEquals(7, adapter.getTopLandingHalfWidth(null, 20));
-        assertEquals(Integer.valueOf(123), adapter.getObjectManagedRideCentreY(null, 0, provider.params));
-        adapter.setPlayerPushing(null, true);
-
-        assertEquals(1, provider.getSolidParamsCalls);
-        assertEquals(1, provider.isSolidForCalls);
-        assertEquals(1, provider.zeroDistanceCalls);
-        assertEquals(1, provider.topWidthCalls);
-        assertEquals(1, provider.managedRideYCalls);
-        assertEquals(1, provider.pushingCalls);
     }
 
     @Test

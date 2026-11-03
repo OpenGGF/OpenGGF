@@ -47,12 +47,6 @@ public record SolidRoutineProfile(
                 stickyContactBuffer));
     }
 
-    public static SolidRoutineAdapter adapt(SolidObjectProvider provider) {
-        return new SolidRoutineAdapter(
-                Objects.requireNonNull(provider, "provider"),
-                fromProvider(provider));
-    }
-
     public com.openggf.game.profiles.solidroutine.SolidRoutineProfile toCanonical() {
         return new com.openggf.game.profiles.solidroutine.SolidRoutineProfile(
                 kind.toCanonical(),

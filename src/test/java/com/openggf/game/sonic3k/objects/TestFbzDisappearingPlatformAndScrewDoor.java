@@ -295,7 +295,7 @@ class TestFbzDisappearingPlatformAndScrewDoor {
     void horizontalScrewDoorPassesCurrentXSoRiderGetsNoCarryDelta() {
         var door = new FbzScrewDoorObjectInstance(spawn(0x7A, 0x43));
 
-        assertFalse(door.carriesRiderOnHorizontalMove(null),
+        assertEquals(door.getX(), door.tailCallD4(door.getX() + 8),
                 "loc_3BCF2 loads current x_pos into d4 immediately before SolidObjectFull, "
                         + "so MvSonicOnPtfm sees a zero horizontal delta");
     }

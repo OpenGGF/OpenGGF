@@ -69,10 +69,10 @@ import java.util.logging.Logger;
  *       with initial velocities instead of timed collapse.</li>
  * </ul>
  * <p>
- * ROM references: Obj_CollapsingBridge (sonic3k.asm:44926),
- * CollapsingPtfmHandlePlayerAndSmash (sonic3k.asm:45427),
- * ObjPlatformCollapse_SmashObject (sonic3k.asm:45440),
- * Check_CollapsePlayerRelease (sonic3k.asm:45389).
+ * ROM references: Obj_CollapsingBridge (sonic3k.asm:44931),
+ * CollapsingPtfmHandlePlayerAndSmash (sonic3k.asm:45432),
+ * ObjPlatformCollapse_SmashObject (sonic3k.asm:45445),
+ * Check_CollapsePlayerRelease (sonic3k.asm:45394).
  */
 public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
@@ -871,7 +871,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     /**
      * Spawns individual fragment children from the fragment mapping frame.
      * Each piece becomes a separate falling object with staggered delay.
-     * ROM: ObjPlatformCollapse_SmashObject (sonic3k.asm:45440)
+     * ROM: ObjPlatformCollapse_SmashObject (sonic3k.asm:45445)
      */
     private void spawnFragments() {
         // Play collapse SFX

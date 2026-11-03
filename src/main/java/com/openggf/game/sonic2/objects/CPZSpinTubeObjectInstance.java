@@ -402,7 +402,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
             return;
         }
 
-        // ROM loc_225FC (docs/s2disasm/s2.asm:48467-48483) gates capture ONLY on:
+        // ROM loc_225FC (docs/s2disasm/s2.asm:48520-48536) gates capture ONLY on:
         //   - not Debug_placement_mode (not modelled here)
         //   - x_pos(a1)-x_pos(a0) < objoff_2A (collisionDistance)  [checked above]
         //   - y_pos(a1)-y_pos(a0) < 0x80                           [checked above]
@@ -602,7 +602,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
         // that leaves the 16-bit subpixel fraction untouched. Use the
         // subpixel-preserving setters so the fraction carried across waypoints is
         // not lost; zeroing it drifts the tube position and shifts the cross-axis
-        // velocity recomputed at loc_22902 (docs/s2disasm/s2.asm:48761-48815).
+        // velocity recomputed at loc_22902 (docs/s2disasm/s2.asm:48767-48821).
         NativePositionOps.writeXPosPreserveSubpixel(player, nextX);
         NativePositionOps.writeYPosPreserveSubpixel(player, nextY);
         markActiveOwner(player);

@@ -52,6 +52,34 @@ class TestSszBridgeNativeTopContact {
         assertEquals(!expectedLanding,player.getAir());
         assertEquals(expectedLanding ? 3179 : y,player.getCentreY(),"native relative Y snap");
     }
+
+    // loc_1E2E0 (sonic3k.asm:41852-41857): a grounded rider outside [x-96,x+96)
+    // loses Status_OnObj, gains Status_InAir and loses the bridge's d6 bit in the
+    // same SolidObjectTop_1P call. Native SSZ1 clears P1's bit on the walk-off frame.
+    @ParameterizedTest
+    @CsvSource({"992,true", "991,false", "799,true", "800,false"})
+    void groundedWalkOffClearsTheBridgeStandingBitInTheSameCall(int x,boolean walksOff) {
+        var bridge=new SszCutsceneBridgeObjectInstance(new ObjectSpawn(0x2C0,0xC88,0x77,0,0,false,0));
+        var registry=new ObjectRegistry() {
+            @Override public ObjectInstance create(ObjectSpawn spawn) {return null;}
+            @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+            @Override public String getPrimaryName(int id) {return "declared local SSZ bridge";}
+        };
+        var manager=new ObjectManager(List.of(),registry,0,null,null);
+        manager.reset(512);manager.addDynamicObject(bridge);
+        var player=new NativeSonic(896,3191);player.setAir(true);player.setYSpeed((short)0);
+        AbstractObjectInstance.updateCameraBounds(512,3008,832,3232,0);
+        manager.update(512,player,List.of(),0,false,true,false);
+        assertTrue(manager.hasObjectStandingBit(player,bridge),"landed on the bridge");
+        assertFalse(player.getAir());
+        player.setCentreXPreserveSubpixel((short)x);
+        manager.update(512,player,List.of(),1,false,true,false);
+        assertEquals(!walksOff,manager.hasObjectStandingBit(player,bridge),"bclr d6,status(a0)");
+        assertEquals(!walksOff,manager.isRidingObject(player));
+        assertEquals(!walksOff,player.isOnObject(),"bclr #Status_OnObj");
+        assertEquals(walksOff,player.getAir(),"bset #Status_InAir");
+    }
+
     private static final class NativeSonic extends Sonic {
         NativeSonic(int x,int y) {
             super("sonic",(short)x,(short)y);setGameRulesForTest(GameRules.SONIC_3K);

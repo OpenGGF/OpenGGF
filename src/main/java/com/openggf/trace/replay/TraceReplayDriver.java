@@ -220,7 +220,7 @@ public final class TraceReplayDriver {
                     TraceMetadata meta = trace.metadata();
                     preSnapSprite.setCentreX(meta.startX());
                     preSnapSprite.setCentreY(meta.startY());
-                    GameServices.collision().resolveGroundAttachment(preSnapSprite, 14, () -> false);
+                    GameServices.collision().placeOnTerrain(preSnapSprite, 14);
                 }
             }
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(

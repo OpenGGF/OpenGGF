@@ -1,0 +1,160 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s3k",
+      "crc32" : "63522553",
+      "sha1" : "CFBF98C36C776677290A872547AC47C53D2761D6"
+    },
+    "inlet" : {
+      "kind" : "cold-level",
+      "zone" : 10,
+      "act" : 0,
+      "showTitleCard" : false
+    },
+    "roster" : {
+      "main" : "sonic",
+      "sidekick" : "tails"
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "legs" : [ {
+      "id" : "ghz-replica",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszGhzBossObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "mtz-replica",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszMtzBossObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "mecha-sonic",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszMechaSonicObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "dez-load",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "enter-boundary"
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ssz1-sonic-tails-cold-complete-320.script",
+    "rows" : 20720,
+    "sha256" : "9be3b2c6b90d64f134c6c7fc80082f5206ba50f97d4adc34bfbec7ff24241317"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/2 exact_resync(window 320, horizon 600, edits 4, confirm 120, leader only)",
+    "engine" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "source" : "repair of 9c55e4915956 from row 1366 following ReferencePath[20720 rows of e0760aaece1f, window 1366..20719, openggf 36aaddb37 recorded track ssz1-sonic-tails-cold-complete-320.csv.gz]",
+    "notes" : [ "kept 20719/20720 original rows (100.0%), 0 reference rows, 1 authored rows, 20720 output rows; unchanged through row 1597" ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8",
+    "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "rows" : 20720
+  }, {
+    "scope" : "BIZHAWK",
+    "passed" : false,
+    "divergedRow" : 1969,
+    "reason" : "P1.y native 3064 engine 3067",
+    "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8",
+    "environment" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+    "rows" : 20720
+  } ],
+  "native" : {
+    "entry" : {
+      "movie" : "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
+      "prefixRows" : 396719,
+      "inputHash" : "7f3c01bc9916da21eee2a4e7cedf38f6aed7deb3df69880665caf834b1b8f4df"
+    },
+    "lag" : [ {
+      "beforeRow" : 1958,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8"
+    }, {
+      "beforeRow" : 1959,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8"
+    }, {
+      "beforeRow" : 1960,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8"
+    }, {
+      "beforeRow" : 1961,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8"
+    }, {
+      "beforeRow" : 1962,
+      "harness" : "tracechaser 703bd92 bizhawk-headless BizHawk 2.11 Genplus-gx",
+      "content" : "f764d6ce3d617e30b71fcac548669b8d866ceb27fe8035ca19c9aee658d6fcb8"
+    } ]
+  }
+}

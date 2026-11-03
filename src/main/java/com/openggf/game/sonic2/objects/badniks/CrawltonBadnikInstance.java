@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Crawlton (0x9E) - Snake badnik from MCZ (Mystic Cave Zone).
- * Based on disassembly Obj9E (s2.asm:75213-75385).
+ * Based on disassembly Obj9E (s2.asm:75328-75500).
  *
  * Behavior:
  * - Hides in wall, detects player within range
@@ -41,7 +41,7 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
     // ROM Obj9E_Init allocates a second SST slot for the multi-sprite body child
     // (see reserveMultiSpriteChildSlot). Tracked so it is allocated exactly once.
     private boolean childSlotReserved;
-    // Collision from Obj9E_SubObjData (s2.asm:75380): collision_flags = $0B
+    // Collision from Obj9E_SubObjData (s2.asm:75587): collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
     // Detection range: add $80 to distance, check < $100 (s2.asm:75240-75245)
@@ -179,7 +179,7 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
             return;
         }
 
-        // Obj_GetOrientationToPlayer: d2/d3 = obj - closest native player (s2.asm:72755-72796)
+        // Obj_GetOrientationToPlayer: d2/d3 = obj - closest native player (s2.asm:72953-72994)
         int d2 = currentX - target.getCentreX();
         int d3 = currentY - target.getCentreY();
 

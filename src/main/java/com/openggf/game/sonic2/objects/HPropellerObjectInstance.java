@@ -97,7 +97,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
     // ========== Animation system ==========
 
     /**
-     * Animation scripts from Ani_objB5 (s2.asm lines 79303-79323).
+     * Animation scripts from Ani_objB5 (s2.asm lines 79933-79953).
      * Format: speed byte, frame bytes, then end command.
      * End commands:
      *   $FF = loop back to start
@@ -298,7 +298,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
 
     /**
      * Checks both main character and sidekick for proximity and applies upward push.
-     * From disassembly: ObjB5_CheckPlayers (s2.asm lines 79255-79295)
+     * From disassembly: ObjB5_CheckPlayers (s2.asm lines 79885-79925)
      */
     private void checkPlayers(PlayableEntity updatePlayer) {
         // ROM: cmpi.b #4,anim(a0) / bne.s ++ (rts)
@@ -321,7 +321,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
      * Checks a single player for proximity and applies the propeller's upward push.
      * This faithfully reproduces the ROM's ObjB5_CheckPlayer routine.
      * <p>
-     * From disassembly: ObjB5_CheckPlayer (s2.asm lines 79262-79295)
+     * From disassembly: ObjB5_CheckPlayer (s2.asm lines 79892-79925)
      * <p>
      * The push formula uses Oscillating_Data+$14 to add vertical oscillation,
      * creating a bobbing effect. When the player is within range, their Y position

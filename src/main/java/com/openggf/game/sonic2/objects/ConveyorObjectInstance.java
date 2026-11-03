@@ -74,7 +74,6 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     // From disassembly: move.b #4,objoff_3A(a0)
     private static final int WAYPOINT_STEP = 4;
 
-    private static final int STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
 
     /**
      * Path waypoint tables from off_28252.
@@ -190,7 +189,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
      * <p>
      * Children spawned by a parent subtype (bit 7 set) inherit the PARENT's
      * x_pos/y_pos as their objoff_30/objoff_32 (path base), not their own spawn
-     * position. ROM Obj6C_LoadSubObject (s2.asm:54137-54151) writes the parent's
+     * position. ROM Obj6C_LoadSubObject (s2.asm:54870-54884) writes the parent's
      * d2/d3 (parent x/y, captured before the loop) into the child's objoff_30/_32
      * even though the child's x_pos/y_pos is set to {@code parent + layoutOffset}.
      * Without this distinction every child orbits around its own offset position
@@ -371,19 +370,6 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public int staleHorizontalLogicalInputFramesWhileRiding(
-            PlayableEntity player, int rideFrames, boolean left, boolean right) {
-        /*
-         * Obj6C_Main moves the platform, restores the saved pre-move x_pos as d4, then
-         * jumps through PlatformObject. When Obj6C has horizontal displacement, that
-         * PlatformObject ride step can carry Sonic before Sonic_Move consumes
-         * Ctrl_1_Held_Logical for rider acceleration.
-         */
-        boolean inputOpposesHorizontalCarry = (xVel > 0 && left && !right) || (xVel < 0 && right && !left);
-        return inputOpposesHorizontalCarry ? STALE_LOGICAL_HORIZONTAL_FRAMES : 0;
-    }
-
-    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         return !isDestroyed();
     }
@@ -399,7 +385,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Obj6C_Main (s2.asm:54304-54311): save old x_pos to the stack, run the
+        // Obj6C_Main (s2.asm:54891-54898): save old x_pos to the stack, run the
         // waypoint check + ObjectMove, then pass the PRE-MOVE x_pos as d4 to
         // JmpTo5_PlatformObject. The shared PlatformObject ride code uses that
         // pre-move x to carry a standing player by the platform's per-frame x
@@ -565,7 +551,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
     /**
      * Apply velocity to position (ObjectMove equivalent).
      * <p>
-     * From disassembly ObjectMove (s2.asm line 29990):
+     * From disassembly ObjectMove (s2.asm line 30191):
      * Position is stored as 16.16 fixed point (x_pos:x_sub as 32-bit long).
      * Velocity (x_vel) is sign-extended to 32 bits, shifted left 8, then added.
      * <pre>

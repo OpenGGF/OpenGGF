@@ -35,7 +35,6 @@ class TestSonic2AuthoredGoal {
             object.setServices(services);
             var before = object.captureRewindState();
             object.update(0, player);
-            object.updatePostPlayer(0, player);
             assertFalse(object.isDestroyed()); assertTrue(gameState.isActCompletionSignalActive());
             assertFalse(gameState.isEndOfLevelActive());
             assertEquals(act, services.currentAct());
@@ -46,7 +45,6 @@ class TestSonic2AuthoredGoal {
             recreated.setServices(services); recreated.restoreRewindState(before);
             assertEquals(spawn, recreated.getSpawn());
             gameState.setActCompletionSignalActive(false); recreated.update(1, player);
-            recreated.updatePostPlayer(1, player);
             assertFalse(recreated.isDestroyed()); assertTrue(gameState.isActCompletionSignalActive());
         }
     }

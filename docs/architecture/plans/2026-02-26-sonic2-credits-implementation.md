@@ -724,7 +724,7 @@ This renders the 21 credit text slides. The ROM stores text data via pointer tab
 
 **Step 1: Study the ROM text format**
 
-Read the disassembly around `ShowCreditsScreen` (s2.asm line 14376) and `off_B2CA` to understand:
+Read the disassembly around `ShowCreditsScreen` (s2.asm line 14386) and `off_B2CA` to understand:
 - Pointer table format: word offsets from `off_B2CA` base
 - Text element format: `dc.b palette, text..., $FF` terminator
 - VRAM write command: 32-bit VDP write command per element

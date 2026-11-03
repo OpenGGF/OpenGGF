@@ -438,7 +438,7 @@ class TestLbzPipePlugObjectInstance {
                     ? new SolidCheckpointBatch(null, Map.of())
                     : checkpointBatch;
             return new ObjectSolidExecutionContext(new FixedSolidExecutionRegistry(current),
-                    current.object(), () -> current);
+                    current.object(), call -> current);
         }
 
         void setCheckpointBatch(SolidCheckpointBatch checkpointBatch) {
@@ -457,7 +457,7 @@ class TestLbzPipePlugObjectInstance {
         @Override public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {}
         @Override public void beginObject(ObjectInstance object, ObjectSolidExecutionContext.Resolver resolver) {}
         @Override public ObjectSolidExecutionContext currentObject() {
-            return new ObjectSolidExecutionContext(this, batch.object(), () -> batch);
+            return new ObjectSolidExecutionContext(this, batch.object(), call -> batch);
         }
         @Override public PlayerStandingState previousStanding(ObjectInstance object, PlayableEntity player) {
             return PlayerStandingState.NONE;

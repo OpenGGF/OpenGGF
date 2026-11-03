@@ -1,13 +1,4 @@
-# SSZ1 Sonic + Tails, native320, donor off, ordinary cold entry. P2 neutral.
-# Controller inputs authored on source39eca8c35 (2026-10-21); no setup seeds.
-# Complete and upper share every input through the upper route (11051 inputs).
-# Zero-based: shot dodge2190; stair turn2950/jump3070; arena entry4138.
-# GHZ fight4400..4782, pad landing5151; original receiving-platform exit5827.
-# Fresh jump7612; brake7662..7671, cloud jump7672; natural launch7709.
-# MTZ fight8440..9318; center9319..9342; fresh pad jump9776.
-# Post11051: fresh jump11160; ground jump11780; seam-cloud jump11951.
-# Brake left11981; left-ledge run-up12101; rotating-carrier release12345.
-# Clear spikes12690; brake12850; real third receiver(5376,3276).
+# Route rows for ssz1-sonic-tails-cold-complete-320.route.json; launch, identity and checks live there.
 137 -
 147 R
 23 -
@@ -60,7 +51,8 @@
 16 -
 25 B
 5 R+B
-3 B
+1 L+B
+2 B
 7 -
 7 L
 16 -
@@ -725,6 +717,4 @@
 4 A
 2 L+A
 9 A
-2298 -
-# Independent neutral destination tail: full native fade, assembly and entrance release.
-180 -
+2478 -

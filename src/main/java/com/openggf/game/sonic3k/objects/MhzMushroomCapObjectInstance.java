@@ -247,8 +247,8 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
-        return false;
+    public int tailCallD4(int routineEntryX) {
+        return getX();
     }
 
     @Override

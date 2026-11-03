@@ -24,7 +24,7 @@ import java.util.List;
  * Flies at constant speed across screen. Spawns a jet exhaust child (0x9C).
  * Position is adjusted each frame by Tornado velocity (loc_36776).
  *
- * Based on disassembly ObjAC (s2.asm lines 76732-76771).
+ * Based on disassembly ObjAC (s2.asm lines 77362-77401).
  *
  * Init:
  *   - LoadSubObject (mappings, art tile, render flags, priority=4, width=$20, collision=8)

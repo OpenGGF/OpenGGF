@@ -174,7 +174,7 @@ final class NativePlayerTerrainScan {
             // prevResult null means FindFloor2 found no solid tile in the extension tile.
             // ROM FindFloor loc_1E85E (adjusted<0) → loc_1E86A: it ALWAYS calls FindFloor2 on
             // the previous tile and applies subi.w #$10,d1 to the result — it never bails out.
-            // When FindFloor2 hits a blank tile (loc_1E88A, s2.asm:43457-43462) it returns
+            // When FindFloor2 hits a blank tile (loc_1E88A, s2.asm:43505-43510) it returns
             // d1 = 15 - (d2 & $F) relative to the shifted d2; the caller's subi #$10 then makes
             // it negative, placing the surface one tile up. The engine's calculateVerticalDistance
             // measures from origY (embedding the ±16), so the blank-tile default here mirrors the
@@ -190,7 +190,7 @@ final class NativePlayerTerrainScan {
         // Full-height tile handling differs between FindFloor and FindFloor2.
         if (metric == FULL_TILE) {
             if (!isExtension) {
-                // FindFloor (first pass, s2.asm:43008-43013 loc_1E86A):
+                // FindFloor (first pass, s2.asm:43412-43417 loc_1E86A):
                 // Recurse to FindFloor2 on the previous tile.
                 // ROM subtracts 16 because FindFloor2's distance is relative to the
                 // shifted d2. But the engine's scanTileVertical always calculates

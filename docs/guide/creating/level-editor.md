@@ -430,6 +430,60 @@ Application quit and the window close button also offer **Save and quit**,
 **Quit without saving**, and **Cancel quit**. A failed save keeps the application
 open; cancelling restores the editor or active playtest.
 
+## Edit route tapes
+
+A route tape is a recorded controller route: `<stem>.route.json` (how the route
+starts: ROM, level, team, width and start clock) and `<stem>.script` (one row per
+controller poll, both pads, physical buttons). Open the **Routes** workspace from
+the plate beside **Stageplay** or from the command sheet, then **Open route**
+(`Ctrl+O`) or **New route** from the route menu (`F1`), which starts a cold-level
+draft over neutral rows.
+
+The timeline shows P1's eight buttons above P2's. Move the cursor with
+**Left/Right** (`Shift` steps 60 rows, the bumpers page) and the button with
+**Up/Down**; **Space** or South toggles the button, **M** or West marks a range,
+North (or `Insert`/`Delete`) opens row actions. Every edit is one undo step.
+
+**Replay** (`R`) plays the working rows from a cold boot in a separate worker and
+reports **Qualified**, **Passes replay; not saved** or **Not qualified: stopped
+at row N**, moving the cursor to that row. When the editor shows the route's
+level, the replayed path is drawn over it and the view follows the cursor.
+**Save qualified** (`Ctrl+S`) replays first and writes the files only after a
+passing replay. **Save draft** keeps unfinished work: the manifest is marked as a
+draft, tests and native checks refuse it, and a draft never replaces a qualified
+route. The panel lists the route's goals, which replay checks on every row.
+
+**Repair** keeps the rows before the first editable row, then follows a reference
+(the route's saved rows, another route, a route script, a BizHawk movie, or a
+track recorded on the engine a movie's rows were authored against) and
+searches new rows only where play drifts from it. A solved repair replaces the
+working rows as one undo step, reports how many original rows it kept, and marks
+kept and searched spans on the timeline; it still needs **Save qualified**. A
+stopped repair names the furthest row it reached and offers **Use best attempt**
+to inspect that unqualified attempt.
+
+**Goals** are the route's legs, checked on every row of a replay: reach a region,
+board or ride an object, attach or hold (grab, hang, tube, airflow and so on),
+wait for an object's phase, defeat a boss, or cross into the next level. **Add leg**
+builds one; its target is the placed object nearest a point (the player's position
+at the cursor by default) or an object picked from **Scan objects here**, which plays
+the rows to the cursor in a separate worker and lists the live objects that report
+a phase, an attachment or hit points, including ones spawned at runtime such as a
+replica boss. **Edit goals as text** edits the whole program in the manifest's format.
+**Plan** keeps the rows before a chosen row and searches rows that complete every
+leg in order; a solved plan replaces the rows and goals as one undo step and still
+needs **Save qualified**.
+
+Stageplay input rows (an applied **Plan route**) open here too, from **Edit input
+rows** in Stageplay. Then the panel names the actor and frames, file, replay and
+repair commands are off, and **Apply to scene** returns the rows to the scene as
+one Stageplay undo step.
+
+Rows are numbered from 0 throughout: the timeline's **Row 156 of 226** is the
+157th of 226 rows, as in replay messages and **Go to row**. **Export BK2** writes a new BizHawk movie of the rows and never
+overwrites a file. The panel lists the manifest's native observations, such as
+lag frames seen on BizHawk; they are display only and never change a replay.
+
 ## Playtest and return
 
 Choose **Playtest from level start** (`F5`) for the authored start or **Playtest

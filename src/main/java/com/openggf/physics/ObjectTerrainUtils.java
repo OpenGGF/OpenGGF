@@ -6,7 +6,7 @@ import com.openggf.level.SolidTile;
 
 /**
  * Terrain collision detection for game objects.
- * Mirrors ROM's ObjCheckFloorDist (s2.asm:43738) for floor/ceiling/wall detection
+ * Mirrors ROM's ObjCheckFloorDist (s2.asm:44210) for floor/ceiling/wall detection
  * used by falling objects, animals, monitors, etc.
  *
  * Unlike player collision (paired sensors), object collision uses single-point checks.
@@ -305,7 +305,7 @@ public final class ObjectTerrainUtils {
         }
 
         // ROM: neg.w produces negative metric for V-flipped tiles.
-        // FindFloor handles this via the negative metric path (s2.asm:42984-43000).
+        // FindFloor handles this via the negative metric path (s2.asm:43406-43422).
         if (metric < 0) {
             int yInTile = y & 0x0F;
             int adjusted = metric + yInTile;

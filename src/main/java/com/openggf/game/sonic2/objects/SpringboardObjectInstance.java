@@ -243,8 +243,11 @@ public class SpringboardObjectInstance extends BoxObjectInstance
             player.setXSpeed((short) (xVel - (boost << 8)));
         }
 
-        // ROM: loc_264BC - Set player to airborne state
+        // ROM: loc_264BC - bset in_air / bclr on_object (s2.asm:52398-52400).
+        // The springboard's own launch clears the rider's Status_OnObj; no
+        // later pass does.
         player.setAir(true);
+        player.setOnObject(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
         // ROM: move.b #0,spindash_flag(a1) - Clear spindash flag
@@ -304,7 +307,7 @@ public class SpringboardObjectInstance extends BoxObjectInstance
 
     /**
      * ROM: Obj40_Main calls SlopedSolid_SingleCharacter which dispatches to
-     * SlopedSolid_cont (s2.asm:35066) on new contact. SlopedSolid_cont adds
+     * SlopedSolid_cont (s2.asm:35263) on new contact. SlopedSolid_cont adds
      * the object's half-height (d2) to the catch range before computing relY:
      * {@code add.w d3,d2} (d2 = halfHeight + yRadius)
      * {@code add.w d2,d3} (d3 = playerY - baseY + 4 + halfHeight + yRadius)

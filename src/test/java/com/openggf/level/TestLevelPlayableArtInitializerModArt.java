@@ -505,6 +505,9 @@ class TestLevelPlayableArtInitializerModArt {
         var rules = mock(com.openggf.game.rules.GameRules.class);
         when(module.getRules()).thenReturn(rules);
         when(module.getGameId()).thenReturn(GameId.S2);
+        when(module.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class))
+                .thenReturn(new com.openggf.game.sonic2.Sonic2GameModule()
+                        .getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         when(rules.dynamicArtDmaService()).thenReturn(com.openggf.game.rules.DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
         fixture.level().gameModule = module;
         com.openggf.game.Game game = mock(com.openggf.game.Game.class,
@@ -516,7 +519,7 @@ class TestLevelPlayableArtInitializerModArt {
         when(tails.getAnimationManager()).thenReturn(animation);
         var lifecycle = mock(com.openggf.game.resources.DynamicArtLifecycleService.class);
         when(lifecycle.isRunActive()).thenReturn(true);
-        when(lifecycle.observePlayerDplc(any(), anyString(), anyInt(), any(), any(), any()))
+        when(lifecycle.observePlayerDplc(anyString(), anyInt(), any(), any()))
                 .thenReturn(new com.openggf.game.resources.DynamicArtLifecycleService.ArtUpdate(false, -1, List.of()));
 
         try (var services = mockStatic(GameServices.class)) {
@@ -528,8 +531,8 @@ class TestLevelPlayableArtInitializerModArt {
         verify(animation).setDynamicArtDecisionOwner(owner.capture());
         org.junit.jupiter.api.Assertions.assertNotNull(owner.getValue());
         owner.getValue().observe(0);
-        verify(lifecycle).observePlayerDplc(eq(GameId.S2), eq("tails"), eq(0), any(),
-                eq(com.openggf.game.resources.DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT), isNull());
+        verify(lifecycle).observePlayerDplc(eq("tails"), eq(0), any(),
+                eq(com.openggf.game.resources.DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT));
     }
 
     private static Fixture fixture(PlayableCharacterRegistry registry, CharacterKey mainKey,

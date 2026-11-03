@@ -81,6 +81,7 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <runOrder>${surefire.runOrder}</runOrder>
                             <includes combine.self="override">
                                 <include>**/ExternalMasterIT.java</include>
                             </includes>

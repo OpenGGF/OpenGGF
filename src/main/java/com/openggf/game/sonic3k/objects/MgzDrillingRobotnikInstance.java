@@ -61,7 +61,7 @@ import java.util.logging.Logger;
  *       {@code Child1_MakeRoboHead} (Robotnik's animated face).</li>
  *   <li>{@code CreateChild1_Normal(ChildObjDat_6D7C0)} → 4 drill-piece children.</li>
  * </ul>
- * {@code MGZ2_SpecialCheckHit} (sonic3k.asm:144434): mini-event instances
+ * {@code MGZ2_SpecialCheckHit} (sonic3k.asm:144439): mini-event instances
  * refresh {@code collision_property} to 1 on every fatal hit (the event flag
  * at $46 is set), so the player is never credited with a kill. The event
  * instance still runs its scripted drill-drop → swing → ceiling-escape flow.
@@ -222,7 +222,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int END_BOSS_MINI_CRAFT_ESCAPE_TIMER = 0x100;
 
     /**
-     * ROM: {@code ChildObjDat_6D7C0} (sonic3k.asm:144644). Four children
+     * ROM: {@code ChildObjDat_6D7C0} (sonic3k.asm:144649). Four children
      * spawned from loc_6BFCA at these offsets, using the listed mapping frames
      * of {@code Map_MGZEndBoss}. Format: {mappingFrame, offX, offY}.
      */
@@ -304,7 +304,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     private static final int[] FLASH_COLORS_BRIGHT = {0x0EEE, 0x0888, 0x0AAA};
 
     /**
-     * ROM: {@code ChildObjDat_6D7EA} / {@code _6D7F2} (sonic3k.asm:144662) spawn
+     * ROM: {@code ChildObjDat_6D7EA} / {@code _6D7F2} (sonic3k.asm:144667) spawn
      * 10 debris chunks from {@code loc_6C024} during the drill drop once the
      * drill is no higher than {@code Camera_Y+$120}. Spawn offset is (+$18, -$40)
      * (flipped to (-$18, -$40) for events 2 & 3). Each chunk gets a different
@@ -1341,7 +1341,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         }
     }
 
-    /** ROM: Obj_MGZ2DrillingRobotnikGo (sonic3k.asm:142469) — Play_Music(mus_EndBoss). */
+    /** ROM: Obj_MGZ2DrillingRobotnikGo (sonic3k.asm:142474) — Play_Music(mus_EndBoss). */
     private void playBossMusicOnce() {
         if (bossMusicPlayed) {
             return;
@@ -1683,7 +1683,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     /**
-     * ROM: {@code Obj_RobotnikHeadMain} (sonic3k.asm:136132). Blink between
+     * ROM: {@code Obj_RobotnikHeadMain} (sonic3k.asm:136137). Blink between
      * mapping_frame 0 and 1 at the AniRaw_RobotnikHead delay of 5 frames.
      * If the parent's status bit 6 (hurt) is set, use mapping_frame 2.
      */

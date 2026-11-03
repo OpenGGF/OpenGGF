@@ -450,12 +450,6 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance implem
         }
 
         @Override
-        public boolean seedsNewRideCarryFromPreUpdateX() {
-            // ObjBD saves x_pos before ObjectMove and passes it through d4 to PlatformObject.
-            return true;
-        }
-
-        @Override
         public SolidExecutionMode solidExecutionMode() {
             return SolidExecutionMode.MANUAL_CHECKPOINT;
         }

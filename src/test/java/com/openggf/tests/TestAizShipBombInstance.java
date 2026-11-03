@@ -44,7 +44,7 @@ public class TestAizShipBombInstance {
         // Obj_AIZShipBomb's init ends at `move.w #6,$32(a0)` and the very next
         // line is the label Obj_AIZShipBombMain, with no rts between them
         // (docs/skdisasm/sonic3k.asm:105413-105425). Main dispatches routine 0
-        // straight into AIZShipBomb_ReadyDrop (:105430, :105437), whose first
+        // straight into AIZShipBomb_ReadyDrop (:105430, :105439), whose first
         // instruction is `addq.w #2,$30(a0)`. The ship allocates the bomb with
         // AllocateObjectAfterCurrent, so its slot is still ahead of the object
         // pass and it runs on its creation frame -- init AND one ReadyDrop step.

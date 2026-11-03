@@ -98,7 +98,6 @@ public class TestPlayableSpriteMovement {
 	@Test
 	void s2DeadRoutineDoesNotRunWaterInteractionAfterCrossingSurface() throws Exception {
 		LevelManager levelManager = mock(LevelManager.class);
-		when(levelManager.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
 		Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
 		setGameRulesForTest(sonic, GameRules.SONIC_2);
 		sonic.setInWater(true);
@@ -2805,7 +2804,7 @@ public class TestPlayableSpriteMovement {
                 GroundSensor.setLevelManager(level);
                 var collision = new CollisionSystem(new TerrainCollisionManager()) {
                     @Override public void resolveGroundAttachment(FrameCollisionPlan plan,
-                            AbstractPlayableSprite player, int threshold, BooleanSupplier support) {
+                            AbstractPlayableSprite player, int threshold) {
                         player.setAir(false); // independent stable object support; real BG probes remain active
                     }
                 };
@@ -3266,32 +3265,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void releasedObjectSupportDoesNotReuseTerrainDetachBalanceSelection() throws Exception {
-                mockSprite.setOnObject(true);
-                mockSprite.captureOnObjectAtFrameStart();
-                mockSprite.setOnObject(false);
-                mockSprite.captureOnObjectAtFrameStart();
-                mockSprite.setAir(true);
-                mockSprite.setRolling(false);
-                mockSprite.setSpindash(false);
-                mockSprite.setAngle((byte) 0);
-                mockSprite.setGSpeed((short) 0);
-                setMovementField("preFrictionGroundSpeed", 0);
-                setMovementField("preMoveBalanceEvaluated", true);
-                setMovementField("preMoveBalanceState", 1);
-                setMovementField("preMoveBalanceDirection", Direction.RIGHT);
-
-                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod(
-                                "updateCrouchState", boolean.class);
-                crouchMethod.setAccessible(true);
-                crouchMethod.invoke(manager, false);
-
-                assertEquals(0, mockSprite.getBalanceState(),
-                                "an object-release frame does not use the terrain AnglePos detach bridge");
-        }
-
-        @Test
-        public void s3kMoveLockDownKeepsWalkWhenPlayerSlotEnteredOnObject() throws Exception {
+        public void s3kMoveLockDownKeepsWalkWhileStandingOnObject() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
@@ -3299,8 +3273,6 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setGSpeed((short) 0);
                 mockSprite.setCrouching(false);
                 mockSprite.setOnObject(true);
-                mockSprite.captureOnObjectAtFrameStart();
-                mockSprite.setOnObject(false);
                 mockSprite.getAnimationManager().suppressGroundMovementAnimationForFrame();
                 setInputState(false, false, true, false, false);
 
@@ -3310,7 +3282,7 @@ public class TestPlayableSpriteMovement {
                 crouchMethod.invoke(manager, false);
 
                 assertFalse(mockSprite.getCrouching(),
-                                "SonicKnux_Roll must see the player-slot Status_OnObj bit and skip Duck");
+                                "SonicKnux_Roll tests the live Status_OnObj bit and skips Duck");
         }
 
         @Test
@@ -3851,16 +3823,14 @@ public class TestPlayableSpriteMovement {
                 @Override
                 public void resolveGroundAttachment(FrameCollisionPlan plan,
                                                     AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(true);
                         sprite.setPushing(false);
                 }
 
                 @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(true);
                         sprite.setPushing(false);
                 }
@@ -3874,15 +3844,13 @@ public class TestPlayableSpriteMovement {
                 @Override
                 public void resolveGroundAttachment(FrameCollisionPlan plan,
                                                     AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
 
                 @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
         }
@@ -3895,15 +3863,13 @@ public class TestPlayableSpriteMovement {
                 @Override
                 public void resolveGroundAttachment(FrameCollisionPlan plan,
                                                     AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
 
                 @Override
                 public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                                    int positiveThreshold,
-                                                    BooleanSupplier hasObjectSupport) {
+                                                    int positiveThreshold) {
                         sprite.setAir(false);
                 }
 

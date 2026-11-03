@@ -30,7 +30,7 @@ class TestSolidExecutionRegistry {
         ObjectInstance object = new RegistryTestObject();
 
         registry.beginFrame(120, List.of(player));
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of(
+        registry.beginObject(object, call -> new SolidCheckpointBatch(object, Map.of(
                 player, new PlayerSolidContactResult(
                         ContactKind.TOP,
                         true,
@@ -40,7 +40,7 @@ class TestSolidExecutionRegistry {
                         new PreContactState((short) 0x180, (short) 0x40, true, 0),
                         new PostContactState((short) 0, (short) 0, false, true, false),
                         0))));
-        registry.currentObject().resolveSolidNow(player);
+        registry.currentObject().resolveSolidNowAll().perPlayer().get(player);
         registry.endObject(object);
         registry.finishFrame();
 
@@ -49,12 +49,12 @@ class TestSolidExecutionRegistry {
         assertTrue(previous.standing());
 
         registry.beginFrame(121, List.of(player));
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of(
+        registry.beginObject(object, call -> new SolidCheckpointBatch(object, Map.of(
                 player, PlayerSolidContactResult.noContact(
                         registry.previousStanding(object, player),
                         new PreContactState((short) 0x200, (short) 0, false, 0),
                         new PostContactState((short) 0x200, (short) 0, true, false, false)))));
-        PlayerSolidContactResult result = registry.currentObject().resolveSolidNow(player);
+        PlayerSolidContactResult result = registry.currentObject().resolveSolidNowAll().perPlayer().get(player);
         registry.endObject(object);
         registry.finishFrame();
 
@@ -73,7 +73,7 @@ class TestSolidExecutionRegistry {
 
         assertTrue(registry.currentObject().isInert());
         registry.beginFrame(1, List.of(player));
-        registry.beginObject(object, () -> {
+        registry.beginObject(object, call -> {
             int pass = resolves.incrementAndGet();
             return new SolidCheckpointBatch(object, Map.of(
                     player, new PlayerSolidContactResult(
@@ -89,8 +89,8 @@ class TestSolidExecutionRegistry {
 
         ObjectSolidExecutionContext context = registry.currentObject();
         assertSame(object, context.object());
-        assertEquals(ContactKind.TOP, context.resolveSolidNow(player).kind());
-        assertEquals(ContactKind.NONE, context.resolveSolidNow(player).kind());
+        assertEquals(ContactKind.TOP, context.resolveSolidNowAll().perPlayer().get(player).kind());
+        assertEquals(ContactKind.NONE, context.resolveSolidNowAll().perPlayer().get(player).kind());
         assertEquals(2, resolves.get());
         assertEquals(ContactKind.NONE, context.lastCheckpoint().perPlayer().get(player).kind());
         registry.endObject(object);
@@ -108,12 +108,12 @@ class TestSolidExecutionRegistry {
         registry.beginFrame(2, List.of(p1, p2));
         registry.beginObject(object, new ObjectSolidExecutionContext.Resolver() {
             @Override
-            public SolidCheckpointBatch resolveNow() {
+            public SolidCheckpointBatch resolve(com.openggf.game.solid.SolidCall call) {
                 throw new AssertionError("ordered spring path must not resolve all participants at once");
             }
 
             @Override
-            public SolidCheckpointBatch resolvePlayer(PlayableEntity player) {
+            public SolidCheckpointBatch resolvePlayer(PlayableEntity player, com.openggf.game.solid.SolidCall call) {
                 order.add(player);
                 return new SolidCheckpointBatch(object, Map.of(player,
                         new PlayerSolidContactResult(ContactKind.SIDE, false, false,
@@ -176,21 +176,21 @@ class TestSolidExecutionRegistry {
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         PlayableEntity player = playableEntity("player");
         ObjectInstance object = new RegistryTestObject();
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of()));
+        registry.beginObject(object, call -> new SolidCheckpointBatch(object, Map.of()));
 
         assertThrows(UnsupportedOperationException.class,
                 () -> registry.currentObject().resolveSolidNowOnly(player));
     }
 
     @Test
-    void resolveSolidNowAllPublishesLatestCheckpointAndResolveSolidNowReturnsExplicitNoContactWhenAbsent() {
+    void resolveSolidNowAllPublishesLatestCheckpointAndOmitsAbsentPlayers() {
         DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
         PlayableEntity player = playableEntity("player");
         ObjectInstance object = new RegistryTestObject();
         AtomicInteger resolves = new AtomicInteger();
 
         registry.beginFrame(7, List.of(player));
-        registry.beginObject(object, () -> {
+        registry.beginObject(object, call -> {
             int pass = resolves.incrementAndGet();
             return new SolidCheckpointBatch(object, Map.of());
         });
@@ -198,13 +198,13 @@ class TestSolidExecutionRegistry {
         ObjectSolidExecutionContext context = registry.currentObject();
         SolidCheckpointBatch first = context.resolveSolidNowAll();
         assertSame(first, context.lastCheckpoint());
-        PlayerSolidContactResult missing = context.resolveSolidNow(player);
+        SolidCheckpointBatch second = context.resolveSolidNowAll();
 
         assertNotNull(first);
         assertEquals(2, resolves.get());
-        assertEquals(ContactKind.NONE, missing.kind());
-        assertFalse(missing.standingNow());
-        assertEquals(ContactKind.NONE, registry.currentObject().lastCheckpoint().perPlayer().getOrDefault(player, missing).kind());
+        assertSame(second, context.lastCheckpoint());
+        assertFalse(second.perPlayer().containsKey(player),
+                "an all-player call reports only the participants its helper resolved");
     }
 
     @Test
@@ -214,7 +214,7 @@ class TestSolidExecutionRegistry {
         ObjectInstance object = new RegistryTestObject();
 
         registry.beginFrame(10, List.of(player));
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of(
+        registry.beginObject(object, call -> new SolidCheckpointBatch(object, Map.of(
                 player, new PlayerSolidContactResult(
                         ContactKind.SIDE,
                         false,
@@ -224,14 +224,15 @@ class TestSolidExecutionRegistry {
                         PreContactState.ZERO,
                         new PostContactState((short) 0, (short) 0, false, false, true),
                         0))));
-        registry.currentObject().resolveSolidNow(player);
+        registry.currentObject().resolveSolidNowAll().perPlayer().get(player);
         registry.endObject(object);
         registry.finishFrame();
 
         registry.beginFrame(11, List.of(player));
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of()));
+        registry.beginObject(object, resolverForPlayer(
+                requested -> new SolidCheckpointBatch(object, Map.of())));
 
-        PlayerSolidContactResult result = registry.currentObject().resolveSolidNow(player);
+        PlayerSolidContactResult result = registry.currentObject().resolveSolidNowOnly(player);
 
         assertEquals(ContactKind.NONE, result.kind());
         assertFalse(result.standingNow());
@@ -247,7 +248,7 @@ class TestSolidExecutionRegistry {
         ObjectInstance object = new RegistryTestObject();
 
         registry.beginFrame(12, List.of(player));
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of(
+        registry.beginObject(object, call -> new SolidCheckpointBatch(object, Map.of(
                 player, new PlayerSolidContactResult(
                         ContactKind.SIDE,
                         false,
@@ -258,7 +259,7 @@ class TestSolidExecutionRegistry {
                         new PostContactState((short) 0, (short) 0, false, false, true),
                         0))));
 
-        PlayerSolidContactResult result = registry.currentObject().resolveSolidNow(player);
+        PlayerSolidContactResult result = registry.currentObject().resolveSolidNowAll().perPlayer().get(player);
 
         assertEquals(ContactKind.SIDE, result.kind());
         assertEquals(0, result.sideDistX(),
@@ -274,7 +275,7 @@ class TestSolidExecutionRegistry {
         ObjectInstance otherObject = new RegistryTestObject();
 
         registry.beginFrame(20, List.of(player));
-        registry.beginObject(activeObject, () -> new SolidCheckpointBatch(otherObject, Map.of()));
+        registry.beginObject(activeObject, call -> new SolidCheckpointBatch(otherObject, Map.of()));
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
                 () -> registry.currentObject().resolveSolidNowAll());
@@ -306,7 +307,7 @@ class TestSolidExecutionRegistry {
         ObjectInstance object = new RegistryTestObject();
 
         registry.beginFrame(1, List.of(player));
-        registry.beginObject(object, () -> new SolidCheckpointBatch(object, Map.of(
+        registry.beginObject(object, call -> new SolidCheckpointBatch(object, Map.of(
                 player, PlayerSolidContactResult.noContact(
                         PlayerStandingState.NONE,
                         PreContactState.ZERO,
@@ -315,7 +316,7 @@ class TestSolidExecutionRegistry {
         ObjectSolidExecutionContext context = registry.currentObject();
         assertTrue(context.isInert());
         assertTrue(ObjectSolidExecutionContext.inert().isInert());
-        assertEquals(ContactKind.NONE, context.resolveSolidNow(player).kind());
+        assertEquals(ContactKind.NONE, context.resolveSolidNowOnly(player).kind());
         assertTrue(context.resolveSolidNowAll().perPlayer().isEmpty());
         assertTrue(context.lastCheckpoint().perPlayer().isEmpty());
         assertEquals(PlayerStandingState.NONE, registry.previousStanding(object, player));
@@ -356,12 +357,12 @@ class TestSolidExecutionRegistry {
             Function<PlayableEntity, SolidCheckpointBatch> resolver) {
         return new ObjectSolidExecutionContext.Resolver() {
             @Override
-            public SolidCheckpointBatch resolveNow() {
+            public SolidCheckpointBatch resolve(com.openggf.game.solid.SolidCall call) {
                 throw new AssertionError("all-player resolution is not expected");
             }
 
             @Override
-            public SolidCheckpointBatch resolvePlayer(PlayableEntity player) {
+            public SolidCheckpointBatch resolvePlayer(PlayableEntity player, com.openggf.game.solid.SolidCall call) {
                 return resolver.apply(player);
             }
         };

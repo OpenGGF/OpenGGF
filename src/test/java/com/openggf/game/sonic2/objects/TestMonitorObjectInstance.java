@@ -277,7 +277,6 @@ class TestMonitorObjectInstance {
         assertFalse(profile.stickyContactBuffer());
         assertTrue(profile.inclusiveRightEdge());
         assertTrue(profile.bypassesOffscreenSolidGate());
-        assertTrue(monitor.projectsPreMovementGroundXForSolidContact(null));
     }
 
     private static ObjectManager mockObjectManager() {

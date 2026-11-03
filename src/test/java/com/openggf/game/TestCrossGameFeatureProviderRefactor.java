@@ -134,9 +134,6 @@ class TestCrossGameFeatureProviderRefactor {
         assertHybridPreservesBaseExceptDonatedCapabilities(base, hybrid);
         assertTrue(hybrid.playerCapability().glideAttacksEnabled(),
                 "The S3K donor advertises Knuckles glide attacks");
-        assertEquals(base.collision().sidekickPushBypassUsesGraceStatus(), hybrid.collision().sidekickPushBypassUsesGraceStatus());
-        assertEquals(base.collision().sidekickClearsStalePushVelocityBeforeGroundMove(),
-                hybrid.collision().sidekickClearsStalePushVelocityBeforeGroundMove());
         assertEquals(base.sidekickCpu().sidekickCpuUsesLevelFrameCounter(), hybrid.sidekickCpu().sidekickCpuUsesLevelFrameCounter());
         assertEquals(base.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta(),
                 hybrid.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta());

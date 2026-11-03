@@ -127,7 +127,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         this.velocity = 0;
         this.isPlayerTriggered = (spawn.subtype() != 0);
 
-        // ROM Obj33_Init (s2.asm:49653-49657): routine_secondary defaults to 2 (mode 2 =
+        // ROM Obj33_Init (s2.asm:49706-49710): routine_secondary defaults to 2 (mode 2 =
         // loc_23BEA pop-physics), and is only overridden to 4 (wait-for-player) when subtype != 0.
         // For the auto-pop (subtype 0) variant, the ROM burns one mode-2 frame immediately after
         // Init with objoff_32 (velocity) = 0: y stays at home, velocity becomes $3800 (< $10000),

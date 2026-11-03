@@ -261,9 +261,9 @@ public final class IwamodokiBadnikInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // d4 = x_pos(a0) and the badnik never moves, so MvSonicOnPtfm's carry is zero either way.
-        return false;
+        return getX();
     }
 
     // ===== Accessors =====

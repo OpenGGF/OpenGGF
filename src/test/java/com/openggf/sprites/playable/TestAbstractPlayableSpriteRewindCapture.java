@@ -458,9 +458,6 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.objectPreservedRollVelocityCarry(), e2.objectPreservedRollVelocityCarry(), "objectPreservedRollVelocityCarry not restored");
         assertEquals(e1.tunnelMode(), e2.tunnelMode(), "tunnelMode not restored");
         assertEquals(e1.onObject(), e2.onObject(), "onObject not restored");
-        assertEquals(e1.onObjectAtFrameStart(), e2.onObjectAtFrameStart(), "onObjectAtFrameStart not restored");
-        assertEquals(e1.onObjectAtPreviousFrameStart(), e2.onObjectAtPreviousFrameStart(),
-                "onObjectAtPreviousFrameStart not restored");
         assertEquals(e1.pushingAtFrameStart(), e2.pushingAtFrameStart(), "pushingAtFrameStart not restored");
         assertEquals(e1.hurtAtFrameStart(), e2.hurtAtFrameStart(), "hurtAtFrameStart not restored");
         assertEquals(e1.hurtRecoveryCompletedThisFrame(), e2.hurtRecoveryCompletedThisFrame(),
@@ -820,7 +817,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         PlayableSpriteMovement.RewindState movement = new PlayableSpriteMovement.RewindState(
                 true, false, true, true,
                 true, false, true, false, true, true, true, false,
-                true, true, 7, 8, 9, true,
+                true, true,
                 true, 3, Direction.LEFT, 0x22, 0x33, 41);
         PlayableSpriteAnimation.RewindState animation =
                 new PlayableSpriteAnimation.RewindState(0x12, 0x34);

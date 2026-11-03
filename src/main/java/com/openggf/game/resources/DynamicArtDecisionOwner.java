@@ -1,6 +1,5 @@
 package com.openggf.game.resources;
 
-import com.openggf.game.GameId;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.Objects;
@@ -13,25 +12,14 @@ import java.util.Objects;
  */
 public final class DynamicArtDecisionOwner {
     private final DynamicArtLifecycleService lifecycle;
-    private final GameId gameId;
     private final String owner;
     private final PlayerSpriteRenderer renderer;
-    private final PlayerArtTransferProfile.ConvertedBank convertedBank;
 
     public DynamicArtDecisionOwner(
             DynamicArtLifecycleService lifecycle,
-            GameId gameId,
             String owner,
             PlayerSpriteRenderer renderer) {
-        this(lifecycle, gameId, owner, renderer, null);
-    }
-
-    public DynamicArtDecisionOwner(
-            DynamicArtLifecycleService lifecycle, GameId gameId, String owner,
-            PlayerSpriteRenderer renderer, PlayerArtTransferProfile.ConvertedBank convertedBank) {
-        this.convertedBank = convertedBank;
         this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
-        this.gameId = Objects.requireNonNull(gameId, "gameId");
         this.owner = Objects.requireNonNull(owner, "owner");
         this.renderer = Objects.requireNonNull(renderer, "renderer");
     }
@@ -42,13 +30,10 @@ public final class DynamicArtDecisionOwner {
         }
         DynamicArtLifecycleService.ArtUpdate update =
                 lifecycle.observePlayerDplc(
-                        gameId, owner, mappingFrame,
+                        owner, mappingFrame,
                         renderer.dplcFrame(mappingFrame),
-                        DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, convertedBank);
+                        DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT);
         renderer.applyRuntimeArtUpdate(mappingFrame, update);
-        if (gameId == GameId.S1) {
-            lifecycle.completePlayerDplc(gameId, owner, update);
-        }
     }
 
     public void prime(int mappingFrame) {
@@ -57,8 +42,8 @@ public final class DynamicArtDecisionOwner {
         }
         DynamicArtLifecycleService.ArtUpdate update =
                 lifecycle.primePlayerDplc(
-                        gameId, owner, mappingFrame,
-                        renderer.dplcFrame(mappingFrame), convertedBank);
+                        owner, mappingFrame,
+                        renderer.dplcFrame(mappingFrame));
         renderer.applyRuntimeArtUpdate(mappingFrame, update);
     }
 }

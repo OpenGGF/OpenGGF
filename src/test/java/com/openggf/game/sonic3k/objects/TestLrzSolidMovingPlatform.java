@@ -63,7 +63,7 @@ class TestLrzSolidMovingPlatform {
     }
 
     /**
-     * {@code loc_258D0} and {@code loc_258FA} (sonic3k.asm:51096-51100, :51121-51125): the same
+     * {@code loc_258D0} and {@code loc_258FA} (sonic3k.asm:51127-51131, :51126-51130): the same
      * {@code Oscillating_table+$0A} byte less {@code $20}, on x for mover 1 and on y for mover 4,
      * and the other coordinate is never written.
      */

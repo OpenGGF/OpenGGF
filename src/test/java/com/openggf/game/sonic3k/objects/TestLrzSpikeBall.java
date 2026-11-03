@@ -47,7 +47,7 @@ class TestLrzSpikeBall {
     }
 
     /**
-     * {@code loc_4397E} (:89025-89029) with {@code subq.b #2,angle(a0)} (:89062): the boulder is
+     * {@code loc_4397E} (:89030-89034) with {@code subq.b #2,angle(a0)} (:89062): the boulder is
      * not static -- it grinds a full 128-pixel sweep on a 128-frame cycle.
      */
     @Test

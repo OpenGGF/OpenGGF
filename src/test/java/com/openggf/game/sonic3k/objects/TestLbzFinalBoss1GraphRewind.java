@@ -156,6 +156,61 @@ class TestLbzFinalBoss1GraphRewind {
         h.assertReplay(later, 5);
     }
 
+    /**
+     * loc_7321A's muzzle names its head through parent3. A detached top segment turns
+     * that head into Obj_FlickerMove (Child_Draw_Sprite_FlickerMove), which the engine
+     * retires; the muzzle must not keep a rewind reference to the retired head in any
+     * of its stages.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"countdown", "blink", "fired"})
+    @RequiresRom(SonicGame.SONIC_3K)
+    void muzzleKeepsNoReferenceToARetiredHead(String stage) throws Exception {
+        Harness h = new Harness();
+        var boss = h.allocateBoss();
+        boss.setRenderXFlipForTest(false);
+        h.advance(1, 1);
+        var top = h.manager.activeObjectsOfType(LbzFinalBoss1Instance.TurretSegmentChild.class).stream()
+                .min(Comparator.comparingInt(LbzFinalBoss1Instance.TurretSegmentChild::getDyForTest))
+                .orElseThrow();
+        LbzFinalBoss1Instance.LaserHeadChild head = null;
+        for (var candidate : h.manager.activeObjectsOfType(LbzFinalBoss1Instance.LaserHeadChild.class)) {
+            if (field(candidate, "segment") == top) head = candidate;
+        }
+        assertNotNull(head);
+        // Step 8 -> 9 is mapping frame $04 with the table flip clear, matching the
+        // unflipped boss: sub_733FC / loc_73450 creates the muzzle.
+        head.forceArcStepForTest(8);
+        head.forceStepTimerExpiredForTest();
+        h.advance(2, 1);
+        LbzFinalBoss1Instance.MuzzleLaserChild muzzle = null;
+        for (var candidate : h.manager.activeObjectsOfType(LbzFinalBoss1Instance.MuzzleLaserChild.class)) {
+            if (field(candidate, "head") == head) muzzle = candidate;
+        }
+        assertNotNull(muzzle, "the top head's muzzle");
+        int frame = 3;
+        while (!switch (stage) {
+            case "countdown" -> true;
+            case "blink" -> Boolean.TRUE.equals(field(muzzle, "blinking"));
+            default -> muzzle.isFiredForTest();
+        }) {
+            h.advance(frame++, 1);
+            assertFalse(muzzle.isDestroyed());
+        }
+        h.hitTop(boss);
+        for (int index = 0; index < 40; index++) {
+            h.advance(frame++, 1);
+            assertDoesNotThrow(h.manager::validateRewindReferenceClosure, stage + " frame " + frame);
+        }
+        assertTrue(head.isDestroyed(), "the detached segment's head retires");
+        if (stage.equals("countdown")) {
+            assertFalse(h.manager.getActiveObjects().contains(muzzle),
+                    "loc_73232 deletes a counting-down muzzle once its head has bit 7 set");
+        } else {
+            assertTrue(muzzle.isFiredForTest(), "a blinking or charging muzzle still fires");
+        }
+    }
+
     private record Link(String type, ObjectRefId id, int slot, ObjectRefId boss, ObjectRefId segment) { }
 
     private static Object field(Object object, String name) throws Exception {

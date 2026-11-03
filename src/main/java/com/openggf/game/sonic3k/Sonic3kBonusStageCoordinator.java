@@ -84,7 +84,7 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
 
     @Override
     public boolean restoresSavedShieldOnEntry() {
-        // SpawnLevelMainSprites_SpawnPowerup (sonic3k.asm:8267-8277)
+        // SpawnLevelMainSprites_SpawnPowerup (sonic3k.asm:8299-8309)
         // restores zones $13/$14, but
         // returns for $15 (Slots). Saved shield bits remain for the return.
         return getActiveType() != BonusStageType.SLOT_MACHINE;

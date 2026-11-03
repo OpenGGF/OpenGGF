@@ -257,7 +257,7 @@ public final class TraceReplayBootstrap {
      *
      * <p>Sonic 2 runs level objects during the title-card sequence before
      * {@code Level_started_flag} is set and before {@code Level_frame_counter}
-     * begins ticking in {@code Level_MainLoop}: see s2.asm:5004-5008,
+     * begins ticking in {@code Level_MainLoop}: see s2.asm:5087-5091,
      * s2.asm:5060-5066, and s2.asm:5077-5092. Headless replay starts directly
      * at gameplay frame 1, so it must reproduce that native object prelude
      * without copying pre-trace SST snapshots back into the engine.

@@ -145,20 +145,20 @@ class TestFbzPlaneTransition {
         player.setCentreX((short) controller.getX());
         player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 1));
         player.setYSpeed((short) 0);
-        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        com.openggf.level.objects.SolidObjectPassTestSupport.routineCheckpoint(manager, controller, player, List.of());
         assertTrue(manager.isRidingObject(player, controller));
         int landingX = player.getCentreX();
 
         controller.snapshotPreUpdatePosition();
         controller.update(3, player);
         assertEquals(0x31C1, controller.getX(), "next dispatch does not cross another pixel boundary");
-        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        com.openggf.level.objects.SolidObjectPassTestSupport.routineCheckpoint(manager, controller, player, List.of());
         assertEquals(landingX, player.getCentreX(),
                 "loc_533A4 loads this dispatch's old x_pos; it never reuses the landing dispatch's d4");
 
         controller.snapshotPreUpdatePosition();
         controller.update(4, player);
-        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        com.openggf.level.objects.SolidObjectPassTestSupport.routineCheckpoint(manager, controller, player, List.of());
         assertEquals(landingX + 1, player.getCentreX(), "later live movement still carries the standing player");
     }
 
@@ -186,7 +186,7 @@ class TestFbzPlaneTransition {
         player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 1));
         player.setAir(false);
         player.setYSpeed((short) 0);
-        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        com.openggf.level.objects.SolidObjectPassTestSupport.routineCheckpoint(manager, controller, player, List.of());
         assertTrue(manager.isRidingObject(player, controller));
         int beforeX = player.getCentreX();
 
@@ -194,7 +194,7 @@ class TestFbzPlaneTransition {
         controller.snapshotPreUpdatePosition();
         controller.update(1, player);
         assertEquals(0x31C0, controller.getX());
-        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        com.openggf.level.objects.SolidObjectPassTestSupport.routineCheckpoint(manager, controller, player, List.of());
         assertEquals(beforeX, player.getCentreX(),
                 "loc_53388 sets d4=$31C0 before SolidObjectTop; loc_53134 alone translates player X");
         assertEquals(0x690 - 0x11 - player.getYRadius(), player.getCentreY(),
@@ -202,9 +202,9 @@ class TestFbzPlaneTransition {
         assertTrue(manager.isRidingObject(player, controller));
         var snapshot = controller.captureRewindState();
         controller.update(2, player);
-        assertTrue(controller.carriesRiderOnHorizontalMove(player), "ordinary d4 sampling resumes next dispatch");
+        assertEquals(0x1234, controller.tailCallD4(0x1234), "ordinary d4 sampling resumes next dispatch");
         controller.restoreRewindState(snapshot);
-        assertFalse(controller.carriesRiderOnHorizontalMove(player), "rewind retains the native zero-delta dispatch");
+        assertEquals(controller.getX(), controller.tailCallD4(0x1234), "rewind retains the native zero-delta dispatch");
     }
 
     @Test
@@ -216,8 +216,6 @@ class TestFbzPlaneTransition {
         assertTrue(controller.isTopSolidOnly());
         assertTrue(controller.isPersistent(),
                 "the native routine remains live through COMPLETE and has no unload tail");
-        assertFalse(controller.seedsNewRideCarryFromPreUpdateX(),
-                "new standing state must not retain the landing frame's earlier d4");
     }
 
     @Test

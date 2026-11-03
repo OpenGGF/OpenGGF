@@ -35,9 +35,10 @@ class TestStageplayRouteWorkspace {
         public void requestRouteApply(StageplayDocument document,Path root){applyRequests++;update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.CHECKING,"checking contents",result());}
         public void cancelRoute(){cancelCalls++;}
         StageplayRouteResult result(){
-            var commands=List.of(new PuppetCommand("route.go",0,PuppetCommandKind.MOVE_TO,150,200,1,0),new PuppetCommand("route.stop",29,PuppetCommandKind.STOP,0,0,0,0));
-            var candidate=source.withPuppets(List.of(new PuppetTrack("hero",false,0,commands)));
-            return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"verified fixture","0".repeat(64),request,candidate,commands,List.of(),List.of(new StageplayRoutePoint(0,100,200,true),new StageplayRoutePoint(1,101,200,true)),1,30,true);
+            var rows=com.openggf.route.RouteFiles.tapeFromScript(request.maxFrames()+" R");
+            var track=com.openggf.stageplay.route.StageplayRoutes.track("route.rows.1","hero",request.startFrame(),rows);
+            var candidate=com.openggf.stageplay.route.StageplayRoutes.install(source,track);
+            return new StageplayRouteResult(StageplayRouteResult.Status.VERIFIED,"verified fixture","0".repeat(64),request,candidate,List.of(),List.of(),List.of(new StageplayRoutePoint(0,100,200,true),new StageplayRoutePoint(1,101,200,true)),1,30,true,track);
         }
     }
     private StageplayWorkspace start(Host host){

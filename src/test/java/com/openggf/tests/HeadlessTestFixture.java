@@ -602,8 +602,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                     && GameServices.module().getLevelInitProfile()
                             .preserveFreshGroundedStatusUntilFirstDispatch();
             if (!preserveFreshGroundedStatus) {
-                GameServices.collision().resolveGroundAttachment(
-                        sprite, 14, () -> false);
+                GameServices.collision().placeOnTerrain(sprite, 14);
             }
 
             // 13. Resolve the active session context and create runner

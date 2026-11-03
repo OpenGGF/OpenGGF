@@ -574,8 +574,8 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void onStRiseComplete() {
         state.routine = ROUTINE_PRE_ATTACK;
         state.y = hoverCentreY;
-        // HCZEndBoss_SetSidePassFromOrigin writes only y_pos and retains
-        // the rise's y_vel for Swing_UpAndDown (sonic3k.asm:140961-140967).
+        // HCZEndBoss_SetSidePassFromOrigin (sonic3k.asm:140961-140967)
+        // writes only y_pos and retains the rise's y_vel for Swing_UpAndDown.
         state.yFixed = (hoverCentreY << 16) | (state.yFixed & 0xFFFF);
         setWait(0xFF, WaitCallback.BEGIN_ATTACK_PHASE);
     }
@@ -695,7 +695,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         loadBossPalette();
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
-        // ROM loc_6BC1C: jmp (BossDefeated_StopTimer).l (sonic3k.asm:142163).
+        // HCZEndBoss_StartDefeat (sonic3k.asm:142110-142113): jmp (BossDefeated_StopTimer).l.
         stopLevelTimerOnBossDefeat();
         // Wait DEFEAT_WAIT frames for explosions, then begin flee
         setWait(DEFEAT_WAIT, WaitCallback.BEGIN_FLEE_SEQUENCE);
@@ -738,7 +738,7 @@ public class HczEndBossInstance extends AbstractBossInstance
 
     /**
      * HCZEndBoss_StartPostDefeat retains the hidden root as the native
-     * HCZEndBoss_WaitPostDefeatGeyser owner (sonic3k.asm:140963-141015).
+     * HCZEndBoss_WaitPostDefeatGeyser owner (sonic3k.asm:141028-141080).
      */
     private void onFleeComplete() {
         state.routine = ROUTINE_CAPSULE_WAIT;

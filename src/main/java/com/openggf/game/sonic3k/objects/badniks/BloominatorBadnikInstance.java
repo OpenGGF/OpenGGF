@@ -92,7 +92,7 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
 
     private void updateIdleWait() {
         // loc_86DA2 consumes render_flags bit 7 from the preceding render pass.
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             return;
         }
         stateTimer--;

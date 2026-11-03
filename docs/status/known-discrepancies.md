@@ -921,7 +921,7 @@ applying the lamppost state". **It does not, and no longer should.** The
 bootstrap carries an explicit note in its place: the ROM's `v_vblank_count` is
 incremented once per V-blank at `VBlank_Exit` (`sonic.asm:685`) and written
 nowhere else in the entire ROM, so nothing resets it on level load and
-`EndDemo_LampVar` (`sonic.asm:3879`) carries no vblank field. Its value entering
+`EndDemo_LampVar` (`sonic.asm:3955`) carries no vblank field. Its value entering
 a credits demo is a free-running count since console reset, not level-derived
 state, and cannot be reconstructed from the lamppost table -- **seeding a
 measured phase there would be a fitted model**. The counter is instead
@@ -1998,7 +1998,7 @@ rather than repeating the sequence.
 
 `Vint_runcount` is free-running and absolute: `VintRet: addq.l #1,(Vint_runcount).w`
 (docs/s2disasm/s2.asm:508) is unconditional and every mode path reaches it. ROM objects
-gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:60989-60998,
+gate on its parity and modulo — `Obj4B_ChkPlayers` `btst #0` (s2.asm:61104-61113,
 period 2, "target Sidekick on uneven frames"), `Obj2C_Leaf` `& $1F`
 (s2.asm:52200-52208, period 32), and `Obj28_Main` `btst #4` for animal bounce
 direction (s2.asm:24660-24665, verified against the recording on all 31 floor-contact
@@ -2146,7 +2146,7 @@ justification below is **narrower than an earlier revision of this entry claimed
   (shooting flag plus a narrow x-window).
 - **Mod-8 phase is NOT invisible — the tripwire below has fired.** An earlier revision
   said "the comparison set does not consume clock phase." That is **wrong**. The Egg
-  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:84935-84942`,
+  Prison random-animal spawn gate (`loc_3F3A8`, `s2.asm:85097-85104`,
   `move.b (Vint_runcount+3).w,d0 / andi.b #7,d0 / bne`) consumes mod-8 phase directly.
   The engine's counter is 6 rows (−2 mod 8) early at segment entry, which fires one extra
   random spawn, consumes an extra RNG draw pair, and shifts every later animal's position,
@@ -2756,7 +2756,7 @@ reports zero errors and zero warnings.
   (`s2.asm:78777-78813`).
 - **`objoff_2f` at WFZ rows 13378-13440.** The WFZ-end snapshot now encodes the low byte of
   the word incremented by `ObjB2_Wait_Leader_position`, then the jump countdown installed
-  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79042-79052`). The Java model already
+  by `ObjB2_Prepare_to_jump` (`s2.asm:78972-78979, 79157-79167`). The Java model already
   owned those values as `leaderWaitCounter` and `jumpTimer`; no trace value supplies them.
 
 The resolved SCZ `x` span at row 7103 was caused by the engine treating an airborne,

@@ -269,13 +269,13 @@ default -> {
 with:
 ```java
 case EGGMAN, STATIC -> {
-    // ROM: robotnik_monitor (s2.asm:25656-25658)
+    // ROM: robotnik_monitor (s2.asm:25834-25836)
     // Both Static (subtype 0) and Eggman (subtype 3) call Touch_ChkHurt2.
     // Hurts the player as if touching a badnik.
     player.setHurt(true);
 }
 case TELEPORT -> {
-    // ROM: teleport_monitor (s2.asm:25825-25845)
+    // ROM: teleport_monitor (s2.asm:25999-26019)
     // Swaps player positions in 2P mode. No-op in 1P mode.
     // 2P mode is not yet implemented.
 }
@@ -337,7 +337,7 @@ In `WaterSystem.java`, replace `getDistortionTable()` (lines 526-546):
 
 ```java
 /**
- * ROM's SwScrl_RippleData table (s2.asm:15408-15413, label byte_C682).
+ * ROM's SwScrl_RippleData table (s2.asm:15414-15419, label byte_C682).
  * 66 bytes of horizontal pixel offsets per scanline for water ripple.
  * Values range 0-3 representing pixel displacement.
  */
@@ -351,7 +351,7 @@ private static final int[] RIPPLE_DATA = {
 
 /**
  * Get water distortion table for underwater ripple effect.
- * Uses the ROM's hand-tuned SwScrl_RippleData table (s2.asm:15408).
+ * Uses the ROM's hand-tuned SwScrl_RippleData table (s2.asm:15418).
  *
  * @return Array of horizontal pixel offsets (per scanline)
  */

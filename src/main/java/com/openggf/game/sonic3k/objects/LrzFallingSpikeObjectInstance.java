@@ -203,9 +203,9 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    public int tailCallD4(int routineEntryX) {
         // d4 = x_pos(a0) (sonic3k.asm:88053); a landed spike never moves again.
-        return false;
+        return getX();
     }
 
     // The routine tail calls Sprite_OnScreen_Test (loc_1B5A0): outside

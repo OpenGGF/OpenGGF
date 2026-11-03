@@ -61,7 +61,7 @@ import java.util.logging.Logger;
 /**
  * LBZ2 Robotnik ship + hanging laser turret boss.
  *
- * <p>ROM: {@code Obj_LBZFinalBoss1} at {@code sonic3k.asm:152001}. The ship
+ * <p>ROM: {@code Obj_LBZFinalBoss1} at {@code sonic3k.asm:152006}. The ship
  * docks above a three-segment turret column whose laser heads sweep an arc
  * and fire horizontal bolts; an orbiting spiked pod circles the assembly.
  * The Sonic/Tails defeat branch runs the full Death Egg launch finale through
@@ -1736,7 +1736,14 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** byte_73849: charge anim frames at delay 0. */
         private static final int[] CHARGE_FRAMES = {0x17, 0x17, 0x18, 0x19, 0x1A, 0x1B};
 
+        /**
+         * parent3 until loc_732BA: the fired bolt never reads it again. Dropped earlier
+         * when the head retires, so no stage keeps a reference to a retired object.
+         */
         private LaserHeadChild head;
+        /** The parent3 position Refresh_ChildPositionAdjusted last read from the head. */
+        private int headX;
+        private int headY;
         private boolean fireFlip;
         private boolean detachedChainAtCreation;
         private int countdownTimer;
@@ -1751,6 +1758,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private MuzzleLaserChild(LbzFinalBoss1Instance boss, LaserHeadChild head, int dx, int dy, boolean fireFlip) {
             super(boss, "LBZFinalBoss1MuzzleLaser", dx, dy);
             this.head = head;
+            this.headX = head.getX();
+            this.headY = head.getY();
             this.fireFlip = fireFlip;
             this.detachedChainAtCreation = (boss.flags & FLAG_DETACH_TOP) != 0
                     && (boss.statusBits & STATUS_HIT_SHIFT) == 0;
@@ -1784,11 +1793,28 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         private void updateCharging() {
+            if (head != null && head.isDestroyed()) {
+                if (chargeIndex < 0 && !blinking) {
+                    // loc_73232: btst #7,status(parent3) / bne loc_7326A deletes the
+                    // counting-down muzzle. The engine retires the head where
+                    // Child_Draw_Sprite_FlickerMove sets that bit on a detached segment.
+                    ObjectLifetimeOps.expireDynamic(this);
+                    return;
+                }
+                // loc_73270 / loc_732A8 keep reading parent3 without that test. The
+                // ROM head is now Obj_FlickerMove debris, which the engine does not
+                // model; the muzzle holds the head's last position instead.
+                head = null;
+            }
+            if (head != null) {
+                headX = head.getX();
+                headY = head.getY();
+            }
             if (chargeIndex >= 0) {
                 // loc_732A8 refreshes the parent-relative position before
                 // every Animate_Raw dispatch, including the callback that fires.
-                x = (head.getX() + dx) & 0xFFFF;
-                y = (head.getY() + dy) & 0xFFFF;
+                x = (headX + dx) & 0xFFFF;
+                y = (headY + dy) & 0xFFFF;
                 // Charge anim, delay 0: one frame per entry, then fire.
                 chargeIndex++;
                 if (chargeIndex >= CHARGE_FRAMES.length) {
@@ -1798,8 +1824,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 mappingFrame = CHARGE_FRAMES[chargeIndex];
                 return;
             }
-            x = (head.getX() + dx) & 0xFFFF;
-            y = (head.getY() + dy) & 0xFFFF;
+            x = (headX + dx) & 0xFFFF;
+            y = (headY + dy) & 0xFFFF;
             if (!blinking) {
                 if (--countdownTimer < 0) {
                     countdownTimer = countdownStep--;
@@ -1823,6 +1849,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** ROM loc_732BA. */
         private void fire() {
             fired = true;
+            // loc_732F6 (MoveSprite2, Sprite_CheckDeleteTouch) never reads parent3 again.
+            head = null;
             collisionFlags = 0x9C;
             mappingFrame = 0x11;
             visible = true;

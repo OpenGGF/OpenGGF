@@ -43,7 +43,7 @@ public class Sonic3kSpecialStagePlayer {
     private boolean bumperLock;
     /**
      * Whether the last {@link #update} call's ROM {@code sub_9580} reached the
-     * cell-check tail at {@code bsr.s sub_972E} (sonic3k.asm:12114), rather
+     * cell-check tail at {@code bsr.s sub_972E} (sonic3k.asm:12124), rather
      * than leaving the routine through one of its earlier {@code rts} /
      * {@code bra locret_972C} exits. Those exits skip the cell check for that
      * frame -- see {@link #reachedCellCheck()}.
@@ -369,7 +369,7 @@ public class Sonic3kSpecialStagePlayer {
             // sonic3k.asm:12074-12075). Unlike the same-cell branches this
             // is an `rts`, not a `bra loc_96FA`, so it leaves sub_9580
             // before BOTH the position update and the cell check at
-            // `bsr.s sub_972E` (sonic3k.asm:12114). The frame therefore
+            // `bsr.s sub_972E` (sonic3k.asm:12124). The frame therefore
             // neither moves nor interacts with the cell it is standing on --
             // which is what lets the ROM re-arm on the same bumper one frame
             // later, from the far side of the sphere.
@@ -611,7 +611,7 @@ public class Sonic3kSpecialStagePlayer {
 
     /**
      * Whether this frame's {@code sub_9580} fell through to its cell-check
-     * tail (`bsr.s sub_972E`, sonic3k.asm:12114) instead of leaving through one
+     * tail (`bsr.s sub_972E`, sonic3k.asm:12124) instead of leaving through one
      * of the routine's earlier exits. The cell check is the LAST thing
      * sub_9580 does, so every early exit suppresses it for that frame.
      *

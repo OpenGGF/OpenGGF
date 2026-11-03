@@ -149,7 +149,7 @@ public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance im
         switch (state) {
             case STATE_PLACED_WAIT -> {
                 // loc_82038: tst.b render_flags(a0) / bpl.s
-                if (isWithinSolidContactBounds()) {
+                if (isWithinOnScreenRenderBounds()) {
                     state = STATE_PLACED_FLY;
                     services().playSfx(Sonic3kSfx.DASH.id);
                 }
@@ -318,7 +318,7 @@ public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance im
         if (!DdzObjectSupport.playerPowered(services())) {
             return false;
         }
-        if (subtype != 0 && isWithinSolidContactBounds()) {
+        if (subtype != 0 && isWithinOnScreenRenderBounds()) {
             DdzEndBossBodyObjectInstance body = DdzEndBossBodyObjectInstance.find(services());
             if (body != null && !body.flashing()
                     && DdzObjectSupport.inTheirRange(getX(), getY(), body.getX(), body.getY(),

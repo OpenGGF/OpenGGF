@@ -626,7 +626,7 @@ composition delivery remain separate.
 ## Tails Flying-With-Cargo Physics
 
 **Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
-**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27593` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
+**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27633` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
 

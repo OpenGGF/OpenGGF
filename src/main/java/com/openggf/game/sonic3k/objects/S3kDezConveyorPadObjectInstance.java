@@ -149,13 +149,6 @@ public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstanc
         // the owner of its per-player standing/pushing bits.
         return true;
     }
-    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        // loc_47A58 (sonic3k.asm:93735-93749) reaches SolidObjectFull only
-        // after the conveyor carry. SolidObjectFull_1P (sonic3k.asm:41061-41081)
-        // consumes this object's standing bit at loc_1DC98, returning without
-        // a new-contact Y lift; an earlier solid cannot consume its ride.
-        return true;
-    }
     @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
         // SolidObjectFull_1P (sonic3k.asm:41061-41081) clears this player's
         // status bit on air/range exit, before sub_47A96's next conveyor carry.

@@ -1936,7 +1936,7 @@ public class Sonic3kConstants {
     public static final int ARTTILE_ORBINAUT = 0x056E;
     public static final int ARTTILE_RIBOT = 0x0547;
     public static final int ARTTILE_CORKEY = 0x0558;
-    // Obj_Flybot767 (sonic3k.asm:192074), LockOn data include.
+    // Obj_Flybot767 (sonic3k.asm:192079), LockOn data include.
     // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
     public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;
     public static final int ART_UNC_FLYBOT_767_SIZE = 4896;
@@ -2461,7 +2461,7 @@ public class Sonic3kConstants {
     //                                            the 0x20 block grid)
     // =====================================================================
 
-    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,x_vel(a0)` (sonic3k.asm:145113). */
+    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,x_vel(a0)` (sonic3k.asm:145118). */
     public static final short CNZ_MINIBOSS_TOP_INIT_X_VEL = (short) 0x0200;
 
     /** ROM: Obj_CNZMinibossTopGo `move.w #$200,y_vel(a0)` (sonic3k.asm:145114). */

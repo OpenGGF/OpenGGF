@@ -76,7 +76,7 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
     public static final int PIECE_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
     /**
      * ROM loc_8CF10: when a drifting piece's late Animate_Raw script ends ($F4 -> $34 callback),
-     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192601-192604). The
+     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192606-192609). The
      * six burst pieces Go_Delete_Sprite instead (off_8D1AC, sonic3k.asm:192832-192838).
      */
     public static final int LINGER_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x380);

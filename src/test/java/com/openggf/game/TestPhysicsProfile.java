@@ -200,7 +200,7 @@ public class TestPhysicsProfile {
     @Test
     public void testStandardModifiers_WaterHurtGravityReduction() {
         PhysicsModifiers m = PhysicsModifiers.STANDARD;
-        // ROM: Obj01_Hurt subtracts $20 when underwater (s2.asm:37802, s1:01 Sonic.asm:1410)
+        // ROM: Obj01_Hurt subtracts $20 when underwater (s2.asm:38166, s1:01 Sonic.asm:1410)
         // Net hurt underwater gravity = $30 - $20 = $10 (same as normal $38 - $28 = $10)
         assertEquals(0x20, m.waterHurtGravityReduction(), "Water hurt gravity reduction");
     }
@@ -253,19 +253,6 @@ public class TestPhysicsProfile {
                 "S3K permanently latches respawn-table bits after player kill");
     }
 
-
-    @Test
-    public void testObjectsExecuteAfterPlayerPhysics_PerGame() {
-        // All three games use post-physics object execution per the
-        // 2026-04-18-solid-ordering-rom-accuracy plan: S2/S3K via DUAL_PATH
-        // collision model, S1 via the bridged inline-order path.
-        assertTrue(GameRules.SONIC_1.objectInteraction().objectsExecuteAfterPlayerPhysics(),
-                "S1 uses post-physics object ordering");
-        assertTrue(GameRules.SONIC_2.objectInteraction().objectsExecuteAfterPlayerPhysics(),
-                "S2 uses post-physics object ordering");
-        assertTrue(GameRules.SONIC_3K.objectInteraction().objectsExecuteAfterPlayerPhysics(),
-                "S3K uses post-physics object ordering");
-    }
 
     @Test
     public void testSpeedShoesCountdownIsADisplayPhaseTimer() {

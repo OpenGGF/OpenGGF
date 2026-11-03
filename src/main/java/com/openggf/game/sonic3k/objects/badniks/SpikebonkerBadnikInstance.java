@@ -70,7 +70,7 @@ public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
     private static final int SWING_PEAK = 0x40;
     /** {@code move.w #4,$40(a0)} (:199036). */
     private static final int SWING_ACCELERATION = 4;
-    /** {@code cmpi.w #$60,d2 / bhs.s loc_91A88} (:199043-199044). */
+    /** {@code cmpi.w #$60,d2 / bhs.s loc_91A88} (:199058-199059). */
     private static final int DETECT_RANGE = 0x60;
 
     /** Body routine index {@code Spikebonker_Index} (:199008-199010). */

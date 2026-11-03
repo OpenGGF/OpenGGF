@@ -495,8 +495,8 @@ negative values drop below.
 **What to check.** When porting any S3K SlopedSolidProvider:
 
 1. Find the ROM routine that samples the slope and computes the
-   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:42022-42055),
-   `SolidObjCheckSloped2` (sonic3k.asm:41927-41954), or the
+   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:42108-42141),
+   `SolidObjCheckSloped2` (sonic3k.asm:42101-42128), or the
    per-object loc_19EB6-style direct subtraction.
 2. Look at the slope data values relative to ROM `y_pos(a0) - d3`:
    - If slope[mid] ~= 0 and the surface visually sits at object_y,
@@ -1511,8 +1511,8 @@ DEZ's vertical conveyor independently reproduces this at original cold row
 3268: `loc_47A14 (sonic3k.asm:93712-93733)` moves Y before
 `loc_47A58 (sonic3k.asm:93735-93749)` calls the full-solid helper. Preserve
 its live instance key and keep the riding record until its own checkpoint
-(`airborneRiderUnseatRequiresOwnCheckpoint`); an earlier solid's generic
-cleanup must not consume this owner's return. Native `loc_1DC98 (sonic3k.asm:41075-41081)` clears support without changing the correct jump Y.
+(only the ridden object's own helper releases an airborne rider); an earlier
+solid's call must not consume this owner's return. Native `loc_1DC98 (sonic3k.asm:41075-41081)` clears support without changing the correct jump Y.
 Check both participants, moving metadata, replacement-slot allocation and real
 recreation/forward replay, as in `TestS3kDezConveyorPadSolidOwnership`.
 
@@ -1997,7 +1997,7 @@ callback that legitimately reloads them.
 
 **ROM citation.** FBZ Blaster `loc_8956A` writes routine 2 and restores the
 turn callback, but does not copy recurring `$3A` into patrol countdown `$2E`;
-that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186568-186579`).
+that reload occurs only in `loc_8955A` (`docs/skdisasm/sonic3k.asm:186583-186594`).
 At complete-run f9965, resetting `$2E` from 64 to 128 after the attack let the
 engine Blaster walk to `$1406` instead of turning near the ROM's `$13E0`, where
 it incorrectly hurt Tails.
@@ -3615,7 +3615,7 @@ width byte, and the same default lives in the shared
 **Full2 exception (HCZ R11, 2026-10-17).** Identify the actual helper before
 changing bounds. `Obj_HCZBlock` / `loc_1F3CA` (:43287–43297) calls
 `SolidObjectFull2`: its Player2 dispatch (:41091–41102) omits the player
-render_flags gate, and `SolidObjectFull2_1P` (:41105–41107) enters
+render_flags gate, and `SolidObjectFull2_1P` (:41110–41112) enters
 `SolidObject_cont` directly, bypassing the object's `loc_1DF88` gate
 (:41430–41434). Both require the existing object-local
 `bypassesOffscreenSolidGate()` capability, rather than wider geometry or a shared
@@ -3629,12 +3629,12 @@ recreation/replay verifies the static capability survives normal reconstruction.
 
 **Shape.** A ROM routine calls `GetSineCosine`, then does `swap dN` and a long
 shift or add on the result. `GetSineCosine` writes only `d0.w` and `d1.w`
-(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3057`), so after `swap` the *low*
+(`move.w SineTable(pc,d0.w),d1`, `sonic3k.asm:3067`), so after `swap` the *low*
 word of the register is whatever the caller -- or, for `d1`, whatever the
 **previously executed object slot** -- happened to leave in the high word. A
 straight `sin << 12` port silently models that residue as zero.
 
-**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70527`)
+**Why it bites.** `Obj_MGZSwingingPlatform`'s `sub_34074` (`sonic3k.asm:70572`)
 does `swap d0 / swap d1 / asr.l #4` and then accumulates five steps, so the
 residue reaches the integer part:
 
@@ -3839,7 +3839,7 @@ Three things trip engine ports here:
 
 The high word is stable across an object's own code-pointer rewrites as long as
 they stay in one bank: `Obj_FBZDEZPlayerLauncher` cycles `loc_3B97A` ->
-`loc_3BA4A` (`sonic3k.asm:79449,79457`), both `$0003xxxx`, so its published word
+`loc_3BA4A` (`sonic3k.asm:79527,79457`), both `$0003xxxx`, so its published word
 is `$0003`.
 
 **Originating investigation.** FBZ1 Sonic+Tails segment, frame 116 (frontier
@@ -4043,7 +4043,7 @@ writes. `sub_4A428`'s Pachinko magnet-orb capture (`:97086-97097`) writes only
 follow replay. The tell is a leader history entry whose value matches **no** BK2
 row in the window -- a latch, not a lag.
 
-**Cross-game.** S2 `Obj01_Control` has the same ordering (`s2.asm:35933-35935`),
+**Cross-game.** S2 `Obj01_Control` has the same ordering (`s2.asm:36222-36224`),
 and the S2 sidekick reads the same delayed `Stat_table`, so any S2 object capture
 modelled with a control lock has the identical defect.
 
@@ -4073,7 +4073,7 @@ field is correct, and the object's engine class takes a single `PlayableEntity`.
 **Mechanism.** The S3K idiom is a main routine that does
 `bsr sub_X / lea (Player_2).w,a1 / bsr sub_X`, with the subroutine branching on
 `cmpa.w #Player_1,a1` only for the *global* consequences. `Obj_PachinkoEnergyTrap`
-`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96680-96683`) is the clean example: both
+`loc_49FD6` (`docs/skdisasm/sonic3k.asm:96685-96688`) is the clean example: both
 players are snapped to the beam and given `object_control = $81`, and only the rise
 latch, the exit countdown and the level restart are gated on Player 1
 (`:96665-96677`). `Obj_PachinkoMagnetOrb` `loc_4A408` (`:96943-96949`) has the same
@@ -4104,7 +4104,7 @@ becomes observable when a scoring branch runs.
 `SpawnLevelMainSprites_SpawnPowerup` (`docs/skdisasm/sonic3k.asm:8296-8322`), which
 runs on EVERY level spawn. The bonus zones are not exceptions to it -- they have
 their own explicit arms into the restore (`cmpi.b #$13,(Current_zone).w / beq
-loc_69E0`, and the same for `#$14`, :8302-8305), so the shield is live for the
+loc_69E0`, and the same for `#$14`, :8312-8315), so the shield is live for the
 DURATION of the bonus stage. The engine had captured the value at entry and consumed
 it only when returning to the level, which reads as a plausible "save and restore"
 pair and is half the ROM's behaviour.

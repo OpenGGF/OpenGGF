@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * Temporary AIZ1-to-AIZ2 fire transition floor.
  *
- * <p>ROM: {@code Obj_AIZTransitionFloor} at sonic3k.asm:104823. Spawned by
+ * <p>ROM: {@code Obj_AIZTransitionFloor} at sonic3k.asm:104828. Spawned by
  * {@code AIZ1BGE_FireTransition} at x=$2FB0/y=$3A0 after the AIZ2 art queues,
  * then calls {@code SolidObjectTop} with d1=$A0, d2=$10, d3=$10.
  */
@@ -119,11 +119,6 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public boolean providesPreMovementGroundAttachmentSupport() {
-        return true;
-    }
-
-    @Override
     public boolean isSkipSolidContactThisFrame() {
         // Obj_AIZTransitionFloor sets status bit 7 before calling SolidObjectTop,
         // so it is solid on its first execution frame.
@@ -132,7 +127,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
 
     @Override
     public int romObjectCodePointerHighWord() {
-        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104823).
+        // Obj_AIZTransitionFloor = 0x0004FE38 (sonic3k.asm:104828).
         return pendingDelete ? 0x0001 : 0x0004; // Delete_Current_Sprite versus floor code
     }
 

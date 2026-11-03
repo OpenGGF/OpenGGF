@@ -9,9 +9,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Player code never clears Status_OnObj; only the object that owns the ride does. Over
+ * empty ICZ2 terrain with the bit set and no object, Player_AnglePos returns before any
+ * floor probe (loc_EC42, sonic3k.asm:18771-18777), so Sonic stays where he is.
+ */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kIcz2StaleObjectGrounding {
     private static final int SCREENSHOT_TOP_LEFT_X = 2137;
@@ -44,21 +50,21 @@ class TestS3kIcz2StaleObjectGrounding {
     }
 
     @Test
-    void staleObjectStatusDoesNotKeepSonicGroundedInIcz2EmptyAir() {
+    void ownerlessObjectStatusSkipsTheFloorProbeInIcz2EmptyAir() {
         player.setCentreX((short) (SCREENSHOT_TOP_LEFT_X + player.getXRadius()));
         player.setCentreY((short) (SCREENSHOT_TOP_LEFT_Y + player.getYRadius()));
         player.setAir(false);
         player.setOnObject(true);
-        player.setPushing(true);
         player.setGSpeed((short) 0);
         player.setYSpeed((short) 0);
+        int x = player.getCentreX();
+        int y = player.getCentreY();
 
         fixture.stepFrame(false, false, false, false, false);
 
-        assertTrue(player.getAir(),
-                "A stale Status_OnObj bit must not keep Sonic grounded over empty ICZ2 terrain");
-        assertFalse(player.isOnObject(),
-                "The stale object latch should be cleared when no live support remains");
-        assertFalse(player.getPushing(), "Terrain walk-off should clear pushing");
+        assertFalse(player.getAir(), "No object released Sonic, so Status_InAir stays clear");
+        assertTrue(player.isOnObject(), "Only the owning object clears Status_OnObj");
+        assertEquals(x, player.getCentreX(), "Sonic does not move at rest");
+        assertEquals(y, player.getCentreY(), "Player_AnglePos returns before the floor probe");
     }
 }

@@ -4600,7 +4600,7 @@ than an obviously broken probe. It was caught only by going to read *why* a resu
 instead of banking it.
 
 **Related, on scope:** the same batch settled its ROM half from **one routine per game**
-(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85499-85508`)
 rather than nine readings — neither writes a routine, so the install is in each boss's own
 dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
 rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
@@ -4678,10 +4678,10 @@ shape matches.
 1. **Do not take a ROM fact from an engine javadoc.** The margin rested on `explicit_height` being
    clear, taken from the engine class's own javadoc rather than the disassembly — the exact
    failure the surrounding audit was written about, committed while writing it. Re-derived at
-   source: `LoadSubObject_Part3` (`s2.asm:72715-72726`) applies mappings, art_tile, render_flags,
+   source: `LoadSubObject_Part3` (`s2.asm:72830-72841`) applies mappings, art_tile, render_flags,
    priority, width_pixels and collision_flags, and **never writes `y_radius`**.
 2. **`ApproxYCheck`'s 32 generalises within its class; the x margin never does.** A second row on
-   the same object (`ObjB8`, `s2.asm:80297`) is also `explicit_height`-clear — so also 32 — but
+   the same object (`ObjB8`, `s2.asm:80317`) is also `explicit_height`-clear — so also 32 — but
    carries `width_pixels` `$10` rather than 4. Per-object width, shared approximate height.
 
 ## One hundred and fourteenth rule: a true general principle can explain away the one piece of evidence pointing at the answer

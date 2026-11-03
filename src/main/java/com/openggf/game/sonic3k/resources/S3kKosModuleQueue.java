@@ -274,7 +274,7 @@ public final class S3kKosModuleQueue {
         if (Boolean.getBoolean("openggf.debug.kosm")) {
             String receipt = "submittedAt=" + java.time.Instant.now()
                     + " represented=" + timing.recordedAuthorityRepresentsRow()
-                    + " caller=" + StackWalker.getInstance().walk(frames -> frames
+                    + " caller=" + java.lang.StackWalker.getInstance().walk(frames -> frames
                             .filter(frame -> !frame.getClassName().equals(S3kKosModuleQueue.class.getName()))
                             .limit(6).map(Object::toString)
                             .collect(java.util.stream.Collectors.joining(" <- ")));

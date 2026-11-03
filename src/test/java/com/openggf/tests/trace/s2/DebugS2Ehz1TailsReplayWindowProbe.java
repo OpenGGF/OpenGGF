@@ -285,11 +285,10 @@ class DebugS2Ehz1TailsReplayWindowProbe {
         }
         int slot = signpost instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1;
         return String.format(
-                "slot=%d state=%s spawned=%s walkFrame=%s",
+                "slot=%d state=%s spawned=%s",
                 slot,
                 readField(signpost, "routineState"),
-                readField(signpost, "resultsSpawned"),
-                readField(signpost, "walkOffEnteredVIntRunCount"));
+                readField(signpost, "resultsSpawned"));
     }
 
     private static Object readField(Object target, String fieldName) {

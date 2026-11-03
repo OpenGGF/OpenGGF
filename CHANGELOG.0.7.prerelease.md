@@ -9,6 +9,21 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Metropolis Zone boss draw layer:** The boss now takes its display layer from
+  its height as the shipped game does, so it moves from layer 3 to layer 4 once it
+  descends to its pacing height. It previously stayed on layer 3, which is the
+  disassembly's `fixBugs` behaviour.
+
+- **Sky Sanctuary cutscene bridge:** Walking off either end clears that
+  player's standing bit on the same frame, as the shipped game does. The bit
+  previously lingered for one more frame after the player had left.
+
+- **Sky Sanctuary rotating platforms:** Jumping off a spinning post or its
+  carrier bar clears the player's "standing on an object" status on the next
+  frame, as the shipped game does. The status previously stayed set until
+  another object cleared it, so the player could run flat through the next
+  slopes instead of following them.
+
 - S3K invisible solid and hurt blocks suppress edge balancing as their native status bit requires.
 
 - LRZ corkscrews retain the shipped two-player DPLC standing-bit quirk and hold the rider pose on skipped passes.
@@ -276,6 +291,15 @@ Unreleased. The earlier development themes remain in
 - **Sonic 2 sidekick visibility:** Tails resets his off-screen respawn counter
   directly from the native on-screen flag, removing an extra entry delay.
 
+- **Sidekick CPU follow routine:** The CPU sidekick's ground-follow routine is
+  now a direct translation of S2 `TailsCPU_Normal` and S3K Tails CPU routine 6.
+  Push-grace windows, object-order and interact-slot push bridges, fast-leader,
+  sliding-leader and underwater push heuristics, deferred follow nudges,
+  frame-counter projections and trace-bootstrap entry branches that had been
+  tuned to individual trace fixtures are removed, with the object, level-event,
+  title-card and rule hooks that fed them. Affected trace frontiers are recorded
+  in the [audit](docs/architecture/audits/2026-10-31-sidekick-cpu-fitted-logic-removal.md).
+
 - **Sonic 2 object-slot timing:** Defeated objects with folded children release
   those children as the object walk reaches their slots. This preserves native
   allocation and lost-ring bounce timing in Chemical Plant.
@@ -424,6 +448,21 @@ Unreleased. The earlier development themes remain in
   presentation, honoring both automatic-playlist suppression owners. Their common
   object art loads without a native zone header; native stages retain their title
   timing and zone-owned spring art.
+
+- **Route tapes in both editors:** the in-engine editor's Routes workspace and
+  OpenGGF Editor open `<stem>.route.json` routes and edit both pads' physical
+  button rows on a two-lane timeline with undo. Replay and qualified saves run in
+  a separate worker; the editors show qualified or the first row a replay cannot
+  complete, draw the replayed path over the route's level, list the manifest's
+  launch and native observations (display only), and export a BizHawk movie on
+  demand. Saving changes the files only after a passing replay; unfinished work
+  saves as a draft that tests and native checks refuse. Repair keeps a route's
+  rows where play still tracks a reference and reports the share it kept.
+  Stageplay's applied routes are now input rows; **Edit input rows** opens them in
+  the same timeline and applies edits back to the scene as one undo step.
+  Routes carry goal legs (reach, board, ride, attach, hold, await a phase, defeat,
+  cross) on placed or runtime-spawned objects, picked from a scan of live objects;
+  Plan searches rows that complete them after a kept prefix.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
@@ -1792,6 +1831,27 @@ its original drawing priority.
   notches from `MenuInput.Pointer.wheel()`.
 
 ## Maintenance and release preparation
+
+- **Shared route planner:** Reference-path authoring, Stageplay player routes
+  and the SSZ and DEZ boss input authors now share one planner. A route is a
+  frozen list of controller rows with a manifest (`.route.json` and `.script`);
+  it counts as qualified only after a cold replay of those rows, and BK2 movies
+  are exported from it. Stageplay saves planned player routes as frozen input
+  tracks (document version 9). Bridges, platforms, updrafts, vines and bosses
+  report their phase, attachment or hit points, so route goals can target them.
+  Repair keeps a route's original rows and searches only where play drifts from
+  a track recorded on the engine the rows were written for; an exact repair
+  edits single rows until both runs agree field for field again. Twelve Sky
+  Sanctuary Act 1 cold routes are repaired this way (one or two edited rows
+  each) and replay their original runs. Native checks compose the route after a
+  recorded entry movie with one filler row per observed lag frame.
+
+- **Object service failures:** AIZ intro camera calls, Lava Reef lava-fall clocks
+  and launch/drop sound calls propagate service failures instead of silently
+  continuing. S2 object PLC submissions retry only queue-capacity rejection;
+  ROM, art and renderer failures remain visible. A ROM-free source guard ratchets
+  existing broad catch handlers across main Java sources, with explicit legacy
+  inventory and adversarial scanner controls.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow

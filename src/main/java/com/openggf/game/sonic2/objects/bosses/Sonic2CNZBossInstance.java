@@ -294,8 +294,8 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     @Override
     protected boolean defeatDeferralAppliesToThisBoss() {
         // ObjA7/Obj51 reads boss_routine(a0) once at the top of its update and jumps
-        // through off_31A2A (docs/s2disasm/s2.asm:66554-66566). The hit bookkeeping runs
-        // in loc_31CDC (docs/s2disasm/s2.asm:66781-66792), called from the tail of the
+        // through off_31A2A (docs/s2disasm/s2.asm:66669-66681). The hit bookkeeping runs
+        // in loc_31CDC (docs/s2disasm/s2.asm:66896-66907), called from the tail of the
         // already-selected routine, and loc_31D42 only awards points, sets
         // Boss_Countdown = $B3 and boss_routine = 6 before returning
         // (docs/s2disasm/s2.asm:66818-66826). So the defeat routine loc_31D5C's first

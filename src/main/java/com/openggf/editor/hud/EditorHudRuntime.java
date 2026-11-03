@@ -18,12 +18,14 @@ public final class EditorHudRuntime implements EditorWindowChrome {
     private final EditorHudPainter painter = new EditorHudPainter();
     private EditorHud hud;
     private StageplayHud stageplay;
+    private RouteHud routes;
     private Host host;
     private boolean active;
     private boolean viewportOverridden;
     private EditorHudLayout layout;
     private double pointerScale = Double.NaN;
     private boolean stageplayShown;
+    private boolean routesShown;
 
     @Override
     public void init(Host host, float framebufferScale) throws java.io.IOException {
@@ -32,6 +34,7 @@ public final class EditorHudRuntime implements EditorWindowChrome {
         canvas.init();
         hud = new EditorHud(host.controller());
         if (host.stageplay() != null) stageplay = new StageplayHud(host.stageplay());
+        if (host.routeTapes() != null) routes = new RouteHud(host.routeTapes(), host.controller());
     }
 
     public boolean isAvailable() { return canvas.isInitialized() && hud != null; }
@@ -47,6 +50,7 @@ public final class EditorHudRuntime implements EditorWindowChrome {
         if (!active && next) {
             hud.reactivated();
             if (stageplay != null) stageplay.reactivated();
+            if (routes != null) routes.reactivated();
         }
         active = next;
         return active;
@@ -62,13 +66,15 @@ public final class EditorHudRuntime implements EditorWindowChrome {
         }
         boolean showingStageplay = stageplayActive();
         boolean workbench = showingStageplay || hud.controller().depth() != EditorHierarchyDepth.WORLD;
-        layout = showingStageplay ? host.stageplay().pickingPosition()
+        layout = routesActive() ? RouteHud.layout(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight)
+                : showingStageplay ? host.stageplay().pickingPosition()
                 ? EditorHudLayout.positionPicker(framebufferWidth,framebufferHeight,logicalWidth,logicalHeight)
                 : StageplayHud.layout(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight)
                 : EditorHudLayout.of(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight, workbench);
         pointerScale = windowWidth > 0 ? framebufferWidth / (double) windowWidth / layout.uiScale() : Double.NaN;
         hud.setPointerScale(pointerScale);
         if (stageplay != null) stageplay.setPointerScale(pointerScale);
+        if (routes != null) routes.setPointerScale(pointerScale);
         viewportOverridden = true;
         int[] game = layout.gameViewport();
         return new int[] {game[0], framebufferHeight - game[1] - game[3], game[2], game[3]};
@@ -80,6 +86,7 @@ public final class EditorHudRuntime implements EditorWindowChrome {
         canvas.begin(framebufferWidth, framebufferHeight, layout.uiScale());
         try {
             if (stageplayActive()) stageplay.draw(canvas, layout);
+            else if (routesActive()) routes.draw(canvas, layout);
             else {
                 painter.draw(canvas, layout, hud);
                 if (stageplay != null) {
@@ -87,6 +94,12 @@ public final class EditorHudRuntime implements EditorWindowChrome {
                     canvas.panel(button.x(), button.y(), button.w(), button.h(), EditorHudTheme.ACCENT_DARK, 1);
                     canvas.text("Stageplay  F4", button.x() + 6, button.y() + 5,
                             EditorHudCanvas.Size.SMALL, EditorHudTheme.TEXT, 1);
+                }
+                if (routes != null) {
+                    var button = routesButton();
+                    canvas.panel(button.x(), button.y(), button.w(), button.h(), EditorHudTheme.ACCENT_DARK, 1);
+                    canvas.text(com.openggf.i18n.UiMessages.text("editor.route_tape.hud_plate"), button.x() + 6,
+                            button.y() + 5, EditorHudCanvas.Size.SMALL, EditorHudTheme.TEXT, 1);
                 }
             }
         } finally {
@@ -105,6 +118,21 @@ public final class EditorHudRuntime implements EditorWindowChrome {
             stageplayShown = showingStageplay;
         }
         if (showingStageplay) return stageplay.update(input);
+        boolean showingRoutes = routesActive();
+        if (showingRoutes != routesShown) {
+            finishPendingEdits();
+            hud.reactivated();
+            if (routes != null) routes.reactivated();
+            routesShown = showingRoutes;
+        }
+        if (showingRoutes) return routes.update(input);
+        if (routes != null && layout != null && !Double.isNaN(pointerScale)
+                && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)
+                && routesButton().contains(input.getMouseX() * pointerScale, input.getMouseY() * pointerScale)) {
+            finishPendingEdits();
+            host.routeTapes().activate();
+            return true;
+        }
         if (stageplay != null && (input.isKeyPressed(GLFW_KEY_F4)
                 || layout != null && !Double.isNaN(pointerScale)
                 && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)
@@ -117,6 +145,13 @@ public final class EditorHudRuntime implements EditorWindowChrome {
     }
 
     private boolean stageplayActive() { return stageplay != null && host.stageplay().active(); }
+
+    private boolean routesActive() { return routes != null && host.routeTapes().active() && !stageplayActive(); }
+
+    /** Beside the Stageplay plate; reachable by pad through the editor's command sheet. */
+    private EditorHudLayout.Rect routesButton() {
+        return new EditorHudLayout.Rect(layout.width() - 98 - 70, 3, 64, 16);
+    }
 
     private EditorHudLayout.Rect stageplayButton() {
         return new EditorHudLayout.Rect(layout.width() - 98, 3, 92, 16);

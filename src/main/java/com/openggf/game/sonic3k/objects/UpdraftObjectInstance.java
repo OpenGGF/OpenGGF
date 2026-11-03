@@ -24,7 +24,7 @@ import java.util.List;
  * from {@code sub_3FBC4} and the object-controlled mushroom-parachute path at
  * {@code loc_3FC76}.
  */
-public final class UpdraftObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+public final class UpdraftObjectInstance extends AbstractObjectInstance implements com.openggf.level.objects.observe.AttachmentSource, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // The native invisible vertical airflow owner affects separate players/parachutes and has no facing body.
     private static final int X_BIAS = 0x40;
@@ -43,6 +43,12 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
     private int outerRange;
     private boolean negativeSubtype;
     private boolean carrierObjectLiftedThisUpdate;
+    /**
+     * Passive route observation: bit {@code i} is set when this update lifted participant {@code i}
+     * (main first, then engine sidekicks). Written only at the successful lift, cleared each update;
+     * it never feeds back into the airflow.
+     */
+    private int airflowParticipants;
 
     public UpdraftObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Updraft");
@@ -59,6 +65,7 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         carrierObjectLiftedThisUpdate = false;
+        airflowParticipants = 0;
         if (playerEntity instanceof AbstractPlayableSprite player) {
             applyAirflow(player, vIntRunCount);
         }
@@ -113,6 +120,8 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
 
         int lift = computeLift(distance, MAIN_Y_BIAS);
         NativePositionOps.writeYPosPreserveSubpixel(player, player.getCentreY() + lift);
+        int participant = participantIndex(player);
+        if (participant >= 0 && participant < 31) airflowParticipants |= 1 << participant;
 
         player.setAir(true);
         player.setRollingJump(false);
@@ -131,6 +140,25 @@ public final class UpdraftObjectInstance extends AbstractObjectInstance implemen
             player.setFlipsRemaining(PLAYER_FLIPS_REMAINING);
             player.setFlipSpeed(PLAYER_FLIP_SPEED);
         }
+    }
+
+    /** The participant's index in the main-then-sidekicks order this object updates them in. */
+    private int participantIndex(com.openggf.game.PlayableEntity player) {
+        ObjectServices objectServices = tryServices();
+        if (objectServices == null) return -1;
+        return objectServices.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED).indexOf(player);
+    }
+
+    @Override
+    public java.util.Optional<com.openggf.level.objects.observe.Attachment> attachmentOf(
+            com.openggf.game.PlayableEntity player) {
+        int participant = participantIndex(player);
+        if (participant < 0 || participant >= 31 || (airflowParticipants & (1 << participant)) == 0) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(new com.openggf.level.objects.observe.Attachment(
+                com.openggf.level.objects.observe.AttachmentKind.AIRFLOW, spawn.x(), spawn.y(), false));
     }
 
     private void maybePlayWindSfx(int vIntRunCount) {

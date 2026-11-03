@@ -73,11 +73,8 @@ class TestLbzCupElevatorInstance {
         Tails sidekick = new Tails("tails", (short) 0x1800, (short) 0x0600);
         sidekick.setCpuControlled(true);
 
-        assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick));
         setPrivateInt(elevator, "activationFlag", 1);
 
-        assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick),
-                "Obj18's Full2 contact consumes Player 2's live position");
         assertTrue(elevator.usesInclusiveRightEdge(),
                 "SolidObject_cont accepts the exact right-hand boundary via `bhi`");
         assertTrue(elevator.usesInstanceSolidStateLatchKey(),

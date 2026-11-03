@@ -129,7 +129,7 @@ public final class LrzButtonHorizontalObjectInstance extends AbstractObjectInsta
         mappingFrame = FRAME_UNPRESSED;
 
         if (!touched) {
-            // btst #4,subtype(a0) / bne.s loc_42D76 (sonic3k.asm:88302-88303).
+            // btst #4,subtype(a0) / bne.s loc_42D76 (sonic3k.asm:88317-88318).
             if (!latching) {
                 Sonic3kLevelTriggerManager.clearBit(triggerIndex, triggerBit);
             }

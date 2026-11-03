@@ -21,7 +21,7 @@ public final class TrigLookupTable {
     private static final double[] COS_DEG_TABLE = new double[360];
 
     /**
-     * ROM Angle_Data lookup table from misc/angles.bin (s2.asm:4081).
+     * ROM Angle_Data lookup table from misc/angles.bin (s2.asm:4085).
      * Maps ratio index (0-255) to arctan angle in first quadrant (0-0x20).
      * Used by calcAngle() for ROM-accurate angle calculation.
      */
@@ -274,7 +274,7 @@ public final class TrigLookupTable {
 
     /**
      * Calculates the movement quadrant from velocity, matching ROM's collision logic.
-     * ROM: Sonic_DoLevelCollision (s2.asm:37547-37557)
+     * ROM: Sonic_DoLevelCollision (s2.asm:37881-37891)
      *
      * The calculation is: ((angle - 0x20) & 0xC0)
      * This offsets the quadrant boundaries by 32 degrees from the cardinal directions.

@@ -355,8 +355,6 @@ public record ObjectManagerSnapshot(
             PlayableEntity player,
             ObjectSpawn objectSpawn,
             int objectSlotIndex,
-            int x,
-            int y,
             int pieceIndex,
             PlayerRefId playerId
     ) {
@@ -365,61 +363,27 @@ public record ObjectManagerSnapshot(
         }
 
         public SolidContactRidingEntry(PlayableEntity player, ObjectSpawn objectSpawn,
-                int objectSlotIndex, int x, int y, int pieceIndex) {
-            this(player, objectSpawn, objectSlotIndex, x, y, pieceIndex, null);
+                int objectSlotIndex, int pieceIndex) {
+            this(player, objectSpawn, objectSlotIndex, pieceIndex, null);
         }
     }
 
     /**
-     * Complete snapshot of the solid-contact collaborator's hidden state.
-     * Riding entries alone are not enough for deterministic fixed-adjacent
-     * rewind: per-player support latches, cached headroom, and the collaborator
-     * frame counter affect the next replayed contact pass.
+     * Complete snapshot of the solid-contact collaborator's state: the ROM-shaped
+     * contact registers (each player's {@code interact} ride and each object's
+     * per-player standing/pushing bits) plus the collaborator frame counter
+     * handed to listener callbacks.
      */
     public record SolidContactState(
             int frameCounter,
             List<SolidContactRidingEntry> riding,
-            List<PlayableEntity> inlineSupportedPlayers,
-            List<PlayableEntity> forceAirOnStaleSupportLoss,
-            List<SolidContactStandingSnapshotEntry> standingSnapshots,
-            List<SolidContactHeadroomSnapshotEntry> headroomSnapshots,
             List<SolidContactLatchEntry> standingBits,
-            List<SolidContactLatchEntry> pushingBits,
-            List<SolidContactLatchEntry> standingBitSnapshots,
-            List<SolidContactPlayerBinding> inlineSupportedPlayerBindings,
-            List<SolidContactPlayerBinding> forceAirOnStaleSupportLossPlayerBindings
+            List<SolidContactLatchEntry> pushingBits
     ) {
         public SolidContactState {
             riding = riding == null ? List.of() : List.copyOf(riding);
-            inlineSupportedPlayers = inlineSupportedPlayers == null ? List.of() : List.copyOf(inlineSupportedPlayers);
-            forceAirOnStaleSupportLoss = forceAirOnStaleSupportLoss == null
-                    ? List.of() : List.copyOf(forceAirOnStaleSupportLoss);
-            standingSnapshots = standingSnapshots == null ? List.of() : List.copyOf(standingSnapshots);
-            headroomSnapshots = headroomSnapshots == null ? List.of() : List.copyOf(headroomSnapshots);
             standingBits = standingBits == null ? List.of() : List.copyOf(standingBits);
             pushingBits = pushingBits == null ? List.of() : List.copyOf(pushingBits);
-            standingBitSnapshots = standingBitSnapshots == null ? List.of() : List.copyOf(standingBitSnapshots);
-            inlineSupportedPlayerBindings = inlineSupportedPlayerBindings == null
-                    ? List.of() : List.copyOf(inlineSupportedPlayerBindings);
-            forceAirOnStaleSupportLossPlayerBindings = forceAirOnStaleSupportLossPlayerBindings == null
-                    ? List.of() : List.copyOf(forceAirOnStaleSupportLossPlayerBindings);
-            if ((!inlineSupportedPlayers.isEmpty() && !inlineSupportedPlayerBindings.isEmpty())
-                    || (!forceAirOnStaleSupportLoss.isEmpty()
-                    && !forceAirOnStaleSupportLossPlayerBindings.isEmpty())) {
-                throw new IllegalArgumentException("Contact membership must use one player-binding channel");
-            }
-        }
-
-        /** Legacy standalone snapshots retain their original raw-player channels. */
-        public SolidContactState(int frameCounter, List<SolidContactRidingEntry> riding,
-                List<PlayableEntity> inlineSupportedPlayers, List<PlayableEntity> forceAirOnStaleSupportLoss,
-                List<SolidContactStandingSnapshotEntry> standingSnapshots,
-                List<SolidContactHeadroomSnapshotEntry> headroomSnapshots,
-                List<SolidContactLatchEntry> standingBits, List<SolidContactLatchEntry> pushingBits,
-                List<SolidContactLatchEntry> standingBitSnapshots) {
-            this(frameCounter, riding, inlineSupportedPlayers, forceAirOnStaleSupportLoss,
-                    standingSnapshots, headroomSnapshots, standingBits, pushingBits, standingBitSnapshots,
-                    List.of(), List.of());
         }
 
         public static SolidContactState empty() {
@@ -427,48 +391,7 @@ public record ObjectManagerSnapshot(
         }
 
         public static SolidContactState fromRiding(List<SolidContactRidingEntry> riding) {
-            return new SolidContactState(
-                    0,
-                    riding,
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of());
-        }
-    }
-
-    public record SolidContactStandingSnapshotEntry(
-            PlayableEntity player,
-            ContactKind kind,
-            boolean standing,
-            boolean pushing,
-            PlayerRefId playerId
-    ) {
-        public SolidContactStandingSnapshotEntry {
-            validateContactPlayer(player, playerId);
-        }
-
-        public SolidContactStandingSnapshotEntry(PlayableEntity player, ContactKind kind,
-                boolean standing, boolean pushing) {
-            this(player, kind, standing, pushing, null);
-        }
-    }
-
-    public record SolidContactHeadroomSnapshotEntry(
-            PlayableEntity player,
-            int hexAngle,
-            int distance,
-            PlayerRefId playerId
-    ) {
-        public SolidContactHeadroomSnapshotEntry {
-            validateContactPlayer(player, playerId);
-        }
-
-        public SolidContactHeadroomSnapshotEntry(PlayableEntity player, int hexAngle, int distance) {
-            this(player, hexAngle, distance, null);
+            return new SolidContactState(0, riding, List.of(), List.of());
         }
     }
 

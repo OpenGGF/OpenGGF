@@ -130,7 +130,7 @@ Expected: `gravityIsSkippedWhenObjectControlled` FAILS because gravity is applie
 In `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`, modify `doObjectMoveAndFall()` (currently lines 1729-1733) to use a new `applyGravity(sprite)` helper, and add the helper with the gate:
 
 ```java
-/** ObjectMoveAndFall: Apply velocity and gravity (s2.asm:29945-29953)
+/** ObjectMoveAndFall: Apply velocity and gravity (s2.asm:30167-30175)
  * ROM applies gravity to y_vel BEFORE movement, but uses the OLD y_vel for position:
  *   move.w  y_vel(a0),d0           ; Save old y_vel in d0
  *   addi.w  #$38,y_vel(a0)         ; Add gravity to y_vel FIRST
