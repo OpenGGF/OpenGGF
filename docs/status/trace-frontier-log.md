@@ -123084,3 +123084,32 @@ focused validation (HczEndBoss* classes only).
   boundary instead of a premature exit. The remaining 53 sit in load/title spans. Pricing synchronous load work is
   held pending a ruling on the reimplementation boundary: see
   `docs/architecture/designs/2026-11-03-synchronous-load-vint-accounting.md`.
+
+## 2026-11-03 — Wave 4 of the trace survey: LRZ boulders/corkscrew/invisible blocks, Mega segment 2, MGZ swinging-platform carry
+
+Four lane branches on base develop `e6a8b4a34`, integrated as `e85bdf518` on `bugfix/ai-trace-wave1-integrate`.
+Merged tree vs develop, all three profiles (`-Ptrace-replay` 886, `-Ptrace-replay-r7` 117, `-Ptrace-segments` 70),
+forkCount=1, alphabetical, JDK 25, original ROMs, surfaceless EGL, per-testcase comparison including run-chain messages:
+no newly red class, no earlier first error; `-Ptrace-replay` unchanged (10F/1E/7S both sides).
+
+- `bugfix/ai-trace-st-lrz-2726` (`c01df0568`, `6ea9f054b`, `6ee22760a`): LRZ boulders unload through the coarse-back
+  camera window (`loc_1B666`) rather than raw camera X; the corkscrew keeps the P2 standing/DPLC quirk (`sub_42262`);
+  the invisible block's status bit 7 suppresses edge balance (`Obj_InvisibleBlock`). Sonic+Tails LRZ 8325 @2726
+  `tails_y_speed` → 7449 @4630 `status_byte` (a push bit set by shared contact resolution; unproven). Tails full-chain
+  LRZ 307 → 214, first error unchanged at 2120 `rings`.
+- `bugfix/ai-trace-mega-segment2` (`e5e810ba8`): Knuckles' glide animation `$20` now resets on a platform landing
+  (`Knux_TouchFloor` `loc_17B6A`), and the camera no longer scrolls on a frame with a bonus-stage restart request
+  (`LevelLoop`). `TestS3kMegaRunChain` loses its segment-physics axis (segment 0 1 → 0, segment 2 112 → 0); the walk
+  still fails at the Slots stage_exit boundary (the 53-V-int load-time deficit). Sonic+Tails Hpz22 489 → 493 with the
+  first error unchanged at row 0 (additions after the existing divergence).
+- `bugfix/ai-trace-st-mgz-10709` (`b70d5a88c`): replaces a fitted swinging-platform carry table with the native
+  fractional arithmetic of `sub_34074 (sonic3k.asm:70569-70602)` via `GetSineCosine (sonic3k.asm:3053-3060)`.
+  Sonic+Tails MGZ 3440 @10709 `x` → 3411 @13848 `camera_y` (29 removals, no additions); restoring the table reproduces
+  3440 @10709. MGZ trace and slice stay green. Sonic+Tails CNZ 9069 → 9215 with the first error unchanged at 2695
+  `tails_y_speed`; the first addition (row 7303 `tails_cpu_ctrl2_held`) follows an existing position divergence.
+- `bugfix/ai-trace-s2-chain-cnz1` (`3d42aa8cd`, docs only): S2 chain CNZ1 row 1876 is the ObjDC slot-machine prize.
+  Its reels are seeded (`$B6`) from a clock reached during the title-card span; the same load-time accounting question
+  as the Mega deficit. ARZ2 row 5512 (capsule side contact) is unproven.
+
+Next targets (user rulings 2026-11-03): carried segment-entry state (policy A, with special-stage identity folded in),
+recorder entry provenance and campaign re-recording (B, D), and a branch-only trial of load-time V-int accounting.
