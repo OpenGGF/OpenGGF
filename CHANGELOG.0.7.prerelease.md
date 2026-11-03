@@ -5,6 +5,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
+  finish opening off screen before unloading. Both corrections preserve Tails CPU
+  respawn timing at the native visibility boundary.
+
 - Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
 
 - FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light

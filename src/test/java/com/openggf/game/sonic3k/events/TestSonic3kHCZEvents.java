@@ -198,6 +198,29 @@ class TestSonic3kHCZEvents {
     }
 
     @Test
+    void wallShakePublishesPreviousSetupAndRestoresPendingPhase() throws Exception {
+        SwScrlHcz handler = new SwScrlHcz();
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+        placePlayer(0x0B00, 0x0700);
+        GameServices.camera().setX((short) 0x0800);
+        GameServices.camera().setY((short) 0x0600);
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
+        events.init(1);
+
+        // HCZ2_ScreenEvent reads the previous ShakeScreen_Setup result.
+        tickAct2(events, 3);
+        assertEquals(0, handler.getShakeOffsetY(), "first screen event precedes first setup");
+        var saved = com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(events);
+        tickAct2(events, 4);
+        assertEquals(3, handler.getShakeOffsetY(), "ScreenShakeArray2[3], not [4]");
+        tickAct2(events, 5);
+        assertEquals(1, handler.getShakeOffsetY(), "ScreenShakeArray2[4]");
+        com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(events, saved);
+        tickAct2(events, 4);
+        assertEquals(3, handler.getShakeOffsetY(), "pending native offset survives rewind");
+    }
+
+    @Test
     void act2WallChasePrimesBgCollisionCameraBeforePhysics() throws Exception {
         SwScrlHcz handler = new SwScrlHcz();
         installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);

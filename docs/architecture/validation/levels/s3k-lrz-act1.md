@@ -1,5 +1,13 @@
 # S3K Lava Reef Act 1 coverage matrix
 
+Big-door lifetime maintenance (2026-11-03):
+`TestLrzBigDoorPersistence.openingFinishesAndClearsShakeAfterCameraLeavesNativeWindow`
+checks that opening runs through tick 64 and clears shake after the camera leaves,
+then permits ordinary unload on the next dispatch. Existing placement-bit and rewind
+checks remain alongside it; the Sonic+Tails LRZ segment grades the resulting CPU
+visibility boundary. Broader cold-route, viewport, donor and team gaps below remain inherited.
+
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and

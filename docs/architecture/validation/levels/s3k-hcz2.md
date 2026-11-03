@@ -1,5 +1,13 @@
 # S3K Hydrocity Act 2 coverage matrix
 
+Screen-shake maintenance (2026-11-03):
+`TestSonic3kHCZEvents.wallShakePublishesPreviousSetupAndRestoresPendingPhase`
+checks the HCZ2 screen-event/setup ordering and restored pending phase; the existing
+`TestS3kHczMovingWallShakeRewind` remains the whole-world forward-replay witness.
+The Sonic+Tails zone-slice trace separately grades the resulting CPU visibility
+boundary. Broader route, viewport, donor and team obligations below remain inherited.
+
+
 Selection update (2026-10-27): routine canonical entry/reload checks cover supported
 axis pairs; bonus transitions retain their existing pilots. Full Cartesian
 products are explicitly manual `exhaustive-audit` coverage, excluded from routine
