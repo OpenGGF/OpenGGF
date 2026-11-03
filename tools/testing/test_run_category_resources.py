@@ -70,7 +70,10 @@ class ResourceTests(unittest.TestCase):
                          ['-Dtest=One', '-Dmaven.compiler.fork=true', 'test'],
                          ['-Dtest=One', '-Dmaven.compiler.maxmem=8g', 'test'],
                          ['-Dtest=One', '-Dmaven.surefire.debug=true', 'test'],
-                         ['-Dtest=One', '--file=elsewhere.xml', 'test']):
+                         ['-Dtest=One', '--file=elsewhere.xml', 'test'],
+                         # Only [clean] test can be split into compilation and execution.
+                         ['-Dtest=One', 'test', 'clean'], ['-Dtest=One', 'test', 'test'],
+                         ['-Dtest=One', '-D', 'test']):
                 with self.subTest(args=args), self.assertRaises(ValueError):
                     lean_command(args)
             for key in ('MAVEN_OPTS', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_ARGS'):
