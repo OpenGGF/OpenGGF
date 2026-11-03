@@ -5,7 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
-- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings and shield, and special stages pick their stage and layout set as the ROM does.
+- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress and shield, and special stages pick their stage and layout set as the ROM does.
 
 - MGZ swinging platforms use native fractional chain arithmetic instead of fitted slot/angle carry tables; spring solid reactions precede native animation.
 

@@ -158,33 +158,33 @@ metadata at arm time:
   (`$FFB1`) and `SK_special_stage_flag` (`$FFBB`), to cross-check the ledger. The
   ledger is exact for recorded gameplay and needs none of them.
 
-## Measured interaction: `Last_star_post_hit` (missing field)
+## `Last_star_post_hit`
 
 A segment that returns from a star-post bonus stage re-enters standing on the
 star post it used. The ROM carries `Last_star_post_hit` across the return: the
 bonus exit restores it from `Saved_last_star_post_hit` (loc_4A024,
-sonic3k.asm:96716-96726). So that star post is already hit and `sub_2D028`
-(sonic3k.asm:61646-61651) skips it. The engine's cold entry has no star-post
-state, so with the carried ring count (20 or more) the post activates on frame
-0 and spawns bonus stars and their KosM art. The ROM spawns neither.
+sonic3k.asm:96716-96726), and a special-stage return sets bit 7 (loc_9D02,
+sonic3k.asm:12708-12712). Each star post's init compares its subtype with the
+byte and starts already hit when the byte is not lower (loc_2CFC0 to loc_2D008,
+sonic3k.asm:61613-61633).
 
-The policy-B branch (`bugfix/ai-trace-entry-provenance`, `3e5ec420b`) records
-`level_entry_placement_source`: `start_table`, `starpost_restore` or
-`special_stage_restore`. That records which branch loc_1BE46 took, not the
-value of `Last_star_post_hit`. Measured with both branches combined: Tails
-`lrz_3` loses its row-0 errors (first error row 73), but it still aborts at row
-2445 with the KosM FIFO full. Knuckles `lbz_2` is unchanged (row-0
-`queue.s3k_kos_*` errors, then the separate LBZ boss rewind-closure abort at
-1086).
+Source: `metadata.last_star_post_hit`, the raw `$FFFE2A` byte TraceChaser
+d98a2aa latches at the first PreLevel frame of the segment's load. The policy-B
+branch's re-recording provides it. The import sets the checkpoint's activation
+mark to the byte's low seven bits; the engine's star-post init already models
+loc_2D008 through that mark. A zero byte (start-table entry) sets nothing. The
+manifest's `starpost_bonus` `last_star_post_hit` cannot stand in. It is sampled
+after loc_2D4CA zeroes the byte (sonic3k.asm:61959-61964), and it reads 0 on
+every such transition.
 
-**Field needed from TraceChaser:** `last_star_post_hit` (S3K
-`Last_star_post_hit`, `$FFFE2A`, u8, sampled at the same load boundary as
-`level_entry_placement_source`) in each segment's `metadata.json`. With it, the
-segment-entry import sets the engine checkpoint index, so a star post whose
-subtype is at or below it initialises as hit (loc_2D008, sonic3k.asm:61631-61633). The manifest's
-`last_star_post_hit` on a `starpost_bonus` transition cannot stand in. It is
-sampled after the bonus entry zeroes the byte (loc_2D4CA, sonic3k.asm:61959-61964), and it
-reads 0 on every such transition.
+Before this was carried, a star-post bonus return re-entered on an un-hit post.
+With the carried rings, the post spawned bonus stars on frame 0 where the ROM
+spawns none. That aborted Tails `lrz_3` at 2445 (KosM FIFO full) and gave
+Knuckles `lbz_2` row-0 queue errors. Measured after carrying the byte: `lrz_3`
+is a failure with no abort, 1152 errors from row 73. `lbz_2` has 6 errors
+(ring timing) through row 1085, then aborts at 1086 on a separate defect: the
+`LbzFinalBoss1Instance$MuzzleLaserChild#head` rewind reference to an
+unregistered `LaserHeadChild`. The replay now reaches that boss state.
 
 ## Entry provenance (policy B)
 

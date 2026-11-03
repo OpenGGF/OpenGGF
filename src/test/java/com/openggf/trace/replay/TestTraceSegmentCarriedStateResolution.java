@@ -125,4 +125,12 @@ class TestTraceSegmentCarriedStateResolution {
         TraceSegmentCarriedState mgz = resolve(SONIC_TAILS, "mgz");
         assertTrue(mgz.consumedGiantRings().isEmpty(), "a new zone starts with a cleared array");
     }
+    @Test
+    void starPostBonusReturnCarriesTheRecordedStarPostByte() throws Exception {
+        // Recorded at the segment's load (metadata.last_star_post_hit): the
+        // return re-enters on post 6, which loc_2D008 initialises as hit.
+        assertEquals(6, resolve(TAILS, "lrz_3").lastStarPostHit());
+        assertEquals(6, resolve(KNUCKLES, "lbz_2").lastStarPostHit());
+        assertEquals(0, resolve(SONIC_TAILS, "mgz").lastStarPostHit(), "start-table entry");
+    }
 }

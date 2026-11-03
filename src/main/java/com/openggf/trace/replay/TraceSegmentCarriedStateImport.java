@@ -143,7 +143,9 @@ public final class TraceSegmentCarriedStateImport {
         Objects.requireNonNull(meta, "meta");
         Optional<RunContext> located = locateRun(traceDir, meta);
         if (located.isEmpty()) {
-            return TraceSegmentCarriedState.none("no run manifest names this segment");
+            return new TraceSegmentCarriedState(
+                    null, null, null, null, null, List.of(), null, null, null,
+                    meta.lastStarPostHit(), List.of("no run manifest names this segment"));
         }
         RunContext run = located.get();
         List<String> unresolved = new ArrayList<>();
@@ -210,7 +212,7 @@ public final class TraceSegmentCarriedStateImport {
                 + " (" + segment.dir() + ")";
         return new TraceSegmentCarriedState(
                 provenance, rings, chaos, emeraldStates, superCount, giantRings,
-                null, cursor, superSet, unresolved);
+                null, cursor, superSet, meta.lastStarPostHit(), unresolved);
     }
 
     private record RunContext(TraceRunManifest manifest, Path runDir, int segmentIndex) {
@@ -475,7 +477,7 @@ public final class TraceSegmentCarriedStateImport {
                 base.provenance(), base.ringCount(), base.chaosEmeraldCount(),
                 base.emeraldStates(), base.superEmeraldCount(), base.consumedGiantRings(),
                 shield, base.specialStageCursor(), base.superEmeraldStageSet(),
-                base.unresolved());
+                base.lastStarPostHit(), base.unresolved());
     }
 
     // -------------------------------------------------------------------- apply
@@ -552,6 +554,7 @@ public final class TraceSegmentCarriedStateImport {
         }
         applyEmeraldState(carried);
         applyConsumedGiantRings(carried);
+        applyLastStarPostHit(carried);
         Integer shield = carried.player1ShieldStatus();
         if (player != null && shield != null && shield != 0) {
             // loc_6A02 (sonic3k.asm:8326-8355) tests fire, then lightning,
@@ -561,6 +564,31 @@ public final class TraceSegmentCarriedStateImport {
                     : ShieldType.BUBBLE;
             player.giveShield(type);
         }
+    }
+
+    /**
+     * {@code Last_star_post_hit} survives the reload that starts the segment
+     * (a star-post bonus exit restores it from {@code Saved_last_star_post_hit},
+     * loc_4A024, sonic3k.asm:96716-96726; a special-stage return sets bit 7,
+     * loc_9D02, sonic3k.asm:12708-12712). Each star post's init compares its own
+     * subtype with it and starts already hit when the byte is not lower
+     * (loc_2CFC0 to loc_2D008, sonic3k.asm:61613-61633). The engine models that
+     * comparison through the checkpoint's activation mark, so the recorded byte,
+     * masked to the subtype's seven bits, becomes that mark. A zero byte (a
+     * start-table entry) sets nothing.
+     */
+    private static void applyLastStarPostHit(TraceSegmentCarriedState carried) {
+        Integer recorded = carried.lastStarPostHit();
+        if (recorded == null || (recorded & 0x7F) == 0) {
+            return;
+        }
+        var level = GameServices.levelOrNull();
+        var checkpoint = level == null ? null : level.getCheckpointState();
+        if (checkpoint == null) {
+            return;
+        }
+        checkpoint.restoreStarPostActivationMark(
+                Math.max(checkpoint.getStarPostActivationMark(), recorded & 0x7F));
     }
 
     private static void applyEmeraldState(TraceSegmentCarriedState carried) {

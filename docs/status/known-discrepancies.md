@@ -1448,12 +1448,10 @@ Still not carried, because no recording holds them: `Saved2_mean_water_level`,
 `Saved2_camera_max_Y_pos`/`Saved2_dynamic_resize_routine`, rings spent for 50
 rings earlier in a segment, and `Extra_life_flags`/`Life_count`/`Timer`. The
 design note lists the TraceChaser export that would close them. Return-entry
-provenance (zone intros skipped on a return, `Last_star_post_hit`) is a separate
-policy (B). Until it lands, a star-post bonus return re-enters on an un-hit star
-post, and with the carried rings that post spawns bonus stars on frame 0 where the
-ROM spawns none. Knuckles `lbz_2` and Tails `lrz_3` show this. Policy B's
-`level_entry_placement_source` does not carry the value; the design note names
-the needed `last_star_post_hit` export.
+provenance (zone intros skipped on a return) is the separate policy-B mechanism
+(`level_entry_placement_source`). The recorded `last_star_post_hit` byte is
+carried through the same import, so a star-post bonus return re-enters with its
+post already hit.
 
 ### Verification
 

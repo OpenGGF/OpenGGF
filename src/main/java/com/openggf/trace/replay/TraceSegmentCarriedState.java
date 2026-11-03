@@ -33,6 +33,9 @@ import java.util.List;
  *                             entry (fire/lightning/bubble), or {@code null}
  * @param specialStageCursor   {@code Current_special_stage} at a special-stage arm
  * @param superEmeraldStageSet {@code SK_special_stage_flag} at a special-stage arm
+ * @param lastStarPostHit      {@code Last_star_post_hit} as recorded at the segment's
+ *                             load ({@code metadata.last_star_post_hit}); bit 7 marks
+ *                             a special-stage return
  * @param unresolved           carried variables this recording cannot establish,
  *                             each with the reason
  */
@@ -46,6 +49,7 @@ public record TraceSegmentCarriedState(
         Integer player1ShieldStatus,
         Integer specialStageCursor,
         Boolean superEmeraldStageSet,
+        Integer lastStarPostHit,
         List<String> unresolved) {
 
     public TraceSegmentCarriedState {
@@ -58,7 +62,7 @@ public record TraceSegmentCarriedState(
     /** No run context: a fixture that is not a run segment carries nothing. */
     public static TraceSegmentCarriedState none(String reason) {
         return new TraceSegmentCarriedState(
-                null, null, null, null, null, List.of(), null, null, null,
+                null, null, null, null, null, List.of(), null, null, null, null,
                 List.of(reason));
     }
 

@@ -1802,8 +1802,8 @@ its original drawing priority.
 ## Maintenance and release preparation
 
 - Standalone S3K run segments enter with the run state the ROM carried in:
-  rings, Chaos and Super Emerald progress, used giant rings, Player 1's shield
-  and path bits. One segment-entry import reads them from the run manifest and
+  rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
+  Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
   the segment's recorded entry row; nothing is written after entry. Standalone
   special stages select their stage and Chaos or Super layout set through the
   ROM's own search instead of defaulting to the Chaos set.
