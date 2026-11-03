@@ -40,7 +40,10 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
     @Override
     public com.openggf.level.objects.AbstractObjectInstance recreateForRewind(
             com.openggf.level.objects.RewindRecreateContext context) {
-        if (context.dynamicEntry() != null && getPlayer() instanceof AbstractPlayableSprite player) {
+        if (context.dynamicEntry() != null && getPlayer() instanceof AbstractPlayableSprite player
+                && (player.hasShield() || (context.dynamicEntry().rewindableAuxiliary()
+                    && player.getPowerUpSpawner() instanceof com.openggf.sprites.render.PlayerAttachedEffectArt supplied
+                    && supplied.instaShieldArt() != null))) {
             // Monitor_Give_LightningShield (sonic3k.asm:40904-40921) replaces the
             // per-player Shield SST. The engine retains a dormant insta-shield
             // alias; restore its captured identity/order without asking the live
@@ -52,6 +55,11 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
             player.setInstaShieldObject(restored);
             return restored;
         }
+        // Unshielded native owners keep the deferred restore path. Their cold
+        // handle may predate art availability; replacing it here would bind an
+        // animation set that was absent in the captured world and start idle
+        // playback during forward replay. Player refresh hydrates that handle
+        // without constructing a newly art-bound one.
         return super.recreateForRewind(context);
     }
 

@@ -44,7 +44,8 @@ Unreleased. The earlier development themes remain in
 
 - **S3K shield rewind:** Restore the captured dormant Insta-Shield identity
   alongside collected elemental shields, keeping their native dispatch ownership
-  and animation continuity across rewind and seamless reloads.
+  and animation continuity across rewind and seamless reloads. Unshielded cold
+  captures retain their existing animation binding through restore.
 
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
   Their native playback publishes the first frame on dispatch, defers animation
