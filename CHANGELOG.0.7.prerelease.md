@@ -42,6 +42,10 @@ Unreleased. The earlier development themes remain in
 - The Lava Reef boss act (`$1600`) starts with the native falling intro on a
   fresh entry, for every character.
 
+- S3K fresh level loads count the terrain wait's final VBlank in the live game
+  loop, as the recording driver already did. The remaining load-time lag
+  frames are documented, not estimated.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership. Bonus entry
   also reserves its fade-completion iteration, preventing premature title-loop
