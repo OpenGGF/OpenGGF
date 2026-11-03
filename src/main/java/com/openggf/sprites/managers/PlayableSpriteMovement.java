@@ -2077,6 +2077,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setYSpeed((short) (yVel + 0x20));
 		}
 
+		// Knuckles_Move_Glide .fallingFast (sonic3k.asm:31733-31746),
+		// also KiS2 Knuckles_GlideSpeedControl: signed word boundary compare,
+		// then ASR.W on both velocities. The -$100 minimum enables Y wrapping.
+		short minimumY = (short) camera().getMinY();
+		if (minimumY != (short) -0x100
+				&& sprite.getCentreY() < (short) (minimumY + 0x10)) {
+			sprite.setXSpeed((short) (sprite.getXSpeed() >> 1));
+			sprite.setGSpeed((short) (sprite.getGSpeed() >> 1));
+		}
+
 		// Collision is checked after doLevelCollision() in modeAirborne
 		setGlideAnimation();
 	}
@@ -2132,6 +2142,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setForcedAnimationId(-1);
 			sprite.setAir(false);
 			sprite.setJumping(false);
+			// Knux_TouchFloor / KiS2 Sonic_ResetOnFloor_Part3: the unsigned
+			// anim >= $20 tail writes Walk; lower animations remain unchanged.
+			if ((sprite.getAnimationId() & 0xFF) >= 0x20) {
+				sprite.setAnimationId(0);
+			}
 			return;
 		}
 
@@ -3512,7 +3527,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Natural deceleration
 		if (gSpeed != 0) {
-			short naturalDecel = (short) (sprite.getRunAccel() / 2);
+			// Sonic_RollSpeed (sonic3k.asm:22959-22966) and Tails_RollSpeed
+			// replace acceleration/2 with $06 for powered forms, including Hyper.
+			short naturalDecel = sprite.isSuperSonic() && movementRules != null
+					&& movementRules.poweredRollFriction() != 0
+					? movementRules.poweredRollFriction() : (short) (sprite.getRunAccel() / 2);
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 

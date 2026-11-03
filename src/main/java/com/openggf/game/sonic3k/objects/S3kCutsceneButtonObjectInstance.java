@@ -1,19 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.NativeSstSlotAccess;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.List;
 
 /**
  * Button used by the AIZ2 Knuckles post-boss cutscene.
@@ -23,22 +17,10 @@ import java.util.List;
  * Knuckles. It does not inspect the occupant's type or animation phase, and
  * a retired actor's slot can now contain the button itself.
  */
-public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
+public class S3kCutsceneButtonObjectInstance extends AbstractS3kCutsceneButtonInstance
         implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
-    // Obj_CutsceneButton renders only the switch; the cutscene character is separately owned.
-
-    private static final int INIT_Y_OFFSET = 4;
-    private static final int PRIORITY = 4;
-    private static final int RANGE_LEFT = -0x18;
-    private static final int RANGE_RIGHT = RANGE_LEFT + 0x30;
-    private static final int RANGE_TOP = -0x18;
-    private static final int RANGE_BOTTOM = RANGE_TOP + 0x30;
-
-    private int x;
-    private int y;
     private boolean cutsceneOverride;
-    private boolean pressed;
 
     public S3kCutsceneButtonObjectInstance(ObjectSpawn spawn) {
         this(spawn, false);
@@ -46,8 +28,6 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
 
     private S3kCutsceneButtonObjectInstance(ObjectSpawn spawn, boolean cutsceneOverride) {
         super(spawn, "CutsceneButton");
-        this.x = spawn.x();
-        this.y = spawn.y() + INIT_Y_OFFSET;
         this.cutsceneOverride = cutsceneOverride;
     }
 
@@ -57,43 +37,23 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public int getX() {
-        return x;
-    }
-
-    @Override
-    public int getY() {
-        return y;
-    }
-
-    @Override
     public boolean isPersistent() {
         return true;
     }
 
-    @Override
-    public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
-    }
-
-    @Override
-    public boolean isHighPriority() {
-        return true;
-    }
-
-    @Override
-    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+    @Override protected boolean suppressUpdate() {
         if (!cutsceneOverride && Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
-            setDestroyed(true);
-            return;
+            ObjectLifetimeOps.expireDynamic(this);
+            return true;
         }
-        if (pressed) {
-            return;
-        }
+        return false;
+    }
+
+    @Override protected TargetPosition targetPosition() {
         int slot = Aiz2BossEndSequenceState.getCutsceneKnucklesSlot();
         var manager = services().objectManager();
         if (slot < 0 || manager == null) {
-            return;
+            return null;
         }
         // Obj_CutsceneButton reads the object pointer in _unkFAA4 and calls
         // Check_InMyRange directly; it does not require a landing/bounce flag
@@ -103,18 +63,10 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         // its live owner's position words, without a stale Java actor link.
         int targetX = occupant == null ? 0 : (short) occupant.getX();
         int targetY = occupant == null ? 0 : (short) occupant.getY();
-        // Check_InMyRange performs signed word comparisons against each
-        // endpoint (sonic3k.asm:180055-180073), not a Java unbounded delta.
-        if (targetX >= (short) (x + RANGE_LEFT) && targetX < (short) (x + RANGE_RIGHT)
-                && targetY >= (short) (y + RANGE_TOP) && targetY < (short) (y + RANGE_BOTTOM)) {
-            // loc_65C04 installs loc_65C50, then immediately dispatches the
-            // subtype action through off_65C40 in this same object pass.
-            pressButton(playerEntity);
-        }
+        return new TargetPosition(targetX, targetY);
     }
 
-    private void pressButton(PlayableEntity playerEntity) {
-        pressed = true;
+    @Override protected void onPressed(PlayableEntity playerEntity) {
         Aiz2BossEndSequenceState.pressButton();
         if (playerEntity instanceof AbstractPlayableSprite player) {
             // loc_65C56 clears Ctrl_1_locked in the button's own SST slot.
@@ -131,15 +83,7 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         // from its own, strictly later, SST slot in this same object scan
         // (sonic3k.asm:59662-59668, 134000-134003). Nothing is pushed at the
         // bridge from here.
-        services().playSfx(Sonic3kSfx.SWITCH.id);
+        // loc_65C04 / loc_65C56 contain no sound request (sonic3k.asm:133993-134048).
     }
 
-    @Override
-    public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.BUTTON);
-        if (renderer == null || !renderer.isReady()) {
-            return;
-        }
-        renderer.drawFrameIndex(pressed ? 1 : 0, x, y, false, false);
-    }
 }

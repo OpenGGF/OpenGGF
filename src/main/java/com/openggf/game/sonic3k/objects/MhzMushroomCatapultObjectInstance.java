@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kSlopedTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -10,7 +11,6 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
-import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
@@ -31,7 +31,7 @@ import java.util.Set;
  * object RAM $34.
  */
 public final class MhzMushroomCatapultObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SlopedSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kSlopedTopSolidProvider, MultiPieceSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native mushroom caps compress and bounce; their cap geometry has no horizontal-facing owner.
     private static final int HALF_WIDTH = 0x20;

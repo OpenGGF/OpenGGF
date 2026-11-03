@@ -1099,3 +1099,11 @@ anchors. Act2 load18670, whole-act/campaign parity, complete SST allocation,
 full-route rewind, other viewports/donors/characters/teams and native
 animation/pixels/audio remain unqualified. The inherited238 earlier attracted-ring
 slot differences are not reclassified or repaired by this continuation.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

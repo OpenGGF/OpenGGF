@@ -70,6 +70,27 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     @Override
+    public void initializePositionedLevelStartCamera(Camera camera, AbstractPlayableSprite player,
+                                                     int zone, int act,
+                                                     com.openggf.game.session.LevelEntryProvenance provenance) {
+        // Unknown pose provenance may describe a post-terrain or pre-spawn body.
+        // Keep its existing camera; never infer ordering from coordinates or a manifest.
+        if (!provenance.hasPostSpawnCameraOrigin()) return;
+        // Get_LevelSizeStart loc_1BF74 (sonic3k.asm:38286-38316) precedes
+        // SpawnLevelMainSprites loc_6B42 (sonic3k.asm:8415-8423). Only a declared
+        // post-SpawnPlayers body authorizes undoing Tails-alone's later +4.
+        boolean tails = com.openggf.game.CharacterKey.TAILS.equals(player.characterKey());
+        // loc_1BEC6 (sonic3k.asm:38202-38231) bypasses the generic focus for
+        // fresh ICZ1 Tails. Its absolute entry camera is separate bring-up work.
+        if (tails && zone == Sonic3kZoneIds.ZONE_ICZ && act == 0 && !provenance.isReturn()) return;
+        int focusY = player.getCentreY();
+        if (tails) focusY -= 4;
+        Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), focusY,
+                com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
+                zone, act, provenance.isReturn(), Sonic3kCartridgePolicy.isStandaloneSk());
+    }
+
+    @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {
         boolean standaloneSk = Sonic3kCartridgePolicy.isStandaloneSk();

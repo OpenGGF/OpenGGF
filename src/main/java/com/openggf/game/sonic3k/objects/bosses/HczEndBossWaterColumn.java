@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -88,7 +89,7 @@ import java.util.logging.Logger;
  * <p>Grab (sub_6B9E2): player within Y-zone table (word_6BAC2) and 32px H —
  * lock object_control, forced float animation.
  */
-public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSolidProvider, RewindRecreatable, RomObjectCodePointerProvider {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

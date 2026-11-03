@@ -1,5 +1,13 @@
 # S3K Mushroom Hill Act 2 coverage matrix
 
+Shared-routine ownership maintenance (2026-11-02): the native explosion adapters
+use the common low/high random-word offset kernel. The following adapter captures
+its exact parent through the central rewind policy; a fresh-recreation regression
+with a decoy left at the birth position rejects proximity as final ownership authority. Native
+burst cadence, allocation-first behavior and retirement remain covered by
+`TestMhzEndBossExplosionController`; broader route/pixel obligations below are
+unchanged.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and
@@ -1566,3 +1574,21 @@ Sonic/Tails movie for observation. This does not qualify a cold engine route,
 other donor/roster/viewport products, audible waveform parity or a matched native
 pixel/trajectory comparison. Native lost-ring loss remains unobserved in the
 supplied movie. Existing broader route/matrix obligations remain inherited.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Explosion-controller graph receiving repair (2026-11-02)
+
+`MhzEndBossExplosionController` now recreates a pure shell and restores its exact
+captured boss reference through graph hydration. The dedicated graph witness
+forces physical recreation, places a nearer decoy, replays following/stationary
+bursts twice, and checks pending retirement without an extra RNG read. Retirement
+uses `ObjectLifetimeOps`; no transient/lifetime guard baseline was increased.
+The graph declaration also supplies global inventory membership. This bounded
+repair does not close the inherited cold-route and presentation obligations above.

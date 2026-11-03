@@ -7,6 +7,37 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
+- FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
+  palette, with debug geometry for its body and children. S3K Super/Hyper reversion
+  retains invincibility until the next native eight-frame boundary.
+
+- **Shared S3K object behavior:** HCZ reuses common capsule opening, effects,
+  geometry, drawing and rewind-safe opening control ownership while retaining
+  its native button/results handoff. FBZ
+  shares common opening writes and native sprite/plane priority without losing
+  its child-slot graph; its button and final-capsule fragments retain high art priority. Cutscene
+  buttons share proximity and presentation, including native sprite priority.
+  Explosion placement now uses the ROM’s high random word for Y, and failed
+  ICZ explosion allocation consumes no RNG or sound. Teleporter swing arithmetic
+  also uses its common transition without changing rewind storage.
+
+- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
+
+- S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
+
+- **MGZ seamless transition:** Keep the shifted camera bounds until the native
+  Act 2 release instead of easing toward the newly loaded level bounds.
+
+- S3K top-solid platforms, bonus flippers and curled vines now select the ROM’s
+  1–16 pixel landing window on the native helper surface. Flat helpers use their
+  landing radius, and AIZ flipping bridges use their raw signed slope heights.
+
+- S3K Lava Reef collapsing bridges and Sky Sanctuary floating platforms now reject
+  exact-boundary new landings, matching the ROM’s one-to-sixteen-pixel overlap
+  check and preserving falling speed until the actual landing frame.
+
 - **Upright S3K Act 2 capsules:** Use the normal seven-explosion sequence and
   child-owned break sound, including Hydrocity’s separate capsule owner.
 
@@ -27,6 +58,15 @@ Unreleased. The earlier development themes remain in
   Correct the pillar archive address so its upload cannot corrupt ring art.
   Restore the weather-machine and defeat explosion bursts, accelerating chase
   entry, lost-ring world rebasing, and Robotnik's gravity-driven stump handoff.
+  Explosion controllers restore their exact owner across fresh rewind recreation
+  and retire through the shared lifetime operations.
+
+- **Music ownership:** Invincibility monitors preserve boss/countdown music; P2
+  drowning cannot replace shared music. S2 boss fades and sound test use native
+  mailboxes. S3K restores the apparent act or invincibility at the native restore
+  boundary, corrects Knuckles cutscene fade triggers/timing and lowest-free song
+  allocation, and uses native miniboss IDs. S2 ring-threshold jingles retain the
+  native secondary mailbox in solo and competition play.
 
 - **Native sprite producers:** Ordinary mapping pieces cannot accidentally emit
   an X=0 mask and hide later sprites, with limits either enabled or disabled.
@@ -1596,6 +1636,8 @@ checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
 Codec-backed field snapshots also compare and hash their scalar and opaque array
 contents, so separate captures of unchanged state remain equal.
+S3K held rewind retains unchanged foreground and full-layout background tilemaps;
+actual geometry and encoded row-pointer changes still rebuild their derived images.
 Boss rewind also retains child construction history after those children retire,
 so future effects keep the same identities when replayed.
 Typed level and object-manager snapshot comparisons also accept equal untyped
@@ -1693,6 +1735,14 @@ its original drawing priority.
   notches from `MenuInput.Pointer.wheel()`.
 
 ## Maintenance and release preparation
+
+- Trace entry placement distinguishes native level boots from intentional
+  positioned entries. Explicit native loads retain their ROM start history;
+  positioned S3K camera focus follows declared SpawnPlayers ordering. Unknown
+  entry kinds retain their existing placement, history and camera behavior.
+  Intentional re-anchoring moves the whole team without refilling native history,
+  and initial Tails assembly preserves
+  placement already assigned by native objects.
 
 - Supported mod builds now check attributed Java source and compiled payloads against
   the reachable Mod API member contract. Engine-only singleton accessors are excluded
@@ -1792,6 +1842,8 @@ its original drawing priority.
   S1 offscreen solid omission, S2 launcher and ARZ ordering, Blue Sphere boot
   input, and S3K boss/slot lifetime behavior, with restore-forward controls.
   Further [engine support](docs/architecture/validation/2026-10-28-tas-engine-support.md)
+  keeps off-screen sidekicks on the correct collision path when horizontal
+  placement entries retire, restoring Sandopolis ceiling attachment. It also
   restores paused clock/rewind phase, typed Reset/Power lifecycle, native ORT
   recovery, ordered S2 art-slot reuse and the P2 intro input/palette consequence.
   Verified original-cartridge resources now serve standalone SK title/MHZ startup

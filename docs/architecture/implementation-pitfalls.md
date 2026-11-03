@@ -1489,6 +1489,13 @@ A full level frame may retire results art, run Obj_LevelResultsCreate, publish t
 
 ### Physical retained planes and source-cache dimensions
 
+Recreating an S3K layout map with identical contents can still change its COW byte
+array identity. The next shared level restore then invalidates both tilemaps.
+Preserve the captured map-byte reference when restoring layout metadata, and only
+rebind derived geometry when its actual inputs changed. An unchanged full-layout
+background is camera-independent; camera windows and retained planes need their
+own restore rules. Origin: LRZ1/SOZ2 held-rewind investigation, 2026-11-02.
+
 An event-owned VDP Plane B is64x32 cells even when its source-world cache is
 taller. Native row writes into the first32 cache rows do not update the later
 world rows; rendering with that taller height can sample untouched art while
@@ -2749,3 +2756,16 @@ bits. Deriving priority from cast membership or the sheet name changes terrain
 occlusion. Likewise, Lava Reef's Robotnik head uses palette 0 while its machine
 sheet defaults to palette 1. Validate the actual owner and part, not only whether
 its mapping frame contains nonzero pixels. Origin: Typing section art, 2026-10-25.
+
+## Song-helper timing belongs to its own object
+
+S3K `sub_65DD6`, `Obj_Song_Fade_Transition` and
+`Obj_Song_Fade_ToLevelMusic` allocate in the lowest free slot. Use the
+lowest-free object path, not an after-current child allocator. The manager
+already decides whether that slot can execute in the current object pass.
+The helper initializer falls through into its first signed decrement: native
+wait words 90 and 120 complete on own entries 91 and 121, including initialization.
+An extra initialization return or unconditional next-frame deferral adds delay;
+do not offset that by fitting the caller's constant. Start the helper at its
+owning ROM trigger (MHZ1 uses the controller's player clamp, not its later generic
+actor). See the [music audit](audits/2026-11-02-music-transitions.md).

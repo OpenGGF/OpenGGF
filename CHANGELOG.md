@@ -5,9 +5,42 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
+
+- Correct FBZ2 boss pilot-light colors, shipped rotation expression and debug geometry; preserve S3K’s native Super/Hyper revert grace boundary.
+- Death sprites draw without hurt-timer blinking, and crushed players reject further hurt and object-owned ring-loss requests.
+
+- S3K level select uses native zone save-card previews, and data select uses the correct Flying Battery palette.
+
+- Knuckles glide speed halves above the native top boundary, including signed-word wrapping and arithmetic-shift behavior.
+- Big Arm submits its ROM art module during native initialization.
+S3K capsule and cutscene-button routines now share their common behavior; the
+object ownership audit also corrected explosion RNG/allocation drift and FBZ
+capsule sprite/plane priority, with rewind-safe opening control ownership.
+
+- Explicit native entries retain their start history and initial native-object
+  placement of Tails. Explicit spawn-order provenance enables native S3K camera
+  focus; unclassified positioned entries retain their existing camera behavior.
+  Intentional positioned entries re-anchor the whole team without refilling history;
+  traces lacking entry provenance retain their existing initialization.
+
+- LBZ2 submits native EggRobo-head art during head initialization.
+- Solo S2 title-card entry records leader history during its native object passes.
+
+- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
+
+- S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
+
+- Restore Sandopolis ceiling attachment by retiring stale placement path markers.
+- Knuckles restores the native animation after non-flat glide landings.
+- LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
+
 - Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
 
 - Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
+
+- Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
+  filling the background tile ring at the restored camera height.
 
 - Clear the native sanctuary openings so stray terrain no longer appears above
   the left Super Emerald pedestals during the results camera descent.
@@ -33,6 +66,9 @@ Upright S3K Act 2 capsules now also use normal explosions and the break sound.
 S3K elemental shields keep animating after returning from Bonus/Special stages.
 Their frame publication, animation switches and invincibility/blank-player pauses
 follow the native scripts.
+
+Music transitions preserve boss/drowning ownership, native S2 request mailboxes,
+and S3K cutscene fades, miniboss request IDs and apparent-act restoration.
 
 - Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
   boss flash phase, preserving the final normal palette row and hit countdown.
@@ -64,7 +100,7 @@ Current changes are recorded in
 remains future scope; `next` has no separate 0.8 implementation line yet.
 
 Recent maintenance includes supported mod-consumption checks, protected movie and trace controls, codec-backed rewind
-snapshot equality, session-owned
+snapshot equality and unchanged S3K terrain-cache reuse, session-owned
 render-registry cleanup, S3K's fresh-entry camera-focus calculation,
 declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility
 timing, S3K fresh-level ring timing and touch-suppressed lightning attraction,

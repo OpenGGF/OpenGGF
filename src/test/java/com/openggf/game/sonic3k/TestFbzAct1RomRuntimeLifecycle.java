@@ -24,6 +24,30 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzAct1RomRuntimeLifecycle {
     @Test
+    void indoorReloadSeedsRowsAtRestoredCameraHeight() throws Exception {
+        com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 0).build();
+        var levels = GameServices.level();
+        var events = ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getFbzEvents();
+        GameServices.sprites().getMainPlayable().setCentreX((short) 0x1000);
+        GameServices.camera().setY((short) 0x500);
+        events.init(0);
+        events.initializeAct1Runtime();
+        byte[] actual = levels.captureBackgroundVdpPlane();
+        int bgY = (0x500 >> 1) - ((0x500 >> 1) >> 5);
+        int firstRow = bgY & 0xFF0;
+        for (int y = firstRow; y < firstRow + 0x100; y += 8) {
+            for (int x = 0; x < 64; x++) {
+                int descriptor = levels.getBackgroundTileDescriptorAtWorld(x * 8, y);
+                int address = (((y / 8) & 31) * 64 + x) * 4;
+                assertEquals((byte) descriptor, actual[address], "tile at world Y=" + y);
+                int attributes = ((descriptor >> 8) & 7) | ((descriptor >> 10) & 24)
+                        | ((descriptor >> 6) & 96) | ((descriptor >> 8) & 128);
+                assertEquals((byte) attributes, actual[address + 1]);
+            }
+        }
+    }
+
+    @Test
     void restoredPlaneDoesNotRepublishItsHistoricalPaletteWrite() {
         var fixture = com.openggf.tests.HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0).build();

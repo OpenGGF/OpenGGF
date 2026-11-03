@@ -1650,7 +1650,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean,boolean)
-CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
@@ -8466,6 +8466,7 @@ METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules
 METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerGroundPoseRules groundPose()
 METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerLandingRules landing()
 METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerLevelBoundaryRules levelBoundary()
+METHOD com.openggf.game.rules.PlayerMovementRules public  short poweredRollFriction()
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  java.lang.String toString()
@@ -18445,6 +18446,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules inputAlwaysCapsGroun
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landing com.openggf.game.rules.PlayerLandingRules
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landingWalkWriteSkippedWhileSpindashing boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules levelBoundary com.openggf.game.rules.PlayerLevelBoundaryRules
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules poweredRollFriction short
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollControlledDecelUsesEffectiveDecelQuarter boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollStopsBelowMinimumSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollingJumpPinballGateRequiresSpindashFlag boolean

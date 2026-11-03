@@ -2,6 +2,8 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Rendered held-rewind probe](../../src/test/java/com/openggf/TestRenderedRewindPerformance.java) measures the live Engine scheduler with isolated EGL and no-device audio. Select it explicitly with `-Pbenchmarks -Dtest=TestRenderedRewindPerformance`; `openggf.perf.*` properties select a recorded input route, repeats and JSON/JFR destination. Use the [runtime isolation owner](../../tools/performance/run_isolated.py) for counterbalanced prebuilt baseline and fixed timing runs. Engine forward/restore pixel comparisons are regression evidence, not emulator parity evidence. Origin: LRZ1/SOZ2 rewind performance, 2026-11-02.
+
 - [Stageplay speech sync](../guide/creating/stageplay-authoring.md#validate-inspect-and-timeline): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
 
 - [Master channel catalogue](../../racing/deploy/README.md#hostname-discovery-srv-records): `racing/deploy/master_channels.py` prints a branch channel's master endpoint from `master-channels.properties` and checks the published `_openggf._tcp` SRV record against it without editing DNS; CI runs it before each testbed deploy (2026-11-01 hostname-only endpoints).
@@ -40,6 +42,11 @@ These skills apply the methodology and current repository policy; plans retain
 per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
+
+- [Shared-checkout integration](../../tools/git/INTEGRATION.md): `integrate.py`
+  holds a machine-local checkout lease across fail-fast delivery and preserves
+  conflicts/staged work through explicit recovery and handoff (issue #256).
+- [Checked commit preparation](../../tools/testing/checked_commit.py) validates an exact message, intended staged paths, and final coauthors before ordinary Git commit. Inputs and limits are in the [contributor policy](../guide/contributing/documentation-policy.md#ai-assisted-commits). Origin: issue #230.
 
 - [Time Attack design captures](../../src/test/java/com/openggf/tools/TimeAttackDesignCaptureTool.java): source-file launcher for real bundled-menu, lobby and crowded Room details pictures in an owned loopback namespace; inputs and class-loader separation are documented in the tool. Set `SHORTCUT_CAPTURE_ONLY=1` for Tab-details checks (2026-10-28/29 menu hill climb); the `tb*` states add F1/R3 details pages, long values and scripted-pad hints (2026-10-29).
 - [Act Practice design captures](../../src/test/java/com/openggf/tools/ActPracticeDesignCaptureTool.java): source-file launcher for the example's real menu (choice, controller hints, induced result states, in-run timer) loaded as the development mod; `PRACTICE_PRE_ESC=1` with an empty owned ROM directory pictures the no-games page (2026-10-29).

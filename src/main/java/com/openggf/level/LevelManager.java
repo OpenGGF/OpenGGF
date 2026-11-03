@@ -3156,6 +3156,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // Package-private entry used by LevelCameraInitialization for explicit
     // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
     void initCameraForLevel(boolean initializeLoadRegisters) {
+        initCameraForLevel(initializeLoadRegisters, null);
+    }
+
+    void initCameraForLevel(boolean initializeLoadRegisters,
+                            com.openggf.game.session.LevelEntryProvenance entryProvenance) {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3214,9 +3219,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             camera.updatePosition(true);
             if (initializeLoadRegisters && getZoneFeatureProvider() instanceof
                     com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
-                initialCamera.initializeLevelStartCamera(camera, playable, getFeatureZoneId(),
-                        getFeatureActId(), bigRingReturn != null
-                                || (checkpoint instanceof CheckpointState state && state.isActive()));
+                boolean savedEntry = bigRingReturn != null
+                        || (checkpoint instanceof CheckpointState state && state.isActive());
+                if (entryProvenance != null) {
+                    initialCamera.initializePositionedLevelStartCamera(camera, playable,
+                            getFeatureZoneId(), getFeatureActId(), entryProvenance);
+                } else {
+                    initialCamera.initializeLevelStartCamera(camera, playable,
+                            getFeatureZoneId(), getFeatureActId(), savedEntry);
+                }
             }
             if (objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
@@ -3306,12 +3317,25 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @param yOffset sidekick Y offset from player. S2 uses 0, S3K uses +4.
      */
     public void spawnSidekicks(int xOffset, int yOffset) {
+        placeSidekicks(xOffset, yOffset, true);
+    }
+
+    /** Entry provenance determines whether native spawn side effects are already complete. */
+    void repositionSidekicks(int xOffset, int yOffset,
+                                   com.openggf.game.session.LevelEntryProvenance provenance) {
+        java.util.Objects.requireNonNull(provenance, "provenance");
+        if (!provenance.isPositioned()) return;
+        placeSidekicks(xOffset, yOffset,
+                provenance == com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY);
+    }
+
+    private void placeSidekicks(int xOffset, int yOffset, boolean initializeLeaderHistory) {
         spriteManager.removeTemporarySidekicks();
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (player == null) {
             return;
         }
-        if (player instanceof AbstractPlayableSprite leaderInit) {
+        if (initializeLeaderHistory && player instanceof AbstractPlayableSprite leaderInit) {
             // ROM Obj01_Init_Continued (s2.asm:36201-36217) / Sonic_Init_Continued
             // -> Reset_Player_Position_Array (sonic3k.asm:21967-21977, 22202-22214):
             // the leader's own init offsets its position by (-$20, +4), zeroes
@@ -3325,6 +3349,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     (short) (leaderInit.getCentreY() + 4));
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
+            // Intentional positioned entries re-anchor the whole team. Native
+            // entries bypass this operation through their explicit provenance.
             // ROM writes only the x_pos/y_pos words here (S2 InitPlayers
             // s2.asm:5191-5195; S3K SpawnLevelMainSprites_SpawnPlayers
             // sonic3k.asm:8396-8399), which on a 68000 leaves the adjacent

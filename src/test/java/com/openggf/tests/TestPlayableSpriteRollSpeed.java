@@ -208,6 +208,44 @@ class TestPlayableSpriteRollSpeed {
                 "S2 Sonic_RollSpeed remains the flat-$20 routine; only Tails owns the retail decel>>2 bug");
     }
 
+    @Test
+    void poweredRollingUsesGameSpecificFrictionWithHeldTravelDirection() throws Exception {
+        for (GameRules rules : new GameRules[]{GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K}) {
+            for (int direction : new int[]{-1, 1}) {
+                for (boolean powered : new boolean[]{false, true}) {
+                    for (int acceleration : new int[]{0xC, 0x18, 0x30}) {
+                        TestablePlayableSprite sonic = s2Sonic((short) (direction * 0xC00));
+                        sonic.setGameRulesForTest(rules);
+                        sonic.setSuperSonic(powered); // Super and Hyper share this movement flag.
+                        sonic.setSpeedConstantsForTest((short) acceleration, (short) 0x100, (short) 0xA00);
+                        PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                                sonic, new NoWallCollisionSystem(), null);
+                        setInputs(movement, direction < 0, direction > 0);
+                        int friction = powered && rules == GameRules.SONIC_3K ? 6 : acceleration / 2;
+                        invokeDoRollSpeed(movement);
+                        assertEquals(direction * (0xC00 - friction), sonic.getGSpeed(),
+                                "Rolling friction: rules=" + rules + ", powered=" + powered
+                                        + ", acceleration=" + acceleration + ", direction=" + direction);
+                        assertTrue(sonic.getRolling());
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void poweredPinballSpeedLockStillSkipsRollingFriction() throws Exception {
+        TestablePlayableSprite sonic = s2Sonic((short) 0xC00);
+        sonic.setGameRulesForTest(GameRules.SONIC_3K);
+        sonic.setSuperSonic(true);
+        sonic.setPinballSpeedLock(true);
+        PlayableSpriteMovement movement = new PlayableSpriteMovement(
+                sonic, new NoWallCollisionSystem(), null);
+        setInputs(movement, false, true);
+        invokeDoRollSpeed(movement);
+        assertEquals(0xC00, sonic.getGSpeed());
+    }
+
     private static void setInputs(PlayableSpriteMovement movement,
             boolean inputLeft, boolean inputRight) throws Exception {
         Field left = PlayableSpriteMovement.class.getDeclaredField("inputLeft");

@@ -117,8 +117,8 @@ final class DdzCreateBossExplosionObjectInstance extends AbstractDdzObjectInstan
         }
         // loc_83E90: Random_Number, masked to 2*range-1 and centred.
         int random = services().rng().nextRaw();
-        int dx = ((random & 0xFFFF) & (parameters.xRange() * 2 - 1)) - parameters.xRange();
-        int dy = (((random >>> 16) & 0xFFFF) & (parameters.yRange() * 2 - 1)) - parameters.yRange();
+        int dx = S3kExplosionOffsets.xOffset(random, parameters.xRange());
+        int dy = S3kExplosionOffsets.yOffset(random, parameters.yRange());
         child.setSpawnPosition(baseX + dx, baseY + dy);
     }
 

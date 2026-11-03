@@ -1916,3 +1916,23 @@ loop/timing owner is changed. Allocation/rewind/anchor results from the earlier
 timer repair remain historical; no new qualification is claimed. The later
 Act1 death endpoints, Act2 windows, complete route, native pixels and broader
 viewport/donor/roster obligations remain inherited and unmeasured here.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Iwamodoki rider release (2026-11-02)
+
+Iwamodoki's self-destruct tail calls `Displace_PlayerOffObject` after setting
+status bit 7. The local regression in `TestIwamodokiBadnikInstance` establishes
+real solid contacts for P1/P2, burns the fuse with each shield type, and checks
+that both riders become airborne while a third player's separate support survives.
+The focused object run passes eight tests without skips on the refreshed develop
+base. This corrects the missing object-owned release; general destroyed-support ROM
+bugs remain unchanged. This short object check does not qualify cold routes,
+viewport/donor breadth, or whole-world rewind and forward replay; those inherited
+matrix obligations remain open.

@@ -3461,8 +3461,15 @@ public final class ObjectSolidContactController {
                     params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
                     instance, true, slopedAdapter);
         } else {
+            // Direct helpers compare against their selected surface in both the
+            // global and inline passes. Ordinary full-solid/classic helpers keep
+            // their established body-height classifier.
+            int contactHalfHeight = instance instanceof TopSolidLandingWindowProvider
+                    && solidProfile.topSolidOnly()
+                    && solidProfile.usesGroundHalfHeightForTopSolidContact()
+                            ? params.groundHalfHeight() : params.airHalfHeight();
             contact = resolveContact(player, anchorX, anchorY, params.halfWidth(),
-                    params.airHalfHeight(), solidProfile, useStickyBuffer, instance, true);
+                    contactHalfHeight, solidProfile, useStickyBuffer, instance, true);
         }
         if (contact == null) {
             if (instance instanceof SolidObjectListener listener) {
@@ -4505,8 +4512,8 @@ public final class ObjectSolidContactController {
             absDistX = distX;
         }
 
-        Integer directTopLimit = topSolidOnly && !sticky && instance instanceof SlopedSolidProvider sloped
-                ? InitialObjectDispatchController.afterCallback(initialDispatch, sloped.getDirectTopLandingOverlapLimit()) : null;
+        Integer directTopLimit = topSolidOnly && !sticky
+                ? directTopLandingOverlapLimit(instance) : null;
         int distY;
         int absDistY;
         // Direct top helpers compare feet-relative overlap, even when it exceeds
@@ -4560,7 +4567,7 @@ public final class ObjectSolidContactController {
                 detectionDistY = distY + getTopLandingSnapAdjustment(instance, player);
             }
             boolean rejectsZeroDistanceTopLanding = detectionDistY == 0
-                    && rejectsZeroDistanceTopSolidLanding(instance);
+                    && (directTopLimit != null || rejectsZeroDistanceTopSolidLanding(instance));
             int overlapLimit = directTopLimit != null ? directTopLimit : 0x10;
             if (detectionDistY < 0 || detectionDistY >= overlapLimit || rejectsZeroDistanceTopLanding) {
                 if (rejectsZeroDistanceTopLanding) {
@@ -4587,7 +4594,9 @@ public final class ObjectSolidContactController {
                 // Their direct top-helper contract keeps the upright position
                 // arithmetic even when the world flag is set. Flat top-solid
                 // callers still select loc_1E4D6 through their normal path.
-                int newCenterY = directTopLimit == null && isReverseGravityActive(player)
+                boolean rawSlopedTopSurface = directTopLimit != null
+                        && instance instanceof SlopedSolidProvider;
+                int newCenterY = !rawSlopedTopSurface && isReverseGravityActive(player)
                         ? playerCenterY + landingSnap
                         : playerCenterY - landingSnap;
                 int newY = newCenterY - (player.getHeight() / 2);
@@ -5221,6 +5230,19 @@ public final class ObjectSolidContactController {
         }
         CollisionRules rules = collisionRulesOrNull(player);
         return rules == null || rules.topSolidLandingAllowsZeroDist();
+    }
+
+    private Integer directTopLandingOverlapLimit(ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        if (instance instanceof TopSolidLandingWindowProvider provider) {
+            return InitialObjectDispatchController.afterCallback(initialDispatch,
+                    provider.getDirectTopLandingOverlapLimit());
+        }
+        if (instance instanceof SlopedSolidProvider provider) {
+            return InitialObjectDispatchController.afterCallback(initialDispatch,
+                    provider.getDirectTopLandingOverlapLimit());
+        }
+        return null;
     }
 
     private boolean rejectsZeroDistanceTopSolidLanding(ObjectInstance instance) {

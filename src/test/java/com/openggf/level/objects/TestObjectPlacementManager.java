@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.objects.S2ObjectWindowing;
 import org.junit.jupiter.api.Test;
 
@@ -10,8 +11,44 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyByte;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestObjectPlacementManager {
+    @Test
+    void twoAxisWindowRetirementStopsFallbackPlaneSwitchesWithoutClearingRespawn() {
+        for (int cameraX : new int[]{0x680, 0x200}) {
+            var marker = new ObjectSpawn(0x500, 0x600, 2, 8, 0, false, 0x600, 0);
+            var placement = new ObjectPlacementController(List.of(marker), () -> 320);
+            placement.setTwoAxisCursorPlacement(true);
+            placement.reset(0x400);
+            placement.loadTwoAxisCursorPass((source, respawn) -> {
+                placement.setTwoAxisRespawnLoaded(respawn);
+                return true;
+            }, () -> true);
+            var switchers = new ObjectPlaneSwitcherController(placement, 2,
+                    new PlaneSwitcherConfig((byte) 0xC, (byte) 0xD, (byte) 0xE, (byte) 0xF));
+            var player = mock(PlayableEntity.class);
+            when(player.getCentreX()).thenReturn((short) 0x4F0);
+            when(player.getCentreY()).thenReturn((short) 0x600);
+            switchers.update(player, source -> false);
+
+            // Keep the participant behind the camera while either X edge retires
+            // the marker. A placement-only consumer must not run it afterward.
+            placement.update(cameraX);
+            placement.loadTwoAxisCursorPass((source, respawn) -> false, () -> true);
+            when(player.getCentreX()).thenReturn((short) 0x510);
+            switchers.update(player, source -> false);
+            verify(player, never())
+                    .setTopSolidBit(anyByte());
+            assertEquals(0x80, placement.captureRewindState(0, 0).objState()[0] & 0x80,
+                    "window retirement must leave the live occurrence's ORT byte intact");
+        }
+    }
+
     @Test
     void twoAxisCursorsKeepActualAllocationRecoveryAcrossRestore() {
         List<ObjectSpawn> layout = List.of(

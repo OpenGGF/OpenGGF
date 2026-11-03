@@ -18,7 +18,7 @@ rg --files src/test | rg 'TestS1.*TraceReplay|traces/s1/.*/metadata.json'
 Use JDK 25 and the discovered absolute Sonic 1 REV01 ROM path:
 
 ```bash
-mvn "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dtest=<TestClass>" test
+python3 tools/testing/maven_queue.py "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dtest=<TestClass>" test
 ```
 
 Check skips and the newly written report under the current worktree's

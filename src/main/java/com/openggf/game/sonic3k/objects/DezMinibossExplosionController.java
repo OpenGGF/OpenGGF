@@ -60,8 +60,8 @@ final class DezMinibossExplosionController extends DezMinibossSprite implements 
         if(slot<0) return; // failed CreateChild6_Simple consumes no RNG
         try {
             int random=services().rng().nextRaw();
-            int x=(getX()+(random&(xRange*2-1))-xRange)&0xFFFF;
-            int y=(getY()+((random>>>16)&(yRange*2-1))-yRange)&0xFFFF;
+            int x=(getX()+S3kExplosionOffsets.xOffset(random, xRange))&0xFFFF;
+            int y=(getY()+S3kExplosionOffsets.yOffset(random, yRange))&0xFFFF;
             AbstractObjectInstance child=ObjectConstructionContext.with(services(),slot,()->
                     normal?new NormalExplosion(new ObjectSpawn(x,y,0,0,0,false,0))
                             :S3kBossExplosionChild.createWithNativeInitSfx(x,y));

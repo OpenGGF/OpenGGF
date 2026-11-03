@@ -7,6 +7,15 @@ and release gates. Historical exhaustive qualifications below are unchanged and
 are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
 
 
+Capsule ownership maintenance (2026-11-02): HCZ now shares upright capsule
+opening/effects/drawing/geometry and common rewind state, while retaining its
+real button SST, deferred ending pose and retained boss/results/geyser handoff.
+The common `$40` results wait uses signed pre-decrement underflow, and common
+animal creation supplies the upright count/offset. Focused capsule/effect replay,
+HCZ graph/control and transient recreation checks cover this maintenance;
+whole cold-route/pixel/audio and broader lifecycle/configuration gaps below
+remain inherited obligations.
+
 Canonical binding: `S3K_HYDROCITY_2`, engine zone 1/act 1, ROM `$0101`, S3KL object set.
 Edges: HCZ1 incoming structural act handoff; MGZ1 outgoing full entry.
 Character routes: Knuckles and Sonic/Tails use different native starts and end-route contexts.
@@ -1053,3 +1062,11 @@ collision re-admission. `TestMhzMinibossPaletteFlash` checks every palette row
 and countdown value for AIZ1 and both HCZ bosses through the public update.
 Existing route, donor/team/viewport and native pixel qualification gaps remain;
 this local correction does not renew whole-act certification.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

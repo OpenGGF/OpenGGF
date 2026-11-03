@@ -1456,3 +1456,11 @@ passing evidence. Queue wait was 478 seconds; Maven execution was 92 seconds.
 The 3,829-class change-based smoke selection is replaced by these focused
 animation, consumer, recreation, donor-body and required S3K loading checks
 for the bounded S3K animation-owner correction.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

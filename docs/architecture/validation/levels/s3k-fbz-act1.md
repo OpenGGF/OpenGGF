@@ -1,5 +1,16 @@
 # FBZ Act 1 coverage matrix
 
+Shield transition follow-up (2026-11-02): the exact-SST reload retains the
+collected shield. A dormant Insta-Shield must defer registration while that
+shared fixed slot is occupied. The parameterized
+`TestFbzActTransitionHeadless#carriedShieldContinuesAnimatingAfterReload`
+checks unique slot ownership and advancing fire/lightning/bubble animation
+through the real synchronous reload. `TestShieldRewindRestore` checks deferred
+registration for every collected shield type and registration after shield loss.
+This bounded positioned transition check does not renew full-route, native
+pixel, donor/team/viewport or whole-world replay qualifications; existing gaps
+remain inherited.
+
 Attack-warning eye overlay follow-up (2026-11-02): `loc_6F0CE` installs
 `word_6FA5E` (mapping frame `$11`, priority `$180`) and draws the warning
 child while its palette script changes line 1, color 15. The engine previously
@@ -730,3 +741,42 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+## Indoor return tile-ring initialization — 2026-11-02
+
+`TestFbzAct1RomRuntimeLifecycle.indoorReloadSeedsRowsAtRestoredCameraHeight`
+checks the initial indoor Plane-B descriptors at a restored camera Y of `$500`.
+FBZ1 background initialization must fill the physical 256px ring starting at
+its effective background Y, aligned to 16px, rather than source world Y zero.
+The deformation bands index world Y, so a zero-origin fill at an interior
+return pairs the bands with unrelated artwork until ordinary scrolling replaces
+those rows. ROM `loc_528A4` calls `Reset_TileOffsetPositionEff` before
+`Refresh_PlaneFull`; the latter writes sixteen successive 16px rows.
+This descriptor check supplements retained-row and rewind tests; it does not
+certify special-stage gameplay or native pixel parity. Existing route, viewport
+and donor gaps remain as recorded above.
+
+Focused validation: `TestFbzAct1RomRuntimeLifecycle`,
+`TestFbzRetainedPlaneNativeRows`, `TestFbzScrollHandler`, `TestFbzEventsAct1`
+and the four required S3K loading selectors completed 83 tests with no
+failures, errors or skips using the original locked-on ROM. The new test
+failed on the pre-fix implementation at world Y=608. No visual capture was
+performed for this correction.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Magnetic-platform crush follow-up (2026-11-02)
+
+`TestFbzMagneticPlatformObjectManagerIntegration` now covers a grounded Sonic
+beneath the real offset solid: crush enters death, preserves rings, and rejects
+later object-owned damage. `TestDeathRadiusTransition` covers direct death draw
+with a preserved hurt timer, timer freeze, and a hurt-floor callback that must
+not request ring loss after death. Existing route, viewport, donor, character,
+rewind and native pixel-comparison gaps remain; these bounded checks do not
+certify the full act or establish the exact timing of the reported ring scatter.

@@ -66,11 +66,12 @@ class TestStageplayCapsuleControlRelease {
             capsule.setServices(fixture.services);
             invoke(capsule, "openCapsule", new Class<?>[0]);
             verify(fixture.services, never()).playSfx(anyInt());
+            assertEquals(0x40, field(capsule, "postOpenTimer").getInt(capsule));
+            assertEquals(1, field(capsule, "mappingFrame").getInt(capsule));
+            assertTrue(field(capsule, "opened").getBoolean(capsule));
             var controller = (S3kBossExplosionController) field(capsule, "explosionController").get(capsule);
             for (int frame = 0; frame < 24; frame++) {
-                if (!(capsule instanceof CnzEggCapsuleInstance)) controller.tick();
-                invoke(capsule, capsule instanceof CnzEggCapsuleInstance
-                        ? "tickExplosionController" : "spawnPendingExplosions", new Class<?>[0]);
+                invoke(capsule, "tickExplosionController", new Class<?>[0]);
             }
             assertTrue(controller.isFinished());
             var children = org.mockito.ArgumentCaptor.forClass(com.openggf.level.objects.ObjectInstance.class);
@@ -87,6 +88,67 @@ class TestStageplayCapsuleControlRelease {
             }
             verify(fixture.services, times(7)).playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id);
             verify(fixture.services, never()).playSfx(com.openggf.game.sonic3k.audio.Sonic3kSfx.EXPLODE.id);
+        }
+    }
+
+    @Test
+    void activeUprightCapsuleExplosionSequenceRestoresWithItsSharedOwner() throws Exception {
+        for (var capsule : List.<AbstractObjectInstance>of(
+                new CnzEggCapsuleInstance(spawn()), new HczEndBossEggCapsuleInstance(100, 100))) {
+            var fixture = new Fixture();
+            var rng = new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S3K);
+            when(fixture.services.rng()).thenReturn(rng);
+            capsule.setServices(fixture.services);
+            invoke(capsule, "openCapsule", new Class<?>[0]);
+            var controller = (S3kBossExplosionController) field(capsule, "explosionController").get(capsule);
+            for (int i = 0; i < 6; i++) controller.tick();
+            var state = capsule.captureRewindState(fixture.context());
+            var rngState = rng.capture();
+            var expected = remainingExplosions(controller);
+            rng.restore(rngState);
+            capsule.restoreRewindState(state, fixture.context());
+            var restored = (S3kBossExplosionController) field(capsule, "explosionController").get(capsule);
+            assertNotSame(controller, restored);
+            assertEquals(expected, remainingExplosions(restored), "active timer, pending effects and RNG replay");
+        }
+    }
+
+    private static List<S3kBossExplosionController.PendingExplosion> remainingExplosions(
+            S3kBossExplosionController controller) {
+        var result = new java.util.ArrayList<>(controller.drainPendingExplosions());
+        while (!controller.isFinished()) {
+            controller.tick();
+            result.addAll(controller.drainPendingExplosions());
+        }
+        return result;
+    }
+
+    @Test
+    void openingControlOwnerRestoresAndReleasesBeforeAnyEndingPose() throws Exception {
+        for (var capsule : List.<AbstractObjectInstance>of(new CnzEggCapsuleInstance(spawn()),
+                new HczEndBossEggCapsuleInstance(100, 100), new FbzEndEggCapsuleInstance(spawn()))) {
+            var fixture = new Fixture();
+            var cpu = mock(SidekickCpuController.class);
+            when(fixture.sidekick.getCpuController()).thenReturn(cpu);
+            when(fixture.services.rng()).thenReturn(new com.openggf.game.GameRng(
+                    com.openggf.game.GameRng.Flavour.S3K));
+            capsule.setServices(fixture.services);
+            invoke(capsule, capsule instanceof FbzEndEggCapsuleInstance ? "openOnce" : "openCapsule",
+                    new Class<?>[0]);
+            verify(cpu).setController2SignedLocked(true);
+            var saved = capsule.captureRewindState(fixture.context());
+            var nativeState = nativeScalarState(capsule);
+            clearInvocations(cpu, fixture.main, fixture.sidekick);
+            capsule.releasePlayersForVisualDirection();
+            verify(cpu, only()).setController2SignedLocked(false);
+            verify(fixture.sidekick, never()).applyObjectControlState(any());
+            verifyNoInteractions(fixture.main);
+            assertEquals(nativeState, nativeScalarState(capsule));
+            capsule.restoreRewindState(saved, fixture.context());
+            clearInvocations(cpu);
+            capsule.releasePlayersForVisualDirection();
+            capsule.releasePlayersForVisualDirection();
+            verify(cpu, only()).setController2SignedLocked(false);
         }
     }
 

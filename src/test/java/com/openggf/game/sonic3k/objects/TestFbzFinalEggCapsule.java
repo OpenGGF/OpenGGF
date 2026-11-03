@@ -516,9 +516,15 @@ class TestFbzFinalEggCapsule {
     }
 
     private static void setField(Object target,String name,Object value) throws Exception {
-        var field=target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        field.set(target,value);
+        for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                var field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                field.set(target, value);
+                return;
+            } catch (NoSuchFieldException ignored) { }
+        }
+        throw new NoSuchFieldException(name);
     }
 
     private static List<String> graphSignature(ObjectManager manager) {

@@ -1426,6 +1426,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             }
             int edge = getWindowEnd(lastCameraX);
             while (cursorIndex > 0 && spawns.get(cursorIndex - 1).x() >= edge) {
+                removeFromCursorWindow(cursorIndex - 1);
                 cursorIndex--;
                 fwdCounter--;
             }
@@ -1442,11 +1443,26 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             }
             int backEdge = getWindowStart(lastCameraX);
             while (leftCursorIndex < spawns.size() && spawns.get(leftCursorIndex).x() < backEdge) {
+                removeFromCursorWindow(leftCursorIndex);
                 leftCursorIndex++;
                 bwdCounter++;
             }
         }
         return changed;
+    }
+
+    /**
+     * loc_1B8BC (sonic3k.asm:37671-37681) and
+     * loc_1B908 (sonic3k.asm:37708-37713) retire layout entries from the horizontal window.
+     * Withdraw their placement-only consumers, including fallback plane switches,
+     * while each live SST retains its own lifetime and respawn byte. In particular,
+     * cursor trimming must not undo the shipped exhaustion-induced ORT drift.
+     */
+    private void removeFromCursorWindow(int layoutIndex) {
+        ObjectSpawn source = spawns.get(layoutIndex);
+        active.remove(source);
+        dormant.clear(layoutIndex);
+        clearCursorLoadState(source);
     }
 
     private boolean loadTwoAxisEntry(int layoutIndex, int respawnIndex, SpawnCallback callback) {

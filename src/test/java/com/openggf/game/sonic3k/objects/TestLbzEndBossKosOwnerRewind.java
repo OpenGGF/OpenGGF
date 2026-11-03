@@ -68,6 +68,24 @@ class TestLbzEndBossKosOwnerRewind {
     }
 
     @Test
+    void readyConstructionOwnerIsClaimedAfterCameraLeavesAdmissionRange() throws Exception {
+        Harness harness = queueOwner();
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        HardwareWorkHandle expected = ownerHandle(harness.boss(), timing);
+        long nextOrdinal = nextKosOrdinal(timing);
+        drain(timing);
+        GameServices.camera().setX((short) 0x3B21);
+        GameServices.camera().setY((short) 0x05A0);
+
+        harness.boss().update(1, harness.fixture().sprite());
+
+        assertFalse(timing.isPending(expected));
+        assertTrue((boolean) field(harness.boss(), "bossArtLoaded"),
+                "camera admission must not strand an already-submitted construction owner");
+        assertEquals(nextOrdinal, nextKosOrdinal(timing));
+    }
+
+    @Test
     void restoredOrdinalWithoutPendingParentFailsClosed() throws Exception {
         Harness harness = queueOwner();
         HardwareTimingService timing = GameServices.hardwareTiming();
@@ -89,11 +107,35 @@ class TestLbzEndBossKosOwnerRewind {
         assertEquals(nextOrdinal, nextKosOrdinal(timing));
     }
 
+    @Test
+    void cameraRangeGateDefersBossArtUntilItsFirstAdmittedDispatch() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).build();
+        GameServices.camera().setX((short) 0x3B21);
+        GameServices.camera().setY((short) 0x05A0);
+        LbzEndBossInstance boss = GameServices.level().getObjectManager()
+                .createDynamicObject(() -> new LbzEndBossInstance(new ObjectSpawn(
+                        0x3B00, 0x05F8, 0xCB, 0, 0, false, 0x05F8)));
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        long nextOrdinal = nextKosOrdinal(timing);
+        assertEquals(-1L, field(boss, "bossArtOrdinal"));
+        boss.update(1, fixture.sprite());
+        assertEquals(nextOrdinal, nextKosOrdinal(timing));
+        assertEquals(-1L, field(boss, "bossArtOrdinal"));
+
+        GameServices.camera().setX((short) 0x3B20);
+        boss.update(2, fixture.sprite());
+        assertEquals(nextOrdinal, ownerHandle(boss, timing).ordinal());
+        assertEquals(nextOrdinal + 1, nextKosOrdinal(timing));
+    }
+
     private static Harness queueOwner() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1)
                 .build();
         GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
+        GameServices.camera().setX((short) 0x3900);
+        GameServices.camera().setY((short) 0x0460);
         LbzEndBossInstance boss = GameServices.level().getObjectManager()
                 .createDynamicObject(() -> new LbzEndBossInstance(new ObjectSpawn(
                         0x3B00, 0x05F8, 0xCB, 0, 0, false, 0x05F8)));

@@ -1,5 +1,15 @@
 # FBZ Act 2 coverage matrix
 
+Capsule ownership maintenance (2026-11-02): the fixed capsule shares native
+opening writes, body drawing and body sprite/plane priority. Its separate button,
+five fragments, nine animals and explosion controller retain their native SST
+graph. Opening CPU-lock ownership is also captured and can be released before
+any ending pose without changing native phase or player pose. `TestS3kSharedRoutineOwnership` pins body/button high art priority and the
+five FBZ2 fragment frames; FBZ1’s separate low-art fragment exception remains
+outside this final-capsule graph. `TestFbzFinalEggCapsule` and graph checks cover
+recreation/lifetime behavior. This does not renew whole-route or pixel/audio and
+wider configuration qualifications below.
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and
@@ -406,3 +416,30 @@ binds the late-parallax redraw case. One and three further draws use the current
 screen projection while preserving native coordinates and the dynamic spawn.
 The update and S3K publication phases are unchanged. This constructed renderer
 check does not close the existing cold-route, viewport, donor, team or native-pixel gaps.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+
+FBZ2 boss display follow-up (2026-11-02): focused regressions cover the shipped
+neutral rotation head, palette-zero pilot flame, and root/arm debug geometry.
+The S3K revert timer now retains invincibility until the next native eight-frame
+boundary. Arms remain harmful until native dismantling; this does not guarantee
+protection throughout the defeat sequence. Full-route, pixel and configuration
+coverage gaps above remain open.
+### Encounter presentation follow-up — 2026-11-02
+
+The subboss roof emitters now preserve `loc_70302`'s vertical render flip
+(native subtypes 0/2); floor emitters 4/6 remain unflipped. The subsequent
+rising-floor entrance pillar preserves `Obj_FBZBossPillar`'s art priority bit
+independently of SAT bucket 6, so terrain cannot hide the blocking pillar.
+`TestFbzAct2Subboss` checks all four emitter draw calls;
+`TestFbzBossPillarInstance` checks priority and the existing eight-step closure,
+including a single `SpikeBalls` impact sound when displacement reaches zero.
+These bounded checks retain the existing route, viewport/donor and native pixel
+coverage limits above; they do not certify additional routes.

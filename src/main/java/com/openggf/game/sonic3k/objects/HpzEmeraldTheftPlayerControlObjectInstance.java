@@ -107,7 +107,7 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
                 phase = PHASE_PAN;
                 camera.setScrollLocked(true);
                 spawnDynamicObjectLowestFreeSlot(
-                        SongFadeTransitionInstance.transitionTo(Sonic3kMusic.MINIBOSS.id));
+                        SongFadeTransitionInstance.transitionTo(Sonic3kMusic.MINIBOSS_S3.id));
                 p1.setControlLocked(false);
                 ObjectControlState.nativeBit7FullControl().applyTo(p1);
                 p1.setObjectMappingFrameControl(true);

@@ -1,217 +1,65 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
-import com.openggf.level.objects.PlayerControlOwners;
-
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
-import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
-import com.openggf.game.sonic3k.objects.FbzEndEggCapsuleExplosionController;
-import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
+import com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
-import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
-import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
-import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.EggPrisonAnimalInstance;
-import com.openggf.level.objects.ObjectConstructionContext;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
-import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.RomObjectCodePointerProvider;
-import com.openggf.level.objects.SolidObjectProvider;
-import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
-import java.util.List;
-import java.util.logging.Logger;
-
 /**
- * Standard ground-based egg capsule for HCZ2 (and other S3K zones).
- *
- * <p>ROM reference: Obj_EggCapsule (sonic3k.asm line 181587).
- * The capsule sits at a fixed position on the ground with the button
- * on TOP at offset (0, -0x24). The player must STAND on the button
- * (SolidObjectFull) to open the capsule.
- *
- * <p>On button press:
- * <ol>
- *   <li>Changes to open frame (mapping_frame = 1)</li>
- *   <li>Spawns normal explosions and animals</li>
- *   <li>Sets 64-frame timer</li>
- *   <li>After timer + player on ground: spawns results screen</li>
- * </ol>
- *
- * <p>ROM collision: SolidObjectFull with d1=$2B, d2=$18, d3=$18.
- * Button detection: SolidObjectFull with small hitbox d1=$1B, d2=4, d3=6.
+ * HCZ's retained boss/results adapter for the shared upright {@code Obj_EggCapsule}.
+ * Opening, animals, explosions, drawing and geometry belong to the common owner.
+ * This adapter preserves the separate native button SST and the retained boss's
+ * results/control/camera handoff rather than inventing a second capsule behavior.
  */
-public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnCoordinateRewindRecreatable, RomObjectCodePointerProvider {
-
-    /**
-     * Word 0 of this object's S3K SST holds its live ROM code pointer.
-     * ROM {@code Obj_EggCapsule} is installed from the S3K object pointer table at
-     * {@code $00086540} (table read from the user-supplied ROM; the
-     * label is defined at docs/skdisasm/sonic3k.asm:181592).
-     * Its whole code block lies in one bank, so the HIGH word that
-     * {@code sub_13EFC} latches into {@code Tails_CPU_interact} and compares
-     * on the next off-screen on-object frame is {@code $0008}
-     * (docs/skdisasm/sonic3k.asm:26856-26883).
-     */
-    @Override
-    public int romObjectCodePointerHighWord() {
-        return 0x0008;
-    }
-
-    private static final Logger LOG = Logger.getLogger(HczEndBossEggCapsuleInstance.class.getName());
-
-    private static final int OBJECT_ID = Sonic3kObjectIds.EGG_CAPSULE;
-    private static final int PRIORITY = 5;
-
-    // ROM: SolidObjectFull parameters (sonic3k.asm:181593-181597)
-    private static final int SOLID_HALF_WIDTH = 0x2B;
-    private static final int SOLID_HALF_HEIGHT = 0x18;
-
-    // ROM: Button on TOP at offset (0, -0x24) from capsule centre
-    private static final int BUTTON_Y_OFFSET = -0x24;
-
-    // Post-open delay before results (ROM: 64-frame timer)
-    private static final int POST_OPEN_DELAY = 64;
-
-    // Animal spawn count (ROM: 14 animals)
-    private static final int ANIMAL_COUNT = 14;
-
-    // Fixed position
-    private int fixedX;
-    private int fixedY;
-
-    // State
-    private int mappingFrame;
-    private boolean opened;
-
+public class HczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleInstance
+        implements SpawnCoordinateRewindRecreatable, RomObjectCodePointerProvider {
     private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
-
-    private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
-
-    private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
-
-    private boolean resultsStarted;
-    private int postOpenTimer;
     private boolean buttonSpawned;
-    private boolean buttonPressed;
     private boolean tailsEndingPoseApplied;
     private boolean mainEndingPosePending;
 
-    // Explosion controller (spawned when capsule opens)
-    private S3kBossExplosionController explosionController;
-
     public HczEndBossEggCapsuleInstance(int x, int y) {
-        super(new ObjectSpawn(x, y, OBJECT_ID, 0, 0, false, 0), "HCZEggCapsule");
-        this.fixedX = x;
-        this.fixedY = y;
+        super(x, y, "HCZEggCapsule");
     }
 
-    private HczEndBossEggCapsuleInstance() {
-        this(0, 0);
-    }
+    private HczEndBossEggCapsuleInstance() { this(0, 0); }
 
-    /** Player-only hand-back; the retained boss root owns the later geyser handoff. */
-    @Override
-    public void releasePlayersForVisualDirection() {
+    @Override public int romObjectCodePointerHighWord() { return 0x0008; }
+
+    @Override public void releasePlayersForVisualDirection() {
         for (var sprite : resultControlOwners.players()) {
             ObjectControlState.none().applyTo(sprite);
             sprite.setControlLocked(false);
         }
-        for (var sprite : sidekickPoseOwners.players()) {
-            if (sprite.getCpuController() != null) sprite.getCpuController().cancelQueuedNativeEndingPose();
-            if (sprite.isObjectControlled() && sprite.getAnimationId() == Sonic3kAnimationIds.VICTORY.id()) {
-                ObjectControlState.none().applyTo(sprite);
-                sprite.setControlLocked(false);
-            }
-        }
-        for (var sprite : sidekickControlOwners.players()) {
-            if (sprite.getCpuController() != null) sprite.getCpuController().setController2SignedLocked(false);
-        }
         resultControlOwners.clear();
-        sidekickControlOwners.clear();
-        sidekickPoseOwners.clear();
+        super.releasePlayersForVisualDirection();
     }
 
-    // ===== Position / lifecycle =====
+    // HCZ retains a real button slot: the parent contributes only its body solid.
+    @Override public int getPieceCount() { return 1; }
+    @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.AUTO_AFTER_UPDATE; }
 
-    @Override
-    public int getX() {
-        return fixedX;
-    }
-
-    @Override
-    public int getY() {
-        return fixedY;
-    }
-
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
-
-    @Override
-    public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
-    }
-
-    // ===== Solid collision (ROM: SolidObjectFull d1=$2B, d2=$18, d3=$18) =====
-
-    @Override
-    public SolidObjectParams getSolidParams() {
-        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
-    }
-
-    @Override
-    public boolean isSolidFor(PlayableEntity player) {
-        // ROM: SolidObjectFull is called every frame unconditionally (line 181502-181506),
-        // before the routine dispatch. The capsule body remains solid throughout the
-        // entire sequence — before, during, and after opening.
-        return true;
-    }
-
-    // ===== Update =====
-
-    @Override
-    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+    @Override public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!buttonSpawned) {
             buttonSpawned = true;
-            spawnChild(() -> new HczEndBossEggCapsuleButton(
-                    this, fixedX, fixedY + BUTTON_Y_OFFSET));
+            spawnChild(() -> new HczEndBossEggCapsuleButton(this, getX(), getY() - 0x24));
         }
         if (!opened) {
-            // The button child publishes its ROM standing-bit result after this
-            // parent slot has run. Consume that signal on the next parent entry,
-            // matching loc_865D0/sub_865DE (sonic3k.asm:181681-181721).
-            if (buttonPressed) {
-                openCapsule();
-            }
+            if (isButtonTriggered()) openCapsule();
         } else if (!resultsStarted) {
-            // Tick explosion controller
-            if (explosionController != null && !explosionController.isFinished()) {
-                explosionController.tick();
-                spawnPendingExplosions();
-            }
-
-            // Wait for post-open delay then start results when player is on ground.
-            if (postOpenTimer > 0) {
-                postOpenTimer--;
-            }
-            if (postOpenTimer == 0
-                    && playerEntity instanceof AbstractPlayableSprite player
-                    && !player.getAir()) {
+            tickExplosionController();
+            // sub_868F8 pre-decrements $40 and waits for signed underflow,
+            // exactly as the shared capsule owner does (sonic3k.asm:181991-181993).
+            if (--postOpenTimer < 0
+                    && playerEntity instanceof AbstractPlayableSprite player && !player.getAir()) {
                 startResults(player);
             }
         } else if (services().gameState().isEndOfLevelActive()) {
-            if (mainEndingPosePending
-                    && playerEntity instanceof AbstractPlayableSprite player) {
+            if (mainEndingPosePending && playerEntity instanceof AbstractPlayableSprite player) {
                 mainEndingPosePending = false;
                 lockForResults(player);
             }
@@ -219,75 +67,11 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         }
     }
 
-    void signalButtonPressed() {
-        buttonPressed = true;
+    void signalButtonPressed() { triggerButton(); }
+
+    @Override protected void spawnCapsuleAnimal(ObjectSpawn animalSpawn, int delay, int artVariant) {
+        spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, delay, artVariant));
     }
-
-    // ===== Capsule opening =====
-
-    /**
-     * ROM: sub_865DE equivalent — capsule opens, spawns explosions and animals.
-     */
-    private void openCapsule() {
-        if (opened) return;
-        opened = true;
-        mappingFrame = 1;  // ROM: move.b #1,mapping_frame(a0) — open lid
-        postOpenTimer = POST_OPEN_DELAY;
-
-        // ROM sub_865DE sets Ctrl_2_locked after the capsule's button child
-        // signals the parent (sonic3k.asm:181639-181646). The capsule runs
-        // after Player_2's slot, so the current CPU step has already happened;
-        // the signed lock suppresses Tails_CPU_Control beginning next frame.
-        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
-                && sidekick.getCpuController() != null) {
-            sidekickControlOwners.add(sidekick);
-            sidekick.getCpuController().setController2SignedLocked(true);
-        }
-
-        // sub_865DE selects subtype $08 (sonic3k.asm:181665-181667).
-        // CreateBossExp08 (sonic3k.asm:176802) uses normal explosions with child-owned sfx_Break.
-        explosionController = new S3kBossExplosionController(fixedX, fixedY, 8, services().rng());
-
-        // Spawn animals
-        spawnAnimals();
-    }
-
-    /**
-     * Drains pending explosions from the controller into dynamic children.
-     */
-    private void spawnPendingExplosions() {
-        if (explosionController == null) return;
-        var pending = explosionController.drainPendingExplosions();
-        for (var entry : pending) {
-            spawnChild(() -> new FbzEndEggCapsuleExplosionController.FbzEndEggCapsuleNormalExplosion(
-                    new ObjectSpawn(entry.x(), entry.y(), 0, 0, 0, false, 0), services()));
-        }
-    }
-
-    /**
-     * ROM: Spawn animals that burst out of the capsule.
-     * Each animal gets a staggered delay so they pop out in sequence.
-     *
-     * <p>Must use {@code spawnFreeChild()} (not raw {@code addDynamicObject()}):
-     * {@link EggPrisonAnimalInstance}'s constructor caches its sprite renderer via
-     * {@code getRenderManager()}, which resolves through per-instance services and
-     * returns null unless the construction context is set. {@code spawnFreeChild()}
-     * sets that context (and keeps the same FindFreeObj/{@code addDynamicObject}
-     * slot semantics); a raw {@code addDynamicObject()} leaves the renderer null and
-     * the released animals render invisibly.
-     */
-    private void spawnAnimals() {
-        for (int i = 0; i < ANIMAL_COUNT; i++) {
-            int animalX = fixedX + (i % 2 == 0 ? -(8 + i * 4) : (8 + i * 4));
-            int animalY = fixedY - 16;  // Animals pop up from top of capsule
-            final int delay = i * 4;  // Staggered: 0, 4, 8, 12, ...
-            final ObjectSpawn spawn = new ObjectSpawn(animalX, animalY, 0x28, 0, 0, false, 0);
-            final int artVariant = services().rng().nextBits(1);
-            spawnFreeChild(() -> new EggPrisonAnimalInstance(spawn, delay, artVariant));
-        }
-    }
-
-    // ===== Results =====
 
     private void startResults(AbstractPlayableSprite player) {
         if (resultsStarted) return;
@@ -307,7 +91,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // Obj_LevelResultsInit on the following Process_Sprites pass.
         spawnFreeChild(
                 () -> new HczEndBossResultsScreenObjectInstance(
-                        getPlayerCharacter(), services().currentAct()));
+                        resolvePlayerCharacter(), services().currentAct()));
     }
 
     private void advanceTailsEndingPoseCheck() {
@@ -341,30 +125,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
-    }
-
-    private PlayerCharacter getPlayerCharacter() {
-        return S3kRuntimeStates.resolvePlayerCharacter(
-                services().zoneRuntimeRegistry(),
-                services().configuration());
-    }
-
-    // ===== Rendering =====
-
-    @Override
-    public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.EGG_CAPSULE);
-        if (renderer == null || !renderer.isReady()) {
-            return;
-        }
-
-        // ROM: Ground-based capsule — draw body upright (no vFlip)
-        renderer.drawFrameIndex(mappingFrame, fixedX, fixedY, false, false);
-
-        // ROM: Button on TOP at offset (0, -0x24). Draw button frame upright.
-        int buttonFrame = opened ? 0xC : 0x5;
-        int buttonY = fixedY + BUTTON_Y_OFFSET;
-        renderer.drawFrameIndex(buttonFrame, fixedX, buttonY, false, false);
     }
 
     private static final class HczEndBossResultsScreenObjectInstance

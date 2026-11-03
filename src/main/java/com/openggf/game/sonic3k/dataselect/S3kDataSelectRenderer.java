@@ -376,12 +376,8 @@ public class S3kDataSelectRenderer {
     }
 
     private byte[] selectedIconZonePaletteBytes(S3kDataSelectAssetSource assets, int paletteIndex) {
-        if (paletteIndex == 7) {
-            byte[] special = assets.getS3ZoneCard8PaletteBytes();
-            if (special != null && special.length > 0) {
-                return special;
-            }
-        }
+        // Locked-on Load_Icon_Art uses Pal_Save_ZoneCard1 + index * 32.
+        // Index 7 is Flying Battery; the S3-only card 8 palette is unrelated.
         return paletteAt(assets.getZoneCardPalettes(), paletteIndex);
     }
 

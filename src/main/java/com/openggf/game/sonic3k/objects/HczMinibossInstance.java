@@ -679,7 +679,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      */
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
-        services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
         state.routine = ROUTINE_LOOP_INIT;
     }
 
@@ -838,8 +838,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
         // This pass already ran the water effect's pull; on the same pass it
         // sees $38 bit 2 clear and releases via loc_6A5FA -> loc_6A986/sub_6A996
-        // (sonic3k.asm:139854-139871).
-        releaseVortexPlayers();
+        // (sonic3k.asm:139925-139930). Keep $42/$44 for the later
+        // loc_6A636 deletion release even if the players land in the meantime.
+        releaseTrackedVortexPlayers();
         state.routine = ROUTINE_COOLDOWN;
         setWait(COOLDOWN_TIME, WaitCallback.START_POST_VORTEX_PAUSE);
     }
@@ -1111,14 +1112,18 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private void applyVortexPull(AbstractPlayableSprite player) {
         List<PlayableEntity> participants = vortexParticipants(player);
         reconcileVortexPlayers(participants);
+        // sub_6A9B8 (sonic3k.asm:140281-140301) rebuilds $42/$44 by height,
+        // before checking object_control. Tracking is independent of capture.
+        vortexTrackedP1 = false;
+        vortexTrackedP2 = false;
+        int checkY = (getWaterEffectY() - 0x20) & 0xFFFF;
         for (int index = 0; index < participants.size(); index++) {
             PlayableEntity entity = participants.get(index);
             if (entity instanceof AbstractPlayableSprite sprite) {
+                boolean belowEffect = (sprite.getCentreY() & 0xFFFF) >= checkY;
+                if (index == 0) vortexTrackedP1 = belowEffect;
+                else if (index == 1) vortexTrackedP2 = belowEffect && !sprite.getDead();
                 applyVortexPullTo(sprite);
-                if (vortexControlledPlayers.containsKey(sprite)) {
-                    if (index == 0) vortexTrackedP1 = true;
-                    else if (index == 1) vortexTrackedP2 = true;
-                }
             }
         }
     }
@@ -1152,6 +1157,14 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      * The extensible control map remains the source of truth for additional sidekicks.
      */
     void releaseTrackedVortexPlayersOnWaterEffectDelete() {
+        releaseTrackedVortexPlayers();
+        vortexTrackedP1 = false;
+        vortexTrackedP2 = false;
+    }
+
+    private void releaseTrackedVortexPlayers() {
+        // loc_6A986 / sub_6A996 (sonic3k.asm:140240-140259) releases both
+        // retained native slots unconditionally, including players not captured.
         PlayableEntity focused = services().camera().getFocusedSprite();
         List<PlayableEntity> participants = vortexParticipants(focused);
         for (int index = 0; index < Math.min(2, participants.size()); index++) {
@@ -1170,8 +1183,6 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
             releaseVortexPlayer(entity);
         }
         vortexControlledPlayers.clear();
-        vortexTrackedP1 = false;
-        vortexTrackedP2 = false;
     }
 
     /**

@@ -151,6 +151,57 @@ class TestSonic3kLevelStartCamera {
         assertEquals(0, camera.getMinX(), "Intro focus never rewrites the native minimum");
     }
 
+    @Test
+    void positionedTailsCameraUsesTheFocusBeforeSpawnPlayersAddedFour() {
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x100);
+        tails.setCentreY((short) 0x124);
+        var provider = new Sonic3kZoneFeatureProvider();
+        camera.setX((short) 0x60);
+        provider.initializePositionedLevelStartCamera(camera, tails, Sonic3kZoneIds.ZONE_GUMBALL, 0,
+                com.openggf.game.session.LevelEntryProvenance.POSITIONED_FRESH_SPAWN);
+        assertEquals(0xC0, camera.getY());
+        assertEquals(0x60, camera.getX(), "Known fresh Gumball entry uses its native horizontal focus");
+        assertEquals(0x124, tails.getCentreY(), "Camera reconstruction cannot move the body");
+        camera.setMinY((short) 0x620);
+        tails.setCentreY((short) 0x500);
+        provider.initializePositionedLevelStartCamera(camera, tails, Sonic3kZoneIds.ZONE_MHZ, 1,
+                com.openggf.game.session.LevelEntryProvenance.POSITIONED_FRESH_SPAWN);
+        assertEquals(0x49C, camera.getY(), "Get_LevelSizeStart does not clamp to minimum Y");
+        assertEquals(0x620, camera.getMinY());
+    }
+
+    @Test
+    void unclassifiedPositionedEntryPreservesBothCameraAxes() {
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x200);
+        tails.setCentreY((short) 0x300);
+        camera.setX((short) 123);
+        camera.setY((short) 456);
+        new Sonic3kZoneFeatureProvider().initializePositionedLevelStartCamera(
+                camera, tails, Sonic3kZoneIds.ZONE_MGZ, 0,
+                com.openggf.game.session.LevelEntryProvenance.POSITIONED_ENTRY);
+        assertEquals(123, camera.getX());
+        assertEquals(456, camera.getY());
+    }
+
+    @Test
+    void explicitPostSpawnEntryKindsSelectFreshOrReturnCameraFocus() {
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 0, (short) 0);
+        tails.setCentreX((short) 0x30);
+        tails.setCentreY((short) 0x400);
+        var provider = new Sonic3kZoneFeatureProvider();
+        provider.initializePositionedLevelStartCamera(camera, tails, Sonic3kZoneIds.ZONE_DEZ, 0,
+                com.openggf.game.session.LevelEntryProvenance.POSITIONED_FRESH_SPAWN);
+        assertEquals(0x40, camera.getX(), "Known fresh entry applies loc_1BF70's focus offset");
+        assertEquals(0x39C, camera.getY());
+        provider.initializePositionedLevelStartCamera(camera, tails, Sonic3kZoneIds.ZONE_DEZ, 0,
+                com.openggf.game.session.LevelEntryProvenance.POSITIONED_RETURN_SPAWN);
+        assertEquals(0, camera.getX(), "Known restored entry bypasses the fresh focus offset");
+        assertEquals(0x39C, camera.getY());
+        assertEquals(0x400, tails.getCentreY(), "Camera focus cannot move the declared body");
+    }
+
     private void start(int x, int y, boolean knuckles, int zone, int act, boolean checkpoint) {
         Sonic3kLevelStartCamera.initialize(camera, x, y, knuckles, zone, act, checkpoint);
     }

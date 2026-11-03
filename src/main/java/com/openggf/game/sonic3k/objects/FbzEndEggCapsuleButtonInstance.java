@@ -59,6 +59,8 @@ public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
     // The press changes only mapping_frame ($0C); the native child never writes y_pos.
     @Override public int getY() { return spawn.y(); }
     @Override public int getPriorityBucket() { return 4; }
+    // SetUp_ObjAttributes3 copies the parent's high art bit; word_86B3E changes only bucket/size/frame.
+    @Override public boolean isHighPriority() { return true; }
     @Override public boolean isPersistent() { return true; }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {

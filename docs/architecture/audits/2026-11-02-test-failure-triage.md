@@ -56,14 +56,14 @@ entries below require reproduction before being called current defects.
 
 | Remaining group | Evidence/status | Severity | Fix complexity |
 | --- | --- | --- | --- |
-| KiS2 EHZ1 (`TestKis2Ehz1TraceReplay`) | Fresh completed replay: 93 errors, including 91 bootstrap errors and animation differences. First bootstrap mismatch is `player_history.pos`, expected `$0068`/slot `$19`, actual `$003F`. | High for parity qualification | Large: native bootstrap/history and animation evidence |
-| Knuckles LBZ2/Big Arm (`TestS3kKnucklesLbz2BigArmTraceReplay`) | Fresh completed replay: 249 errors. Rings start at 55 versus 0; subsequent queue fingerprints also disagree. | High for parity qualification | Large: carried-in progression and queue lifecycle |
-| S3K CNZ (`TestS3kCnzTraceReplay`) | Historical replay plus three slot/air-countdown/path-swap assertions. Not rerun in this task. | High | Large: object allocation/lifetime and strict trace parity |
-| Whole-run chains and S2 halfpipe return | Five historical classes listed below. Not rerun in this task. | High | Large: production handoffs, progression and timing |
-| S3K cold routes/campaigns | Twelve historical classes listed below. Deaths, boss completion, replay or handoff assertions; not rerun in this task. | High | Large: route-specific reproduction and ROM-backed diagnosis |
+| KiS2 EHZ1 (`TestKis2Ehz1TraceReplay`) | Delivered replay advances93→38 errors; animation/cursor/X history now match. Remaining Y slots26–63 expect$0293 versus$0294. Explicit entry provenance/reanchor repair is assigned to the inlet lane. | High for parity qualification | Large: native bootstrap/history evidence |
+| Knuckles LBZ2/Big Arm (`TestS3kKnucklesLbz2BigArmTraceReplay`) | Delivered replay advances249→232 after camera admission and EggRobo-head submission. Rings55/0 and movement945 remain. Queue frontier1454 expects$376876; the proved Big Arm INIT omission is repaired locally but leaves every replay record unchanged. | High for parity qualification | Large: progression, remaining producers and movement |
+| S3K CNZ (`TestS3kCnzTraceReplay`) | The independent pinned-a8 survey reproduces 3,112 errors, first row17322 `camera_x`; active solid-order effort owns this frontier. No fleet rerun. | High | Large: current camera/slot causes require attribution |
+| Whole-run chains and S2 halfpipe return | Full halfpipe return is freshly red on two timestamp axes, uniformly65 rows early; represented gameplay/art comparisons pass. KiS2 chain freshly reproduces its terminal boundary at65856; the glide repair advances CPZ1 from35,443 to23,755 errors, frontier2051→3490. Three other listed classes are unmeasured by this fleet. | High | Large: production handoffs, progression and timing |
+| S3K cold routes/campaigns | MHZ Knuckles and DEZ solo Sonic deaths freshly reproduced. Nine other listed classes are unmeasured. FBZ’s current short witness passes and its removed historical method is not a current failure. | High | Large: route-specific reproduction and ROM-backed diagnosis |
 
 The two fresh red replays reached their prescribed comparison gates and skipped
-no tests. Their first assertions match the old local reports. Neither repair may
+no tests. LBZ retains its carried-rings first assertion; KiS2 now reaches only the remaining Y-slot initialization mismatch. Neither repair may
 hydrate gameplay from expected trace rows or make an assertion weaker. See the
 [bootstrap boundary](../../status/known-discrepancies.md#s3k-complete-run-segment-start-position-bootstrap-debt).
 
@@ -75,9 +75,9 @@ Whole-run/return classes:
 - `TestKis2CompleteEmeraldRunChain`
 - `TestS3kKnucklesSuperEmeraldRunChain`
 
-Cold-route/campaign classes:
+Cold-route/campaign classes (11 remaining identities; only MHZ and DEZ solo
+representatives reproduced in this fleet):
 
-- `TestFbzAct2RouteHeadless`
 - `TestSozColdAct2Capture`
 - `TestDezColdRouteCapture`
 - `TestDezIncomingFinalRouteCapture`
@@ -134,3 +134,89 @@ subsequent sanctuary-only event branch is outside those exercised paths.
 The queue history Python selection passed 32 cases. The combined updated Java
 source is also compiled before integration; this build is not additional test
 coverage. Changelog entries from upstream and this repair are retained together.
+
+
+## Agent fleet integration follow-up
+
+The fleet is scoped to the original inventory, now19 remaining class identities;
+it is not the broader survey's complete inventory. The user has reserved priorities
+and policy decisions for additional survey hypotheses. No new work is started from
+that list, and carried-run-state/trace-input authority is unchanged.
+
+Worker commits `2832c01cf` (glide animation) and `c839a6bde` (boss art admission)
+are preserved in lead merge `91ea642e5`, based on updated `develop` at
+`a8f3f8647`. Lead review added a ready-construction-owner camera-exit regression:
+it failed before the additional service gate and passes after recognizing the
+existing ordinal as ownership. New submissions still require native camera range.
+
+Combined validation completed324 cases:322 functional passes, two known replay
+failures, zero errors/skips. Both replay gates complete; KiS2 is91 bootstrap/zero
+animation errors over1,817 rows, LBZ239 errors (232 physics/seven animation) over
+6,309 gameplay comparisons /6,444 planned rows. The LBZ nonqueue/timing errors
+are identical to the pinned survey baseline. Its active-source mismatch coverage
+shrinks6,248→13 frames, despite splitting into more error spans. This is bounded
+advancement, not a green trace suite. Nine advertised auxiliary comparators remain
+unimplemented. The exact combined selector, pinned ROM citations and coverage
+limits are in the [frontier entry](../../status/trace-frontier-log.md#2026-11-02--kis2-glide-landing-and-lbz2-camera-owned-art).
+
+The historical worker ran four exact methods at unchanged `2557cf5b0` with no
+skips: current FBZ starpost5 passes; MHZ dies at input26853; DEZ solo Sonic dies
+at19924 (historical14721); full S2 halfpipe returns fail only timestamp axes.
+The DEZ difference is not a fleet repair: that worker made no changes. Death
+observations do not identify the damaging contact or prove a ROM discrepancy.
+The halfpipe's represented dynamic-art reports pass5,733 and6,381 comparisons,
+while eight timestamps per return are uniformly65 rows early. No offset is fitted.
+
+KiS2 history/prelude ownership and the LBZ EggRobo-head producer remain in their
+already-assigned implementation slices. CNZ stays with the existing solid-order
+effort. Historical row-stamping and newly surveyed hypotheses receive no new
+assignment while user priorities are pending. The removed FBZ full-route method
+is a coverage obligation, not a currently failing test; its short replacement
+pass does not certify the full route.
+
+
+## Solo history follow-up
+
+Worker `6d8cab5e9`, preserved in merge `6ec3de1a4`, restores leader-history
+recording on existing solo S2 title-card passes. KiS2 EHZ1 advances91→38 errors,
+all in untouched Y slots26–63 ($0293/$0294), with1,817 rows compared and zero
+gameplay/animation errors. Cross-entry integration completes116 cases:114 passes,
+known KiS2/LBZ replay failures, zero errors/skips. S1 GHZ1 and ordinary S2 EHZ1
+remain green; LBZ stays239 errors. The exact selection and bounded-validation
+rationale are in the [frontier entry](../../status/trace-frontier-log.md#2026-11-02--solo-s2-title-card-leader-history-passes).
+
+The remaining history defect involves initialization provenance at both fixture
+construction and sidekick reanchoring. Its edits are handed to the survey lead's
+shared inlet lane to avoid overlap. The KiS2 worker instead owns native glide
+top-boundary speed halving; LBZ owns the missing EggRobo-head art producer.
+These newer assignments supersede the earlier hold on those survey hypotheses.
+Carried-run-state policy and unrelated survey work remain outside this repair.
+
+
+The composed history/EggRobo producer candidate `578f985cc`, including upstream
+music changes through `193e1ff58`, completes179 cases:177 passes, known KiS2/LBZ
+replay failures, zero errors/skips. LBZ advances239→232 by removing exactly seven
+row858–859 records; its complete error profile matches the worker candidate.
+Next producer frontier is1454 (Big Arm archive$376874). KiS2 remains38 untouched
+Y slots, handed to the inlet lane under the accepted merge-order boundary.
+These two test classes remain red; this delivery does not claim trace-suite parity.
+
+
+## Glide boundary and Big Arm INIT follow-up
+
+Glide worker `491be466c` is preserved in integration merge `1f328a17d`. Native
+signed-word boundary and arithmetic shifts pass both-rule adversarial controls;
+composed validation completes275 cases:273 passes, known chain/EHZ1 failures,
+zero errors/skips. CPZ1 compares5,574 rows and retains the worker's23,755 errors,
+with first non-camera mismatch3490 Y speed. The chain still stops at65856; six
+dynamic-art gaps remain. This repair does not qualify the complete run.
+
+Big Arm worker `f0862ebaf` repairs native INIT module submission with a red/green
+descriptor and rewind witness. Its55 controls pass, but every LBZ replay record
+remains identical at232 errors. Native object creation/INIT dispatch at row1454
+is still unattributed. The component correction must not be credited with trace
+advancement. Composed boss validation at `526f8ba24` completes81 cases:80 passes, the
+known LBZ failure, zero errors/skips. Its complete replay profile matches the
+worker exactly. Exact commands and limits are in the frontier log. Remaining high-severity groups above are large campaigns,
+with separately bounded implementation slices assigned where evidence supports
+them. Carried-state policy remains a user decision.

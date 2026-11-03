@@ -715,9 +715,6 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossArenaHelperInstance",
                     "com.openggf.game.sonic3k.objects.TestMhzEndBossArenaHelperRewind"),
             Map.entry(
-                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController",
-                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossExplosionController"),
-            Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild",
                     "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossHitProxyRewind"),
             Map.entry(
@@ -735,6 +732,9 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherMachineChild",
                     "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherMachineRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic3k.objects.bosses.MhzEndBossExplosionController",
+                    "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossExplosionController"),
             Map.entry(
                     "com.openggf.game.sonic3k.objects.bosses.MhzEndBossWeatherVisualChild",
                     "com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossWeatherVisualRewind"),

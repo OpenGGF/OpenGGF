@@ -52,6 +52,13 @@ final class PlayableSpriteRuntimeServices {
                 return module != null ? module.getLevelEventProvider() : null;
         }
         static boolean bossOwnsMusic(AbstractPlayableSprite sprite) {
+                // Obj01_ChkInvin (S2) reads Current_Boss_ID; Sonic_ChkInvin (S3K)
+                // reads Boss_flag. Boss objects publish that native ownership through
+                // game state even when the event manager's encounter flag is clear.
+                GameStateManager state = gameStateOrNull(sprite);
+                if (state != null && state.getCurrentBossId() != 0) {
+                        return true;
+                }
                 return levelEventsOrNull(sprite) instanceof com.openggf.game.AbstractLevelEventManager events
                                 && events.isBossActive();
         }

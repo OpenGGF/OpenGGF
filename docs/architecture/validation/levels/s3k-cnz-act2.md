@@ -388,3 +388,11 @@ and22 owning live-rewind controls (24T/0F/0E/0S). All63 current registry keys,
 above remains its historical source epoch. See the
 [exact command, source fingerprint and limits](../../plans/2026-10-22-native-gap-swarm.md#cnz2-cold-handoff-observes-the-admitted-live-history-floor--2026-10-23).
 This does not qualify the other CNZ/ICZ routes, native timing, breadth or full acts.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

@@ -350,7 +350,8 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
             camera.setMinX((short) CAMERA_LOCK_X);
             camera.setMaxX((short) CAMERA_LOCK_X);
             services().gameState().setCurrentBossId(9);
-            services().fadeOutMusic();
+            // Shipped PlaySound route: SFX admission may crowd out this fade.
+            services().playSfx(0xF9);
         }
     }
 
