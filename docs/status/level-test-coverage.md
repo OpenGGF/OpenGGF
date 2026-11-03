@@ -2585,3 +2585,10 @@ Iwamodoki self-destruct follow-up (2026-11-02): the
 and [LRZ2](../architecture/validation/levels/s3k-lrz-act2.md#iwamodoki-rider-release-2026-11-02)
 matrices record the bounded P1/P2 shield/rider regression and inherited route,
 breadth and rewind obligations.
+
+SSZ diagonal transfers and arrival animation (2026-11-03): the
+[act-1 local increment](../architecture/validation/levels/s3k-ssz-act1.md#diagonal-bridge-transfer-and-arrival-animation-2026-11-03)
+adds Sonic/Tails and Tails rolling-transfer restore/replay and real-jump controls
+at320/800, plus a scripted-arrival animation assertion. Existing collapse and
+compatibility checks remain green. This closes the local bridge handoff gap;
+full-act/native sequences and remaining donor/participant breadth stay open.
