@@ -123018,3 +123018,39 @@ Integration verification: merge `f3328a72e` vs develop `982b279d5` in separate w
 profiles (forkCount=1, alphabetical, JDK 25, original ROMs, surfaceless EGL). r6 886/13/1/7 identical
 for every case; r7 117 tests: the only change is `TestS3kSozCompleteRunTraceReplay` 3155@32951 → **green**;
 seg 70/48/8/0 identical for every case.
+
+## 2026-11-03 — Wave 2 of the trace survey: MGZ green, post-return art queue, HCZ/LRZ, Bubbles, insta-shield rewind
+
+Five lane branches, validated together on integration tree `d79147386` (+ coverage inventory fix), base develop
+`e4b8857a8`. All runs used forkCount=1, alphabetical order, JDK 25, original ROMs and surfaceless EGL, with
+before/after comparison per testcase. No class newly red and no first error earlier.
+
+- `bugfix/ai-trace-post-return-art-queue` (`df655bc08`, lead follow-up `36225e97f`): the run-chain harness
+  re-anchored a bonus-return level at row 1, skipping the first real LevelLoop dispatch after title release
+  (`loc_6468` / `loc_64DC`, sonic3k.asm:7880-7915). LoadEnemyArt was then submitted after its completion
+  edge and the KosM queue stalled. `TestS3kMegaRunChain`: returned AIZ segment 12260 errors @34 →
+  112 @186; the chain now stops at segment 3 ("lost production ownership", AIZ2 title card). Tails FBZ2's
+  "FIFO full" is a separate extra ring-restoration submission (FBZ, other fleet). KosM caller receipts are
+  collected only under `openggf.debug.kosm`.
+- `bugfix/ai-trace-endsign-control-order` (`2fe981642`): the MGZ boss SST becomes EndSignControl through
+  native allocators, so control runs in slot 7 before results in slot 8 (`loc_887CA (sonic3k.asm:185107-185110)`,
+  `Obj_EndSignResults (sonic3k.asm:176326-176337)`). **`TestS3kMgzTraceReplay` 4 @14384 → green**
+  (35861 rows).
+- `bugfix/ai-trace-killed-badnik-touch` (`cb56a6d22`): the survey's stale-collision hypothesis was disproved.
+  Bubbles initialised during its offscreen-wait return rather than on the next pass (`Obj_WaitOffscreen /
+  loc_85B02 (sonic3k.asm:180362-180394)`). Together with the EndSignControl fix,
+  **`TestS3kMgzZoneSliceTraceReplay` 7921 @5255 → green**. Sonic+Tails MGZ 4100 → 3440 (first error at 10709
+  unchanged).
+- `bugfix/ai-trace-tails-cpu-respawn-counter` (`420bb6473`): not a CPU-counter bug. The HCZ2 shake phase was
+  published one setup early (`HCZ2_ScreenEvent`), and the LRZ big door unloaded mid-opening (`loc_42AAE` /
+  `loc_42B08`, sonic3k.asm:88157-88191). HCZ slice 609 @12236 → 608 @28814 `x`; Sonic+Tails LRZ
+  8328 @2355 → 8325 @2726 `tails_y_speed`.
+- `bugfix/ai-trace-attracted-ring-shield-rewind` (`ed3771e8b`, `3e581b965`): `27410c3bb`'s reload guard
+  dropped the captured insta-shield on rewind restore. **`TestS3kAttractedRingMoviePhase` (both methods)
+  → green.** The first version broke `TestS3kTailsFullChainRunPrefix.openingPrefixReleasesInputBeforeColdCaptureRewind`
+  (caught during integration, attributed by an EndSignControl-only control run, fixed in `3e581b965`).
+
+Integration results vs `e4b8857a8` (SOZ merge run): r6 886 tests, 13 → 9 failures (MGZ trace, AttractedRing ×2 green;
+the other cases are identical); r7 117, only Mega (error → later failure) and Sonic+Tails LRZ change; seg 70, HCZ slice / MGZ slice /
+Sonic+Tails MGZ / Sonic+Tails LRZ as above. Ordinary: 219 touched-class + keep-green pass; rewind sweep/inventory/ratchet +
+MGZ miniboss 1361 pass, zero skips.
