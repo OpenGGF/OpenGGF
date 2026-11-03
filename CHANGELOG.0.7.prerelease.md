@@ -32,6 +32,16 @@ Unreleased. The earlier development themes remain in
 
 - MGZ swinging platforms use native fractional chain arithmetic and execution-order inputs instead of fitted slot/angle carry tables; spring animation starts from the native cleared timer.
 
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Fixtures without the field keep their previous setup.
+
+- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
+  fresh entry, for every character.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership. Bonus entry
   also reserves its fade-completion iteration, preventing premature title-loop
@@ -1854,6 +1864,13 @@ its original drawing priority.
   ROM, art and renderer failures remain visible. A ROM-free source guard ratchets
   existing broad catch handlers across main Java sources, with explicit legacy
   inventory and adversarial scanner controls.
+
+- Standalone S3K run segments enter with the run state the ROM carried in:
+  rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
+  Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
+  the segment's recorded entry row; nothing is written after entry. Standalone
+  special stages select their stage and Chaos or Super layout set through the
+  ROM's own search instead of defaulting to the Chaos set.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow

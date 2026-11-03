@@ -26,6 +26,14 @@ harnesses.
 - **Pre-trace bootstrap is fine.** Setting starting position, RNG seed, oscillation pre-advance,
   and frame counter once at frame 0 is "load a save state at the BK2 starting point". The
   prohibition is on per-frame write-back during the comparison loop.
+- **Carried run state enters once, through one mechanism.** A standalone run segment starts
+  with the run state the ROM carried in from the previous segment: rings, emerald progress,
+  used giant rings, Player 1's shield and path bits. `TraceSegmentCarriedStateImport` resolves
+  these from the run manifest and the segment's own recorded entry row and imports them at
+  segment entry. Special-stage segments pick their stage from the same state through the ROM's
+  `sub_85B0` search. A variable no recording establishes is reported as unresolved, not
+  guessed. State is never invented mid-run, and run-chain continuations never import. See
+  [segment carried run state](../../architecture/designs/2026-11-03-segment-carried-run-state.md).
 
 If a trace replay test passes only because engine state is snapped back to ROM-correct values
 each frame, the engine has not been verified — it has been masked. Honest tests force honest
@@ -122,9 +130,26 @@ must verify that the value came from the native recorder and matching inputs.
 Missing endpoint evidence fails before engine boot. Partial
 runs, round trips and prefix/frontier checks retain optional endpoints through
 their existing replay helpers. A `complete_run` segment profile or a full-run
-filename does not supply an endpoint observation. See the
+filename does not supply an endpoint observation. The three S3K
+campaign manifests (Knuckles Super Emerald, Tails full chain, Sonic+Tails complete
+emeralds) carry the native observation `title_screen`, captured by TraceChaser
+from the final input frame; see the
 [five-manifest audit](../../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md)
-for the current capture blocker; do not fill missing observations by hand.
+for the history. Do not fill missing observations by hand.
+
+Segment entry kind comes only from the recorder's `level_entry_placement_source`
+(`start_table`, `starpost_restore`, `special_stage_restore`): the placement branch
+the ROM took when that segment's load began (S3K `loc_1BE46` /
+`Load_Starpost_Settings`, S2 `LevelSizeLoad`). `TraceReplayBootstrap` maps it in
+`recordedEntryPlacementProvenance`: an S3K start-table segment boots as a fresh
+post-spawn body (ROM camera derivation including the Tails-alone +4), an S3K
+restore as a post-spawn return (zone intros skipped, as `SpawnLevelMainSprites`
+does), and an S2/KiS2 start-table segment with a native title-card prelude as a
+native load. S2 restores and fixtures without the field keep the unclassified
+setup. Coordinates, manifest topology and run names never select the entry kind.
+The same observation records `last_star_post_hit`, the raw star-post byte the load
+read (bit 7 retained on special-stage returns). Replay does not read it yet; it is
+the ROM-observed index for importing carried segment state.
 
 Trace replay tests require:
 

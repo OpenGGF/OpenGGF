@@ -44,6 +44,10 @@ public class TraceData {
     // so recomputing them made replay quadratic in trace length.
     private List<TraceEvent.DynamicArtTransferState> cachedDynamicArtTransferStates;
     private Boolean cachedHasRecordedPreLevelPrefix;
+    // Directory the trace was loaded from, or null for in-memory fixtures. A
+    // run segment's carried entry state is resolved from its run manifest,
+    // which sits beside (or, for standalone copies, near) this directory.
+    private Path sourceDirectory;
 
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
@@ -90,6 +94,7 @@ public class TraceData {
         HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
         TraceData trace = new TraceData(metadata, frames, events, hardwareTimingSchedule);
+        trace.sourceDirectory = traceDirectory;
         trace.validateAdvertisedLoadQueueStates();
         trace.validateAdvertisedDynamicArtTransferStates(
                 StoredPhysicsFrameDomain.fromTraceFrames(frames),
@@ -152,6 +157,7 @@ public class TraceData {
 
         TraceData trace = new TraceData(
                 metadata, Collections.emptyList(), events, hardwareTimingSchedule);
+        trace.sourceDirectory = traceDirectory;
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         StoredPhysicsFrameDomain frameDomain = physicsPath == null
                 ? null
@@ -168,6 +174,11 @@ public class TraceData {
     }
 
     public TraceMetadata metadata() { return metadata; }
+
+    /** Directory this trace was loaded from; empty for in-memory traces. */
+    public java.util.Optional<Path> sourceDirectory() {
+        return java.util.Optional.ofNullable(sourceDirectory);
+    }
     public HardwareTimingSchedule hardwareTimingSchedule() { return hardwareTimingSchedule; }
     public int frameCount() { return frames.size(); }
 
