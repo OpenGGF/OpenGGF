@@ -624,3 +624,86 @@ fixtures, not act certification. These figures describe the focused runs;
 full-profile comparison is a separate delivery gate. Wider character, donor, viewport, team, native presentation and complete
 route/lifecycle obligations remain open. The separately identified raw-animation
 callback continuation discrepancy is unchanged by this correction.
+
+## Collected shield rewind ownership — 2026-11-03
+
+A focused `git bisect run` from `a8f3f8647` to `e4b8857a8` identifies
+`27410c3bb` as the first failure of both attracted-ring movie methods.
+`ca7fe51a3` passes; the culprit correctly protects collected-shield ownership
+on seamless reload, but its live-registration guard also skipped a captured
+dormant Insta-Shield during rewind reconstruction. A temporary probe in both
+movies observed the deferred slot100/dynamicId0 entry, then the guard executing
+with `registered=true`, `registerNow=true`, LIGHTNING, and only the elemental
+shield active. These movie windows are cold MGZ1 entry and collection, not an
+act-reload route.
+
+`Monitor_Give_LightningShield (sonic3k.asm:40904-40921)` writes the owning
+player's fixed Shield SST; `Obj_LightningShield_Destroy
+(sonic3k.asm:34824-34827)` writes Obj_InstaShield back to that same slot.
+The engine represents this with a retained dormant alias plus an elemental
+owner, and its snapshot contract compares both identities. S3K Insta-Shield
+reconstruction now returns and rebinds the captured object directly; existing
+manager restore ordering preserves the elemental executing occupant. Live
+reload registration remains deferred. No comparison, movie, gameplay state,
+shared rewind algorithm or object manager is changed.
+
+`TestS3kActTransitionShieldContinuity` adds FIRE/LIGHTNING/BUBBLE checks for exact
+object-manager/player round-trips and subsequent elemental dispatch. The two
+independent attracted-ring movies remain the production registry/forward-replay
+witnesses. This bounded fix leaves this matrix's inherited route, donor,
+viewport and team gaps open.
+
+Validation on `e4b8857a8` plus the focused reconstruction change: both movie
+methods pass (2 tests, zero failures/errors/skips); reverting only the source
+change reproduces both original missing-entry failures. The focused shield,
+rewind, reload and S3K keep-green selection passes 1,570 tests with zero failures
+or errors and one visual capture skip (`TestInstaShieldVisual`: GPU init failed in the
+display-free environment).
+`TestEveryObjectRewindRoundTrip` contributes 1,342 passing cases; all 25 shield
+continuity cases pass, including the three new restore/dispatch cases. No
+shared rewind or object-manager source changed, so the shared-runtime three-profile
+gate is not invoked. These are focused results, not full-suite qualification.
+
+
+### Cold-capture consumer correction — 2026-11-03
+
+Integration found that `ed3771e8b` reconstructed unshielded native handles too,
+beyond the collected-shield ownership case. On that branch,
+`TestS3kTailsFullChainRunPrefix.openingPrefixReleasesInputBeforeColdCaptureRewind`
+failed with slot100/dynamicId8 playback differences: previous animation -1→0,
+frame index 0→1, delay 0→19, mapping 0→6. The method completes a Tails prefix,
+then boots **Sonic** into SOZ2 for the cold capture; this slot is the Sonic
+Insta-Shield, not Tails' tails object. The original focused selection missed
+this production cold-capture consumer.
+
+Direct reconstruction is now confined to a collected shield owning the shared
+SST, plus the previously supported directed overlays. Unshielded native entries
+retain their prior deferred restore and existing player-owned handle, avoiding
+constructor-time binding of an animation set absent in the captured cold world.
+No cursor is reset or advanced by reconstruction, and all snapshot comparisons
+remain unchanged. Matched before/after selections include all eleven concrete
+`*RunPrefix`/`*RunChain` classes across the r6/r7 profiles, as well as the two
+attracted-ring movies and object rewind round-trips. Existing terminal-evidence,
+run-boundary and art-queue failures remain separately attributed; this local
+correction does not claim to repair those campaigns or the act's inherited gaps.
+
+A temporary reconstruction probe confirmed `owner=sonic`, `shield=null`,
+`old=InstaShieldObjectInstance`, `oldBound=false`, `probeBound=true` twice in
+the failing method. The narrowed path passed that method (one test, zero
+failures/errors/skips); the probe was removed before the final consumer runs.
+
+Final matched consumer results: r6 has 11 tests / 3 failures / 1 error / zero
+skips before and after; r7 improves from 7 tests / 1 failure / 3 errors / zero
+skips to 7 / 0 / 3 / 0. Only the Tails prefix assertion changes, from the cold
+restore failure to passing. All other test identities and assertion messages
+match exactly. All 86 r6 and 8 r7 parsed JSON summaries (error counts,
+verification groups and retained mismatch lists) are identical; no added or
+earlier reported mismatch appears. The two attracted-ring movie methods pass
+with zero failures/errors/skips. Complete campaigns remain red for the
+pre-existing assertions described above; these are bounded consumer checks,
+not a full-profile or full-suite pass.
+
+The final focused object/shield/keep-green selection passes 1,465 tests with
+zero failures, errors or skips, including all 1,342 object round-trip cases and
+all 25 elemental continuity cases. All runs use forkCount1, the original absolute
+ROM paths, Java25 and surfaceless EGL; no animator or comparison code changed.
