@@ -9,6 +9,15 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 2 level start:** The title card spends the extra frame the shipped
+  game waits after the zone name lands, and its exit runs the camera and zone
+  events only on the frame the blue background starts to leave. Casino Night's
+  slot machine therefore draws its first reels on the native frame, a finished
+  spin pays out on the frame the cage sees it, and the seventh-emerald and
+  Knuckles in Sonic 2 results return to the level on the same frame as ordinary
+  results. Hill Top and Mystic Cave events read the level frame counter the
+  shipped game reads.
+
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
   descends to its pacing height. It previously stayed on layer 3, which is the

@@ -374,6 +374,14 @@ public final class LevelFrameStep {
                                 .shouldRunLevelOnlyFixedSlotsDuringLockedPhase())
                 ? spriteManager
                 : null;
+        // A locked title-card object pass can omit the main loop's scroll and
+        // dynamic-event routine: S2's leave loop (docs/s2disasm/s2.asm:5060-5066)
+        // reaches DeformBgLayer only from Obj34_BackgroundOutInit
+        // (s2.asm:27587-27596). See LockedTitleCardLevelStepGate.
+        boolean runsLevelScrollAndEvents = phase != PlcLifecyclePhase.LEVEL_TITLE_CARD
+                || !(context.gameModule().getTitleCardProvider()
+                        instanceof com.openggf.game.internal.LockedTitleCardLevelStepGate gate)
+                || gate.runsLevelScrollAndEventsThisLockedPass();
         // 2. Player-slot ReactToItem runs before ExecuteObjects, so touch checks
         //    read a frame-start snapshot of object touch state.
         levelManager.prepareTouchResponseSnapshots();
@@ -391,12 +399,15 @@ public final class LevelFrameStep {
 
         // 3. Object slots in slot order; each object resolves its own solid
         //    calls, so later objects see earlier contact adjustments.
+        Runnable zoneFeaturesAfterObjects = runsLevelScrollAndEvents
+                ? levelManager::updateZoneFeaturesAfterObjectExecution
+                : () -> { };
         Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
                 ? () -> {
                     levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
-                    levelManager.updateZoneFeaturesAfterObjectExecution();
+                    zoneFeaturesAfterObjects.run();
                 }
-                : levelManager::updateZoneFeaturesAfterObjectExecution;
+                : zoneFeaturesAfterObjects;
         wrapper.wrap("objects",
                 () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
                         afterExecBeforePlacement, false));
@@ -418,7 +429,8 @@ public final class LevelFrameStep {
         //    before post-camera placement/level scroll without moving event writes
         //    ahead of the ROM camera scroll.
         LevelEventProvider levelEvents = context.levelEventProvider();
-        boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
+        boolean cameraDrivenScroll = runsLevelScrollAndEvents
+                && levelManager.advanceCameraDrivenScrollForFrame();
 
         BonusStageProvider bonusStageProvider = context.bonusStageProvider();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
@@ -453,7 +465,7 @@ public final class LevelFrameStep {
 
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
-        if (!suppressDefaultCamera && !cameraDrivenScroll
+        if (runsLevelScrollAndEvents && !suppressDefaultCamera && !cameraDrivenScroll
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
@@ -473,7 +485,8 @@ public final class LevelFrameStep {
 		if (!levelExitRequestedDuringObjects) {
 		    camera.captureRenderCopy();
 		}
-		if (levelEvents != null && !levelExitRequestedDuringObjects) {
+		if (runsLevelScrollAndEvents && levelEvents != null
+                && !levelExitRequestedDuringObjects) {
             levelEvents.update();
         }
 
@@ -551,7 +564,7 @@ public final class LevelFrameStep {
         // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and
         //     record the boundary state for the NEXT frame's scroll clamp.
-        if (!suppressDefaultCamera && !cameraDrivenScroll
+        if (runsLevelScrollAndEvents && !suppressDefaultCamera && !cameraDrivenScroll
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);

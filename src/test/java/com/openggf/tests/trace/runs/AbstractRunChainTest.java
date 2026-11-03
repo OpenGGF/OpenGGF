@@ -1941,6 +1941,9 @@ abstract class AbstractRunChainTest {
                 int prepared = prepareAcrossLevelBoundary(
                         loop, playback, probe, movie, seg, next, stepCap,
                         levelAtSegmentStart);
+                anchorInterLevelVblankBeforeGapWalk(
+                        seg, next, prepared, semanticSourceTailVblank,
+                        playback.getCursorFrame());
                 int rowsConsumed = admitLevelWhenReady(
                         gameplayMode, loop, playback, runCoordinator, exit, obs, next,
                         prepared, stepCap,
@@ -3870,6 +3873,64 @@ abstract class AbstractRunChainTest {
             // count (notably S1's six-row death/act seam).
             objectManager.initVblaCounter(sourceTailVblank + requiredTicks);
         }
+    }
+
+    /**
+     * Re-anchors the object V-blank clock before {@link #admitLevelWhenReady}
+     * walks the rest of a level-entry gap, so the walk ENDS on the movie budget
+     * instead of starting there.
+     *
+     * <p>{@link #prepareAcrossLevelBoundary} reconciles the clock to the
+     * destination's first-row budget the moment the destination level is
+     * active. On a census-driven entry that moment is the start of the ROM's
+     * {@code Level:} work, not its end: the walk then plays every remaining
+     * gap row -- the masked load block, the title-card arrival, the
+     * {@code LoadZoneTiles} upload, the load lag and the leave loop -- and
+     * each of those rows ticks the clock exactly once
+     * ({@link #serviceLagRowVint} on a lag row, the engine step or
+     * {@link #serviceSuppressedRowVint} on an admitted one). Every clock read
+     * during the title card was therefore the gap's whole length ahead, and
+     * the post-walk reconcile rewound it only after title-card work had
+     * consumed it: CNZ's {@code SlotMachine_Routine1} seeds the reels from
+     * {@code Vint_runcount} (docs/s2disasm/s2.asm:59438-59460) on a leave-loop
+     * iteration, and kept a seed the ROM never drew.
+     *
+     * <p>Subtracting the rows still to be walked places the anchor where the
+     * walk's own one-tick-per-row ends on the same budget. The budget's masked
+     * rows (the interrupt-masked block at docs/s2disasm/s2.asm:4768-4772 that
+     * clears the screen and loads the title-card art) are the gap's first
+     * non-admitted rows, which the walk still ticks; the clock is exact
+     * from the end of that block on, and no object or title-card owner runs
+     * inside it. The post-walk reconcile stays as the check that the
+     * choreography spent the movie rows it was given.
+     *
+     * <p>Movie-clock pacing only: the inputs are the engine's own source-tail
+     * counter, the manifest budget and the BK2 cursor. No trace field is read
+     * into engine state.
+     */
+    private void anchorInterLevelVblankBeforeGapWalk(
+            TraceRunSegmentDescriptor currentLevel,
+            TraceRunSegmentDescriptor nextLevel,
+            int preparedFramesConsumed,
+            int sourceTailVblank,
+            int cursorFrame) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignsInterLevelVblank()) {
+            return;
+        }
+        int rowsStillToWalk = nextLevel.segment().bk2FrameOffset()
+                + preparedFramesConsumed - cursorFrame;
+        if (rowsStillToWalk <= 0) {
+            return;
+        }
+        int requiredTicks = TraceRunReplayWalker.interLevelVblankBudget(
+                currentLevel.segment(), nextLevel.segment(), preparedFramesConsumed,
+                TraceRunVblankClock.maskedLevelEntryLoss(
+                        profile, nextLevel.segment()));
+        GameServices.level().getObjectManager().initVblaCounter(
+                Math.subtractExact(
+                        Math.addExact(sourceTailVblank, requiredTicks),
+                        rowsStillToWalk));
     }
 
     /**

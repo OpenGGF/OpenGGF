@@ -169,8 +169,26 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         // Dispatch to zone-specific event handler
         Sonic2ZoneEvents handler = getActiveHandler();
         if (handler != null) {
-            handler.update(currentAct, frameCounter);
+            handler.update(currentAct, levelFrameCounter());
         }
+    }
+
+    /**
+     * The native {@code Level_frame_counter} word the zone handlers read
+     * (for example LevEvents_HTZ, docs/s2disasm/s2.asm:20772-20786, and
+     * LevEvents_MCZ2_Routine4, :21498). {@code Level} clears it
+     * (s2.asm:4772-4773) and only {@code Level_MainLoop} advances it
+     * (:5092), so the leave loop's single {@code DeformBgLayer} reads zero.
+     * This manager's own update count also counts that locked call and is not
+     * the ROM word.
+     */
+    private int levelFrameCounter() {
+        var title = GameServices.module().getTitleCardProvider();
+        if (title != null && !title.shouldReleaseControl()) {
+            return 0;
+        }
+        var sprites = GameServices.spritesOrNull();
+        return (sprites != null ? sprites.getFrameCounter() : frameCounter) & 0xFFFF;
     }
 
     @Override

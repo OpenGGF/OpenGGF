@@ -235,6 +235,44 @@ class TestPointPokeyObjectInstance {
     }
 
     @Test
+    void completedReelsEnterThePayoutInTheSameCageInvocation() throws Exception {
+        var state = GameModuleRegistry.getCurrent().getGameService(
+                com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.class);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1DC0, (short) 0x0368);
+        player.setGameRulesForTest(GameRules.SONIC_2);
+        PointPokeyObjectInstance pokey = new PointPokeyObjectInstance(
+                new ObjectSpawn(0x1DC0, 0x0368, 0xD6, 1, 0, false, 0), "PointPokey") {
+            @Override
+            protected boolean isWithinOnScreenRenderBounds() {
+                return true;
+            }
+        };
+        var module = GameModuleRegistry.getCurrent();
+        ObjectManager objects = new ObjectManager(List.of(), null, 0, null, null, null,
+                GameServices.camera(), new StubObjectServices() {
+                    @Override public com.openggf.game.GameModule gameModule() { return module; }
+                });
+        objects.addDynamicObject(pokey);
+        invokeCapture(pokey, player);
+        Field manager = PointPokeyObjectInstance.class.getDeclaredField("slotMachineManager");
+        manager.setAccessible(true);
+        manager.set(pokey, new com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager() {
+            @Override public boolean isComplete() { return true; }
+            @Override public int getReward() { return -1; }
+        });
+        setIntField(pokey, "playerState", 2);
+
+        pokey.update(0, player);
+
+        Field playerState = PointPokeyObjectInstance.class.getDeclaredField("playerState");
+        playerState.setAccessible(true);
+        assertEquals(3, playerState.getInt(pokey));
+        assertEquals(1, state.capture(),
+                "loc_2BDF8 branches to loc_2BC86 on the pass that sees routine $18, so the bomb "
+                        + "payout reaches loc_2BD48 in that same invocation (s2.asm:59315-59322)");
+    }
+
+    @Test
     void bombSoundCounterIsSessionOwnedWrappedAndRewindable() {
         var module = GameModuleRegistry.getCurrent();
         var state = module.getGameService(com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState.class);
