@@ -14,6 +14,9 @@ Unreleased. The earlier development themes remain in
   its native start history. The three S3K campaign chains also record their
   movie endpoint. Fixtures without the field keep their previous setup.
 
+- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
+  fresh entry, for every character.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 
