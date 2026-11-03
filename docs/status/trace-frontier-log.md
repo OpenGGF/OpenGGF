@@ -123391,3 +123391,45 @@ not a green campaign or a landed timing fix. Both adapter handoffs, the early
 bonus title gate, semantic synchronous-load clocks and a distinct continuous
 BK2 remain open. Exact queue and total wall time are unknown; credited refined
 Maven execution was 57.244s after a last observed 602s queue wait.
+
+
+## 2026-11-03 — Bonus-entry fade completion retains its native owner
+
+Base `12a6febc5`, isolated `bugfix/ai-bonus-entry-fade-owner`. Bonus entry used
+raw FadeManager while return registered the existing blocking-fade owner.
+The correction reserves the completion iteration before its callback installs
+TITLE_CARD. No wait value, job identity, timing input or trace adapter changes.
+The [phase evidence](../architecture/audits/2026-11-03-s3k-load-clock-causal-accounting.md#bonus-entry-blocking-fade-correction)
+keeps this separate from the rejected source-tail/readiness experiment.
+
+A new real-token regression fails unchanged production:23 tests/1 failure,
+0 errors/skips;22 existing controls pass. With the correction,
+`python3 tools/testing/maven_queue.py -Dmse=off -B '-Dtest=TestGameLoopBonusStageSession,TestPlcFrameLifecycleCoordinator' test`
+passes54 tests,0 failures/errors/skips. The original display-free JDK25/EGL Mega
+command in the audit now gives native locked-title spans70/80/83; terrain remains
+5/26/13 versus native10/26/26. Admission clocks5519/6925/9046 leave cumulative
+deficits10/32/51. The33 synchronous interrupts and18 shorter terrain-wait ticks
+remain open; no compensating title/terrain tick was added.
+
+Mega remains1 test/1 known `stage_exit` boundary failure,0 errors/skips. Slots
+retains complete comparison,7891 reported errors and first noncamera row268
+`y_speed` ROM0/engine -$0400. This matches baseline failure identity, count and
+first mismatch, not complete error-vector equivalence or campaign qualification.
+Initial/returned AIZ reports stay zero-error partial reports. Native phase
+logging is temporary and removed from delivered source. A second continuous
+BK2 and the broader readiness/synchronous-load corrections remain unqualified.
+
+Final logging-free validation also passes all92 admission, authority and required
+S3K loading checks,0 failures/errors/skips, with verified ROMs found and missing
+none. The exact focused selection and coverage limits are in the audit.
+
+Updated-base qualification: `e07b75a90` arrived during validation with shared
+player/physics work. Task changes reapplied without conflicts. Matched r7 runs
+select `TestGameLoopBonusStageSession,TestS3kMegaRunChain`: baseline24 tests/2
+failures (new token regression plus known Mega failure), candidate24/1 known
+Mega failure,0 errors/skips in both. All four segment JSON reports compare equal
+as projections; native phase observations remain as above. Logging-free final
+validation adds the lifecycle coordinator to the preceding focused selection:
+123 pass,0 failures/errors/skips; with23 bonus tests this is146 current-base
+focused passes. Exact commands, timing limits and the4438-class smoke-plan
+rationale are in the audit. No broader campaign qualification is claimed.

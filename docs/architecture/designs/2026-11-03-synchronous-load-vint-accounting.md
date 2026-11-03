@@ -185,3 +185,10 @@ not establish correct phase ownership. Mega reaches an earlier ownership failure
 and the independent cold-start control does not reach its bonus. Both adapters,
 title-gate ordering and a valid continuous second movie remain qualification
 obligations. This proposal remains deferred; no runtime load price is introduced.
+
+The subsequent [blocking-fade correction](../audits/2026-11-03-s3k-load-clock-causal-accounting.md#bonus-entry-blocking-fade-correction)
+uses the existing production owner at bonus entry. It restores the measured
+locked-title spans to native 70/80/83 without the rejected readiness handoff.
+The current residual is51 ticks:33 measured synchronous interrupts and18
+shorter terrain waits. This closes the bounded title-loop discrepancy, not
+the synchronous-load design or another campaign's qualification.
