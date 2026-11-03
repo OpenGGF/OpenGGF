@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- HCZ2 end-boss swing resumes from the live rise velocity and retains the native fractional Y position.
+
 - HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.
 
 - HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.

@@ -157,7 +157,6 @@ public class HczEndBossInstance extends AbstractBossInstance
     private S3kSharedBossCameraGate cameraGate;
 
     // Movement state (Task 6)
-    private int swingVelocity;
     private boolean swingDown;
     private int hoverCentreY;
     private int savedPatrolVel = -0x100;
@@ -236,7 +235,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         propellerActive = false;
         bladeFireSignal = false;
         defeatSignal = false;
-        swingVelocity = 0;
+        state.yVel = 0;
         swingDown = false;
         hoverCentreY = 0;
         savedPatrolVel = -0x100;
@@ -525,10 +524,9 @@ public class HczEndBossInstance extends AbstractBossInstance
      */
     private void updateSwingAndWait() {
         SwingMotion.Result result = SwingMotion.update(
-                SWING_ACCEL, swingVelocity, SWING_AMPLITUDE, swingDown);
-        swingVelocity = result.velocity();
+                SWING_ACCEL, state.yVel, SWING_AMPLITUDE, swingDown);
         swingDown = result.directionDown();
-        state.yVel = swingVelocity;
+        state.yVel = result.velocity();
 
         state.applyVelocity();
         tickWait();
@@ -544,9 +542,8 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void onDescentComplete() {
         state.routine = ROUTINE_HOVER_WAIT;
         hoverCentreY = state.y;
-        swingVelocity = SWING_AMPLITUDE;
+        state.yVel = SWING_AMPLITUDE;
         swingDown = false;
-        state.yVel = 0;
         directionCounter = 0x9F; // initial direction counter (ROM: loc_6AF80)
         setWait(0x3F, WaitCallback.PRE_ATTACK_WAIT_COMPLETE);
     }
@@ -587,8 +584,9 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void onStRiseComplete() {
         state.routine = ROUTINE_PRE_ATTACK;
         state.y = hoverCentreY;
-        state.yFixed = hoverCentreY << 16;
-        state.yVel = 0;
+        // HCZEndBoss_SetSidePassFromOrigin writes only y_pos and retains
+        // the rise's y_vel for Swing_UpAndDown (sonic3k.asm:140961-140967).
+        state.yFixed = (hoverCentreY << 16) | (state.yFixed & 0xFFFF);
         setWait(0xFF, WaitCallback.BEGIN_ATTACK_PHASE);
     }
 
@@ -608,7 +606,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         attackPassCounter = 8;
         setWait(0xBF, WaitCallback.ATTACK_PASS_COMPLETE);
         // Re-init swing
-        swingVelocity = SWING_AMPLITUDE;
+        state.yVel = SWING_AMPLITUDE;
         swingDown = false;
     }
 
@@ -619,10 +617,9 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void updateAttackPatrol() {
         // Swing oscillation
         SwingMotion.Result result = SwingMotion.update(
-                SWING_ACCEL, swingVelocity, SWING_AMPLITUDE, swingDown);
-        swingVelocity = result.velocity();
+                SWING_ACCEL, state.yVel, SWING_AMPLITUDE, swingDown);
         swingDown = result.directionDown();
-        state.yVel = swingVelocity;
+        state.yVel = result.velocity();
 
         // Apply velocity (both X and Y)
         state.applyVelocity();

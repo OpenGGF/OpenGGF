@@ -1162,3 +1162,19 @@ The local grab-range control and focused boss/graph/keep-green selection pass
 groups at row 28879 to 600 at row 28970 `tails_y`; all ten sibling error lists
 remain identical to the paired-suction baseline. The next frontier is an early
 P2 turbine contact, with the native boss/turbine one pixel above the engine.
+
+
+## End-boss rise-to-swing ownership — 2026-11-03
+
+`HCZEndBoss_SetSidePassFromOrigin` (sonic3k.asm:140961-140967) writes only
+integer Y and retains `y_vel`; `Swing_UpAndDown` (sonic3k.asm:177947-177981)
+then reads that live velocity. The engine probe observes `075AD000/FF00`
+before the handoff, but the old owner discards `D000` and resumes cached
+`FFA0`. The boss now uses its live velocity throughout swing and preserves
+the fraction on the integer reset. Shared swing code is unchanged.
+
+The independent fractional-position/live-velocity control and the affected
+boss/rewind/keep-green selection pass 86 cases without skips. The slice moves
+from 600 errors at 28970 to 549 at 29136 `tails_x`, and all ten sibling HCZ
+error lists remain identical. Broader route/configuration and pending-main
+initialization restore obligations remain inherited.

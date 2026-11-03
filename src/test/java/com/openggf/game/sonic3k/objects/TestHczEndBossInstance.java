@@ -35,6 +35,31 @@ class TestHczEndBossInstance {
     }
 
     @Test
+    void postRiseSwingUsesLiveVelocityAndRetainsPositionFraction() throws Exception {
+        TestObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.createStandalone());
+        HczEndBossInstance boss = ObjectConstructionContext.construct(services,
+                () -> new HczEndBossInstance(new ObjectSpawn(0x4050, 0x0758, 0x9A, 0, 0, false, 0)));
+        boss.setServices(services);
+        Field hover = HczEndBossInstance.class.getDeclaredField("hoverCentreY");
+        hover.setAccessible(true);
+        hover.setInt(boss, 0x0758);
+        boss.getState().yFixed = 0x075AD000;
+        boss.getState().yVel = -0x100;
+        Method callback = HczEndBossInstance.class.getDeclaredMethod("onStRiseComplete");
+        callback.setAccessible(true);
+        callback.invoke(boss);
+        assertEquals(0x0758D000, boss.getState().yFixed);
+        assertEquals(-0x100, boss.getState().yVel);
+        Method swing = HczEndBossInstance.class.getDeclaredMethod("updateSwingAndWait");
+        swing.setAccessible(true);
+        swing.invoke(boss);
+        assertEquals(0x0757D000, boss.getState().yFixed,
+                "the first Swing_UpAndDown reverses acceleration without replacing the live velocity");
+        assertEquals(-0x100, boss.getState().yVel);
+    }
+
+    @Test
     void capsuleButtonRetainsItsSeparateSolidObjectFullGeometry() {
         HczEndBossEggCapsuleInstance capsule = new HczEndBossEggCapsuleInstance(0x4250, 0x07E0);
         HczEndBossEggCapsuleButton button = new HczEndBossEggCapsuleButton(
