@@ -17,6 +17,10 @@ Unreleased. The earlier development themes remain in
 - The Lava Reef boss act (`$1600`) starts with the native falling intro on a
   fresh entry, for every character.
 
+- Fresh S3K trace segments derive the entry camera from the ROM start-location
+  entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
+  objects (the DDZ fly-in, the shrine) have already moved.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 
