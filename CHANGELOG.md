@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.
+
 - HCZ2 boss blades start their floor-hit raw animation from the cleared timer, restoring native water-chute launch timing.
 
 - HCZ2 end-boss attack setup runs on the native wait-underflow pass; spray release performs its final interaction once.

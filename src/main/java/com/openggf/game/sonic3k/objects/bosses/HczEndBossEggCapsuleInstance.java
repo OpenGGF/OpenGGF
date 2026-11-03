@@ -20,7 +20,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIn
     private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
     private boolean buttonSpawned;
     private boolean tailsEndingPoseApplied;
-    private boolean mainEndingPosePending;
 
     public HczEndBossEggCapsuleInstance(int x, int y) {
         super(x, y, "HCZEggCapsule");
@@ -59,10 +58,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIn
                 startResults(player);
             }
         } else if (services().gameState().isEndOfLevelActive()) {
-            if (mainEndingPosePending && playerEntity instanceof AbstractPlayableSprite player) {
-                mainEndingPosePending = false;
-                lockForResults(player);
-            }
             advanceTailsEndingPoseCheck();
         }
     }
@@ -78,13 +73,12 @@ public class HczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIn
         resultsStarted = true;
         // HCZEndBoss_StartPostDefeat already owns _unkFAA8. Creating results
         // neither re-arms that global flag nor transfers the retained root's wait.
-        // sub_868F8 changes the parent to routine 6 after the player slot has
-        // already animated. Defer the engine-side pose publication to the next
-        // parent entry so that this dispatch retains the player's current
-        // mapping; the following player tick then observes the native Victory
-        // write and restarts its script (sonic3k.asm:181677-181681,
-        // 181900-181918).
-        mainEndingPosePending = true;
+        // sub_868F8 calls Set_PlayerEndingPose in this dispatch, after the
+        // player has animated (sonic3k.asm:181991-182009,182073-182084).
+        // Publishing anim now retains its current mapping until the next
+        // player pass; the CPU pose request likewise targets the next P2 slot.
+        lockForResults(player);
+        advanceTailsEndingPoseCheck();
         // sub_868F8 calls AllocateObject, which scans from the beginning of
         // Dynamic_object_RAM rather than allocating after the capsule. The
         // result owner therefore takes the lowest available SST and reaches
@@ -147,14 +141,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIn
             return true;
         }
 
-        @Override
-        protected boolean shouldDeferInitialResultsArtLoadDispatch() {
-            // Obj_LevelResultsInit follows the capsule's AllocateObject path
-            // across the next hardware service boundary in HCZ2, so the
-            // three Queue_Kos_Module calls begin on the following dispatch
-            // (sonic3k.asm:182118-182137, 62582-62638).
-            return true;
-        }
+        // Obj_LevelResultsInit submits art on its initialization dispatch
+        // (sonic3k.asm:182118-182137); no additional HCZ dispatch is inserted.
 
         @Override
         protected boolean shouldRestorePlayerControlsOnExit() {

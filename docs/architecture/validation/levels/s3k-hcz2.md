@@ -1216,3 +1216,32 @@ The 86 focused boss/rewind/keep-green cases pass without skips. The slice
 advances from 404 errors at 29530 to 71 at 30646 `player_animation_id`, with
 all ten sibling error lists unchanged. The remaining frontier is the local
 capsule/results adapter; inherited breadth and pending-main restore gaps remain.
+
+
+## Native capsule/results handoff and green slice — 2026-11-03
+
+`sub_868F8` (sonic3k.asm:181991-182009) invokes `Set_PlayerEndingPose`
+(sonic3k.asm:182073-182084) during results creation. Its animation-byte write
+retains the already-published mapping until the next player pass. The retained
+adapter now publishes that pose immediately, queues native P2 for its next
+player slot, and permits `Obj_LevelResultsInit` (sonic3k.asm:182118-182137)
+to submit art on its own initialization dispatch. Allocation's separate
+first-dispatch boundary remains intact.
+
+Executed probes showed the old main pending flag at 30646, main pose/P2 queue
+and art deferral at 30647, and P2 freeze at 30648. Native comparison requires
+main pose at 30646 and P2/art at 30647. The corrected production component
+control and expanded focused/terminal/graph/keep-green selection pass 97 cases
+with zero failures, errors or skips. The final HCZ trace selection has 12 tests,
+eight inherited sibling failures, no errors or skips. Both methods in
+`TestS3kHczZoneSliceTraceReplay` pass: 71 groups at 30646 become zero errors /
+zero warnings, with 29,285 compared frames, 31,482 planned trace rows and the
+comparison gate reached. All ten sibling error lists exactly match the
+pre-task baseline; their carried-state/entry frontiers remain separate.
+
+The trace still advertises eight absent auxiliary schemas (cage state/execution,
+velocity/position writes, Sonic position history, CPU normal steps, and CNZ
+cylinder state/execution). No trace comparator, bootstrap, timing authority or
+fixture was changed. This is bounded native Sonic+Tails cross-act route evidence;
+configuration breadth, full-level certification and the pending-main-init
+restore spot remain unqualified.
