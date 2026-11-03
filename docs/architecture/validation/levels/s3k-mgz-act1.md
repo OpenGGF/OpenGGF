@@ -315,3 +315,287 @@ the short MGZ frontier from row 13,939 `camera_x` to row 14,384
 certification. The larger MGZ3 group count is attributed to its already-divergent
 results/control release, and the remaining four short-trace animation errors
 have the independent pre-existing slot-order owner described above.
+
+
+## EndSignControl allocation (2026-11-02)
+
+The final matched baseline and candidate use pinned develop `982b279d5`,
+containing the accepted camera correction `57a5d5996`. Earlier prototype runs
+on `6cdd598c7` established the native owner sequence; the full selected baseline
+was retaken after rebasing. The short MGZ fixture now compares 35,861 rows with
+zero errors or warnings, including both native players' ending animation fields.
+Its matched baseline has four animation errors beginning at row 14,384 and no
+physics errors. This closes the animation frontier exposed by the camera fix;
+it does not certify every MGZ character, viewport or donor route.
+
+### Allocation and lifetime owners
+
+The ordering follows native allocation and object lifetime. No slot number,
+extra delay or trace identity selects production behavior.
+
+| Native phase | ROM owner and allocator | Corrected engine owner |
+| --- | --- | --- |
+| Killing touch, then boss dispatch | `TunnelbotMiniboss_CheckHitOrDefeat (sonic3k.asm:185352-185360)` consumes the hit in the boss's SST. | Touch records defeat; the first defeated boss dispatch creates helpers and leaves the fresh wait untouched. |
+| Camera helper | `TunnelbotMiniboss_StartDefeat (sonic3k.asm:185383-185389)` calls global `AllocateObject`. | Global allocation from the boss dispatch replaces forward allocation from player touch. A lower hole therefore waits until the next object pass. |
+| Explosion controller | `TunnelbotMiniboss_CreateExplosion (sonic3k.asm:185391-185394)` calls `CreateChild1_Normal`. | An independent SST after the boss replaces the embedded Java controller. It continues while the boss SST changes owner. |
+| Arm retirement | `TunnelbotMiniboss_HitboxChild_Main (sonic3k.asm:185129-185140)` deletes each hitbox on its own turn. | Existing arm dispatches retire themselves; the player callback no longer clears their slots before the boss allocates helpers. |
+| Music and control handoff | `Wait_FadeToLevelMusic (sonic3k.asm:179747-179764)` globally allocates music, then tail-calls `loc_887CA (sonic3k.asm:185107-185110)`. | Keep the existing global music allocation; replace the boss with EndSignControl in its transferred SST. |
+| Five debris pieces | `loc_887CA (sonic3k.asm:185107-185110)` creates them after installing control; `CreateChild1_Normal (sonic3k.asm:177015-177044)` scans after the parent. | Create debris from the retained control at handoff, rather than on the killing touch. |
+| Signpost | `Obj_EndSignControlDoSign (sonic3k.asm:180488-180497)` calls `CreateChild6_Simple (sonic3k.asm:177210-177230)`. | The shared flow already allocates after its native control slot; that slot now belongs to the original boss. |
+| Results | `Obj_EndSignResults (sonic3k.asm:176326-176337)` calls global `AllocateObject`. | Always allocate globally, including after waiting for landing. Remove the split-owner allocation heuristic; retaining control changes which slot is free. |
+
+`MgzMinibossExplosionController` uses the existing real-SST subtype-zero controller.
+`Obj_CreateBossExplosion (sonic3k.asm:176750-176764)` installs the zeroed wait;
+`CreateBossExp00 (sonic3k.asm:176801)` supplies the `$20` count and `$20` ranges.
+The shared controller handles immediate first dispatch, three-update cadence,
+31 allocation attempts, and allocation-before-RNG; available space yields 31 explosions.
+Its own recreate path and scalar rewind state preserve the remaining phase.
+The boss no longer stays alive merely to tick explosions.
+
+The shared results allocator had another split-owner compensation: it selected
+forward allocation after waiting for Sonic to land, and used a remembered
+control-slot boundary for other timing modes. `52f36670c` introduced that
+boundary to retain native dispatch order across detached Java owners. The ROM
+has no corresponding allocator branch: `Obj_EndSignResults (sonic3k.asm:176326-176337)`
+returns while P1 is airborne, then always calls `AllocateObject`. The corrected shared path therefore uses the global allocator
+for both cases. A real-pool signpost test creates a lower SST hole and checks
+both immediate grounded allocation and allocation after an airborne wait;
+it replaces the old test of the compensation's boolean decisions. The removed
+FBZ call only supplied metadata to that deleted heuristic; FBZ's signpost
+creation still uses forward `CreateChild6_Simple` allocation.
+
+The MGZ transition fallback also previously wrote WAIT at results publication.
+A live EndSignControl now owns native P1/P2 restoration; the fallback retains
+responsibility for scenes without that owner and additional engine followers.
+`Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508)` calls
+`Restore_PlayerControl2 (sonic3k.asm:180455-180461)` from its own dispatch after
+observing the cleared active latch. The fallback neither orders objects nor adds
+a delay. CNZ object and solid owners are unchanged.
+
+### Executed owner sequence
+
+The short replay's post-step observations confirm the retained control and
+results ordering. Rows are trace indices, not CSV frame-counter values.
+
+| Row | Observed engine owners | P1 animation / mapping | Active latch / object control |
+| --- | --- | --- | --- |
+| 13,424 | Boss 7; independent explosion controller 11 | `02 / 98` | false / false |
+| 13,488 | EndSignControl 7; controller 11; five new debris pieces | `00 / 03` | true / false |
+| 13,608 | EndSignControl 7; signpost 9 | `00 / 06` | true / false |
+| 14,383 | EndSignControl 7; results 8; signpost 9 | `13 / B1` | true / true |
+| 14,384 | EndSignControl 7; results 8 | `13 / B1` | false / true |
+| 14,385 | EndSignControl 7 | `05 / B2` | false / false |
+| 14,386 | EndSignControl 7 | `05 / BA` | false / false |
+
+At 14,384 the lower control has already run when results clears the latch.
+It restores WAIT on 14,385 after the player has animated, retaining mapping
+`B2` for that row. Both native players' strict animation comparisons pass.
+The observer lists selected owner classes; a transformed title-card class is
+outside that filter.
+
+Whole-pool parity remains an inherited gap. ROM's overlapping controller is
+slot 12 running `Obj_Wait (sonic3k.asm:178040-178049)`; slot 13 is its first
+`Obj_BossExplosionAnim (sonic3k.asm:176920-176938)` child, not the controller.
+The engine controller is slot 11. Native slot 8 still contains a
+`MoveDraw_SpriteTimed2 (sonic3k.asm:178901-178905)` owner at the killing hit.
+The exact origin of the one-slot pool difference is unattributed here; this
+fix certifies the retained control/results order and independent lifetime,
+not identical occupancy for every pre-existing debris or effect object.
+
+### Focused regression and validation
+
+The unfixed-production allocation control on `6cdd598c7` runs 16 tests with one expected
+failure: global camera-helper allocation should select slot 5, but the old path
+selects slot 15. The corrected unit scene passes all 16 tests, including helper
+creation at the boss dispatch, occupied arm slots during allocation, retained
+control SST, overlapping explosions, independent expiry, and controller phase
+capture/recreation. These are bounded object checks, not a full MGZ boss world
+rewind certification.
+
+The fresh r6 measurement on pinned `982b279d5` compares the same 51 consumer
+methods: baseline 44 passes, six assertion failures and one campaign admission
+error; candidate 45 passes, five assertion failures and the same admission error.
+Both have zero skips. MGZ is the single changed consumer error list, from four
+animation errors to zero; every other error list, warning count, bootstrap-error
+count and compared frame count matches exactly. The candidate also passes all
+16 MGZ unit tests. The eight observation-only samples above were removed from
+the harness after that measurement. The complete consumer comparison and final ordinary checks follow below.
+
+The matched r7 selection has 18 methods: four passes, 11 assertion failures,
+three campaign admission errors and zero skips in both builds. Every status,
+failure message, complete error list, warning count, bootstrap-error count and
+frame count matches exactly. In particular, Tails MGZ3 remains at 3,161 errors
+beginning with its inherited row-zero y-speed mismatch.
+
+### Matched 38-class boss/results selection
+
+The source base is `982b279d5` for both measurements. The selected consumer
+methods total 86: baseline 50 passes, 32 assertion failures and four errors;
+candidate 51 passes, 31 assertion failures and the same four errors. There
+are no skips. No previously passing class becomes red and no first error moves
+earlier. Warnings, bootstrap-error counts and frame counts match for every
+owned report. Only the three MGZ error lists below change.
+
+Counts are strict grouped errors, not individual mismatching frame/field pairs.
+The final column is unchanged unless it explicitly shows an arrow.
+
+| Profile | Class | Before → after errors | First error: row / field |
+| --- | --- | ---: | --- |
+| r6 | `TestS3kReplayReferenceClosureIntegration` | 0 → 0 | — |
+| r6 | `TestS3kAizTraceReplay` | 0 → 0 | — |
+| r6 | `TestS3kCnzTraceReplay` | 3112 → 3112 | 17322 / `camera_x` |
+| r6 | `TestS3kKnucklesLbz2BigArmTraceReplay` | 232 → 232 | 0 / `rings` |
+| r6 | `TestS3kMgzTraceReplay` | 4 → 0 | 14384 / `player_animation_id` → — |
+| r7 | `TestS3kFbzCompleteRunTraceReplay` | 1 → 1 | 19158 / `tails_cpu_respawn_counter` |
+| r7 | `TestS3kSozCompleteRunTraceReplay` | 3155 → 3155 | 32951 / `tails_y` |
+| r7 | `TestS3kTailsFullChainAiz5SegmentTraceReplay` | 345 → 345 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainCnzSegmentTraceReplay` | 3089 → 3089 | 0 / `y_sub` |
+| r7 | `TestS3kTailsFullChainFbz3SegmentTraceReplay` | 291 → 291 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainHcz6SegmentTraceReplay` | 229 → 229 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainIczSegmentTraceReplay` | 1157 → 1157 | 0 / `y_speed` |
+| r7 | `TestS3kTailsFullChainLbzSegmentTraceReplay` | 3281 → 3281 | 0 / `y` |
+| r7 | `TestS3kTailsFullChainMgz3SegmentTraceReplay` | 3161 → 3161 | 0 / `y_speed` |
+| r7 | `TestS3kTailsFullChainMhz5SegmentTraceReplay` | 185 → 185 | 0 / `camera_y` |
+| r7 | `TestS3kTailsFullChainSoz2SegmentTraceReplay` | 643 → 643 | 0 / `camera_y` |
+| seg | `TestS3kAizZoneSliceTraceReplay` | 0 → 0 | — |
+| seg | `TestS3kCnzZoneSliceTraceReplay` | 4255 → 4255 | 14616 / `camera_x` |
+| seg | `TestS3kHczZoneSliceTraceReplay` | 609 → 609 | 12236 / `tails_cpu_respawn_counter` |
+| seg | `TestS3kIczZoneSliceTraceReplay` | 2430 → 2430 | 11989 / `x` |
+| seg | `TestS3kLbzZoneSliceTraceReplay` | 1663 → 1663 | 30582 / `tails_y` |
+| seg | `TestS3kMgzZoneSliceTraceReplay` | 7921 → 7939 | 5255 / `tails_g_speed` |
+| seg | `TestS3kMhzZoneSliceTraceReplay` | 3191 → 3191 | 6958 / `rings` |
+| seg | `TestS3kSonicTailsAiz5SegmentTraceReplay` | 2522 → 2522 | 0 / `x_speed` |
+| seg | `TestS3kSonicTailsCnzSegmentTraceReplay` | 9069 → 9069 | 2695 / `tails_y_speed` |
+| seg | `TestS3kSonicTailsFbzSegmentTraceReplay` | 4152 → 4152 | 7619 / `x_speed` |
+| seg | `TestS3kSonicTailsHcz4SegmentTraceReplay` | 464 → 464 | 0 / `rings` |
+| seg | `TestS3kSonicTailsIcz2SegmentTraceReplay` | 965 → 965 | 0 / `rings` |
+| seg | `TestS3kSonicTailsLbzSegmentTraceReplay` | 7187 → 7187 | 959 / `player_animation_id` |
+| seg | `TestS3kSonicTailsMgzSegmentTraceReplay` | 4100 → 4100 | 10709 / `x` |
+| seg | `TestS3kSonicTailsMhz9SegmentTraceReplay` | 1125 → 1125 | 0 / `camera_y` |
+| seg | `TestS3kSonicTailsSoz2SegmentTraceReplay` | 7834 → 7834 | 0 / `tails_y_speed` |
+
+The remaining six selected campaign/integration classes have unchanged per-method
+status and failure identity:
+
+| Profile | Class | Before and after |
+| --- | --- | --- |
+| r6 | `TestS3kSonicTailsCompleteEmeraldRunChain` | 1 error |
+| r6 | `TestS3kSonicTailsCompleteEmeraldRunPrefix` | 3 pass |
+| r7 | `TestS3kKnucklesSuperEmeraldRunChain` | 1 pass, 1 error |
+| r7 | `TestS3kMegaRunChain` | 1 error |
+| r7 | `TestS3kTailsFullChainRunChain` | 1 error |
+| r7 | `TestS3kTailsFullChainRunPrefix` | 3 pass |
+
+The complete Emerald/Tails-chain admission errors still reject missing
+`expected_movie_end_mode`; `TestS3kMegaRunChain` still fails while queuing AIZ2
+KosM transition art. Passing prefix methods and completed segment reports do
+not certify those unexecuted campaign tails.
+
+### MGZ segment count attribution
+
+The zone slice's grouped total rises **7,921 → 7,939**, with the first error
+unchanged at row 5,255 `tails_g_speed`. Expanding the reported spans into
+mismatching row/field pairs gives **334,950 → 334,836**: 115 removed pairs and
+one added pair. The first list difference removes early P1/P2 animation errors
+at row 16,510. The subsequent queue-busy entry in the list already exists in
+both builds; it is not a new mismatch.
+
+At 16,510 the baseline has already restored WAIT (`05`) and released control;
+the candidate retains native victory (`13`) and control, matching the ROM's
+animation. Native control 7 precedes results 11 in the candidate pool, replacing
+the baseline's detached control 21 / signpost 22 / results 24. This reproduces
+`Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508)` observing the cleared
+active latch on its own next pass. This divergent slice still releases one
+pass early: at 16,511 candidate animation is `05` versus ROM `13`, while the
+baseline is already walking (`00`). The remaining release discrepancy is an
+inherited frontier, not a fitted timer adjustment in this fix.
+
+The first added pair is `tails_x_sub` at **16,579**. The paired observations
+show that both engines were already outside the ROM state:
+
+| Row / value | Baseline engine | Candidate engine | ROM |
+| --- | --- | --- | --- |
+| 16,011 P1 X/Y | `0091,08BC` | `0091,08BC` | `0091,08BC` |
+| 16,011 rings | 58 | 58 | 59 |
+| 16,011 Tails Y fraction | `6F00` | `6F00` | `8A00` |
+| 16,011 camera X/Y | `0001,0810` | `0001,0810` | `0001,0810` |
+| 16,579 P1 X/Y | `0105,08BC` | `0102,08BC` | `00FF,08BC` |
+| 16,579 Tails X/Y | 200,2243 | 197,2244 | 194,2244 |
+| 16,579 Tails X fraction | `6700` | `6300` | `6700` |
+| 16,579 Tails Y fraction | `6200` | `AF00` | `1600` |
+| 16,579 Tails X speed | 772 | 764 | 757 |
+| 16,579 Tails Y speed | -77 | -76 | 74 |
+| 16,579 camera X/Y | `0000,0810` | `0000,0810` | `0000,0810` |
+
+The baseline's isolated X-fraction agreement at 16,579 is coincidental within
+an already incorrect Tails position and motion state. The addition is downstream
+of the shared Tails fraction/rings debt at 16,011 and the inherited release
+mismatch. **The higher group count is not an attributable regression in the
+native allocation correction.** No comparison was suppressed or re-baselined.
+
+`TestS3kSonicTailsMgzSegmentTraceReplay` retains 4,100 groups and its row-10,709
+`x` frontier. It removes seven mismatching row/field pairs at 13,702–13,703,
+with no added pairs (374,242 → 374,235). Every other selected consumer's complete
+error list matches baseline exactly.
+
+### Reproduction commands
+
+Both 38-class measurements used JDK 25, Lua 5.4, original absolute ROM paths,
+surfaceless EGL, one reused Surefire fork and alphabetical order. Before each
+profile invocation, the task driver removed that worktree's generated
+`target/surefire-reports` and `target/trace-reports`; it read the owned replay
+JSONs, not only Maven totals. These selectors and function expand to the exact
+queued invocations. The reference-checkout directory is represented by an
+environment variable to keep machine-local home paths out of committed docs:
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JDK_JAVA_OPTIONS MAVEN_ARGS LD_LIBRARY_PATH
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+export JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl
+export PATH="$HOME/.local/bin:$PATH"
+export OPENGGF_REFERENCE_ROOT=/absolute/path/to/reference-checkout
+run_selected() {
+  python3 tools/testing/maven_queue.py -Dmse=off -B "-P$1" \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical "-Dtest=$2" \
+    "-Dsonic1.rom.path=${OPENGGF_REFERENCE_ROOT}/s1.gen" \
+    "-Dsonic2.rom.path=${OPENGGF_REFERENCE_ROOT}/s2.gen" \
+    "-Ds3k.rom.path=${OPENGGF_REFERENCE_ROOT}/s3k.gen" \
+    "-Dkis2.rom.path=${OPENGGF_REFERENCE_ROOT}/kis2.gen" \
+    "-Dsonic1.rev00.rom.path=${OPENGGF_REFERENCE_ROOT}/s1-r0.gen" \
+    "-Dsonic2.rev00.rom.path=${OPENGGF_REFERENCE_ROOT}/s2-r0.gen" test
+}
+r6='TestS3kAizTraceReplay,TestS3kCnzTraceReplay,TestS3kKnucklesLbz2BigArmTraceReplay,TestS3kMgzTraceReplay,TestS3kReplayReferenceClosureIntegration,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kSonicTailsCompleteEmeraldRunPrefix'
+r7='TestS3kFbzCompleteRunTraceReplay,TestS3kKnucklesSuperEmeraldRunChain,TestS3kMegaRunChain,TestS3kSozCompleteRunTraceReplay,TestS3kTailsFullChainAiz5SegmentTraceReplay,TestS3kTailsFullChainCnzSegmentTraceReplay,TestS3kTailsFullChainFbz3SegmentTraceReplay,TestS3kTailsFullChainHcz6SegmentTraceReplay,TestS3kTailsFullChainIczSegmentTraceReplay,TestS3kTailsFullChainLbzSegmentTraceReplay,TestS3kTailsFullChainMgz3SegmentTraceReplay,TestS3kTailsFullChainMhz5SegmentTraceReplay,TestS3kTailsFullChainRunChain,TestS3kTailsFullChainRunPrefix,TestS3kTailsFullChainSoz2SegmentTraceReplay'
+seg='TestS3kAizZoneSliceTraceReplay,TestS3kCnzZoneSliceTraceReplay,TestS3kHczZoneSliceTraceReplay,TestS3kIczZoneSliceTraceReplay,TestS3kLbzZoneSliceTraceReplay,TestS3kMgzZoneSliceTraceReplay,TestS3kMhzZoneSliceTraceReplay,TestS3kSonicTailsAiz5SegmentTraceReplay,TestS3kSonicTailsCnzSegmentTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay,TestS3kSonicTailsHcz4SegmentTraceReplay,TestS3kSonicTailsIcz2SegmentTraceReplay,TestS3kSonicTailsLbzSegmentTraceReplay,TestS3kSonicTailsMgzSegmentTraceReplay,TestS3kSonicTailsMhz9SegmentTraceReplay,TestS3kSonicTailsSoz2SegmentTraceReplay'
+run_selected trace-replay "$r6"
+run_selected trace-replay-r7 "$r7"
+run_selected trace-segments "$seg"
+```
+
+The candidate r6 command additionally appended
+`,TestMgzMinibossInstance,TestS3kSignpostInstance` to `$r6`. The 16 MGZ units
+passed; the first version of the new signpost scene failed its setup assertion
+because slot 9 lies below the generic test pool's dynamic base. The scene now
+places the signpost four slots above the pool's actual first free slot; its
+allocator assertions are unchanged. The final ordinary run below rechecks it.
+All observation probes were removed before that run. Production source is
+unchanged from the completed 38-class measurement.
+
+The final ordinary command uses the same environment and ROM arguments:
+
+```bash
+run_selected smoke 'TestS3kBossDefeatSignpostFlow,TestS3kSignpostInstance,TestS3kSignpostNativeControlSst,TestS3kResultsScreenObjectInstance,TestS3kResultsKosQueueAndChildren,TestS3kResultsKosQueueRewind,TestFbzMinibossDefeatChildren,TestS3kSignpostStubGraphRewind,TestSonic3kLevelEventRewindSnapshot,TestS3kNestedHurtboxGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+```
+
+It passes **183 tests with zero failures, errors or skips**, including all 20
+signpost tests. The `TestSonic3kLevelLoading` selector intentionally resolves
+both existing packages. Combined with the 16 passing MGZ units in r6, the
+focused owner, results, rewind and keep-green checks pass. The production patch
+fingerprint is identical across all three completed candidate profiles and the
+final ordinary run. The temporary observer code is absent from the final tree.
+
+This is bounded focused validation, not a full smoke suite or a complete-route
+certification. The inherited campaign admission errors, divergent segment
+frontiers and whole-pool/whole-boss rewind gaps described above remain open.
+The short strict MGZ replay is green; no new red consumer or earlier frontier
+was introduced, and the only grouped-count increase is attributed above.

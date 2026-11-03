@@ -65,6 +65,7 @@ import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
 import com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
+import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
 import com.openggf.camera.Camera;
@@ -2013,10 +2014,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             hczEvents.restorePostResultsPlayerControl();
         }
         if (mgzPendingPostTransitionRelease) {
-            // The carried results owner clears its active transition state at
-            // this publication boundary; release the players on that same
-            // native owner pass and let the following player slot select its
-            // movement animation.
+            // The carried results owner clears its active transition state here.
+            // Complete the event handoff; a retained EndSignControl restores
+            // native P1/P2 from its own SST dispatch.
             releasePendingMgzPostTransition();
         }
         if (cnzPendingPostTransitionRelease) {
@@ -2095,9 +2095,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     /**
      * After the MGZ1 → MGZ2 seamless reload, release the player (and sidekicks)
-     * from the signpost victory pose so normal play resumes. The ROM's
-     * MGZ1BGE_Transition does not run a cutscene; the player simply continues
-     * under their own control once the level has reloaded.
+     * from the signpost victory pose so normal play resumes. A retained native
+     * EndSignControl owns P1/P2 restoration; this fallback also covers engine
+     * followers and scenes without that owner.
      */
     private void releasePendingMgzPostTransition() {
         if (!mgzPendingPostTransitionRelease) {
@@ -2123,20 +2123,31 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             mgzEvents.armAct2LevelSizeChange();
         }
 
+        // Obj_EndSignControlAwaitStart (sonic3k.asm:180502-180508) calls
+        // Restore_PlayerControl2 (sonic3k.asm:180455-180461) for native P1/P2. When that SST survived the reload, let its own dispatch
+        // observe _unkFAA8 rather than writing WAIT from the results/event owner.
+        var objectManager = GameServices.level().getObjectManager();
+        boolean nativeControlOwnsRestore = objectManager != null
+                && objectManager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class).stream()
+                        .anyMatch(flow -> !flow.isDestroyed());
+        PlayableEntity nativeP2 = playerQueryFromGameServices().nativeP2OrNull();
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
-        if (player != null) {
+        if (player != null && !nativeControlOwnsRestore) {
             ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setForcedAnimationId(-1);
             player.setAnimationId(Sonic3kAnimationIds.WAIT);
         }
         for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (nativeControlOwnsRestore && sidekick == nativeP2) {
+                continue;
+            }
             ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setForcedAnimationId(-1);
             sidekick.setAnimationId(Sonic3kAnimationIds.WAIT);
         }
-        LOG.info("MGZ: released player from victory pose after Act 1 → Act 2 reload");
+        LOG.info("MGZ: completed post-results event handoff after Act 1 → Act 2 reload");
     }
 
     /**

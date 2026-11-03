@@ -207,6 +207,11 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         return this;
     }
 
+    /** CreateChild1_Normal (sonic3k.asm:177015-177044) allocates after the retained handoff SST. */
+    <T extends AbstractObjectInstance> T spawnHandoffChild(java.util.function.Supplier<T> factory) {
+        return spawnChildAfterSlot(nativeControlSlot, factory);
+    }
+
     @Override
     public int getX() {
         return signpostX;
@@ -337,7 +342,6 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
                     signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
                     resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
                     usesShortResultsChildRetireTail);
-            signpost.preserveNativeControlAllocationBoundary(nativeControlSlot);
             return signpost;
         });
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);

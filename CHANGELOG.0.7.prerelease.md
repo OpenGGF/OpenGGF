@@ -27,6 +27,9 @@ Unreleased. The earlier development themes remain in
 
 - **MGZ seamless transition:** Keep the shifted camera bounds until the native
   Act 2 release instead of easing toward the newly loaded level bounds.
+  The miniboss also retains its native EndSignControl slot while explosions
+  continue independently, so results restore player animations on the ROM's pass.
+  Results also use the native global allocator after waiting for the player to land.
 
 - S3K top-solid platforms, bonus flippers and curled vines now select the ROM’s
   1–16 pixel landing window on the native helper surface. Flat helpers use their

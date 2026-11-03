@@ -273,9 +273,6 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
             // slot and only report a sign when that allocation succeeds.
             S3kSignpostInstance sign = spawnChild(() ->
                     new S3kSignpostInstance(x, 0, 0, 0, 0, true));
-            // The boss SST itself becomes Obj_EndSignControl; retain its real
-            // allocation boundary when Obj_EndSignResults calls AllocateObject.
-            sign.preserveNativeControlAllocationBoundary(getSlotIndex());
             signSpawned = !sign.isDestroyed();
         }
     }
