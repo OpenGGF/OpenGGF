@@ -75,21 +75,11 @@ workflow defaults.
 
 ## Build and verification
 
-Before submitting a focused test, choose its memory lane. Use the ordinary
-command for automatically qualified tests. For other tests, inspect their fixtures
-and allocations; use `--lean` when those needs are known to be bounded. Keep
-unknown, memory-heavy, ROM/trace/native checks in their existing lanes. A focused
-selector alone does not prove small memory use. Normal admission reserves 7 GiB;
-lean admission reserves 4 GiB and caps each JVM heap at 1 GiB. Do not drop required
-flags or coverage to qualify. Report a lean OOM and rerun with `--normal`.
-
-For frequently used small tests, prefer permanent automatic qualification over
-repeated manual lane choices. Review the source and fixtures, verify the exact
-focused command with `--lean`, then add eligible classes to `QUALIFIED_CLASSES`
-in `tools/testing/maven_small.py` and run the Python safety checks. Preserve its
-source and invocation guards; a fast runtime or one low RSS sample is insufficient.
-`BATCH_ONLY_CLASSES` does not qualify focused lifecycle commands. See the
-[testing guide](tools/testing/README.md) for details.
+Focused tests use the ordinary wrapper command; reviewed small classes select the
+lean lane automatically. `--lean` is optional for other tests whose memory needs
+are known to be bounded. A lean OOM is a failed run: report it and rerun with
+`--normal`. Registry qualification is described in the
+[testing guide](tools/testing/README.md#queued-maven-execution).
 
 ```bash
 python3 tools/testing/maven_queue.py -v  # leased version probe; must report Java 25
@@ -177,106 +167,33 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   Record execution, queue wait and total wall separately; shared admission can
   extend wall time independently of test cost. Batches
   provide admission opportunities for focused jobs; a single expensive class,
-  memory pressure or an existing serial holder can still cause a wait. Run
-  `run_categories.py --base <integration-base> --preflight` in the actual launch
-  environment to check Java 25, Lua 5.4 and PowerShell. On macOS retain known
-  working display/service permissions; tool preflight does not prove GLFW access.
+  memory pressure or an existing serial holder can still cause a wait. `--run`
+  checks Java 25, Lua 5.4 and PowerShell before launching any test. On macOS retain
+  known working display/service permissions; tool checks do not prove GLFW access.
   Complete required checks once; repeat only for new edits, failures, repaired
   prerequisites or unresolved risk. Do not rerun unchanged smoke coverage on
   baseline, development and integrated trees merely as a ceremony. Attribute
   disputed failures with bounded matched tests on baseline/current and compare
   exact identities, assertions and skips. New/worsened failures block delivery.
 - A smoke/category/focused pass is bounded validation, never a full-suite pass.
-  Record exact commands, outcomes, skips and coverage limits. Public releases
+  Record exact commands, outcomes, skips and coverage limits; for a category run,
+  its final `VERDICT` line states these. Public releases
   retain full ordinary (`-Pfull-suite`), guards and required ROM/trace validation.
-- **Queue local Maven tests.** Category `--run` commands queue automatically across
-  linked worktrees. For focused tests and lifecycle commands that execute tests (including
-  `package` without a skip), use
+- **Queue local Maven tests.** Category `--run` commands queue automatically. Run
+  focused tests and lifecycle commands that execute tests through
   `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
-  Build-only commands such as `compile`, `test-compile` and `package -DskipTests` bypass
-  shared admission automatically; they hold the current worktree's build/test lock.
-  Wrapped builds also hold a shared activity lease during execution. Isolated
-  performance measurements first acquire their own worktree outside the queue,
-  acquire exclusive test admission, then drain active
-  builds and block new builds with an exclusive activity lease. Idle retained
-  category worktrees do not block measurements; never sweep foreign worktree locks
-  or request test admission while holding a build activity lease. Direct/older
-  wrappers do not honor activity isolation; use current tooling for measurements.
-  Even `mvn -v` can launch multiple JVMs. Use the queued version command above
-  or the updated category preflight; do not run an ad hoc version probe without
-  activity or execution admission. Release activity before requesting queued tests,
-  and do not wrap the updated preflight in another activity lease.
-  Direct `mvn` builds are also allowed, provided nothing else is writing that worktree's
-  `target/`. Prefer the wrapper when builds and tests may share a worktree. Unknown plugin
-  goals, alternate POMs/profiles and custom Maven launch arguments remain queued conservatively;
-  inspect their behavior before running them directly as builds. The serial override applies
-  to queued tests, not build-only commands. Native builds also bypass admission when tests
-  are skipped, but their resource needs are separate from ordinary Java compilation.
-  The exact JVM-environment flag `-Dopenggf.headless.gl=surfaceless-egl` preserves
-  normal admission and lean eligibility; unknown options and resource overrides
-  remain conservative. Do not clear required graphics flags to get a slot.
-  Submit the command even if another agent is testing: it waits, reports status and
-  starts automatically. Waiting requires no permission or manual lock cleanup.
-  Qualified exact focused checks with `-Dmse=off` automatically use the lean lane
-  on Linux; the explicit reviewed registry is in `maven_small.py`. At most 50
-  registered classes qualify, with source/shape checks and no custom overrides.
-  Use `--normal` to retain the larger heap. The category runner groups qualified
-  classes into separate batches without dropping or duplicating candidates.
-  Batch-only registrations qualify prepared `surefire:test`, not whole-project
-  compilation or automatic focused lifecycle admission.
-  Qualified one-worker batches use 4 GiB / 4-core admission; qualified two-worker
-  batches use 1 GiB heaps with shared 5 GiB / 8-core admission. Neither qualifies
-  for short-job backfill solely from its heap shape. Source/environment
-  rejection retains normal heaps and the requested worker count. Guards retain
-  their separate normal one-worker invocation.
-  For other small focused tests with known bounded memory needs, use `--lean`: it caps
-  Maven and the test JVM at 1 GiB each and reserves 4 GiB / 4 cores, so these checks
-  can overlap where normal 7 GiB / 8-core budgets cannot. It requires exact `-Dtest`
-  selectors without profiles or custom JVM/build overrides. A lean OOM is a failed
-  run; report it and rerun with `--normal`. Keep release-only full suites and memory-heavy,
-  trace/native test or required domain checks in their existing lanes. Older worktrees
-  can invoke the updated main-workspace wrapper by absolute path while keeping
-  their own cwd and `target/`; update their tooling for the new scheduling rules.
-  Linux admission allows different worktrees to overlap when conservative memory/CPU
-  reservations fit (three runs by default, crediting each running job's measured usage);
-  one worktree remains exclusive. Single-fork trace/audio profiles share the queue,
-  including exact default flags `-Dsurefire.forkCount=1` and
-  `-Dsurefire.reuseForks=true`; other fork/reuse/heap overrides remain exclusive. See
-  the guide for exclusive shapes. Other platforms retain serialization. Waiting requests favour short estimates; after five minutes,
-  aged requests take priority in arrival order. An aged request needing shared capacity
-  drains existing jobs, with one exception: a memory/CPU-blocked resource-aware
-  head allows one qualified small job (at most 4 GiB / 4 cores, estimate <=60s)
-  in another tree to backfill. The allowance stays spent until the head leaves
-  the queue, even after the small job finishes. Explicit `--lean` alone does not
-  grant eligibility. Serial heads, full slots and unknown state drain immediately.
-  This bounds overtaking, not elapsed delay; running jobs are never preempted.
-  An aged resource-aware request waiting only on its own busy worktree permits unrelated trees to proceed while
-  retaining priority in its tree. Category continuations retain at most five minutes
-  of accumulated waiting credit, then spend it by their actual execution time;
-  preparation and gaps earn no credit. This preserves progress across batches
-  without granting permanent aged priority. Temporary
-  OS-leased waiting records are automatic and pruned after cancellation/death;
-  older wrappers retain lock safety but cannot honour priority. See the testing guide.
-  Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
-  Git policy settings and profiling are documented in `tools/testing/README.md`;
-  `maven_queue.py --stats` summarises recorded queue waits, holds and peak memory.
-  `maven_queue.py --dashboard` opens a local server at `http://127.0.0.1:8766`
-  for a read-only live view; stop it with Ctrl-C. Waiting rows explain memory/CPU,
-  slot, worktree, exclusive, priority and draining blockers when known. Fresh
-  scheduler reports are distinguished from inferred legacy observations.
-  Scheduling age includes waiting credit and is separate from actual wait; older
-  jobs can have unknown timings.
-  Tooling revisions are self-reported and advisory; unknown does not prove outdated
-  code. Updating main does not update an already-running wrapper. Scheduling
-  estimates are coarse ordering hints, not measured runtimes.
-  For per-test memory investigation, use `tools/testing/profile_test_memory.py`
-  with exact expensive class selectors; it queues an isolated repeated JVM and
-  records allocation, sampled peaks and post-GC retention candidates. See the
-  testing guide's measurement limits; a diagnostic report is not suite validation.
-  The queue holds a slot only during execution; cancellation releases a waiting
-  request or stops its running Maven process tree. Keep the command session alive
-  while waiting. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
-  OS locks release automatically; never delete Maven queue/slot/worktree lock files to force access.
+  Build-only commands (`compile`, `test-compile`, `package -DskipTests`) bypass shared
+  admission but hold the worktree lock.
+  Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
+  A direct build is fine only when nothing else writes that `target/`. Submit even
+  while another agent is testing: the command waits, reports status and starts
+  automatically; keep its session alive. Never
+  delete queue/slot/worktree lock files, launch an ad hoc `mvn -v` (use the queued
+  version command above), or drop required flags such as
+  `-Dopenggf.headless.gl=surfaceless-egl` to get a slot. `OPENGGF_MAVEN_QUEUE=serial`
+  forces exclusive execution. Admission budgets, lean/batch qualification, aging,
+  backfill, isolated-measurement leases, `--stats`/`--dashboard` and per-test memory
+  profiling belong to the [testing guide](tools/testing/README.md#queued-maven-execution).
 - Category runs have a configurable **per-invocation** timeout (`--max-minutes`,
   default 40) and a 10-minute no-output timeout. Queue waiting does not count.
   A timeout means incomplete validation; inspect the cause and rerun the necessary
@@ -293,17 +210,17 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   guidance (no POM, selection-policy, Java, workflow or hook changes), verify the Python
   safety suite and actual tool preflight. Do not run the engine suite to test its wrapper.
   Selection-policy/build/Java changes still follow change-based validation above.
-- Do not repeat completed checks on unchanged code without a concrete reason. Diagnostics
-  are temporary: inspect `results.json` (including skips and failures), then run
-  `python3 tools/testing/run_categories.py --acknowledge <run-id>` before delivery to
-  delete the entire run directory. Do not leave consumed results behind. Success logs,
-  raw XML and invocation temporary directories are removed automatically after Maven exits.
-  The next run deletes unacknowledged leftovers under the runner lock. Use
-  `--keep-diagnostics` only when the user explicitly requests longer retention; opt-in
-  retention is still bounded to two runs / 100 MiB and acknowledgment deletes it too.
-  No validation receipts are written. Do not archive logs elsewhere to evade
-  cleanup. Inspect summaries instead of streaming logs into context. The runner does not
-  cache passes or enforce Git integration; queued Maven commands share its execution slot.
+- Do not repeat completed checks on unchanged code without a concrete reason. The
+  category runner classifies every skip with `tools/testing/release-skip-policy.json`;
+  an unexplained or required skip, including a missing-ROM skip, makes the run
+  incomplete (exit 1), and failures take precedence. A passing run deletes its
+  diagnostics after printing the verdict. Failed or incomplete runs keep bounded
+  diagnostics: read `results.json`, then delete them with
+  `python3 tools/testing/run_categories.py --acknowledge <run-id>` before delivery.
+  Use `--keep-diagnostics` only when the user asks for longer retention (bounded to
+  two runs / 100 MiB). No validation receipts or pass caches are written; do not
+  archive logs elsewhere. Add a skip-policy rule only for a verified explicit opt-in
+  or optional input; the release classifier uses the same rules.
 - CI runs smoke on develop/next after a 30-minute quiet period. Non-draft pull
   requests run branch policy, the default smoke suite and separate guards; manual
   CI uses smoke and guards too. Feature/bugfix pushes run nothing. Direct integration
@@ -313,7 +230,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   publishing, and also uses full-suite. Routine CI dispatch never selects it.
 - Before reporting suite results, read the measurement-hazard table in
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
-  Attribute results to the command, commit, and completed run; inspect skips.
+  Attribute results to the command, commit, and completed run; inspect skips
+  outside the category runner's verdict.
 
 ## Enforced correction contracts
 

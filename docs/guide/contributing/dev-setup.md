@@ -123,7 +123,6 @@ arrow keys and press Space. If a ROM file is missing, you will see an error mess
 ```bash
 # Inspect the change-based smoke selection against your pinned integration base.
 python3 tools/testing/run_categories.py --base <pre-task-commit>
-python3 tools/testing/run_categories.py --base <pre-task-commit> --preflight
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run
 
 # Run a single test class or method.
@@ -133,8 +132,11 @@ python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#testCo
 
 Use focused checks for bounded changes and the change-based smoke selection for
 shared or uncertain changes. Routine validation never selects the release-only
-`-Pfull-suite`. Inspect executed tests and skips, then acknowledge category-runner
-results with `python3 tools/testing/run_categories.py --acknowledge <run-id>`.
+`-Pfull-suite`. The category runner checks tool prerequisites automatically and
+ends with a `VERDICT` that includes coverage and skip classification. Unexplained
+or required skips make the run incomplete. Passing runs clean up automatically;
+for failed or incomplete runs, inspect `results.json`, then remove the diagnostics
+with `python3 tools/testing/run_categories.py --acknowledge <run-id>`.
 See [Testing](testing.md) and the [testing tools](../../../tools/testing/README.md)
 for selection, queue admission and diagnostics.
 

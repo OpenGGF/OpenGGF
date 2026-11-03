@@ -1275,11 +1275,11 @@ except KeyboardInterrupt:
         marker.with_suffix('.release').touch()
         output = command.communicate(timeout=5)[0]
         self.assertEqual(0, command.returncode, output)
-        self.assertIn('Selected checks passed', output)
+        self.assertIn('VERDICT PASSED', output)
         self.assertIn('Waiting', output)
-        runs = list((self.linked / 'target/category-tests').iterdir())
-        self.assertEqual(1, len(runs))
-        self.assertEqual('passed', json.loads((runs[0] / 'status.json').read_text())['status'])
+        # The CLI consumes a passing result through its verdict and leaves nothing to acknowledge.
+        self.assertIn('Passing diagnostics removed.', output)
+        self.assertFalse((self.linked / 'target/category-tests').exists())
         self.assertFalse((self.linked / 'target/category-tests-last-broad.json').exists())
         self.assertEqual('not a new queue lock', (legacy / 'task.lock').read_text())
 
