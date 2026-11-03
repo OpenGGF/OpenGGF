@@ -70,7 +70,7 @@ New zones and acts follow the [zone and act testing standard](docs/guide/contrib
 
 ## ROM and reference setup
 
-Find the root `.gen` files and pass absolute paths. A missing or wrong path silently skips `@RequiresRom` tests. Never rename, copy, delete or link ROMs. Verify identity when it matters:
+Queued test commands and category runs find verified root `.gen` files (then a linked worktree's main checkout) by SHA-1 and pass absolute paths; pass a property only to pin another dump. Check the wrapper's found/missing line: a missing or wrong path silently skips `@RequiresRom` tests. Never rename, copy, delete or link ROMs. Verify identity when it matters:
 
 | ROM | Test property | CRC32 | SHA-1 |
 |---|---|---|---|

@@ -5,6 +5,8 @@
 Unreleased. The earlier development themes remain in
 [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
+- Add an opt-in `external-master` test profile for live master discovery, TLS, player admission and room browsing; normal test runs remain offline.
+
 ## Gameplay and presentation
 
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from

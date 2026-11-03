@@ -22,13 +22,12 @@ Before reporting suite numbers, read the measurement-hazard table in
 [briefing-trace-rounds.md](../../../docs/agent-workflow/briefing-trace-rounds.md).
 Confirm the requested concrete test exists and which fixture/segments it drives.
 
-Example focused run (set the variables to discovered paths and a real class):
+Example focused run (a real class; the wrapper discovers verified ROMs and prints which
+properties it found):
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 \
-  -Dsurefire.runOrder=alphabetical "-Dtest=$TRACE_TEST" \
-  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
-  "-Ds3k.rom.path=$S3K_ROM" test
+  -Dsurefire.runOrder=alphabetical "-Dtest=$TRACE_TEST" test
 ```
 
 The ordinary suite excludes replay tests. `trace-replay` covers the release-6

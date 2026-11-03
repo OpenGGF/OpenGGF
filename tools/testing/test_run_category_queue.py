@@ -793,6 +793,7 @@ with queue.worktree_build_slot(root) as tree_fd:
         import maven_small
         with patch.object(queue, 'maven_slot', return_value=nullcontext(None)) as slot, \
                 patch.object(maven_small, 'automatic_lean', return_value=(['bounded', 'test'], {'SMALL': '1'})) as automatic, \
+                patch('rom_inputs.rom_args', return_value=[]), \
                 patch('category_artifacts.stop_process_tree'), \
                 patch.object(queue.subprocess, 'Popen') as popen:
             popen.return_value.__enter__.return_value.wait.return_value = 0

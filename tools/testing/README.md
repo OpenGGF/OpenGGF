@@ -262,13 +262,18 @@ matrix instead; supply all three verified ROM paths as described in the
 Run that additional lane for FBZ traversal changes and exhaustive ROM validation.
 The category runner's ordinary/guard result does not include this lane.
 
-The runner discovers existing root `.gen` files by the documented SHA-1 identities and passes
-absolute ROM paths. In an isolated worktree, use `--rom-directory /absolute/original/ROM/directory`
-to discover the originals there as well, including the documented KiS2 lock-on dump when present.
-Each path is one Maven argument, including filenames with spaces. This avoids Java environment
-injection and creates no ROM links or copies. Discovery runs once per invocation; the plan and
-verdict name the found and missing ROM properties, never ROM contents. A test skipped for a
-missing ROM has no skip-policy rule, so the run reports incomplete rather than passed.
+The runner and the focused queue share `rom_inputs.py`, which identifies existing `.gen`
+files by the documented SHA-1 identities and passes absolute ROM paths. It searches the
+worktree root first, then an explicit `--rom-directory /absolute/original/ROM/directory`,
+then the repository's main checkout when the root is a linked worktree. No other worktree
+is searched. The first original found for a property wins, including the documented KiS2
+lock-on dump when present. Each path is one Maven argument, including filenames with spaces.
+This avoids Java environment injection and creates no ROM links or copies. A ROM property
+already set in `MAVEN_ARGS`, `MAVEN_OPTS`, the JVM option variables, `.mvn` configuration or
+the `SONIC_1/2/3K_ROM_PATH` variables stays the caller's choice. Discovery runs once per
+invocation; the plan and verdict name the found, caller-supplied and missing ROM properties,
+never ROM contents. A test skipped for a missing ROM has no skip-policy rule, so the run
+reports incomplete rather than passed.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
 working-tree fingerprint, ordinary worker count and selected source classes; command arrays record the exact Maven
@@ -425,6 +430,18 @@ worktree (PowerShell accepts the same Python command):
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
 python3 tools/testing/maven_queue.py -Dmse=off package
 ```
+
+Test lifecycles (`test`, `package` or `verify`, optionally with `clean`) receive the same
+verified ROM discovery as the category runner, so ordinary focused ROM-backed tests need
+no hand-assembled `-D...rom.path` flags. The wrapper prints one line naming the found,
+caller-supplied and missing properties. Admission, estimates and automatic lean
+qualification use the command as typed, before ROM paths are appended. A command that
+names any ROM property, including an intentionally empty `-Ds3k.rom.path=`, keeps exactly
+its own ROM set; use that to pin a different dump or prove a skip. Build-only commands,
+plugin goals, alternate POMs/reactor selections, custom `.mvn/maven.config`,
+`MAVEN_ARGS`, `--stats` and `--dashboard` are never changed.
+A missing ROM never blocks a ROM-free test; its ROM-gated tests skip, which is not a
+ROM-backed pass. Discovery does not select a graphics backend.
 
 Build-only commands bypass the shared test scheduler automatically, including its
 resource reservations, priority and serial override:
