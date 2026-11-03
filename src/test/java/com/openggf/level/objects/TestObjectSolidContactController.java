@@ -33,6 +33,42 @@ import static org.mockito.ArgumentMatchers.any;
 
 class TestObjectSolidContactController {
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x10, 0x1F, 0x20, 0x21, 0x22, 0x23})
+    void nonRollingKnucklesObjectLandingResetsOnlyNativeGlideAnimations(int animation) {
+        var owner = new PieceSolid(spawn(), false, true);
+        var manager = boundaryEnabledManager(owner);
+        owner.snapshotPreUpdatePosition();
+        var player = new ContactKnuckles();
+        player.setAir(true);
+        player.setRolling(false);
+        player.applyCustomRadii(10, 10);
+        player.setDoubleJumpFlag(1);
+        player.setAnimationId(animation);
+        player.setMappingFrame(0xC0);
+        player.setAbilityMappingFrameControl(true);
+        player.setForcedAnimationId(0x20);
+        player.setCentreX((short) owner.getPieceX(0));
+        int top = owner.getPieceParams(0).groundHalfHeight() + player.getYRadius();
+        player.setCentreY((short) (owner.getPieceY(0) - 4 - top + 8));
+        player.setYSpeed((short) 0x100);
+        manager.updateSolidContacts(player);
+        assertSame(owner, manager.getRidingObject(player));
+        assertFalse(player.getAir());
+        assertEquals(0, player.getDoubleJumpFlag());
+        assertEquals(animation >= 0x20 ? 0 : animation, player.getAnimationId());
+        assertEquals(0xC0, player.getMappingFrame(), "object landing follows the animation pass");
+        assertEquals(-1, player.getForcedAnimationId());
+    }
+
+    private static final class ContactKnuckles extends com.openggf.sprites.playable.Knuckles {
+        ContactKnuckles() {
+            super("knuckles-contact", (short) 0, (short) 0);
+            setGameRulesForTest(GameRules.SONIC_3K);
+        }
+    }
+
+
     @Test
     void resetClearsInlineSupportAndStaleSupportLossState() {
         ObjectSolidContactController controller =

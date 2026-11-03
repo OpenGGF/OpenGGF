@@ -71,6 +71,22 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Grouped report counts are not raw field-error totals. `DivergenceReport` counts
+error groups and records only each group's starting values; an unchanged group
+can hide a changed engine value later in its span. Live comparator counts instead
+accumulate field mismatches. For an exact added-error gate, compare complete
+`FrameComparison` fields at the actual compared rows; do not expand group spans
+into assumed observations. The [Mega segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md)
+uses a full standalone capture to distinguish these metrics.
+
+Editing a running shell driver can produce a trailing parse error after every
+Maven run has completed (2026-11-03, Mega segment2). Bash had already parsed the
+profile loop, executed all three invocations and copied their reports, then read
+the rewritten file at an obsolete offset. Finish driver edits before launch.
+After a collection error, inspect each completed Maven result and copied XML;
+the shell exit alone proves neither missing validation nor successful collection.
+See the [segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md).
+
 A Java object reference can become stale after whole-world restore (2026-11-02,
 MHZ2 boss capture). The captured world and replayed pixels matched, but a local
 boss reference still pointed at the retired instance. Sampling it logged a frozen
