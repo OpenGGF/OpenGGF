@@ -231,7 +231,20 @@ class TestS3kSszArrivalHeadless {
 
         // The helper is allocated at loc_57D18 with a $C frame delay and releases on the same
         // swing the leader uses.
-        fixture.stepIdleFrames(1 + RISE_FRAMES + 0x0C + 90);
+        for (int i = 0; i < 1 + RISE_FRAMES + 0x0C + 10
+                && (tails.getCentreX() & 0xFFFF) == 0x7F00; i++) {
+            fixture.stepIdleFrames(1);
+        }
+        // Obj_57DCC (sonic3k.asm:116935-116946) replaces object_control
+        // $83 with 1: Animate_Tails must resume during the scripted swing.
+        assertEquals(0x100, tails.getCentreX() & 0xFFFF);
+        assertFalse(tails.isObjectMappingFrameControl(), "arrival releases the dormant animation lock");
+        assertTrue(tails.isObjectControlled(), "movement remains owned by the helper");
+        fixture.stepIdleFrames(1);
+        assertEquals(2, tails.getAnimationId());
+        assertTrue(tails.getMappingFrame() >= 0x96 && tails.getMappingFrame() <= 0x9A,
+                "Animate_Tails selects the native roll frames while the helper owns movement");
+        fixture.stepIdleFrames(90);
         assertFalse(tails.getAir() && (tails.getCentreX() & 0xFFFF) == 0x7F00,
                 "Obj_57DCC moved Player_2 to the arrival column");
     }

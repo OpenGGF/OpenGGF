@@ -4688,3 +4688,16 @@ remain unchanged. Pinned `loc_584DE` uses the carried sign, so the old draft's
 X-only deletion rewrite is rejected. Historical engine RGB changes are not native
 pixel evidence. No continuous launch, native sprite-build or pixel check was run;
 existing route, donor/roster, display and full-world acceptance limits remain.
+
+## Diagonal bridge transfer and arrival animation (2026-11-03)
+
+`TestS3kSszDiagonalTransfers` exercises rolling transfers between the permanent
+native diagonal bridge placements for Sonic/Tails and Tails at320/800. All four
+cases retain rolling, restore/replay every registry key across the transfer,
+and reject re-grounding an actual jump. `TestS3kSszArrivalHeadless` now checks
+that the helper releases Tails' dormant mapping lock during the scripted swing.
+The existing four collapse-presentation and20compatibility cases pass, as do
+both cold-route checks and nine traversal cases. This is local contract coverage;
+full-act, donor and participant breadth beyond these cases remains inherited.
+See the [ROM and trace audit](../../audits/2026-11-03-s3k-ssz-diagonal-transfer.md)
+for executed branch evidence, profile coverage and the remaining frontiers.

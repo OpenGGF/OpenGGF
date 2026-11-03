@@ -11,6 +11,9 @@ Unreleased. The earlier development themes remain in
   restores art while the existing layout owner handles scene geometry. A rendered
   cache audit covers 68 stock act/scene entries across all three games.
 
+- Sky Sanctuary diagonal bridges retain a rolling player's pose while transferring
+  between sections, and Tails resumes roll animation during the arrival swing.
+
 - S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
   finish opening off screen before unloading. Both corrections preserve Tails CPU
   respawn timing at the native visibility boundary.

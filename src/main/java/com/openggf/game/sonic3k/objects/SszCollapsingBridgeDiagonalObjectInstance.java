@@ -9,6 +9,8 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidExecutionMode;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -110,13 +112,47 @@ public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObj
     }
 
     @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (!collapsed) {
-            if (!neverCollapses() && isPlayerRiding()) {
-                collapse(player);
-            }
-            return;
+        if (collapsed) {
+            advanceCollapse();
         }
+        var manager = services().objectManager();
+        var p1 = services().playerQuery().mainPlayerOrNull();
+        var p2 = services().playerQuery().nativeP2OrNull();
+        // loc_44D98 (sonic3k.asm:90279-90304) and
+        // loc_44EF6 (sonic3k.asm:90420-90448) save status BEFORE SolidObjectTopSloped2.
+        // A walk-off clears OnObj, but the owning bridge then clears InAir for
+        // a non-jumping previous rider. The next slot must see that grounded
+        // state, so RideObject_SetRide does not call Player_TouchFloor/unroll.
+        boolean p1Standing = p1 != null && manager.hasObjectStandingBit(p1, this);
+        boolean p2Standing = p2 != null && manager.hasObjectStandingBit(p2, this);
+        checkpointAll();
+        regroundPreviousRider(p1, p1Standing);
+        regroundPreviousRider(p2, p2Standing);
+        if (!collapsed && !neverCollapses()) {
+            // loc_44DEC (sonic3k.asm:90306-90324) tests the NEW standing
+            // bits after collision; Player 1 wins if both players are standing.
+            if (p1 != null && manager.hasObjectStandingBit(p1, this)) {
+                collapse(p1);
+            } else if (p2 != null && manager.hasObjectStandingBit(p2, this)) {
+                collapse(p2);
+            }
+        }
+    }
+
+    private static void regroundPreviousRider(PlayableEntity player, boolean wasStanding) {
+        if (wasStanding && player instanceof AbstractPlayableSprite sprite
+                && sprite.getAir() && !sprite.isJumping()) {
+            sprite.setAir(false);
+        }
+    }
+
+    private void advanceCollapse() {
         // loc_44EBA.
         if (--shrinkTimer > 0) {
             return;
