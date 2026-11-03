@@ -123433,3 +123433,38 @@ validation adds the lifecycle coordinator to the preceding focused selection:
 123 pass,0 failures/errors/skips; with23 bonus tests this is146 current-base
 focused passes. Exact commands, timing limits and the4438-class smoke-plan
 rationale are in the audit. No broader campaign qualification is claimed.
+
+## 2026-11-03 — Wave 5 of the trace survey: carried segment-entry state, recorded entry provenance, gap lag census
+
+User rulings (2026-11-03): run state may be carried from the previous segment at entry, never invented mid-run
+(policy A; special-stage identity folds into it); entry provenance and campaign re-recording proceed (B, D);
+load-time V-int pricing is permitted as a branch trial. Integrated as `bugfix/ai-trace-wave1-integrate` on develop
+`32d4e9aae`; merged tree vs develop, all three profiles (forkCount=1, alphabetical, JDK 25, original ROMs, surfaceless
+EGL, per-testcase comparison including run-chain messages): no newly red class, no earlier first error. Focused rewind,
+keep-green, gitlink-guard and touched-class checks: 1942 pass, 0 skips.
+
+- `bugfix/ai-trace-entry-provenance` (`cda6cf730`, `36bde6fc3`, `08c63d83c`; TraceChaser `d98a2aa`): the recorder
+  publishes `level_entry_placement_source` and the raw `last_star_post_hit`, latched at each load's first `$8C` frame
+  (`loc_1BE46`, `Load_Starpost_Settings`, `LevelSizeLoad`). Segment boots take the ROM's fresh or return branch;
+  LRZ3 boss `$1600` gets its falling intro (`loc_6896`). The three S3K campaign chains and KiS2 EHZ1 were re-recorded
+  with byte-identical payloads and record `expected_movie_end_mode`; the chains now run instead of refusing.
+  **KiS2 EHZ1 38 → green**; Tails full-chain AIZ, Gumball2, Gumball3 and MGZ green.
+- `bugfix/ai-trace-carried-segment-state` (`68435275a`..`8088d8728`): one segment-entry import
+  (`TraceSegmentCarriedStateImport`) of carried rings, emerald progress (`S3kRunEmeraldLedger`), used giant rings
+  (exact ring-plus-flash signature), shield, path bits and the star-post byte (loc_2D008); special stages select
+  through `sub_85B0` (`S3kSpecialStageSelection`). `seedSegmentEntryVelocity` removed (frame-0 output, not carried
+  state). **Green: S+T Ss8/9/10/12/13/14, Tails Ss8–14, Tails HCZ4.** Later first errors, e.g. S+T HCZ4 0 → 570,
+  ICZ 2337 → 3836, ICZ2 0 → 483, LBZ 959 → 1171, MHZ8 0 → 1672, SOZ2 0 → 9349, Dez23 77 → 939; S+T MGZ 3411 → 762
+  errors (first still 13848). Tails LRZ3 re-enters with its post hit and no longer aborts.
+- `bugfix/ai-trace-gap-lag-census` (`dfd7716ae`, `da4970e73`/`3c4d3d5e1` withheld, `86d173323`): the live loop counts
+  the final `loc_7870` terrain-wait V-int; special-stage returns hold player art until the census row ending the
+  synchronous load (the `InitPlayers` call). S2 chain return axes 36–40 rows → 1; KiS2 chain 10 → 5 axes; Mega
+  Slots 7891@268 → 7505@300. The remaining Mega deficit (50 V-ints) is CPU-bound lag: a proven boundary for ROM
+  pricing (`docs/architecture/audits/2026-11-03-load-vint-trial.md`, `…-gap-lag-census.md`).
+- Integration repairs: the carried-state branch's develop merge had reverted the TraceChaser gitlink to `703bd92`
+  while its guards expect `d98a2aa`; restored. A `loc_9D02` citation was reworded so the checker reads its label.
+- Attributed changes: S+T CNZ, DEZ238, HPZ3, MHZ2 and Tails AIZ5 gain errors with the first error unchanged.
+  Knuckles LBZ2 Big Arm failure → error: it now tracks the ROM into the boss and hits a pre-existing rewind-closure
+  defect (`ExplosionShowerChild` → retired `LbzFinalBoss1Instance`; the other fleet owns the fix). S+T `ssz`
+  failure → error at the existing KosM stall (16449). S+T Hpz2/Hpz3 stay at row 0: Sky Sanctuary's level start
+  reads `lastCheckpointIndex`, which needs the saved-block recorder export (queued).
