@@ -1451,8 +1451,9 @@ design note lists the TraceChaser export that would close them. Return-entry
 provenance (zone intros skipped on a return, `Last_star_post_hit`) is a separate
 policy (B). Until it lands, a star-post bonus return re-enters on an un-hit star
 post, and with the carried rings that post spawns bonus stars on frame 0 where the
-ROM spawns none. Knuckles `lbz_2` and Tails `lrz_3` show this, as the design note
-records.
+ROM spawns none. Knuckles `lbz_2` and Tails `lrz_3` show this. Policy B's
+`level_entry_placement_source` does not carry the value; the design note names
+the needed `last_star_post_hit` export.
 
 ### Verification
 
