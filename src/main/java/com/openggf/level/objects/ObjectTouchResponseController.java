@@ -592,6 +592,9 @@ final class ObjectTouchResponseController {
             if (flags == 0) {
                 continue; // Skip collision for objects with no collision flags
             }
+            // Touch_Width (sonic3k.asm:20710-20715) and
+            // ShieldTouch_Width (sonic3k.asm:21281-21289) replace the entire width input, even on a miss.
+            objectManager.publishSineCosineInputFraction(0);
             int sizeIndex = flags & 0x3F;
             int width = table.getWidthRadius(sizeIndex);
             int height = table.getHeightRadius(sizeIndex);
@@ -782,6 +785,9 @@ final class ObjectTouchResponseController {
             if (flags == 0) {
                 continue;
             }
+            // Touch_Width (sonic3k.asm:20710-20715) and
+            // ShieldTouch_Width (sonic3k.asm:21281-21289) replace the entire width input, even on a miss.
+            objectManager.publishSineCosineInputFraction(0);
             int sizeIndex = flags & 0x3F;
             int width = table.getWidthRadius(sizeIndex);
             int height = table.getHeightRadius(sizeIndex);

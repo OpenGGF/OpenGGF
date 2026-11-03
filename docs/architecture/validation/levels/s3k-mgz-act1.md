@@ -707,3 +707,39 @@ The final focused object/shield/keep-green selection passes 1,465 tests with
 zero failures, errors or skips, including all 1,342 object round-trip cases and
 all 25 elemental continuity cases. All runs use forkCount1, the original absolute
 ROM paths, Java25 and surfaceless EGL; no animator or comparison code changed.
+
+
+## Swinging-platform fractional input — 2026-11-03
+
+The local correction replaces `hasLaterSlotRiderCosineResidue` with the native
+per-link computation in `sub_34074 (sonic3k.asm:70569-70602)`. An unsigned
+incoming fraction contributes to every cosine step before integer extraction.
+Execution-order publications come from projected player position, terrain lookup,
+animation-index reads and solid/touch-width reads; object-manager snapshots retain
+the input across restore. Spring animation uses the native cleared timer and
+reports only executed frame-index reads. Each spring's solid reaction precedes
+animation, so a launch restarts its script on the same native pass. Attracted-ring
+touch misses clear the width input too; retained entries remain readable by P2
+until their actual ring slot clears collision.
+
+Temporary engine probes at rows 10705–10710 proved the fitted table took angle `$62`
+in slot 6 and reduced Sonic's leftward carry from 2 px to 1 px. Native read-only GPGX
+probes of both original movies observed incoming `$0000` there and `$FD00` on the
+short movie's angle `$6D` pass. `Player_LevelBound
+(sonic3k.asm:23207-23213)` owns the latter projected fraction; subsequent native
+owners determine whether it survives. The independent zone-slice movie also
+requires `$6900` at angle `$6F`; the executed spring timer preserves it there.
+Reintroducing the original table reproduces
+3440 errors from row 10709 with matching speeds and subpixels.
+
+`TestMGZSwingingPlatformObjectInstance` binds arithmetic and live input consumption;
+`TestObjectAnimationState` binds the immediate read, 16-pass timer cycle, switch
+marker and restore phase. `TestObjectManagerRewindSnapshot` binds fraction capture
+and restoration. `TestSonic3kSpringObjectInstance` binds same-pass vertical launch
+animation; `TestRingNativeSlotDispatch` binds admitted/missed ring touch reads.
+`TestTraceGhostGameplayIsolation` rejects publications from
+unregistered ghost playables, preserving the comparison-only boundary. The short MGZ trace, MGZ zone slice, Sonic+Tails segment and all
+Tails MGZ segments remain strict regression gates. The independent row 17383
+carried-emerald inventory issue remains policy A; no bootstrap input is added.
+These bounded contracts leave the matrix's wider route/configuration and native
+presentation obligations open.

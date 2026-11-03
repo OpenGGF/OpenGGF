@@ -13,6 +13,8 @@ Unreleased. The earlier development themes remain in
 
 - LRZ grinding boulders retain the native coarse-camera lifetime, preserving their contact with both players.
 
+- MGZ swinging platforms use native fractional chain arithmetic and execution-order inputs instead of fitted slot/angle carry tables; spring animation starts from the native cleared timer.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 

@@ -14,9 +14,23 @@ import java.util.function.IntConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** Internal competition streaming seam; deliberately outside the creator API. */
+/** Internal native gameplay seams; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
     private ObjectManagerInternalAccess() { }
+
+    /** Native chain arithmetic input; internal gameplay state, outside the creator API. */
+    public static int sineCosineInputFraction(ObjectManager manager) {
+        return manager.sineCosineInputFraction();
+    }
+
+    public static void publishSineCosineInputFraction(ObjectManager manager, int fraction) {
+        manager.publishSineCosineInputFraction(fraction);
+    }
+
+    public static void publishSineCosineInputFraction(ObjectManager manager,
+            com.openggf.sprites.playable.AbstractPlayableSprite producer, int fraction) {
+        manager.publishSineCosineInputFraction(producer, fraction);
+    }
 
     public static InitialDispatch captureInitialDispatch(ObjectManager manager) {
         return new InitialDispatch(manager);
