@@ -22,10 +22,10 @@ preserves the earlier component-evidence assessment.
 ```bash
 # Routine broad coverage: all smoke candidates, yielding admission between batches.
 python3 tools/testing/run_categories.py --category all --run
-# Focused regression (use --lean for small checks).
-python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestCollisionLogic test
+# Focused regression (reviewed small classes select lean automatically).
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic test
 # Single method.
-python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCollisionLogic#testCollisionLogic' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#testCollisionLogic' test
 # Public release preparation ONLY: the former complete ordinary suite.
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```
@@ -40,6 +40,13 @@ queues at most 50 candidate classes per ordinary batch, releases shared admissio
 between batches and before guards, and retains the worktree lock throughout.
 Queue waits do not consume its execution timeout. Raw unfiltered Maven runs remain
 monolithic; use the runner for broad local coverage and package with `-DskipTests`.
+
+Every category `--run` checks tool prerequisites automatically. Its final
+`VERDICT` states the tested source, executed coverage and allowed/unexplained skip
+counts. Unexplained or required skips mean incomplete validation (exit 1). Passing
+runs clean up automatically; failed or incomplete runs retain bounded diagnostics.
+Inspect their `results.json`, then remove them with
+`python3 tools/testing/run_categories.py --acknowledge <run-id>`.
 
 See [testing utilities](../../../tools/testing/README.md#default-suite-and-release-only-validation).
 
@@ -215,7 +222,9 @@ to stdout and written to `target/rewind-benchmark-results.json`.
 
 Many tests require ROM files to load level data, object art, or audio. These tests
 **skip gracefully** when ROMs are absent, so CI and contributors without ROMs can still
-run the rest of the suite.
+run the rest of the suite. The local category runner treats these missing-ROM
+skips as incomplete coverage, so a ROM-less run cannot claim a passing verdict
+for the selected ROM-backed checks.
 
 ### `@RequiresRom` Annotation
 

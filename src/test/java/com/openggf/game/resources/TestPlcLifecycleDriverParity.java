@@ -61,7 +61,7 @@ class TestPlcLifecycleDriverParity {
     void publicPlcFrameEntriesRequireTheCallersLatchedToken() {
         List<String> phaseOwned = List.of(
                 "execute", "executeWithPause", "serviceVBlankOnly",
-                "serviceHardwareVBlankOnly", "dispatchGameVBlank",
+                "dispatchGameVBlank",
                 "executeHardwareTimedObjectScan");
         for (var method : LevelFrameStep.class.getDeclaredMethods()) {
             if (Modifier.isPublic(method.getModifiers())

@@ -193,10 +193,22 @@ public final class LevelFrameStep {
         }
     }
 
-    public static void serviceHardwareVBlankOnly(
-            LevelFrameContext context, PlcLifecycleFrame frame) {
+    /**
+     * Services one caller-requested held VBlank, then advances its clock.
+     * No gameplay body or playback row is consumed here. Only game VBlank
+     * publication is token-idempotent: bonus lag can request multiple service
+     * and clock steps under the same token. Pause has a separate claim policy
+     * in {@link #serviceVBlankOnly}.
+     *
+     * <p>The supplied clock preserves the caller's captured or live binding.
+     * A failed service never spends its clock tick.
+     */
+    static void serviceHeldVBlank(
+            LevelFrameContext context, PlcLifecycleFrame frame, Runnable advanceClock) {
+        Objects.requireNonNull(advanceClock, "advanceClock");
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        advanceClock.run();
     }
 
     /**

@@ -244,10 +244,7 @@ final class LevelIterationAdmissionController {
             com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame frame) {
         boolean ownsRecordedRow = playback.observerHasUnconsumedRecordedRows();
         if (objects != null) {
-            LevelFrameStep.serviceHardwareVBlankOnly(context, frame);
-            // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank
-            // invariant on ObjectManager.vblaCounter.
-            objects.advanceVblaCounter();
+            LevelFrameStep.serviceHeldVBlank(context, frame, objects::advanceVblaCounter);
         }
         if (ownsRecordedRow) {
             playback.onLevelFrameAdvanced();

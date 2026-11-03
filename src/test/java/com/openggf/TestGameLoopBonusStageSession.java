@@ -277,17 +277,32 @@ class TestGameLoopBonusStageSession {
         when(playback.shouldSkipCurrentGameplayTick()).thenReturn(true);
         when(playback.currentSkippedTickVblankAdvanceCount()).thenReturn(3);
         var rewind = mock(com.openggf.game.rewind.LiveRewindManager.class);
-        var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
-        var context = mock(LevelFrameContext.class);
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                (com.openggf.game.resources.PlcLifecycleService) null);
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        frame.claim(frozen ? com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE
+                : com.openggf.game.resources.PlcLifecyclePhase.LAG);
+        var timing = spy(new com.openggf.game.timing.HardwareTimingService());
+        var reboundLevel = mock(LevelManager.class);
+        var reboundObjects = mock(com.openggf.level.objects.ObjectManager.class);
+        when(reboundLevel.getObjectManager()).thenReturn(reboundObjects);
+        var context = new LevelFrameContext(module, module.getRules(), null, null,
+                null, null, null, null, null, timing,
+                boundary -> write(loop, "levelManager", reboundLevel), RuntimeArtCoordinator.NONE);
         write(loop, "playbackDebugManager", playback); write(loop, "liveRewindManager", rewind); write(loop, "activePlcLifecycleFrame", frame);
         mode(GameMode.BONUS_STAGE); provider(loop, provider); pending(loop, frozen);
-        try (var contexts = mockStatic(LevelFrameContext.class); var steps = mockStatic(LevelFrameStep.class)) {
+        try (var contexts = mockStatic(LevelFrameContext.class)) {
             contexts.when(() -> LevelFrameContext.from(any())).thenReturn(context);
             call(loop, "updateBonusStageMode", new Class<?>[]{boolean.class}, false);
-            steps.verify(() -> LevelFrameStep.serviceHardwareVBlankOnly(context, frame), times(frozen ? 1 : 3));
-            verify(objects, times(frozen ? 1 : 3)).advanceVblaCounter(); verify(playback).onLevelFrameAdvanced();
+            verify(timing, times(frozen ? 1 : 3)).service(
+                    com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE);
+            verify(objects, never()).advanceVblaCounter();
+            verify(reboundObjects, times(frozen ? 1 : 3)).advanceVblaCounter();
+            verify(playback).onLevelFrameAdvanced();
             verify(provider, never()).onFrameUpdate(); verify(provider, never()).isStageComplete(); verifyNoInteractions(rewind);
             verify(sprites, never()).update(any());
+        } finally {
+            frame.finish();
         }
     }
     @Test void registrationAndZoneSelectionThrowsRetainPublishedProviderWithoutRollback() throws Exception {

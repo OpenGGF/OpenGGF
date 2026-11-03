@@ -141,6 +141,12 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         var playback = mock(com.openggf.debug.playback.PlaybackDebugManager.class);
         when(playback.observerHasUnconsumedRecordedRows()).thenReturn(observerHasRows);
         var objects = mock(com.openggf.level.objects.ObjectManager.class);
+        harness.context().setHardwareTimingBoundaryObserver(boundary -> {
+            harness.observer().onBoundary(boundary);
+            // Service callbacks can change observer state; consume from the
+            // ownership decision made before this physical step.
+            when(playback.observerHasUnconsumedRecordedRows()).thenReturn(!observerHasRows);
+        });
         var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
                 harness.context().getWorldSession().getGameModule());
         var frame = lifecycle.latchBeforeFadeUpdate();
@@ -157,6 +163,22 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         org.mockito.Mockito.verify(playback, org.mockito.Mockito.times(observerHasRows ? 1 : 0))
                 .onLevelFrameAdvanced();
         assertEquals(1, harness.port().capture().rawFrameLatch());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void fadeWithoutObjectManagerRetainsItsExistingServiceEligibility(boolean observerHasRows) {
+        var playback = mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        when(playback.observerHasUnconsumedRecordedRows()).thenReturn(observerHasRows);
+        var context = mock(LevelFrameContext.class);
+        var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
+
+        new LevelIterationAdmissionController().consumeTransitionFreezeRow(
+                playback, null, context, frame);
+
+        org.mockito.Mockito.verifyNoInteractions(context, frame);
+        org.mockito.Mockito.verify(playback, org.mockito.Mockito.times(observerHasRows ? 1 : 0))
+                .onLevelFrameAdvanced();
     }
 
     private Harness harness(int edgeRawFrame) throws Exception {

@@ -3580,9 +3580,9 @@ abstract class AbstractRunChainTest {
      *
      * <p>Unlike {@link #attachLevelSegment}, this method does not itself re-seek
      * the BK2 cursor. Its caller first establishes the required alignment: an
-     * uncompared special-stage return keeps the pre-seeked cursor advanced by its
-     * fall-through frame, while the bonus/Option-B return explicitly re-anchors
-     * to {@code returnOffset + 1}. In both cases the cursor reaches
+     * uncompared special-stage return retains its organically advanced cursor,
+     * while a setup-only compared-bonus return explicitly re-anchors to
+     * {@code returnOffset}, with {@code framesConsumed == 0}. The cursor reaches
      * {@code returnOffset + framesConsumed} before this method attaches.
      * Starting the comparator at {@code framesConsumed} keeps the recording-frame
      * index and the BK2 cursor in lockstep, so the already-run leading frame(s)

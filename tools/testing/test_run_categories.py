@@ -82,7 +82,8 @@ class CategoryPolicyTests(unittest.TestCase):
                     patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), \
                     patch.object(runner, 'run_logged', return_value=0) as process:
                 self.assertEqual(0, runner.run_plan(root, plan, rom_directory=originals))
-            self.assertEqual(2, discover.call_count)
+            # Discovered once, so the reported ROM properties match every command.
+            self.assertEqual(1, discover.call_count)
             for call in discover.call_args_list:
                 self.assertEqual((root, originals), call.args)
             for call in process.call_args_list[1:]:

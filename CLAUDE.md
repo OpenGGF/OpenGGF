@@ -23,21 +23,11 @@ Carry authorised work through verification and delivery. User instructions overr
 
 ## Build and verification
 
-Before submitting a focused test, choose its memory lane. Use the ordinary
-command for automatically qualified tests. For other tests, inspect their fixtures
-and allocations; use `--lean` when those needs are known to be bounded. Keep
-unknown, memory-heavy, ROM/trace/native checks in their existing lanes. A focused
-selector alone does not prove small memory use. Normal admission reserves 7 GiB;
-lean admission reserves 4 GiB and caps each JVM heap at 1 GiB. Do not drop required
-flags or coverage to qualify. Report a lean OOM and rerun with `--normal`.
-
-For frequently used small tests, prefer permanent automatic qualification over
-repeated manual lane choices. Review the source and fixtures, verify the exact
-focused command with `--lean`, then add eligible classes to `QUALIFIED_CLASSES`
-in `tools/testing/maven_small.py` and run the Python safety checks. Preserve its
-source and invocation guards; a fast runtime or one low RSS sample is insufficient.
-`BATCH_ONLY_CLASSES` does not qualify focused lifecycle commands. See the
-[testing guide](tools/testing/README.md) for details.
+Focused tests use the ordinary wrapper command; reviewed small classes select the
+lean lane automatically. `--lean` is optional for other tests whose memory needs
+are known to be bounded. A lean OOM is a failed run: report it and rerun with
+`--normal`. Registry qualification is described in the
+[testing guide](tools/testing/README.md#queued-maven-execution).
 
 ```bash
 mvn -Dmse=off compile
@@ -58,8 +48,8 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B # public rel
 - For broad local runs use `--workers 2`, and state the class count, cost and stopping rule first. Rerun only after edits, failures or repaired prerequisites.
 - Attribute a failure by running the same tests on the baseline and comparing identities, assertions and skips. New or worse failures block delivery.
 - Never delete queue lock files, and never edit or build the tree during a category run.
-- Read the results and skips, then delete diagnostics with `run_categories.py --acknowledge <run-id>`.
-- Use Java 25, JUnit 5 and `-Dmse=off`. Guards need Lua 5.4 and PowerShell; run the preflight in the real environment.
+- The runner classifies every skip with `tools/testing/release-skip-policy.json`; unexplained or required skips make validation incomplete. Report its final `VERDICT` line. Passing runs delete diagnostics automatically; inspect failed/incomplete results and delete them with `run_categories.py --acknowledge <run-id>`. Add skip-policy rules only for verified explicit opt-ins or optional inputs.
+- Use Java 25, JUnit 5 and `-Dmse=off`. Guards need Lua 5.4 and PowerShell. Category `--run` checks prerequisites automatically; `--preflight` checks them without launching tests.
 - GL tests need `-Dopenggf.headless.gl=surfaceless-egl`. Render headless or offscreen only; window diagnostics need an isolated display, never the shared desktop.
 - `--lean` (1 GiB) suits small, already-compiled classes. It runs out of memory when tests must be recompiled; rerun with `--normal`.
 - Report the command, commit, outcome, skips and limits, and read the [measurement hazards](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output). A bounded pass is never a full-suite pass. Full procedures: [testing guide](tools/testing/README.md).

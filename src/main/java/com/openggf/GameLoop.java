@@ -2071,10 +2071,9 @@ public class GameLoop {
                 // parity, mirroring updateLevelMode's skip branch.
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
-                    LevelFrameStep.serviceHardwareVBlankOnly(
-                            LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
-                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
-                    levelManager.getObjectManager().advanceVblaCounter();
+                    LevelFrameStep.serviceHeldVBlank(
+                            LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                            () -> levelManager.getObjectManager().advanceVblaCounter());
                 }
             }
             advanceGameplayAudioFrameForTick(doFrameStep);
@@ -2098,10 +2097,9 @@ public class GameLoop {
             // return level a stale frame-0 input. onLevelFrameAdvanced is a no-op
             // when no playback session is active.
             if (levelManager.getObjectManager() != null) {
-                LevelFrameStep.serviceHardwareVBlankOnly(
-                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
-                // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
-                levelManager.getObjectManager().advanceVblaCounter();
+                LevelFrameStep.serviceHeldVBlank(
+                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                        () -> levelManager.getObjectManager().advanceVblaCounter());
             }
             playbackDebugManager.onLevelFrameAdvanced();
         }
