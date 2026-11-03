@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+S3K shake/visibility maintenance (2026-11-03): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records pending shake
+phase and rewind checks; the [LRZ1 matrix](../architecture/validation/levels/s3k-lrz-act1.md)
+records big-door off-screen completion and shake release. These are bounded local
+obligations; the existing broader route/configuration gaps remain open.
+
 ## Shared act-reload shield ownership
 
 The 2026-11-02 shield continuity regression

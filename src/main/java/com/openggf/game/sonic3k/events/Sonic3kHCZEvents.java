@@ -224,6 +224,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
     /** Timed screen shake countdown (frames remaining, 0 = inactive). */
     private int shakeTimer;
+    // Screen_shake_offset left by the preceding background setup; captured by the sidecar.
+    private int pendingScreenShakeOffset;
 
     /** Reference to the spawned wall collision object. */
     @RewindTransient(reason = "cached live object reference; object lifetime and state "
@@ -330,6 +332,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         wallMoving = false;
         wallStopped = false;
         shakeTimer = 0;
+        pendingScreenShakeOffset = 0;
         wallObject = null;
         act2BgUpdatedPrePhysics = false;
         wallChaseBgOverlayActive = false;
@@ -1005,6 +1008,15 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     // =========================================================================
 
     private void updateAct2Bg(int frameCounter) {
+        // HCZ2_ScreenEvent (sonic3k.asm:106040-106043) consumes the offset
+        // BEFORE HCZ2BGE_WallMove (sonic3k.asm:106099-106105) calls the shake setup.
+        // Our wall/collision prelude runs early, so retain its new setup result
+        // for the following screen event instead of rendering that new phase now.
+        SwScrlHcz shakeHandler = resolveHczScrollHandler();
+        int appliedShakeOffset = pendingScreenShakeOffset;
+        if (shakeHandler != null) {
+            shakeHandler.setScreenShakeOffset(0);
+        }
         // Timed screen shake countdown (ROM: ShakeScreen_Setup countdown)
         if (shakeTimer > 0) {
             shakeTimer--;
@@ -1026,6 +1038,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             case BG_NORMAL -> {
                 // Normal deformation — scroll handler handles everything
             }
+        }
+        if (shakeHandler != null) {
+            pendingScreenShakeOffset = shakeHandler.getShakeOffsetY();
+            shakeHandler.setScreenShakeOffset(appliedShakeOffset);
         }
     }
 
@@ -1114,8 +1130,13 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         SwScrlHcz scrollHandler = resolveHczScrollHandler();
         if (scrollHandler != null) {
             scrollHandler.setWallChaseOffsetX(wallOffsetPixels);
-            scrollHandler.setScreenShakeOffset(
-                    wallMoving ? getShakeOffset(frameCounter) : 0);
+            if (wallMoving) {
+                scrollHandler.setScreenShakeOffset(getShakeOffset(frameCounter));
+            } else {
+                // loc_5100C (sonic3k.asm:106188-106198) installs the timed flag
+                // on the stop pass, before the background tail's shake setup.
+                updateScreenShakeFromTimer();
+            }
             scrollHandler.primeBgCollisionState(camera().getX(), camera().getY());
         }
 
