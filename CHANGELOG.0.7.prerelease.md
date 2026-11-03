@@ -42,6 +42,10 @@ Unreleased. The earlier development themes remain in
 - S3K saves retain collected giant rings and Chaos Special Stage rotation after
   reload, and resume stock zones at their native starting act.
 
+- **S3K shield rewind:** Restore the captured dormant Insta-Shield identity
+  alongside collected elemental shields, keeping their native dispatch ownership
+  and animation continuity across rewind and seamless reloads.
+
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
   Their native playback publishes the first frame on dispatch, defers animation
   switches, and pauses elemental shields while the player is invincible or blank.

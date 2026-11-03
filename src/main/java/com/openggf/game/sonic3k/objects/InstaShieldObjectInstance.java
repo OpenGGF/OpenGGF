@@ -40,13 +40,13 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
     @Override
     public com.openggf.level.objects.AbstractObjectInstance recreateForRewind(
             com.openggf.level.objects.RewindRecreateContext context) {
-        if (context.dynamicEntry() != null && context.dynamicEntry().rewindableAuxiliary()
-                && getPlayer() instanceof AbstractPlayableSprite player
-                && player.getPowerUpSpawner() instanceof com.openggf.sprites.render.PlayerAttachedEffectArt supplied
-                && supplied.instaShieldArt() != null) {
-            // Extra directed performers own rewindable overlays outside ROM SST slots.
-            // The ordinary deferred player-refresh path requires a captured native slot;
-            // return this auxiliary graph directly so the manager restores its ID/state.
+        if (context.dynamicEntry() != null && getPlayer() instanceof AbstractPlayableSprite player) {
+            // Monitor_Give_LightningShield (sonic3k.asm:40904-40921) replaces the
+            // per-player Shield SST. The engine retains a dormant insta-shield
+            // alias; restore its captured identity/order without asking the live
+            // registration path to reclaim the elemental shield's fixed slot.
+            // The manager hydrates the captured state and keeps the last alias
+            // as the executing occupant. This also restores directed overlays.
             var restored = com.openggf.level.objects.ObjectConstructionContext.construct(context.objectServices(),
                     () -> new InstaShieldObjectInstance(player));
             player.setInstaShieldObject(restored);

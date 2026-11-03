@@ -315,3 +315,43 @@ the short MGZ frontier from row 13,939 `camera_x` to row 14,384
 certification. The larger MGZ3 group count is attributed to its already-divergent
 results/control release, and the remaining four short-trace animation errors
 have the independent pre-existing slot-order owner described above.
+
+
+## Collected shield rewind ownership — 2026-11-03
+
+A focused `git bisect run` from `a8f3f8647` to `e4b8857a8` identifies
+`27410c3bb` as the first failure of both attracted-ring movie methods.
+`ca7fe51a3` passes; the culprit correctly protects collected-shield ownership
+on seamless reload, but its live-registration guard also skipped a captured
+dormant Insta-Shield during rewind reconstruction. A temporary probe in both
+movies observed the deferred slot100/dynamicId0 entry, then the guard executing
+with `registered=true`, `registerNow=true`, LIGHTNING, and only the elemental
+shield active. These movie windows are cold MGZ1 entry and collection, not an
+act-reload route.
+
+`Monitor_Give_LightningShield (sonic3k.asm:40904-40921)` writes the owning
+player's fixed Shield SST; `Obj_LightningShield_Destroy
+(sonic3k.asm:34824-34827)` writes Obj_InstaShield back to that same slot.
+The engine represents this with a retained dormant alias plus an elemental
+owner, and its snapshot contract compares both identities. S3K Insta-Shield
+reconstruction now returns and rebinds the captured object directly; existing
+manager restore ordering preserves the elemental executing occupant. Live
+reload registration remains deferred. No comparison, movie, gameplay state,
+shared rewind algorithm or object manager is changed.
+
+`TestS3kActTransitionShieldContinuity` adds FIRE/LIGHTNING/BUBBLE checks for exact
+object-manager/player round-trips and subsequent elemental dispatch. The two
+independent attracted-ring movies remain the production registry/forward-replay
+witnesses. This bounded fix leaves this matrix's inherited route, donor,
+viewport and team gaps open.
+
+Validation on `e4b8857a8` plus the focused reconstruction change: both movie
+methods pass (2 tests, zero failures/errors/skips); reverting only the source
+change reproduces both original missing-entry failures. The focused shield,
+rewind, reload and S3K keep-green selection passes 1,570 tests with zero failures
+or errors and one visual capture skip (`TestInstaShieldVisual`: GPU init failed in the
+display-free environment).
+`TestEveryObjectRewindRoundTrip` contributes 1,342 passing cases; all 25 shield
+continuity cases pass, including the three new restore/dispatch cases. No
+shared rewind or object-manager source changed, so the shared-runtime three-profile
+gate is not invoked. These are focused results, not full-suite qualification.
