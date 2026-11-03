@@ -364,3 +364,27 @@ Verified rooms still require an eligible trusted creator and a live verifier wit
 the correct build/ROM fingerprint. The current menu creates casual rooms; Docker
 does not change that UI or its admission rules. See [server configuration](../../CONFIGURATION.md#racing-server-master-verifier-settings)
 and the [deployment design and validation record](../../docs/architecture/plans/2026-10-23-racing-docker-deployment.md).
+
+### Opt-in live master check
+
+From the repository root, with Java 25:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pexternal-master test
+# Override for next, or an explicit certificate-validated wss endpoint:
+python3 tools/testing/maven_queue.py -Dmse=off -Pexternal-master -Dopenggf.externalMaster=multi-next.openggf.com test
+```
+
+The default is the develop service, `multi-dev.openggf.com`. This checks real
+SRV discovery, TLS, protocol authentication/admission and an S3K room-list reply.
+An empty browser is valid. Network, certificate and admission errors fail the run;
+there are no missing-server skips or relaxed TLS checks. The temporary identity
+is deleted by JUnit, although the server may retain its normal admission record.
+The class is named `ExternalMasterIT` so ordinary smoke, guards and release tests
+do not select it; the profile explicitly selects it and enables its second guard.
+
+This is a service/browser check, not certification of room creation, joins,
+readiness, ghost relay, gameplay or verifier processing. Those have local tests;
+the isolated deployment smoke tool above covers a real verified relay attempt
+with a prepared trusted account. Public hosting requires the server's normal
+trust policy; this check never bypasses it or joins other players' rooms.

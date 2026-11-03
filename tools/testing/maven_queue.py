@@ -487,15 +487,29 @@ _FAIL_SWITCHES = {'-fae', '-ff', '-fn', '--fail-at-end', '--fail-fast', '--fail-
 def runs_surefire_lifecycle(args):
     if os.environ.get('MAVEN_ARGS'):
         return False
+    # Match the tracked launch defaults rather than interpreting arbitrary Maven
+    # configuration: it may select another POM, reactor or even extra goals.
+    config = Path.cwd() / '.mvn/maven.config'
+    try:
+        if config.exists() and set(shlex.split(config.read_text(), comments=True)) - {'-Dmse=relaxed', '-Dmse=off'}:
+            return False
+    except (OSError, ValueError):
+        return False
+    switches = _FAIL_SWITCHES | {'-B', '--batch-mode', '-q', '--quiet', '-e', '--errors',
+                                '-X', '--debug', '-o', '--offline', '-U', '--update-snapshots',
+                                '-ntp', '--no-transfer-progress', '-V', '--show-version'}
     goals = []
     tokens = iter(args)
     for token in tokens:
         if token in ('-D', '--define', '-P', '--activate-profiles', '-T', '--threads'):
             if next(tokens, None) is None:
                 return False
-        elif token.startswith(('-f', '--file')) and token not in _FAIL_SWITCHES:
-            return False
-        elif not token.startswith('-'):
+        elif token.startswith(('-D', '-P', '-T', '--define=', '--activate-profiles=', '--threads=')):
+            continue
+        elif token.startswith('-'):
+            if token not in switches:
+                return False
+        else:
             goals.append(token)
     return bool(SUREFIRE_PHASES & set(goals)) and set(goals) <= SUREFIRE_PHASES | {'clean'}
 

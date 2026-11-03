@@ -220,7 +220,9 @@ class LaunchTests(Fixture):
             ['-Dmaven.test.skip=true', 'verify'],
             ['-Dtest=TestOne', 'surefire:test'], ['compile', 'exec:java', '-Dexec.mainClass=X'],
             ['-f', 'other/pom.xml', 'test'], ['--file=other/pom.xml', 'test'], ['-fother.xml', 'test'],
-            ['-pl', 'module', 'test'], ['-Dtest=TestOne', 'test', 'install'], ['-v'], ['-D'],
+            ['-pl', 'module', 'test'], ['-pl=module', 'test'], ['--projects=module', 'test'],
+            ['-ssettings.xml', 'test'], ['--settings=settings.xml', 'test'],
+            ['-Dtest=TestOne', 'test', 'install'], ['-v'], ['-D'],
         ]
         for args in shapes:
             with self.subTest(args=args):
@@ -230,6 +232,21 @@ class LaunchTests(Fixture):
         with patch.dict(os.environ, {'MAVEN_ARGS': '-B'}):
             argv, *_ = self.launch(['-Dtest=TestOne', 'test'])
             self.assertEqual(['mvn', '-Dtest=TestOne', 'test'], argv)
+
+    def test_custom_maven_config_does_not_trigger_discovery(self):
+        config = self.linked / '.mvn/maven.config'
+        config.parent.mkdir()
+        for content in ('-f other/pom.xml', '--file=other/pom.xml', '-pl module',
+                        '--projects=module', '-Dmse=relaxed\nverify'):
+            with self.subTest(config=content):
+                config.write_text(content)
+                with patch.object(self.roms, 'rom_args', side_effect=AssertionError('scanned')):
+                    argv, *_, output = self.launch(['-Dtest=TestOne', 'test'])
+                self.assertEqual(['mvn', '-Dtest=TestOne', 'test'], argv)
+                self.assertNotIn('ROM properties', output)
+        config.write_text('-Dmse=relaxed\n')
+        argv, *_ = self.launch(['-Dtest=TestOne', 'test'])
+        self.assertEqual(['mvn', '-Dtest=TestOne', 'test', *self.discovered], argv)
 
     def test_lifecycle_and_profile_shapes_that_run_surefire_get_discovery(self):
         for args in (['-Psmoke', 'test', '-B'], ['clean', '-fae', 'verify'],

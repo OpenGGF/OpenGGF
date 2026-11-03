@@ -123113,3 +123113,24 @@ no newly red class, no earlier first error; `-Ptrace-replay` unchanged (10F/1E/7
 
 Next targets (user rulings 2026-11-03): carried segment-entry state (policy A, with special-stage identity folded in),
 recorder entry provenance and campaign re-recording (B, D), and a branch-only trial of load-time V-int accounting.
+
+## 2026-11-03 — Mega load-clock causal accounting (investigation)
+
+On `54966bab3`, read-only native/engine phase probes partition the remaining
+11/22/20 per-load losses: 33 zero-routine interrupt increments outside explicit
+waits, 18 fewer terrain-wait ticks and two fewer locked-title ticks. Only 25
+interrupt samples lie in direct block/chunk decode or layout copy; six follow
+unmasking and two occur in initial object work. Native capture replays the
+original first 9,300 movie rows, with four loads and 408 observations, and
+independently matches the prior restart/admission clocks.
+
+The terrain batches are submitted with recorded-row authority inactive on both
+bonus entries but active on AIZ return, while the overall policy is RECORDED.
+The entry batches therefore use engine preparation/readiness rather than recorded
+completion edges; return terrain waits align. The narrower title-span cause
+remains to be isolated. Do not price all 53 as synchronous decompression or add
+a tick to every title release. Both focused `TestS3kMegaRunChain` observations
+retain the known stage_exit assertion failure (one test/failure, zero
+errors/skips); the Slots report remains 7891 at first non-camera row268
+`y_speed`. No runtime correction, fixture replacement or green trace claim.
+See the [phase census, commands and limits](../architecture/audits/2026-11-03-s3k-load-clock-causal-accounting.md).

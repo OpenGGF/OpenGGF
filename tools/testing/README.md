@@ -355,7 +355,8 @@ caller-supplied and missing properties. Admission, estimates and automatic lean
 qualification use the command as typed, before ROM paths are appended. A command that
 names any ROM property, including an intentionally empty `-Ds3k.rom.path=`, keeps exactly
 its own ROM set; use that to pin a different dump or prove a skip. Build-only commands,
-plugin goals, alternate POMs, `MAVEN_ARGS`, `--stats` and `--dashboard` are never changed.
+plugin goals, alternate POMs/reactor selections, custom `.mvn/maven.config`,
+`MAVEN_ARGS`, `--stats` and `--dashboard` are never changed.
 A missing ROM never blocks a ROM-free test; its ROM-gated tests skip, which is not a
 ROM-backed pass. Discovery does not select a graphics backend.
 
