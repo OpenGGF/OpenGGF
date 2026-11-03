@@ -8,6 +8,21 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## Entry snapshot picture differences — 2026-11-03
+
+The [rendered cache audit](../architecture/audits/performance/2026-11-03-rewind-level-audit.md)
+found exact engine-picture differences after whole-registry restore at six-frame
+AIZ2, HCZ2, FBZ2 and ending entries. Each matched zero of five restored pictures on
+baseline `1b22c86eb` and on combined candidate `40d0d86e5`; all four reproduced in
+fresh JVMs. These are engine forward/restore comparisons, not emulator parity
+findings. Rendering/capture ownership and full-route impact remain unattributed.
+
+The cache performance assertions pass at those entries under their respective
+plane ownership rules. Their picture diagnostics remain separate and open; the
+SSZ2 cache fix is not a claim that these pictures are corrected. Investigation
+should first isolate palette, art and derived presentation restoration before
+changing gameplay or weakening picture comparison.
+
 ## DEZ original-input ring frontier at the second staircase — 2026-10-30
 
 The [fresh continuation](trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)
