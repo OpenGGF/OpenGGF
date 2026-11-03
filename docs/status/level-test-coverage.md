@@ -2606,3 +2606,7 @@ This is a local lifetime obligation; the Act1 matrix's broader route/rewind gaps
 LRZ Act1 corkscrew follow-up (2026-11-03): [P2 dispatch audit](../architecture/audits/2026-11-03-lrz-corkscrew-p2.md)
 adds a two-player held/resumed-pass witness and exercises the existing three
 rewind spots; comprehensive two-player route/rewind breadth remains open.
+
+LRZ Act1 invisible support follow-up (2026-11-03): the [status7 audit](../architecture/audits/2026-11-03-lrz-invisible-balance.md)
+records the real rider edge-balance witness and invisible-block rewind checks;
+full-route and broader matrix obligations remain open.

@@ -94,6 +94,15 @@ public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean suppressesObjectEdgeBalance() {
+        // Obj_InvisibleBlock (sonic3k.asm:42701-42706) sets status bit7,
+        // as do the hurt variants (sonic3k.asm:43313-43318,43480-43485).
+        // Sonic_NotRight (sonic3k.asm:22488-22494) skips object-edge balance
+        // for that bit; collision width does not make the invisible edge balanceable.
+        return true;
+    }
+
+    @Override
     public boolean usesInclusiveRightEdge() {
         // Every S3K invisible-block variant calls SolidObjectFull2. Its X
         // entry gate rejects with bhi, so relX == width * 2 is still a valid

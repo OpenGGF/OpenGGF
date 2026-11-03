@@ -1962,3 +1962,11 @@ executed P1 DPLC frame transition, native held P2 pass, two-player unit witness
 and three existing capture/restore/forward-replay spots. The S+T frontier moves
 3415 ->3791; solo LRZ and both bonus-return reports are identical. The 83-test
 object/keep-green selection passes without skips. Broader matrix gaps remain inherited.
+
+## Invisible support edge balance (2026-11-03)
+
+The [status7 audit](../../audits/2026-11-03-lrz-invisible-balance.md) binds the
+real slot6 support and player balance diagnostic at3791 to native status88.
+The local object-family override removes that animation-only disagreement,
+with no added error cells;103 object/rewind/keep-green checks pass without skips.
+The next frontier is4630 status_byte. The existing broader matrix gaps remain open.
