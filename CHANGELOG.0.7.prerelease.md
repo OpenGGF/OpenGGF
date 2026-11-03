@@ -32,6 +32,10 @@ Unreleased. The earlier development themes remain in
 
 - MGZ swinging platforms use native fractional chain arithmetic and execution-order inputs instead of fitted slot/angle carry tables; spring animation starts from the native cleared timer.
 
+- S3K fresh level loads count the terrain wait's final VBlank in the live game
+  loop, as the recording driver already did. The remaining load-time lag
+  frames are documented, not estimated.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 

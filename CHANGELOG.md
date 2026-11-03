@@ -7,6 +7,8 @@ readable and historical versions can be referenced directly.
 
 - MGZ swinging platforms use native fractional chain arithmetic instead of fitted slot/angle carry tables; spring solid reactions precede native animation.
 
+- S3K fresh level loads count the terrain wait's final VBlank in the live game loop, as in the ROM.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
 - HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.
