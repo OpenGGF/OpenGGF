@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.
+
 - HCZ2 end-boss startup preserves native callback/init dispatches and the water platform's cleared animation timer.
 
 - Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.

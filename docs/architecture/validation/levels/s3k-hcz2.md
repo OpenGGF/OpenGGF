@@ -1113,3 +1113,29 @@ not an agreeing native state. No newly red class or earlier first error occurs.
 The next local owner is the shared displacement register in
 `HCZEndBossColumn_PushPlayersFromWater` (sonic3k.asm:141825-141854): both
 eligible players to the right negate the same register in succession.
+
+
+## End-boss paired suction — 2026-11-03
+
+`HCZEndBossColumn_PushPlayersFromWater` (sonic3k.asm:141825-141854)
+initializes the positional displacement once and retains negations across
+native P1/P2. An eligible P1 to the right makes it negative; an eligible P2
+to the right negates it back to positive. Skipped participants leave it
+unchanged; equality takes the unnegated path. Extension participants retain
+independent displacement transactions.
+
+Executed branch instrumentation at slice row 28856 observes P1 at `(40DB,07EC)`
+and P2 at `(4117,07EA)`, both right of column `40C8`, with water at `07E0`.
+The old branch shifts both by -2; native P1 finishes at `40D9` and P2 at
+`4119`. The corrected slice moves from 644 groups at 28856 to 635 at 28879.
+Nine sibling error lists are unchanged. The remaining sibling has 229 to 230
+groups solely because removing row 3796 `x` splits an existing span; expanded
+row/field sets contain no added mismatch and its first error stays at row 0
+`camera_y`. This is bounded route evidence; the earlier act/configuration and
+pending-initialization restore gaps remain open.
+
+The 83 unchanged focused boss/rewind/keep-green cases pass without skips;
+the new paired-suction control passes separately after correcting its fixture's
+inherited-field setup and below-water placement. That control covers paired
+right-side players, skipped P1, and exact X equality. Earlier fixture errors
+and a misplaced wrapper flag were failed attempts, not gameplay evidence.

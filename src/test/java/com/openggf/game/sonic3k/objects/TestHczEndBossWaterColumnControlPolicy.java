@@ -48,6 +48,33 @@ class TestHczEndBossWaterColumnControlPolicy {
     }
 
     @Test
+    void nativePairRetainsSuctionDisplacementAcrossBothPlayers() throws Exception {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x4100, (short) 0x1100);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x4200, (short) 0x1100);
+        HczEndBossWaterColumn column = newWaterColumn();
+        column.setServices(new TestObjectServices() {
+            @Override public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> p1, () -> List.of(p2));
+            }
+        }.withConfiguration(SonicConfigurationService.createStandalone()));
+        assertEquals(0x4000, column.getX());
+        invokePrivate(column, "applySuction", p1);
+        assertEquals(0x40FE, p1.getCentreX() & 0xFFFF);
+        assertEquals(0x4202, p2.getCentreX() & 0xFFFF,
+                "P2 negates the displacement already negated by P1");
+
+        p1.setCentreY((short) 0); // skipped P1 must leave d2 positive
+        p2.setCentreX((short) 0x4200);
+        invokePrivate(column, "applySuction", p1);
+        assertEquals(0x41FE, p2.getCentreX() & 0xFFFF);
+
+        p2.setCentreX((short) 0x4000);
+        invokePrivate(column, "applySuction", p1);
+        assertEquals(0x4002, p2.getCentreX() & 0xFFFF,
+                "native bhs includes equality in the positive-displacement path");
+    }
+
+    @Test
     void bladeImpactUsesNativeHarmfulCollisionDuringFirstThreeFrames() throws Exception {
         HczEndBossImpactFixture fixture = newImpactFixture();
         HczEndBossBladeImpactExplosion impact = fixture.impact();

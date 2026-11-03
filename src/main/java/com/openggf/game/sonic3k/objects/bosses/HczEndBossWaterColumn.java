@@ -725,47 +725,37 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
         NativePlayerSlots slots = nativePlayerSlots(player);
         if (slots.p1() != null) {
             applyGrabAndCarry(slots.p1(), 0, sprayY);
-            applySuctionTo(slots.p1());
         }
         if (slots.p2() != null) {
             applyGrabAndCarry(slots.p2(), 1, sprayY);
-            applySuctionTo(slots.p2());
+        }
+        // HCZEndBossColumn_PushPlayersFromWater initializes d2 once, then
+        // retains each negation across P1/P2 (sonic3k.asm:141825-141854).
+        int displacement = 2;
+        if (slots.p1() != null) {
+            displacement = applySuctionTo(slots.p1(), displacement);
+        }
+        if (slots.p2() != null) {
+            applySuctionTo(slots.p2(), displacement);
         }
         for (AbstractPlayableSprite extension : extendedParticipants(player, slots)) {
             applyGrabAndCarry(extension, -1, sprayY);
-            applySuctionTo(extension);
+            applySuctionTo(extension, 2);
         }
     }
 
-    /**
-     * sub_6B9AC + sub_6B9C8: horizontal push toward column.
-     * ROM: $20000 (2.0 in 16.16) applied to x_pos when player is below
-     * water+8 and not object-controlled. This is a gentle positional drag
-     * (not velocity-based), so the player can escape by running/swimming
-     * in the opposite direction.
-     */
-    private void applySuctionTo(AbstractPlayableSprite sprite) {
-        if (sprite.getDead() || sprite.isObjectControlled()) {
-            return;
+    /** Native d2 is an in/out displacement, including on the equality path. */
+    private int applySuctionTo(AbstractPlayableSprite sprite, int displacement) {
+        // HCZEndBossColumn_PushPlayerFromWater (sonic3k.asm:141841-141854):
+        // skipped participants leave d2 unchanged; only x > column negates it.
+        if (sprite.isObjectControlled() || sprite.getCentreY() <= getWaterLevelY() + 8) {
+            return displacement;
         }
-
-        int waterY = getWaterLevelY();
-        int spriteY = sprite.getCentreY();
-
-        // ROM: cmp.w y_pos(a1),d1; bhs locret — skip if water+8 >= player_y
-        // (skip when player is above water+8; apply when player is below water+8)
-        if (spriteY <= waterY + 8) {
-            return;
+        if (sprite.getCentreX() > currentX) {
+            displacement = -displacement;
         }
-
-        int spriteX = sprite.getCentreX();
-        // ROM: cmp.w x_pos(a1),d0; bhs.s loc_6B9DC; neg.l d2
-        // If column_x >= sprite_x: push right (positive). Otherwise: push left.
-        if (spriteX < currentX) {
-            sprite.shiftX(2);
-        } else if (spriteX > currentX) {
-            sprite.shiftX(-2);
-        }
+        sprite.shiftX(displacement);
+        return displacement;
     }
 
     /**
