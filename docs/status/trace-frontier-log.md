@@ -123533,3 +123533,16 @@ structural reference from a stationary, invisible component, preserves its
 controller/algorithm/dispatch, and covers graph reconstruction, controller RNG,
 boss transitions, the actual full replay and required S3K consumers. No shared
 algorithm changes, release-only full suite or complete trace green claim.
+
+### Correction to the wave-5 entry — Mega Slots first error moved earlier (attributed)
+
+The wave-5 comparison truncated run-chain messages, so it missed one segment-level change. `TestS3kMegaRunChain`
+segment 3 (Slots) moves from 7891 errors @268 `y_speed` to 7947 @232 `rings`. Measured by the bonus-entry tail lane
+(`bugfix/ai-trace-s3k-bonus-entry-tail`, audit `docs/architecture/audits/2026-11-03-s3k-bonus-entry-tail.md`). The
+release V-int (`dfd7716ae`) composes with develop's `69ec429fc` (one V-int per bonus entry), and together they bring
+the Mega admission clocks closer to native at every boundary: Gumball 5519 → 5520, AIZ return 6925 → 6927, Slots
+9046 → 9049, against native 5529 / 6957 / 9097. Slots seeds its reels from that clock, so any inexact clock yields a
+different wrong payout. Deficits of 51, 50, 48, 30, 23 and 3 V-ints gave first errors at rows 268, 300, 232, 236,
+220 and 252. Slots can therefore validate only an exact clock. The move is kept and attributed rather than reverted.
+The last three V-ints are the unrecorded segment-switch frames, and their recorder census is in progress. The lead's
+comparator now diffs full chain messages.
