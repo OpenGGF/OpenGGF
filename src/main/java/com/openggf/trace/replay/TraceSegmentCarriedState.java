@@ -64,13 +64,12 @@ public record TraceSegmentCarriedState(
 
     /**
      * A giant-ring touch ({@code Obj_SSEntryRing} with its {@code Obj_SSEntryFlash})
-     * the recorder observed in the final rows of an earlier segment of this zone
-     * visit. {@code SSEntryFlash_GoSS} set bit {@code subtype} of
+     * the recorder observed in an earlier segment of this zone visit. {@code SSEntryFlash_GoSS} set bit {@code subtype} of
      * {@code Collected_special_ring_array} for it (loc_618D0, sonic3k.asm:128477-128481),
      * and only a full {@code SaveGame} clears the array again (loc_C4CC,
      * sonic3k.asm:15957-15958).
      */
     public record ConsumedGiantRing(String segmentDir, int x, int y, int subtype,
-                                    int lastSeenFrame) {
+                                    int touchFrame) {
     }
 }

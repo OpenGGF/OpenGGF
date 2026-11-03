@@ -47,7 +47,7 @@ standalone copy. The manifest segment must agree on `bk2_frame_offset` and
 | `Ring_count` | `LevelGamestate.setRings` | inbound transition: `rings_after` on a `stage_exit` return, `rings_before` into a bonus stage. A fresh zone has no inbound record; the ROM clears rings there (loc_63B4) and nothing is imported |
 | `Chaos_emerald_count` | `GameStateManager` emerald states | `emeralds_after`/`emeralds_before` of the latest transition at or before the segment (level play cannot change it) |
 | `Collected_emeralds_array` (0-3 per emerald), `Super_emerald_count` | `GameStateManager.restoreS3kEmeraldProgress` | folded by `S3kRunEmeraldLedger` over the manifest's earlier special stages (see below) |
-| `Collected_special_ring_array` | `GameStateManager.markSpecialRingCollected` | giant-ring touches recorded in the last 256 rows of earlier segments of this zone visit, confirmed against the loaded level's giant-ring placements |
+| `Collected_special_ring_array` | `GameStateManager.markSpecialRingCollected` | giant-ring touches recorded anywhere in earlier segments of this zone visit, confirmed against the loaded level's giant-ring placements |
 | Player 1 shield (`status_secondary` fire/lightning/bubble) | `AbstractPlayableSprite.giveShield` | this segment's recorded entry row (`interact_state`, row 0) |
 | `top_solid_bit`/`lrb_solid_bit` | `setTopSolidBit`/`setLrbSolidBit` | this segment's recorded entry row (`state_snapshot`, row 0); moved here from `seedSegmentEntrySolidBits` |
 | `Current_special_stage`, `SK_special_stage_flag` (special-stage segments) | stage selection | recorded `special_stage_index` (sampled at the arm, before the search); the set from the ledger |
@@ -95,14 +95,32 @@ before any Super stage (`1` × 7).
 ### Giant-ring memory
 
 A touch leaves a signature an idle ring cannot. `SSEntryFlash_Init` copies the
-ring's position into `Obj_SSEntryFlash`, so two object routines occupy the same
-position and subtype until the flash deletes the ring. The flash's subtype is the
-bit loc_618D0 sets. Measured over every S3K run segment, the signature occurs on
-exactly the giant-ring-ended segments, including the S&K giant rings that lead to
-the shrine (subtype `$81`/`$82`) and have no manifest transition of their own.
+ring's position into `Obj_SSEntryFlash`, which is allocated in another SST slot.
+For a few frames two slots therefore hold the ring's position and subtype on
+the same frame, until the flash deletes the ring at its fourth frame. The
+flash's subtype is the bit `loc_618D0` sets. Each earlier segment of the zone
+visit is scanned in full; there is no row window.
+
+The first version required only "two object routines at one position" in a
+segment's last 256 rows. That window was a fitted search constant, and the
+weaker test is not exact over a whole segment. `SSEntryRing_Display` deletes a
+ring through `Go_Delete_SpriteSlotted` both when it was consumed and when it
+went off screen (`loc_61928` → `loc_6196A`). So an off-screen ring also shows
+two routines at its position, and so does the 50-ring award (`loc_61794`). The
+full-segment measurement found 41 such non-touch positions (for example S+T `fbz`
+×4, `lrz` ×3, `cnz` ×3, Knuckles `icz` ×3). The two-slots-on-one-frame
+signature, restricted to giant-ring positions, occurs exactly once per segment
+that entered a special stage or the shrine through a giant ring, 49 segments
+across the five runs. Every occurrence carries the flash, at that segment's
+end, and there are none elsewhere.
+
+Rings spent for 50 rings (`loc_61794`) also set their bit but create no flash,
+so no recording establishes them. The TraceChaser export of
+`Collected_special_ring_array` at each boundary (below) would cover them.
+
 The zone visit runs back through special and bonus stages and the shrine
 excursions. A level of another zone that the run left by advancing to the next
-level ends the visit: the act-2 results' full `SaveGame` clears the array
+level ends it: the act-2 results' full `SaveGame` clears the array
 (loc_2DCB6 → loc_C4CC).
 
 ## Special stages

@@ -1,7 +1,5 @@
 package com.openggf.trace.replay;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ShieldType;
@@ -64,9 +62,6 @@ import java.util.Set;
  */
 public final class TraceSegmentCarriedStateImport {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
-    /** Recorded object rows searched back from a giant-ring-ended segment's end. */
-    private static final int GIANT_RING_TAIL_ROWS = 256;
     // status_secondary bits: Status_FireShield 4, Status_LtngShield 5,
     // Status_BublShield 6 (loc_69E0 masks exactly these three).
     private static final int FIRE_SHIELD = 1 << 4;
@@ -334,66 +329,91 @@ public final class TraceSegmentCarriedStateImport {
                 }
                 continue;
             }
-            rings.addAll(recordedGiantRingTouchesAtSegmentEnd(
-                    run.runDir().resolve(s.dir()), s.dir(), s.traceFrameCount()));
+            rings.addAll(recordedGiantRingTouches(run.runDir().resolve(s.dir()), s.dir()));
         }
         unresolved.add("Collected_special_ring_array: rings spent for 50 rings with seven"
-                + " emeralds (loc_61794) are read only from a segment's last rows");
+                + " emeralds (loc_61794) leave no flash, so no recording establishes them");
         return rings;
     }
 
     /**
-     * Giant-ring touches the recorder observed in a segment's last rows. A
-     * touch leaves a signature no idle ring has: {@code SSEntryFlash_Init}
-     * copies the ring's position into {@code Obj_SSEntryFlash}, so two
-     * different object routines occupy the same position and subtype until
-     * the flash deletes the ring at its fourth frame (SSEntryFlash_Main), and
-     * the flash's own subtype is the bit {@code loc_618D0} sets
-     * (sonic3k.asm:128477-128481). At import each touch is confirmed against
-     * the loaded level's giant-ring placements (same position and subtype).
+     * Giant-ring touches the recorder observed anywhere in a segment. A touch
+     * leaves a signature nothing else at a giant-ring position has:
+     * {@code SSEntryFlash_Init} copies the ring's position into
+     * {@code Obj_SSEntryFlash}, allocated in another SST slot, so two slots hold
+     * the ring's position and subtype on the same frame until the flash deletes
+     * the ring at its fourth frame ({@code SSEntryFlash_Main}). The flash's
+     * subtype is the bit {@code loc_618D0} sets (sonic3k.asm:128477-128481). An
+     * idle ring, or one deleted off screen ({@code loc_61928} to
+     * {@code loc_6196A}), is only ever one slot. At import each touch is
+     * confirmed against the loaded level's giant-ring placements (same position
+     * and subtype). Measured over every committed S3K run segment, the
+     * signature at a giant-ring position occurs exactly once per segment that
+     * entered a special stage or the shrine through a giant ring, and nowhere else.
      */
-    static List<TraceSegmentCarriedState.ConsumedGiantRing> recordedGiantRingTouchesAtSegmentEnd(
-            Path segmentDir, String dirName, int traceFrameCount) {
+    static List<TraceSegmentCarriedState.ConsumedGiantRing> recordedGiantRingTouches(
+            Path segmentDir, String dirName) {
         Path aux = TraceFiles.resolve(segmentDir, "aux_state.jsonl");
-        if (aux == null || traceFrameCount <= 0) {
+        if (aux == null) {
             return List.of();
         }
-        int firstTailFrame = traceFrameCount - GIANT_RING_TAIL_ROWS;
-        java.util.Map<String, Set<String>> codesAt = new java.util.LinkedHashMap<>();
-        java.util.Map<String, TraceSegmentCarriedState.ConsumedGiantRing> latest =
+        java.util.Map<String, TraceSegmentCarriedState.ConsumedGiantRing> touches =
                 new java.util.LinkedHashMap<>();
+        java.util.Map<String, Set<Integer>> slotsThisFrame = new java.util.HashMap<>();
+        int currentFrame = Integer.MIN_VALUE;
         try (BufferedReader reader = TraceFiles.openReader(aux)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (!line.contains("\"object_state\"") || leadingFrame(line) < firstTailFrame) {
+                if (!line.contains("\"object_state\"")) {
                     continue;
                 }
-                JsonNode node = JSON.readTree(line);
-                if (!"object_state".equals(node.path("event").asText())) {
-                    continue;
+                int frame = leadingFrame(line);
+                if (frame != currentFrame) {
+                    slotsThisFrame.clear();
+                    currentFrame = frame;
                 }
-                int x = parseHex(node.path("x").asText());
-                int y = parseHex(node.path("y").asText());
-                int subtype = parseHex(node.path("subtype").asText());
-                if (x < 0 || y < 0 || subtype < 0) {
+                int slot = parseHex(stringValue(line, "slot"));
+                int x = parseHex(stringValue(line, "x"));
+                int y = parseHex(stringValue(line, "y"));
+                int subtype = parseHex(stringValue(line, "subtype"));
+                if (slot < 0 || x < 0 || y < 0 || subtype < 0) {
                     continue;
                 }
                 String key = x + ":" + y + ":" + subtype;
-                codesAt.computeIfAbsent(key, k -> new LinkedHashSet<>())
-                        .add(node.path("object_code").asText());
-                latest.put(key, new TraceSegmentCarriedState.ConsumedGiantRing(
-                        dirName, x, y, subtype, node.path("frame").asInt()));
+                Set<Integer> slots = slotsThisFrame.computeIfAbsent(key, k -> new LinkedHashSet<>());
+                if (slots.add(slot) && slots.size() == 2) {
+                    touches.putIfAbsent(key, new TraceSegmentCarriedState.ConsumedGiantRing(
+                            dirName, x, y, subtype, frame));
+                }
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        List<TraceSegmentCarriedState.ConsumedGiantRing> touches = new ArrayList<>();
-        latest.forEach((key, ring) -> {
-            if (codesAt.get(key).size() >= 2) {
-                touches.add(ring);
+        return List.copyOf(touches.values());
+    }
+
+    /** A top-level scalar of one aux JSON line, unquoted, or {@code null}. */
+    private static String stringValue(String line, String field) {
+        String key = "\"" + field + "\":";
+        int at = line.indexOf(key);
+        if (at < 0) {
+            return null;
+        }
+        int i = at + key.length();
+        while (i < line.length() && line.charAt(i) == ' ') {
+            i++;
+        }
+        boolean quoted = i < line.length() && line.charAt(i) == '"';
+        int start = quoted ? i + 1 : i;
+        int end = start;
+        while (end < line.length()) {
+            char c = line.charAt(end);
+            if (quoted ? c == '"' : (c == ',' || c == '}' || c == ' ')) {
+                break;
             }
-        });
-        return List.copyOf(touches);
+            end++;
+        }
+        return line.substring(start, end);
     }
 
     /** The {@code "frame"} value an aux line opens with, without a full parse. */
@@ -559,8 +579,6 @@ public final class TraceSegmentCarriedStateImport {
         if (gameState == null || level == null || level.getCurrentLevel() == null) {
             return;
         }
-        java.util.Map<String, TraceSegmentCarriedState.ConsumedGiantRing> consumedPerSegment =
-                new java.util.LinkedHashMap<>();
         for (TraceSegmentCarriedState.ConsumedGiantRing ring : carried.consumedGiantRings()) {
             boolean onGiantRingPlacement = false;
             for (ObjectSpawn spawn : level.getCurrentLevel().getObjects()) {
@@ -574,10 +592,6 @@ public final class TraceSegmentCarriedStateImport {
             if (!onGiantRingPlacement) {
                 continue;
             }
-            consumedPerSegment.merge(ring.segmentDir(), ring,
-                    (a, b) -> b.lastSeenFrame() >= a.lastSeenFrame() ? b : a);
-        }
-        for (TraceSegmentCarriedState.ConsumedGiantRing ring : consumedPerSegment.values()) {
             // Obj_SSEntryRing tests bit subtype (btst d0,d1 on a longword, so
             // mod 32) before it builds itself (sonic3k.asm:128271-128275).
             gameState.markSpecialRingCollected(ring.subtype() & 0x1F);

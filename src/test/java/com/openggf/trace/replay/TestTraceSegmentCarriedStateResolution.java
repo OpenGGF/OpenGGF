@@ -106,11 +106,18 @@ class TestTraceSegmentCarriedStateResolution {
     }
 
     @Test
-    void giantRingEndedSegmentsOfTheSameZoneVisitAreCandidates() throws Exception {
+    void everyGiantRingTouchOfTheZoneVisitIsFoundAndNothingElse() throws Exception {
+        // Whole-segment scan: the ring and its flash share a position in two
+        // SST slots on one frame only after a touch.
         TraceSegmentCarriedState aiz4 = resolve(SONIC_TAILS, "aiz_4");
-        assertFalse(aiz4.consumedGiantRings().isEmpty());
-        assertTrue(aiz4.consumedGiantRings().stream()
-                .anyMatch(r -> r.segmentDir().equals("aiz_3")));
+        assertEquals(List.of("aiz_3:6584:1104:4", "aiz_2:576:976:3", "aiz:7112:1216:1"),
+                aiz4.consumedGiantRings().stream()
+                        .map(r -> r.segmentDir() + ":" + r.x() + ":" + r.y() + ":" + r.subtype())
+                        .toList());
+        // MHZ3 follows a shrine excursion: the MHZ2 ring that led there is carried.
+        TraceSegmentCarriedState mhz3 = resolve(SONIC_TAILS, "mhz_3");
+        assertTrue(mhz3.consumedGiantRings().stream()
+                .anyMatch(r -> r.segmentDir().equals("mhz_2") && r.subtype() == 3));
         TraceSegmentCarriedState mgz = resolve(SONIC_TAILS, "mgz");
         assertTrue(mgz.consumedGiantRings().isEmpty(), "a new zone starts with a cleared array");
     }
