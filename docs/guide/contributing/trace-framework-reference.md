@@ -762,7 +762,12 @@ The base JUnit-5 test class. Subclasses override `game()`, `zone()`, `act()`,
    metadata's shared `_movies/<source_bk2>` placement or a retained local `.bk2`.
 3. Prepare the recorded team and ROM-backed level through `TraceReplaySessionBootstrap`,
    `TraceReplayBootstrap` and `HeadlessTestFixture`. Some entry profiles require a
-   fresh level load rather than a reused `SharedLevel`.
+   fresh level load rather than a reused `SharedLevel`. The declared-position entry
+   (`applyStartPositionAndGroundSnap`) runs the one carried-state import,
+   `TraceSegmentCarriedStateImport.importAtSegmentEntry`. That import sets the
+   run segment's recorded rings, emerald progress, used giant rings, shield and
+   path bits before the camera, level events and first row. S3K special-stage
+   segments use `importAtSpecialStageEntry` to choose their stage.
 4. Step the production frame driver with movie input and the supported phase model.
    Dedicated hardware timing can release only matching prepared production work,
    under the [timing input contract](../../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).

@@ -26,6 +26,14 @@ harnesses.
 - **Pre-trace bootstrap is fine.** Setting starting position, RNG seed, oscillation pre-advance,
   and frame counter once at frame 0 is "load a save state at the BK2 starting point". The
   prohibition is on per-frame write-back during the comparison loop.
+- **Carried run state enters once, through one mechanism.** A standalone run segment starts
+  with the run state the ROM carried in from the previous segment: rings, emerald progress,
+  used giant rings, Player 1's shield and path bits. `TraceSegmentCarriedStateImport` resolves
+  these from the run manifest and the segment's own recorded entry row and imports them at
+  segment entry. Special-stage segments pick their stage from the same state through the ROM's
+  `sub_85B0` search. A variable no recording establishes is reported as unresolved, not
+  guessed. State is never invented mid-run, and run-chain continuations never import. See
+  [segment carried run state](../../architecture/designs/2026-11-03-segment-carried-run-state.md).
 
 If a trace replay test passes only because engine state is snapped back to ROM-correct values
 each frame, the engine has not been verified — it has been masked. Honest tests force honest
