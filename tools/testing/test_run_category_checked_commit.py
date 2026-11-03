@@ -37,9 +37,11 @@ class CheckedCommitTests(unittest.TestCase):
         self.git("commit", "-m", "initial")
         self.before = self.git("rev-parse", "HEAD")
         shutil.copytree(SOURCE / ".githooks", self.root / ".githooks")
-        # pre-commit runs the staged disassembly citation guard from the repository.
-        (self.root / "tools/disasm").mkdir(parents=True)
-        shutil.copy2(SOURCE / "tools/disasm/disasm_citations.py", self.root / "tools/disasm")
+        # Hooks run inside this disposable repository, so include their real
+        # citation-checking dependency as well as the policy scripts.
+        disasm_tools = self.root / "tools/disasm"
+        disasm_tools.mkdir(parents=True)
+        shutil.copy2(SOURCE / "tools/disasm/disasm_citations.py", disasm_tools)
         self.git("config", "core.hooksPath", ".githooks")
         self.message = self.root / "message.txt"
         self.message.write_text(MESSAGE)
