@@ -6,7 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import java.util.List;
 
-/** Exact real-SST subtype-zero CreateBossExplosion controller shared by FBZ bosses. */
+/** Exact real-SST subtype-zero CreateBossExplosion controller shared by boss defeat owners. */
 abstract class AbstractS3kBossExplosionObjectInstance extends AbstractObjectInstance {
     protected int familySlot;
     protected int x;

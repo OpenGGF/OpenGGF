@@ -158,7 +158,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private boolean preservesPostObjectResultDispatchBoundary;
     private boolean preservesGroundedResultsDispatchBoundary;
     private boolean usesShortResultsChildRetireTail;
-    private int nativeControlSlot = -1;
 
     /**
      * Creates the signpost at the given X position.
@@ -213,10 +212,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     private S3kSignpostInstance() {
         this(0, 0);
-    }
-
-    void preserveNativeControlAllocationBoundary(int slot) {
-        nativeControlSlot = slot;
     }
 
     @Override
@@ -671,47 +666,15 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
                                 resultsChildTimingAdjustment,
                                 usesShortResultsChildRetireTail));
-        // Obj_EndSignResults calls AllocateObject.  Its lower free slot has
-        // already passed in the current Process_Sprites walk, so the results
-        // owner is published now but its Obj_LevelResultsInit dispatch starts
-        // on the following pass, matching the native owner contract.
-        if (useFirstFreeResultsOwner()) {
-            spawnFreeChild(resultsFactory);
-        } else {
-            spawnChild(resultsFactory);
-        }
+        // Obj_EndSignResults (sonic3k.asm:176326-176337) waits for grounded
+        // P1, then ALWAYS calls global AllocateObject. Having waited in the
+        // air does not change the allocator or the object's execution boundary.
+        spawnFreeChild(resultsFactory);
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
             applyNativeSidekickEndingPose(player);
         }
-    }
-
-    private boolean useFirstFreeResultsOwner() {
-        int firstFreeSlot = services().objectManager() == null
-                ? -1
-                : services().objectManager().firstFreeDynamicSlot();
-        return usesFirstFreeResultsOwner(
-                resultsWaitedForPlayerLanding,
-                preservesGroundedResultsDispatchBoundary,
-                usesShortResultsChildRetireTail,
-                firstFreeSlot,
-                nativeControlSlot);
-    }
-
-    static boolean usesFirstFreeResultsOwner(boolean waitedForPlayerLanding,
-            boolean preservesGroundedBoundary, boolean usesShortRetireTail,
-            int firstFreeSlot, int nativeControlSlot) {
-        // Obj_EndSignControl remains in the defeated boss's SST in the ROM.
-        // The Java flow/sign split can sit later in the pool, so compare
-        // FindFreeObj with that retained native owner boundary: a free slot
-        // after it must stay on the forward, same-pass side of Process_Sprites.
-        if (preservesGroundedBoundary && nativeControlSlot >= 0
-                && firstFreeSlot > nativeControlSlot) {
-            return false;
-        }
-        return preservesGroundedBoundary
-                || (!waitedForPlayerLanding && !usesShortRetireTail);
     }
 
     static ResultsChildTimingAdjustment resultsChildTimingAdjustment(boolean waitedForPlayerLanding,
