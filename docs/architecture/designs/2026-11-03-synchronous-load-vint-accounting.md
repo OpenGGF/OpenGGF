@@ -4,6 +4,14 @@ Status: proposed, implementation deferred for lead/user decision. Follow-up to
 [the Mega Slots audit](../audits/2026-11-03-s3k-mega-slots-clock.md), measured on
 `347b695dc` with temporary read-only probes. No runtime change is included.
 
+Follow-up: the [native/engine phase census](../audits/2026-11-03-s3k-load-clock-causal-accounting.md)
+now partitions the residual 53 ticks in this witness: 33 zero-routine interrupt
+increments outside explicit waits, 18 shorter terrain-wait ticks and two
+shorter locked-title ticks. Only 25 of the 33 interrupt samples fall inside
+direct block/chunk decode or layout copy; six follow unmasking and two occur
+during initial object work. The 53 must not become a synchronous-decompression
+budget. The proposed ledger/pricing implementation remains deferred.
+
 ## Localization and hypothesis result
 
 The deficit accumulates over **three fresh loads**, not during ordinary play
