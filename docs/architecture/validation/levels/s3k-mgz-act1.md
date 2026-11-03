@@ -315,3 +315,28 @@ the short MGZ frontier from row 13,939 `camera_x` to row 14,384
 certification. The larger MGZ3 group count is attributed to its already-divergent
 results/control release, and the remaining four short-trace animation errors
 have the independent pre-existing slot-order owner described above.
+
+## Bubbles offscreen continuation — 2026-11-03
+
+`Obj_WaitOffscreen` (sonic3k.asm:180362-180394) consumes the preceding
+`Render_Sprites` visibility. Its `loc_85B02` restores the object's continuation
+and returns; initialization belongs to the next object pass. Bubbles now retains
+that visibility through post-camera publication, returns from the waiting pass,
+and exposes zero collision flags until its init routine runs.
+
+`TestBubblesBadnikInstance.offscreenContinuationReturnsBeforeInitializationAndReplaysAfterRestore`
+checks the continuation-only pass, init-only pass and first movement, including
+capture/restore at the pending-init seam. The focused touch/badnik group passes
+88 tests without skips. `TestTouchResponseManager.killedEnemyStillHurtsLaterVulnerableSidekick`
+pins the existing later-player hurt path under S1, S2 and S3K rules.
+
+The MGZ zone-slice replay's row-5255 probe showed that the killed badnik remained
+in Tails' touch list with flags `$12`; its engine X was `$13F8`, one pixel left
+of ROM `$13F9`. Correcting activation restores that position and the same-frame
+hurt response. The focused slice moves from 7921 errors at row 5255 to 5367 at
+row 16511. The Sonic+Tails segment moves from 4100 to 3447 errors, retaining its
+first row-10709 X mismatch; the row-11618 cluster is removed. These remain strict-red
+fixtures, not act certification. These figures describe the focused runs;
+full-profile comparison is a separate delivery gate. Wider character, donor, viewport, team, native presentation and complete
+route/lifecycle obligations remain open. The separately identified raw-animation
+callback continuation discrepancy is unchanged by this correction.
