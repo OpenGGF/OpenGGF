@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
+
 - Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
 
 - Correct FBZ2 boss pilot-light colors, shipped rotation expression and debug geometry; preserve S3K’s native Super/Hyper revert grace boundary.

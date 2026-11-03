@@ -19,6 +19,8 @@ import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Arrays;
 
@@ -47,9 +49,10 @@ class TestS3kCollisionLayoutTilemapRestore {
         if (savedConfig != null) TraceReplaySessionBootstrap.restoreGameplayConfig(savedConfig);
     }
 
-    @Test
-    void unchangedWholeWorldRestoresReuseBothTilemapsAndCapturedMapBytes() {
-        var fixture = openLrz1();
+    @ParameterizedTest
+    @CsvSource({"9,0", "10,1"})
+    void unchangedWholeWorldRestoresReuseBothTilemapsAndCapturedMapBytes(int zone, int act) {
+        var fixture = openAct(zone, act);
         var owner = GameServices.level();
         var tilemaps = owner.getTilemapManager();
         var registry = fixture.gameplayMode().getRewindRegistry();
@@ -137,7 +140,11 @@ class TestS3kCollisionLayoutTilemapRestore {
     }
 
     private static HeadlessTestFixture openLrz1() {
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(9, 0)
+        return openAct(9, 0);
+    }
+
+    private static HeadlessTestFixture openAct(int zone, int act) {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act)
                 .withFreshLevelStartLifecycle().build();
         fixture.stepIdleFrames(2);
         ensureTilemaps(GameServices.level());
