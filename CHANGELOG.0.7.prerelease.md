@@ -7,6 +7,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- HCZ2 end-boss attack setup runs on the native wait-underflow pass; spray release performs its final interaction once.
+
 - HCZ2 end-boss swing resumes from the live rise velocity and retains the native fractional Y position.
 
 - HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.

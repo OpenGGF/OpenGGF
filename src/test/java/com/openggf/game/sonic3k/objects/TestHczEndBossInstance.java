@@ -125,7 +125,7 @@ class TestHczEndBossInstance {
         assertEquals(1, getIntField(boss, "fleeTimer"));
     }
     @Test
-    void preAttackSetupDefersTheCallbackWithoutAddingASwingStep() throws Exception {
+    void preAttackWaitRunsItsCallbackOnUnderflowWithoutAnExtraSwingStep() throws Exception {
         TestObjectServices services = new TestObjectServices()
                 .withConfiguration(SonicConfigurationService.getInstance());
         HczEndBossInstance boss = ObjectConstructionContext.construct(
@@ -150,20 +150,11 @@ class TestHczEndBossInstance {
         tickWait.setAccessible(true);
         tickWait.invoke(boss);
 
-        Field pending = HczEndBossInstance.class.getDeclaredField("pendingAttackSetupDispatch");
-        pending.setAccessible(true);
-        assertTrue(pending.getBoolean(boss));
-        assertEquals(10, boss.getState().routine);
-
-        Method update = HczEndBossInstance.class.getDeclaredMethod(
-                "updateBossLogic", int.class, com.openggf.game.PlayableEntity.class);
-        update.setAccessible(true);
-        update.invoke(boss, 0, null);
-
-        assertFalse(pending.getBoolean(boss));
-        assertEquals(12, boss.getState().routine);
+        assertEquals(12, boss.getState().routine,
+                "Obj_Wait invokes HCZEndBoss_StartSidePass in the underflow dispatch");
+        assertEquals(0xBF, waitTimer.getInt(boss));
         assertEquals(setupY, stateY.getInt(boss.getState()),
-                "the setup-only dispatch must not add an extra swing movement");
+                "the callback configures attack without another swing/movement step");
     }
 
     @Test

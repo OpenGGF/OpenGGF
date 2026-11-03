@@ -255,14 +255,6 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
-    /**
-     * The separately allocated spray SST runs after its platform parent. When
-     * {@code HCZEndBossPlatform_StartFallAway} selects DESCEND, that later slot
-     * still completes its final suction dispatch before observing parent bit 3
-     * (docs/skdisasm/sonic3k.asm:141208-141241,141270-141294).
-     */
-    private boolean pendingSprayTailInteraction;
-
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
 
@@ -502,9 +494,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (risingAtEntry || pendingSprayTailInteraction) {
+        if (risingAtEntry) {
             applySuction(player);
-            pendingSprayTailInteraction = false;
         }
     }
 
@@ -599,14 +590,15 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
 
         solidActive = true;
 
-        // Suction/grab during hold
+        // HCZEndBossColumn_Idle runs its last interaction, then observes
+        // the parent's release bit on this pass (sonic3k.asm:141297-141310).
+        // The next pass is ReleaseMove and performs no player interaction.
         applySuction(player);
 
         // Check boss propeller state (ROM: btst #3,$38(a1))
         if (!boss.isPropellerActive()) {
             // loc_6B34A: transition to DESCEND
             routine = ROUTINE_DESCEND;
-            pendingSprayTailInteraction = true;
 
             // ROM: bset #3,$38(a0) — set own flag (not used elsewhere)
             // ROM: y_vel = $80

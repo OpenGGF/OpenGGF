@@ -150,21 +150,19 @@ class TestHczEndBossWaterColumnControlPolicy {
     }
 
     @Test
-    void descentRetainsTheLaterSpraySlotsFinalInteraction() throws Exception {
+    void descentDoesNotRepeatTheSpraySlotsFinalInteraction() throws Exception {
         HczEndBossWaterColumn column = newWaterColumn();
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0738);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4100, (short) 0x1100);
         setIntField(column, "routine", 6);
 
         invokePrivate(column, "updateHold", player);
-
         assertEquals(8, getIntField(column, "routine"));
-        assertTrue(getBooleanField(column, "pendingSprayTailInteraction"),
-                "loc_6B3DE runs after loc_6B34A changes the parent to DESCEND");
+        assertEquals(0x40FE, player.getCentreX() & 0xFFFF,
+                "the release dispatch retains the spray's final suction interaction");
 
         invokePrivate(column, "updateRiseDescend", player);
-
-        assertFalse(getBooleanField(column, "pendingSprayTailInteraction"),
-                "the first descent dispatch consumes exactly one retained spray interaction");
+        assertEquals(0x40FE, player.getCentreX() & 0xFFFF,
+                "HCZEndBossColumn_ReleaseMove performs no player interaction on the following pass");
     }
 
     @Test

@@ -1178,3 +1178,23 @@ boss/rewind/keep-green selection pass 86 cases without skips. The slice moves
 from 600 errors at 28970 to 549 at 29136 `tails_x`, and all ten sibling HCZ
 error lists remain identical. Broader route/configuration and pending-main
 initialization restore obligations remain inherited.
+
+
+## End-boss attack and spray release dispatch — 2026-11-03
+
+`Obj_Wait` (sonic3k.asm:178040-178049) directly invokes
+`HCZEndBoss_StartSidePass` (sonic3k.asm:140969-140978) on underflow.
+`HCZEndBossColumn_Idle` (sonic3k.asm:141297-141310) completes its final
+interaction before selecting release movement on that same pass; the next
+release-movement dispatch does not interact with players. The engine probe
+records pending attack at 29135, setup/release at 29136, then extra spray
+interaction at 29137. Native aux selects attack/release at 29135.
+
+The extra deferrals are removed. Two older controls that pinned those deferrals
+are corrected to assert same-pass callback setup without extra movement and
+one final spray interaction without repetition. All 86 focused boss/rewind/
+keep-green cases pass without skips. The slice advances from 549 errors at
+29136 to 404 at 29530 `y_speed`. Nine siblings stay exact; the other returns
+from 230 to 229 groups by removing the previous split. The next frontier is
+blade-water-chute activation. Existing breadth and pending-main restore gaps
+remain open.

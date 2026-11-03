@@ -150,8 +150,6 @@ public class HczEndBossInstance extends AbstractBossInstance
     private WaitCallback waitCallback = WaitCallback.NONE;
     /** Retains HCZEndBoss_Init after the code-pointer-only camera callback. */
     private boolean pendingMainInitialization;
-    /** Retains loc_6B03A for the next consolidated setup dispatch. */
-    private boolean pendingAttackSetupDispatch;
     private boolean pendingDefeatDispatch;
     private boolean customFlashDirty;
     private S3kSharedBossCameraGate cameraGate;
@@ -225,7 +223,6 @@ public class HczEndBossInstance extends AbstractBossInstance
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
         pendingMainInitialization = false;
-        pendingAttackSetupDispatch = false;
         customFlashDirty = false;
         if (cameraGate == null) {
             cameraGate = new S3kSharedBossCameraGate();
@@ -366,13 +363,6 @@ public class HczEndBossInstance extends AbstractBossInstance
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         if (pendingDefeatDispatch) {
             pendingDefeatDispatch = false;
-            updateCustomFlash();
-            updateDynamicSpawn(state.x, state.y);
-            return;
-        }
-        if (pendingAttackSetupDispatch) {
-            pendingAttackSetupDispatch = false;
-            beginAttackPhase();
             updateCustomFlash();
             updateDynamicSpawn(state.x, state.y);
             return;
@@ -915,7 +905,10 @@ public class HczEndBossInstance extends AbstractBossInstance
             case PRE_ATTACK_WAIT_COMPLETE -> onPreAttackWaitComplete();
             case ST_DESCENT_COMPLETE -> onStDescentComplete();
             case ST_RISE_COMPLETE -> onStRiseComplete();
-            case BEGIN_ATTACK_PHASE -> pendingAttackSetupDispatch = true;
+            // Obj_Wait jumps directly to HCZEndBoss_StartSidePass on underflow;
+            // it does not replace the code pointer (sonic3k.asm:178040-178049,
+            // 140969-140978). Setup completes in this same object dispatch.
+            case BEGIN_ATTACK_PHASE -> beginAttackPhase();
             case ATTACK_PASS_COMPLETE -> onAttackPassComplete();
             case BEGIN_FLEE_SEQUENCE -> beginFleeSequence();
             case NONE -> {
