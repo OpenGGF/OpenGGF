@@ -1071,7 +1071,8 @@ Unreleased. The earlier development themes remain in
   games, restarts and bonus stage entries and returns now hand control over with
   the card still holding for its last 22 frames, as zone changes already did, instead
   of keeping the player frozen for 90 frames. Restarts and bonus returns no longer
-  fade the card in from black.
+  fade the card in from black. Bonus entry holds the source camera at the
+  native restart boundary.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
   native hit check of whichever phase it is in. Angel Island's flipping bridges
@@ -1096,6 +1097,8 @@ Unreleased. The earlier development themes remain in
   Slides apply collision corrections before their separate floor scan, keep the
   original signed zero-speed boundary, and preserve the turn byte through get-up
   and landing callbacks. KiS2 keeps its temporary radii across both scans.
+  Ordinary object landings reset Knuckles' raw glide animation to walking
+  while retaining that frame's already-produced sprite mapping.
   All glide states apply their native camera and level-boundary prelude before
   moving; sliding, climbing and ledge returns retain the original velocity order.
   Sonic 3 & Knuckles ground slides also queue their ROM sound on the level clock

@@ -31,6 +31,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
@@ -5695,6 +5696,15 @@ public final class ObjectSolidContactController {
                 playableSprite.setFlipTurned(false);
                 playableSprite.setFlipsRemaining(0);
                 playableSprite.setLookDelayCounter((short) 0);
+                // loc_17B6A (sonic3k.asm:32894-32907), Knux_TouchFloor's
+                // non-rolling tail, also runs for ordinary object landings.
+                // Clear the raw glide animation after the player animation pass;
+                // this frame's mapping remains owned by that earlier pass.
+                if (playableSprite.getSecondaryAbility() == SecondaryAbility.GLIDE
+                        && (playableSprite.getAnimationId() & 0xFF) >= 0x20) {
+                    playableSprite.setAnimationId(0);
+                }
+
                 if (!playableSprite.getPinballMode()
                         && instance instanceof SolidObjectProvider provider
                         && InitialObjectDispatchController.afterCallback(initialDispatch, provider.nonRollingLandingPublishesWalk(player))) {
