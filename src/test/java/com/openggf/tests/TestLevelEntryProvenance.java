@@ -31,11 +31,12 @@ class TestLevelEntryProvenance {
         var trace = TraceData.load(Path.of("src/test/resources/traces/kis2/ehz1"));
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
         com.openggf.tests.trace.TraceReplayTestSession.reopenForRecordedTeam(trace.metadata());
-        // The production caller can declare a native load. The fixture itself
-        // lacks recorder-observed placement provenance and stays unclassified.
-        assertEquals(LevelEntryProvenance.UNCLASSIFIED_ENTRY,
+        // The recorder observed a start-table load (Last_star_pole_hit clear at
+        // LevelSizeLoad, s2.asm:14774-14792), and the native title-card prelude
+        // replays the frames to row 0, so the production load owns placement.
+        assertEquals(LevelEntryProvenance.NATIVE_LEVEL_START,
                 TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
-        assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace));
+        assertFalse(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace));
         var origin = LevelEntryProvenance.NATIVE_LEVEL_START;
         fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0)
                 .withEntryProvenance(origin)
@@ -62,15 +63,23 @@ class TestLevelEntryProvenance {
     }
 
     @Test
-    void timingPreludeDoesNotDeclareStartTableOrReturnPlacement() throws Exception {
-        for (String path : new String[] {
-                "kis2/ehz1", "s2/runs/s2-ehz-halfpipe-roundtrip/seg2_ehz1" }) {
-            var trace = TraceData.load(Path.of("src/test/resources/traces").resolve(path));
-            assertTrue(trace.metadata().hasNativePreludeBootstrap());
-            assertEquals(LevelEntryProvenance.UNCLASSIFIED_ENTRY,
-                    TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
-            assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace));
-        }
+    void timingPreludeAloneDoesNotDeclareStartTableOrReturnPlacement() throws Exception {
+        // Both fixtures carry the title-card timing prelude. Only the one whose
+        // recorder observed level_entry_placement_source is classified by it.
+        var unobserved = TraceData.load(Path.of(
+                "src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/seg2_ehz1"));
+        assertTrue(unobserved.metadata().hasNativePreludeBootstrap());
+        assertNull(unobserved.metadata().levelEntryPlacementSource());
+        assertEquals(LevelEntryProvenance.UNCLASSIFIED_ENTRY,
+                TraceReplayBootstrap.entryProvenanceForTraceReplay(unobserved));
+        assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(unobserved));
+
+        var observed = TraceData.load(Path.of("src/test/resources/traces/kis2/ehz1"));
+        assertTrue(observed.metadata().hasNativePreludeBootstrap());
+        assertEquals(com.openggf.trace.LevelEntryPlacementSource.START_TABLE,
+                observed.metadata().levelEntryPlacementSource());
+        assertEquals(LevelEntryProvenance.NATIVE_LEVEL_START,
+                TraceReplayBootstrap.entryProvenanceForTraceReplay(observed));
     }
 
     @Test @RequiresRom(SonicGame.SONIC_3K)

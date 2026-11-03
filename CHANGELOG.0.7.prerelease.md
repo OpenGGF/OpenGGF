@@ -7,6 +7,13 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Fixtures without the field keep their previous setup.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 

@@ -459,12 +459,56 @@ public final class TraceReplayBootstrap {
 
     public static com.openggf.game.session.LevelEntryProvenance entryProvenanceForTraceReplay(TraceData trace) {
         // A recorded pre-level input prefix already owns the production load.
-        // native_prelude_bootstrap alone describes title-card timing: both
-        // start-table boots and special-stage returns carry that marker.
-        // Preserve their existing placement/history until the recorder supplies
-        // entry provenance; neither coordinates nor manifest topology select it.
+        // Otherwise only the recorder-observed placement branch classifies the
+        // entry; neither coordinates nor manifest topology select it.
         return hasRecordedPreLevelPrefix(trace)
                 ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
+                : recordedEntryPlacementProvenance(trace);
+    }
+
+    /**
+     * Entry kind from the recorder's {@code level_entry_placement_source}: the
+     * placement branch the ROM itself took when this segment's load began.
+     * Missing evidence keeps the unclassified compatibility path.
+     *
+     * <ul>
+     *   <li>Start table with a native title-card prelude (S2/KiS2): the
+     *       production load places the body from the same start table
+     *       ({@code LevelSizeLoad}, s2.asm:14774-14792) and the prelude replays
+     *       the frames up to row 0, so the production load owns placement.</li>
+     *   <li>Start table without a prelude (S3K level/bonus segments): a fresh
+     *       post-{@code SpawnPlayers} body. {@code Get_LevelSizeStart} derives
+     *       the camera from that placement (loc_1BE5E/loc_1BF74,
+     *       sonic3k.asm:38195-38316).</li>
+     *   <li>S3K restore: {@code Load_Starpost_Settings} restores the saved
+     *       position and then branches to the same camera derivation
+     *       (loc_1BE46, sonic3k.asm:38186-38192), and SpawnLevelMainSprites
+     *       skips every zone intro (sonic3k.asm:8147-8150).</li>
+     *   <li>S2/KiS2 restore: {@code Obj79_LoadData} (s2.asm:44776-44812) also
+     *       returns to the shared camera derivation, but the native-prelude
+     *       S2 boot replays its title card from a start-table production load,
+     *       and no published S2 fixture yet shows the recorded body is the
+     *       post-spawn origin. It keeps the unclassified setup.</li>
+     * </ul>
+     */
+    static com.openggf.game.session.LevelEntryProvenance recordedEntryPlacementProvenance(
+            TraceData trace) {
+        return recordedEntryPlacementProvenance(trace == null ? null : trace.metadata());
+    }
+
+    static com.openggf.game.session.LevelEntryProvenance recordedEntryPlacementProvenance(
+            TraceMetadata meta) {
+        LevelEntryPlacementSource source = meta == null ? null : meta.levelEntryPlacementSource();
+        if (source == null) {
+            return com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
+        }
+        if (!source.isRestore()) {
+            return meta.hasNativePreludeBootstrap()
+                    ? com.openggf.game.session.LevelEntryProvenance.NATIVE_LEVEL_START
+                    : com.openggf.game.session.LevelEntryProvenance.POSITIONED_FRESH_SPAWN;
+        }
+        return "s3k".equals(meta.game())
+                ? com.openggf.game.session.LevelEntryProvenance.POSITIONED_RETURN_SPAWN
                 : com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY;
     }
 

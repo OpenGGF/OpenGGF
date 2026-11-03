@@ -5,6 +5,13 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Fixtures without the field keep their previous setup.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
 - HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.

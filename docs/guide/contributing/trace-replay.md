@@ -122,9 +122,23 @@ must verify that the value came from the native recorder and matching inputs.
 Missing endpoint evidence fails before engine boot. Partial
 runs, round trips and prefix/frontier checks retain optional endpoints through
 their existing replay helpers. A `complete_run` segment profile or a full-run
-filename does not supply an endpoint observation. See the
+filename does not supply an endpoint observation. The three S3K
+campaign manifests (Knuckles Super Emerald, Tails full chain, Sonic+Tails complete
+emeralds) carry the native observation `title_screen`, captured by TraceChaser
+from the final input frame; see the
 [five-manifest audit](../../architecture/audits/2026-10-29-s3k-campaign-terminal-certification.md)
-for the current capture blocker; do not fill missing observations by hand.
+for the history. Do not fill missing observations by hand.
+
+Segment entry kind comes only from the recorder's `level_entry_placement_source`
+(`start_table`, `starpost_restore`, `special_stage_restore`): the placement branch
+the ROM took when that segment's load began (S3K `loc_1BE46` /
+`Load_Starpost_Settings`, S2 `LevelSizeLoad`). `TraceReplayBootstrap` maps it in
+`recordedEntryPlacementProvenance`: an S3K start-table segment boots as a fresh
+post-spawn body (ROM camera derivation including the Tails-alone +4), an S3K
+restore as a post-spawn return (zone intros skipped, as `SpawnLevelMainSprites`
+does), and an S2/KiS2 start-table segment with a native title-card prelude as a
+native load. S2 restores and fixtures without the field keep the unclassified
+setup. Coordinates, manifest topology and run names never select the entry kind.
 
 Trace replay tests require:
 

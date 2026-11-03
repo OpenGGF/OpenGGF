@@ -1128,9 +1128,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return false;
         }
         var level = GameServices.level();
+        // SpawnLevelMainSprites skips every zone intro when Last_star_post_hit
+        // or Special_bonus_entry_flag is set (sonic3k.asm:8147-8150). A
+        // standalone boot learns that from its recorded entry kind.
         return level.hasBigRingReturn()
                 || level.isBonusStageReturn()
-                || level.getCheckpointState().isActive();
+                || level.getCheckpointState().isActive()
+                || com.openggf.level.LevelEntryInitialization.isDeclaredReturnEntry(level);
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
