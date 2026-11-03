@@ -9,6 +9,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic 2 elevators and monitors:** Casino Night elevators keep their
+  fractional position between trips and accelerate the shipped way when they
+  pass exactly through their centre, so a second ride starts moving on the
+  original frame. Rolling through a monitor while another platform carries the
+  player no longer knocks the player off that platform.
+
 - **Sonic 2 level start:** The title card spends the extra frame the shipped
   game waits after the zone name lands, and its exit runs the camera and zone
   events only on the frame the blue background starts to leave. Casino Night's
