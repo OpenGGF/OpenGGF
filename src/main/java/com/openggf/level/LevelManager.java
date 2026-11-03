@@ -3433,6 +3433,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
         if (presentationSuppressed) {
+            var suppressedOwner = activeGameModule().getTitleCardProvider();
+            if (ctx.isQueueFreshLevelRuntimeArt()
+                    && suppressedOwner instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                    && boundary.freshLevelTitleOwnerDeletesAtInit(currentZone, currentAct)) {
+                // The owner deletes itself without presentation, but the Level
+                // routine's title and terrain waits still precede gameplay.
+                suppressedOwner.requestFreshLevelRuntimeArtHandoff(ctx.getLevelIndex());
+                requestTitleCard(currentZone, apparentAct);
+                return;
+            }
             // No title-card object exists on this path, so there is no residual
             // Obj_TitleCardWait2 owner to retire before gameplay begins.
             completeInitialTitleCardPresentation();

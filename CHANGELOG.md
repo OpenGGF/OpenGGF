@@ -28,6 +28,8 @@ readable and historical versions can be referenced directly.
 
 - S3K fresh level loads count the terrain wait's final VBlank in the live game loop, as in the ROM.
 
+- Doomsday queues its misc and boss Master Emerald art through the native module queue, and the S3K ending load queues its terrain art and waits for it before the ending scene starts.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
 - HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.

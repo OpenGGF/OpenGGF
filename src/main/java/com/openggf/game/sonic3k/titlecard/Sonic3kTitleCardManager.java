@@ -461,7 +461,56 @@ public class Sonic3kTitleCardManager
         initializeLevelRoutineTitle(zoneIndex, actIndex);
     }
 
+    /**
+     * Obj_TitleCardInit (sonic3k.asm:62148-62160) deletes at {@code $D01} before
+     * queuing archives or creating children. Level: still installs the owner at
+     * loc_62B6 (sonic3k.asm:7762-7767) and loops at loc_62CC (sonic3k.asm:7769-7781)
+     * until it is gone; LoadLevelLoadBlock (sonic3k.asm:9737-9771) then queues the
+     * terrain parents and loc_7870 (sonic3k.asm:9772-9780) waits for them.
+     */
+    @Override
+    public boolean freshLevelTitleOwnerDeletesAtInit(int zoneIndex, int actIndex) {
+        return zoneIndex == 0x0D && actIndex == 1;
+    }
+
+    private void initializeDeletedLevelRoutineTitle(int zoneIndex, int actIndex) {
+        // The owner never reaches Obj_TitleCardCreate: no archives, children,
+        // display or LoadEnemyArt tail. Reuse the fresh-level gates only; keep
+        // the armed terrain handoff and any retained title art.
+        publishedCard = null;
+        preparedCard = null;
+        currentZone = zoneIndex;
+        currentAct = actIndex;
+        bonusMode = false;
+        inLevelMode = false;
+        displayHoldFrames = DISPLAY_HOLD_FRAMES;
+        resetLevelGamestateOnInLevelDisplay = false;
+        resetLevelGamestateCountdown = 0;
+        heldLevelCounterDispatchOwned = false;
+        retainedResultsHeldLevelCounterOwned = false;
+        inLevelPlayerControlLockOwned = false;
+        inLevelGameplayOwnedExternally = false;
+        inLevelExitDelayFrames = 0;
+        retainedControlPollFollowsTitleCompletion = false;
+        inLevelArtAdmissionPollObserved = false;
+        releasePreloadedActCameraOnComplete = false;
+        preloadedActCompletionPrepared = false;
+        freshLevelChildMovementObserved = false;
+        freshLevelTitleReady = false;
+        freshLevelTerrainStarted = false;
+        artLoading = false;
+        state = Sonic3kTitleCardState.COMPLETE;
+        stateTimer = 0;
+        phaseCounter = 0;
+        exitChildrenGone = false;
+        enterLevelRoutineTitleLoop(zoneIndex, actIndex);
+    }
+
     private void initializeLevelRoutineTitle(int zoneIndex, int actIndex) {
+        if (freshLevelTitleOwnerDeletesAtInit(zoneIndex, actIndex)) {
+            initializeDeletedLevelRoutineTitle(zoneIndex, actIndex);
+            return;
+        }
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
         // with #$16 just before LevelLoop (sonic3k.asm:62202, 7910).
         // Obj_TitleCardInit queues its archives on every Level: entry even
@@ -1016,6 +1065,12 @@ public class Sonic3kTitleCardManager
             // LoadLevelLoadBlock/loc_7870 services the queues but does not call
             // Process_Sprites. The carried title owner resumes in LevelLoop.
             return;
+        }
+        if (freshLevelTransitionMode && state == Sonic3kTitleCardState.COMPLETE
+                && !freshLevelTitleReady) {
+            // A deleted-at-init owner: this loc_62CC Process_Sprites pass ran
+            // Obj_TitleCardInit's Delete_Current_Sprite, clearing objoff_48.
+            freshLevelTitleReady = true;
         }
         if (freshLevelTransitionMode && state == Sonic3kTitleCardState.DISPLAY
                 && !freshLevelTitleReady) {
