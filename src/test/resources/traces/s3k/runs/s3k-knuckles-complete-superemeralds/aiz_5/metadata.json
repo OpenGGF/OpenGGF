@@ -10,6 +10,7 @@
   "start_x": "0x3650",
   "start_y": "0x0758",
   "level_entry_placement_source": "starpost_restore",
+  "last_star_post_hit": 8,
   "characters": ["knuckles"],
   "main_character": "knuckles",
   "sidekicks": [],

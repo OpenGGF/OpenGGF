@@ -10,6 +10,7 @@
   "start_x": "0x26C0",
   "start_y": "0x0640",
   "level_entry_placement_source": "special_stage_restore",
+  "last_star_post_hit": 130,
   "characters": ["sonic", "tails"],
   "main_character": "sonic",
   "sidekicks": ["tails"],

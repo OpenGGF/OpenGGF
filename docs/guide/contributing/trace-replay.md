@@ -139,6 +139,9 @@ restore as a post-spawn return (zone intros skipped, as `SpawnLevelMainSprites`
 does), and an S2/KiS2 start-table segment with a native title-card prelude as a
 native load. S2 restores and fixtures without the field keep the unclassified
 setup. Coordinates, manifest topology and run names never select the entry kind.
+The same observation records `last_star_post_hit`, the raw star-post byte the load
+read (bit 7 retained on special-stage returns). Replay does not read it yet; it is
+the ROM-observed index for importing carried segment state.
 
 Trace replay tests require:
 

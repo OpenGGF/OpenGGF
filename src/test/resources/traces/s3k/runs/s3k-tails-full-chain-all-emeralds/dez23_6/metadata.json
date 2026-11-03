@@ -10,6 +10,7 @@
   "start_x": "0x1640",
   "start_y": "0x03A3",
   "level_entry_placement_source": "start_table",
+  "last_star_post_hit": 0,
   "characters": ["tails"],
   "main_character": "tails",
   "sidekicks": [],

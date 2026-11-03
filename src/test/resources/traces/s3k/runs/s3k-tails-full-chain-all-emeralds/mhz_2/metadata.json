@@ -10,6 +10,7 @@
   "start_x": "0x01C0",
   "start_y": "0x0684",
   "level_entry_placement_source": "special_stage_restore",
+  "last_star_post_hit": 129,
   "characters": ["tails"],
   "main_character": "tails",
   "sidekicks": [],

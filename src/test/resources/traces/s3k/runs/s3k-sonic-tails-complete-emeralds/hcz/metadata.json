@@ -10,6 +10,7 @@
   "start_x": "0x0280",
   "start_y": "0x0020",
   "level_entry_placement_source": "start_table",
+  "last_star_post_hit": 0,
   "characters": ["sonic", "tails"],
   "main_character": "sonic",
   "sidekicks": ["tails"],

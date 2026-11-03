@@ -10,6 +10,7 @@
   "start_x": "0x2A3E",
   "start_y": "0x07AC",
   "level_entry_placement_source": "starpost_restore",
+  "last_star_post_hit": 6,
   "characters": ["tails"],
   "main_character": "tails",
   "sidekicks": [],
