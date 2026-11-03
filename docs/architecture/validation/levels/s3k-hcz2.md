@@ -1078,3 +1078,38 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+
+## End-boss setup and platform animation — 2026-11-03
+
+`HCZEndBoss_StartMain` (sonic3k.asm:140871-140875) replaces the dispatch
+pointer and returns. The subsequent `HCZEndBoss_Init` dispatch
+(sonic3k.asm:140898-140918) initializes children and the descent timer;
+`HCZEndBoss_MoveWait` begins on the following pass. The consolidated owner
+now preserves both boundaries. `HCZEndBossPlatform_Init`
+(sonic3k.asm:141175-141194) leaves the new slot's animation timer cleared;
+`Animate_RawNoSST` (sonic3k.asm:177432-177446) advances first on dispatch 1,
+then every four dispatches, reaching the callback on dispatch 25.
+
+Two independent controls fail on the old source with assertion failures and
+pass with the correction. The focused boss/graph-rewind/keep-green selection
+passes 83 cases without skips. Native trace aux and temporary engine observers
+identify turbine activation/platform creation at 28623/28788 versus the old
+engine's 28621/28786, with identical 165-dispatch turbine acceleration.
+
+The HCZ slice advances from row 28814 `x` (608 error groups) to row 28856
+`tails_x` (644 groups). All ten sibling HCZ trace error lists remain identical,
+including both green siblings. These are bounded Sonic+Tails route observations;
+whole-act, viewport/donor/team breadth and pending-initialization graph restore
+remain unqualified. The existing graph controls pass but do not specifically
+capture the newly separated pending initialization dispatch.
+
+Error-list attribution: the first removed error is row 28814 `x`; the first
+added error is row 28884 `tails_cpu_ctrl2_held`, after existing Tails motion
+divergence at 28856. At 28884, ROM/engine P1 are both `(40D1,07B8)`, camera
+both `(4031,0738)`, while Tails is `(40CE,07F0)` / `(40D1,07E6)` and velocity
+`(00B0,0000)` / `(FD80,0000)`. The addition follows an already divergent P2,
+not an agreeing native state. No newly red class or earlier first error occurs.
+The next local owner is the shared displacement register in
+`HCZEndBossColumn_PushPlayersFromWater` (sonic3k.asm:141825-141854): both
+eligible players to the right negate the same register in succession.

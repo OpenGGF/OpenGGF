@@ -379,7 +379,11 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
 
         // Init spin-up animation (byte_6BE0C)
         spinupIndex = 0;
-        spinupTimer = SPINUP_DELAY;
+        // HCZEndBossPlatform_Init leaves the fresh slot's anim_frame_timer
+        // cleared (sonic3k.asm:141175-141194). Animate_RawNoSST pre-decrements
+        // it and advances anim_frame on the first dispatch, then every four
+        // (sonic3k.asm:177434-177446), reaching $F4 after 25 dispatches.
+        spinupTimer = 0;
 
         // Init column animation (will be used after spin-up)
         columnAnimIndex = 0;

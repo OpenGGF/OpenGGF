@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+HCZ2 boss setup (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-setup-and-platform-animation--2026-11-03) records callback/init/movement and raw-animation controls, unchanged sibling trace results and the remaining pending-initialization restore obligation. Broader route/configuration gaps remain inherited.
+
 S3K shake/visibility maintenance (2026-11-03): the
 [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records pending shake
 phase and rewind checks; the [LRZ1 matrix](../architecture/validation/levels/s3k-lrz-act1.md)

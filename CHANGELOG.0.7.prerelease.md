@@ -7,6 +7,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- HCZ2 end-boss camera release preserves the separate main-initialization dispatch,
+  and its water platform starts raw animation from the fresh slot's cleared timer.
+
 - S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
   finish opening off screen before unloading. Both corrections preserve Tails CPU
   respawn timing at the native visibility boundary.

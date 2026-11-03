@@ -19,6 +19,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHczEndBossInstance {
     @Test
+    void cameraCallbackLeavesInitializationForTheNextObjectDispatch() throws Exception {
+        TestObjectServices services = new TestObjectServices()
+                .withConfiguration(SonicConfigurationService.createStandalone());
+        HczEndBossInstance boss = ObjectConstructionContext.construct(services,
+                () -> new HczEndBossInstance(new ObjectSpawn(0x4050, 0x0738, 0x9A, 0, 0, false, 0)));
+        boss.setServices(services);
+        int y = boss.getState().y;
+        Method callback = HczEndBossInstance.class.getDeclaredMethod("onCameraLockComplete");
+        callback.setAccessible(true);
+        callback.invoke(boss);
+        assertEquals(0, boss.getState().yVel,
+                "HCZEndBoss_StartMain only replaces the code pointer; HCZEndBoss_Init runs next pass");
+        assertEquals(y, boss.getState().y);
+    }
+
+    @Test
     void capsuleButtonRetainsItsSeparateSolidObjectFullGeometry() {
         HczEndBossEggCapsuleInstance capsule = new HczEndBossEggCapsuleInstance(0x4250, 0x07E0);
         HczEndBossEggCapsuleButton button = new HczEndBossEggCapsuleButton(

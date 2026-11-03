@@ -148,6 +148,8 @@ public class HczEndBossInstance extends AbstractBossInstance
     // =========================================================================
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
+    /** Retains HCZEndBoss_Init after the code-pointer-only camera callback. */
+    private boolean pendingMainInitialization;
     /** Retains loc_6B03A for the next consolidated setup dispatch. */
     private boolean pendingAttackSetupDispatch;
     private boolean pendingDefeatDispatch;
@@ -223,6 +225,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.renderFlags = 0;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
+        pendingMainInitialization = false;
         pendingAttackSetupDispatch = false;
         customFlashDirty = false;
         if (cameraGate == null) {
@@ -477,6 +480,13 @@ public class HczEndBossInstance extends AbstractBossInstance
      * ROM: sets y_vel = 0x80 (descend) with wait timer 0xEF (239 frames).
      */
     private void onCameraLockComplete() {
+        // HCZEndBoss_StartMain (sonic3k.asm:140871-140875) replaces the code
+        // pointer and returns. HCZEndBoss_Init is a separate next-pass dispatch.
+        pendingMainInitialization = true;
+    }
+
+    private void initializeMain() {
+        pendingMainInitialization = false;
         LOG.info("HCZ End Boss: camera lock complete, spawning children");
         spawnChildren();
         // Begin descent into arena
@@ -494,7 +504,16 @@ public class HczEndBossInstance extends AbstractBossInstance
      * ROM: Used by DESCEND, ST_DESCEND, ST_RISE routines.
      */
     private void updateMoveAndWait() {
-        updateCameraLock();
+        // The camera callback and HCZEndBoss_Init do not fall through into
+        // HCZEndBoss_MoveWait (sonic3k.asm:140899-140921).
+        if (!cameraGate.isComplete()) {
+            updateCameraLock();
+            return;
+        }
+        if (pendingMainInitialization) {
+            initializeMain();
+            return;
+        }
         state.applyVelocity();
         tickWait();
     }

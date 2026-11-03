@@ -35,6 +35,19 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class TestHczEndBossWaterColumnControlPolicy {
 
     @Test
+    void freshPlatformReachesRawAnimationCallbackAfterTwentyFiveDispatches() throws Exception {
+        HczEndBossWaterColumn column = newWaterColumn();
+        invokeNoArgPrivate(column, "updateInit");
+        for (int i = 1; i < 25; i++) {
+            invokeNoArgPrivate(column, "updateAnimate");
+            assertEquals(2, getIntField(column, "routine"), "premature callback at tick " + i);
+        }
+        invokeNoArgPrivate(column, "updateAnimate");
+        assertEquals(4, getIntField(column, "routine"),
+                "Animate_Raw starts with cleared anim_frame_timer: ticks 1,5,9,13,17,21,25");
+    }
+
+    @Test
     void bladeImpactUsesNativeHarmfulCollisionDuringFirstThreeFrames() throws Exception {
         HczEndBossImpactFixture fixture = newImpactFixture();
         HczEndBossBladeImpactExplosion impact = fixture.impact();
