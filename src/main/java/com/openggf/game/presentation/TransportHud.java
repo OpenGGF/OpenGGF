@@ -28,7 +28,8 @@ public final class TransportHud {
     public enum Placement { ABOVE_LIVES, BOTTOM_RIGHT, TOP_RIGHT, TOP_RIGHT_SECOND }
 
     public enum Status {
-        REWIND(MenuChrome.CYAN), HOLD(MenuChrome.GOLD), RECORD(MenuChrome.RED),
+        REWIND(MenuChrome.CYAN), REWIND_LOW(MenuChrome.AMBER), REWIND_EMPTY(MenuChrome.AMBER),
+        HOLD(MenuChrome.GOLD), RECORD(MenuChrome.RED),
         PLAY(MenuChrome.CYAN), PLAY_WARNING(MenuChrome.AMBER), STOP(MenuChrome.MUTED),
         WARNING(MenuChrome.AMBER), ERROR(MenuChrome.RED), PAUSE(MenuChrome.TEXT);
 
@@ -41,11 +42,18 @@ public final class TransportHud {
 
     /**
      * {@code title} and {@code value} share the only routine row; {@code note} adds a second row
-     * for an exception. A negative progress value omits the hold meter.
+     * for an exception. A negative progress value omits the hold meter. A non-empty
+     * {@code valueReserve} keeps room for that wider value and right-aligns the value in it, so a
+     * counting value and the meter under it keep one plate width.
      */
-    public record Message(Status status, String title, String value, String note, int progressPercent) { }
+    public record Message(Status status, String title, String value, String note, int progressPercent,
+                          String valueReserve) {
+        public Message(Status status, String title, String value, String note, int progressPercent) {
+            this(status, title, value, note, progressPercent, "");
+        }
+    }
 
-    record Layout(int x, int y, int width, int height, String title, String value, String note) { }
+    record Layout(int x, int y, int width, int height, String title, String value, String note, int valueWidth) { }
 
     /** Logical-frame rectangle a plate occupies, so other overlays can keep clear of it. */
     public record Bounds(int x, int y, int width, int height) {
@@ -63,19 +71,30 @@ public final class TransportHud {
             // Match the shader picker's translucent navy. Only the one-pixel edge is opaque;
             // a filled opaque frame underneath would erase the scenery before alpha blending.
             rect(graphics, layout.x + 1, layout.y + 1, layout.width - 2, layout.height - 2, MenuChrome.NAVY, 209);
-            rect(graphics, layout.x, layout.y, layout.width, 1, MenuChrome.EDGE, 255);
-            rect(graphics, layout.x, layout.y + layout.height - 1, layout.width, 1, MenuChrome.EDGE, 255);
-            rect(graphics, layout.x, layout.y + 1, 1, layout.height - 2, MenuChrome.EDGE, 255);
-            rect(graphics, layout.x + layout.width - 1, layout.y + 1, 1, layout.height - 2, MenuChrome.EDGE, 255);
+            // A drained rewind takes its status colour into the frame: the plate itself reads as spent.
+            float[] edge = message.status == Status.REWIND_EMPTY ? message.status.color : MenuChrome.EDGE;
+            rect(graphics, layout.x, layout.y, layout.width, 1, edge, 255);
+            rect(graphics, layout.x, layout.y + layout.height - 1, layout.width, 1, edge, 255);
+            rect(graphics, layout.x, layout.y + 1, 1, layout.height - 2, edge, 255);
+            rect(graphics, layout.x + layout.width - 1, layout.y + 1, 1, layout.height - 2, edge, 255);
             if (!usesWarningGlyph(message.status)) {
                 icon(graphics, layout.x + PAD_X, layout.y + PAD_Y + 2, message.status);
             }
             if (message.progressPercent >= 0) {
                 int trackWidth = layout.width - 2 * PAD_X;
                 int y = layout.y + layout.height - 4;
-                rect(graphics, layout.x + PAD_X, y, trackWidth, 2, MenuChrome.EDGE, 255);
-                int filled = trackWidth * Math.clamp(message.progressPercent, 0, 100) / 100;
-                if (filled > 0) rect(graphics, layout.x + PAD_X, y, filled, 2, message.status.color, 255);
+                if (message.status == Status.REWIND_EMPTY) {
+                    // Drained: the track breaks into 2 px dashes, so empty is a shape as well as a colour.
+                    for (int dash = 0; dash < trackWidth; dash += 4) {
+                        rect(graphics, layout.x + PAD_X + dash, y, Math.min(2, trackWidth - dash), 2, message.status.color, 255);
+                    }
+                } else {
+                    rect(graphics, layout.x + PAD_X, y, trackWidth, 2, MenuChrome.EDGE, 255);
+                    int percent = Math.clamp(message.progressPercent, 0, 100);
+                    // Any remaining amount keeps at least one lit pixel; only zero reads as empty.
+                    int filled = percent == 0 ? 0 : Math.max(1, trackWidth * percent / 100);
+                    if (filled > 0) rect(graphics, layout.x + PAD_X, y, filled, 2, message.status.color, 255);
+                }
             }
             // Text batches draw immediately; complete their backing and glyphs first.
             graphics.flushScreenSpace();
@@ -89,8 +108,9 @@ public final class TransportHud {
             }
             text.drawShadowedText(layout.title, x, y, color(message.status.color), TEXT_SCALE);
             if (!layout.value.isEmpty()) {
-                text.drawShadowedText(layout.value, x + text.measureWidth(layout.title, TEXT_SCALE) + text.measureWidth(" ", TEXT_SCALE), y,
-                        color(MenuChrome.TEXT), TEXT_SCALE);
+                int valueX = x + text.measureWidth(layout.title, TEXT_SCALE) + text.measureWidth(" ", TEXT_SCALE)
+                        + layout.valueWidth - text.measureWidth(layout.value, TEXT_SCALE);
+                text.drawShadowedText(layout.value, valueX, y, color(MenuChrome.TEXT), TEXT_SCALE);
             }
             if (!layout.note.isEmpty()) {
                 boolean alert = message.status == Status.ERROR || message.status == Status.WARNING
@@ -124,7 +144,10 @@ public final class TransportHud {
         int titleWidth = text.measureWidth(title, TEXT_SCALE);
         String value = fit(text, message.value, textRoom - titleWidth - gap);
         String note = fit(text, message.note, textRoom);
-        int rowWidth = titleWidth + (value.isEmpty() ? 0 : gap + text.measureWidth(value, TEXT_SCALE));
+        String reserve = fit(text, message.valueReserve, textRoom - titleWidth - gap);
+        int valueWidth = value.isEmpty() ? 0
+                : Math.max(text.measureWidth(value, TEXT_SCALE), text.measureWidth(reserve, TEXT_SCALE));
+        int rowWidth = titleWidth + (value.isEmpty() ? 0 : gap + valueWidth);
         int width = TEXT_X + Math.max(rowWidth, text.measureWidth(note, TEXT_SCALE)) + PAD_X;
         int height = 2 * PAD_Y + ROW * (note.isEmpty() ? 1 : 2) + (message.progressPercent >= 0 ? 3 : 0);
         // All three games place lives at y=200 and score/time/rings at the upper left.
@@ -133,10 +156,10 @@ public final class TransportHud {
                 ? Math.max(0, (viewportWidth - 320) / 2) + MARGIN : viewportWidth - MARGIN - width;
         if (placement == Placement.TOP_RIGHT || placement == Placement.TOP_RIGHT_SECOND) {
             int top = MARGIN + (placement == Placement.TOP_RIGHT_SECOND ? 2 * PAD_Y + ROW + 2 : 0);
-            return new Layout(x, top, width, height, title, value, note);
+            return new Layout(x, top, width, height, title, value, note, valueWidth);
         }
         int bottom = placement == Placement.ABOVE_LIVES ? 196 : 216;
-        return new Layout(x, bottom - height, width, height, title, value, note);
+        return new Layout(x, bottom - height, width, height, title, value, note, valueWidth);
     }
 
     private static String fit(PixelFontTextRenderer text, String value, int width) {
@@ -152,7 +175,9 @@ public final class TransportHud {
     private static void icon(GraphicsManager graphics, int x, int y, Status status) {
         // Authored 9x8 masks; every set bit is exactly one projection pixel.
         int[] rows = switch (status) {
-            case REWIND -> new int[] {0x22, 0x66, 0xEE, 0x1FE, 0xEE, 0x66, 0x22, 0};
+            case REWIND, REWIND_LOW -> new int[] {0x22, 0x66, 0xEE, 0x1FE, 0xEE, 0x66, 0x22, 0};
+            // Skip-to-start: a stop bar against the rewind arrows, the limit of history.
+            case REWIND_EMPTY -> new int[] {0x111, 0x133, 0x177, 0x1FF, 0x177, 0x133, 0x111, 0};
             case HOLD -> new int[] {0x38, 0x44, 0x82, 0x82, 0x82, 0x44, 0x38, 0};
             case RECORD -> new int[] {0x38, 0x7C, 0xFE, 0xFE, 0xFE, 0x7C, 0x38, 0};
             case PLAY, PLAY_WARNING -> new int[] {0x80, 0xC0, 0xE0, 0xF0, 0xE0, 0xC0, 0x80, 0};

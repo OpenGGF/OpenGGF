@@ -121,7 +121,12 @@ mods:
 
 # ── Rewind (live) ──
 rewind:
-  liveEnabled: false   # Enable held-key rewind during ordinary live play
+  liveEnabled: true # Legacy enable gate for launch profiles and tools
+  budgetScope: act # off, checkpoint, act, zone
+  budgetSeconds: "10" # 5, 10, 15, 20, 30, 60, unlimited
+  refillOnLifeLoss: true
+  bonusStages: true
+  specialStages: true # Allow rewind in supported special stages
   liveKey: R   # Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind
   tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
   tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held

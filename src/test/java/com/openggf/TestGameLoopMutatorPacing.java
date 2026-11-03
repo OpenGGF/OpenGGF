@@ -192,6 +192,9 @@ class TestGameLoopMutatorPacing {
             }
         };
         TestEnvironment.configureGameModuleFixture(module);
+        // This pacing-only mock has no level/snapshot installation. Rewind
+        // cases explicitly enable their held-key interception below.
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         var policy = new AtomicReference<>(policy(speed, follows));
         var world = MutatorPhysicsWorld.create(policy::get,com.openggf.game.mutators.LevelMutatorPolicy.STOCK,child);
         var context = mock(GameplayModeContext.class);

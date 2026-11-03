@@ -2621,7 +2621,12 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_LIMIT_TYPE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_SECONDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_SIZE_MB
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_BONUS_STAGES
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_BUDGET_SCOPE
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_BUDGET_SECONDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_HISTORY_SECONDS
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_REFILL_ON_LIFE_LOSS
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_SPECIAL_STAGES
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration RIGHT
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_DIRECTORY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_PREFER_COMPOSITE

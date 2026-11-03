@@ -1408,6 +1408,8 @@ public class TestGameLoop {
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(module.getTitleCardProvider()).thenReturn(titleCard);
         TestEnvironment.configureGameModuleFixture(module);
+        // This retained-module mock has no snapshot payload; live history is unrelated.
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameLoop loop = new GameLoop(mockInputHandler);
         assertSame(titleCard, loop.getTitleCardProvider());
         GameplayModeContext presentation =

@@ -710,6 +710,13 @@ public enum SonicConfiguration {
 	UI_LANGUAGE,
 
 	/** Enforce native per-line sprite count/pixel budgets; presentation only. */
-	DISPLAY_SPRITE_SCANLINE_LIMIT;
+	DISPLAY_SPRITE_SCANLINE_LIMIT,
+
+	/** Live rewind allowance controls; appended to preserve existing enum ordinals. */
+	REWIND_BUDGET_SCOPE,
+	REWIND_BUDGET_SECONDS,
+	REWIND_REFILL_ON_LIFE_LOSS,
+	REWIND_BONUS_STAGES,
+	REWIND_SPECIAL_STAGES;
 
 }

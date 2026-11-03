@@ -231,19 +231,29 @@ its authored start. See the [level editor guide](../creating/level-editor.md).
 
 ## How do I enable live rewind?
 
-Enable **Rewind** in Settings → Gameplay, or override it for one game in
+Choose **Rewind** in Settings → Gameplay, or override it for one game in
 **Game Setup**. The equivalent global setting is:
 
 ```yaml
 rewind:
   liveEnabled: true
+  budgetScope: act
+  budgetSeconds: "10"
+  refillOnLifeLoss: true
+  bonusStages: true
+  specialStages: true
   liveKey: R
 ```
 
 With that enabled, hold the configured live rewind key during normal level play to rewind the live
 gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play and
-appears only while the key is held, showing the current rewind frame. Rewind history
-resets at committed level and act transition boundaries.
+shows remaining seconds and a draining bar while rewinding. At zero, rewind stops immediately; pressing again shows an amber empty frame and dashed meter for one second.
+
+Choose **Off**, **Per checkpoint**, **Per act** (default), or **Per zone** to set when the consumable allowance refills. **Rewind budget** defaults to **10 seconds**, with **Unlimited** available instead of zero. Starting a new game always starts a fresh allowance. Forward play does not refund time, and replaying the same refill boundary does not refill again. **Refill on life loss** defaults to On and refills after respawn completes.
+
+**Bonus-stage rewind** and **Special-stage rewind** both default to On. Each supported stage visit gets a fresh allowance using the same maximum; your main-stage balance is preserved until you return. These options and the budget controls are inactive while Rewind is Off. Unlimited still uses the retained gameplay history; it does not remove storage limits. Rewind history resets at committed level and act transition boundaries.
+
+Live rewind currently requires native level geometry. Standalone creator levels using custom geometry run normally without live rewind.
 
 Live rewind also reverses audio presentation from the recent mixed PCM history
 and freezes graphical fade progression to the restored rewind snapshots. The

@@ -5,6 +5,12 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+The five saved rewind allowance preferences (`REWIND_BUDGET_SCOPE`,
+`REWIND_BUDGET_SECONDS`, `REWIND_REFILL_ON_LIFE_LOSS`, `REWIND_BONUS_STAGES`,
+`REWIND_SPECIAL_STAGES`) are appended to `SonicConfiguration`, preserving existing
+ordinals. The mutable `0.7` signature pin and candidate description include them;
+the release descriptor remains candidate `0.7.0`, with no publication or topology change.
+
 `SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT` adds the saved presentation
 preference `display.spriteScanlineLimit`, enabled by default. It is appended
 to preserve existing enum ordinals. The mutable `0.7` signature pin and

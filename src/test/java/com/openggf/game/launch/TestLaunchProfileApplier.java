@@ -22,6 +22,20 @@ class TestLaunchProfileApplier {
     Path tempDir;
 
     @Test
+    void perGameOnUsesActScopeWhenGlobalRewindIsOff() {
+        var config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.REWIND_BUDGET_SCOPE, "off");
+        assertFalse(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        new LaunchProfileApplier(config).apply(
+                new LaunchProfile(true, "off", false, "global", "sonic", "none"), SONIC_1);
+        assertTrue(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        assertEquals("act", config.getString(SonicConfiguration.REWIND_BUDGET_SCOPE));
+        config.clearSessionOverrides();
+        assertFalse(config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        assertEquals("off", config.getString(SonicConfiguration.REWIND_BUDGET_SCOPE));
+    }
+
+    @Test
     void applySetsAlwaysManagedSessionOverrides() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
         LaunchProfile profile = new LaunchProfile(true, "s2", true, "global", "tails", "sonic");

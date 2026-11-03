@@ -26,7 +26,8 @@ class TestHubSetupChips {
         var config = SonicConfigurationService.createStandalone(directory);
         var store = new LaunchProfileStore(config);
         var chips = HubSetupChips.forStock(SONIC_2, LaunchProfile.stockFor(SONIC_2), store, config, 0);
-        assertEquals(List.of("SONIC & TAILS", "4:3"), labels(chips));
+        assertEquals(List.of("SONIC & TAILS", "4:3", "REWIND ON"), labels(chips),
+                "the stock profile inherits the enabled per-act rewind default");
         assertTrue(chips.stream().noneMatch(HubSetupChips.Chip::thisGameOnly), "nothing is set for this game only");
         assertEquals(List.of("SONIC"), labels(HubSetupChips.forStock(SONIC_1, LaunchProfile.stockFor(SONIC_1), store, config, 0))
                 .subList(0, 1), "a solo team names one character");

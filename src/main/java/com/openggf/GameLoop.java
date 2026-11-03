@@ -2661,6 +2661,7 @@ public class GameLoop {
     void startLevelFromTitleScreenImmediate(int zone, int act) {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
+        liveRewindManager.startNewRun();
         try {
             levelManager.loadZoneAndActForFreshRuntime(zone, act);
         } catch (IOException e) {
@@ -3000,6 +3001,7 @@ public class GameLoop {
             levelSelect.reset();
 
             GameServices.gameState().startNewGameFromTitle(); // S1 LevSel_Level -> PlayLevel (sonic.asm:2270-2283)
+            liveRewindManager.startNewRun();
             levelSelect.onGameplayStart();
             // Fade out level select music
             audioManager.fadeOutMusic();

@@ -84,7 +84,12 @@ class TestSonicConfigurationFileBootstrap {
         // The registered defaults are what every unset key reads.
         assertEquals("Q", service.getString(SonicConfiguration.FRAME_STEP_KEY));
         assertEquals("", service.getString(SonicConfiguration.PLAYBACK_MOVIE_PATH));
-        assertFalse(service.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        assertTrue(service.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED));
+        assertEquals("act", service.getString(SonicConfiguration.REWIND_BUDGET_SCOPE));
+        assertEquals("10", service.getString(SonicConfiguration.REWIND_BUDGET_SECONDS));
+        assertTrue(service.getBoolean(SonicConfiguration.REWIND_REFILL_ON_LIFE_LOSS));
+        assertTrue(service.getBoolean(SonicConfiguration.REWIND_BONUS_STAGES));
+        assertTrue(service.getBoolean(SonicConfiguration.REWIND_SPECIAL_STAGES));
         assertFalse(service.getBoolean(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT));
         assertEquals("R", service.getString(SonicConfiguration.LIVE_REWIND_KEY));
         assertTrue(service.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP));

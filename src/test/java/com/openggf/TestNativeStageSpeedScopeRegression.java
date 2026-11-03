@@ -1,6 +1,8 @@
 package com.openggf;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.*;
 import com.openggf.game.mutators.GameplayMutatorPolicy;
@@ -70,6 +72,8 @@ class TestNativeStageSpeedScopeRegression {
     }
 
     private static PumpLoop loop(int speed) throws Exception {
+        // This mock pump has no LevelManager or gameplay snapshot providers.
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         var world = MutatorPhysicsWorld.create(() -> new GameplayMutatorPolicy(100, 0, 100, 0xC00, speed, false));
         var context = mock(GameplayModeContext.class); when(context.getWorldSession()).thenReturn(world);
         when(context.isGameplayRuntimeReady()).thenReturn(true);

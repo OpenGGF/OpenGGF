@@ -33,6 +33,9 @@ public class LaunchProfileApplier {
         if (!sanitized.rewind().isDefault()) {
             configService.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED,
                     sanitized.rewind() == LaunchToggle.ON);
+            if (sanitized.rewind() == LaunchToggle.ON
+                    && "off".equals(configService.getString(SonicConfiguration.REWIND_BUDGET_SCOPE)))
+                configService.setSessionOverride(SonicConfiguration.REWIND_BUDGET_SCOPE, "act");
         }
         if ("off".equals(sanitized.crossGameSource())) {
             configService.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);

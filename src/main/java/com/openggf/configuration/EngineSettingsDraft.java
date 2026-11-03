@@ -24,7 +24,7 @@ public final class EngineSettingsDraft {
     static {
         for (Category category : Category.values()) {
             // Stable sort: within Controls, player bindings come before engine shortcuts.
-            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category && !ConfigCatalog.meta(k).section().startsWith("hub"))
+            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> k != SonicConfiguration.LIVE_REWIND_ENABLED).filter(k -> category(k) == category && !ConfigCatalog.meta(k).section().startsWith("hub"))
                     .sorted(java.util.Comparator.comparingInt(k -> controlGroupOrder(k)))
                     .toList());
         }
@@ -41,6 +41,10 @@ public final class EngineSettingsDraft {
     public EngineSettingsDraft(SonicConfigurationService config) {
         this.config = Objects.requireNonNull(config);
         initial = config.settingsSnapshot();
+        Object enabled = initial.get(SonicConfiguration.LIVE_REWIND_ENABLED);
+        boolean enabledValue = enabled instanceof Number number ? number.intValue() != 0
+                : Boolean.parseBoolean(String.valueOf(enabled));
+        if (!enabledValue) initial.put(SonicConfiguration.REWIND_BUDGET_SCOPE, "off");
         values = new EnumMap<>(initial);
         values.keySet().forEach(this::refresh);
     }
@@ -69,6 +73,11 @@ public final class EngineSettingsDraft {
         if (section.startsWith("launch")) return Category.LAUNCH;
         // Every non-debug hotkey lives with the other controls, wherever its section is.
         if (meta.type() == ConfigType.KEY && !section.startsWith("debug")) return Category.INPUT;
+        if (switch (key) {
+            case REWIND_BUDGET_SCOPE, REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS,
+                    REWIND_BONUS_STAGES, REWIND_SPECIAL_STAGES -> true;
+            default -> false;
+        }) return Category.GAMEPLAY;
         if (key == SonicConfiguration.LOAD_TIME_SIMULATION
                 || section.startsWith("rewind") && key != SonicConfiguration.LIVE_REWIND_ENABLED
                 || section.startsWith("hub")) return Category.ADVANCED;
@@ -110,7 +119,10 @@ public final class EngineSettingsDraft {
     }
     public boolean dirty() { return changedCount > 0; }
     public int changedCount() { return changedCount; }
-    public void reset(SonicConfiguration key) { put(key, config.getDefaultValue(key)); }
+    public void reset(SonicConfiguration key) {
+        if (key == SonicConfiguration.REWIND_BUDGET_SCOPE) set(key, config.getDefaultValue(key).toString());
+        else put(key, config.getDefaultValue(key));
+    }
     public void reset(Category category) { keys(category).forEach(this::reset); }
     public record Change(SonicConfiguration key, String before, String after) { }
     public List<Change> changes() {
@@ -188,12 +200,23 @@ public final class EngineSettingsDraft {
         put(key, parsed);
     }
 
+    public static List<String> rewindOptions(SonicConfiguration key) {
+        return key == SonicConfiguration.REWIND_BUDGET_SCOPE
+                ? List.of("off", "checkpoint", "act", "zone")
+                : List.of("5", "10", "15", "20", "30", "60", "unlimited");
+    }
+
     public static List<String> presentationLimits() {
         return List.of("AUTO", "30", "50", "60", "75", "100", "120", "144", "165", "240", "360");
     }
 
     public void step(SonicConfiguration key, int direction) {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
+        if (key == SonicConfiguration.REWIND_BUDGET_SCOPE || key == SonicConfiguration.REWIND_BUDGET_SECONDS) {
+            var options = rewindOptions(key);
+            set(key, options.get(Math.floorMod(options.indexOf(text(key)) + direction, options.size())));
+            return;
+        }
         if (key == SonicConfiguration.FPS) {
             var options = presentationLimits();
             int index = options.indexOf(text(key).toUpperCase(java.util.Locale.ROOT));

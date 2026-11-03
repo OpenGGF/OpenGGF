@@ -7,7 +7,8 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including the saved sprite scanline-limit
+     * Current unpublished compiled-mod API candidate, including saved rewind budget scope,
+     * allowance and stage/life-loss controls, plus the saved sprite scanline-limit
      * presentation preference and BCP 47 host-interface
      * UI_LANGUAGE preference, detached CPU-only title-preview providers and their RGBA
      * image/animation sequence contract, run-scoped native HUD profiles,
