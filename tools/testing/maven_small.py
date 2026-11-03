@@ -111,9 +111,9 @@ QUALIFIED_CLASSES = frozenset({
     'com.openggf.version.TestBuildIdentity',
 })
 
-# These additional tests were qualified only after normal-memory preparation.
-# Full-project Java compilation does not fit the 1 GiB Maven heap reliably;
-# do not extend the automatic focused lifecycle policy from batch evidence.
+# These additional tests were qualified only as prepared category batches.
+# Focused lean commands also compile with normal memory, but batch evidence does
+# not qualify an exact focused invocation; verify it with --lean before moving.
 BATCH_ONLY_CLASSES = frozenset({
     'com.openggf.mods.code.TestEggmansSkyExample',
     'com.openggf.mods.code.TestFlappyTailsExample',

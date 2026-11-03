@@ -152,8 +152,11 @@ class LaunchTests(Fixture):
         import maven_queue as queue
         import maven_activity
         import maven_small
+        import run_categories
         output = StringIO()
         with self.table(**self.digests), \
+                patch.object(run_categories, 'tree_state', return_value='unchanged'), \
+                patch.object(run_categories, 'validate_preparation_contract'), \
                 patch.object(queue, 'maven_slot', return_value=nullcontext(None)) as slot, \
                 patch.object(queue, 'worktree_build_slot', return_value=nullcontext(None)) as build, \
                 patch.object(maven_activity, 'build_activity_slot', return_value=nullcontext(())), \
@@ -162,6 +165,7 @@ class LaunchTests(Fixture):
                 patch.object(queue.subprocess, 'Popen') as popen, redirect_stdout(output):
             popen.return_value.__enter__.return_value.wait.return_value = 0
             self.assertEqual(0, queue.main(list(args)))
+        self.commands = [call.args[0] for call in popen.call_args_list]
         return popen.call_args.args[0], slot, build, lean, output.getvalue()
 
     def test_focused_test_adds_discovered_roms_after_caller_tokens(self):
@@ -186,7 +190,10 @@ class LaunchTests(Fixture):
     def test_qualified_lean_command_is_classified_before_roms_are_added(self):
         bounded = (['-Dmse=off', '-Dtest=TestOne', 'test', '-Dsurefire.argLine=-Xmx1g'], {'SMALL': '1'})
         argv, slot, _, lean, _ = self.launch(['-Dmse=off', '-Dtest=TestOne', 'test'], automatic=bounded)
-        self.assertEqual(['mvn', *bounded[0], *self.discovered], argv)
+        # Normal-memory compilation needs no ROMs; the prepared lean run gets them unchanged.
+        self.assertEqual([['mvn', '-Dmse=off', '-Dtest=TestOne', 'test-compile'],
+                          ['mvn', '-Dmse=off', '-Dtest=TestOne', 'surefire:test', '-Dsurefire.argLine=-Xmx1g',
+                           *self.discovered]], self.commands)
         lean.assert_called_once_with(['-Dmse=off', '-Dtest=TestOne', 'test'], root=Path.cwd())
         self.assertTrue(slot.call_args.kwargs['small_job'])
 
