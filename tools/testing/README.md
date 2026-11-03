@@ -230,8 +230,9 @@ The runner discovers existing root `.gen` files by the documented SHA-1 identiti
 absolute ROM paths. In an isolated worktree, use `--rom-directory /absolute/original/ROM/directory`
 to discover the originals there as well, including the documented KiS2 lock-on dump when present.
 Each path is one Maven argument, including filenames with spaces. This avoids Java environment
-injection and creates no ROM links or copies. Missing ROMs still require inspecting
-skips; a successful exit alone does not establish ROM-backed coverage.
+injection and creates no ROM links or copies. Discovery runs once per invocation; the plan and
+verdict name the found and missing ROM properties, never ROM contents. A test skipped for a
+missing ROM has no skip-policy rule, so the run reports incomplete rather than passed.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
 working-tree fingerprint, ordinary worker count and selected source classes; command arrays record the exact Maven
@@ -241,8 +242,8 @@ interrupted or timed-out preparation launches no batches and leaves the run
 incomplete. `results.json` aggregates each lane's worker count, totals,
 completed/planned batch counts, skipped cases and failure details, and `status.json`
 distinguishes passed, failed and incomplete runs. Diagnostic lists are capped at 1,000 records
-per kind with explicit omitted counts; messages/stacks are bounded excerpts. Inspect skips,
-omissions and domain coverage before delivery. The runner checks exit status and nonempty
+per kind with explicit omitted counts; messages/stacks are bounded excerpts; skip
+classification counts are never capped. The runner checks exit status and nonempty
 execution and rejects a changed working tree at completion. A failed Maven batch
 without JUnit failure reports stops further execution and preserves the failed
 batch identity and causal log; remaining coverage is incomplete. It does not cache or authenticate
@@ -260,11 +261,43 @@ preparation and queue waits, may overlap across two forks, and do not attribute
 work in a crashed JVM that produced no report. Existing acknowledgment/cleanup
 rules remove these diagnostics along with the rest of the run.
 
+### Skip classification and verdict
+
+Every ordinary and guard skip is classified with `classify_surefire_skips.py` against
+`release-skip-policy.json`, the release workflow's exact `class#method` policy. Each
+lane records uncapped `skip_classification` counts and a bounded `unexplained_skips`
+list. A skip that is unclassified, required (its input is declared present), depends
+on an undeclared input, or lacks a report identity leaves the lane and run
+**incomplete** with exit 1. Test failures take precedence (**failed**), and a lane
+whose every case skipped still fails even when each skip is allowed.
+
+The runner declares only inputs it can establish from the launch: `gl` is present
+when `DISPLAY` or `WAYLAND_DISPLAY` is set, matching the release gate's display check
+(surfaceless EGL does not supply the GLFW contexts those tests use); `s2_bk2` and
+`s3k_observations` are present when `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`,
+`_JAVA_OPTIONS` or `MAVEN_ARGS` passes their `-D` property; generated local
+references are absent. Unparseable options and new policy inputs stay undeclared,
+so their skips fail closed. A malformed policy stops `--run` and `--preflight`
+before any tool or Maven launch.
+
+Every run ends with one `VERDICT PASSED|FAILED|INCOMPLETE` line: tested head and
+source fingerprint, selection mode and candidate classes, completed/planned batches
+per lane, test/failure/error/skip totals with allowed/unexplained counts, missing ROM
+properties, declared skip inputs, any stop reason, and the statement that it is a
+bounded smoke selection, not a full-suite pass. Up to 20 unexplained skips per lane
+are printed above it. Quote that line when reporting the run.
+
+Rationale (2026-11-03): manual `results.json` inspection and acknowledgment after
+every pass was ceremony, while a run whose skips nobody read could still report
+success with missing ROMs or required inputs. Classifying with the existing release
+policy keeps one authority; a separate wrapper or new selection/queue behaviour was
+not needed. Add a policy rule only for a verified explicit opt-in gate or optional
+input: the release classifier uses the same rules, so a rule also accepts that skip
+there. Real failures and mandatory prerequisites never get rules.
+
 ### Cost, prerequisites and stopping
 
-Run `python3 tools/testing/run_categories.py --base <pinned-base> --preflight` in the
-same environment as the intended test command. Every `--run` also performs these checks:
-Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
+Every `--run` checks prerequisites before any test lane: Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
 default `lua`) and `pwsh` on PATH. Failures are collected before any test lane starts.
 The Maven version probe holds a shared build-activity lease, inherited by its JVM,
 so it waits for isolated measurements without joining the test queue. Its 20-second
@@ -277,6 +310,9 @@ run a suppressed `java -version` helper before the Maven launcher itself.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the
 first graphics launch, especially after a documented sandbox failure.
+`--preflight` runs the same checks alone and also prints the skip-policy rule count,
+declared skip inputs and found/missing ROM properties; it is optional, not a
+required step before `--run`.
 
 All-category selections and selections of at least 500 candidate classes print a cost warning.
 These are bounded smoke selections, not exhaustive release validation.
@@ -387,6 +423,12 @@ normal admission. Prepared category batches also use the separately reviewed
 lifecycle admission, because full-project test compilation can exceed a 1 GiB
 Maven heap. The wrapper prints when it selects the smaller budget. Use
 `--normal` before Maven arguments to retain the larger heap.
+
+To qualify a frequently used small class permanently, review its source and
+fixtures, verify the exact focused command with `--lean`, add it to
+`QUALIFIED_CLASSES` in `maven_small.py` and run the Python safety checks. Keep the
+registry's source and invocation guards; a fast runtime or one low RSS sample is
+not sufficient evidence.
 
 For other focused tests with known bounded memory needs, explicitly use the lean lane:
 
@@ -714,8 +756,10 @@ It can overlap resource-aware Maven runs in other worktrees, but waits for write
 in its own tree and for legacy/serial exclusive clients. It does not occupy a JVM
 slot, join the admission queue or require CPU/memory headroom.
 
-Diagnostics are temporary, not a run history. After inspecting `results.json` (including
-skip reasons and failures) and any relevant log tail, acknowledge consumption:
+Diagnostics are temporary, not a run history. A passing CLI run prints its verdict and
+deletes its run directory; nothing remains to acknowledge. Failed or incomplete runs keep
+bounded diagnostics. After reading `results.json` (including unexplained skips and
+failures) and any relevant log tail, acknowledge consumption:
 
 ```bash
 python3 tools/testing/run_categories.py --acknowledge <run-id>
@@ -726,15 +770,17 @@ running Maven. Only exact runner IDs are accepted, never paths or symlinked dire
 A repeated acknowledgment is harmless. Agents must acknowledge consumed results before
 delivery; there is no background process that can detect when a human has read a file.
 
-- Success logs and raw XML are deleted immediately after extracting results. The compact
-  results remain temporarily so skips can be inspected before acknowledgment.
+- Success logs and raw XML are deleted immediately after extracting results. A passing
+  run's compact results are deleted after the verdict unless `--keep-diagnostics` was given.
+  Direct `run_plan` callers (Python tests) keep passing runs for inspection.
 - Failed/interrupted results include rolling log tails until acknowledged. Each Maven
   invocation keeps two chunks of at most **2 MiB each** while running. Read `.log.1` before
   `.log`. Raw XML is deleted after summary extraction.
 - Before launching another run, the runner deletes all unacknowledged, recognized prior
   run directories, including legacy retained runs. This also cleans abandoned diagnostics;
   it never follows symlinks or prunes unrelated target contents.
-- Only an explicit `--keep-diagnostics` on `--run` retains a run across later launches.
+- Only an explicit `--keep-diagnostics` on `--run` retains a passing run, or any run
+  across later launches.
   Use it only at the user's request. Opt-in retention remains bounded to **two runs /
   100 MiB**, and acknowledgment deletes these folders too. Raw XML and temporary fixture
   data are still removed; this flag retains bounded logs and JSON, not complete build output.
