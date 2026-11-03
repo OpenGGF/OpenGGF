@@ -7,6 +7,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K invisible solid and hurt blocks suppress edge balancing as their native status bit requires.
+
+- LRZ corkscrews retain the shipped two-player DPLC standing-bit quirk and hold the rider pose on skipped passes.
+
+- LRZ grinding boulders retain the native coarse-camera lifetime, preserving their contact with both players.
+
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.
 

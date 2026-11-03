@@ -2598,3 +2598,15 @@ compatibility checks remain green. This closes the local bridge handoff gap;
 full-act/native sequences and remaining donor/participant breadth stay open.
 
 S2 ARZ2 producer-clock follow-up (2026-11-03): the [clock-selection route matrix](../architecture/research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03) records native Sonic+Tails continuous/standalone controls, an independent halfpipe movie, KiS2 campaign limits, clock-word boundaries and actual restore/forward RNG checks. The row5084 frontier moves to inherited5512; newly admitted CNZ1 remains incomplete. Wider viewports, donor/team breadth and complete-act certification remain inherited gaps. Full-profile qualification is recorded in that artifact.
+
+LRZ Act1 local follow-up (2026-11-03): the [boulder lifetime audit](../architecture/audits/2026-11-03-lrz-boulder-lifetime.md)
+records unsigned coarse-camera boundary checks and LRZ trace/keep-green results.
+This is a local lifetime obligation; the Act1 matrix's broader route/rewind gaps remain open.
+
+LRZ Act1 corkscrew follow-up (2026-11-03): [P2 dispatch audit](../architecture/audits/2026-11-03-lrz-corkscrew-p2.md)
+adds a two-player held/resumed-pass witness and exercises the existing three
+rewind spots; comprehensive two-player route/rewind breadth remains open.
+
+LRZ Act1 invisible support follow-up (2026-11-03): the [status7 audit](../architecture/audits/2026-11-03-lrz-invisible-balance.md)
+records the real rider edge-balance witness and invisible-block rewind checks;
+full-route and broader matrix obligations remain open.
