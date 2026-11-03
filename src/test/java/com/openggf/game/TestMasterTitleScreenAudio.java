@@ -9,10 +9,13 @@ import com.openggf.game.launch.LaunchProfileStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.*;
@@ -21,6 +24,9 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 /** Interaction-level coverage for host-owned master-title menu feedback. */
 class TestMasterTitleScreenAudio {
+
+    @TempDir
+    Path configDirectory;
 
     private final AudioManager audio = AudioManager.getInstance();
 
@@ -112,7 +118,9 @@ class TestMasterTitleScreenAudio {
         InputHandler input = new InputHandler();
         pressFrame(screen, input, GLFW_KEY_DOWN);
         pressFrame(screen, input, GLFW_KEY_ENTER);
+        assertTrue(screen.isRomLocatorOpenForTest());
         pressFrame(screen, input, GLFW_KEY_ESCAPE);
+        assertFalse(screen.isRomLocatorOpenForTest());
         assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL"), emittedSfxNames());
     }
 
@@ -133,7 +141,7 @@ class TestMasterTitleScreenAudio {
     }
 
     private MasterTitleScreen activeScreen(boolean selectedRomAvailable) {
-        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(configDirectory);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         MasterTitleScreen screen = new MasterTitleScreen(config, new LaunchProfileStore(config),
                 cue -> audio.playSfx(cue.sfxName()));
