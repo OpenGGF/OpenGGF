@@ -273,7 +273,8 @@ whose every case skipped still fails even when each skip is allowed.
 
 The runner declares only inputs it can establish from the launch: `gl` is present
 when `DISPLAY` or `WAYLAND_DISPLAY` is set, matching the release gate's display check
-(surfaceless EGL does not supply the GLFW contexts those tests use); `s2_bk2` and
+(this capability describes display-backed GL; explicit EGL fixtures enforce
+their own backend requirements); `s2_bk2` and
 `s3k_observations` are present when `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`,
 `_JAVA_OPTIONS` or `MAVEN_ARGS` passes their `-D` property; generated local
 references are absent. Unparseable options and new policy inputs stay undeclared,
