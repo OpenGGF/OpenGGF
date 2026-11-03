@@ -37,6 +37,9 @@ class CheckedCommitTests(unittest.TestCase):
         self.git("commit", "-m", "initial")
         self.before = self.git("rev-parse", "HEAD")
         shutil.copytree(SOURCE / ".githooks", self.root / ".githooks")
+        # pre-commit runs the staged disassembly citation guard from the repository.
+        (self.root / "tools/disasm").mkdir(parents=True)
+        shutil.copy2(SOURCE / "tools/disasm/disasm_citations.py", self.root / "tools/disasm")
         self.git("config", "core.hooksPath", ".githooks")
         self.message = self.root / "message.txt"
         self.message.write_text(MESSAGE)
