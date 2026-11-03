@@ -4396,7 +4396,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void setWalkAnimationAfterRollingLanding(AbstractPlayableSprite sprite) {
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		if (movementRules != null
-				&& movementRules.landingWalkWriteSkippedWhileSpindashing()
+				&& movementRules.landing().landingWalkWriteSkippedWhileSpindashing()
 				&& sprite.getSpindash()) {
 			if (movementRules.rollingJumpPinballGateRequiresSpindashFlag()) {
 				if (sprite.getAnimationProfile() instanceof ScriptedVelocityAnimationProfile velocityProfile
