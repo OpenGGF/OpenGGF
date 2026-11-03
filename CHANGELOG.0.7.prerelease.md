@@ -20,6 +20,21 @@ Unreleased. The earlier development themes remain in
 - S2 ARZ leaves read the native gameplay clock after title-card release, preserving
   bubble and boss-arrow random sequences in continuous runs.
 
+- HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.
+
+- HCZ2 boss blades start their floor-hit raw animation from the cleared timer, restoring native water-chute launch timing.
+
+- HCZ2 end-boss attack setup runs on the native wait-underflow pass; spray release performs its final interaction once.
+
+- HCZ2 end-boss swing resumes from the live rise velocity and retains the native fractional Y position.
+
+- HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.
+
+- HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.
+
+- HCZ2 end-boss camera release preserves the separate main-initialization dispatch,
+  and its water platform starts raw animation from the fresh slot's cleared timer.
+
 - S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
   finish opening off screen before unloading. Both corrections preserve Tails CPU
   respawn timing at the native visibility boundary.
