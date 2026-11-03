@@ -2003,3 +2003,5 @@ its original drawing priority.
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
   require every named case to execute without skips. Original ROMs remain local
   or private; hosted builds and automatic publication retain their existing flow.
+
+- LBZ phase-one explosion showers retain their own controller through boss deletion and rewind, allowing Knuckles' Big Arm replay to finish its comparisons.

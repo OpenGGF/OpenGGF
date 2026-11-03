@@ -123468,3 +123468,68 @@ keep-green, gitlink-guard and touched-class checks: 1942 pass, 0 skips.
   defect (`ExplosionShowerChild` → retired `LbzFinalBoss1Instance`; the other fleet owns the fix). S+T `ssz`
   failure → error at the existing KosM stall (16449). S+T Hpz2/Hpz3 stay at row 0: Sky Sanctuary's level start
   reads `lastCheckpointIndex`, which needs the saved-block recorder export (queued).
+
+
+## 2026-11-03 — LBZ independent explosion-shower rewind lifetime
+
+At wave-5 candidate `35d097848` (published as develop `7c82cc1b4` with only
+an additional frontier entry), the exact standalone LBZ replay aborts at
+traceIndex1454/romFrame1454. Full closure diagnostics identify `BossChild#boss`
+on `ExplosionShowerChild` dynamic272, slot7, pointing to deleted
+`LbzFinalBoss1Instance`. This differs from the earlier lane's muzzle/head
+report at1086;1454 and the captured field path are the measured boundary here.
+The diagnostic run completes one test with one error and zero skips.
+
+The independent explosion controller now extends `AbstractObjectInstance` with
+its own spawn coordinates, controller rewind state and injected services. It
+retains neither the boss nor its lifetime. It continues issuing the same
+controller explosions/sounds after boss deletion. Spawn allocation, priority
+and presentation role are preserved. No shared rewind code, queue timing,
+carried-state import or trace assertion is changed.
+
+A focused boss-deletion witness first fails on exactly the same dangling
+reference. The corrected witness isolates combat children, captures the live
+shower after boss retirement, destructively restores it and compares forward
+snapshots. The earlier synthetic muzzle-on-head-retirement probe did not
+reproduce closure and was removed. The first fixed test run exposed unrelated
+debris in the artificial retirement setup and an obsolete reflective fixture
+constructor; these fixtures were corrected. A remaining direct-fixture services
+binding was then corrected without another production edit.
+
+Combined validation on `7c82cc1b4` plus the production patch runs103 cases:
+101 pass, the LBZ comparison assertion fails normally, and the direct-fixture
+services error requires the final selective rerun recorded below. Zero skips.
+The shower's destructive restore/forward replay and all required S3K controls
+pass. The LBZ runtime no longer aborts: gate reached,6,444 planned rows /6,309
+gameplay comparisons,263 divergence records (199 physics/64 animation), zero
+warnings; first frame76 rings56/55. Counts after the old abort are newly measured,
+not comparable to the232-error pre-wave-5 bootstrap. Trace parity remains open.
+
+All runs use queued Maven, Java25, unset DISPLAY/WAYLAND_DISPLAY, surfaceless
+EGL, `-Dmse=off`; the wrapper finds all six verified ROM properties, none missing.
+The exact diagnostic command adds `-Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Dtest=TestS3kKnucklesLbz2BigArmTraceReplay test -B`.
+The focused red selector is
+`TestLbzFinalBoss1GraphRewind#explosionShowerOutlivesBossAndRestoresWithoutRetiredOwner`.
+Combined fixed selectors, with the same replay profile/order/fork flags:
+
+```text
+TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1Instance,TestS3kKnucklesLbz2BigArmTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Focused red queue wait1,657s / Maven37.949s; first fixed wait2,330s /119s;
+corrected combined wait879s /106s. These are invocation measurements, not summed
+delivery elapsed time. Final fixture-only selection is `TestLbzFinalBoss1Instance`
+without the trace profile; all28 cases pass, zero failures/errors/skips
+(Maven33.354s, queue1,497s). The previously passing graph, loading and replay
+results remain applicable because this final edit only binds the synthetic
+fixture service handle. In total102 functional controls pass across these
+completed checks; the full replay retains its normal263-record assertion. No duplicate unchanged replay
+is submitted for that fixture-only correction.
+
+The change plan selects3,578 smoke classes because the file owns a zone boss.
+Focused checks replace that broad selection: the change removes an unused
+structural reference from a stationary, invisible component, preserves its
+controller/algorithm/dispatch, and covers graph reconstruction, controller RNG,
+boss transitions, the actual full replay and required S3K consumers. No shared
+algorithm changes, release-only full suite or complete trace green claim.

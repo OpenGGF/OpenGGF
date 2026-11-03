@@ -211,6 +211,34 @@ class TestLbzFinalBoss1GraphRewind {
         }
     }
 
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void explosionShowerOutlivesBossAndRestoresWithoutRetiredOwner() throws Exception {
+        Harness h = new Harness();
+        var boss = h.allocateBoss();
+        h.advance(1, 1);
+        boss.forceHitCountForTest(1);
+        boss.onPlayerAttack(null, null);
+        h.advance(2, 1);
+        assertFalse(h.manager.activeObjectsOfType(LbzFinalBoss1Instance.ExplosionShowerChild.class).isEmpty());
+        // Isolate the independent shower from combat children whose own lifetimes
+        // are covered separately; the native handoff has already retired that graph.
+        for (var child : List.copyOf(h.manager.activeObjectsOfType(LbzFinalBoss1Instance.BossChild.class))) {
+            if (!LbzFinalBoss1Instance.ExplosionShowerChild.class.isInstance(child)) {
+                h.manager.removeDynamicObject(child);
+            }
+        }
+        com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(boss);
+        var boundary = assertDoesNotThrow(() -> h.advance(3, 1)).getFirst();
+        assertFalse(h.manager.activeObjectsOfType(LbzFinalBoss1Instance.ExplosionShowerChild.class).isEmpty(),
+                "the native explosion controller survives boss deletion");
+        assertDoesNotThrow(h.manager::validateRewindReferenceClosure);
+        var later = h.advance(4, 12);
+        h.destructiveRestore(boundary, boss);
+        assertDoesNotThrow(h.manager::validateRewindReferenceClosure);
+        h.assertReplay(later, 4);
+    }
+
     private record Link(String type, ObjectRefId id, int slot, ObjectRefId boss, ObjectRefId segment) { }
 
     private static Object field(Object object, String name) throws Exception {
