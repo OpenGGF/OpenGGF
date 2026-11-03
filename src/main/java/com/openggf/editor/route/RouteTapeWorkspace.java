@@ -673,7 +673,8 @@ public final class RouteTapeWorkspace {
                 case MENU -> routeMenu();
                 case EXIT -> exit();
             }
-        } catch (RuntimeException failure) {
+        } catch (UncheckedIOException | IllegalArgumentException | IllegalStateException failure) {
+            // Route I/O and the workspace's own validation messages; anything else is an engine bug and propagates.
             report(failure);
         }
     }

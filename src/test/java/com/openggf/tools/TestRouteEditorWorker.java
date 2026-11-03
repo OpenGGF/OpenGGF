@@ -173,7 +173,7 @@ class TestRouteEditorWorker {
         var launch = LaunchContract.coldLevel(RomIdentity.ofFile("s3k", rom), new LevelId("s3k", 10, 0),
                 new Roster("sonic", "tails"), 320, 0);
         // The arrival bridge is live before input 1366, where the route reaches it.
-        var rows = RouteFiles.tapeFromMovie(Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"), 1360);
+        var rows = RouteFiles.tapeFromMovie(sszCompleteMovie(), 1360);
         var route = RouteArtifact.of(launch, rows, new com.openggf.route.Provenance("test", "", "", List.of()));
         var records = run(RouteEditorProtocol.Kind.SCAN, route, 1300, Map.of("s3k", rom));
         assertEquals(RouteEditorProtocol.Verdict.PASSED, records.getLast().result().verdict());
@@ -196,9 +196,15 @@ class TestRouteEditorWorker {
         var request = new RouteEditorProtocol.Request(RouteEditorProtocol.Kind.REPAIR, RouteCodec.formatTransport(route),
                 null, false, null, new RouteEditorProtocol.Repair(0, 60, 1, 0, -1), 0,
                 Path.of("src/test/resources/routes/s3k/tracks/ssz1-tails-solo-cold-flight-320.csv.gz"),
-                Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320.bk2"), Map.of("s3k", rom));
+                sszCompleteMovie(), Map.of("s3k", rom));
         var refused = assertThrows(java.io.IOException.class, () -> run(request));
         assertTrue(refused.getMessage().contains("was recorded from movie"), refused.getMessage());
+    }
+
+    /** The committed SSZ route is a manifest; its BK2 is derived on demand. */
+    private Path sszCompleteMovie() throws java.io.IOException {
+        Path manifest = Path.of("src/test/resources/routes/s3k/ssz1-sonic-tails-cold-complete-320" + RouteFiles.MANIFEST_SUFFIX);
+        return RouteFiles.exportBk2(RouteFiles.read(manifest), dir.resolve("ssz1-sonic-tails-cold-complete-320.bk2"));
     }
 
     @Test

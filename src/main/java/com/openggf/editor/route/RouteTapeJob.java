@@ -263,7 +263,7 @@ public final class RouteTapeJob implements AutoCloseable {
         task = Thread.ofVirtual().name("route-tape-job").start(() -> {
             try {
                 run(wire, request.kind(), content, rows, token);
-            } catch (Exception failure) {
+            } catch (IOException | InterruptedException failure) {
                 publish(token, new Update(token, Phase.ERROR, request.kind(), 0, 0, 0, rows,
                         Objects.toString(failure.getMessage(), failure.getClass().getSimpleName()), content, -1, null,
                         null));
@@ -272,7 +272,7 @@ public final class RouteTapeJob implements AutoCloseable {
     }
 
     private void run(RouteEditorProtocol.Request request, Kind kind, String content, int rows, long token)
-            throws Exception {
+            throws IOException, InterruptedException {
         var command = new ArrayList<String>();
         command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
         command.add("--enable-native-access=ALL-UNNAMED");

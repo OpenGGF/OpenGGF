@@ -53,7 +53,7 @@ public final class RouteEditorWorker {
         try (var input = new RouteEditorProtocol.LineReader(new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
             run(RouteEditorProtocol.decodeRequest(input), output);
             output.flush();
-        } catch (Exception failure) {
+        } catch (IOException failure) {
             System.err.println("Route worker: " + Objects.toString(failure.getMessage(), failure.getClass().getSimpleName()));
             System.exit(1);
         }
