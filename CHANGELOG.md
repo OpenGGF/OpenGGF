@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- S3K fresh level loads count the title loop's first VBlank and the terrain wait's final VBlank as in the ROM.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
 - HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.

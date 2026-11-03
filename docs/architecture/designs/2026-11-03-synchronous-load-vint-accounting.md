@@ -1,6 +1,9 @@
 # Synchronous load and transition V-int accounting
 
-Status: proposed, implementation deferred for lead/user decision. Follow-up to
+Status: steps 2-3 trialled under the 2026-11-03 ruling; see
+[the load-time V-int trial](../audits/2026-11-03-load-vint-trial.md). Two
+ROM-stated V-ints are implemented; the rest is a proven cycle-cost boundary.
+Original status: proposed, implementation deferred for lead/user decision. Follow-up to
 [the Mega Slots audit](../audits/2026-11-03-s3k-mega-slots-clock.md), measured on
 `347b695dc` with temporary read-only probes. No runtime change is included.
 

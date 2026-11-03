@@ -193,6 +193,18 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     private LevelFrameResult stepFrame(
             LogicalInputSnapshot snapshot, Runnable beforeGameplay,
             boolean deferRecordedPauseEntry) {
+        // A fresh load inside this iteration makes it Level's setup frame.
+        com.openggf.level.LevelSetupFrameAccess.beginIteration(levelManager);
+        try {
+            return stepFrameInIteration(snapshot, beforeGameplay, deferRecordedPauseEntry);
+        } finally {
+            com.openggf.level.LevelSetupFrameAccess.endIteration(levelManager);
+        }
+    }
+
+    private LevelFrameResult stepFrameInIteration(
+            LogicalInputSnapshot snapshot, Runnable beforeGameplay,
+            boolean deferRecordedPauseEntry) {
         var gameplayMode = SessionManager.getCurrentGameplayMode();
         if (com.openggf.game.mode.ControlledFrameRuntime.controller(gameplayMode) != null) {
             lastFrameResult = com.openggf.game.mode.ControlledFrameRuntime.step(gameplayMode, inputHandler, snapshot, false, beforeGameplay);

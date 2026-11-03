@@ -247,8 +247,25 @@ public final class LevelFrameStep {
         // A blocking fade may already own and prepare this same phase. The
         // losing external scan keeps its body, but cannot repeat that tail.
         if (claimed) {
-            frame.prepareAfterLoop(phase);
+            prepareTitleLoopTail(context, frame, phase);
         }
+    }
+
+    /**
+     * Arms the claimed loop-tail preparation, except on a fresh load's own
+     * setup frame: Level has queued its PLCs but has not yet reached loc_62CC's
+     * Process_Nem_Queue_Init, which follows that loop's first Wait_VSync
+     * (sonic3k.asm:7769-7775).
+     */
+    static void prepareTitleLoopTail(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
+        if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD
+                && com.openggf.level.LevelSetupFrameAccess.inFreshLevelSetupFrame(
+                        context.levelManager())) {
+            frame.omitLevelSetupFrameTitleLoopTail();
+            return;
+        }
+        frame.prepareAfterLoop(phase);
     }
 
     /**
