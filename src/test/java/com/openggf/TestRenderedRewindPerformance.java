@@ -55,7 +55,9 @@ class TestRenderedRewindPerformance {
         Files.createDirectories(output);
         List<Object> runs = new ArrayList<>();
         for (int repeat = 0; repeat < repeats; repeat++) {
-            var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+            var settings = new GameplayCaptureSession.Settings(320,
+                    System.getProperty("openggf.perf.character", "sonic"),
+                    System.getProperty("openggf.perf.sidekick", "tails"), "off", null, null, null);
             Engine engine = null;
             try (var session = new GameplayCaptureSession(settings)) {
                 var config = GameServices.configuration();
