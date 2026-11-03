@@ -132,6 +132,33 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         assertEquals(null, harness.port().capture().rawFrameLatch());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void transitionFadeServicesVintRegardlessOfComparatorCursorOwnership(
+            boolean observerHasRows) throws Exception {
+        Harness harness = harness(1);
+        harness.port().beginRawFrame(1);
+        var playback = mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        when(playback.observerHasUnconsumedRecordedRows()).thenReturn(observerHasRows);
+        var objects = mock(com.openggf.level.objects.ObjectManager.class);
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                harness.context().getWorldSession().getGameModule());
+        var frame = lifecycle.latchBeforeFadeUpdate();
+        frame.claim(com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE);
+        try {
+            new LevelIterationAdmissionController().consumeTransitionFreezeRow(
+                    playback, objects, LevelFrameContext.from(harness.context()), frame);
+        } finally {
+            frame.finish();
+        }
+        assertTrue(harness.context().hardwareTiming().isReady(harness.handle()),
+                "the fade's VInt must service real prepared work even after comparison ends");
+        org.mockito.Mockito.verify(objects).advanceVblaCounter();
+        org.mockito.Mockito.verify(playback, org.mockito.Mockito.times(observerHasRows ? 1 : 0))
+                .onLevelFrameAdvanced();
+        assertEquals(1, harness.port().capture().rawFrameLatch());
+    }
+
     private Harness harness(int edgeRawFrame) throws Exception {
         GameplayModeContext context = new GameplayModeContext(
                 new WorldSession(new Sonic3kGameModule()),

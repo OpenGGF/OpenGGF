@@ -7,6 +7,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- Held transition fades continue servicing VBlank work and the native clock
+  after trace comparison closes, while preserving movie-row ownership.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain; the ending resource adapter
   restores art while the existing layout owner handles scene geometry. A rendered
   cache audit covers 68 stock act/scene entries across all three games.
