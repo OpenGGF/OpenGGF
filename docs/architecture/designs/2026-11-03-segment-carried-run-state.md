@@ -186,6 +186,28 @@ is a failure with no abort, 1152 errors from row 73. `lbz_2` has 6 errors
 `LbzFinalBoss1Instance$MuzzleLaserChild#head` rewind reference to an
 unregistered `LaserHeadChild`. The replay now reaches that boss state.
 
+### Open: the engine's `Last_star_post_hit` itself (`lastCheckpointIndex`)
+
+The import sets only the activation mark, which is what loc_2D008 compares.
+Other ROM readers test the byte directly. SSZ1/SSZ2 ScreenInit (`tst.b
+(Last_star_post_hit).w`) is the measured case; the engine models it as
+`CheckpointState.lastCheckpointIndex`, which the import does not set. Before the
+mark was carried, a star-post bonus return into SSZ re-touched its un-hit post at
+frame 0. That set `lastCheckpointIndex` by accident and kept ScreenInit off the
+fresh-arrival path. With the post correctly hit, ScreenInit spawns
+`SszArrivalControllerObjectInstance`, which lifts Sonic to the arrival start.
+Measured: S+T `hpz_3` (SSZ1) goes from 292 errors at row 332 (without the
+mark) to 383 at row 0; S+T `hpz_2` from 1114 at 119 to 1019 at row 0. Develop
+also fails both at row 0 (283 rings / 1103 rings), so neither is earlier than
+develop. Disabling only the mark restores 292@332. A probe traced Sonic's Y write
+to `SszArrivalControllerObjectInstance.applyInit`.
+
+Carrying the byte into `lastCheckpointIndex` as well would fix ScreenInit. It
+also arms the death-respawn path, which needs `Saved_X_pos`/`Saved_Y_pos` (the
+manifest records them as `saved_x_pos`/`saved_y_pos`) and
+`Saved_camera_X_pos`/`Saved_camera_Y_pos` (not recorded). That follow-up needs
+the camera pair exported, or a ruling on respawn without it.
+
 ## Entry provenance (policy B)
 
 The entry hook takes no position on whether a segment is a fresh start or a
