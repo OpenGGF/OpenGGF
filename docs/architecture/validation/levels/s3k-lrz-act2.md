@@ -1867,3 +1867,15 @@ Knuckles route methods still fail in Act1, at15323 (9765/2479) and5027
 moves from723 to the native722, and the nine sampled fields match completed
 native object passes through level732. Per-input comparison still differs at
 native admission hold723; it is not waived. No new Act2 qualification follows.
+
+## Iwamodoki rider release (2026-11-02)
+
+Iwamodoki's self-destruct tail calls `Displace_PlayerOffObject` after setting
+status bit 7. The local regression in `TestIwamodokiBadnikInstance` establishes
+real solid contacts for P1/P2, burns the fuse with each shield type, and checks
+that both riders become airborne while a third player's separate support survives.
+The focused object run passes eight tests without skips on the refreshed develop
+base. This corrects the missing object-owned release; general destroyed-support ROM
+bugs remain unchanged. This short object check does not qualify cold routes,
+viewport/donor breadth, or whole-world rewind and forward replay; those inherited
+matrix obligations remain open.

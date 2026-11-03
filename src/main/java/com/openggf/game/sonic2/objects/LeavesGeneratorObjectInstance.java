@@ -45,7 +45,7 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
     // Minimum speed required to trigger leaves (0x200 in either axis)
     private static final int MIN_TRIGGER_SPEED = 0x200;
 
-    // Obj2C_CollisionFlags (docs/s2disasm/s2.asm:52053-52056).
+    // Obj2C_CollisionFlags (docs/s2disasm/s2.asm:52052-52055).
     private static final int[] COLLISION_FLAGS = {0xD6, 0xD4, 0xD5};
 
     private static final int MAIN_TOUCH_BIT = 0x01;
@@ -63,7 +63,7 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
             TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     // Velocity table for leaf particles (8.8 fixed point values)
-    // ROM: Obj2C_Speeds (docs/s2disasm/s2.asm:52032-52037).
+    // ROM: Obj2C_Speeds (docs/s2disasm/s2.asm:52191-52195).
     private static final int[][] LEAF_VELOCITIES = {
             {-0x80, -0x80},  // Leaf 0: top-left
             {0xC0, -0x40},   // Leaf 1: top-right
@@ -151,11 +151,16 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
     }
 
     private int levelFrameCounter(int vIntRunCount) {
-        var levelManager = services().levelManager();
-        // Obj2C_Main reads the Level_frame_counter word, not V_int_run_count
-        // (s2.asm:52096,52106,52120). LevelFrameStep advances the injected
-        // level clock before RunObjects; pause/lag rows do not advance it.
-        return (levelManager != null ? levelManager.getFrameCounter() : vIntRunCount) & 0xFFFF;
+        // Obj2C_Main (s2.asm:52078-52124) reads the native level word.
+        // The player gameplay clock resets at title release; LevelManager's
+        // execution clock includes the title's object passes.
+        // Level (s2.asm:4757-4773) clears the word before the title leave loop
+        // (s2.asm:5060-5066). Level_MainLoop (s2.asm:5088-5094) then advances it,
+        // so locked title passes read zero.
+        var title = services().titleCardProvider();
+        if (title != null && !title.shouldReleaseControl()) return 0;
+        var sprites = services().spriteManager();
+        return (sprites != null ? sprites.getFrameCounter() : vIntRunCount) & 0xFFFF;
     }
 
     private AbstractPlayableSprite mainPlayer() {

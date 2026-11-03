@@ -70,6 +70,27 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     }
 
     @Override
+    public void initializePositionedLevelStartCamera(Camera camera, AbstractPlayableSprite player,
+                                                     int zone, int act,
+                                                     com.openggf.game.session.LevelEntryProvenance provenance) {
+        // Unknown pose provenance may describe a post-terrain or pre-spawn body.
+        // Keep its existing camera; never infer ordering from coordinates or a manifest.
+        if (!provenance.hasPostSpawnCameraOrigin()) return;
+        // Get_LevelSizeStart loc_1BF74 (sonic3k.asm:38286-38316) precedes
+        // SpawnLevelMainSprites loc_6B42 (sonic3k.asm:8415-8423). Only a declared
+        // post-SpawnPlayers body authorizes undoing Tails-alone's later +4.
+        boolean tails = com.openggf.game.CharacterKey.TAILS.equals(player.characterKey());
+        // loc_1BEC6 (sonic3k.asm:38202-38231) bypasses the generic focus for
+        // fresh ICZ1 Tails. Its absolute entry camera is separate bring-up work.
+        if (tails && zone == Sonic3kZoneIds.ZONE_ICZ && act == 0 && !provenance.isReturn()) return;
+        int focusY = player.getCentreY();
+        if (tails) focusY -= 4;
+        Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), focusY,
+                com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
+                zone, act, provenance.isReturn(), Sonic3kCartridgePolicy.isStandaloneSk());
+    }
+
+    @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {
         boolean standaloneSk = Sonic3kCartridgePolicy.isStandaloneSk();
@@ -189,7 +210,13 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     private final AdvancedRenderMode mhzShipForegroundMode = new AdvancedRenderMode() {
         @Override public String id() { return "s3k-mhz2-ship-foreground"; }
         @Override public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
-            if (foregroundVerticalScrollSplit() != null) builder.enablePerLineForegroundScroll();
+            if (foregroundVerticalScrollSplit() != null || (GameServices.hasRuntime()
+                    && GameServices.zoneRuntimeState() instanceof
+                    com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState state
+                    && state.isEndBossArenaBackgroundActive())) {
+                // sub_5550C also replaces Plane A's first $30 scroll words in the chase.
+                builder.enablePerLineForegroundScroll();
+            }
         }
     };
 
@@ -414,8 +441,16 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 ? dezPlanetBackground.captureProjection(manager, Integer.MAX_VALUE) : null;
     }
 
+    private com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState mhzChasePlaneState() {
+        return GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState state
+                && state.isEndBossArenaBackgroundActive() ? state : null;
+    }
+
     @Override public long foregroundDescriptorRevision() {
         if(!GameServices.hasRuntime())return 0;
+        var mhz = mhzChasePlaneState();
+        if (mhz != null) return mhz.isEndBossArenaForegroundRefreshActive() ? 2 : 1;
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && (ending.credits().active() || (ending.postCreditsStarted() && ending.flag(3)))) {
@@ -458,6 +493,16 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
 
     @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
         if(!GameServices.hasRuntime())return 0;
+        var mhz = mhzChasePlaneState();
+        if (mhz != null) {
+            // loc_55380 streams the $180..$1AF canopy at layout X=$4000
+            // into Plane A's $80..$AF ring rows. Camera Y=$280 exposes it
+            // above the chase; sub_5550C scrolls that band with the forest.
+            boolean canopy = sourceY >= 0x280 && sourceY < 0x2B0;
+            return GameServices.level().getForegroundTileDescriptorAtWorld(
+                    canopy ? 0x4000 + (sourceX & 0x1FF) : sourceX,
+                    canopy ? sourceY - 0x100 : sourceY);
+        }
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && (ending.credits().active() || (ending.postCreditsStarted() && ending.flag(3)))) {
@@ -574,6 +619,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
 
     @Override public long backgroundDescriptorRevision() {
         if(!GameServices.hasRuntime())return 0;
+        var mhz = mhzChasePlaneState();
+        if (mhz != null) return mhz.isEndBossArenaForegroundRefreshActive() ? 2 : 1;
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return Long.MIN_VALUE;
@@ -610,6 +657,19 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
         if(!GameServices.hasRuntime())return 0;
+        var mhz = mhzChasePlaneState();
+        if (mhz != null) {
+            int rowY = sourceY & 0xFF;
+            // loc_553B6 replaces the top $30 lines of Plane B from layout
+            // X=$200,Y=$80. These are the ramp's source cells, not the forest.
+            if (mhz.isEndBossArenaForegroundRefreshActive() && rowY >= 0x80 && rowY < 0xB0) {
+                return GameServices.level().getBackgroundTileDescriptorAtWorld(0x200 + (sourceX & 0x1FF), rowY);
+            }
+            // sub_554B8 starts at BG Y=$180; Draw_TileRow fills the rest
+            // from X=0, wrapping the physical 512x256 plane.
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(
+                    sourceX & 0x1FF, rowY + (rowY < 0x80 ? 0x200 : 0x100));
+        }
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return 0;

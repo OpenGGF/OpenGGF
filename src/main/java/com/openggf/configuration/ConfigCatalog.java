@@ -62,8 +62,8 @@ public final class ConfigCatalog {
                 "Show hundredths of a second in the HUD's TIME (0:00.00), as Sonic CD does; "
                 + "the original three games show whole seconds"));
         put(DISPLAY_SPRITE_SCANLINE_LIMIT, of("display", "spriteScanlineLimit", BOOL,
-                "Enforce native per-scanline sprite count and pixel-width limits; "
-                + "disabling retains explicit sprite masks and total table capacity"));
+                "Enforce native sprite-table capacity and per-scanline count and pixel-width limits; "
+                + "disabling retains explicit sprite masks"));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
         put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,
@@ -95,7 +95,16 @@ public final class ConfigCatalog {
                 Set.of("FULL", "LIMITED")));
         put(DISPLAY_COLOR_PROFILE_TOGGLE_KEY, of("display", "colorProfileToggleKey", KEY,
                 "Runtime key to cycle the display color profile"));
-        put(FPS, of("display", "fps", INT, "Window rendering limit; gameplay and audio use the region cadence"));
+        put(DISPLAY_INTERPOLATION_TOGGLE_KEY, of("display", "interpolationToggleKey", KEY,
+                "Runtime key to toggle presentation interpolation"));
+        put(DISPLAY_PACING, ofEnum("display", "pacing",
+                "Live cadence: AUTO locks to a display refresh near the region rate, EXACT keeps nominal speed",
+                Set.of("AUTO", "EXACT")));
+
+        put(FPS, of("display", "fps", STRING, "Window rendering limit: AUTO follows display refresh (region rate if unknown), or a positive integer; gameplay and audio stay at 50/60 Hz"));
+        put(DISPLAY_INTERPOLATION, of("display", "interpolation", BOOL,
+                "Render-only motion interpolation above the region rate; "
+                + "adds up to one tick of visual latency; recordings and screenshots stay exact"));
 
         // ui: presentation language never changes persisted keys or game text.
         put(UI_LANGUAGE, of("ui", "language", STRING,
@@ -130,7 +139,7 @@ public final class ConfigCatalog {
         put(JUMP, derived(KEY,
                 "Deprecated flat-key compatibility alias for Player 1 action button A"));
         put(START, of("input.player1", "start", KEY,
-                "Player 1: start (in-game pause). Keyboard-only -- gamepad Start toggles PAUSE_KEY's pause instead"));
+                "Player 1: start / pause (same visible pause as input.pause)"));
         put(P2_UP, of("input.player2", "up", KEY, "Player 2: look up"));
         put(P2_DOWN, of("input.player2", "down", KEY, "Player 2: crouch/roll"));
         put(P2_LEFT, of("input.player2", "left", KEY, "Player 2: move left"));
@@ -208,6 +217,11 @@ public final class ConfigCatalog {
         // rewind (player-facing live rewind)
         put(LIVE_REWIND_ENABLED, of("rewind", "liveEnabled", BOOL,
                 "Enable held-key rewind during ordinary live play"));
+        put(REWIND_BUDGET_SCOPE, ofEnum("rewind", "budgetScope", "When the consumable rewind allowance refills", Set.of("off", "checkpoint", "act", "zone")));
+        put(REWIND_BUDGET_SECONDS, ofEnum("rewind", "budgetSeconds", "Seconds available per refill, or unlimited", Set.of("5", "10", "15", "20", "30", "60", "unlimited")));
+        put(REWIND_REFILL_ON_LIFE_LOSS, of("rewind", "refillOnLifeLoss", BOOL, "Refill after a completed life-loss respawn"));
+        put(REWIND_BONUS_STAGES, of("rewind", "bonusStages", BOOL, "Allow rewind in supported bonus stages with a fresh allowance per visit"));
+        put(REWIND_SPECIAL_STAGES, of("rewind", "specialStages", BOOL, "Allow rewind in supported special stages with a fresh allowance per visit"));
         put(LIVE_REWIND_KEY, of("rewind", "liveKey", KEY,
                 "Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind"));
         put(LIVE_REWIND_HALF_SPEED_KEY, of("rewind", "liveHalfSpeedKey", KEY,

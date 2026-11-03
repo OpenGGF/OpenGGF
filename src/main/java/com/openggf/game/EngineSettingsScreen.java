@@ -175,8 +175,8 @@ public final class EngineSettingsScreen {
             return;
         }
         if (capturing) { updateCapture(input); return; }
-        if (keyMenu) { updateKeyMenu(input); return; }
-        if (choosing) { updateChoice(input); return; }
+        if (keyMenu) { updateKeyMenu(input, pointer); return; }
+        if (choosing) { updateChoice(input, pointer); return; }
         if (MenuInput.back(input) || pointer.rightPressed()) { requestClose(); return; }
         if (updatePointer(pointer)) return;
         if (groupsFocused) {
@@ -260,7 +260,7 @@ public final class EngineSettingsScreen {
         ConfigType type = ConfigCatalog.meta(selected()).type();
         if (selected() == SonicConfiguration.AUDIO_HUB_MUSIC_VOLUME) return;
         if (type == ConfigType.KEY) { keyMenu = true; choice = 0; }
-        else if (type == ConfigType.BOOL || type == ConfigType.ENUM) {
+        else if (selected() == SonicConfiguration.FPS || type == ConfigType.BOOL || type == ConfigType.ENUM) {
             choosing = true;
             choice = Math.max(0, options().indexOf(draft.text(selected())));
         } else openTextEditor();
@@ -276,6 +276,15 @@ public final class EngineSettingsScreen {
         boolean moved = pointer.x() != lastPointerX || pointer.y() != lastPointerY;
         lastPointerX = pointer.x();
         lastPointerY = pointer.y();
+        if (pointer.wheel() != 0 && !keys().isEmpty()) {
+            int target = Math.clamp(row - pointer.wheel(), 0, keys().size() - 1);
+            if (target != row || tabsFocused || saveFocused || resetFocused || groupsFocused) {
+                tabsFocused = false;
+                focusRow(target);
+                MenuFeedback.emit(NAVIGATE);
+            }
+            return true;
+        }
         if (draft.dirty() && pointer.over(frame.width() - saveButtonWidth() - 8, 8, saveButtonWidth(), saveButtonHeight())) {
             if (moved || pointer.leftPressed()) { saveFocused = true; tabsFocused = false; resetFocused = false; groupsFocused = false; }
             if (pointer.leftPressed() && apply()) closeRequested = true;
@@ -699,6 +708,14 @@ public final class EngineSettingsScreen {
     }
 
     private List<String> options() {
+        if (selected() == SonicConfiguration.REWIND_BUDGET_SCOPE || selected() == SonicConfiguration.REWIND_BUDGET_SECONDS)
+            return EngineSettingsDraft.rewindOptions(selected());
+        if (selected() == SonicConfiguration.FPS) {
+            var limits = new ArrayList<>(EngineSettingsDraft.presentationLimits());
+            String current = draft.text(selected()).toUpperCase(java.util.Locale.ROOT);
+            if (!limits.contains(current)) limits.add(current);
+            return limits;
+        }
         return optionCache.computeIfAbsent(selected(), key -> {
             if (ConfigCatalog.meta(key).type() == ConfigType.BOOL) return List.of("false", "true");
             return ConfigCatalog.meta(key).allowedValues().stream().sorted().toList();
@@ -774,9 +791,13 @@ public final class EngineSettingsScreen {
         keepRowVisible();
     }
 
-    private void updateChoice(InputHandler input) {
+    private void updateChoice(InputHandler input, MenuInput.Pointer pointer) {
         if (MenuInput.back(input)) { choosing = false; MenuFeedback.emit(CANCEL); return; }
         int count = options().size() + 1;
+        if (pointer.inside() && pointer.wheel() != 0) {
+            int target = Math.clamp(choice - pointer.wheel(), 0, count - 1);
+            if (target != choice) { choice = target; MenuFeedback.emit(NAVIGATE); }
+        }
         if (MenuInput.up(input)) { choice = Math.floorMod(choice - 1, count); MenuFeedback.emit(NAVIGATE); }
         if (MenuInput.down(input)) { choice = (choice + 1) % count; MenuFeedback.emit(NAVIGATE); }
         if (MenuInput.accept(input)) {
@@ -787,8 +808,12 @@ public final class EngineSettingsScreen {
         }
     }
 
-    private void updateKeyMenu(InputHandler input) {
+    private void updateKeyMenu(InputHandler input, MenuInput.Pointer pointer) {
         if (MenuInput.back(input)) { keyMenu = false; MenuFeedback.emit(CANCEL); return; }
+        if (pointer.inside() && pointer.wheel() != 0) {
+            int target = Math.clamp(choice - pointer.wheel(), 0, 3);
+            if (target != choice) { choice = target; MenuFeedback.emit(NAVIGATE); }
+        }
         if (MenuInput.up(input)) { choice = Math.floorMod(choice - 1, 4); MenuFeedback.emit(NAVIGATE); }
         if (MenuInput.down(input)) { choice = (choice + 1) % 4; MenuFeedback.emit(NAVIGATE); }
         if (MenuInput.accept(input)) {
@@ -1353,7 +1378,9 @@ public final class EngineSettingsScreen {
                 boolean nonDefault = i < values.size() && !values.get(i).equals(defaultText);
                 boolean current = i < values.size() && values.get(i).equals(draft.text(selected()));
                 if (current) MenuChrome.fill(font, 14, y + 3, 3, 3, MenuChrome.CYAN);
-                label(pageLabel(label, width - 40), 22, y, nonDefault ? AMBER : WHITE);
+                // Option rows share the light face used by the parent Settings form.
+                MenuChrome.compact(font, MenuStyle.fit(label, width - 40, MenuStyle.COMPACT),
+                        22, y, nonDefault ? AMBER : WHITE);
             }
             MenuChrome.footer(font, width, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(lastInput), UiMessages.text("settings.screen.set_caps")),
                     MenuChrome.hint(MenuChrome.backKey(lastInput), UiMessages.text("settings.screen.cancel_caps"))), MenuChrome.controller(lastInput), ticks);

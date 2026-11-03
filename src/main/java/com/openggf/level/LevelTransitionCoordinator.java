@@ -977,10 +977,13 @@ public class LevelTransitionCoordinator {
 
     /**
      * Returns true while the current level should be treated as inactive for a
-     * pending zone/act transition.
+     * pending level restart, including an accepted bonus-stage entry.
      */
     public boolean isLevelInactiveForTransition() {
-        return levelInactiveForTransition;
+        // loc_2D4CA (sonic3k.asm:61959-61973) requests a bonus via
+        // Restart_level_flag. LevelLoop (sonic3k.asm:7927-7929) branches
+        // before DeformBgLayer/ScreenEvents on that same object pass.
+        return levelInactiveForTransition || bonusStageRequested != null;
     }
 
     /**

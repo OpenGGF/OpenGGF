@@ -62,7 +62,7 @@ jobs:
       - name: Build unchanged Java 25 engine and SDK
         shell: pwsh
         run: >-
-          mvn -B "-Dmse=off" "-DskipTests" "-Dlwjgl.core.classifier=unsafe" -Puniversal-jar package dependency:build-classpath
+          mvn -B "-Dmse=off" "-DskipTests" "-Dlwjgl.core.classifier=unsafe" "-Dopenggf.multiplayer.channel=develop" -Puniversal-jar package dependency:build-classpath
           "-DincludeScope=runtime" "-Dmdep.outputFile=target/native-runtime-classpath.txt"
       - name: Build all example and sample mods from source
         shell: pwsh

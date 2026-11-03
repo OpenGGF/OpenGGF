@@ -44,7 +44,7 @@ import java.util.List;
  */
 public final class LbzMinibossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
-        MultiBucketRenderable, ObjectVisualFacing.Source {
+        MultiBucketRenderable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The fixed frontal cylinder and independently moving panels have no logical horizontal facing.
         return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
@@ -755,7 +755,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         int levelMusicId = services().getCurrentLevelMusicId();
         if (levelMusicId > 0) {
             // ROM loc_72562 allocates Obj_Song_Fade_ToLevelMusic.
-            spawnFreeChild(() -> new SongFadeTransitionInstance(LEVEL_MUSIC_FADE_FRAMES, levelMusicId));
+            spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(levelMusicId));
         }
         // ROM loc_72562 restores x_pos from $3C before Obj_EndSignControl, so the
         // signpost falls at the boss's home X. AfterBoss_LBZ shares AfterBoss_MHZ
@@ -1140,4 +1140,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
     private record PanelAnchor(int x, int y, int xSub, int ySub) {
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hitCount > 1) hitCount = 1; }
 }

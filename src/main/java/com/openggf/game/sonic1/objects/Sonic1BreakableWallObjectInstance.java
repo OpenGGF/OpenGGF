@@ -51,7 +51,7 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/3C Smashable Wall.asm
  */
 public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional, com.openggf.level.objects.homing.HomingTargetSource {
 
 // Smashable wall sections and their scattered mapping pieces have no horizontal-facing body.
 
@@ -186,7 +186,9 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
                           boolean airborne, boolean rolling, int impactSpeed) {
         // From disassembly: btst #5,obStatus(a0) - is Sonic pushing against the wall?
         // In the ROM, SolidObject sets bit 5 for ANY ground side contact.
-        if (!sideContact || airborne) {
+        // Homing-attack mutator: the strike arrives as if spindashed in, so it is a ground push.
+        boolean homing = com.openggf.game.mutators.HomingAttackRuntime.striking(services().worldSession(), player);
+        if (!sideContact || (airborne && !homing)) {
             return;
         }
         // From disassembly: cmpi.b #id_Roll,obAnim(a1) - is Sonic rolling?
@@ -495,5 +497,10 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
             }
             return frame.pieces().get(fragmentIndex);
         }
+    }
+    /** Homing: a wall broken by a fast roll; the homing arrival counts as a grounded roll. */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return broken ? null : com.openggf.level.objects.HomingTargets.at(this,
+                com.openggf.level.objects.homing.HomingTargetKind.BREAKABLE_WALL);
     }
 }

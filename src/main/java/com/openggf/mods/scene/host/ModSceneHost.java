@@ -691,7 +691,7 @@ public final class ModSceneHost {
             if (handler == null || services == null || services.mouse() == null) {
                 return SceneMouse.none();
             }
-            int wheel = MouseWheel.of(handler).takeNotches();
+            int wheel = MouseWheel.of(handler).notches();
             boolean left = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_LEFT);
             boolean right = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
             int[] p = handler.hasMouseInputSeen()

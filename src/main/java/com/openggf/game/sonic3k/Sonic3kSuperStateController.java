@@ -44,7 +44,7 @@ import java.util.logging.Logger;
  *   <li>2 = fading out (reverting) - timer 3, retreat 6 bytes, stop at 0</li>
  * </ul>
  */
-public class Sonic3kSuperStateController extends SuperStateController {
+public class Sonic3kSuperStateController extends SuperStateController implements com.openggf.game.internal.RuntimeArtRefreshParticipant {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSuperStateController.class.getName());
 
     /** Palette fade state: 0=off, 1=fading in, -1=cycling, 2=fading out. */
@@ -528,6 +528,28 @@ public class Sonic3kSuperStateController extends SuperStateController {
                         | (companionState << 24),
                 packPalette(savedNormalPalette),
                 packPalette(savedNormalUnderwaterPalette));
+    }
+
+    /**
+     * Rebinds rebuilt normal art without replacing the native form/palette clocks.
+     * The initializer has just installed normal resources; retain these for the
+     * eventual reversion and republish the active form's mapping presentation.
+     */
+    @Override
+    public void rebindAfterArtRefresh() {
+        normalRenderer = player.getSpriteRenderer();
+        normalAnimSet = player.getAnimationSet();
+        if (superArtSet != null) {
+            // Refresh rebuilt the team bank allocation and palette contexts too.
+            superRenderer = new PlayerSpriteRenderer(superArtSet);
+            superRenderer.setRenderContext(normalRenderer.getRenderContext());
+        }
+        // An ordinary art refresh owns no normal-form physics reset (for
+        // example a live speed-shoes profile). Powered forms need their
+        // animation profile and mappings republished after normal art setup.
+        if (getState() != SuperState.NORMAL || endingRescueRevertMappingsPending) {
+            reconcileRewindPresentation(getState());
+        }
     }
 
     @Override
@@ -1062,7 +1084,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         // period, this is how SonicKnux_SuperHyper.revertToNormal restores the
         // zone music: it plays none itself and lets Sonic_ChkInvin re-issue
         // Current_music when the timer expires.
-        player.setInvincibleFrames(1);
+        // Sonic_ChkInvin decrements the native timer only when Level_frame_counter & 7 is zero.
+        // Our public timer counts individual frames; preserve protection until that boundary.
+        LevelManager nativeLevel = GameServices.levelOrNull();
+        player.setInvincibleFrames(8 - ((nativeLevel == null ? 0 : nativeLevel.getFrameCounter()) & 7));
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
         }

@@ -21,6 +21,29 @@ class TestSozMechanisms {
         o.setServices(new StubObjectServices().withPlayerQuery(new ObjectPlayerQuery(() -> p,List::of)));
         o.setPlayerPushing(p,true);return o;
     }
+    @Test void handlePrecedesRailInSatButFollowsItInPainterOrder() {
+        for (boolean sat : new boolean[]{false, true}) {
+            for (int flip : new int[]{0, 1}) {
+                var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+                var renders = mock(ObjectRenderManager.class);
+                var graphics = mock(com.openggf.graphics.GraphicsManager.class);
+                when(renderer.isReady()).thenReturn(true);
+                when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH))
+                        .thenReturn(renderer);
+                when(graphics.isSpriteSatCollectionActive()).thenReturn(sat);
+                var o = new SozPushSwitchObjectInstance(new ObjectSpawn(300,100,0x45,1,flip,false,0));
+                o.setServices(new StubObjectServices() {
+                    @Override public ObjectRenderManager renderManager() { return renders; }
+                    @Override public com.openggf.graphics.GraphicsManager graphicsManager() { return graphics; }
+                });
+                o.appendRenderCommands(new java.util.ArrayList<>());
+                var order = inOrder(renderer);
+                if (sat) order.verify(renderer).drawFrameIndex(1,300,100,flip!=0,false);
+                order.verify(renderer).drawFrameIndex(0,300+(flip!=0?-16:16),100,false,false);
+                if (!sat) order.verify(renderer).drawFrameIndex(1,300,100,flip!=0,false);
+            }
+        }
+    }
     @Test void analogPushNeedsFourPassesForOnePixelAndSaturatesAt128() {
         var p=player(280);var o=button(1,0,p);p.setSubpixelRaw(0x1234,0x5678);
         for(int i=1;i<=128;i++) {

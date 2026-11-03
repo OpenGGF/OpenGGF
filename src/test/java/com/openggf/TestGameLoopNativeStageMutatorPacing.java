@@ -95,6 +95,8 @@ class TestGameLoopNativeStageMutatorPacing {
     @Test @RequiresRom(SonicGame.SONIC_3K)
     void nativeSlotBonusRuntimeUpdatesOncePerExecutedLevelFrameAcrossFourTickBudget() throws Exception {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_SLOT_MACHINE, 0).build();
+        // The independent pump below uses a mock context, not the fixture's live owner.
+        config().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         var actualContext = SessionManager.getCurrentGameplayMode();
         var provider = spy((Sonic3kBonusStageCoordinator) GameServices.module().getBonusStageProvider());
         actualContext.setActiveBonusStageProvider(provider);
@@ -194,6 +196,8 @@ class TestGameLoopNativeStageMutatorPacing {
     private static Fixture fixture(SpecialStageProvider provider, int speed) throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         config().clearSessionOverrides();
+        // The pump context models pacing only, without a level/history installation.
+        config().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GraphicsManager.getInstance().resetState(); GraphicsManager.getInstance().initHeadless();
         config().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config().setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");

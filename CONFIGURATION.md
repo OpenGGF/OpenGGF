@@ -116,13 +116,16 @@ ui:
 | `SCREEN_WIDTH` | `display` / `debug.window.width` | int | `640` | Actual window width in OS pixels. Derived from aspect preset when `display.windowAutosize=true`. |
 | `SCREEN_HEIGHT` | `display` / `debug.window.height` | int | `448` | Actual window height in OS pixels. |
 | `SCALE` | `debug.window.scale` | double | `1.0` | **DEPRECATED** additional rendering scale factor. |
-| `FPS` | `display.fps` | int | `60` | Window rendering limit, applied immediately. Values are bounded to 1–1,000,000,000. Simulation and audio use 60 Hz NTSC or 50 Hz PAL independently of this value. VSync and rendering cost can limit actual presentation. |
+| `FPS` | `display.fps` | AUTO or int | `AUTO` | Window rendering limit beside Interpolation in Display → Picture, applied immediately. `AUTO` (case-insensitive) follows the advertised display refresh, or the region rate if unknown. Numeric values are bounded to 1–1,000,000,000. Simulation and audio use 60 Hz NTSC or 50 Hz PAL independently of this value. VSync and rendering cost can limit actual presentation. |
+| `DISPLAY_INTERPOLATION` | `display.interpolation` | boolean | `false` | Render-only motion interpolation. Smooths pictures above the region rate with the default Auto rendering limit; adds up to one tick of visual latency. Recordings and screenshots stay exact. Applied immediately. |
+| `DISPLAY_PACING` | `display.pacing` | enum | `AUTO` | Live window cadence, applied immediately. `AUTO` locks region services to the display when its advertised refresh is within 1 Hz of a whole multiple of the region rate, `display.fps` is at least the region rate and the speaker is rate-regulated; a two-second probe must confirm that swaps block at that rate within 0.2%. Locked play runs at the measured display speed (59.94 Hz is 0.1% slow) and falls back to `EXACT` on repeated missed vblanks, non-blocking swaps or an out-of-band rate. `EXACT` keeps services on host time at nominal speed on any display. Tick-indexed gameplay, recordings, captures and traces are identical in both modes. |
 | `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `FAST` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses the generator-owned measured profile data; `FAST` (default) uses the hand-tuned copy of that data (`load-time-profiles/s3k-fast-v1.json`, which also carries the S3K title-screen Sonic frame decodes taken from the original hardware capture), and warns then behaves as `NONE` for a game without a FAST manifest; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. S1/S2 resolve through their default module factory to the supplied immediate profile; their ROM-derived PLC and dynamic-art/DPLC lifecycles remain game-owned and are not retimed by this setting. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
 | `CONFIG_PRESERVE_EXPLICIT_DEFAULTS` | `config.preserveExplicitDefaults` | bool | `false` | Developer override: retain explicitly listed recognized settings, including values equal to defaults, when converting an older full configuration to sparse format. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
 | `DISPLAY_COLOR_EXPANSION` | `display.colorExpansion` | string | `"FULL"` | Independent palette RGB output range, selectable as Full or Limited in Settings → Display. Full preserves current output (maximum 255); Limited applies rounded 238/255 gain after fades and the selected profile, including arbitrary creator palette RGB. The saved choice applies to cached normal and underwater palettes, the palette colour-0 backdrop and clear colour, and headless gameplay captures (applied at each capture boot through the same owner as the window). RAW_RGB + LIMITED matches GPGX normal digital ROM channel levels; this is not video 16–235 range or shadow/highlight emulation. |
+| `DISPLAY_INTERPOLATION_TOGGLE_KEY` | `display.interpolationToggleKey` | key | `N` | Runtime key to toggle and save presentation interpolation, with a brief On/Off notification. Rebind under Controls beside the colour-profile shortcut; binding changes apply after restart. |
 | `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | `display.colorProfileToggleKey` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.yaml` and shown briefly in the bottom-left corner. |
-| `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. Gameplay retains H40 sprite capacity (20 pieces/320 fetched pixels per line, 80 table entries), so side pieces compete for that fixed budget; masks still span the wider logical raster. A game module (such as a mod) may pin a preset for its session; the setting itself is unchanged and returns at the master title. |
+| `DISPLAY_ASPECT` | `display.aspect` | string | `"NATIVE_4_3"` | Display aspect preset. Controls the logical pixel width used by the renderer. Accepted values: `"NATIVE_4_3"` (320 px, exact native behavior), `"WIDE_16_10"` (352 px, supported), `"WIDE_16_9"` (400 px, primary supported widescreen target), `"ULTRA_21_9"` (528 px, best-effort smoke tier), and `"SUPER_32_9"` (800 px, exploratory). Wider presentation does not widen ROM world boundaries or trace-comparison authority. With sprite limits enabled, gameplay retains H40 sprite capacity (20 pieces/320 fetched pixels per line, 80 table entries), so side pieces compete for that fixed budget; masks still span the wider logical raster. A game module (such as a mod) may pin a preset for its session; the setting itself is unchanged and returns at the master title. |
 | `DISPLAY_WINDOW_MODE` | `display.windowMode` | enum | `"WINDOWED"` | `"WINDOWED"` allows normal resizing and maximising; `"BORDERLESS"` covers the current monitor without window borders; `"FULLSCREEN"` uses exclusive fullscreen at the monitor's current resolution. Saving a changed mode previews it for 15 seconds; Keep changes persists it, while Revert, Back or timeout restores the previous mode. Returning to windowed mode restores the previous window placement. |
 | `DISPLAY_SCALING` | `display.scaling` | enum | `"INTEGER"` | `"INTEGER"` uses the largest whole-number scale that fits, preserving equal-sized square pixels. `"FIT"` uses the largest proportional fit, allowing fractional scaling. Both preserve the game image's proportions and centre it with bars where necessary. Changes apply when saved. |
 | `DISPLAY_WINDOW_AUTOSIZE` | `display.windowAutosize` | bool | `true` | When `true` and a widescreen preset is active, the OS window is derived from the preset at 2x baseline (e.g. `WIDE_16_9` → 800×448). When a launch changes the aspect (a launch profile, or a module's required aspect such as a mod laid out for 16:9), a windowed, non-maximised window is refitted: it keeps its whole-number height scale and takes the new aspect's width, within the monitor, rather than letterboxing. When `false`, `SCREEN_WIDTH`/`SCREEN_HEIGHT` are used verbatim so a custom window size is preserved, and launches never resize the window. At startup it has no effect when `DISPLAY_ASPECT` is `"NATIVE_4_3"`. |
@@ -135,7 +138,7 @@ ui:
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
 | `DISPLAY_HUD_ANCHOR` | `display.hudAnchor` | string | `"DEFAULT"` | Horizontal position of the score/time/rings/lives HUD on widescreen profiles: `"DEFAULT"` keeps the centered native-frame position; `"LEFT_EDGE"` anchors it to the screen's left edge. Both settings produce the same position at native 4:3. |
 | `DISPLAY_HUD_TIME_HUNDREDTHS` | `display.hudTimeHundredths` | bool | `false` | Show hundredths of a second in the HUD's TIME (`0:00.00`), as Sonic CD does, in each game's own HUD digits (the point is the lower dot of the game's colon). The original three games show whole seconds. Read when a level starts. Mods can also ask for it during a run (`RunHandle.setHudTimeHundredths`). |
-| `DISPLAY_SPRITE_SCANLINE_LIMIT` | `display.spriteScanlineLimit` | bool | `false` | Settings → Display → Picture: Sprite scanline limit. Enforce the original per-scanline sprite-piece and declared-pixel-width budgets (H40: 20 pieces / 320 pixels; H32: 16 / 256). Turn off to remove both per-line budgets and overflow carry. Explicit sprite masks and total sprite-table capacity still apply. Normal play defaults to off. TraceCaptureTool temporarily enables native budgets for ROM image comparisons and restores the caller preference on completion or failure. Other visual parity probes must explicitly enable it. Applies when preparing the next sprite table after saving; does not change gameplay or trace comparison state. |
+| `DISPLAY_SPRITE_SCANLINE_LIMIT` | `display.spriteScanlineLimit` | bool | `false` | Settings → Display → Picture: Sprite scanline limit. Enforce the original per-scanline sprite-piece and declared-pixel-width budgets (H40: 20 pieces / 320 pixels; H32: 16 / 256). Turn off to remove both per-line budgets, overflow carry and total sprite-table capacity. Explicit sprite masks still apply. Normal play defaults to off. TraceCaptureTool temporarily enables native budgets for ROM image comparisons and restores the caller preference on completion or failure. Other visual parity probes must explicitly enable it. Applies when preparing the next sprite table after saving; does not change gameplay or trace comparison state. |
 
 ### Display shader library
 
@@ -861,7 +864,7 @@ does not change the private password or remove admitted players. Direct joins
 reveal the host's endpoint to the joining peer; relay routing protects it from
 that peer. The trusted master still processes routing metadata.
 
-Short codes use the selected `masterUrl` for remote and player-hosted games.
+Short codes use the selected master server for remote and player-hosted games.
 Without a configured or available master, manual LAN joining retains the longer
 pinned invite, such as `HOST_IP:27888#<share-code>`. Replace `HOST_IP` with the
 host's reachable LAN IP or name before sharing. Join LAN requires the complete
@@ -870,7 +873,15 @@ password. Plain addresses and `ws://` room connections are rejected. Invitations
 are no longer automatically logged, written to `lan-invite.txt` or saved as a
 last join address. Existing user-authored exports are left untouched.
 
-Invite, password, chat, display-name and URL fields use keyboard text entry.
+A host-name master is looked up on every Browse or Host: the SRV records must name
+that same host (they may point at a CNAME), so DNS chooses only the port and the
+certificate is still checked against the typed name. A missing record, a lookup
+failure and a record naming another host each show their own message ("No master
+server is published at ...", "Could not look up ...", "... points to another host");
+there is no fallback port. Recording uploads use the port the connection was
+admitted on.
+
+Invite, password, chat, display-name and master-server fields use keyboard text entry.
 Enter accepts and Escape cancels. Global display/capture shortcuts stay quiet
 while an editor is open. Invite and password fields are masked while typing.
 
@@ -884,8 +895,9 @@ folder. Edit them from the **Settings** row of the Time Attack menu; changes sav
 | `retryKey` | `82` (`R`) | Keyboard key that retries the act. The settings page captures a key; the file accepts GLFW key codes or names such as `F6`. |
 | `hostPort` | `27888` | Port for player-hosted rooms (manual LAN and master-listed direct rooms), served as a pinned TLS WebSocket. |
 | `displayName` | `""` | Multiplayer display name; blank uses the identity prefix. |
-| `masterUrl` | `""` | Master-server `wss://` URL for browsing and short invite codes, including player-hosted rooms; blank leaves manual LAN joining available. Plaintext `ws://` is allowed only with a literal loopback IPv4/IPv6 address, not `localhost` or other hostnames. |
-| `masterTrustInsecure` | `false` | Local development only: trust master-server and recording-upload TLS certificates at literal loopback addresses. Insecure upload mode rejects remote endpoints before taking custody of a recording; remote masters/uploads require normal certificate validation. |
+| `masterMode` | `default` | Master server for browsing and short invite codes, including player-hosted rooms. `default` follows the running build's master (the Settings row shows, for example, **Build default (multi-dev.openggf.com)**); the host name is never written here, so a profile moved between builds follows the new build. `custom` uses `masterCustom`. `off` disables browsing and listing; manual LAN joining still works. Left/Right on the Settings row cycles the modes. |
+| `masterCustom` | `""` | The custom master: a bare host name such as `multi-next.openggf.com`, whose port comes from its `_openggf._tcp` DNS SRV record, or a full `wss://host:port/master` URL (IPv6 literals in brackets). A host name must have at least two labels; IP literals, single-label names and `localhost` need a URL. Plaintext `ws://` is allowed only with a literal loopback IPv4/IPv6 address. Kept while another mode is selected. Editing the row with empty text selects `default`. A pre-release `masterUrl` key is ignored; an old engine `TIME_ATTACK_NET_MASTER_URL` imports as `custom`. |
+| `masterTrustInsecure` | `false` | Local development only: trust master-server and recording-upload TLS certificates at literal loopback addresses. It applies only to a `wss://` URL with a literal loopback address, never to a host name, whatever DNS returns. Insecure upload mode rejects remote endpoints before taking custody of a recording; remote masters/uploads require normal certificate validation. |
 | `minimap` | `true` | Show the multiplayer minimap progress strip. |
 | `chatMode` | `FULL_CHAT` | Requested communication for rooms this player creates: `FULL_CHAT` (typed and quick), `QUICK_CHAT` (quick only), or `OFF`. Public relay hosts may impose a stricter maximum. Personal censorship and chat hiding use the global `multiplayer.*` keys above. |
 
@@ -946,11 +958,18 @@ standalone images or Compose, including TLS, mounts, restart limits and backups.
 BK2 playback controls are unbound by default and must be rebound in `debug.playback`
 before BK2 playback can be controlled from the keyboard.
 
+The allowance and stage/life-loss controls are in Settings → Gameplay and are active only when Rewind is not Off. Existing `liveEnabled: false` preferences remain disabled until changed. The legacy enable gate is retained for launch overrides and tools; a per-game On override uses Per act if the global scope is Off. Unlimited removes the spend limit, not the separate history-storage cap. Stage visits preserve the main-stage balance. Starting a new game always starts a fresh allowance. Forward play and restoring snapshots do not refund spent allowance; reaching the same boundary again does not repeat its refill. Exhaustion immediately stops rewind. A denied press shows the empty meter for one second.
+
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Enables gameplay debug shortcuts and most overlay controls. The visible debug HUD starts hidden until toggled; performance overlay, screenshot and recording controls have their own gates. |
 | `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow gameplay entry into the experimental level editor with `Shift+Tab`; project authoring is also available from Advanced → Editor projects at the hub. |
-| `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
+| `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `true` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
+| `REWIND_BUDGET_SCOPE` | `rewind.budgetScope` | enum | `"act"` | Rewind refill scope: `off`, `checkpoint`, `act`, `zone`. Gameplay shows Off / Per checkpoint / Per act / Per zone. |
+| `REWIND_BUDGET_SECONDS` | `rewind.budgetSeconds` | enum | `"10"` | Shared allowance: `5`, `10`, `15`, `20`, `30`, `60` seconds, or `unlimited`; there is no zero option. Actual game frames rewound consume it, including speed modifiers and coast. |
+| `REWIND_REFILL_ON_LIFE_LOSS` | `rewind.refillOnLifeLoss` | bool | `true` | Refill after completed life-loss respawn, never merely entering the death animation. |
+| `REWIND_BONUS_STAGES` | `rewind.bonusStages` | bool | `true` | Enable supported bonus-stage rewind, with an independent fresh allowance each visit. |
+| `REWIND_SPECIAL_STAGES` | `rewind.specialStages` | bool | `true` | Enable supported special-stage rewind, with an independent fresh allowance each visit. |
 | `LIVE_REWIND_DETERMINISM_AUDIT` | `debug.rewind.determinismAudit` | bool | `false` | Audit live-rewind determinism: re-simulates each completed rewind keyframe segment during live play and logs the first state divergence, pinpointing state that is missing from rewind capture. Disarms after the first divergence because replayed out-of-snapshot state cannot be rolled back. |
 | `LIVE_REWIND_TAPE_COAST_ENABLED` | `rewind.tapeCoastEnabled` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. When enabled, reverse audio playback is resampled to match the current rewind speed (>1.0 pitches up, <1.0 plays slow-motion). |
 | `LIVE_REWIND_TAPE_COAST_MIN_STEPS` | `rewind.tapeCoastMinSteps` | number | `0.25` | Initial rewind speed (in steps per visual frame) when the rewind key is first pressed. Values below 1.0 produce a slow-motion start: the speed controller's fractional accumulator spreads each physics step across multiple visual frames. Speed then accelerates toward `LIVE_REWIND_TAPE_COAST_MAX_STEPS`. Used only when tape coast is enabled. |
@@ -1240,7 +1259,7 @@ Square/Cross/Circle respectively.
 | `P1_A` | `input.player1.a` | `32` | Space | Player 1 action button A / jump. |
 | `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
 | `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
-| `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. Keyboard-only: the gamepad Start button is instead wired to `PAUSE_KEY`'s pause (see below), since this one has no visible feedback. |
+| `START` | `input.player1.start` | `257` | Enter | Player 1 Start. During live gameplay, keyboard and gamepad Start toggle the same visible pause as `PAUSE_KEY`, including audio. Menus retain Start semantics; recorded input retains ROM-native pause for replay accuracy. |
 | `P2_UP` | `input.player2.up` | `73` | I | Player 2 look up. |
 | `P2_DOWN` | `input.player2.down` | `75` | K | Player 2 crouch / roll. |
 | `P2_LEFT` | `input.player2.left` | `74` | J | Player 2 move left. |
@@ -1248,7 +1267,7 @@ Square/Cross/Circle respectively.
 | `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. In S2 this feeds the configured sidekick/manual-input path; it does not enable native two-player/competition gameplay. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
-| `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
+| `P2_START` | `input.player2.start` | `259` | Backspace | Player 2 Start. |
 | `CONTROLLER_ENABLED` | `input.controller.enabled` | `true` | true | Enable GLFW gamepad/controller input. |
 | `CONTROLLER_DEADZONE` | `input.controller.deadzone` | `0.35` | 0.35 | Left-stick digital direction deadzone. |
 | `CONTROLLER_PLAYER1` | `input.controller.player1` | `"auto"` | auto | Controller assignment for Player 1 (`auto` or `none`). |
@@ -1256,7 +1275,7 @@ Square/Cross/Circle respectively.
 
 The gamepad Back/Select/View button on the primary connected pad is a hardcoded (not remappable, no config key) stand-in for the keyboard `Tab` key on the main-menu game-select screen (`MasterTitleScreen`) and its per-game options panel (`LaunchConfigPanel`): it opens the options panel for the selected game and closes it again, mirroring `Tab`'s role in that specific flow only. It has no effect on `Tab`'s other keyboard uses elsewhere (level editor toggle, Special Stage entry, art viewer), which are unrelated screens/modes.
 
-| `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game (`userPaused`): shows the top-right `PAUSE` plate and halts audio. The gamepad Start button on the primary connected pad also toggles this pause, unconditionally (not remappable) -- gamepad Start does NOT trigger the ROM `Game_paused` ("Player 1 Start" / `START`) pause above, since that one has no visible feedback. |
+| `PAUSE_KEY` | `input.pause` | `257` | Enter | Pause / unpause the game (`userPaused`): shows the top-right `PAUSE` plate and halts audio. Live Player 1 Start, from keyboard or the primary gamepad, toggles this same pause. |
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. The gamepad right bumper (RB/R1) on the primary connected pad also steps a frame, unconditionally (not remappable). |
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
@@ -1340,6 +1359,16 @@ stored in `config.yaml`.
 | --- | --- | --- |
 | `openggf.installDir` | Directory holding the engine jar or native executable (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
 
+### Build properties for bundled mods
+
+These Maven properties (`mvn ... -D<name>=<value>`) shape a build's bundled mods. They are
+read at packaging time, not at run time.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `openggf.multiplayer.channel` | `develop` | Selects the build's default Time Attack master from `racing/deploy/master-channels.properties` (`master` → `multi.openggf.com`, `develop` → `multi-dev.openggf.com`, `next` → `multi-next.openggf.com`). It is written into each bundled mod as `network-defaults.properties` before the mod is validated and hashed. CI passes the branch (pull requests pass their base branch); release builds pass `master`. Local builds of any branch default to develop's master unless the channel is passed. An unknown channel fails the build. |
+| `openggf.multiplayer.defaultMaster` | empty | Replaces the channel's host for a private build: a bare host name or a `wss://` URL, checked with the engine's master-address parser (no network I/O). Invalid text fails the build. |
+
 Bundled mods are listed, with their exact SHA-256, in a manifest inside the engine
 artifact; only jars matching it are trusted by default (see
 [trust](docs/modding/concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
@@ -1351,6 +1380,16 @@ trust, validation and fault handling as the JVM. A player's enable/disable choic
 like any other mod's.
 
 ---
+
+## Runtime queue diagnostics
+
+The JVM property `-Dopenggf.debug.kosm=true` adds S3K KosM submission messages
+at `java.util.logging` INFO level; the logger and its handlers must admit INFO.
+It defaults to false and is separate from `config.yaml`. FIFO overflow exceptions
+always include pending archive descriptors, direct children and readiness. With
+the property enabled they also include local submission timestamps and caller
+stacks, which are collected only then because each costs a stack walk. These host
+diagnostic receipts are not rewound and never select queue service or readiness.
 
 ## Test-only system properties
 

@@ -476,6 +476,20 @@ including prebuilt commands and `tools/performance/run_isolated.py` for isolated
 measurements. If a benchmark reports a divergent key, investigate it as a coverage
 gap unless the comparator itself is demonstrably wrong.
 
+### Derived terrain caches
+
+S3K collision-layout restoration preserves the captured map-byte reference. A new
+array containing identical bytes would manufacture a geometry change for the next
+shared level restore and force both tilemaps to rebuild. Encoded layout bytes,
+map dimensions and layer dimensions still trigger geometry rebinding when changed.
+The ending scene resource adapter restores resident art; the later collision-layout
+adapter restores scene geometry. Calling `setLevel` from both owners would reset
+animated-content ownership and invalidate otherwise reusable tilemaps on every step.
+Full-layout backgrounds can retain their derived image across unchanged restores.
+Camera-window, descriptor-owned and retained-plane backgrounds keep their separate
+restore rules. The rendered performance probe is listed in the
+[agent workflow index](../../agent-workflow/README.md).
+
 ### Performance attribution
 
 When the debug performance overlay is enabled, the rewind hot path

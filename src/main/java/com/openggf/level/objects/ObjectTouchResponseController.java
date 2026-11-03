@@ -592,6 +592,9 @@ final class ObjectTouchResponseController {
             if (flags == 0) {
                 continue; // Skip collision for objects with no collision flags
             }
+            // Touch_Width (sonic3k.asm:20710-20715) and
+            // ShieldTouch_Width (sonic3k.asm:21281-21289) replace the entire width input, even on a miss.
+            objectManager.publishSineCosineInputFraction(0);
             int sizeIndex = flags & 0x3F;
             int width = table.getWidthRadius(sizeIndex);
             int height = table.getHeightRadius(sizeIndex);
@@ -782,6 +785,9 @@ final class ObjectTouchResponseController {
             if (flags == 0) {
                 continue;
             }
+            // Touch_Width (sonic3k.asm:20710-20715) and
+            // ShieldTouch_Width (sonic3k.asm:21281-21289) replace the entire width input, even on a miss.
+            objectManager.publishSineCosineInputFraction(0);
             int sizeIndex = flags & 0x3F;
             int width = table.getWidthRadius(sizeIndex);
             int height = table.getHeightRadius(sizeIndex);
@@ -920,15 +926,12 @@ final class ObjectTouchResponseController {
                         hpBeforeHit = objectCallbacks.call(
                                 instance, provider2::getCollisionProperty);
                     }
-                    // ROM parity (sonic3k.asm:20981-21026): Touch_EnemyNormal sets
-                    // status bit 7 on the badnik AND applies +/-$100 bounce to the
-                    // attacking player in the SAME function. The skip-when-destroyed
-                    // behaviour only applies to a SUBSEQUENT collision pass (e.g. after
-                    // P1 destroys a badnik in P1's TouchResponse, P2's pass naturally
-                    // skips because the object's (a0) was rewritten to Obj_Explosion).
-                    // We mirror that by capturing the pre-attack destroyed state and
-                    // gating the bounce only on prior destruction - never on the
-                    // sidekick's own kill (which would suppress her +/-$100 bounce).
+                    // Touch_EnemyNormal (sonic3k.asm:20981-21026) rewrites the
+                    // slot to Obj_Explosion WITHOUT clearing collision_flags.
+                    // A later player can still touch it until loc_1E626
+                    // (sonic3k.asm:42226-42243) initializes the explosion.
+                    // This Java retired-owner guard only gates attack/bounce;
+                    // it does not exclude the object from the later hurt pass.
                     boolean wasAlreadyDestroyed = instance instanceof AbstractObjectInstance preAoi
                             && preAoi.isDestroyed();
                     if (instance instanceof TouchResponseAttackable attackable) {
@@ -1061,7 +1064,12 @@ final class ObjectTouchResponseController {
         return true;
     }
 
-    private TouchCategory decodeCategory(int flags, TouchResponseProfile profile) {
+    /** The native touch category for {@code flags}, as this controller would dispatch them. */
+    static TouchCategory nativeCategory(int flags, TouchResponseProfile profile) {
+        return decodeCategory(flags, profile);
+    }
+
+    private static TouchCategory decodeCategory(int flags, TouchResponseProfile profile) {
         int categoryBits = flags & 0xC0;
         int sizeIndex = flags & 0x3F;
         if (profile != null && profile.categoryDecodeMode() == TouchCategoryDecodeMode.FORCE_ENEMY) {
@@ -1095,7 +1103,7 @@ final class ObjectTouchResponseController {
         };
     }
 
-    private boolean isSonic1TouchSpecialPropertyIndex(int sizeIndex) {
+    private static boolean isSonic1TouchSpecialPropertyIndex(int sizeIndex) {
         return switch (sizeIndex) {
             // S1 React_Special increments obColProp for $D7 and $E1 only:
             // docs/s1disasm/_incObj/sub ReactToItem.asm:377-427.
@@ -1104,14 +1112,14 @@ final class ObjectTouchResponseController {
         };
     }
 
-    private boolean isS3kTouchSpecialPropertyIndex(int sizeIndex) {
+    private static boolean isS3kTouchSpecialPropertyIndex(int sizeIndex) {
         return switch (sizeIndex) {
             case 0x06, 0x07, 0x0A, 0x0C, 0x15, 0x16, 0x17, 0x18, 0x21 -> true;
             default -> false;
         };
     }
 
-    private boolean isSonic2TouchSpecialPropertyIndex(int sizeIndex) {
+    private static boolean isSonic2TouchSpecialPropertyIndex(int sizeIndex) {
         return switch (sizeIndex) {
             case 0x06, 0x07, 0x0A, 0x0B, 0x0C, 0x14, 0x15, 0x16,
                     0x17, 0x18, 0x1A, 0x21 -> true;
@@ -1151,6 +1159,8 @@ final class ObjectTouchResponseController {
                     // bounce from an engine instance that was already destroyed.
                     boolean wasAlreadyDestroyed = instance instanceof AbstractObjectInstance preAoi
                             && preAoi.isDestroyed();
+                    var homing = homingAttack();
+                    if (homing != null) homing.beforeAttack(player, instance);
                     if (instance instanceof TouchResponseAttackable attackable) {
                         objectCallbacks.run(instance,
                                 () -> attackable.onPlayerAttack(player, result));
@@ -1176,6 +1186,7 @@ final class ObjectTouchResponseController {
                     if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1 also halves.
                         applyBossBounce(player, profile);
+                        if (homing != null) homing.afterAttack(player, instance, true);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_KillEnemy: position-based bounce only when onPlayerAttack
                         // destroyed the instance. Objects like Crawl that handle their own
@@ -1184,6 +1195,7 @@ final class ObjectTouchResponseController {
                                 && postAoi.isDestroyed();
                         if (isNowDestroyed) {
                             applyEnemyBounce(player, resolvedTouchY);
+                            if (homing != null) homing.afterAttack(player, instance, false);
                         }
                     }
                 } else {
@@ -1195,16 +1207,26 @@ final class ObjectTouchResponseController {
             }
             case BOSS -> {
                 if (isPlayerAttacking(player, instance)) {
+                    var homing = homingAttack();
+                    if (homing != null) homing.beforeAttack(player, instance);
                     if (instance instanceof TouchResponseAttackable attackable) {
                         objectCallbacks.run(instance,
                                 () -> attackable.onPlayerAttack(player, result));
                     }
                     applyBossBounce(player, profile);
+                    if (homing != null) homing.afterAttack(player, instance, true);
                 } else {
                     applyHurt(player, instance, result, profile);
                 }
             }
         }
+    }
+
+    /** The homing-attack mutator observes leader attacks; native touch results stay authoritative. */
+    private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
+        var services = objectManager.services();
+        return services == null ? null : com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                services.worldSession(), com.openggf.game.mutators.HomingAttackRuntime.class);
     }
 
     private boolean isPlayerAttacking(PlayableEntity player, ObjectInstance target) {

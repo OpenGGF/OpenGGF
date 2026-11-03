@@ -356,6 +356,7 @@ class TestObjectManagerRewindSnapshot {
             manager.update(0, null, null, i);
         }
 
+        manager.publishSineCosineInputFraction(0x1FD00);
         int fc = manager.getFrameCounter();
         int vc = manager.getVblaCounter();
 
@@ -364,6 +365,8 @@ class TestObjectManagerRewindSnapshot {
 
         assertEquals(fc, snapshot.frameCounter());
         assertEquals(vc, snapshot.vblaCounter());
+        assertEquals(0xFD00, snapshot.sineCosineInputFraction());
+        manager.publishSineCosineInputFraction(0);
 
         // Run more frames to advance counters
         for (int i = 6; i <= 10; i++) {
@@ -375,6 +378,7 @@ class TestObjectManagerRewindSnapshot {
         snap.restore(snapshot);
         assertEquals(fc, manager.getFrameCounter());
         assertEquals(vc, manager.getVblaCounter());
+        assertEquals(0xFD00, manager.sineCosineInputFraction());
     }
 
     @Test

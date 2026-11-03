@@ -963,7 +963,7 @@ public class AizEndBossInstance extends AbstractBossInstance
         try {
             int levelMusic = services().getCurrentLevelMusicId();
             if (levelMusic > 0) {
-                services().playMusic(levelMusic);
+                services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), levelMusic));
             }
         } catch (Exception e) {
             // Ignore audio errors

@@ -97,6 +97,32 @@ class TestPowerUpMusicRestore {
                 "boss music must survive invincibility expiring");
     }
 
+    @Test
+    void s3kBossIdKeepsMusicAfterSuperOrHyperRevert() {
+        assertBossIdKeepsMusic();
+    }
+
+    @Test
+    void s2BossIdKeepsMusicAfterSuperRevert() {
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic2.Sonic2GameModule());
+        installLevelMusic(LEVEL_MUSIC);
+        player = new Sonic("test", (short) 0, (short) 0);
+        assertBossIdKeepsMusic();
+    }
+
+    private void assertBossIdKeepsMusic() {
+        levelEvents().setBossActive(false);
+        GameServices.gameState().setCurrentBossId(1);
+        try {
+            player.setInvincibleFrames(1);
+            player.tickStatus();
+            assertTrue(musicRequests().isEmpty(),
+                    "the native boss ID must suppress the deferred power-up music return");
+        } finally {
+            GameServices.gameState().setCurrentBossId(0);
+        }
+    }
+
     /** ROM: {@code cmpi.b #12,air_left(a0)} — don't change music while drowning. */
     @Test
     void drowningCountdownKeepsItsMusicWhenInvincibilityExpires() {

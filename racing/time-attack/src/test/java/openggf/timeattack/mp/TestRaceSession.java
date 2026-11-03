@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -69,13 +70,39 @@ class TestRaceSession {
     @ValueSource(strings = {"ws://example.com/master", "ws://localhost/master", "wss://user@example.com/master"})
     void browserRejectsUnsafeEndpointBeforeLaunchingAConnectWorker(String url) {
         var settings = settings(27900);
-        settings.setMasterUrl(url);
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         var session = session("unsafe", settings, new MemoryModStorage(), new Launches());
         session.browse(SETUP, FP);
         assertEquals(RaceSession.State.IDLE, session.state());
         assertEquals(0, session.connectWorkersRunning());
-        assertTrue(session.consumeNotice().startsWith("Invalid master server URL"));
+        assertTrue(session.consumeNotice().startsWith("Invalid master server address"));
     }
+    @Test
+    void anOffMasterNeverStartsAConnectWorker() {
+        var settings = settings(27900);
+        settings.setBuildDefaultMaster("multi-dev.openggf.com");
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Off());
+        var session = session("off", settings, new MemoryModStorage(), new Launches());
+        session.browse(SETUP, FP);
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertEquals(0, session.connectWorkersRunning(), "Off performs no DNS and opens no socket");
+        assertEquals("The master server is off in Settings (LAN only)", session.consumeNotice());
+    }
+
+    @Test
+    void trustAllTlsIsDecidedFromALiteralLoopbackUrlNeverFromDns() {
+        RaceSession.checkMasterAddress("ws://127.0.0.1:9000/master", true);
+        RaceSession.checkMasterAddress("wss://[::1]:9000/master", true);
+        RaceSession.checkMasterAddress("multi-dev.openggf.com", false);
+        // Broken cases: a host name (whatever it resolves to) and localhost never earn trust-all.
+        assertThrows(IllegalArgumentException.class,
+                () -> RaceSession.checkMasterAddress("multi-dev.openggf.com", true));
+        assertThrows(IllegalArgumentException.class,
+                () -> RaceSession.checkMasterAddress("wss://localhost:9000/master", true));
+        assertThrows(IllegalArgumentException.class,
+                () -> RaceSession.checkMasterAddress("ws://example.com/master", false));
+    }
+
     private static final String FP = "0.8:cafe1234";
     private static final RaceSession.RoundSetup SETUP =
             new RaceSession.RoundSetup("s2", 0, 0, "sonic", "OPEN", null, 60);
@@ -369,7 +396,7 @@ class TestRaceSession {
         assertTrue(session.consumeNotice().startsWith("Invalid LAN invite"));
         session.browse(SETUP, FP);
         assertEquals(RaceSession.State.IDLE, session.state());
-        assertTrue(session.consumeNotice().contains("master server URL"));
+        assertTrue(session.consumeNotice().contains("master server"));
     }
 
     @Test
@@ -428,7 +455,7 @@ class TestRaceSession {
         assertTrue(established.await(5, TimeUnit.SECONDS));
 
         TimeAttackSettings hostSettings = settings(freePort());
-        hostSettings.setMasterUrl(url);
+        hostSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         hostSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession host = session("host", hostSettings, new MemoryModStorage(), new Launches());
         host.browse(SETUP, FP);
@@ -443,7 +470,7 @@ class TestRaceSession {
         assertTrue(host.masterLinkRunning());
 
         TimeAttackSettings guestSettings = settings(freePort());
-        guestSettings.setMasterUrl(url);
+        guestSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession guest = session("guest", guestSettings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("the guest browser", () -> guest.state() == RaceSession.State.BROWSING, guest);
@@ -485,7 +512,7 @@ class TestRaceSession {
         assertNull(host.masterClient());
         assertNull(host.hostServer());
         assertFalse(host.masterLinkRunning());
-        MasterClient observer = MasterClient.connect(URI.create(url),
+        MasterClient observer = MasterClient.connect(url,
                 PlayerIdentity.loadOrCreate(dir.resolve("observer")), "OBS", FP, null).get(15, TimeUnit.SECONDS);
         try {
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
@@ -502,7 +529,7 @@ class TestRaceSession {
     void aFullRoomDataMailboxDoesNotStopTheMasterHeartbeatKeeper() throws Exception {
         String url = startPrivateMaster("heartbeat-owner");
         TimeAttackSettings settings = settings(freePort());
-        settings.setMasterUrl(url);
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession owner = session("heartbeat-owner", settings, new MemoryModStorage(), new Launches());
         owner.hostLan(SETUP, FP);
         pollUntil("registered owner lobby", () -> owner.state() == RaceSession.State.LOBBY, owner);
@@ -537,7 +564,7 @@ class TestRaceSession {
     void failedBrowserJoinReturnsToTheBrowserWithTheReason() throws Exception {
         masterServer = MasterServer.start(TestMasterServer.testConfig(), dir.resolve("master"));
         TimeAttackSettings settings = settings(freePort());
-        settings.setMasterUrl("ws://127.0.0.1:" + masterServer.port() + "/master");
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom("ws://127.0.0.1:" + masterServer.port() + "/master"));
         RaceSession guest = session("guest", settings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("the browser", () -> guest.state() == RaceSession.State.BROWSING, guest);
@@ -852,7 +879,7 @@ class TestRaceSession {
     @Test
     void rejectedLanRegistrationKeepsPrivateAdmissionAndOffersOnlyExplicitManualSharing() throws Exception {
         TimeAttackSettings settings = settings(freePort());
-        settings.setMasterUrl("ws://127.0.0.1:" + freePort() + "/master");
+        settings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom("ws://127.0.0.1:" + freePort() + "/master"));
         RaceSession owner = session("fallback-owner", settings, new MemoryModStorage(), new Launches());
         hostPrivate(owner);
         assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
@@ -866,7 +893,7 @@ class TestRaceSession {
             throws Exception {
         String url = startPrivateMaster("registered-owner");
         TimeAttackSettings configured = settings(freePort());
-        configured.setMasterUrl(url);
+        configured.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession owner = session("registered-owner", configured,
                 new MemoryModStorage(), new Launches());
         hostPrivate(owner);
@@ -900,7 +927,7 @@ class TestRaceSession {
         ControlledMasterServer controlled = routing.equals("RELAY") ? new ControlledMasterServer() : null;
         String url = startPrivateMaster("code-owner", controlled);
         TimeAttackSettings ownerSettings = settings(freePort());
-        ownerSettings.setMasterUrl(url);
+        ownerSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
         if (routing.equals("LAN")) hostPrivate(owner);
@@ -918,7 +945,7 @@ class TestRaceSession {
         pollUntil("owner invite disclosure", () -> owner.coordinator().session().invite() != null, owner);
         String code = owner.coordinator().session().invite().code();
         TimeAttackSettings guestSettings = settings(freePort());
-        guestSettings.setMasterUrl(url);
+        guestSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession guest = session("code-guest", guestSettings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("guest browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);
@@ -964,7 +991,7 @@ class TestRaceSession {
     void wrongPasswordOrRotatedCodeReturnsToTheBrowserWithoutAdmitting(boolean rotate) throws Exception {
         String url = startPrivateMaster("code-owner");
         TimeAttackSettings ownerSettings = settings(freePort());
-        ownerSettings.setMasterUrl(url);
+        ownerSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
         owner.browse(SETUP, FP);
         pollUntil("owner browser", () -> owner.state() == RaceSession.State.BROWSING, owner);
@@ -976,7 +1003,7 @@ class TestRaceSession {
         pollUntil("owner code", () -> owner.coordinator().session().invite() != null, owner);
         String code = owner.coordinator().session().invite().code();
         TimeAttackSettings guestSettings = settings(freePort());
-        guestSettings.setMasterUrl(url);
+        guestSettings.setMasterSelection(new openggf.timeattack.MasterSelection.Custom(url));
         RaceSession guest = session("code-guest", guestSettings, new MemoryModStorage(), new Launches());
         guest.browse(SETUP, FP);
         pollUntil("guest browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);

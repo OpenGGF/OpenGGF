@@ -36,6 +36,7 @@ public class RomDetectionService {
         initialDetectors.forEach(this::registerDetector);
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized RomDetectionService getInstance() {
         if (instance == null) {
             instance = new RomDetectionService();

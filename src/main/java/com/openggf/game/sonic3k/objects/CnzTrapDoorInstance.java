@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.game.PlayableEntity;
@@ -15,7 +16,6 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -27,9 +27,9 @@ import java.util.List;
  * ROM behavior:
  * <ul>
  *   <li>{@code Map_CNZTrapDoor} with {@code ArtTile_CNZMisc+$9F}</li>
- *   <li>{@code loc_31CCA} checks both players against the 64x32 trigger box in
- *       {@code sub_31CFA}, then calls {@code SolidObjectTop} every frame whatever the
- *       animation state, then {@code Animate_Sprite} (sonic3k.asm:67262-67273)</li>
+ *   <li>{@code loc_31CCA} (sonic3k.asm:67262-67273) checks both players against the
+ *       64x32 trigger box in {@code sub_31CFA}, then calls {@code SolidObjectTop} every
+ *       frame whatever the animation state, then {@code Animate_Sprite}</li>
  *   <li>Plays {@code sfx_TrapDoor} when the trigger box is entered</li>
  *   <li>Animates via {@code Ani_CNZTrapDoor} and stays open while the trigger box is occupied</li>
  * </ul>
@@ -39,7 +39,7 @@ import java.util.List;
  * is applied here.
  */
 public class CnzTrapDoorInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     /** ROM {@code move.w #$80,priority(a0)} at Obj_CNZTrapDoor init: bucket 1. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
@@ -162,15 +162,11 @@ public class CnzTrapDoorInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
+        // loc_31CCA (sonic3k.asm:67262-67270) calls SolidObjectTop after the
+        // player slots. loc_1E45A (sonic3k.asm:42038-42063) reads their current
+        // positions. Native zero rejection removes the old previous-position
+        // workaround for the zero-accepting detector.
         return SOLID_PARAMS;
-    }
-
-    @Override
-    public boolean rejectsZeroDistanceTopSolidLanding() {
-        // SolidObjectTop's new-landing test at loc_1E45A accepts only the
-        // overlap band [-$10,-1]: sub.w d1,d0 then cmpi.w #-$10,d0 / blo
-        // returns on an exact d0=0 (sonic3k.asm:42044-42053).
-        return true;
     }
 
     @Override

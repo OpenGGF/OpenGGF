@@ -1,5 +1,6 @@
 package com.openggf.physics;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
@@ -525,6 +526,16 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 solidityBit);
     }
 
+    private static void publishTerrainAddressFraction(AbstractPlayableSprite sprite) {
+        // Find_Tile_FG (sonic3k.asm:19177-19200) and
+        // Find_Tile_BG (sonic3k.asm:19151-19175) construct the
+        // signed chunk address from a full -1 before returning a word distance.
+        // Publish only from executing collision owners, never read-only probes.
+        var level = sprite.currentLevelManagerIfAvailable();
+        var objects = level != null ? level.getObjectManager() : null;
+        if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, sprite, 0xFFFF);
+    }
+
     public void resolveGroundAttachment(AbstractPlayableSprite sprite, int positiveThreshold) {
         resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold);
     }
@@ -600,6 +611,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
 
         updateGroundMode(sprite);
+        publishTerrainAddressFraction(sprite);
 
         SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
         SensorResult leftSensor = groundResult[0];
@@ -866,6 +878,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                                     Consumer<SensorResult[]> landingProbeHandler,
                                     boolean forceFloorCheck) {
         requireTerrainOnlyPlan(plan, "resolveAirCollision");
+        publishTerrainAddressFraction(sprite);
         // SonicKnux_DoLevelCollision uses explicit world-space floor, ceiling,
         // and wall checks. The engine's sensor offsets otherwise rotate from a
         // stale grounded mode retained after leaving a loop or wall, causing an

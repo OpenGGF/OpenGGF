@@ -481,6 +481,13 @@ public class LostRingObjectInstance extends AbstractObjectInstance
             }
         }
 
+        if (!collected) {
+            ObjectServices services = servicesOrNull();
+            int repeat = services == null || services.zoneRuntimeState() == null
+                    ? 0 : services.zoneRuntimeState().levelRepeatOffset();
+            // loc_1A7B0/loc_1A83C subtract after movement/probing, before Draw_Sprite.
+            xSubpixel -= repeat << 8;
+        }
         queueNativeDisplaySprite();
     }
 
@@ -813,7 +820,11 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed()) {
+        // BuildSprites/Render_Sprites rejects this SST before mapping expansion.
+        // Keep the existing game-specific Obj37 vertical extent, independent of
+        // the prior render bit used by the floor probe.
+        if (isDestroyed() || !isWithinRenderSpriteBounds(
+                RING_RENDER_HALF_WIDTH, resolveLostRingRenderVerticalMargin())) {
             return;
         }
         ObjectServices services = servicesOrNull();

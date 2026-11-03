@@ -107,6 +107,11 @@ public final class FbzEndBossArmChild extends AbstractFbzEndBossChild implements
         PatternSpriteRenderer renderer = services().renderManager().getRenderer(Sonic3kObjectArtKeys.FBZ_END_BOSS);
         if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(1, x, y, !boss.isFacingRight(), false);
     }
+    @Override public void appendDebugRenderCommands(com.openggf.debug.DebugRenderContext ctx) {
+        // Touch_Sizes[$23] for the native $A3 harmful collision.
+        ctx.drawRect(x, y, 0x0C, 0x18, 1f, 0.2f, 0.2f);
+        ctx.drawWorldLabel(x, y, -1, "FBZ spiked arm " + armIndex, com.openggf.debug.DebugColor.RED);
+    }
     @Override public int getPriorityBucket() { return 5; }
     @Override public boolean isHighPriority() { return true; }
 

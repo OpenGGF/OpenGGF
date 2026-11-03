@@ -34,8 +34,9 @@ below records the original culling fix with native limits enabled.
 
 `display.spriteScanlineLimit` is saved under Settings > Display >
 Picture as **Sprite scanline limit**. False removes the per-line count and
-pixel-width budgets, including overflow carry. Explicit masks and total
-sprite-table capacity remain active. Existing configuration enum ordinals are
+pixel-width budgets, including overflow carry. A subsequent crowded-scene fix
+also removes total sprite-table capacity when disabled: retaining the 80/64-entry
+cap still dropped sprites in normal play. Explicit masks remain active. Existing configuration enum ordinals are
 preserved by appending the key; the mutable 0.7 API pin includes it. The reviewed
 release descriptor remains unpublished candidate 0.7.0.
 

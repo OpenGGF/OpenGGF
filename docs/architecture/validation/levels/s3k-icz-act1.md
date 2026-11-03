@@ -746,3 +746,56 @@ camera-word components into ordinary ICZ traversal or qualify later act/boss,
 roster/donor/width, checkpoint/respawn or native timing/pixel gaps. Exact scope
 and the still-red delivery selection are in the
 [Root composition record](../../plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).
+
+## Draw ownership follow-up (2026-10-31)
+
+`TestS3kIcz1SnowboardIntroHeadless#bigSnowPileRendersLockOnBackgroundSnowTiles`
+now checks graphics submissions through both the sprite-mask and foreground
+dispatches, plus the tile count returned by an overlay traversal. No draw
+diagnostic is retained in the pile's captured temporal state. The separate
+`TestS3kSpecialRenderEffectRegistration#iczAct1RegistersBigSnowPileOverlayAndPriorityMask`
+pins the foreground-overlay and sprite-mask stages.
+`TestRewindFixS3KIczBigSnowPileCodec` retains the live-event-owner recreation
+obligation. These bindings do not close the existing route, viewport, donor,
+team or native-pixel coverage gaps.
+
+## Miniboss attack and destruction correction — 2026-11-01
+
+The local miniboss checks cover the normal/red/yellow `word_71AE6` palette
+sequence, shard movement before the `Obj_Wait` terminal dispatch, the 64th
+post-hit body dispatch entering sign control while explosions continue, and
+fresh-object restore/forward replay through falling ice retirement. The body
+stops drawing at that handoff; existing orb/shard priority and palette classes
+carry into gravity-driven flickering debris. Four body quarters use
+`loc_7168A`; explosion Y scatter uses the RNG high word (`sub_83E84`).
+
+These are bounded component and managed-graph obligations. The fourteen existing
+inline child slots remain folded under their parent until their debris tail
+retires; individual native SST release/allocation pressure is not certified.
+Full-route completion, viewport/donor/team breadth, Knuckles-specific post-boss
+palette omission, and matched native pixels remain inherited gaps. A positioned
+engine picture does not close those obligations.
+
+Verification: the four ICZ classes (`TestS3kIczMinibossObject`,
+`TestIczMinibossGraphRewind`, `TestIczMinibossRenderBuckets`,
+`TestIczMinibossFieldDisposition`) pass 35 checks without skips. The lifetime
+API correction and tightened raw-call inventory pass all 32 checks in
+`TestObjectPhysicsStandardizationGuard`; the other 819 checks in the earlier
+820-check guards invocation passed before that bounded correction. The four
+required S3K loading/bootstrap selectors pass 60 checks without skips. These
+are focused/guard checks, not a broad smoke or full-suite result.
+
+An owned EGL probe rendered ICZ2 assets with apparent act 0, explicit native
+arena bounds and an injected miniboss. Its declared six-hit test hook at tick
+600 showed falling ice and ongoing explosions at tick 700 and a falling
+signpost at tick 900. This skips route traversal and does not compare native
+pixels. The arm mapping frames, offsets and sprite ordering remain source-led;
+no speculative arm shortening is applied.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.

@@ -147,7 +147,6 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
      */
     private static final int CNZ_MINIBOSS_OPENING_WAIT = 0x7F;
 
-    private static final int CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME = 2 * 60;
     private static final int FRAME_BASE_CLOSED = 0;
     private static final int FRAME_BASE_OPEN = 6;
     /**
@@ -369,7 +368,17 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // only advance the wait timer so onEndGo() eventually runs.
         if (state.defeated) {
             tickDefeatExplosionController();
-            tickWait();
+            if (waitCallback == WaitCallback.END_GO) {
+                // Native Wait_FadeToLevelMusic decrements even an inherited negative word.
+                waitTimer = (short) (waitTimer - 1);
+                if (waitTimer < 0) {
+                    waitTimer = (2 * 60) - 1;
+                    spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(resolveLevelMusicId()));
+                    runWaitCallback();
+                }
+            } else {
+                tickWait();
+            }
             return;
         }
 
@@ -966,8 +975,6 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
             spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
         }
         spawnBreakApartDebris();
-        spawnChild(() -> new SongFadeTransitionInstance(
-                CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME, resolveLevelMusicId()));
         services().playSfx(Sonic3kSfx.EXPLODE.id);
     }
 

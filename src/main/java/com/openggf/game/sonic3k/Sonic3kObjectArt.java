@@ -188,6 +188,16 @@ public class Sonic3kObjectArt {
                 Sonic3kConstants.MAP_SOZ_FLOATING_PILLAR_ADDR, artTileBase | (2 << 13));
     }
 
+    /**
+     * Obj_SOZRapelWire / Map_SOZRapelWire: the pulley word $FFC4 must add
+     * the full $4411 art word, wrapping to $43D5 (tile $3D5, palette 2).
+     * Resolving the fields separately loses the pulley and retains bogus flips.
+     */
+    public ObjectSpriteSheet buildSozRapelWireSheet(int artTileBase) {
+        return buildLevelArtSheetWithResolvedTileWords(
+                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, artTileBase | (2 << 13));
+    }
+
     private ObjectSpriteSheet buildLevelArtSheetWithResolvedTileWords(int mappingAddress, int artTileWord) {
         if (reader == null) return null;
         List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddress);

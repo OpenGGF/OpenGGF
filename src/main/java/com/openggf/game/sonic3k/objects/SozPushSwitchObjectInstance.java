@@ -139,7 +139,16 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
         if(retained) return;
         var r=getRenderer(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH);
         if(r!=null && r.isReady()) {
-            // Native main sprite precedes its child in SAT priority; paint the track first.
+            // Obj_SOZPushSwitch selects main frame 1 and child frame 0
+            // (sonic3k.asm:86669-86690). loc_1B46A emits the child after
+            // the main mapping (sonic3k.asm:37135-37177): first opaque SAT
+            // pixels win, whereas the painter path needs the reverse order.
+            var graphics = services().graphicsManager();
+            if (graphics != null && graphics.isSpriteSatCollectionActive()) {
+                r.drawFrameIndex(1,x,spawn.y(),flipped(),(spawn.renderFlags()&2)!=0);
+                r.drawFrameIndex(0,spawn.x()+(flipped()?-16:16),spawn.y(),false,false);
+                return;
+            }
             r.drawFrameIndex(0,spawn.x()+(flipped()?-16:16),spawn.y(),false,false);
             r.drawFrameIndex(1,x,spawn.y(),flipped(),(spawn.renderFlags()&2)!=0);
         }

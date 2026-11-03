@@ -25,8 +25,8 @@ public final class FbzEndEggCapsuleExplosionController extends AbstractObjectIns
         int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, getSlotIndex());
         if (slot < 0) return;
         int random = services().rng().nextRaw();
-        int x = getX() + (random & 0x3F) - 0x20;
-        int y = getY() + ((random >>> 16) & 0x3F) - 0x20;
+        int x = getX() + S3kExplosionOffsets.xOffset(random, 0x20);
+        int y = getY() + S3kExplosionOffsets.yOffset(random, 0x20);
         FbzEndEggCapsuleNormalExplosion child;
         try {
             child = ObjectConstructionContext.with(services(), slot,

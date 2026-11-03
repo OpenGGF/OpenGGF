@@ -84,6 +84,8 @@ public final class FbzBossPillarInstance extends AbstractObjectInstance
     @Override public int getOnScreenHalfHeight() { return 0xFF; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
+    // Obj_FBZBossPillar: make_art_tile(ArtTile_FBZBossPillar,2,1).
+    @Override public boolean isHighPriority() { return true; }
     @Override public int getPriorityBucket() { return 6; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_BOSS_PILLAR);

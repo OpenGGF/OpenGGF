@@ -1,5 +1,13 @@
 # S3K Lava Reef Act 1 coverage matrix
 
+Big-door lifetime maintenance (2026-11-03):
+`TestLrzBigDoorPersistence.openingFinishesAndClearsShakeAfterCameraLeavesNativeWindow`
+checks that opening runs through tick 64 and clears shake after the camera leaves,
+then permits ordinary unload on the next dispatch. Existing placement-bit and rewind
+checks remain alongside it; the Sonic+Tails LRZ segment grades the resulting CPU
+visibility boundary. Broader cold-route, viewport, donor and team gaps below remain inherited.
+
+
 Routine selection update (2026-10-27): the reviewed full configuration products
 and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
 now require explicit `exhaustive-audit`. Short real contact, lifecycle and
@@ -1918,3 +1926,49 @@ loop/timing owner is changed. Allocation/rewind/anchor results from the earlier
 timer repair remain historical; no new qualification is claimed. The later
 Act1 death endpoints, Act2 windows, complete route, native pixels and broader
 viewport/donor/roster obligations remain inherited and unmeasured here.
+
+## Music ownership follow-up (2026-11-02)
+
+The [cross-game music audit](../../audits/2026-11-02-music-transitions.md)
+records corrected native request IDs and/or level-restore selection affecting
+this route. Restoration selects the apparent playlist and P1 invincibility at
+the native boundary. These local checks do not requalify this matrix’s inherited
+route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+## Iwamodoki rider release (2026-11-02)
+
+Iwamodoki's self-destruct tail calls `Displace_PlayerOffObject` after setting
+status bit 7. The local regression in `TestIwamodokiBadnikInstance` establishes
+real solid contacts for P1/P2, burns the fuse with each shield type, and checks
+that both riders become airborne while a third player's separate support survives.
+The focused object run passes eight tests without skips on the refreshed develop
+base. This corrects the missing object-owned release; general destroyed-support ROM
+bugs remain unchanged. This short object check does not qualify cold routes,
+viewport/donor breadth, or whole-world rewind and forward replay; those inherited
+matrix obligations remain open.
+
+## Grinding boulder lifetime (2026-11-03)
+
+`loc_1B666` uses the placed X and coarse-back camera. The local regression now
+checks both unsigned boundaries and a camera crossing inside the placed-X block.
+The four LRZ r7 replays and 69 object/keep-green tests were measured on
+`e6a8b4a34`; see the [audit](../../audits/2026-11-03-lrz-boulder-lifetime.md).
+This repairs the Sonic+Tails row-2726 hurt and solo-Tails row-2592 cascade.
+Solo row2120 ring collection and bonus-return LRZ2/LRZ3 inlet debt remain distinct;
+viewport/donor breadth, whole-route rewind and complete-act certification remain inherited gaps.
+
+## Corkscrew P2 dispatch (2026-11-03)
+
+The [corkscrew audit](../../audits/2026-11-03-lrz-corkscrew-p2.md) records the
+executed P1 DPLC frame transition, native held P2 pass, two-player unit witness
+and three existing capture/restore/forward-replay spots. The S+T frontier moves
+3415 ->3791; solo LRZ and both bonus-return reports are identical. The 83-test
+object/keep-green selection passes without skips. Broader matrix gaps remain inherited.
+
+## Invisible support edge balance (2026-11-03)
+
+The [status7 audit](../../audits/2026-11-03-lrz-invisible-balance.md) binds the
+real slot6 support and player balance diagnostic at3791 to native status88.
+The local object-family override removes that animation-only disagreement,
+with no added error cells;103 object/rewind/keep-green checks pass without skips.
+The next frontier is4630 status_byte. The existing broader matrix gaps remain open.

@@ -21,7 +21,10 @@ display:
   spriteScanlineLimit: false  # Enable native per-row count/pixel budgets for ROM image comparisons
   colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
-  fps: 60   # Frames per second to render (changes game speed)
+  interpolationToggleKey: N # Runtime key to toggle and save presentation interpolation
+  fps: AUTO # Display refresh (region rate if unknown), or a positive rendering limit; gameplay/audio stay at 50/60 Hz
+  interpolation: false # Smooths motion above the region rate; up to one tick of visual latency; recordings/screenshots stay exact
+  pacing: "AUTO"   # AUTO locks to a display refresh near the region rate; EXACT keeps nominal game speed
 
 # ── Interface ──
 ui:
@@ -51,7 +54,7 @@ input:
     a: SPACE   # Player 1: action button A
     b: ""   # Player 1: action button B
     c: ""   # Player 1: action button C
-    start: BACKSPACE   # Player 1: start (in-game pause); keyboard-only, gamepad Start toggles input.pause instead
+    start: ENTER   # Player 1: start / pause (same visible pause as input.pause)
   player2:
     up: I   # Player 2: look up
     down: K   # Player 2: crouch/roll
@@ -60,7 +63,7 @@ input:
     a: RIGHT_SHIFT   # Player 2: action button A
     b: ""   # Player 2: action button B
     c: ""   # Player 2: action button C
-    start: RIGHT_CONTROL   # Player 2: start
+    start: BACKSPACE   # Player 2: start
 
 # ── Audio ──
 audio:
@@ -118,7 +121,12 @@ mods:
 
 # ── Rewind (live) ──
 rewind:
-  liveEnabled: false   # Enable held-key rewind during ordinary live play
+  liveEnabled: true # Legacy enable gate for launch profiles and tools
+  budgetScope: act # off, checkpoint, act, zone
+  budgetSeconds: "10" # 5, 10, 15, 20, 30, 60, unlimited
+  refillOnLifeLoss: true
+  bonusStages: true
+  specialStages: true # Allow rewind in supported special stages
   liveKey: R   # Key held to rewind during live play; the gamepad left bumper (L1/LB) also holds rewind
   tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
   tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held

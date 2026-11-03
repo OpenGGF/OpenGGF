@@ -11,6 +11,32 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Synthetic wall time and tick-indexed input; no sleeping, window, ROM or device. */
 class TestFixedSimulationScheduler {
+    @ParameterizedTest @CsvSource({"50,75", "50,144", "50,165", "60,75", "60,144", "60,165"})
+    void phaseObservationsNeverChangeReservations(int hz, int cap) {
+        var observed = new FixedSimulationScheduler(hz, cap, 4, SECOND);
+        var control = new FixedSimulationScheduler(hz, cap, 4, SECOND);
+        for (long delta : new long[]{0, 1, 9_000_000, 20_000_000, SECOND, 0, 0, 400_000_000}) {
+            for (long work : new long[]{0, 1, 1_000_000, Long.MAX_VALUE}) observed.observePhase(work);
+            assertEquals(control.advance(delta), observed.advance(delta));
+            assertEquals(observed.observePhase(0), observed.observePhase(0));
+        }
+    }
+
+    @Test void phaseRefusesDebtClippingAbortAndWholeTickDue() {
+        var scheduler = new FixedSimulationScheduler(60, 144, 4, 250_000_000);
+        assertEquals(new FixedSimulationScheduler.Available(0.3), scheduler.observePhase(5_000_000));
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(16_666_667));
+        scheduler.advance(100_000_000);
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(0));
+        scheduler.reset();
+        scheduler.advance(SECOND);
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(0));
+        scheduler.reset();
+        scheduler.invalidatePhase();
+        assertInstanceOf(FixedSimulationScheduler.Unavailable.class, scheduler.observePhase(0));
+        assertThrows(IllegalArgumentException.class, () -> scheduler.observePhase(-1));
+    }
+
     private static final long SECOND = 1_000_000_000L;
 
     @ParameterizedTest
@@ -71,7 +97,7 @@ class TestFixedSimulationScheduler {
                 for (int tick = 0; tick < batch.ticks(); tick++) actual.add(state.step());
                 if (batch.pendingTicks() == 0) break;
                 caughtUp = true;
-                assertEquals(0, batch.nanosUntilNextIteration());
+                assertEquals(0, batch.nanosUntilTick());
                 batch = scheduler.advance(0);
                 assertFalse(batch.render(), "do not render a backlog of missed pictures");
             } while (true);
@@ -87,7 +113,8 @@ class TestFixedSimulationScheduler {
         var initial = scheduler.advance(0);
         assertEquals(0, initial.ticks());
         assertFalse(initial.render());
-        assertEquals(6_944_445, initial.nanosUntilNextIteration());
+        assertEquals(16_666_667, initial.nanosUntilTick());
+        assertEquals(6_944_445, initial.nanosUntilRender());
         assertEquals(0, scheduler.advance(16_666_666).ticks());
         var first = scheduler.advance(1);
         assertEquals(1, first.ticks());
@@ -158,7 +185,7 @@ class TestFixedSimulationScheduler {
         assertEquals(120, ticks);
         assertEquals(expectedDiscardedNanos, discarded);
         assertEquals(expectedDebt, batch.pendingTicks());
-        assertEquals(0, batch.nanosUntilNextIteration());
+        assertEquals(0, batch.nanosUntilTick());
     }
 
     @Test
@@ -171,7 +198,8 @@ class TestFixedSimulationScheduler {
         assertEquals(0, resumed.pendingTicks());
         assertEquals(0, resumed.tickRemainderUnits());
         assertFalse(resumed.render());
-        assertEquals(6_944_445, resumed.nanosUntilNextIteration());
+        assertEquals(16_666_667, resumed.nanosUntilTick());
+        assertEquals(6_944_445, resumed.nanosUntilRender());
         assertEquals(1, scheduler.advance(16_666_667).ticks());
     }
 
@@ -184,6 +212,26 @@ class TestFixedSimulationScheduler {
         assertEquals(Long.MAX_VALUE - SECOND, batch.discardedWallNanos());
         assertTrue(batch.render());
         assertFalse(scheduler.advance(0).render());
+    }
+
+    @Test
+    void tickAndRenderDeadlinesAreReportedSeparately() {
+        var scheduler = new FixedSimulationScheduler(60, 30, 4, SECOND);
+        var first = scheduler.advance(16_666_667);
+        assertEquals(1, first.ticks());
+        assertFalse(first.render(), "a 30 FPS gate does not open on the first 60 Hz tick");
+        assertEquals(16_666_667, first.nanosUntilTick());
+        assertEquals(16_666_667, first.nanosUntilRender());
+        var second = scheduler.advance(16_666_667);
+        assertEquals(1, second.ticks());
+        assertTrue(second.render());
+        assertEquals(16_666_666, second.nanosUntilTick());
+        assertEquals(33_333_333, second.nanosUntilRender(), "the render phase keeps its own deadline");
+        var debt = scheduler.advance(100_000_000);
+        assertEquals(4, debt.ticks());
+        assertEquals(2, debt.pendingTicks());
+        assertEquals(0, debt.nanosUntilTick(), "pending services wake immediately");
+        assertTrue(debt.nanosUntilRender() > 0, "debt never pulls the render deadline forward");
     }
 
     @Test

@@ -50,6 +50,41 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Full real-runtime FBZ1BGE_Normal reload contract. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzActTransitionHeadless {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ShieldType.class, names = {"FIRE", "LIGHTNING", "BUBBLE"})
+    void carriedShieldContinuesAnimatingAfterReload(ShieldType type) throws Exception {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
+                .startPosition((short) 0x2EE1, (short) 0x0540)
+                .startPositionIsCentre().build();
+        fixture.sprite().giveShield(type);
+        var shield = fixture.sprite().getShieldObject();
+        var field = shield.getClass().getDeclaredField("animationLifecycle");
+        field.setAccessible(true);
+        var lifecycle = field.get(shield);
+        var capture = lifecycle.getClass().getDeclaredMethod("captureRewindStateValue");
+        capture.setAccessible(true);
+        var events = ((Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider()).getFbzEvents();
+        events.setEventsFg5(true);
+        events.updateAct1BackgroundEvent(fixture.sprite().getCentreX(),
+                fixture.sprite().getCentreY(), false);
+        assertSame(shield, fixture.sprite().getShieldObject());
+        var shieldSlot = ((AbstractObjectInstance) shield).getSlotIndex();
+        assertEquals(1, GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .filter(object -> object.getSlotIndex() == shieldSlot).count(),
+                "the dormant insta-shield must not share the collected shield's slot");
+        var before = capture.invoke(lifecycle);
+        boolean advanced = false;
+        for (int i = 0; i < 16; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+            advanced |= !before.equals(capture.invoke(lifecycle));
+        }
+        assertTrue(advanced, "the retained shield must keep advancing after Load_Level");
+    }
+
     @Test
     void seamlessReloadLeavesEnemyKosBatchForTheLaterTitleOwner() throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()

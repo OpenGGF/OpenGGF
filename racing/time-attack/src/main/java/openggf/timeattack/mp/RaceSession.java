@@ -9,6 +9,7 @@ import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.DirectJoinAddress;
 import com.openggf.net.client.DirectRoomRegistration;
 import com.openggf.net.client.MasterClient;
+import com.openggf.net.client.MasterDiscoveryException;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RaceConnection;
 import com.openggf.net.client.RoomAccessRequiredException;
@@ -172,6 +173,8 @@ public final class RaceSession implements AutoCloseable {
     private JdkRaceHostServer host;
     private DirectRoomRegistration directRegistration;
     private MasterClient master;
+    /** Whether {@link #master} was admitted with the local-development trust-all TLS context. */
+    private boolean masterInsecure;
     private String masterRoomId;
     private MasterLink masterLink;
     private RoundSetup browseSetup;
@@ -227,13 +230,13 @@ public final class RaceSession implements AutoCloseable {
         int port = settings.hostPort();
         String configuredName = settings.displayName();
         String look = lookSource.apply(setup.gameId(), setup.character()).encode();
-        String configuredMaster = settings.masterUrl();
+        Optional<String> configuredMaster = settings.masterAddress();
         boolean localTrust = settings.masterTrustInsecure();
         String chatMode = settings.chatMode().name();
         start("Starting LAN room...", State.IDLE, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            boolean seekListing = !configuredMaster.isBlank();
+            boolean seekListing = configuredMaster.isPresent();
             JdkRaceHostServer server = op.own((seekListing
                     ? JdkRaceHostServer.startTlsBrokerPending(port,
                     roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
@@ -244,13 +247,15 @@ public final class RaceSession implements AutoCloseable {
             op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
             MasterClient registered = null;
             DirectRoomRegistration registration = null;
-            if (!configuredMaster.isBlank()) {
+            if (seekListing) {
                 MasterClient candidate = null;
                 try {
-                    URI uri = masterEndpoint(configuredMaster, localTrust);
-                    candidate = op.own(op.await(MasterClient.connect(uri, me, name, fingerprint,
+                    String address = configuredMaster.get();
+                    checkMasterAddress(address, localTrust);
+                    // MasterClient resolves a bare host name (DNS SRV) here, on the connect worker.
+                    candidate = op.own(op.await(MasterClient.connect(address, me, name, fingerprint,
                             localTrust ? insecureMasterSslContext() : null),
-                            MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 2000, MasterClient::close), MasterClient::close);
+                            MasterClient.CONNECT_DEADLINE_MILLIS + 2000, MasterClient::close), MasterClient::close);
                     registration = registerDirect(op, candidate, server, setup, fingerprint);
                     registered = candidate;
                 } catch (Exception unavailable) {
@@ -294,6 +299,7 @@ public final class RaceSession implements AutoCloseable {
                 host = activeServer;
                 directRegistration = ownedRegistration;
                 master = ownerLink;
+                masterInsecure = ownerLink != null && localTrust;
                 masterRoomId = created == null ? null : created.roomId();
                 browseSetup = setup;
                 browseFingerprint = fingerprint;
@@ -437,28 +443,39 @@ public final class RaceSession implements AutoCloseable {
     public void browse(RoundSetup setup, String fingerprint) {
         Objects.requireNonNull(setup, "setup");
         leave();
-        String configured = settings.masterUrl();
-        if (configured.isBlank()) {
-            fail("Set a master server URL in Settings to browse rooms");
+        Optional<String> configured = settings.masterAddress();
+        if (configured.isEmpty()) {
+            fail(settings.masterSelection() instanceof openggf.timeattack.MasterSelection.Off
+                    ? "The master server is off in Settings (LAN only)"
+                    : "Choose a master server in Settings to browse rooms");
             return;
         }
-        URI uri;
-        try {
-            uri = masterEndpoint(configured, settings.masterTrustInsecure());
-        } catch (IllegalArgumentException e) {
-            fail("Invalid master server URL");
-            return;
-        }
+        String address = configured.get();
         boolean trustInsecure = settings.masterTrustInsecure();
+        try {
+            checkMasterAddress(address, trustInsecure);
+        } catch (IllegalArgumentException e) {
+            fail(INVALID_MASTER_ADDRESS);
+            return;
+        }
         String configuredName = settings.displayName();
-        start("Connecting to the master server...", State.IDLE, op -> {
+        String connecting = address.contains("://") ? "Connecting to the master server..."
+                : "Connecting to " + address.strip() + "...";
+        start(connecting, State.IDLE, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
             SSLContext ssl = trustInsecure ? insecureMasterSslContext() : null;
-            MasterClient client = op.own(op.await(MasterClient.connect(uri, me, name, fingerprint, ssl),
-                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 2000, MasterClient::close), MasterClient::close);
+            MasterClient client;
+            try {
+                // DNS discovery runs inside connect, on this worker, never on the engine thread.
+                client = op.own(op.await(MasterClient.connect(address, me, name, fingerprint, ssl),
+                        MasterClient.CONNECT_DEADLINE_MILLIS + 2000, MasterClient::close), MasterClient::close);
+            } catch (IllegalArgumentException invalid) {
+                throw new InvalidMasterAddressException(invalid);
+            }
             return () -> {
                 master = client;
+                masterInsecure = trustInsecure;
                 browseSetup = setup;
                 browseFingerprint = fingerprint;
                 state = State.BROWSING;
@@ -619,6 +636,7 @@ public final class RaceSession implements AutoCloseable {
             directRegistration.close();
             directRegistration = null;
         }
+        masterInsecure = false;
         if (master != null) {
             MasterClient leaving = master;
             master = null;
@@ -878,8 +896,9 @@ public final class RaceSession implements AutoCloseable {
             // The owner's last choice; the host ignores it from anyone else.
             connection.sendControl(new ControlMessage.SetReadyRule(settings.readyRule().name()));
         }
+        // Uploads use the endpoint the master connection was admitted on, never settings text.
         coordinator = new MultiplayerRaceCoordinator(RaceTransport.from(connection), clientSession, clockMillis,
-                settings.masterUrl(), settings.masterTrustInsecure(), ghostStore);
+                master == null ? null : master.endpoint(), master != null && masterInsecure, ghostStore);
         coordinator.setShowMinimap(settings.minimap());
         coordinator.setChatPreferenceSource(censorChat, disableChat);
         if (hostingRoom && host != null) {
@@ -1225,14 +1244,36 @@ public final class RaceSession implements AutoCloseable {
         finally { java.util.Arrays.fill(value, '\0'); }
     }
 
-    private static URI masterEndpoint(String configured, boolean localTrust) {
-        URI uri = NetworkEndpoints.webSocket(URI.create(configured.trim()));
-        if (localTrust && !NetworkEndpoints.literalLoopback(uri.getHost()))
-            throw new IllegalArgumentException("insecure TLS trust is local-development only");
-        return uri;
+    static final String INVALID_MASTER_ADDRESS = "Invalid master server address";
+
+    /**
+     * Pure admission before any connect worker or DNS: URL forms pass the mod's endpoint policy,
+     * and trust-all TLS is local development only, decided from a literal-loopback URL in the text
+     * itself (a DNS name never earns it, whatever it resolves to). Bare names are parsed by
+     * {@link MasterClient#connect}.
+     */
+    static void checkMasterAddress(String address, boolean trustInsecure) {
+        String text = address.strip();
+        if (text.contains("://")) {
+            URI uri = NetworkEndpoints.webSocket(URI.create(text));
+            if (trustInsecure && !NetworkEndpoints.literalLoopback(uri.getHost()))
+                throw new IllegalArgumentException("insecure TLS trust is local-development only");
+        } else if (trustInsecure) {
+            throw new IllegalArgumentException("insecure TLS trust needs a literal-loopback URL");
+        }
+    }
+
+    /** Address text the engine rejected; shown as {@link #INVALID_MASTER_ADDRESS}. */
+    private static final class InvalidMasterAddressException extends Exception {
+        InvalidMasterAddressException(Throwable cause) { super(INVALID_MASTER_ADDRESS, cause); }
     }
 
     private static String failureNotice(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause() == current ? null : current.getCause()) {
+            if (current instanceof InvalidMasterAddressException) return INVALID_MASTER_ADDRESS;
+            // "No master server is published at ...", "Could not look up ...", "...points to another host".
+            if (current instanceof MasterDiscoveryException discovery) return discovery.getMessage();
+        }
         Throwable cause = failure;
         while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
         if (cause instanceof RoomInviteRejectedException limited && limited.retryAfterMillis() > 0) {

@@ -17,6 +17,7 @@ final class FixedSimulationScheduler {
     private final long maxDebtUnits;
     private long tickUnits;
     private long renderUnits;
+    private boolean phaseUnavailable;
 
     /** No defaults: runtime batch/debt limits require separate responsiveness evidence. */
     FixedSimulationScheduler(int simulationHz, int renderHz, int maxTicksPerBatch, long maxDebtNanos) {
@@ -58,6 +59,7 @@ final class FixedSimulationScheduler {
         // Whole-nanosecond admission preserves every existing fractional tick unit.
         long admittedNanos = Math.min(elapsedNanos, (maxDebtUnits - tickUnits) / simulationHz);
         long discardedNanos = elapsedNanos - admittedNanos;
+        phaseUnavailable = discardedNanos > 0;
         tickUnits += admittedNanos * simulationHz;
         int ticks = (int) Math.min(tickUnits / SECOND, maxTicksPerBatch);
         tickUnits -= ticks * SECOND;
@@ -71,8 +73,7 @@ final class FixedSimulationScheduler {
         long remainder = tickUnits % SECOND;
         long untilTick = pendingTicks > 0 ? 0 : ceilingDivide(SECOND - remainder, simulationHz);
         long untilRender = ceilingDivide(SECOND - renderUnits, renderHz);
-        return new Batch(ticks, render, pendingTicks, remainder, discardedNanos,
-                Math.min(untilTick, untilRender));
+        return new Batch(ticks, render, pendingTicks, remainder, discardedNanos, untilTick, untilRender);
     }
 
     /**
@@ -84,12 +85,29 @@ final class FixedSimulationScheduler {
     void reset() {
         tickUnits = 0;
         renderUnits = 0;
+        phaseUnavailable = false;
     }
 
     /** Paused host service keeps fractional phase, but cannot accumulate whole-tick debt. */
     void discardWholeTickDebt() {
         tickUnits %= SECOND;
     }
+
+    /** Pure observation after service work. It never reserves or consumes allowances. */
+    Phase observePhase(long unaccountedElapsedNanos) {
+        if (unaccountedElapsedNanos < 0) throw new IllegalArgumentException("elapsed time must be nonnegative");
+        if (phaseUnavailable || tickUnits >= SECOND
+                || unaccountedElapsedNanos >= ceilingDivide(SECOND - tickUnits, simulationHz)) {
+            return new Unavailable();
+        }
+        return new Available((tickUnits + unaccountedElapsedNanos * simulationHz) / (double) SECOND);
+    }
+
+    void invalidatePhase() { phaseUnavailable = true; }
+
+    sealed interface Phase { }
+    record Available(double alpha) implements Phase { }
+    record Unavailable() implements Phase { }
 
     private static long ceilingDivide(long numerator, int denominator) {
         return (numerator + denominator - 1) / denominator;
@@ -100,9 +118,11 @@ final class FixedSimulationScheduler {
      * {@code tickRemainderUnits / 1e9} is fractional tick phase, excluding whole debt;
      * it is not a valid interpolation fraction while {@code pendingTicks > 0}.
      * Discarded wall nanoseconds are per call, not a lifetime total.
-     * The relative sleep deadline starts at the supplied elapsed-time observation,
-     * before executing this batch; account for subsequent work before sleeping.
+     * Both relative deadlines start at the supplied elapsed-time observation, before
+     * executing this batch; account for subsequent work before sleeping. The live caller
+     * wakes on ticks and treats {@code render} as a thinning gate; the render deadline and
+     * tick remainder stay available for presentation-time interpolation.
      */
     record Batch(int ticks, boolean render, long pendingTicks, long tickRemainderUnits,
-                 long discardedWallNanos, long nanosUntilNextIteration) { }
+                 long discardedWallNanos, long nanosUntilTick, long nanosUntilRender) { }
 }

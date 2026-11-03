@@ -3,6 +3,8 @@ import tempfile
 from pathlib import Path
 import unittest
 from build import check_toolchain, compile_prepared, native_dependencies, compiler_options, VERSION
+from build import image_modules, reflection_metadata, verify_master_discovery, DNS_PROVIDER_MODULE, DNS_CONTEXT_FACTORY
+import json
 from unittest.mock import patch
 import os
 from toolchain import ASSETS
@@ -61,5 +63,20 @@ class NativeBuildTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'no closed-world fallback'): check_toolchain(root)
             (root / 'release').write_text(f'IMPLEMENTOR="GraalVM Community"\nGRAALVM_VERSION="{VERSION.split("+")[0]}"\n')
             check_toolchain(root)
+
+    def test_master_discovery_provider_is_in_every_recipe(self):
+        modules = image_modules({'java.net.http'})
+        self.assertIn(DNS_PROVIDER_MODULE, modules)
+        self.assertIn('java.logging', modules)
+        reflect = reflection_metadata()
+        self.assertIn(DNS_CONTEXT_FACTORY, {entry['name'] for entry in json.loads(reflect)})
+        self.assertIn('sun.net.www.protocol.jar.Handler', {entry['name'] for entry in json.loads(reflect)})
+        arguments = ['--add-modules=' + ','.join(sorted(modules))]
+        verify_master_discovery(arguments, reflect)
+        # Broken cases: a recipe without the module or the factory entry is refused.
+        with self.assertRaisesRegex(ValueError, DNS_PROVIDER_MODULE):
+            verify_master_discovery(['--add-modules=java.logging,java.net.http'], reflect)
+        with self.assertRaisesRegex(ValueError, DNS_CONTEXT_FACTORY):
+            verify_master_discovery(arguments, '[{"name":"sun.net.www.protocol.jar.Handler"}]')
 
 if __name__ == '__main__': unittest.main()

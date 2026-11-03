@@ -41,6 +41,7 @@ import java.util.logging.Logger;
  * screen works regardless of whether a level is loaded. This follows the same
  * pattern as the S2 {@code Sonic2SpecialStageResultsScreen}.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private int viewportXOffset;
     private static final Logger LOGGER = Logger.getLogger(Sonic1SpecialStageResultsScreen.class.getName());

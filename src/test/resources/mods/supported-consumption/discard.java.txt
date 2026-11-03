@@ -1,0 +1,2 @@
+// expected: com.openggf.game.rules.GameRules#dynamicArtDmaService,com.openggf.game.rules.DynamicArtDmaServiceModel
+class Probe { void f(com.openggf.game.rules.GameRules r) { r.dynamicArtDmaService(); } }

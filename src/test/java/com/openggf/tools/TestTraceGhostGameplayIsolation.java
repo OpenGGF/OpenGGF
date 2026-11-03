@@ -1,5 +1,6 @@
 package com.openggf.tools;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.GameServices;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -27,6 +28,26 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Real registered players and behavioral timers, rather than mock restore owners. */
 @RequiresRom(SonicGame.SONIC_2)
 class TestTraceGhostGameplayIsolation {
+    @Test void ghostAnimationCannotPublishLiveFractionalArithmetic() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(rom("s2"), 0, 0, settings);
+            var manager = GameServices.level().getObjectManager();
+            var renderer = new GhostTraceRenderer();
+            var trace = TraceFixtures.trace(TraceFixtures.metadata("s2", 0, 0),
+                    java.util.stream.IntStream.range(0, 12)
+                            .mapToObj(i -> row(i, session.player())).toList());
+            ObjectManagerInternalAccess.publishSineCosineInputFraction(manager, 0xFD00);
+            try {
+                admit(renderer, trace, 12);
+                assertEquals(0xFD00, ObjectManagerInternalAccess.sineCosineInputFraction(manager),
+                        "comparison-only ghost animation must preserve live fractional input");
+            } finally {
+                renderer.reset();
+            }
+        }
+    }
+
     @Test void seekingCannotRemoveMainPlayersLiveSpeedShoesTimer() throws Exception {
         seekPreservesTimer(false);
     }

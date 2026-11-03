@@ -27,7 +27,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Native draw counters must not advance while a directed template observes the current picture. */
+/** Native state must not advance during either ordinary draws or directed capture. */
 class TestStageplayNativeCapturePurity {
     @Test
     void mgzBodyCaptureAndOrdinaryDrawPreserveHeadAnimationPhase() throws Exception {
@@ -46,7 +46,7 @@ class TestStageplayNativeCapturePurity {
     }
 
     @Test
-    void mgzDefeatPartCapturePreservesFlickerAndOrdinaryDrawStillConsumesOnePhase()
+    void mgzDefeatPartCaptureAndRepeatedDrawPreserveTheUpdatePhase()
             throws Exception {
         Fixture fixture = new Fixture();
         var part = fixture.objects.createDynamicObject(() -> new MgzEndBossKnuxDefeatPart(spawn()));
@@ -54,30 +54,33 @@ class TestStageplayNativeCapturePurity {
         fixture.captureTwice(part,
                 () -> assertEquals(1, field(MgzEndBossKnuxDefeatPart.class, "flicker").getInt(part)));
         part.appendRenderCommands(new ArrayList<>());
+        part.appendRenderCommands(new ArrayList<>());
+        assertEquals(1, field(MgzEndBossKnuxDefeatPart.class, "flicker").getInt(part));
+        part.update(123, null);
         assertEquals(2, field(MgzEndBossKnuxDefeatPart.class, "flicker").getInt(part));
     }
 
     @Test
-    void pachinkoCapturePreservesRenderDiagnosticAndOrdinaryDrawStillCounts() {
+    void pachinkoCaptureAndOrdinaryDrawPreserveTemporalScalars() {
         Fixture fixture = new Fixture();
         var trap =
                 fixture.objects.createDynamicObject(
                         () -> new PachinkoEnergyTrapObjectInstance(spawn()));
-        fixture.captureTwice(trap, () -> assertEquals(0, trap.getRenderCount()));
+        fixture.captureTwice(trap, () -> assertEquals(0, trap.getUpdateCount()));
         trap.appendRenderCommands(new ArrayList<>());
-        assertEquals(1, trap.getRenderCount());
+        trap.appendRenderCommands(new ArrayList<>());
+        assertEquals(0, trap.getUpdateCount());
     }
 
     @Test
-    void snowCapturePreservesBackgroundDiagnosticAndOrdinaryAppendStillClearsIt() throws Exception {
+    void snowCaptureAndOrdinaryAppendPreserveTemporalPosition() throws Exception {
         Fixture fixture = new Fixture();
         var pile =
                 fixture.objects.createDynamicObject(
                         () -> new IczBigSnowPileInstance(spawn(), null));
-        field(IczBigSnowPileInstance.class, "lastRenderedTileCount").setInt(pile, 12);
-        fixture.captureTwice(pile, () -> assertEquals(12, pile.getLastRenderedTileCountForTests()));
+        fixture.captureTwice(pile, () -> assertEquals(IczBigSnowPileInstance.BASE_Y, pile.getY()));
         pile.appendRenderCommands(new ArrayList<>());
-        assertEquals(0, pile.getLastRenderedTileCountForTests());
+        assertEquals(IczBigSnowPileInstance.BASE_Y, pile.getY());
     }
 
     @Test
@@ -86,18 +89,53 @@ class TestStageplayNativeCapturePurity {
         fixture.provideMgzRenderer();
         var part = fixture.objects.createDynamicObject(() -> new MgzEndBossKnuxDefeatPart(spawn()));
         Field flicker = field(MgzEndBossKnuxDefeatPart.class, "flicker");
-        flicker.setInt(part, 1);
+        flicker.setInt(part, 2);
         var direction = ObjectDirectionAccess.forManager(fixture.objects);
         var first = direction.captureDynamic(part);
-        assertEquals(1, flicker.getInt(part));
+        assertEquals(2, flicker.getInt(part));
         var second = direction.captureDynamic(part);
-        assertEquals(1, flicker.getInt(part));
+        assertEquals(2, flicker.getInt(part));
         assertEquals(first, second);
         assertEquals(ObjectVisualFacing.Basis.NON_DIRECTIONAL, first.facing());
         assertEquals(1, first.parts().size());
         assertEquals(0x2E, first.parts().getFirst().defaultPose());
         part.appendRenderCommands(new ArrayList<>());
         assertEquals(2, flicker.getInt(part));
+    }
+
+    @Test
+    void mgzDefeatFlickerIsUpdateOwnedAndRewindRestoresTheNextPhase() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.provideMgzRenderer();
+        var part = fixture.objects.createDynamicObject(() -> new MgzEndBossKnuxDefeatPart(spawn()));
+        Field phase = field(MgzEndBossKnuxDefeatPart.class, "flicker");
+        part.update(100, null);
+        assertEquals(1, phase.getInt(part));
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        assertThrows(IllegalArgumentException.class, () -> direction.captureDynamic(part),
+                "The first bchg sees a clear old bit and omits the fragment");
+        // An arbitrary V-int gap does not supply extra object executions.
+        part.update(107, null);
+        assertEquals(2, phase.getInt(part));
+        var picture = direction.captureDynamic(part);
+        assertEquals(1, picture.parts().size());
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(fixture.objects.rewindSnapshottable());
+        var before = registry.capture();
+        for (int i = 0; i < 3; i++) part.appendRenderCommands(new ArrayList<>());
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey("object-manager",
+                before.get("object-manager"), registry.capture().get("object-manager")).isEmpty());
+        part.update(108, null);
+        assertEquals(3, phase.getInt(part));
+        registry.restore(before);
+        var restored = fixture.objects.getActiveObjects().stream()
+                .filter(MgzEndBossKnuxDefeatPart.class::isInstance)
+                .map(MgzEndBossKnuxDefeatPart.class::cast).findFirst().orElseThrow();
+        assertEquals(2, phase.getInt(restored));
+        assertEquals(picture, direction.captureDynamic(restored));
+        restored.update(108, null);
+        assertEquals(3, phase.getInt(restored));
+        assertThrows(IllegalArgumentException.class, () -> direction.captureDynamic(restored));
     }
 
     private static ObjectSpawn spawn() {
@@ -125,6 +163,7 @@ class TestStageplayNativeCapturePurity {
                     new ObjectManager(
                             List.of(), null, 0, null, null, graphics, new Camera(), services);
             when(services.objectManager()).thenReturn(objects);
+            when(services.camera()).thenReturn(new Camera());
         }
 
         void provideMgzRenderer() {

@@ -107,7 +107,7 @@ class TestHandshakeIntentBinding {
                     () -> RaceClient.connect(java.net.URI.create(uri), identity, "A", "build").get());
             assertInstanceOf(IllegalArgumentException.class, room.getCause(), uri);
             var master = assertThrows(java.util.concurrent.ExecutionException.class,
-                    () -> MasterClient.connect(java.net.URI.create(uri), identity, "A", "build", null).get());
+                    () -> MasterClient.connect(uri, identity, "A", "build", null).get());
             assertInstanceOf(IllegalArgumentException.class, master.getCause(), uri);
         }
     }

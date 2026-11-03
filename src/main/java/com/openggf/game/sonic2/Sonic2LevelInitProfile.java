@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  * @see <a href="docs/plans/2026-02-27-rom-driven-init-profiles-design.md">
  *      Design doc: Sonic 2 Level Init Profile (57 steps)</a>
  */
-public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
+public class Sonic2LevelInitProfile extends AbstractLevelInitProfile implements com.openggf.game.internal.LevelMotionPresentation {
     private static final Logger LOGGER = Logger.getLogger(
             Sonic2LevelInitProfile.class.getName());
     private static final int LEVEL_ENTRY_FADE_OUT_REQUEST = 0xF9;

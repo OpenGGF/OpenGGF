@@ -40,7 +40,8 @@ class TestNativeSpriteSatGameplay {
     void sonic3kQueuedAttractedRingKeepsRingVisibilityAndAdmissionThroughRealGameplay() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
-        try (var session = new GameplayCaptureSession(settings)) {
+        try (var session = new GameplayCaptureSession(settings);
+             var limits = NativeSpriteLimits.enable()) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
             session.step(null); session.step(null);
             var level = GameServices.level();
@@ -81,7 +82,8 @@ class TestNativeSpriteSatGameplay {
     private void check(Path rom, boolean placedListBeforeBuckets) throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
-        try (var session = new GameplayCaptureSession(settings)) {
+        try (var session = new GameplayCaptureSession(settings);
+             var limits = NativeSpriteLimits.enable()) {
             session.boot(rom, 0, 0, settings);
             session.step(null); session.step(null);
             // Control the stage-list producer independently of whatever the boot camera sees.

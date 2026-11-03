@@ -245,6 +245,7 @@ public class AudioManager implements MusicRestoreSink {
         return manager;
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized AudioManager getInstance() {
         if (instance == null) {
             instance = new AudioManager();
@@ -389,6 +390,14 @@ public class AudioManager implements MusicRestoreSink {
      */
     public int outputSampleRate() {
         return presentationBinding.outputSampleRate();
+    }
+
+    /** Whether live output can follow the producer clock without long-term speaker drift. */
+    boolean isSpeakerRateRegulated() {
+        AudioPresentationSink sink = presentationBinding.presentationSink;
+        if (sink instanceof OpenAlPcmSink speaker) return speaker.isRateRegulated();
+        return sink instanceof NoDeviceAudioSink
+                || (sink == null && (backend == null || backend instanceof NullAudioBackend));
     }
 
     /** Host-owned finite scene music routed through the existing capture/speaker producer. */

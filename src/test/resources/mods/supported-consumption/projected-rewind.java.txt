@@ -1,0 +1,2 @@
+// expected: clean
+class Probe implements com.openggf.level.objects.ModRewindRecreatable { public com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.ObjectReconstructionContext context) { return null; } }

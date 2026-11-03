@@ -79,6 +79,7 @@ public final class ConfigYamlWriter {
     }
 
     private static String format(ConfigKeyMeta m, Object value) {
+        if (m.path().equals("display.fps") && value instanceof Number) return value.toString();
         return switch (m.type()) {
             case BOOL -> String.valueOf(toBool(value));
             case INT -> String.valueOf(toInt(value));

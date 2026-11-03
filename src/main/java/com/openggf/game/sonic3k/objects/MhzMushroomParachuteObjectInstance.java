@@ -217,7 +217,6 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
             releaseGrabbedPlayer(slot, player, true);
             return;
         }
-        snapGrabbedPlayerToParachute(player);
     }
 
     private void releaseGrabbedPlayer(PlayerSlot slot, AbstractPlayableSprite player, boolean jumpRelease) {
@@ -354,9 +353,19 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
         if (player == null) {
             return;
         }
+        short oldX = player.getX();
+        short oldY = player.getY();
         NativePositionOps.writeXPosPreserveSubpixel(player, motion.x);
         NativePositionOps.writeYPosPreserveSubpixel(player, motion.y + PLAYER_Y_OFFSET);
         syncPlayerVelocity(player);
+        // loc_3F678: collision runs after the carry writes. Preserve its response;
+        // sub_3F5C2 detects the changed velocity on the next pass and releases.
+        ObjectServices objectServices = tryServices();
+        if (objectServices != null && objectServices.collisionSystem() != null) {
+            player.updateSensors(oldX, oldY);
+            com.openggf.sprites.managers.PlayableMovementInternalAccess.resolveLevelCollision(
+                    player, objectServices.collisionSystem());
+        }
         syncCarriedPlayerFrameAndFacing(player);
     }
 

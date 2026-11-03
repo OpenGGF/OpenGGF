@@ -35,7 +35,8 @@ class TestLegacyTimeAttackSettings {
         assertEquals("Tails' #1", settings.displayName());
         assertFalse(settings.encode().contains("lastJoinAddress"));
         assertFalse(settings.encode().contains("host:1234#code"));
-        assertEquals("wss://example.test/master?token=one#two", settings.masterUrl());
+        // A non-blank legacy URL becomes a Custom master, as written.
+        assertEquals(new MasterSelection.Custom("wss://example.test/master?token=one#two"), settings.masterSelection());
         assertTrue(settings.masterTrustInsecure());
         assertFalse(settings.minimap());
         assertEquals(yaml, Files.readString(source));
@@ -104,4 +105,13 @@ class TestLegacyTimeAttackSettings {
         assertEquals(295, TimeAttackSettings.load(storage).retryKey());
     }
 
+
+    @org.junit.jupiter.api.Test void aBlankLegacyMasterUrlKeepsTheBuildDefault() {
+        TimeAttackSettings blank = new TimeAttackSettings();
+        LegacyTimeAttackSettings.apply(blank, java.util.Map.of("TIME_ATTACK_NET_MASTER_URL", "  "));
+        assertEquals(new MasterSelection.BuildDefault(), blank.masterSelection());
+        TimeAttackSettings custom = new TimeAttackSettings();
+        LegacyTimeAttackSettings.apply(custom, java.util.Map.of("TIME_ATTACK_NET_MASTER_URL", "multi.openggf.com"));
+        assertEquals(new MasterSelection.Custom("multi.openggf.com"), custom.masterSelection());
+    }
 }

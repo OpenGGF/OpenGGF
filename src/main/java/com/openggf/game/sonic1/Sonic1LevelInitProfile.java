@@ -37,7 +37,7 @@ import java.io.IOException;
  *      Design doc: Sonic 1 Level Init Profile (44 steps)</a>
  */
 public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
-        implements com.openggf.game.internal.BlockingLevelEntryFade {
+        implements com.openggf.game.internal.LevelMotionPresentation, com.openggf.game.internal.BlockingLevelEntryFade {
     private final Sonic1LevelEventManager levelEventManager;
     private final Sonic1SwitchManager switchManager;
     private final Sonic1ConveyorState conveyorState;

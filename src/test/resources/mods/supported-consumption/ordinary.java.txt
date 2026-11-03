@@ -1,0 +1,2 @@
+// expected: clean
+class Probe { boolean f(com.openggf.level.objects.AbstractObjectInstance x) { return x.isDestroyed(); } }

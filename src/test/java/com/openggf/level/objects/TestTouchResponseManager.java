@@ -77,6 +77,33 @@ public class TestTouchResponseManager {
         when(player.getSecondaryAbility()).thenReturn(SecondaryAbility.INSTA_SHIELD);
     }
 
+    static java.util.stream.Stream<GameRules> killedEnemyTouchRules() {
+        return java.util.stream.Stream.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("killedEnemyTouchRules")
+    void killedEnemyStillHurtsLaterVulnerableSidekick(GameRules rules) {
+        when(player.getGameRules()).thenReturn(rules);
+        when(player.getAnimationId()).thenReturn(2);
+        when(player.getRolling()).thenReturn(true);
+        setupTableSize(2, 12, 12);
+        var enemy = new MockDestroyableSnapshotAttackableEnemy(160, 112, 2);
+        objectManager.addDynamicObject(enemy);
+        objectManager.update(0, player, List.of(), 1, false);
+        var controller = new ObjectTouchResponseController(objectManager, table);
+        controller.update(player, 2, false);
+        assertTrue(enemy.isDestroyed());
+
+        AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
+        when(tails.getCentreX()).thenReturn((short) 160);
+        when(tails.getCentreY()).thenReturn((short) 112);
+        when(tails.getYRadius()).thenReturn((short) 20);
+        when(tails.getGameRules()).thenReturn(rules);
+        controller.updateSidekick(tails, 2, false);
+        verify(tails).applyHurt(160);
+    }
+
     @AfterEach
     public void tearDown() {
         SessionManager.clear();

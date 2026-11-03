@@ -30,6 +30,7 @@ import java.util.List;
  * <p>
  * ROM reference: Obj_AIZForegroundPlant (sonic3k.asm:60475-60505)
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizForegroundPlantInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private int origX;

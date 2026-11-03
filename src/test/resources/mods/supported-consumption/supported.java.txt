@@ -1,0 +1,2 @@
+// expected: clean
+class Probe { com.openggf.mods.code.GgfMod mod; }

@@ -144,12 +144,10 @@ public class S3kBossExplosionController {
     }
 
     private void spawnExplosionChild() {
-        // ROM: sub_52850 random offset calculation (sonic3k.asm:176837-176842).
+        // loc_83E90 masks the low word for X, then SWAP selects the high word for Y.
         int random = rng.nextRaw();
-        int xMask = (xRange * 2) - 1;
-        int yMask = (yRange * 2) - 1;
-        int xOffset = (random & xMask) - xRange;
-        int yOffset = ((random >> 8) & yMask) - yRange;
+        int xOffset = S3kExplosionOffsets.xOffset(random, xRange);
+        int yOffset = S3kExplosionOffsets.yOffset(random, yRange);
         pendingExplosions.add(new PendingExplosion(centreX + xOffset, centreY + yOffset, true));
     }
 

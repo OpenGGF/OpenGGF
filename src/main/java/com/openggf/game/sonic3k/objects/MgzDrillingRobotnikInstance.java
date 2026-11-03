@@ -811,7 +811,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         // $2E to 2*60-1, clear render_flags bit 7, then jump through $34 to loc_6C2BE.
         endBossDefeatHandoffComplete = true;
         endBossBodyHiddenAfterFadeHandoff = true;
-        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, resolveLevelMusicId()));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(resolveLevelMusicId()));
         waitTimer = (2 * 60) - 1;
         startEndBossMiniCraftEscape();
         spawnEndBossDefeatDebris();
@@ -920,7 +920,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         try {
             int levelMusic = resolveLevelMusicId();
             if (levelMusic > 0) {
-                services().playMusic(levelMusic);
+                services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), levelMusic));
             }
         } catch (Exception e) {
             LOG.fine(

@@ -49,7 +49,7 @@ import java.io.IOException;
  * attraction curve is the exact {@code dword_6EC7E} table.
  */
 public final class CnzEndBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source, com.openggf.level.objects.boss.InstagibBossTarget {
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // The native target/turn routine owns facingRight independently of the selected mapping frame.
         return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
@@ -605,7 +605,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         defeatScatterStarted = true;
         defeatBodyHidden = true;
         defeatWaitTimer = (2 * 60) - 1;
-        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.CNZ2.id));
+        spawnFreeChild(() -> SongFadeTransitionInstance.toLevelMusic(Sonic3kMusic.CNZ2.id));
         spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, -0x14, -0x100));
         spawnChild(() -> new CnzEndBossDefeatDebrisChild(this, 0x14, 0x100));
     }
@@ -777,7 +777,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
      * state machine.
      */
     private void restoreLevelMusic() {
-        services().playMusic(Sonic3kMusic.CNZ2.id);
+        services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), Sonic3kMusic.CNZ2.id));
     }
 
     private void setStoredMaxX(int value) {
@@ -890,4 +890,6 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             magnetChild = null;
         }
     }
+    /** Instagib: the next native hit becomes the defeating one; phases and defeat stay native. */
+    @Override public void collapseToFinalHit() { if (hitCount > 1) hitCount = 1; }
 }

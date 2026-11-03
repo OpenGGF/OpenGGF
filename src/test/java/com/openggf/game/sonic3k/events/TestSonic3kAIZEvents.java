@@ -836,8 +836,9 @@ public class TestSonic3kAIZEvents {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 1})
-    public void fireMusicRestoreFollowsRomEscapeTimerAcrossActReload(int apparentAct) {
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5})
+    public void fireMusicRestoreFollowsRomEscapeTimerAcrossActReload(int scenario) {
+        int apparentAct = scenario & 1;
         Camera camera = GameServices.camera();
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
@@ -874,10 +875,14 @@ public class TestSonic3kAIZEvents {
         // Restore_LevelMusic reads Apparent_zone_and_act, not the loaded act.
         assertEquals(0, GameServices.level().getApparentAct());
         GameServices.level().setApparentAct(apparentAct);
+        var player = GameServices.sprites().getMainPlayable();
+        if (scenario >= 4) player.setSuperSonic(true);
+        else if (scenario >= 2) player.setInvincibleFrames(600);
         for (int continuationFrame = 0; continuationFrame <= 0x120; continuationFrame++) {
             updateFireTransitionWithHardware(events, 1, frame + continuationFrame);
         }
-        verify(audio).playMusic(apparentAct == 0 ? Sonic3kMusic.AIZ1.id : Sonic3kMusic.AIZ2.id);
+        verify(audio).playMusic(scenario >= 2 ? Sonic3kMusic.INVINCIBILITY.id
+                : apparentAct == 0 ? Sonic3kMusic.AIZ1.id : Sonic3kMusic.AIZ2.id);
     }
 
     @Test

@@ -16,6 +16,26 @@ import com.openggf.level.render.PatternSpriteRenderer;
  * rig that the owning object ticks and renders.
  */
 public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig.Snapshot> {
+    /** Permanent rewind owner for a rig created after its containing object. */
+    static final class OptionalRig implements RewindStateful<Snapshot> {
+        LbzMinibossBoxRig value;
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return value == null ? null : value.captureRewindStateValue();
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            if (state == null) {
+                value = null;
+            } else {
+                value = new LbzMinibossBoxRig(0, 0);
+                value.restoreRewindStateValue(state);
+            }
+        }
+    }
+
     /** ROM byte_8D1D4: mapping frame, render-flag OR bits, child_dx, child_dy. */
     private static final int[][] PIECE_PARTS = {
             {6, 0, -0x10, 0},

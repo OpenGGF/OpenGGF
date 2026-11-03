@@ -16,6 +16,7 @@ import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
  *       OVER-object test, so both halves answer a press (:57-66).</li>
  * </ul>
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class Sonic1GameOverCardObjectInstance extends AbstractGameOverCardObjectInstance {
 
     /** {@code move.w #12*60,obTimeFrame(a0)}. */

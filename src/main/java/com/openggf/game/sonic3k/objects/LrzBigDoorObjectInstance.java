@@ -81,6 +81,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
     private int baseY;
     /** ROM {@code $2E(a0)}. */
     private int openTimer;
+    private boolean openingRoutineThisFrame;
     /** Which routine pointer {@code (a0)} holds. */
     private int stage;
     /** The Y the already-open branch leaves in {@code y_pos(a0)}. */
@@ -124,6 +125,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        openingRoutineThisFrame = false;
         if (stage == STAGE_WAITING) {
             if (!playerInTriggerRegion(playerEntity)) {
                 return;
@@ -141,6 +143,7 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         if (stage != STAGE_OPENING) {
             return;
         }
+        openingRoutineThisFrame = true;
         // addq.b #1,$2E(a0) / cmpi.b #$40 (sonic3k.asm:88156-88162).
         openTimer = (openTimer + 1) & 0xFF;
         if (openTimer == OPEN_ANGLE) {
@@ -167,6 +170,14 @@ public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
         }
         int deltaX = (short) (player.getCentreX() - getCentreX());
         return deltaX >= TRIGGER_X_DISTANCE;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        // loc_42AAE (sonic3k.asm:88156-88182) ends in Draw_Sprite, including
+        // the tick that clears Screen_shake_flag and enters the open routine.
+        // Only the following loc_42B08 dispatch (:88185-88191) may unload.
+        return stage == STAGE_OPENING || openingRoutineThisFrame;
     }
 
     private void writeScreenShakeFlag(int value) {

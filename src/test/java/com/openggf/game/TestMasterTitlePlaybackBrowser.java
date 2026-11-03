@@ -232,8 +232,8 @@ class TestMasterTitlePlaybackBrowser {
             com.openggf.control.MouseWheel.of(input).scroll(1);
             screen.update(input); input.update();
             assertEquals(PlaybackEntry.Kind.RECORDING, screen.playbackBrowserForTest().selectedEntry().kind(),
-                    "the title must forward the notch it already consumed");
-            assertEquals(0, com.openggf.control.MouseWheel.of(input).takeNotches(), "a notch has one owner");
+                    "the title must forward this pass's notch to the browser");
+            assertEquals(0, com.openggf.control.MouseWheel.of(input).notches(), "a notch ends with its input pass");
             if (left > 0) {
                 input.handleMouseMove(10, 100); input.handleMouseButton(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
                 screen.update(input); input.update();

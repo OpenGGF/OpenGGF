@@ -10,10 +10,13 @@ public final class MenuInput {
     private MenuInput() {
     }
 
-    /** Logical-screen pointer and button edges for module menus. No window means no pointer. */
+    /**
+     * Logical-screen pointer, button edges and this pass's wheel notches (positive = away from
+     * the user) for module menus. No window means no pointer.
+     */
     @com.openggf.game.ModApi
-    public record Pointer(int x, int y, boolean inside, boolean leftPressed, boolean rightPressed) {
-        public static Pointer none() { return new Pointer(-1, -1, false, false, false); }
+    public record Pointer(int x, int y, boolean inside, boolean leftPressed, boolean rightPressed, int wheel) {
+        public static Pointer none() { return new Pointer(-1, -1, false, false, false, 0); }
         public boolean over(int left, int top, int width, int height) {
             return inside && width > 0 && height > 0 && x >= left && y >= top
                     && (long) x < (long) left + width && (long) y < (long) top + height;
@@ -23,7 +26,7 @@ public final class MenuInput {
     /**
      * Maps physical mouse input through the same letterboxed viewport as mod scenes.
      * Logical movie/trace overrides suppress the pointer, preserving replay authority.
-     * Hover and click policy remain with the menu; calling this does not consume input.
+     * Hover, click and wheel policy remain with the menu; calling this does not consume input.
      */
     public static Pointer pointer(InputHandler input, int width, int height) {
         return com.openggf.MenuPointerRuntime.pointer(input, width, height);

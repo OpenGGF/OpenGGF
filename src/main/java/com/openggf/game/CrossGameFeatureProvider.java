@@ -91,6 +91,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         return configService != null ? configService : GameServices.configuration();
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized CrossGameFeatureProvider getInstance() {
         if (instance == null) {
             instance = new CrossGameFeatureProvider();

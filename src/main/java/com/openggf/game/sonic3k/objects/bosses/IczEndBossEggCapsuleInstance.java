@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.level.objects.AbstractResultsScreen;
@@ -70,6 +72,7 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
 
         @Override
         protected void onExitReady() {
+            if (isDestroyed()) return;
             var camera = services().camera();
             var level = services().currentLevel();
             if (camera != null) {
@@ -92,6 +95,17 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
                 }
             }
             super.onExitReady();
+            if (services().runPolicy().returnsToHostOnActCompletion()) return;
+            // loc_71DE2 restores music after results, before the player runs
+            // through ICZ2's corridor (sonic3k.asm:150750-150763).
+            int music = services().levelManager() != null
+                    ? services().levelManager().getApparentLevelMusicId()
+                    : services().getCurrentLevelMusicId();
+            if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main
+                    && (main.getInvincibleFrames() > 0 || main.isSuperSonic())) {
+                music = Sonic3kMusic.INVINCIBILITY.id;
+            }
+            if (music >= 0) services().playMusic(music);
         }
 
         @Override

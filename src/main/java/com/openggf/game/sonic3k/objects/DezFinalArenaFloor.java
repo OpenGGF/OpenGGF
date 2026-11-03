@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.sonic3k.runtime.DezFinalCamera;
 
 import com.openggf.game.PlayableEntity;
@@ -11,7 +12,7 @@ import java.util.List;
 
 /** DEZ3 Obj_5A7C8 moving support, Obj_5A8E6 entry support and Obj_5A872 falling blocks. */
 public final class DezFinalArenaFloor extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements S3kTopSolidProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
     public static final int MOVING = 0, ENTRY = 1, FALLING = 2;
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
     private int mode;

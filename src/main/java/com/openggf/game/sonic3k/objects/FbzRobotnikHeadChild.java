@@ -38,8 +38,10 @@ public final class FbzRobotnikHeadChild extends AbstractFbzEndBossChild {
         x = ship.getX();
         y = ship.getY() + NATIVE_Y_OFFSET;
         if (player != null) facingRight = x < player.getCentreX();
+        // Obj_FBZRobotnikHeadMain: FixBugs=0 reads head $38, not parent $38.
+        // The head never receives the rotation bit; the fixed branch enables frame 1.
         frame = boss.isDefeated() ? 3 : boss.isHurtFlashActive() ? 2
-                : boss.phase() == FbzEndBossInstance.Phase.ROTATION ? 1 : 0;
+                : 0;
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {

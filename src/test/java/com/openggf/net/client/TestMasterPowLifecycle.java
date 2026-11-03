@@ -171,9 +171,9 @@ class TestMasterPowLifecycle {
     }
 
     private static MasterClient client(Path dir) throws Exception {
-        var constructor = MasterClient.class.getDeclaredConstructor(PlayerIdentity.class, String.class, String.class);
+        var constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        return constructor.newInstance(PlayerIdentity.loadOrCreate(dir), "Alice", "build");
+        return constructor.newInstance(java.net.URI.create("wss://master.test/master"), PlayerIdentity.loadOrCreate(dir), "Alice", "build");
     }
     private static Object field(MasterClient client, String name) throws Exception {
         var field = MasterClient.class.getDeclaredField(name); field.setAccessible(true); return field.get(client);
@@ -189,9 +189,9 @@ class TestMasterPowLifecycle {
     }
     @Test
     void excessiveChallengeFailsAdmissionWithoutStartingUnboundedWork(@TempDir Path dir) throws Exception {
-        var constructor = MasterClient.class.getDeclaredConstructor(PlayerIdentity.class, String.class, String.class);
+        var constructor = MasterClient.class.getDeclaredConstructor(java.net.URI.class, PlayerIdentity.class, String.class, String.class);
         constructor.setAccessible(true);
-        var client = constructor.newInstance(PlayerIdentity.loadOrCreate(dir), "Alice", "build");
+        var client = constructor.newInstance(java.net.URI.create("wss://master.test/master"), PlayerIdentity.loadOrCreate(dir), "Alice", "build");
         var admitted = new CompletableFuture<MasterClient>();
         var receive = MasterClient.class.getDeclaredMethod("receiveAdmission", WebSocket.class,
                 ControlMessage.class, CompletableFuture.class);

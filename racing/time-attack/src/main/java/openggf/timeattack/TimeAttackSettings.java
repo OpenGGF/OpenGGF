@@ -18,8 +18,12 @@ import java.util.TreeMap;
 /**
  * The Time Attack mod's own settings (the engine has no {@code timeAttack.*} keys): the port for
  * player-hosted rooms, the last LAN invite, the multiplayer display name and look, the master
- * server URL and its development-only trust-all switch, the multiplayer minimap and the ready
- * rule for rooms this player owns.
+ * server choice ({@link MasterSelection}) and its development-only trust-all switch, the
+ * multiplayer minimap and the ready rule for rooms this player owns.
+ *
+ * <p>The master server is stored as {@code masterMode} ({@code default}, {@code custom} or
+ * {@code off}) plus the last custom text {@code masterCustom}. The build default host is supplied
+ * by the running build ({@link #setBuildDefaultMaster}) and is never written to the file.
  *
  * <p>The display name is stored canonical ({@link DisplayNames#sanitize}), as hosts require. The
  * look is a base colour ({@code lookBase}, the name and ghost colour; empty for the stock look)
@@ -49,7 +53,10 @@ public final class TimeAttackSettings {
     private int retryKey = com.openggf.mods.scene.SceneKeys.R;
     private int hostPort = DEFAULT_HOST_PORT;
     private String displayName = "";
-    private String masterUrl = "";
+    private String masterMode = "default";
+    private String masterCustom = "";
+    /** The running build's default master address; never persisted. */
+    private String buildDefaultMaster = "";
     private boolean masterTrustInsecure;
     private boolean minimap = true;
     private ReadyRules readyRule = ReadyRules.DEFAULT_BY_SIZE;
@@ -147,7 +154,11 @@ public final class TimeAttackSettings {
                     }
                 }
                 case "displayName" -> settings.setDisplayName(value);
-                case "masterUrl" -> settings.setMasterUrl(value);
+                case "masterMode" -> {
+                    String mode = MasterSelection.normalizedMode(value);
+                    if (mode.equals("default") || mode.equals("custom") || mode.equals("off")) settings.masterMode = mode;
+                }
+                case "masterCustom" -> settings.masterCustom = singleLine(value, MAX_TEXT_LENGTH);
                 case "masterTrustInsecure" -> settings.masterTrustInsecure = "true".equalsIgnoreCase(value);
                 case "minimap" -> settings.minimap = !"false".equalsIgnoreCase(value);
                 case "readyRule" -> {
@@ -225,7 +236,8 @@ public final class TimeAttackSettings {
                 .append("retryKey=").append(retryKey).append('\n')
                 .append("hostPort=").append(hostPort).append('\n')
                 .append("displayName=").append(displayName).append('\n')
-                .append("masterUrl=").append(masterUrl).append('\n')
+                .append("masterMode=").append(masterMode).append('\n')
+                .append("masterCustom=").append(masterCustom).append('\n')
                 .append("masterTrustInsecure=").append(masterTrustInsecure).append('\n')
                 .append("minimap=").append(minimap).append('\n')
                 .append("readyRule=").append(readyRule.name()).append('\n')
@@ -419,12 +431,49 @@ public final class TimeAttackSettings {
         return gameId != null && gameId.matches("[a-z0-9]{1,16}");
     }
 
-    public String masterUrl() {
-        return masterUrl;
+    /** The stored master choice; a custom mode without text is the build default. */
+    public MasterSelection masterSelection() {
+        return switch (masterMode) {
+            case "off" -> new MasterSelection.Off();
+            case "custom" -> masterCustom.isEmpty() ? new MasterSelection.BuildDefault()
+                    : new MasterSelection.Custom(masterCustom);
+            default -> new MasterSelection.BuildDefault();
+        };
     }
 
-    public void setMasterUrl(String url) {
-        masterUrl = singleLine(url, MAX_TEXT_LENGTH);
+    /** Selecting the build default or Off keeps the last custom text for a later switch back. */
+    public void setMasterSelection(MasterSelection selection) {
+        Objects.requireNonNull(selection, "selection");
+        if (selection instanceof MasterSelection.Custom custom) masterCustom = custom.address();
+        masterMode = selection.modeName();
+    }
+
+    /** The last custom master text, kept while another mode is selected (may be empty). */
+    public String customMasterText() {
+        return masterCustom;
+    }
+
+    /** The running build's default master address, or empty when the build has none. */
+    public String buildDefaultMaster() {
+        return buildDefaultMaster;
+    }
+
+    /** Installs the running build's default; it is never persisted. */
+    public void setBuildDefaultMaster(String address) {
+        buildDefaultMaster = singleLine(address, MAX_TEXT_LENGTH);
+    }
+
+    /**
+     * The address to connect to: the build default, the custom text, or empty when the master is
+     * Off (or the build default is selected in a build that has none).
+     */
+    public Optional<String> masterAddress() {
+        return switch (masterSelection()) {
+            case MasterSelection.Off ignored -> Optional.empty();
+            case MasterSelection.Custom custom -> Optional.of(custom.address());
+            case MasterSelection.BuildDefault ignored -> buildDefaultMaster.isEmpty()
+                    ? Optional.empty() : Optional.of(buildDefaultMaster);
+        };
     }
 
     public boolean masterTrustInsecure() {

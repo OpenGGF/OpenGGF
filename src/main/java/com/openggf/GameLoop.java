@@ -1474,10 +1474,7 @@ public class GameLoop {
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
                 titleCardLifecycle::releaseResult, levelManager, gameplayMode,
-                !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
-                        || playbackDebugManager.isCurrentForcedStartPress()
-                        || (RecordedInputOwnership.active(inputHandler)
-                            && inputHandler.logical().player1().startPressed())),
+                !overlayOwnsPause && GameLoopPauseInput.nativeStartEdge(inputHandler, playbackDebugManager),
                 userRecordingControls,
                 request -> routeHostedRunSeamlessTransitionBeforeApply(
                         request, doFrameStep),
@@ -1740,16 +1737,8 @@ public class GameLoop {
             if (!skipGameplay) {
                 // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
                 spriteManager.publishHeldInputForLevelEvents(inputHandler);
-                // ROM in-game pause (Game_paused / Pause_Loop): the P1 Start leading
-                // edge is classified by the outer FrameAdmission before reaching
-                // this ordinary step, so a pause freezes the level update while
-                // the frame counter still advances. Universal across S1/S2/S3K
-                // (the trigger and unpause are a Start-press edge in every game;
-                // per-game pause divergences are debug-only cheats inert in normal
-                // play). Keyboard-only on purpose: this pause has no visible HUD
-                // feedback and never halts audio, so gamepad Start instead drives
-                // the PAUSE_KEY-style userPaused toggle below (which does both) --
-                // see the pauseKey handling earlier in this method.
+                // Native pause is reserved for recorded controller input. Live Start
+                // uses the visible host pause before ordinary frame admission.
                 userRecordingControls.beforeLevelFrame(inputHandler);
                 if (hostedRuns.isActive()) {
                     hostedRuns.beforeStep(inputHandler);
@@ -2672,6 +2661,7 @@ public class GameLoop {
     void startLevelFromTitleScreenImmediate(int zone, int act) {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
+        liveRewindManager.startNewRun();
         try {
             levelManager.loadZoneAndActForFreshRuntime(zone, act);
         } catch (IOException e) {
@@ -3011,6 +3001,7 @@ public class GameLoop {
             levelSelect.reset();
 
             GameServices.gameState().startNewGameFromTitle(); // S1 LevSel_Level -> PlayLevel (sonic.asm:2270-2283)
+            liveRewindManager.startNewRun();
             levelSelect.onGameplayStart();
             // Fade out level select music
             audioManager.fadeOutMusic();
@@ -3222,7 +3213,10 @@ public class GameLoop {
         } else if (levelManager.hasPendingFreshLevelTransitionBoundary()
                 && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
                 && boundary.installsImmediateFreshLevelPalette()) {
-            fadeManager.clearOverlayForImmediatePaletteLoad();
+            // This row still belongs to the outgoing fade. The pending title
+            // request is consumed next iteration; keep destination setup hidden
+            // until that card has installed its own black field.
+            fadeManager.holdBlack();
         } else {
             GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
         }

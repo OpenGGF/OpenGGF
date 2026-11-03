@@ -79,7 +79,8 @@ public record GameRules(
                     // waterVelocityChangeGatedByObjectControl: S1 Sonic_Water has no object_control test
                     false
             ,
-                    false
+                    false,
+                    (short) 0
             ),
             new PlayerCapabilityRules(
                     false,
@@ -228,7 +229,8 @@ public record GameRules(
                     // waterVelocityChangeGatedByObjectControl: S2 Obj01_InWater has no object_control test
                     false
             ,
-                    true
+                    true,
+                    (short) 0
             ),
             new PlayerCapabilityRules(
                     true,
@@ -384,7 +386,8 @@ public record GameRules(
                     // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22271, :27488
                     true
             ,
-                    true
+                    true,
+                    (short) 6
             ),
             new PlayerCapabilityRules(
                     true,

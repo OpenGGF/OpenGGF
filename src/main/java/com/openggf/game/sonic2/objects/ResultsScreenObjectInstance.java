@@ -32,6 +32,7 @@ import java.util.logging.Logger;
  * 3. WAIT: Brief pause after tally
  * 4. TRANSITION: Load next level
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class ResultsScreenObjectInstance extends AbstractResultsScreen
         implements ZeroScalarArgsRewindRecreatable, ObjectVisualFacing.NonDirectional {
     // Obj3A owns text and tally digits; slide-in offsets are layout, not horizontal body facing.

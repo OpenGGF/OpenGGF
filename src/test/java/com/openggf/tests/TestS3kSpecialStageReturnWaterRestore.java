@@ -64,15 +64,17 @@ public class TestS3kSpecialStageReturnWaterRestore {
                 "Special-stage return should restore the saved water level immediately");
     }
 
-    @Test
-    public void specialStageReturn_restoresSavedElementalShield() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ShieldType.class,
+            names = {"FIRE", "LIGHTNING", "BUBBLE"})
+    public void specialStageReturn_restoresSavedElementalShield(ShieldType type) throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(ZONE_HCZ, ACT_1)
                 .build();
 
         LevelManager levelManager = GameServices.level();
         AbstractPlayableSprite player = fixture.sprite();
-        player.giveShield(ShieldType.FIRE);
+        player.giveShield(type);
 
         levelManager.saveBigRingReturn(new BigRingReturnState(
                 player.getCentreX(),
@@ -89,8 +91,22 @@ public class TestS3kSpecialStageReturnWaterRestore {
         levelManager.getBigRingReturn().restoreToPlayer(
                 player, fixture.camera(), levelManager.getLevelGamestate());
 
-        assertEquals(ShieldType.FIRE, player.getShieldType(),
+        assertEquals(type, player.getShieldType(),
                 "An elemental shield saved before the special stage should return with Sonic");
+        var shield = player.getShieldObject();
+        var field = shield.getClass().getDeclaredField("animationLifecycle");
+        field.setAccessible(true);
+        var lifecycle = (com.openggf.game.rewind.RewindStateful<?>) field.get(shield);
+        fixture.stepIdleFrames(1);
+        var before = lifecycle.captureRewindStateValue();
+        fixture.stepIdleFrames(10);
+        org.junit.jupiter.api.Assertions.assertNotEquals(before, lifecycle.captureRewindStateValue(),
+                "Returned elemental shield must keep animating through the object manager");
+        player.removeShield();
+        fixture.stepIdleFrames(2);
+        org.junit.jupiter.api.Assertions.assertTrue(
+                levelManager.getObjectManager().getActiveObjects().contains(player.getInstaShieldObject()),
+                "Deferred Insta-Shield must register once the elemental shield is gone");
     }
 
     @Test

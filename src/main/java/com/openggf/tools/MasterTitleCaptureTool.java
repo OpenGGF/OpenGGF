@@ -68,6 +68,11 @@ public final class MasterTitleCaptureTool {
                 new Scene("10-hub-overridden", List.of(down, down, right, enter, down, down, down, down, right, esc, enter), 30),
                 new Scene("11-settings", List.of(up, right, enter), 20),
                 new Scene("12-settings-tabs", List.of(up, right, enter, up), 20),
+                new Scene("rewind-settings-scope", gameplaySettingKeys(SonicConfiguration.REWIND_BUDGET_SCOPE, false), 20),
+                new Scene("rewind-settings-budget", gameplaySettingKeys(SonicConfiguration.REWIND_BUDGET_SECONDS, false), 20),
+                new Scene("rewind-settings-off", gameplaySettingKeys(SonicConfiguration.REWIND_BUDGET_SECONDS, false), 20),
+                new Scene("rewind-settings-choices", gameplaySettingKeys(SonicConfiguration.REWIND_BUDGET_SECONDS, true), 20),
+                new Scene("rewind-settings-stages", gameplaySettingKeys(SonicConfiguration.REWIND_SPECIAL_STAGES, false), 20),
                 new Scene("13-settings-gameplay", List.of(up, right, enter, up, right, right, right, down), 20),
                 new Scene("14-settings-controls", List.of(up, right, enter, up, right, right, down, down, down, down,
                         down, down, down, down, down, down), 20),
@@ -136,7 +141,7 @@ public final class MasterTitleCaptureTool {
                 new Scene("26-paused-setup-character", List.of(down, right, enter, down), 20),
                 new Scene("27-paused-settings", List.of(up, right, enter), 20),
                 new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20),
-                new Scene("29-settings-restart-row", advancedSettingKeys(SonicConfiguration.FPS), 20),
+                new Scene("29-settings-restart-row", advancedSettingKeys(SonicConfiguration.DISPLAY_PACING), 20),
                 new Scene("30-hub-restart-pending", List.of(), 40),
                 new Scene("31-settings-restart-pending", List.of(up, right, enter, up), 20),
                 new Scene("32-paused-zoom-start", List.of(), 0),
@@ -181,9 +186,13 @@ public final class MasterTitleCaptureTool {
             if (paused != null) all.addAll(pausedScenes);
             else all.addAll(pausedScenes.subList(10, 13));
             for (Scene scene : all) {
+                String prefix = System.getProperty("openggf.capture.scenePrefix", "");
+                if (!scene.name().startsWith(prefix)) continue;
                 Path configDir = Files.createTempDirectory("master-title-capture");
                 SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
                 config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+                if (scene.name().equals("rewind-settings-off"))
+                    config.setConfigValue(SonicConfiguration.REWIND_BUDGET_SCOPE, "off");
                 if (scene.name().contains("restart-pending")) {
                     // A frame-rate change saved in Settings since start-up, which waits for a restart.
                     com.openggf.configuration.PendingRestart.captureAtStart(config);
@@ -419,6 +428,17 @@ public final class MasterTitleCaptureTool {
         } catch (java.io.IOException ignored) {
             // Best effort: the capture never depends on removing its scratch configuration.
         }
+    }
+
+    /** Reach a budget preference through the real Settings navigation, without fixed row offsets. */
+    private static List<Integer> gameplaySettingKeys(SonicConfiguration key, boolean picker) {
+        var keys = new java.util.ArrayList<>(List.of(GLFW_KEY_UP, GLFW_KEY_RIGHT, GLFW_KEY_ENTER,
+                GLFW_KEY_UP, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT, GLFW_KEY_RIGHT, GLFW_KEY_DOWN));
+        var settings = com.openggf.configuration.EngineSettingsDraft.pageKeys(
+                com.openggf.configuration.EngineSettingsDraft.Category.GAMEPLAY);
+        for (int i = 0; i < settings.indexOf(key); i++) keys.add(GLFW_KEY_DOWN);
+        if (picker) keys.add(GLFW_KEY_ENTER);
+        return keys;
     }
 
     private static List<Integer> advancedSettingKeys(SonicConfiguration key) {

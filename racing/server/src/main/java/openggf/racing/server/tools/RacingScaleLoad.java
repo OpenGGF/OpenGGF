@@ -249,7 +249,7 @@ final class RacingScaleLoad implements AutoCloseable {
     private Peer connect(int index) throws Exception {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(RacingScaleTool.identityPath(run, roomIndex, index));
         String name = "R" + roomIndex + "P" + index;
-        MasterClient master = future(MasterClient.connect(endpoint, identity, name, RacingScaleTool.FP, null));
+        MasterClient master = future(MasterClient.connect(endpoint.toString(), identity, name, RacingScaleTool.FP, null));
         masters.add(master);
         if (roomId == null) {
             roomId = future(master.createRoom(new ControlMessage.RoomDescriptor("Scale " + roomIndex,
@@ -271,7 +271,7 @@ final class RacingScaleLoad implements AutoCloseable {
 
     private void rejectOverflow() throws Exception {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(RacingScaleTool.identityPath(run, roomIndex, config.players()));
-        try (MasterClient overflow = future(MasterClient.connect(endpoint, identity, "OVERFLOW", RacingScaleTool.FP, null))) {
+        try (MasterClient overflow = future(MasterClient.connect(endpoint.toString(), identity, "OVERFLOW", RacingScaleTool.FP, null))) {
             try {
                 RaceConnection connection = future(overflow.joinRoom(roomId, identity, "OVERFLOW", RacingScaleTool.FP));
                 connection.close();
@@ -324,7 +324,7 @@ final class RacingScaleLoad implements AutoCloseable {
     }
 
     private MasterClient backgroundConnect(PlayerIdentity identity, String name) throws Exception {
-        CompletableFuture<MasterClient> pending = MasterClient.connect(endpoint, identity, name, RacingScaleTool.FP, null);
+        CompletableFuture<MasterClient> pending = MasterClient.connect(endpoint.toString(), identity, name, RacingScaleTool.FP, null);
         try {
             return pending.get(config.timeoutSeconds(), TimeUnit.SECONDS);
         } catch (Exception failure) {
@@ -372,7 +372,7 @@ final class RacingScaleLoad implements AutoCloseable {
         peers.getFirst().connection.close();
         await(() -> peers.stream().allMatch(peer -> !peer.connection.isOpen()), "host departure disconnects guests");
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(RacingScaleTool.identityPath(run, roomIndex, config.players() + 1));
-        try (MasterClient observer = future(MasterClient.connect(endpoint, identity, "OBSERVER", RacingScaleTool.FP, null))) {
+        try (MasterClient observer = future(MasterClient.connect(endpoint.toString(), identity, "OBSERVER", RacingScaleTool.FP, null))) {
             await(() -> {
                 try {
                     return future(observer.listRooms("s3k", 0)).rooms().stream()

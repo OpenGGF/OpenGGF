@@ -10,8 +10,6 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.ConstantDynamic;
-import org.objectweb.asm.signature.SignatureReader;
-import org.objectweb.asm.signature.SignatureVisitor;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -48,6 +46,16 @@ public final class ModValidator {
     private static final String MOD_API_DESCRIPTOR = "Lcom/openggf/game/ModApi;";
     private static final Map<String, EngineClassInfo> ENGINE_CLASSES = new ConcurrentHashMap<>();
     private static final EngineClassInfo MISSING_ENGINE_CLASS = new EngineClassInfo(null, List.of(), false, 0);
+
+    public enum ValidationMode { EXPERT_LEGACY, SUPPORTED_ONLY }
+    private ValidationMode mode = ValidationMode.EXPERT_LEGACY;
+    private SupportedModContract supportedContract;
+
+    public ModValidator(ValidationMode mode) {
+        this();
+        this.mode = Objects.requireNonNull(mode);
+        if (mode == ValidationMode.SUPPORTED_ONLY) supportedContract = new SupportedModContract();
+    }
 
     private final Set<String> trustedApi;
     private final ModInputLimits limits;
@@ -149,8 +157,20 @@ public final class ModValidator {
             } else if (supportedObjectBase) {
                 validateObject(info, classes, findings);
             }
+            if (mode == ValidationMode.SUPPORTED_ONLY) {
+                for (String reference : info.engineReferences)
+                    if (!supportedContract.supportedType(reference))
+                        findings.add(error("UNSUPPORTED_ENGINE_SYMBOL", info.name, "", reference + "; " + SupportedModContract.HINT));
+                for (MemberReference ref : info.memberReferences) {
+                    String owner = resolveAuthoredOwner(ref.owner, ref.name, ref.descriptor, classes, new HashSet<>());
+                    if (owner == null && !classes.containsKey(ref.owner)) owner = ref.owner; // Missing engine members fail closed.
+                    if (owner != null && (SupportedModContract.engine(owner) || SupportedModContract.forbiddenOperation(owner,ref.name)) && !supportedContract.consumableMember(owner, ref.name, ref.descriptor))
+                        findings.add(error("UNSUPPORTED_ENGINE_MEMBER", info.name, ref.name, owner + "#" + ref.name + "; " + SupportedModContract.HINT));
+                }
+                if (info.name.startsWith("com/openggf/")) findings.add(error("ENGINE_NAMESPACE", info.name, "", "Creator classes cannot own engine names"));
+            }
             for (String reference : info.engineReferences) {
-                if (!isTrustedApi(reference) && (!classes.containsKey(reference)
+                if (mode == ValidationMode.EXPERT_LEGACY && !isTrustedApi(reference) && (!classes.containsKey(reference)
                         || reference.startsWith("com/openggf/"))) {
                     findings.add(warning("NON_API_ENGINE_REFERENCE", info.name, "", reference
                             + " is reachable engine internals without a compatibility promise"));
@@ -162,6 +182,19 @@ public final class ModValidator {
                 .thenComparing(ModValidationFinding::member)
                 .thenComparing(ModValidationFinding::message));
         return new ModValidationReport(findings);
+    }
+
+    private String resolveAuthoredOwner(String owner, String name, String descriptor,
+                                                Map<String, ClassInfo> classes, Set<String> seen) {
+        if (!seen.add(owner)) return null;
+        ClassInfo info = classes.get(owner);
+        if (info == null) return supportedContract.declaringOwner(owner,name,descriptor);
+        if (info.declaredMembers.contains(name + descriptor)) return null;
+        for (String parent : info.interfaces) {
+            String resolved = resolveAuthoredOwner(parent,name,descriptor,classes,seen);
+            if (resolved != null && SupportedModContract.engine(resolved)) return resolved;
+        }
+        return info.superName == null ? null : resolveAuthoredOwner(info.superName,name,descriptor,classes,seen);
     }
 
     private boolean isTrustedApi(String internalName) {
@@ -274,9 +307,18 @@ public final class ModValidator {
                 info.referenceDescriptor(descriptor); return info.annotationValues();
             }
 
+            @Override public org.objectweb.asm.RecordComponentVisitor visitRecordComponent(String name, String descriptor, String signature) {
+                info.referenceDescriptor(descriptor); info.referenceSignature(signature);
+                return new org.objectweb.asm.RecordComponentVisitor(Opcodes.ASM9) {
+                    @Override public AnnotationVisitor visitAnnotation(String d, boolean v) { info.referenceDescriptor(d); return info.annotationValues(); }
+                    @Override public AnnotationVisitor visitTypeAnnotation(int r, org.objectweb.asm.TypePath p, String d, boolean v) { info.referenceDescriptor(d); return info.annotationValues(); }
+                };
+            }
+
             @Override public FieldVisitor visitField(int access, String name, String descriptor,
                                                      String signature, Object value) {
                 FieldInfo field = new FieldInfo(access, name, descriptor, value);
+                info.declaredMembers.add(name + descriptor);
                 info.fields.add(field); info.referenceDescriptor(descriptor);
                 info.referenceSignature(signature);
                 return new FieldVisitor(Opcodes.ASM9) {
@@ -294,6 +336,7 @@ public final class ModValidator {
 
             @Override public MethodVisitor visitMethod(int access, String name, String descriptor,
                                                        String signature, String[] exceptions) {
+                info.declaredMembers.add(name + descriptor);
                 if (name.equals("<clinit>")) info.classInitializer = true;
                 info.referenceMethodDescriptor(descriptor);
                 info.referenceSignature(signature);
@@ -316,6 +359,7 @@ public final class ModValidator {
                 }
                 return new MethodVisitor(Opcodes.ASM9) {
                     final String methodKey = name + descriptor;
+                    @Override public AnnotationVisitor visitAnnotationDefault() { return info.annotationValues(); }
                     @Override public AnnotationVisitor visitAnnotation(String annotation, boolean visible) {
                         info.referenceDescriptor(annotation); return info.annotationValues();
                     }
@@ -341,6 +385,7 @@ public final class ModValidator {
                     }
                     @Override public void visitMethodInsn(int opcode, String owner, String method,
                                                           String desc, boolean isInterface) {
+                        info.memberReferences.add(new MemberReference(owner, method, desc));
                         info.reference(owner); info.referenceMethodDescriptor(desc);
                         if (method.equals("services")
                                 && desc.endsWith("Lcom/openggf/level/objects/ObjectServices;")) {
@@ -351,6 +396,7 @@ public final class ModValidator {
                         }
                     }
                     @Override public void visitFieldInsn(int opcode, String owner, String field, String desc) {
+                        info.memberReferences.add(new MemberReference(owner, field, desc));
                         info.reference(owner); info.referenceDescriptor(desc);
                         if (opcode == Opcodes.PUTSTATIC && owner.equals(info.name)) {
                             info.staticWrites.add(field);
@@ -588,6 +634,8 @@ public final class ModValidator {
         boolean classInitializer;
         final List<String> interfaces = new ArrayList<>();
         final List<FieldInfo> fields = new ArrayList<>();
+        final Set<MemberReference> memberReferences = new HashSet<>();
+        final Set<String> declaredMembers = new HashSet<>();
         final Set<String> engineReferences = new HashSet<>();
         final Set<String> staticWrites = new HashSet<>();
         final Set<String> servicesMethods = new HashSet<>();
@@ -605,17 +653,15 @@ public final class ModValidator {
         }
         void referenceSignature(String signature) {
             if (signature == null) return;
-            SignatureVisitor visitor = new SignatureVisitor(Opcodes.ASM9) {
-                @Override public void visitClassType(String name) { reference(name); }
-            };
-            SignatureReader reader = new SignatureReader(signature);
-            try { reader.accept(visitor); }
-            catch (IllegalArgumentException error) { reader.acceptType(visitor); }
+            for (String name : SupportedModContract.signatureTypes(null,signature,null)) reference(name);
         }
         AnnotationVisitor annotationValues() {
             return new AnnotationVisitor(Opcodes.ASM9) {
                 @Override public void visit(String name, Object value) { referenceValue(value); }
-                @Override public void visitEnum(String name, String descriptor, String value) { referenceDescriptor(descriptor); }
+                @Override public void visitEnum(String name, String descriptor, String value) {
+                    referenceDescriptor(descriptor);
+                    memberReferences.add(new MemberReference(Type.getType(descriptor).getInternalName(),value,descriptor));
+                }
                 @Override public AnnotationVisitor visitAnnotation(String name, String descriptor) {
                     referenceDescriptor(descriptor); return this;
                 }
@@ -633,6 +679,7 @@ public final class ModValidator {
             }
         }
         void referenceHandle(Handle handle) {
+            memberReferences.add(new MemberReference(handle.getOwner(), handle.getName(), handle.getDesc()));
             reference(handle.getOwner());
             int tag = handle.getTag();
             if (tag == Opcodes.H_GETFIELD || tag == Opcodes.H_GETSTATIC
@@ -643,6 +690,7 @@ public final class ModValidator {
             }
         }
     }
+    private record MemberReference(String owner, String name, String descriptor) { }
     private record EngineClassInfo(String superName, List<String> interfaces, boolean modApi, int access) { }
     private record FieldInfo(int access, String name, String descriptor, Object value,
                              Set<String> annotations) {

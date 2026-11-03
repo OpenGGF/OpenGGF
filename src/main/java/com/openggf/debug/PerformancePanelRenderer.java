@@ -312,6 +312,12 @@ public class PerformancePanelRenderer {
             }
         }
 
+        // Live window pacing: picture/service rates and whether pictures are blended.
+        for (String line : com.openggf.Engine.livePresentationPanelLines()) {
+            memY -= lineHeight;
+            drawTextBottomLeft(line, textX, memY, DebugColor.CYAN);
+        }
+
         textRenderer.endBatch();
     }
 

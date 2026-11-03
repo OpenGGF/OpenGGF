@@ -49,6 +49,7 @@ import com.openggf.debug.DebugRenderer;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.DebugState;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelMotionAccess;
 import com.openggf.level.Level;
 import com.openggf.level.MutableLevel;
 import com.openggf.game.session.EditorCursorState;
@@ -192,6 +193,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				com.openggf.game.presentation.TransportHud.Status.PAUSE, "PAUSE", "", "", -1);
 	private static final long USER_PAUSE_SCREENSHOT_HIDE_NANOS = 1_000_000_000L;
 	private DisplayColorProfileController displayColorProfileController;
+	private com.openggf.graphics.DisplayInterpolationController displayInterpolationController;
 	private DisplayShaderController displayShaderController;
 	private DisplayShaderPickerController displayShaderPickerController;
 	private final DisplayShaderPickerRenderer displayShaderPickerRenderer = new DisplayShaderPickerRenderer();
@@ -811,11 +813,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		}
 
-		// Make the OpenGL context current
+		// Make the OpenGL context current. LiveFrameRuntime is the sole live swap-interval writer.
 		glfwMakeContextCurrent(window);
-
-		// Enable v-sync
-		glfwSwapInterval(1);
 
 		// Apply the saved desktop mode before showing the window.
 		displayWindowController = new DisplayWindowController(window);
@@ -1042,6 +1041,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void initializePresentationGraphics() throws IOException {
 		graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
 		com.openggf.graphics.GraphicsProjectionAccess.install(graphicsManager, this);
+		displayInterpolationController = new com.openggf.graphics.DisplayInterpolationController(configService);
 		displayColorProfileController = DisplayColorProfileController.fromConfig(
 				configService,
 				graphicsManager,
@@ -2905,8 +2905,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void loop() {
-		liveFrames = createLiveFrameRuntime(this::renderScheduledFrame, () -> glfwSwapBuffers(window));
-		long previousTime = System.nanoTime();
+		liveFrames = createLiveFrameRuntime(new LiveEndpoints(this::renderScheduledFrame, () -> glfwSwapBuffers(window),
+				org.lwjgl.glfw.GLFW::glfwSwapInterval, displayWindowController::output,
+				() -> com.openggf.audio.AudioManagerInternalAccess.speakerRateRegulated(audioManager), System::nanoTime));
 		while (!glfwWindowShouldClose(window)) {
 			textInputWindow.pollEvents();
 			gameLoop.modSceneHost.flushClipboardWrites();
@@ -2919,29 +2920,34 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				windowWidth = framebuffer.width(); windowHeight = framebuffer.height();
 				reshape(windowWidth, windowHeight);
 			}
-			long observed = System.nanoTime();
-			var iteration = liveFrames.iterate(observed - previousTime);
-			previousTime = iteration.wallAnchor(observed, System.nanoTime());
-			if (paused) {
-				try { Thread.sleep(33); }
-				catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return; }
-			} else {
-				// Work, capture backpressure and swap time count against this absolute deadline.
-				waitForFrameDeadline(previousTime + iteration.nanosUntilNextIteration());
-			}
+			// Work, capture backpressure and swap time count against this absolute deadline.
+			waitForFrameDeadline(liveFrames.iterate().wakeAtNanos());
 		}
 		if (schedulingRegistry != null) schedulingRegistry.deregisterPostRestoreCallback("live-scheduling");
 	}
 
+	/** Window, device and clock endpoints the live runtime drives; tests substitute fakes. */
+	record LiveEndpoints(java.util.function.Consumer<LivePictureRequest> render, Runnable swap,
+			java.util.function.IntConsumer swapInterval, java.util.function.Supplier<DisplayOutput> output,
+			java.util.function.BooleanSupplier speakerRegulated, java.util.function.LongSupplier clock) { }
+
 	/** Same live coordinator for the window host and isolated production-path tests. */
-	LiveFrameRuntime createLiveFrameRuntime(java.util.function.Consumer<Boolean> render, Runnable swap) {
+	LiveFrameRuntime createLiveFrameRuntime(LiveEndpoints endpoints) {
+		var render = endpoints.render();
+		var swap = endpoints.swap();
 		return new LiveFrameRuntime(new LiveFrameRuntime.Owner() {
-			public int simulationHz() { return FrameRateResolver.simulation(configService); }
-			public int presentationHz() { return resolveTargetFps(configService); }
-			public boolean focused() { return !paused; }
-			public boolean hostPaused() { return gameLoop.isPaused(); }
-			public Object boundary() { return liveSchedulingBoundary(); }
-			public boolean tick() {
+			public LiveFrameRuntime.HostState hostState() {
+				DisplayOutput output = endpoints.output().get();
+				return new LiveFrameRuntime.HostState(FrameRateResolver.simulation(configService),
+						FrameRateResolver.presentation(configService, output.advertisedRefreshHz()), !paused, gameLoop.isPaused(), liveSchedulingBoundary(),
+						liveCaptureController.state() == LiveCaptureController.State.ACTIVE,
+						suspension.requiresScenePicture() || liveStepPicturePending,
+						FrameRateResolver.pacing(configService), output,
+						endpoints.speakerRegulated().getAsBoolean(),
+						configService.getBoolean(SonicConfiguration.DISPLAY_INTERPOLATION), screenshotRequested,
+						FrameRateResolver.automaticPresentation(configService));
+			}
+			public boolean tick(boolean interpolationActive) {
 				return runFrameWithModAbort(() -> {
 					suspension.betweenFrames(suspensionEffects);
 					// Resource installation is a window-thread obligation even without a picture.
@@ -2954,14 +2960,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						pendingRegionWorkNanos += System.nanoTime() - started;
 					}
 					graphicsManager.runPendingRenderThreadTasks();
+					observeLiveMotion(interpolationActive);
 				}, Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
 			}
-			public boolean captureActive() { return liveCaptureController.state() == LiveCaptureController.State.ACTIVE; }
-			public boolean requiresPicture() { return suspension.requiresScenePicture() || liveStepPicturePending; }
-			public boolean draw(boolean capture) {
+			public boolean draw(LivePictureRequest picture) {
 				liveSceneSubmissionsBefore = gameLoop.modSceneHost.renderedSubmissions();
 				return runFrameWithModAbort(() -> {
-					render.accept(capture);
+					render.accept(picture);
 					liveStepPicturePending = false;
 				},
 						Engine.this::discardAbortedLiveFrame, gameLoop::returnToMasterTitle);
@@ -2969,18 +2974,36 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void swap() {
 				sceneFocusPresentation.swapPrepared(swap, liveSceneSubmissionsBefore, gameLoop.modSceneHost.renderedSubmissions());
 			}
+			public void swapInterval(int interval) { endpoints.swapInterval().accept(interval); }
 			public void serviceDevice() { com.openggf.audio.AudioManagerInternalAccess.serviceDevice(audioManager); }
-		});
+		}, endpoints.clock());
 	}
 
 	/** Host diagnostics; no gameplay or scheduler state is exposed through the Mod API. */
+	/** Short performance-panel lines; empty when no live window scheduler runs (offline tools). */
+	public static java.util.List<String> livePresentationPanelLines() {
+		if (instance == null || instance.liveFrames == null) return java.util.List.of();
+		var stats = instance.liveFrames.statistics();
+		return java.util.List.of(
+				String.format(java.util.Locale.ROOT, "pic %.1f svc %.1f", stats.picturesPerSecond(), stats.servicesPerSecond()),
+				String.format(java.util.Locale.ROOT, "blend %.1f a%.2f", stats.blendedPerSecond(), stats.lastAlpha()),
+				"int " + stats.interpolation(),
+				LevelMotionAccess.panelOutcome(instance.levelManager));
+	}
+
 	public static String liveSchedulingDiagnostics() {
 		if (instance == null || instance.liveFrames == null) return "Live scheduler: inactive\n";
 		var stats = instance.liveFrames.statistics();
-		return "Region services: " + stats.simulationHz() + " Hz; display limit: " + stats.presentationHz()
-				+ " FPS\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
+		return "Region services: " + stats.regionHz() + " Hz; display limit: " + stats.pictureCap()
+				+ " FPS\nCadence: " + stats.cadence() + " (interval " + stats.swapInterval() + ", reason "
+				+ stats.reason() + "); measured presents: " + String.format(java.util.Locale.ROOT, "%.3f", stats.measuredPresentHz())
+				+ " Hz\nCompleted services: " + stats.services() + "; pictures: " + stats.pictures()
 				+ "; swaps: " + stats.swaps() + "\nPending services: " + stats.pendingTicks()
-				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n";
+				+ "; discarded wall time: " + stats.discardedWallNanos() + " ns\n"
+				+ String.format(java.util.Locale.ROOT, "Interpolation: %s; alpha %.2f\nRates: %.1f pictures/s, %.1f blended/s, %.1f services/s\n",
+						stats.interpolation(), stats.lastAlpha(), stats.picturesPerSecond(), stats.blendedPerSecond(),
+						stats.servicesPerSecond())
+				+ LevelMotionAccess.diagnostics(instance.levelManager) + "\n";
 	}
 
 	private void discardAbortedLiveFrame() {
@@ -3029,9 +3052,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * can reach a scene. All GLFW calls stay on the window thread. This is an observation
 	 * cadence, not a hardware timestamp guarantee: rendering and OS scheduling can delay
 	 * a poll. Only the final quarter-millisecond retains the existing precision spin.
+	 * An unfocused window waits here too, on the runtime's longer deadline.
 	 */
 	private void waitForFrameDeadline(long deadlineNanos) {
-		while (!paused && !glfwWindowShouldClose(window)) {
+		while (!glfwWindowShouldClose(window)) {
 			long remainingNanos = deadlineNanos - System.nanoTime();
 			if (remainingNanos <= 0) return;
 			if (remainingNanos <= 250_000) {
@@ -3063,7 +3087,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void displayFrame() {
 		suspension.betweenFrames(suspensionEffects);
 		liveFrame = advanceFrame();
-		renderScheduledFrame(true);
+		renderScheduledFrame(new LivePictureRequest.CaptureLatest());
+	}
+
+	/** The live window's only interpolation-history writer; offline drivers never retain history. */
+	private void observeLiveMotion(boolean interpolationActive) {
+		LevelMotionAccess.observeService(levelManager, spriteManager, interpolationActive);
 	}
 
 	private boolean beginPictureProfiling() {
@@ -3080,7 +3109,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		return performanceOverlayEnabled;
 	}
 
-	private void renderScheduledFrame(boolean capture) {
+	private void renderScheduledFrame(LivePictureRequest picture) {
 		boolean performanceOverlayEnabled = beginPictureProfiling();
 
 		syncEditorChromeViewport();
@@ -3107,7 +3136,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		FrameAdvance frame = liveFrame != null ? liveFrame
 				: new FrameAdvance(graphicsManager.getUiRenderPipeline(), false, false);
-		renderAdvancedFrame(frame, performanceOverlayEnabled, capture);
+		LevelMotionAccess.present(levelManager, picture.selection(), () -> renderAdvancedFrame(frame, performanceOverlayEnabled, picture.capture()));
 
 		profiler.endFrame();
 		overlayStateReady = false;
@@ -3169,7 +3198,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
-				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
+				() -> {
+					if (displayColorProfileController != null) displayColorProfileController.update(inputHandler);
+					if (displayInterpolationController != null) displayInterpolationController.update(inputHandler);
+				},
 				() -> { if (displayShaderController != null) displayShaderController.update(inputHandler); });
 	}
 
@@ -3779,10 +3811,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void renderDisplayColorProfileNotification() {
-		if (displayColorProfileController == null) {
-			return;
+		String text = displayInterpolationController != null ? displayInterpolationController.notificationText() : null;
+		if (text == null && displayColorProfileController != null) {
+			text = displayColorProfileController.notificationText();
 		}
-		String text = displayColorProfileController.notificationText();
 		if (text == null) {
 			return;
 		}

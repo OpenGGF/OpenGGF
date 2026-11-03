@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.audio.S3kLevelMusicRestore;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayerCharacter;
@@ -538,7 +540,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
         minibossStartReleased = true;
         if (audio() != null) {
-            audio().playMusic(Sonic3kMusic.MINIBOSS.id);
+            audio().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
         }
         spawnMinibossScrollControlOnce();
     }
@@ -895,10 +897,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
         // Restore_LevelMusic ($85B60) derives Current_music from the apparent
         // zone/act and selects invincibility playback from P1's secondary status.
-        int music = levelManager().getApparentLevelMusicId();
-        if (player.getInvincibleFrames() > 0 || player.isSuperSonic()) {
-            music = Sonic3kMusic.INVINCIBILITY.id;
-        }
+        int music = S3kLevelMusicRestore.resolve(levelManager().getApparentLevelMusicId(), player);
         if (music >= 0) {
             audio().playMusic(music);
         }

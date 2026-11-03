@@ -206,7 +206,9 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (parentResults != null && !completionReported) {
+        // Render_Sprites / loc_1AE58 (sonic3k.asm:36481-36518):
+        // flag $40 entries are culled before any main/child mapping expansion.
+        if (parentResults != null && !completionReported && isWithinRenderWindow()) {
             parentResults.appendElementRender(this, commands);
         }
     }

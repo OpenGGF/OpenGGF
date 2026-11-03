@@ -1898,6 +1898,141 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void s3kLrzBridgeAndSszPlatformRejectZeroDistanceButLandInside() {
+        for (boolean lrz : new boolean[] {true, false}) {
+            for (int overlap : new int[] {0, 1, 16, 17}) {
+                ObjectSpawn spawn = new ObjectSpawn(100, 100, 0, 0, 0, false, 0);
+                AbstractObjectInstance object = lrz
+                        ? new com.openggf.game.sonic3k.objects.LrzCollapsingBridgeInstance(spawn)
+                        : new com.openggf.game.sonic3k.objects.SszFloatingPlatformObjectInstance(spawn);
+                ObjectManager manager = buildManager(object);
+                object.snapshotPreUpdatePosition();
+                SolidObjectParams params = ((SolidObjectProvider) object).getSolidParams();
+                TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+                player.useGameRules(GameRules.SONIC_3K);
+                player.setWidth(20);
+                player.setHeight(38);
+                player.setAir(true);
+                player.setYSpeed((short) 0x100);
+                player.setCentreX((short) 100);
+                int y = 100 - 4 - params.groundHalfHeight() - player.getYRadius() + overlap;
+                player.setCentreY((short) y);
+                player.resetPositionHistory();
+
+                runObjectPass(manager, player);
+
+                String context = object.getClass().getSimpleName() + " overlap=" + overlap;
+                boolean lands = overlap >= 1 && overlap <= 16;
+                assertEquals(lands, player.isOnObject(), context);
+                assertEquals(!lands, player.getAir(), context);
+                assertEquals(lands ? 0 : 0x100, player.getYSpeed(), context);
+                if (!lands) assertEquals(y, player.getCentreY(), context);
+            }
+        }
+    }
+
+    @Test
+    public void s3kFlatTopWindowUsesRomD3RatherThanPlayerCollisionModel() {
+        for (GameRules rules : List.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K)) {
+            for (int overlap : new int[] {0, 1, 16, 17}) {
+                ObjectSpawn spawn = new ObjectSpawn(100, 100, 0, 0, 0, false, 0);
+                var object = new com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance(spawn);
+                ObjectManager manager = buildManager(object);
+                object.snapshotPreUpdatePosition();
+                TestPlayableSprite player = topWindowPlayer();
+                player.useGameRules(rules);
+                // loc_31BD2 (sonic3k.asm:67184-67188): d3=$11, not height_pixels=$10.
+                int y = 100 - 0x11 - player.getYRadius() - 4 + overlap;
+                player.setCentreY((short) y);
+                player.resetPositionHistory();
+
+                runObjectPass(manager, player);
+
+                assertTopWindowResult(player, overlap, y);
+            }
+        }
+    }
+
+    @Test
+    public void s3kFlatTopWindowMirrorsTheNativeReverseEntry() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        com.openggf.game.GameServices.gameState().setReverseGravityActive(true);
+        for (int overlap : new int[] {0, 1, 16, 17}) {
+            var object = new com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance(
+                    new ObjectSpawn(100, 100, 0, 0, 0, false, 0));
+            ObjectManager manager = buildManager(object);
+            object.snapshotPreUpdatePosition();
+            TestPlayableSprite player = topWindowPlayer();
+            int radius = player.getYRadius();
+            // loc_1E4D6 (sonic3k.asm:42093-42112): mirrored feet, same -16..-1 gate.
+            int y = 100 + 0x11 + radius + 4 - overlap;
+            player.setCentreY((short) y);
+            player.resetPositionHistory();
+
+            runObjectPass(manager, player);
+
+            assertTopWindowResult(player, overlap, y);
+            if (overlap >= 1 && overlap <= 16) {
+                assertEquals(100 + 0x11 + radius, player.getCentreY());
+            }
+        }
+    }
+
+    @Test
+    public void s3kSlopedTopWindowUsesRawSurfaceIndependentOfBodyHeight() {
+        for (int nativeSample : new int[] {0, -28}) {
+            // AIZFlippingBridge_ArcHeights (sonic3k.asm:59061-59065) starts at -$1C.
+            byte[] samples = nativeSample == 0 ? new byte[16]
+                    : new com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance(
+                            new ObjectSpawn(100, 100, 0, 0, 0, false, 0)).getSlopeData();
+            for (int overlap : new int[] {0, 1, 16, 17}) {
+                var object = new S3kSlopedTopProbe(samples);
+                ObjectManager manager = buildManager(object);
+                TestPlayableSprite player = topWindowPlayer();
+                // SolidObjCheckSloped2 (sonic3k.asm:42133-42142): raw signed surface.
+                int y = 100 - nativeSample - player.getYRadius() - 4 + overlap;
+                player.setCentreY((short) y);
+                player.resetPositionHistory();
+
+                runObjectPass(manager, player);
+
+                assertTopWindowResult(player, overlap, y);
+            }
+        }
+    }
+
+    private TestPlayableSprite topWindowPlayer() {
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setCentreX((short) 100);
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        return player;
+    }
+
+    private void assertTopWindowResult(TestPlayableSprite player, int overlap, int originalY) {
+        boolean lands = overlap >= 1 && overlap <= 16;
+        String context = "ROM top overlap=" + overlap;
+        assertEquals(lands, player.isOnObject(), context);
+        assertEquals(!lands, player.getAir(), context);
+        assertEquals(lands ? 0 : 0x100, player.getYSpeed(), context);
+        if (!lands) assertEquals(originalY, player.getCentreY(), context);
+    }
+
+    private static final class S3kSlopedTopProbe extends TestSolidObject
+            implements com.openggf.game.sonic3k.S3kSlopedTopSolidProvider {
+        private final byte[] samples;
+        private S3kSlopedTopProbe(byte[] samples) {
+            super(100, 100, SolidObjectParams.of(16, 30, 31), true);
+            this.samples = samples;
+        }
+        @Override public byte[] getSlopeData() { return samples; }
+        @Override public boolean isSlopeFlipped() { return false; }
+    }
+
+    @Test
     public void cnzTrapDoorSolidObjectTopRejectsExactSurfaceBoundaryAndLandsOnePixelInside() {
         ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x44, 0, 0, false, 0);
         CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
@@ -1919,8 +2054,7 @@ public class TestSolidObjectManager {
         runObjectPass(manager, exactBoundary);
 
         assertFalse(exactBoundary.isOnObject(),
-                "S3K SolidObjectTop returns on d0 == 0: loc_1E45A's cmpi.w #-$10,d0 / blo "
-                        + "accepts only [-$10,-1] (sonic3k.asm:42044-42053)");
+                "loc_1E45A (sonic3k.asm:42044-42055) rejects zero via unsigned cmpi/blo");
         assertTrue(exactBoundary.getAir());
         assertEquals(0x100, exactBoundary.getYSpeed());
         assertEquals(100 - 4 - maxTop, exactBoundary.getCentreY());
@@ -1949,6 +2083,7 @@ public class TestSolidObjectManager {
         ObjectSpawn spawn = new ObjectSpawn(0x1560, 0x0284, 0x44, 0, 0, false, 0);
         CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
         ObjectManager manager = buildManager(object);
+        // Advance past the constructor's no-contact frame, like the object loop.
         object.snapshotPreUpdatePosition();
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
@@ -1969,6 +2104,28 @@ public class TestSolidObjectManager {
         assertFalse(player.isOnObject());
         assertEquals(0x07A8, player.getYSpeed() & 0xFFFF);
         assertEquals(0x0264, player.getCentreY() & 0xFFFF);
+    }
+
+    @Test
+    public void cnzTrapDoorSamplesCurrentPlayerPositionWithNativeUnsignedWindow() {
+        CnzTrapDoorInstance object = new CnzTrapDoorInstance(
+                new ObjectSpawn(100, 100, 0x44, 0, 0, false, 0));
+        ObjectManager manager = buildManager(object);
+        // Advance past the constructor's no-contact frame, like the object loop.
+        object.snapshotPreUpdatePosition();
+        TestPlayableSprite player = topWindowPlayer();
+        int zeroY = 100 - object.getSolidParams().groundHalfHeight() - player.getYRadius() - 4;
+        player.setCentreY((short) zeroY);
+        player.resetPositionHistory();
+        player.setCentreY((short) (zeroY + 1));
+
+        runObjectPass(manager, player);
+
+        // loc_31CCA (sonic3k.asm:67262-67270) -> loc_1E45A (sonic3k.asm:42038-42063)
+        // reads current y_pos, not the previous zero-distance position.
+        assertFalse(player.getAir());
+        assertTrue(player.isOnObject());
+        assertEquals(0, player.getYSpeed());
     }
 
     @Test

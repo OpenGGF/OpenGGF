@@ -25,6 +25,59 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void interpolationShortcutIsRebindableBesideTheColourProfileShortcut() {
+        Fixture f = new Fixture();
+        var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.INPUT);
+        assertEquals(keys.indexOf(DISPLAY_COLOR_PROFILE_TOGGLE_KEY) + 1,
+                keys.indexOf(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+        f.tab(CONTROLS);
+        f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT, 3);
+        f.press(GLFW_KEY_DOWN);
+        f.focus(DISPLAY_INTERPOLATION_TOGGLE_KEY);
+        assertTrue(f.texts().contains("Interpolation shortcut"));
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_F8);
+        assertEquals(GLFW_KEY_N, f.config.getInt(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals(GLFW_KEY_F8, f.config.getInt(DISPLAY_INTERPOLATION_TOGGLE_KEY));
+    }
+
+    @Test
+    void renderingLimitOffersAutoBesideInterpolationAndRetainsCustomNumbers() {
+        Fixture f = new Fixture();
+        var keys = EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.DISPLAY);
+        assertEquals(keys.indexOf(FPS) + 1, keys.indexOf(DISPLAY_INTERPOLATION));
+        assertFalse(EngineSettingsDraft.pageKeys(EngineSettingsDraft.Category.ADVANCED).contains(FPS));
+        assertEquals("PICTURE", EngineSettingLabels.group(FPS));
+        f.focus(FPS);
+        assertTrue(f.texts().contains("Auto (display refresh)"));
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("Auto (display refresh)"));
+        assertTrue(f.texts().contains("30"));
+        f.assertTextBounds(320);
+        f.assertTextBounds(400);
+        f.press(GLFW_KEY_DOWN);
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertEquals(30, f.config.getInt(FPS));
+        f.config.setConfigValue(FPS, 137);
+        f.config.saveConfig();
+        f = new Fixture();
+        f.focus(FPS);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.texts().contains("137"));
+        f.press(GLFW_KEY_ENTER);
+        f.press(GLFW_KEY_ESCAPE);
+        assertEquals(137, f.config.getInt(FPS));
+    }
+
+    @Test
     void spriteScanlineLimitIsEditableAndPersistsOnTheDisplayPage() {
         var key = ConfigCatalog.byPath("display.spriteScanlineLimit");
         assertNotNull(key, "sprite scanline limit must be a persisted setting");
@@ -232,8 +285,8 @@ class TestEngineSettingsScreen {
         f.tab(SOUND);
         boolean original = f.config.getBoolean(AUDIO_ENABLED);
         f.press(GLFW_KEY_RIGHT);
-        f.screen.updatePointer(new MenuInput.Pointer(310, 160, true, false, false));
-        f.screen.updatePointer(new MenuInput.Pointer(250, 12, true, false, false));
+        f.screen.updatePointer(new MenuInput.Pointer(310, 160, true, false, false, 0));
+        f.screen.updatePointer(new MenuInput.Pointer(250, 12, true, false, false, 0));
         f.press(GLFW_KEY_ENTER);
         assertTrue(f.screen.consumeApplied());
         assertTrue(f.screen.consumeCloseRequested());
@@ -393,7 +446,7 @@ class TestEngineSettingsScreen {
                 "a game-start setting keeps both description lines");
         assertFalse(f.texts().contains("RESTART"), "unchanged settings need no restart badge");
 
-        f = new Fixture(EngineSettingsScreen.Scope.ADVANCED);
+        f = new Fixture();
         f.focus(FPS);
         assertFalse(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
         f.press(GLFW_KEY_RIGHT);
@@ -421,7 +474,7 @@ class TestEngineSettingsScreen {
         List<String> texts = f.texts();
         assertTrue(texts.contains("ADVANCED SETTINGS"));
         assertFalse(texts.contains("DISPLAY"), "no tab strip for a single page");
-        assertTrue(texts.stream().anyMatch(text -> text.startsWith("Rendering limit")), "technical display controls live here");
+        assertFalse(texts.stream().anyMatch(text -> text.startsWith("Rendering limit")), "the rendering limit lives beside Interpolation on Display");
     }
 
     @Test
@@ -548,7 +601,7 @@ class TestEngineSettingsScreen {
                 "every non-debug hotkey lives under Controls");
         assertEquals(EngineSettingsDraft.Category.INPUT, EngineSettingsDraft.category(LIVE_REWIND_KEY));
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(MAIN_CHARACTER_CODE));
-        for (var key : List.of(FPS, SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
+        for (var key : List.of(SCALE, DISPLAY_SHADER_LIBRARY_ROOT, DISPLAY_SHADER_DEFAULT_PHASE)) {
             assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(key));
         }
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(CROSS_GAME_SOURCE));
@@ -604,7 +657,7 @@ class TestEngineSettingsScreen {
     }
 
     @Test
-    void promptListsConcreteChangesAndGameplayHasOneRewindRow() {
+    void promptListsConcreteChangesAndGameplayGroupsBudgetControls() {
         Fixture f = new Fixture();
         f.tab(SOUND);
         f.press(GLFW_KEY_RIGHT);
@@ -612,7 +665,8 @@ class TestEngineSettingsScreen {
         // Each change draws its old value, an arrow glyph, then the new value.
         assertTrue(java.util.Collections.indexOfSubList(f.texts(), List.of("On", "Off")) >= 0, f.texts().toString());
         EngineSettingsDraft catalog = new EngineSettingsDraft(f.config);
-        assertEquals(List.of(LIVE_REWIND_ENABLED), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
+        assertEquals(List.of(REWIND_BUDGET_SCOPE, REWIND_BUDGET_SECONDS, REWIND_REFILL_ON_LIFE_LOSS,
+                REWIND_BONUS_STAGES, REWIND_SPECIAL_STAGES), catalog.keys(EngineSettingsDraft.Category.GAMEPLAY).stream()
                 .filter(key -> ConfigCatalog.meta(key).section().equals("rewind")).toList());
         assertEquals(EngineSettingsDraft.Category.ADVANCED, EngineSettingsDraft.category(LOAD_TIME_SIMULATION));
     }
@@ -654,7 +708,7 @@ class TestEngineSettingsScreen {
                     for (var line : f.font.lines) if (c.groups().contains(line.text)) captionsSeen.add(line.text);
                     f.assertTextBounds(width);
                     // The pointer reaches the same row where it is drawn.
-                    f.screen.updatePointer(new MenuInput.Pointer(60, y + 5, true, false, false));
+                    f.screen.updatePointer(new MenuInput.Pointer(60, y + 5, true, false, false, 0));
                     assertEquals(key, f.screen.selectedForTest(), "hover over the drawn row keeps " + key);
                     f.press(GLFW_KEY_DOWN);
                 }
@@ -667,15 +721,35 @@ class TestEngineSettingsScreen {
                 var first = g.screen.selectedForTest();
                 g.font.lines.clear(); g.screen.render(width);
                 int firstY = g.screen.rowYForTest(first);
-                g.screen.updatePointer(new MenuInput.Pointer(60, firstY - 12 + 5, true, true, false));
+                g.screen.updatePointer(new MenuInput.Pointer(60, firstY - 12 + 5, true, true, false, 0));
                 assertEquals(first, g.screen.selectedForTest(), "the caption above the first row is not a row");
                 var second = g.screen.lines().get(2).key();
                 if (second != null) {
-                    g.screen.updatePointer(new MenuInput.Pointer(60, g.screen.rowYForTest(second) + 5, true, false, false));
+                    g.screen.updatePointer(new MenuInput.Pointer(60, g.screen.rowYForTest(second) + 5, true, false, false, 0));
                     assertEquals(second, g.screen.selectedForTest());
                 }
             }
         }
+    }
+
+    @Test
+    void rewindBudgetControlsFollowScopeAndRemainEditableWhileOff() {
+        Fixture f = new Fixture();
+        f.tab(GAMEPLAY);
+        f.focus(REWIND_BUDGET_SCOPE);
+        f.press(GLFW_KEY_LEFT); // Per act -> Per checkpoint
+        f.press(GLFW_KEY_LEFT); // Per checkpoint -> Off
+        f.press(GLFW_KEY_DOWN);
+        assertEquals(REWIND_BUDGET_SECONDS, f.screen.selectedForTest());
+        assertTrue(f.descriptionLines().contains("Used while Rewind is not Off."), f.descriptionLines().toString());
+        f.press(GLFW_KEY_RIGHT); // allowance can be prepared while disabled
+        f.press(GLFW_KEY_UP);
+        f.press(GLFW_KEY_RIGHT); // enable per checkpoint
+        f.press(GLFW_KEY_DOWN);
+        assertFalse(f.descriptionLines().contains("Used while Rewind is not Off."));
+        assertTrue(f.texts().contains("15 s"), f.texts().toString());
+        assertEquals("Per zone", EngineSettingLabels.value(REWIND_BUDGET_SCOPE, "zone"));
+        assertEquals("Unlimited", EngineSettingLabels.value(REWIND_BUDGET_SECONDS, "unlimited"));
     }
 
     @Test
@@ -742,6 +816,23 @@ class TestEngineSettingsScreen {
                     && com.openggf.configuration.SettingTiming.of(key) == com.openggf.configuration.SettingTiming.NEXT_GAME)
                 assertTrue(applies.contains("resume"), key + " also reaches a paused game: " + applies);
         }
+    }
+
+    @Test
+    void wheelMovesTheFocusedRowAndStopsAtTheFirst() {
+        Fixture keys = new Fixture();
+        var first = keys.screen.selectedForTest();
+        keys.press(GLFW_KEY_DOWN, 2);
+        var third = keys.screen.selectedForTest();
+        assertNotEquals(first, third);
+
+        Fixture f = new Fixture();
+        assertTrue(f.screen.updatePointer(new MenuInput.Pointer(60, 100, true, false, false, -2)));
+        assertEquals(third, f.screen.selectedForTest(), "two notches towards the user move down two rows");
+        f.screen.updatePointer(new MenuInput.Pointer(60, 100, true, false, false, 5));
+        assertEquals(first, f.screen.selectedForTest(), "the wheel stops at the first row");
+        f.press(GLFW_KEY_DOWN, 2);
+        assertEquals(third, f.screen.selectedForTest(), "the wheel left keyboard focus in the list");
     }
 
     private final class Fixture {

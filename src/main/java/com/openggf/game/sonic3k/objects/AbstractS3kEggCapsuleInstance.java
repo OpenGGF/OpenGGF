@@ -1,0 +1,54 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+/** Common fixed-capsule ROM state; native child graphs and results continuations remain adapters. */
+public abstract class AbstractS3kEggCapsuleInstance extends AbstractObjectInstance {
+    private final PlayerControlOwners nativeP2ControlOwners = new PlayerControlOwners();
+    protected boolean opened;
+    protected int mappingFrame;
+    protected int postOpenTimer;
+
+    protected AbstractS3kEggCapsuleInstance(ObjectSpawn spawn, String name) {
+        super(spawn, name);
+    }
+
+    // ObjDat_EggCapsule (sonic3k.asm:182246-182250) owns both native priorities.
+    @Override public final int getPriorityBucket() { return RenderPriority.fromS3kWord(0x200); }
+    @Override public final boolean isHighPriority() { return true; }
+
+    /** sub_865DE (sonic3k.asm:181652-181667): common opening writes before child allocation. */
+    protected final void initializeCapsuleOpening() {
+        opened = true;
+        mappingFrame = 1;
+        postOpenTimer = 0x40;
+        if (locksNativeP2CpuOnOpen()) {
+            PlayableEntity candidate = services().playerQuery().nativeP2OrNull();
+            if (candidate instanceof AbstractPlayableSprite p2 && p2.getCpuController() != null) {
+                nativeP2ControlOwners.add(p2);
+                p2.getCpuController().setController2SignedLocked(true);
+            }
+        }
+    }
+
+    protected boolean locksNativeP2CpuOnOpen() { return true; }
+    @Override public void releasePlayersForVisualDirection() {
+        for (var player : nativeP2ControlOwners.players()) {
+            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
+        }
+        nativeP2ControlOwners.clear();
+    }
+
+    protected final void drawCapsuleBody() {
+        var renderer = getRenderer(Sonic3kObjectArtKeys.EGG_CAPSULE);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+        }
+    }
+}

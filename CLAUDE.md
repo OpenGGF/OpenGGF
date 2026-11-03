@@ -23,6 +23,22 @@ Carry authorised work through verification and delivery. User instructions overr
 
 ## Build and verification
 
+Before submitting a focused test, choose its memory lane. Use the ordinary
+command for automatically qualified tests. For other tests, inspect their fixtures
+and allocations; use `--lean` when those needs are known to be bounded. Keep
+unknown, memory-heavy, ROM/trace/native checks in their existing lanes. A focused
+selector alone does not prove small memory use. Normal admission reserves 7 GiB;
+lean admission reserves 4 GiB and caps each JVM heap at 1 GiB. Do not drop required
+flags or coverage to qualify. Report a lean OOM and rerun with `--normal`.
+
+For frequently used small tests, prefer permanent automatic qualification over
+repeated manual lane choices. Review the source and fixtures, verify the exact
+focused command with `--lean`, then add eligible classes to `QUALIFIED_CLASSES`
+in `tools/testing/maven_small.py` and run the Python safety checks. Preserve its
+source and invocation guards; a fast runtime or one low RSS sample is insufficient.
+`BATCH_ONLY_CLASSES` does not qualify focused lifecycle commands. See the
+[testing guide](tools/testing/README.md) for details.
+
 ```bash
 mvn -Dmse=off compile
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test

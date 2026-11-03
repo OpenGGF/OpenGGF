@@ -15,10 +15,12 @@ one.
 | Space | Player 1 action A / jump |
 | I / K / J / L | Player 2 up / down / left / right (`input.player2.up/down/left/right`) |
 | Right Shift | Player 2 action A / jump |
-| Enter | Pause / unpause |
-| Backspace | Player 1 start / in-game pause (engine default; add `input.player1.start` to `config.yaml` to override) |
-| Right Control | Player 2 start |
+| Enter | Player 1 Start / pause / unpause (`input.player1.start`) |
+| Backspace | Player 2 start |
 | Q | Advance one frame (while paused) |
+
+Live Player 1 Start and `input.pause` toggle one visible pause, including audio.
+Recorded playback retains ROM-native Start behavior for accurate replays.
 
 Keyboard B and C action bindings are intentionally unbound by default. All
 three Mega Drive actions act as jump buttons during platforming gameplay when
@@ -32,7 +34,7 @@ available.
 ## Continue screens
 
 After Game Over, a remaining continue opens the game's countdown screen. Press
-Player 1 Start (Backspace by default, or the gamepad Start button) to use it;
+Player 1 Start (Enter by default, or the gamepad Start button) to use it;
 S3K also accepts Player 2 Start. Jump/action buttons do not accept a continue.
 In Sonic 1, Start becomes available after Sonic lands on the floor. Acceptance
 plays the departure animation, spends one continue and restores three lives.
@@ -75,7 +77,7 @@ connected pad:
 | Left bumper | LB | L1 | Hold to rewind live gameplay (`rewind.liveKey`) |
 | Right bumper | RB | R1 | Advance one frame while paused (`debug.keys.frameStep`) |
 | Back button | View | Select | Open/close the per-game options panel on the main menu (stands in for `Tab` in that flow only) |
-| Start | Start | Options | Pause / unpause (`input.pause`, same as Enter -- shows the top-right `PAUSE` plate and halts audio). Not wired to the separate silent ROM in-game pause (`input.player1.start` / Backspace). |
+| Start | Start | Options | Pause / unpause (`input.pause`, same as Enter -- shows the top-right `PAUSE` plate and halts audio). Keyboard Player 1 Start uses this same pause. |
 
 ## Rewind
 

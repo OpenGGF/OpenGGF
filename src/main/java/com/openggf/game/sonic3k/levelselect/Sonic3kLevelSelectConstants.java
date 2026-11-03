@@ -131,30 +131,10 @@ public final class Sonic3kLevelSelectConstants {
     /** Number of zones in the left column */
     public static final int LEFT_COLUMN_ZONE_COUNT = 9;
 
-    /**
-     * Icon table — maps menu index to icon index (0-14).
-     * Each icon is a 4x3 tile (32x24 pixel) zone preview image.
-     *
-     * <p>From s3.asm LevSel_IconTable (line 8872), with S&amp;K zones
-     * reusing existing icon indices.
-     */
+    /** Native save-card indices, in save progression order rather than zone-ID order. */
     public static final int[] ICON_TABLE = {
-            0, 0,    // 0-1   AIZ Act 1-2
-            7, 7,    // 2-3   HCZ Act 1-2
-            8, 8,    // 4-5   MGZ Act 1-2
-            6, 6,    // 6-7   CNZ Act 1-2
-            2, 2,    // 8-9   FBZ Act 1-2
-            5, 5,    // 10-11 ICZ Act 1-2
-            4, 4,    // 12-13 LBZ Act 1-2
-            1, 1,    // 14-15 MHZ Act 1-2
-            9, 9,    // 16-17 SOZ Act 1-2
-            // Right column
-            0xA, 0xA, // 18-19 LRZ Act 1-2
-            3, 3,      // 20-21 SSZ Act 1-2
-            0xB, 0xB,  // 22-23 DEZ Act 1-2
-            0xB, 0xB,  // 24-25 DDZ / (disabled)
-            0xC, 0xC,  // 26-27 Special Stage / (disabled)
-            0xE         // 28    Sound Test
+            0, 0, 1, 1, 2, 2, 3, 3, 7, 7, 4, 4, 5, 5, 6, 6, 8, 8,
+            9, 9, 11, 11, 12, 12, 13, -1, -1, -1, -1
     };
 
     /**

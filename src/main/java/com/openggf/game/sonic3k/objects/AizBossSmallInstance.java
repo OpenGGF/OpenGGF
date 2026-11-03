@@ -33,6 +33,7 @@ import java.util.logging.Logger;
  * <p>Every 16 frames plays {@code cfx_RobotnikSiren}.
  * Rendered using {@link Sonic3kObjectArtKeys#AIZ2_BOSS_SMALL} mapping frame 0.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizBossSmallInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable {
     private static final Logger LOG = Logger.getLogger(AizBossSmallInstance.class.getName());

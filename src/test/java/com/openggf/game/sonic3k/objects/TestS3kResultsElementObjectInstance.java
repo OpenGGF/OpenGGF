@@ -70,6 +70,34 @@ class TestS3kResultsElementObjectInstance {
         assertTrue(child.isDestroyed(), "the next dispatch retires past the live 400px edge");
     }
 
+    @Test
+    void offscreenResultsDoNotSubmitMappingsButPartialAndWideEntriesDo() throws Exception {
+        var parent = mock(S3kResultsScreenObjectInstance.class);
+        var graphics = mock(GraphicsManager.class);
+        when(graphics.getProjectionWidth()).thenReturn(320);
+        var services = new TestObjectServices().withGraphicsManager(graphics);
+        for (int index = 0; index < 12; index++) {
+            var child = new S3kResultsElementObjectInstance(parent, index, PlayerCharacter.SONIC_ALONE);
+            child.setServices(services);
+            child.appendRenderCommands(new java.util.ArrayList<>());
+        }
+        org.mockito.Mockito.verify(parent, org.mockito.Mockito.never()).appendElementRender(
+                org.mockito.Mockito.any(), org.mockito.Mockito.anyList());
+        var child = new S3kResultsElementObjectInstance(parent, 1, PlayerCharacter.SONIC_ALONE);
+        child.setServices(services);
+        setField(child, "currentX", -0x30);
+        child.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(parent).appendElementRender(org.mockito.Mockito.eq(child), org.mockito.Mockito.anyList());
+        org.mockito.Mockito.clearInvocations(parent);
+        setField(child, "currentX", 0x170);
+        child.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(parent, org.mockito.Mockito.never()).appendElementRender(
+                org.mockito.Mockito.any(), org.mockito.Mockito.anyList());
+        when(graphics.getProjectionWidth()).thenReturn(400);
+        child.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(parent).appendElementRender(org.mockito.Mockito.eq(child), org.mockito.Mockito.anyList());
+    }
+
     private static void setField(Object target, String name, Object value) throws Exception {
         Class<?> type = target.getClass();
         while (type != null) {

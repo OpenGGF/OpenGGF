@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.render.SpecialRenderEffectStage;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -374,50 +375,28 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertNotNull(pile, "ICZ1 should spawn Obj_ICZ1BigSnowPile");
         List<GLCommand> commands = new ArrayList<>();
         pile.appendRenderCommands(commands);
-        Object objectPassTileCount = pile.getClass()
-                .getDeclaredMethod("getLastRenderedTileCountForTests")
-                .invoke(pile);
-        assertEquals(0, ((Number) objectPassTileCount).intValue(),
-                "Obj_ICZ1BigSnowPile visual snow should not render in the object/sprite pass");
+        assertTrue(commands.isEmpty(), "The pile must not contribute object/sprite commands");
+        var snow = (com.openggf.game.sonic3k.objects.IczBigSnowPileInstance) pile;
+        var graphics = org.mockito.Mockito.mock(GraphicsManager.class);
+        var context = new SpecialRenderEffectContext(GameServices.camera(), 0, GameServices.level(), graphics);
+        var effects = GameServices.specialRenderEffectRegistry();
+        effects.dispatch(SpecialRenderEffectStage.AFTER_BACKGROUND, context);
+        org.mockito.Mockito.verifyNoInteractions(graphics);
 
-        GameServices.specialRenderEffectRegistry().dispatch(
-                SpecialRenderEffectStage.AFTER_BACKGROUND,
-                new SpecialRenderEffectContext(
-                        GameServices.camera(),
-                        0,
-                        GameServices.level(),
-                        GameServices.graphics()));
-        Object backgroundPassTileCount = pile.getClass()
-                .getDeclaredMethod("getLastRenderedTileCountForTests")
-                .invoke(pile);
-        assertEquals(0, ((Number) backgroundPassTileCount).intValue(),
-                "Obj_ICZ1BigSnowPile visual snow should render in front of low-priority foreground tiles");
+        effects.dispatch(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK, context);
+        int maskTiles = snowTileSubmissions(graphics);
+        assertTrue(maskTiles > 0, "The pile must submit snow tiles into the sprite priority mask");
+        org.mockito.Mockito.clearInvocations(graphics);
+        effects.dispatch(SpecialRenderEffectStage.AFTER_FOREGROUND, context);
+        assertEquals(maskTiles, snowTileSubmissions(graphics), "The foreground overlay must submit the same snow source");
+        org.mockito.Mockito.clearInvocations(graphics);
+        assertEquals(maskTiles, snow.renderBackgroundLayer(context));
+        assertEquals(maskTiles, snowTileSubmissions(graphics), "The returned diagnostic describes this traversal");
+    }
 
-        GameServices.specialRenderEffectRegistry().dispatch(
-                SpecialRenderEffectStage.SPRITE_PRIORITY_MASK,
-                new SpecialRenderEffectContext(
-                        GameServices.camera(),
-                        0,
-                        GameServices.level(),
-                        GameServices.graphics()));
-        Object priorityMaskTileCount = pile.getClass()
-                .getDeclaredMethod("getLastRenderedTileCountForTests")
-                .invoke(pile);
-        assertTrue(((Number) priorityMaskTileCount).intValue() > 0,
-                "Obj_ICZ1BigSnowPile should contribute to the sprite priority mask so Sonic appears behind it");
-
-        GameServices.specialRenderEffectRegistry().dispatch(
-                SpecialRenderEffectStage.AFTER_FOREGROUND,
-                new SpecialRenderEffectContext(
-                        GameServices.camera(),
-                        0,
-                        GameServices.level(),
-                        GameServices.graphics()));
-        Object tileCount = pile.getClass()
-                .getDeclaredMethod("getLastRenderedTileCountForTests")
-                .invoke(pile);
-        assertTrue(((Number) tileCount).intValue() > 0,
-                "Obj_ICZ1BigSnowPile should render non-empty lock-on ICZ background snow tiles");
+    private static int snowTileSubmissions(GraphicsManager graphics) {
+        return (int) org.mockito.Mockito.mockingDetails(graphics).getInvocations().stream()
+                .filter(call -> call.getMethod().getName().equals("renderPatternWithId")).count();
     }
 
     private boolean hasSnowboardIntroObject() {

@@ -34,7 +34,7 @@ class TestSpriteSatLimits {
         }
     }
 
-    @Test void disabledLineLimitsRetainExplicitMaskingAndTotalTableCapacity() {
+    @Test void disabledLimitsRetainExplicitMaskingWithoutTotalTableCap() {
         var raster = SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224);
         var masked = List.of(piece(8, 20, 1, 1, 1), piece(40, 20, 1, 1, 0x7C0),
                 piece(48, 20, 1, 1, 2), piece(80, 20, 1, 1, 200));
@@ -43,8 +43,12 @@ class TestSpriteSatLimits {
         assertEquals(1, result.getFirst().piece().firstPatternIndex());
 
         var crowded = new ArrayList<SpriteSatEntry>();
-        for (int i = 0; i < 81; i++) crowded.add(piece(40, 20, 1, 1, i));
-        assertEquals(80, withoutLineLimits(crowded, false, raster).size());
+        for (int i = 0; i < 100; i++) crowded.add(piece(40, i * 2, 1, 1, i));
+        for (var mode : List.of(raster, SpriteSatMaskPostProcessor.Raster.h32(0, 0, 224),
+                SpriteSatMaskPostProcessor.Raster.extended(0, 0, 528, 224))) {
+            assertEquals(mode.tableSprites(), SpriteSatMaskPostProcessor.process(crowded, false, mode).size());
+            assertEquals(crowded, withoutLineLimits(crowded, false, mode));
+        }
     }
 
     @Test void disabledPixelBudgetDoesNotArmAMaskOnTheFollowingLine() {

@@ -136,13 +136,37 @@
   "@settings.key.display_color_profile_toggle_key.help": {
     "description": "Settings help for stable configuration key DISPLAY_COLOR_PROFILE_TOGGLE_KEY. Technical YAML documentation remains separate."
   },
-  "settings.key.fps.label": "Rendering limit (FPS)",
+  "settings.key.display_interpolation_toggle_key.label": "Interpolation shortcut",
+  "@settings.key.display_interpolation_toggle_key.label": {
+    "description": "Settings label for stable configuration key DISPLAY_INTERPOLATION_TOGGLE_KEY (display.interpolationToggleKey)."
+  },
+  "settings.key.display_interpolation_toggle_key.help": "Toggle and save motion interpolation during play. Binding changes apply after restart.",
+  "@settings.key.display_interpolation_toggle_key.help": {
+    "description": "Settings help for stable configuration key DISPLAY_INTERPOLATION_TOGGLE_KEY. Technical YAML documentation remains separate."
+  },
+  "settings.key.fps.label": "Rendering limit",
   "@settings.key.fps.label": {
     "description": "Settings label for stable configuration key FPS (display.fps)."
   },
-  "settings.key.fps.help": "Window pictures per second. Gameplay and audio stay at 60 Hz NTSC or 50 Hz PAL.",
+  "settings.key.fps.help": "Auto follows the display refresh rate, or the region rate when unknown. Gameplay and audio stay at 60 Hz NTSC or 50 Hz PAL.",
   "@settings.key.fps.help": {
     "description": "Settings help for stable configuration key FPS. Technical YAML documentation remains separate."
+  },
+  "settings.key.display_interpolation.label": "Interpolation",
+  "@settings.key.display_interpolation.label": {
+    "description": "Settings label for stable configuration key DISPLAY_INTERPOLATION (display.interpolation)."
+  },
+  "settings.key.display_interpolation.help": "Smooths motion between game ticks. Works when pictures run faster than the region rate. Adds up to one tick of visual latency. Recordings and screenshots stay exact.",
+  "@settings.key.display_interpolation.help": {
+    "description": "Settings help for stable configuration key DISPLAY_INTERPOLATION."
+  },
+  "settings.key.display_pacing.label": "Display pacing",
+  "@settings.key.display_pacing.label": {
+    "description": "Settings label for stable configuration key DISPLAY_PACING (display.pacing)."
+  },
+  "settings.key.display_pacing.help": "Auto follows a 60 or 50 Hz display for smooth motion. Exact keeps the original speed on any display.",
+  "@settings.key.display_pacing.help": {
+    "description": "Settings help for stable configuration key DISPLAY_PACING. Technical YAML documentation remains separate."
   },
   "settings.key.load_time_simulation.label": "ROM loading timing",
   "@settings.key.load_time_simulation.label": {
@@ -1516,6 +1540,14 @@
   "@settings.value.NATIVE_4_3": {
     "description": "OpenGGF host UI: settings.value.NATIVE_4_3. Translate the complete message; preserve named arguments."
   },
+  "settings.value.AUTO": "Auto",
+  "@settings.value.AUTO": {
+    "description": "OpenGGF host UI: settings.value.AUTO. Translate the complete message; preserve named arguments."
+  },
+  "settings.value.EXACT": "Exact",
+  "@settings.value.EXACT": {
+    "description": "OpenGGF host UI: settings.value.EXACT. Translate the complete message; preserve named arguments."
+  },
   "settings.value.FAST": "Fast",
   "@settings.value.FAST": {
     "description": "OpenGGF host UI: settings.value.FAST. Translate the complete message; preserve named arguments."
@@ -2006,6 +2038,10 @@
   "@settings.value.openggf_folder": {
     "description": "OpenGGF host UI: settings.value.openggf_folder. Preserve the complete message and its named arguments."
   },
+  "settings.value.auto_display_refresh": "Auto (display refresh)",
+  "@settings.value.auto_display_refresh": {
+    "description": "Rendering limit choice that follows the display refresh rate."
+  },
   "settings.value.automatic": "Automatic",
   "@settings.value.automatic": {
     "description": "OpenGGF host UI: settings.value.automatic. Preserve the complete message and its named arguments."
@@ -2359,5 +2395,118 @@
   "settings.teams.keep_help": "Keeps this team in the list of extra teams.",
   "@settings.teams.keep_help": {
     "description": "Extra save-screen teams editor in Settings: help for Done on one team's page."
+  },
+  "settings.key.rewind_budget_scope.label": "Rewind",
+  "@settings.key.rewind_budget_scope.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_budget_scope.help": "Choose when your rewind allowance refills. Replaying the same boundary never refills it again.",
+  "@settings.key.rewind_budget_scope.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_budget_seconds.label": "Rewind budget",
+  "@settings.key.rewind_budget_seconds.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_budget_seconds.help": "Total seconds you can rewind between refills. Forward play does not restore spent time.",
+  "@settings.key.rewind_budget_seconds.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_refill_on_life_loss.label": "Refill on life loss",
+  "@settings.key.rewind_refill_on_life_loss.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_refill_on_life_loss.help": "Restore the allowance after losing a life and respawning.",
+  "@settings.key.rewind_refill_on_life_loss.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_bonus_stages.label": "Bonus-stage rewind",
+  "@settings.key.rewind_bonus_stages.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_bonus_stages.help": "Allow rewind in supported bonus stages. Each visit starts with a fresh allowance.",
+  "@settings.key.rewind_bonus_stages.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.key.rewind_special_stages.label": "Special-stage rewind",
+  "@settings.key.rewind_special_stages.label": {
+    "description": "Rewind budget label."
+  },
+  "settings.key.rewind_special_stages.help": "Allow rewind in supported special stages. Each visit starts with a fresh allowance.",
+  "@settings.key.rewind_special_stages.help": {
+    "description": "Rewind budget help."
+  },
+  "settings.rewind.scope.off": "Off",
+  "@settings.rewind.scope.off": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.scope.checkpoint": "Per checkpoint",
+  "@settings.rewind.scope.checkpoint": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.scope.act": "Per act",
+  "@settings.rewind.scope.act": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.scope.zone": "Per zone",
+  "@settings.rewind.scope.zone": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.unlimited": "Unlimited",
+  "@settings.rewind.unlimited": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.enabled_help": "Used while Rewind is not Off.",
+  "@settings.rewind.enabled_help": {
+    "description": "Rewind budget setting text."
+  },
+  "settings.rewind.seconds": "{seconds} s",
+  "@settings.rewind.seconds": {
+    "description": "Rewind allowance in seconds.",
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "settings.value.checkpoint": "Per checkpoint",
+  "@settings.value.checkpoint": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.act": "Per act",
+  "@settings.value.act": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.zone": "Per zone",
+  "@settings.value.zone": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.unlimited": "Unlimited",
+  "@settings.value.unlimited": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.5": "5 s",
+  "@settings.value.5": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.10": "10 s",
+  "@settings.value.10": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.15": "15 s",
+  "@settings.value.15": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.20": "20 s",
+  "@settings.value.20": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.30": "30 s",
+  "@settings.value.30": {
+    "description": "Rewind setting enum display value."
+  },
+  "settings.value.60": "60 s",
+  "@settings.value.60": {
+    "description": "Rewind setting enum display value."
   }
 }

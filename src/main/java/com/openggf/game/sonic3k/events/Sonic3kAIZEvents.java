@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.audio.S3kLevelMusicRestore;
+
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.CheckpointState;
@@ -750,7 +752,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         fireMusicRestoreTimer--;
         if (fireMusicRestoreTimer < 0) {
-            int levelMusicId = levelManager().getApparentLevelMusicId();
+            int levelMusicId = S3kLevelMusicRestore.resolve(
+                    levelManager().getApparentLevelMusicId(), spriteManager().getMainPlayable());
             if (levelMusicId >= 0) {
                 // ROM AIZMinibossCutscene_Escape calls Restore_LevelMusic,
                 // which derives the track from Apparent_zone_and_act;

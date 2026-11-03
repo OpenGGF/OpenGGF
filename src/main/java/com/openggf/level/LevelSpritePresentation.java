@@ -192,12 +192,14 @@ public final class LevelSpritePresentation {
         if (level != null) com.openggf.game.LevelRingDisplay.register(level, registry);
         else com.openggf.game.LevelRingDisplay.unregister(registry);
         registry.deregister("level-sprite-presentation");
+        registry.deregisterPostRestoreCallback("level-motion-presentation");
         registry.deregister("level-bounds-mask");
         registry.deregister("camera-boundary-presentation");
         var renderer = level == null ? null : level.spritePresentationRenderer();
         // Registration can precede renderer attachment (including headless sessions).
         // Remove the previous scene's adapters even when this scene has none yet.
         if (renderer == null) return;
+        registry.registerPostRestoreCallback("level-motion-presentation", renderer::invalidateMotion);
         registry.register(renderer.boundsMask);
         if (level.camera != null) {
             registry.register(com.openggf.camera.CameraBoundaryPresentation.rewindAdapter(level.camera));

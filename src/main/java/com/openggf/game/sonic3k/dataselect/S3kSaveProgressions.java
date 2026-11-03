@@ -195,6 +195,20 @@ final class S3kSaveProgressions {
         return java.util.Optional.of(new DataSelectDestination(word >>> 8, word & 0xFF));
     }
 
+    static DataSelectDestination saveStart(int zone, int act, SelectedTeam team) {
+        if (zone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ) {
+            return act == 0 ? new DataSelectDestination(Sonic3kZoneIds.ZONE_LRZ, 0)
+                    : new DataSelectDestination(Sonic3kZoneIds.ZONE_HPZ, 1);
+        }
+        if (zone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && act == 0) {
+            return new DataSelectDestination(Sonic3kZoneIds.ZONE_DEZ, 0);
+        }
+        if (zone >= 0 && zone <= Sonic3kZoneIds.ZONE_DDZ) {
+            act = zone == Sonic3kZoneIds.ZONE_SSZ && isKnuckles(team) ? 1 : 0;
+        }
+        return new DataSelectDestination(zone, act);
+    }
+
     private static boolean isKnuckles(SelectedTeam team) {
         return team != null && "knuckles".equalsIgnoreCase(team.mainCharacter());
     }

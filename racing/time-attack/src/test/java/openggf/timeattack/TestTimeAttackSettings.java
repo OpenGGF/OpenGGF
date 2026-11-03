@@ -34,7 +34,8 @@ class TestTimeAttackSettings {
         TimeAttackSettings settings = TimeAttackSettings.load(new MemoryModStorage());
         assertEquals(27888, settings.hostPort());
         assertEquals("", settings.displayName());
-        assertEquals("", settings.masterUrl());
+        assertEquals(new MasterSelection.BuildDefault(), settings.masterSelection());
+        assertEquals(java.util.Optional.empty(), settings.masterAddress(), "a build without a default has none");
         assertFalse(settings.masterTrustInsecure());
         assertTrue(settings.minimap());
         assertEquals(27888, TimeAttackSettings.load(null).hostPort());
@@ -47,7 +48,7 @@ class TestTimeAttackSettings {
         settings.setRetryKey(com.openggf.mods.scene.SceneKeys.F6);
         settings.setHostPort(30000);
         settings.setDisplayName("Knuckles é");
-        settings.setMasterUrl("wss://master.example:8443/master");
+        settings.setMasterSelection(new MasterSelection.Custom("wss://master.example:8443/master"));
         settings.setMasterTrustInsecure(true);
         settings.setMinimap(false);
         assertTrue(settings.save(storage));
@@ -57,7 +58,7 @@ class TestTimeAttackSettings {
         assertEquals(com.openggf.mods.scene.SceneKeys.F6, loaded.retryKey());
         assertEquals(30000, loaded.hostPort());
         assertEquals("Knuckles é", loaded.displayName());
-        assertEquals("wss://master.example:8443/master", loaded.masterUrl());
+        assertEquals(new MasterSelection.Custom("wss://master.example:8443/master"), loaded.masterSelection());
         assertTrue(loaded.masterTrustInsecure());
         assertFalse(loaded.minimap());
     }
@@ -82,11 +83,11 @@ class TestTimeAttackSettings {
     void valuesStayOnOneLineAndWithinTheirLimits() {
         TimeAttackSettings settings = new TimeAttackSettings();
         settings.setDisplayName("evil\nhostPort=1");
-        settings.setMasterUrl("x".repeat(500));
+        settings.setMasterSelection(MasterSelection.typed("x".repeat(500)));
         TimeAttackSettings reloaded = TimeAttackSettings.parse(settings.encode());
         assertEquals(27888, reloaded.hostPort());
         assertEquals("evil hostPort=1", reloaded.displayName());
-        assertEquals(TimeAttackSettings.MAX_TEXT_LENGTH, reloaded.masterUrl().length());
+        assertEquals(TimeAttackSettings.MAX_TEXT_LENGTH, reloaded.customMasterText().length());
     }
 
     @Test
@@ -119,11 +120,12 @@ class TestTimeAttackSettings {
         input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.ENTER);
         assertEquals(30001, settings.hostPort());
 
-        input.tapDown(view::update); // master URL
+        input.tapDown(view::update); // master server
         input.tapEnter(view::update);
-        input.type(view::update, "ws://127.0.0.1:9000/master");
+        input.type(view::update, "ws://[::1]:9000/master");
         input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.ENTER);
-        assertEquals("ws://127.0.0.1:9000/master", settings.masterUrl());
+        assertEquals(new MasterSelection.Custom("ws://[::1]:9000/master"), settings.masterSelection(),
+                "the editor accepts IPv6 brackets");
 
         input.tapDown(view::update); // master TLS
         input.tapRight(view::update);
@@ -400,5 +402,74 @@ class TestTimeAttackSettings {
         assertEquals(com.openggf.net.protocol.ReadyRules.AUTO, back.readyRule());
         assertEquals(com.openggf.net.protocol.ReadyRules.DEFAULT_BY_SIZE,
                 TimeAttackSettings.parse("readyRule=SOMETIMES\n").readyRule());
+    }
+
+    @Test
+    void theBuildDefaultIsFollowedButNeverPersistedAsAHostName() {
+        MemoryModStorage storage = new MemoryModStorage();
+        TimeAttackSettings settings = new TimeAttackSettings();
+        settings.setBuildDefaultMaster("multi-dev.openggf.com");
+        assertEquals(java.util.Optional.of("multi-dev.openggf.com"), settings.masterAddress());
+        assertTrue(settings.save(storage));
+        String saved = storage.read(TimeAttackSettings.FILE_NAME).orElseThrow();
+        // Broken case: a copied default would pin this profile to develop's master forever.
+        assertFalse(saved.contains("multi-dev.openggf.com"), saved);
+        assertTrue(saved.contains("masterMode=default"), saved);
+        // The same profile in a next build follows next's master.
+        TimeAttackSettings next = TimeAttackSettings.load(storage);
+        next.setBuildDefaultMaster("multi-next.openggf.com");
+        assertEquals(java.util.Optional.of("multi-next.openggf.com"), next.masterAddress());
+    }
+
+    @Test
+    void offAndCustomPersistAndOffNeverYieldsAnAddress() {
+        MemoryModStorage storage = new MemoryModStorage();
+        TimeAttackSettings settings = new TimeAttackSettings();
+        settings.setBuildDefaultMaster("multi-dev.openggf.com");
+        settings.setMasterSelection(new MasterSelection.Custom("multi-next.openggf.com"));
+        assertEquals(java.util.Optional.of("multi-next.openggf.com"), settings.masterAddress());
+        settings.setMasterSelection(new MasterSelection.Off());
+        assertEquals(java.util.Optional.empty(), settings.masterAddress(), "Off never falls back to the default");
+        assertTrue(settings.save(storage));
+        TimeAttackSettings loaded = TimeAttackSettings.load(storage);
+        loaded.setBuildDefaultMaster("multi-dev.openggf.com");
+        assertEquals(new MasterSelection.Off(), loaded.masterSelection());
+        assertEquals("multi-next.openggf.com", loaded.customMasterText(), "custom text survives for a switch back");
+        assertEquals(new MasterSelection.BuildDefault(), TimeAttackSettings.parse("masterMode=custom\n").masterSelection());
+        assertEquals(new MasterSelection.BuildDefault(), TimeAttackSettings.parse("masterMode=sometimes\n").masterSelection());
+        // The unreleased masterUrl key is not migrated.
+        assertEquals(new MasterSelection.BuildDefault(),
+                TimeAttackSettings.parse("masterUrl=wss://old.example/master\n").masterSelection());
+    }
+
+    @Test
+    void theSettingsPageCyclesMasterModesAndLabelsTheBuildDefault() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        settings.setBuildDefaultMaster("multi-dev.openggf.com");
+        SettingsView view = new SettingsView(settings, () -> { }, cue -> { });
+        FakeViewInput input = new FakeViewInput();
+        for (int i = 0; i < 3; i++) input.tapDown(view::update);
+        assertEquals(SettingsView.Row.MASTER_SERVER, view.focusedRow());
+        assertEquals("Build default (multi-dev.openggf.com)", view.masterLabel());
+        input.tapRight(view::update);
+        assertEquals(new MasterSelection.Off(), settings.masterSelection(), "no custom text yet: default -> off");
+        assertEquals("Off (LAN only)", view.masterLabel());
+        input.tapRight(view::update);
+        assertEquals(new MasterSelection.BuildDefault(), settings.masterSelection());
+        input.tapEnter(view::update);
+        input.type(view::update, "multi-next.openggf.com");
+        input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.ENTER);
+        assertEquals("multi-next.openggf.com", view.masterLabel());
+        input.tapLeft(view::update);
+        assertEquals(new MasterSelection.BuildDefault(), settings.masterSelection());
+        input.tapLeft(view::update);
+        assertEquals(new MasterSelection.Off(), settings.masterSelection());
+        input.tapLeft(view::update);
+        assertEquals(new MasterSelection.Custom("multi-next.openggf.com"), settings.masterSelection());
+        // Clearing the editor returns to the build default.
+        input.tapEnter(view::update);
+        for (int i = 0; i < 40; i++) input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.BACKSPACE);
+        input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.ENTER);
+        assertEquals(new MasterSelection.BuildDefault(), settings.masterSelection());
     }
 }

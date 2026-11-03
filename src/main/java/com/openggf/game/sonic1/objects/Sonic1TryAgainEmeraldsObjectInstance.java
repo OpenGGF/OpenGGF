@@ -28,6 +28,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/s1disasm/_incObj/8C Try Again Emeralds.asm
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class Sonic1TryAgainEmeraldsObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1TryAgainEmeraldsObjectInstance.class.getName());
 

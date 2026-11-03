@@ -118,6 +118,91 @@ class TestDrowningControllerMusicSelection {
                 "Controller should flag drowning music as active");
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"onExitWater", "onDrown", "replenishAir"})
+    void secondaryPlayerCannotRestoreMusicEvenWithCapturedCountdownLatch(String boundary) throws Exception {
+        var audio = mock(AudioManager.class);
+        var level = mock(LevelManager.class);
+        when(level.getCurrentLevelMusicId()).thenReturn(Sonic1Music.LZ.id);
+        when(audio.getAudioProfile()).thenReturn(new Sonic1AudioProfile());
+        var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
+        var module = mock(com.openggf.game.GameModule.class);
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        var context = new PlayableRuntimeContext(module, null, level, null, null, sprites, null, null, audio);
+        Sonic primary = context.construct(() -> new Sonic("sonic", (short) 0, (short) 0));
+        when(sprites.getMainPlayable()).thenReturn(primary);
+        Sonic secondary = context.construct(() -> new Sonic("secondary", (short) 0, (short) 0));
+        DrowningController countdown = new DrowningController(secondary);
+        setPrivateBoolean(countdown, "drowningMusicStarted", true);
+
+        DrowningController.class.getMethod(boundary).invoke(countdown);
+
+        verify(audio, never()).playMusic(org.mockito.ArgumentMatchers.anyInt());
+        verify(level, never()).getCurrentLevelMusicId();
+        assertFalse(countdown.isDrowningMusicPlaying());
+        DrowningController primaryCountdown = new DrowningController(primary);
+        setPrivateBoolean(primaryCountdown, "drowningMusicStarted", true);
+        DrowningController.class.getMethod(boundary).invoke(primaryCountdown);
+        verify(audio).playMusic(Sonic1Music.LZ.id);
+    }
+
+    @Test
+    void secondaryPlayerKeepsCountdownEffectsWithoutSharedMusicOrRestore() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.setAudioProfile(new Sonic1AudioProfile());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
+        GameServices.level().resetState();
+        Sonic primary = new Sonic("sonic", (short) 0, (short) 0);
+        GameServices.sprites().addSprite(primary);
+        // A human secondary participant must also be silent; CPU is not identity.
+        Sonic secondary = new Sonic("secondary", (short) 0, (short) 0);
+        DrowningController countdown = new DrowningController(secondary);
+        setPrivateInt(countdown, "remainingAir", 12);
+        setPrivateInt(countdown, "frameTimer", 1);
+
+        countdown.update();
+
+        assertEquals(11, countdown.getRemainingAir());
+        assertTrue(getPrivateInt(countdown, "numberBubbleTimer") >= 0);
+        assertTrue(musicCommands(audio).isEmpty());
+        assertFalse(countdown.isDrowningMusicPlaying());
+        // Even a pre-existing latch (e.g. after restoring an older snapshot)
+        // cannot make a secondary participant replace P1's music.
+        Field latch = DrowningController.class.getDeclaredField("drowningMusicStarted");
+        latch.setAccessible(true);
+        latch.setBoolean(countdown, true);
+        countdown.replenishAir();
+        assertEquals(30, countdown.getRemainingAir());
+        assertFalse(countdown.isDrowningMusicPlaying());
+        assertTrue(musicCommands(audio).isEmpty());
+
+        DrowningController primaryCountdown = new DrowningController(primary);
+        setPrivateInt(primaryCountdown, "remainingAir", 12);
+        setPrivateInt(primaryCountdown, "frameTimer", 1);
+        primaryCountdown.update();
+        assertEquals(1, musicCommands(audio).size());
+    }
+
+    @Test
+    void fixedSecondaryCountdownDoesNotPublishMusic() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.setAudioProfile(new Sonic3kAudioProfile());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
+        GameServices.level().resetState();
+        GameServices.sprites().addSprite(new Sonic("sonic", (short) 0, (short) 0));
+        DrowningController countdown = new DrowningController(new Sonic("secondary", (short) 0, (short) 0));
+        countdown.setRemainingAirFromFixedCountdown(12);
+
+        var event = countdown.performFixedCountdownAirEvent(true);
+
+        assertEquals(11, event.airAfter());
+        assertEquals(5, event.countdownNumber());
+        assertTrue(musicCommands(audio).isEmpty());
+        assertFalse(countdown.isDrowningMusicPlaying());
+    }
+
     @Test
     void s3kFixedCountdownAirEventTriggersDrowningMusicWithoutGenericBubbleUpdate() {
         AudioManager audioManager = AudioManager.getInstance();

@@ -35,6 +35,65 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class TestHczEndBossWaterColumnControlPolicy {
 
     @Test
+    void freshPlatformReachesRawAnimationCallbackAfterTwentyFiveDispatches() throws Exception {
+        HczEndBossWaterColumn column = newWaterColumn();
+        invokeNoArgPrivate(column, "updateInit");
+        for (int i = 1; i < 25; i++) {
+            invokeNoArgPrivate(column, "updateAnimate");
+            assertEquals(2, getIntField(column, "routine"), "premature callback at tick " + i);
+        }
+        invokeNoArgPrivate(column, "updateAnimate");
+        assertEquals(4, getIntField(column, "routine"),
+                "Animate_Raw starts with cleared anim_frame_timer: ticks 1,5,9,13,17,21,25");
+    }
+
+    @Test
+    void nativePairRetainsSuctionDisplacementAcrossBothPlayers() throws Exception {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x4100, (short) 0x1100);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x4200, (short) 0x1100);
+        HczEndBossWaterColumn column = newWaterColumn();
+        column.setServices(new TestObjectServices() {
+            @Override public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> p1, () -> List.of(p2));
+            }
+        }.withConfiguration(SonicConfigurationService.createStandalone()));
+        assertEquals(0x4000, column.getX());
+        invokePrivate(column, "applySuction", p1);
+        assertEquals(0x40FE, p1.getCentreX() & 0xFFFF);
+        assertEquals(0x4202, p2.getCentreX() & 0xFFFF,
+                "P2 negates the displacement already negated by P1");
+
+        p1.setCentreY((short) 0); // skipped P1 must leave d2 positive
+        p2.setCentreX((short) 0x4200);
+        invokePrivate(column, "applySuction", p1);
+        assertEquals(0x41FE, p2.getCentreX() & 0xFFFF);
+
+        p2.setCentreX((short) 0x4000);
+        invokePrivate(column, "applySuction", p1);
+        assertEquals(0x4002, p2.getCentreX() & 0xFFFF,
+                "native bhs includes equality in the positive-displacement path");
+    }
+
+    @Test
+    void carriedP1ConsumesTheRangeWordBeforeP2Bounds() throws Exception {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0FD8);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x4000, (short) 0x1000);
+        HczEndBossWaterColumn column = newWaterColumn();
+        column.setServices(new TestObjectServices() {
+            @Override public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> p1, () -> List.of(p2));
+            }
+        }.withConfiguration(SonicConfigurationService.createStandalone()));
+        setIntField(column, "segmentCount", 4);
+        invokeGrab(column, p1, true);
+        invokePrivate(column, "applySuction", p1);
+        assertTrue(p1.isObjectControlled());
+        assertFalse(p2.isObjectControlled(),
+                "P1 consumes -$38; P2 top uses the next word +$88, excluding this player");
+        assertEquals(0x1000, p2.getCentreY() & 0xFFFF);
+    }
+
+    @Test
     void bladeImpactUsesNativeHarmfulCollisionDuringFirstThreeFrames() throws Exception {
         HczEndBossImpactFixture fixture = newImpactFixture();
         HczEndBossBladeImpactExplosion impact = fixture.impact();
@@ -52,16 +111,17 @@ class TestHczEndBossWaterColumnControlPolicy {
     }
 
     @Test
-    void bladeSlowdownRetainsEntryTickBeforeAdvancingRawAnimation() throws Exception {
+    void bladeSlowdownAdvancesRawAnimationOnItsFirstDispatch() throws Exception {
         HczEndBossBlade blade = newBlade();
         invokeNoArgPrivate(blade, "transitionToSpinDown");
 
         invokeNoArgPrivate(blade, "updateSpinDown");
-        assertEquals(6, getIntField(blade, "mappingFrame"));
+        assertEquals(7, getIntField(blade, "mappingFrame"),
+                "Animate_RawGetFaster advances from cleared timer/anim_frame to script frame 7 immediately");
 
         invokeNoArgPrivate(blade, "updateSpinDown");
         assertEquals(7, getIntField(blade, "mappingFrame"),
-                "Animate_RawGetFaster advances from anim_frame 0 to script frame 7");
+                "subsequent dispatches retain the script's delay");
     }
 
     @Test
@@ -91,21 +151,19 @@ class TestHczEndBossWaterColumnControlPolicy {
     }
 
     @Test
-    void descentRetainsTheLaterSpraySlotsFinalInteraction() throws Exception {
+    void descentDoesNotRepeatTheSpraySlotsFinalInteraction() throws Exception {
         HczEndBossWaterColumn column = newWaterColumn();
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0738);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4100, (short) 0x1100);
         setIntField(column, "routine", 6);
 
         invokePrivate(column, "updateHold", player);
-
         assertEquals(8, getIntField(column, "routine"));
-        assertTrue(getBooleanField(column, "pendingSprayTailInteraction"),
-                "loc_6B3DE runs after loc_6B34A changes the parent to DESCEND");
+        assertEquals(0x40FE, player.getCentreX() & 0xFFFF,
+                "the release dispatch retains the spray's final suction interaction");
 
         invokePrivate(column, "updateRiseDescend", player);
-
-        assertFalse(getBooleanField(column, "pendingSprayTailInteraction"),
-                "the first descent dispatch consumes exactly one retained spray interaction");
+        assertEquals(0x40FE, player.getCentreX() & 0xFFFF,
+                "HCZEndBossColumn_ReleaseMove performs no player interaction on the following pass");
     }
 
     @Test

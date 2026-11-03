@@ -61,6 +61,34 @@ class TestHczEndBossTerminalOwnership {
     }
 
     @Test
+    void capsulePublishesEndingPoseAndQueuesP2OnResultsCreation() throws Exception {
+        World world = new World("sonic");
+        world.frame();
+        var capsule = world.only(HczEndBossEggCapsuleInstance.class);
+        world.main.setAir(false);
+        world.main.setAnimationId(Sonic3kAnimationIds.WAIT);
+        world.main.setXSpeed((short) 0x120);
+        var p2 = world.nativeP2();
+        assertNotNull(p2);
+        p2.setAir(false);
+        p2.setDead(false);
+        p2.setPreventTailsRespawn(false);
+        set(capsule, "opened", true);
+        invoke(capsule, "startResults", new Class<?>[]{AbstractPlayableSprite.class}, world.main);
+        assertEquals(Sonic3kAnimationIds.VICTORY.id(), world.main.getAnimationId(),
+                "sub_868F8 publishes the pose in its results-creation dispatch");
+        assertEquals(0, world.main.getXSpeed());
+        assertTrue((boolean) get(capsule, "tailsEndingPoseApplied"),
+                "P2 ending pose is queued for the next native player slot");
+        var results = world.only(S3kResultsScreenObjectInstance.class);
+        Method artDelay = S3kResultsScreenObjectInstance.class.getDeclaredMethod(
+                "shouldDeferInitialResultsArtLoadDispatch");
+        artDelay.setAccessible(true);
+        assertFalse((boolean) artDelay.invoke(results),
+                "Obj_LevelResultsInit submits its art without an extra HCZ dispatch");
+    }
+
+    @Test
     void finalFleeRetainsTheHiddenRootAndAllocatesCapsuleBeforeLowerFreeHoleIsLost() throws Exception {
         World world = new World("sonic");
         world.moveAfter(world.boss, world.boss.getSlotIndex() + 8);

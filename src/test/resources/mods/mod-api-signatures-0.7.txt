@@ -857,6 +857,9 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback visib
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HeadTarget visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HomingAttack visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HomingCharacter visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$HomingMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$MonitorFilter visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$NoBonusStages visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints visible @com.openggf.game.ModApi
@@ -1019,6 +1022,8 @@ CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher$BinarySender visi
 CF-ANNOTATION TYPE com.openggf.net.client.GhostStreamPublisher$BinarySender visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.client.LobbyPosePublisher visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.MasterClient visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.MasterDiscoveryException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.MasterDiscoveryException$Reason visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Control visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RaceClient$Disconnected visible @com.openggf.game.ModApi
@@ -1423,7 +1428,7 @@ CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.S
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource)
 CONSTRUCTOR com.openggf.control.InputHandler public  <init>(java.util.function.Supplier<com.openggf.control.InputBindings>,com.openggf.control.GamepadStateSource,java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.control.LogicalInputSnapshot public  <init>(com.openggf.control.PlayerInputState,com.openggf.control.PlayerInputState,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
-CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.control.MenuInput$Pointer public  <init>(int,int,boolean,boolean,boolean,int)
 CONSTRUCTOR com.openggf.control.PhysicalBinding public  <init>(char,int,int,int)
 CONSTRUCTOR com.openggf.control.PhysicalGamepad public  <init>(int,java.lang.String,boolean[],float[])
 CONSTRUCTOR com.openggf.control.PhysicalInput public  <init>(long,java.util.List<java.lang.Integer>,java.util.List<com.openggf.control.PhysicalGamepad>,java.util.List<com.openggf.control.PhysicalInputEvent>,int)
@@ -1646,7 +1651,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean,boolean)
-CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
@@ -1900,6 +1905,7 @@ CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$BigHead public  <init>(int,j
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback public  <init>(int,int)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity public  <init>(int)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public  <init>(int,boolean)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  <init>(com.openggf.mods.mutators.MutatorPolicy$HomingMode,java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public  <init>(java.util.Set<com.openggf.game.mutators.MonitorContent>)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$NoBonusStages public  <init>()
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints public  <init>()
@@ -2518,6 +2524,9 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE_TOGGLE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_ANCHOR
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_TIME_HUNDREDTHS
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_INTERPOLATION
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_INTERPOLATION_TOGGLE_KEY
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_PACING
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SCALING
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_DEFAULT_PHASE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_LIBRARY_ROOT
@@ -2616,7 +2625,12 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_LIMIT_TYPE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_SECONDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_SIZE_MB
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_BONUS_STAGES
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_BUDGET_SCOPE
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_BUDGET_SECONDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_HISTORY_SECONDS
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_REFILL_ON_LIFE_LOSS
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_SPECIAL_STAGES
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration RIGHT
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_DIRECTORY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_PREFER_COMPOSITE
@@ -3443,6 +3457,7 @@ FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.opengg
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability FLUID_CONTEXT
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability GAMEPLAY_HOLD
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability GAMEPLAY_SPEED
+FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability HOMING_ATTACK
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability HUD_PRESENTATION
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability INPUT_CONTROL
 FIELD com.openggf.mods.mutators.MutatorCapability public,static,final com.openggf.mods.mutators.MutatorCapability MONITOR_FILTER
@@ -3472,6 +3487,11 @@ FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com
 FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget BOSSES
 FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget PLAYER
 FIELD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget SIDEKICKS
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter KNUCKLES
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter SONIC
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter TAILS
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingMode HOMING
+FIELD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingMode INSTAGIB
 FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target ALL_TEAM
 FIELD com.openggf.mods.mutators.MutatorPolicy$Target public,static,final com.openggf.mods.mutators.MutatorPolicy$Target LEADER
 FIELD com.openggf.mods.mutators.MutatorScope public,static,final com.openggf.mods.mutators.MutatorScope LAUNCH
@@ -3705,7 +3725,11 @@ FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.ope
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase RUNNING
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase VOTE
 FIELD com.openggf.net.client.MasterClient public,static,final int MAX_PENDING_REQUESTS
+FIELD com.openggf.net.client.MasterClient public,static,final long CONNECT_DEADLINE_MILLIS
 FIELD com.openggf.net.client.MasterClient public,static,final long MASTER_REPLY_TIMEOUT_MILLIS
+FIELD com.openggf.net.client.MasterDiscoveryException$Reason public,static,final com.openggf.net.client.MasterDiscoveryException$Reason FOREIGN_TARGET
+FIELD com.openggf.net.client.MasterDiscoveryException$Reason public,static,final com.openggf.net.client.MasterDiscoveryException$Reason LOOKUP_FAILED
+FIELD com.openggf.net.client.MasterDiscoveryException$Reason public,static,final com.openggf.net.client.MasterDiscoveryException$Reason NOT_PUBLISHED
 FIELD com.openggf.net.client.RaceClient public,static,final long JOIN_TIMEOUT_MILLIS
 FIELD com.openggf.net.client.RemoteGhostPlayback public,static,final int CATCHUP_SLACK_FRAMES
 FIELD com.openggf.net.client.RemoteGhostPlayback public,static,final int DELAY_GROW_FRAMES
@@ -4274,6 +4298,7 @@ INTERFACE com.openggf.mods.mutators.MutatorPolicy$BigHead com.openggf.mods.mutat
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed com.openggf.mods.mutators.MutatorPolicy
+INTERFACE com.openggf.mods.mutators.MutatorPolicy$HomingAttack com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$MonitorFilter com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$NoBonusStages com.openggf.mods.mutators.MutatorPolicy
 INTERFACE com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints com.openggf.mods.mutators.MutatorPolicy
@@ -4534,7 +4559,6 @@ METHOD com.openggf.audio.AudioManager public  void update()
 METHOD com.openggf.audio.AudioManager public  void updateLegacyDevice()
 METHOD com.openggf.audio.AudioManager public,static  com.openggf.audio.AudioManager createSilent()
 METHOD com.openggf.audio.AudioManager public,static  com.openggf.audio.AudioManager createStandalonePresentation(java.lang.String,com.openggf.audio.GameAudioProfile,com.openggf.configuration.SonicConfigurationService,com.openggf.debug.PerformanceProfiler,com.openggf.audio.output.AudioPresentationSink,com.openggf.audio.smps.SmpsCoordFlagHandlerOwner)
-METHOD com.openggf.audio.AudioManager public,static,synchronized  com.openggf.audio.AudioManager getInstance()
 METHOD com.openggf.audio.AudioManager public,static,synchronized  com.openggf.audio.AudioManager presentationOwner()
 METHOD com.openggf.audio.AudioManager public,synchronized  boolean hasInstalledBackend(com.openggf.audio.AudioBackend)
 METHOD com.openggf.audio.AudioManager public,synchronized  com.openggf.audio.AudioManager$DiagnosticObserverHandle acquireDiagnosticObservers(com.openggf.audio.AudioManager$DiagnosticObserverSet)
@@ -5247,7 +5271,6 @@ METHOD com.openggf.configuration.SonicConfigurationService public  void setConfi
 METHOD com.openggf.configuration.SonicConfigurationService public  void setSessionOverride(com.openggf.configuration.SonicConfiguration,java.lang.Object)
 METHOD com.openggf.configuration.SonicConfigurationService public,static  com.openggf.configuration.SonicConfigurationService createStandalone()
 METHOD com.openggf.configuration.SonicConfigurationService public,static  com.openggf.configuration.SonicConfigurationService createStandalone(java.nio.file.Path)
-METHOD com.openggf.configuration.SonicConfigurationService public,static,synchronized  com.openggf.configuration.SonicConfigurationService getInstance()
 METHOD com.openggf.control.ActionFrame public  boolean held(java.lang.String)
 METHOD com.openggf.control.ActionFrame public  boolean pressed(java.lang.String)
 METHOD com.openggf.control.ActionFrame public  float amount(java.lang.String)
@@ -5409,6 +5432,7 @@ METHOD com.openggf.control.MenuInput$Pointer public  boolean inside()
 METHOD com.openggf.control.MenuInput$Pointer public  boolean leftPressed()
 METHOD com.openggf.control.MenuInput$Pointer public  boolean over(int,int,int,int)
 METHOD com.openggf.control.MenuInput$Pointer public  boolean rightPressed()
+METHOD com.openggf.control.MenuInput$Pointer public  int wheel()
 METHOD com.openggf.control.MenuInput$Pointer public  int x()
 METHOD com.openggf.control.MenuInput$Pointer public  int y()
 METHOD com.openggf.control.MenuInput$Pointer public,final  boolean equals(java.lang.Object)
@@ -5544,7 +5568,6 @@ METHOD com.openggf.debug.DebugOverlayManager public  void updateInput(com.opengg
 METHOD com.openggf.debug.DebugOverlayManager public  void updateInput(com.openggf.control.InputHandler,boolean)
 METHOD com.openggf.debug.DebugOverlayManager public  void updateInput(com.openggf.control.InputHandler,boolean,com.openggf.configuration.KeyChord)
 METHOD com.openggf.debug.DebugOverlayManager public  void updateInput(com.openggf.control.InputHandler,boolean,com.openggf.configuration.SonicConfigurationService)
-METHOD com.openggf.debug.DebugOverlayManager public,static,synchronized  com.openggf.debug.DebugOverlayManager getInstance()
 METHOD com.openggf.debug.DebugOverlayToggle public  boolean defaultEnabled()
 METHOD com.openggf.debug.DebugOverlayToggle public  int keyCode()
 METHOD com.openggf.debug.DebugOverlayToggle public  java.lang.String label()
@@ -5586,7 +5609,6 @@ METHOD com.openggf.debug.MemoryStats public  long getTotalGcTimeMs()
 METHOD com.openggf.debug.MemoryStats public  void beginSection(java.lang.String)
 METHOD com.openggf.debug.MemoryStats public  void endSection(java.lang.String)
 METHOD com.openggf.debug.MemoryStats public  void update()
-METHOD com.openggf.debug.MemoryStats public,static  com.openggf.debug.MemoryStats getInstance()
 METHOD com.openggf.debug.MemoryStats$SectionAllocation public  double kbPerFrame()
 METHOD com.openggf.debug.MemoryStats$SectionAllocation public  java.lang.String name()
 METHOD com.openggf.debug.MemoryStats$SectionAllocation public  long bytesPerFrame()
@@ -5612,7 +5634,6 @@ METHOD com.openggf.debug.PerformanceProfiler public  void reset()
 METHOD com.openggf.debug.PerformanceProfiler public  void setAllocationTrackingEnabled(boolean)
 METHOD com.openggf.debug.PerformanceProfiler public  void setEnabled(boolean)
 METHOD com.openggf.debug.PerformanceProfiler public  void setSampleSink(com.openggf.debug.FrameSampleSink)
-METHOD com.openggf.debug.PerformanceProfiler public,static,synchronized  com.openggf.debug.PerformanceProfiler getInstance()
 METHOD com.openggf.debug.ProfileSnapshot public  boolean hasData()
 METHOD com.openggf.debug.ProfileSnapshot public  double fps()
 METHOD com.openggf.debug.ProfileSnapshot public  double totalFrameTimeMs()
@@ -5657,7 +5678,6 @@ METHOD com.openggf.debug.playback.Bk2Movie public  java.lang.String getLogKey()
 METHOD com.openggf.debug.playback.Bk2Movie public  java.nio.file.Path getSourcePath()
 METHOD com.openggf.debug.playback.Bk2Movie public  java.util.List<com.openggf.debug.playback.Bk2FrameInput> getFrames()
 METHOD com.openggf.debug.playback.Bk2Movie public  java.util.Map<java.lang.String,java.lang.String> getHeaderMetadata()
-METHOD com.openggf.debug.playback.PlaybackDebugManager public,static  com.openggf.debug.playback.PlaybackDebugManager getInstance()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean activateScheduledLevelLoadSession()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean hasActiveOrScheduledSession()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean hasLoadedMovie()
@@ -5939,7 +5959,6 @@ METHOD com.openggf.game.CrossGameFeatureProvider public  void initialize(java.la
 METHOD com.openggf.game.CrossGameFeatureProvider public  void resetState()
 METHOD com.openggf.game.CrossGameFeatureProvider public,static  boolean isActive()
 METHOD com.openggf.game.CrossGameFeatureProvider public,static  boolean isS3kDonorActive()
-METHOD com.openggf.game.CrossGameFeatureProvider public,static,synchronized  com.openggf.game.CrossGameFeatureProvider getInstance()
 METHOD com.openggf.game.DamageCause public,static  com.openggf.game.DamageCause valueOf(java.lang.String)
 METHOD com.openggf.game.DamageCause public,static  com.openggf.game.DamageCause[] values()
 METHOD com.openggf.game.DataSelectProvider public  com.openggf.game.dataselect.DataSelectExitTransition exitTransition()
@@ -6743,7 +6762,6 @@ METHOD com.openggf.game.RomDetectionService public  java.util.List<com.openggf.g
 METHOD com.openggf.game.RomDetectionService public  java.util.Optional<com.openggf.game.GameModule> detectAndCreateModule(com.openggf.data.Rom)
 METHOD com.openggf.game.RomDetectionService public  void registerDetector(com.openggf.game.RomDetector)
 METHOD com.openggf.game.RomDetectionService public  void unregisterDetector(com.openggf.game.RomDetector)
-METHOD com.openggf.game.RomDetectionService public,static,synchronized  com.openggf.game.RomDetectionService getInstance()
 METHOD com.openggf.game.RomDetector public,abstract  boolean canHandle(com.openggf.data.Rom)
 METHOD com.openggf.game.RomDetector public,abstract  com.openggf.game.GameModule createModule()
 METHOD com.openggf.game.RomDetector public,abstract  int getPriority()
@@ -8412,6 +8430,7 @@ METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules
 METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerGroundPoseRules groundPose()
 METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerLandingRules landing()
 METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerLevelBoundaryRules levelBoundary()
+METHOD com.openggf.game.rules.PlayerMovementRules public  short poweredRollFriction()
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  java.lang.String toString()
@@ -8930,7 +8949,6 @@ METHOD com.openggf.graphics.GraphicsManager public  void submitSpriteSatControlE
 METHOD com.openggf.graphics.GraphicsManager public  void submitSpriteSatPiece(com.openggf.level.render.SpritePieceRenderer$PreparedPiece)
 METHOD com.openggf.graphics.GraphicsManager public  void updatePatternTexture(com.openggf.level.Pattern,int)
 METHOD com.openggf.graphics.GraphicsManager public <T> java.util.concurrent.CompletableFuture<T> submitRenderThreadTask(java.util.concurrent.Callable<T>)
-METHOD com.openggf.graphics.GraphicsManager public,static,final,synchronized  com.openggf.graphics.GraphicsManager getInstance()
 METHOD com.openggf.graphics.GraphicsManager public,static,synchronized  void destroyForReinit()
 METHOD com.openggf.graphics.PaletteFadePresentation public  boolean affects(int)
 METHOD com.openggf.graphics.PaletteFadePresentation public  boolean clear()
@@ -9163,7 +9181,6 @@ METHOD com.openggf.graphics.pipeline.RenderOrderRecorder public  void clear()
 METHOD com.openggf.graphics.pipeline.RenderOrderRecorder public  void record(com.openggf.graphics.pipeline.RenderPhase,java.lang.String)
 METHOD com.openggf.graphics.pipeline.RenderOrderRecorder public  void recordPostFadeDiagnostic(java.lang.String)
 METHOD com.openggf.graphics.pipeline.RenderOrderRecorder public  void setEnabled(boolean)
-METHOD com.openggf.graphics.pipeline.RenderOrderRecorder public,static,synchronized  com.openggf.graphics.pipeline.RenderOrderRecorder getInstance()
 METHOD com.openggf.graphics.pipeline.RenderPhase public,static  com.openggf.graphics.pipeline.RenderPhase valueOf(java.lang.String)
 METHOD com.openggf.graphics.pipeline.RenderPhase public,static  com.openggf.graphics.pipeline.RenderPhase[] values()
 METHOD com.openggf.graphics.pipeline.UiRenderPipeline public  boolean isFadeActive()
@@ -12493,6 +12510,16 @@ METHOD com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public,final  int h
 METHOD com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static  com.openggf.mods.mutators.MutatorPolicy$HeadTarget valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.MutatorPolicy$HeadTarget public,static  com.openggf.mods.mutators.MutatorPolicy$HeadTarget[] values()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  com.openggf.mods.mutators.MutatorCapability capability()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  com.openggf.mods.mutators.MutatorPolicy$HomingMode mode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public  java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter> characters()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public,final  int hashCode()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingAttack public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static  com.openggf.mods.mutators.MutatorPolicy$HomingCharacter valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingCharacter public,static  com.openggf.mods.mutators.MutatorPolicy$HomingCharacter[] values()
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static  com.openggf.mods.mutators.MutatorPolicy$HomingMode valueOf(java.lang.String)
+METHOD com.openggf.mods.mutators.MutatorPolicy$HomingMode public,static  com.openggf.mods.mutators.MutatorPolicy$HomingMode[] values()
 METHOD com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public  java.util.Set<com.openggf.game.mutators.MonitorContent> removedContents()
 METHOD com.openggf.mods.mutators.MutatorPolicy$MonitorFilter public,final  boolean equals(java.lang.Object)
@@ -13368,6 +13395,7 @@ METHOD com.openggf.net.client.LobbyPosePublisher public  void onFrame(com.opengg
 METHOD com.openggf.net.client.MasterClient public  boolean isOpen()
 METHOD com.openggf.net.client.MasterClient public  com.openggf.net.hub.RoomInviteService inviteService(java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.lang.String masterSessionToken()
+METHOD com.openggf.net.client.MasterClient public  java.net.URI endpoint()
 METHOD com.openggf.net.client.MasterClient public  java.util.List<com.openggf.net.client.RaceClient$InboundEvent> drainInbound()
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinInvite(java.lang.String,com.openggf.net.protocol.ControlMessage$RoomJoinResult,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.protocol.RoomPassword)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinResolved(com.openggf.net.protocol.ControlMessage$RoomJoinResult,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.client.RoomJoinOptions)
@@ -13385,8 +13413,11 @@ METHOD com.openggf.net.client.MasterClient public  void leaveRoom(java.lang.Stri
 METHOD com.openggf.net.client.MasterClient public  void sendBinary(byte[])
 METHOD com.openggf.net.client.MasterClient public  void sendControl(com.openggf.net.protocol.ControlMessage)
 METHOD com.openggf.net.client.MasterClient public,static  boolean allowsRelayFallback(java.lang.Throwable)
-METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.MasterClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,javax.net.ssl.SSLContext)
+METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.MasterClient> connect(java.lang.String,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,javax.net.ssl.SSLContext)
 METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> completeRoomHandshake(com.openggf.net.client.RaceConnection,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
+METHOD com.openggf.net.client.MasterDiscoveryException public  com.openggf.net.client.MasterDiscoveryException$Reason reason()
+METHOD com.openggf.net.client.MasterDiscoveryException$Reason public,static  com.openggf.net.client.MasterDiscoveryException$Reason valueOf(java.lang.String)
+METHOD com.openggf.net.client.MasterDiscoveryException$Reason public,static  com.openggf.net.client.MasterDiscoveryException$Reason[] values()
 METHOD com.openggf.net.client.RaceClient public  boolean isOpen()
 METHOD com.openggf.net.client.RaceClient public  com.openggf.net.protocol.ControlMessage$JoinAccepted joinAccepted()
 METHOD com.openggf.net.client.RaceClient public  int playerSlot()
@@ -16947,6 +16978,9 @@ NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Mutator
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HeadTarget
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingAttack
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingCharacter
+NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingMode
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$MonitorFilter
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoBonusStages
 NESTED com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints
@@ -16996,6 +17030,7 @@ NESTED com.openggf.mods.ui.TextLayout com.openggf.mods.ui.TextLayout$Alignment
 NESTED com.openggf.mods.ui.TextLayout com.openggf.mods.ui.TextLayout$Metrics
 NESTED com.openggf.net.client.ClientRaceSession com.openggf.net.client.ClientRaceSession$Phase
 NESTED com.openggf.net.client.GhostStreamPublisher com.openggf.net.client.GhostStreamPublisher$BinarySender
+NESTED com.openggf.net.client.MasterDiscoveryException com.openggf.net.client.MasterDiscoveryException$Reason
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$Control
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$Disconnected
 NESTED com.openggf.net.client.RaceClient com.openggf.net.client.RaceClient$GhostData
@@ -17308,6 +17343,7 @@ PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.Mutato
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed
+PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$HomingAttack
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$MonitorFilter
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoBonusStages
 PERMITS com.openggf.mods.mutators.MutatorPolicy com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints
@@ -17591,6 +17627,7 @@ RECORD-COMPONENT com.openggf.control.LogicalInputSnapshot player2 com.openggf.co
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer inside boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer leftPressed boolean
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer rightPressed boolean
+RECORD-COMPONENT com.openggf.control.MenuInput$Pointer wheel int
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer x int
 RECORD-COMPONENT com.openggf.control.MenuInput$Pointer y int
 RECORD-COMPONENT com.openggf.control.PhysicalBinding code int
@@ -18286,6 +18323,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules inputAlwaysCapsGroun
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landing com.openggf.game.rules.PlayerLandingRules
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landingWalkWriteSkippedWhileSpindashing boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules levelBoundary com.openggf.game.rules.PlayerLevelBoundaryRules
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules poweredRollFriction short
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollControlledDecelUsesEffectiveDecelQuarter boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollStopsBelowMinimumSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollingJumpPinballGateRequiresSpindashFlag boolean
@@ -19153,6 +19191,8 @@ RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback vertica
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity percent int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed audioFollowsSpeed boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed percent int
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$HomingAttack characters java.util.Set<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter>
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$HomingAttack mode com.openggf.mods.mutators.MutatorPolicy$HomingMode
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$MonitorFilter removedContents java.util.Set<com.openggf.game.mutators.MonitorContent>
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAppendage boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAttachedEffects boolean
@@ -20839,6 +20879,7 @@ TYPE class public,final com.openggf.net.client.DirectRoomRegistration SUPER java
 TYPE class public,final com.openggf.net.client.GhostStreamPublisher SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.LobbyPosePublisher SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Object
+TYPE class public,final com.openggf.net.client.MasterDiscoveryException SUPER java.io.IOException
 TYPE class public,final com.openggf.net.client.RaceClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostPlayback SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostRegistry SUPER java.lang.Object
@@ -21080,6 +21121,8 @@ TYPE enum public,static,final com.openggf.mods.mutators.HudPresentationPolicy$Mo
 TYPE enum public,static,final com.openggf.mods.mutators.InputControlPolicy$Mode SUPER java.lang.Enum<com.openggf.mods.mutators.InputControlPolicy$Mode>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorConfigurationScreen$Cue SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorConfigurationScreen$Cue>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$HeadTarget SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$HeadTarget>
+TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingCharacter SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$HomingCharacter>
+TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingMode SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$HomingMode>
 TYPE enum public,static,final com.openggf.mods.mutators.MutatorPolicy$Target SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorPolicy$Target>
 TYPE enum public,static,final com.openggf.mods.mutators.NativePowerupPolicy$Kind SUPER java.lang.Enum<com.openggf.mods.mutators.NativePowerupPolicy$Kind>
 TYPE enum public,static,final com.openggf.mods.mutators.ObjectFieldPolicy$Mode SUPER java.lang.Enum<com.openggf.mods.mutators.ObjectFieldPolicy$Mode>
@@ -21104,6 +21147,7 @@ TYPE enum public,static,final com.openggf.mods.ui.AtlasFont$GlyphCase SUPER java
 TYPE enum public,static,final com.openggf.mods.ui.FocusRegions$Direction SUPER java.lang.Enum<com.openggf.mods.ui.FocusRegions$Direction>
 TYPE enum public,static,final com.openggf.mods.ui.TextLayout$Alignment SUPER java.lang.Enum<com.openggf.mods.ui.TextLayout$Alignment>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
+TYPE enum public,static,final com.openggf.net.client.MasterDiscoveryException$Reason SUPER java.lang.Enum<com.openggf.net.client.MasterDiscoveryException$Reason>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
 TYPE enum public,static,final com.openggf.net.hub.RoomHost$ListenerAdmission SUPER java.lang.Enum<com.openggf.net.hub.RoomHost$ListenerAdmission>
 TYPE enum public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation SUPER java.lang.Enum<com.openggf.net.protocol.ControlMessage$InviteOperation>
@@ -21681,6 +21725,7 @@ TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$BigHead 
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$HomingAttack SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$MonitorFilter SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoBonusStages SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints SUPER java.lang.Record
@@ -22757,6 +22802,9 @@ TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DefeatKnockback @com.ope
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$DrySonicGravity @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$GameplaySpeed @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HeadTarget @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HomingAttack @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HomingCharacter @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$HomingMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$MonitorFilter @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$NoBonusStages @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.MutatorPolicy$NoCheckpoints @com.openggf.game.ModApi
@@ -22919,6 +22967,8 @@ TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher$BinarySender @com.op
 TYPE-ANNOTATION com.openggf.net.client.GhostStreamPublisher$BinarySender @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.client.LobbyPosePublisher @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.MasterClient @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.MasterDiscoveryException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.MasterDiscoveryException$Reason @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$Control @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RaceClient$Disconnected @com.openggf.game.ModApi

@@ -45,6 +45,18 @@ class TestS3kEndingSceneResources {
         for(int i=0;i<512&&!EndingSceneResourceHandoff.ready(s);i++)service();
         assertTrue(EndingSceneResourceHandoff.ready(s),"native queues must retire without fixture completion admission");
     }
+    @Test void unchangedSceneRestorePreservesMapOwnershipAndRestoresResidentArt(){
+        boot();var level=(Sonic3kLevel)GameServices.level().getCurrentLevel();
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var snapshot=registry.capture();var mapBytes=level.getMap().getData();
+        byte[] expected=new byte[64];level.getPattern(0).copyInto(expected,0);
+        byte[] overlay=new byte[32];java.util.Arrays.fill(overlay,(byte)0xAB);
+        level.applyPatternOverlay(overlay,0,false);
+        registry.restore(snapshot);
+        assertSame(mapBytes,level.getMap().getData());
+        byte[] restored=new byte[64];level.getPattern(0).copyInto(restored,0);
+        assertArrayEquals(expected,restored);
+    }
     @Test void queueAizInstallsVerifiedTerrainAndNativeChunkPatchesWithoutChangingD01OrHistory(){
         boot();var s=TestEnvironment.objectServices();var level=(Sonic3kLevel)s.currentLevel();
         assertEquals(9,level.getMap().getWidth());

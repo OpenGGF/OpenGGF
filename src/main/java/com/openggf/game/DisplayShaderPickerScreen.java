@@ -32,6 +32,11 @@ public final class DisplayShaderPickerScreen {
             details = new MenuDetailsScreen(title(), fullText(picker, root, status));
             return none();
         }
+        if (picker.isOpen() && input != null) {
+            var frame = MenuContentFrame.fit(viewportWidth);
+            MenuInput.Pointer pointer = MenuInput.pointer(input, frame.surfaceWidth(), 224);
+            if (pointer.inside()) picker.scroll(pointer.wheel());
+        }
         return picker.update(input, current);
     }
 

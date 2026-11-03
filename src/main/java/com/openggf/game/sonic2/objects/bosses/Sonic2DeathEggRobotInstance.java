@@ -647,7 +647,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         if (head != null && head.isBodyMiscSignaled()) {
             bodyRoutine = BODY_COUNTDOWN;
             actionTimer = COUNTDOWN_TIMER;
-            services().fadeOutMusic();
+            // Shipped PlaySound route: SFX admission may crowd out this fade.
+            services().playSfx(0xF9);
         }
     }
 

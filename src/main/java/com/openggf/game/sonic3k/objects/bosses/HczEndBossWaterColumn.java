@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -88,7 +89,7 @@ import java.util.logging.Logger;
  * <p>Grab (sub_6B9E2): player within Y-zone table (word_6BAC2) and 32px H —
  * lock object_control, forced float animation.
  */
-public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSolidProvider, RewindRecreatable, RomObjectCodePointerProvider {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -254,14 +255,6 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // -- Spray animation state (inline — replaces spray child loc_6B3DE) --
     private int sprayAnimIndex;
     private int sprayAnimTimer;
-    /**
-     * The separately allocated spray SST runs after its platform parent. When
-     * {@code HCZEndBossPlatform_StartFallAway} selects DESCEND, that later slot
-     * still completes its final suction dispatch before observing parent bit 3
-     * (docs/skdisasm/sonic3k.asm:141208-141241,141270-141294).
-     */
-    private boolean pendingSprayTailInteraction;
-
     /** Platform wait counter for ROUTINE_PLATFORM (ROM $2E). */
     private int platformWait;
 
@@ -378,7 +371,11 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
         // Init spin-up animation (byte_6BE0C)
         spinupIndex = 0;
-        spinupTimer = SPINUP_DELAY;
+        // HCZEndBossPlatform_Init leaves the fresh slot's anim_frame_timer
+        // cleared (sonic3k.asm:141175-141194). Animate_RawNoSST pre-decrements
+        // it and advances anim_frame on the first dispatch, then every four
+        // (sonic3k.asm:177434-177446), reaching $F4 after 25 dispatches.
+        spinupTimer = 0;
 
         // Init column animation (will be used after spin-up)
         columnAnimIndex = 0;
@@ -497,9 +494,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         solidActive = true;
 
         // Suction (replicated from spray child sub_6B9AC + sub_6B9E2)
-        if (risingAtEntry || pendingSprayTailInteraction) {
+        if (risingAtEntry) {
             applySuction(player);
-            pendingSprayTailInteraction = false;
         }
     }
 
@@ -594,14 +590,15 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
 
         solidActive = true;
 
-        // Suction/grab during hold
+        // HCZEndBossColumn_Idle runs its last interaction, then observes
+        // the parent's release bit on this pass (sonic3k.asm:141297-141310).
+        // The next pass is ReleaseMove and performs no player interaction.
         applySuction(player);
 
         // Check boss propeller state (ROM: btst #3,$38(a1))
         if (!boss.isPropellerActive()) {
             // loc_6B34A: transition to DESCEND
             routine = ROUTINE_DESCEND;
-            pendingSprayTailInteraction = true;
 
             // ROM: bset #3,$38(a0) — set own flag (not used elsewhere)
             // ROM: y_vel = $80
@@ -718,49 +715,42 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         int sprayY = getSprayY();
 
         NativePlayerSlots slots = nativePlayerSlots(player);
+        // HCZEndBossColumn_ProcessPlayers retains the selected range pointer;
+        // PushHeldPlayer consumes one word even when its top check releases P1
+        // (sonic3k.asm:141861-141874,141920-141925). FixBugs=0 retains that
+        // P2 range shift; independently resetting the range would fix the ROM bug.
+        boolean consumedRangeWord = slots.p1() != null
+                && applyGrabAndCarry(slots.p1(), 0, sprayY, 0);
+        if (slots.p2() != null) {
+            applyGrabAndCarry(slots.p2(), 1, sprayY, consumedRangeWord ? 1 : 0);
+        }
+        // HCZEndBossColumn_PushPlayersFromWater initializes d2 once, then
+        // retains each negation across P1/P2 (sonic3k.asm:141825-141854).
+        int displacement = 2;
         if (slots.p1() != null) {
-            applyGrabAndCarry(slots.p1(), 0, sprayY);
-            applySuctionTo(slots.p1());
+            displacement = applySuctionTo(slots.p1(), displacement);
         }
         if (slots.p2() != null) {
-            applyGrabAndCarry(slots.p2(), 1, sprayY);
-            applySuctionTo(slots.p2());
+            applySuctionTo(slots.p2(), displacement);
         }
         for (AbstractPlayableSprite extension : extendedParticipants(player, slots)) {
-            applyGrabAndCarry(extension, -1, sprayY);
-            applySuctionTo(extension);
+            applyGrabAndCarry(extension, -1, sprayY, 0);
+            applySuctionTo(extension, 2);
         }
     }
 
-    /**
-     * sub_6B9AC + sub_6B9C8: horizontal push toward column.
-     * ROM: $20000 (2.0 in 16.16) applied to x_pos when player is below
-     * water+8 and not object-controlled. This is a gentle positional drag
-     * (not velocity-based), so the player can escape by running/swimming
-     * in the opposite direction.
-     */
-    private void applySuctionTo(AbstractPlayableSprite sprite) {
-        if (sprite.getDead() || sprite.isObjectControlled()) {
-            return;
+    /** Native d2 is an in/out displacement, including on the equality path. */
+    private int applySuctionTo(AbstractPlayableSprite sprite, int displacement) {
+        // HCZEndBossColumn_PushPlayerFromWater (sonic3k.asm:141841-141854):
+        // skipped participants leave d2 unchanged; only x > column negates it.
+        if (sprite.isObjectControlled() || sprite.getCentreY() <= getWaterLevelY() + 8) {
+            return displacement;
         }
-
-        int waterY = getWaterLevelY();
-        int spriteY = sprite.getCentreY();
-
-        // ROM: cmp.w y_pos(a1),d1; bhs locret — skip if water+8 >= player_y
-        // (skip when player is above water+8; apply when player is below water+8)
-        if (spriteY <= waterY + 8) {
-            return;
+        if (sprite.getCentreX() > currentX) {
+            displacement = -displacement;
         }
-
-        int spriteX = sprite.getCentreX();
-        // ROM: cmp.w x_pos(a1),d0; bhs.s loc_6B9DC; neg.l d2
-        // If column_x >= sprite_x: push right (positive). Otherwise: push left.
-        if (spriteX < currentX) {
-            sprite.shiftX(2);
-        } else if (spriteX > currentX) {
-            sprite.shiftX(-2);
-        }
+        sprite.shiftX(displacement);
+        return displacement;
     }
 
     /**
@@ -779,7 +769,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      * @param isPlayer1 true for main player, false for sidekick
      * @param sprayY    precomputed spray Y position for this frame
      */
-    private void applyGrabAndCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY) {
+    private boolean applyGrabAndCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY, int rangeWordOffset) {
         boolean isGrabbed = isGrabbed(sprite, playerIndex);
 
         // ROM: btst #7,status(a3) — if boss defeated, release
@@ -787,7 +777,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             if (isGrabbed) {
                 releasePlayer(sprite, playerIndex);
             }
-            return;
+            return false;
         }
 
         // ROM: cmpi.b #6,routine(a2) — dead/dying → displace off
@@ -796,7 +786,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 clearGrabFlag(sprite, playerIndex);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b invulnerability_timer(a2) — invulnerable → displace off
@@ -805,7 +795,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 clearGrabFlag(sprite, playerIndex);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b object_control(a2) — check if player is controlled
@@ -815,42 +805,57 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
                 // Another object has control. Fall through to range check
                 // (ROM falls through to loc_6BA32). But since we don't own
                 // this player, just skip.
-                return;
+                return false;
             }
             // We own this player — go to carry logic (loc_6BA6C)
-            doCarry(sprite, playerIndex, sprayY);
-            return;
+            doCarry(sprite, playerIndex, sprayY, rangeWordOffset);
+            return true;
         }
 
         // Player is NOT object-controlled — range check + initial grab (loc_6BA32)
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
+        int wordIndex = idx * 2 + rangeWordOffset;
 
         int spriteY = sprite.getCentreY();
-        int yTop = sprayY + zone[0];
-        int yHeight = zone[1];
+        int yTop = (sprayY + grabZoneWord(wordIndex)) & 0xFFFF;
 
         // ROM: add.w (a1),d0; cmp.w d0,d2; blo locret — player above zone top
         if (spriteY < yTop) {
-            return;
+            return false;
         }
         // ROM: add.w 2(a1),d0; cmp.w d0,d2; bhs locret — player below zone bottom
-        if (spriteY >= yTop + yHeight) {
-            return;
+        if (spriteY >= ((yTop + grabZoneWord(wordIndex + 1)) & 0xFFFF)) {
+            return false;
         }
 
         // ROM: x range check: sub.w d2,d0; addi.w #$10,d0; cmpi.w #$20,d0
         int spriteX = sprite.getCentreX();
         int hDist = currentX - spriteX + GRAB_H_DIST;
         if (hDist < 0 || hDist >= (GRAB_H_DIST * 2)) {
-            return;
+            return false;
         }
 
         // In range — initial grab (sub_6BADA)
         doInitialGrab(sprite, playerIndex);
 
         // Immediately enter carry logic this frame (ROM falls through to loc_6BA6C)
-        doCarry(sprite, playerIndex, sprayY);
+        doCarry(sprite, playerIndex, sprayY, rangeWordOffset);
+        return true;
+    }
+
+
+    private int grabZoneWord(int wordIndex) {
+        if (wordIndex < GRAB_ZONES.length * 2) {
+            return GRAB_ZONES[wordIndex / 2][wordIndex & 1];
+        }
+        // The shifted last pair reads the following CapturePlayer instruction
+        // as data (sonic3k.asm:141959-141975). Read that word from the supplied
+        // ROM, rather than inventing a clamped range or simulating instructions.
+        try {
+            return services().romReader().readS16BE(0x6BAC2 + wordIndex * 2);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Cannot read HCZ end-boss grab range", e);
+        }
     }
 
     /**
@@ -901,13 +906,12 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
      *   subq.w #2,y_pos(a2)
      * </pre>
      */
-    private void doCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY) {
+    private void doCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY, int rangeWordOffset) {
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
         int spriteY = sprite.getCentreY();
 
         // ROM: check if player has risen above the top of grab zone → release
-        int yTop = sprayY + zone[0];
+        int yTop = (sprayY + grabZoneWord(idx * 2 + rangeWordOffset)) & 0xFFFF;
         if (spriteY < yTop) {
             releasePlayer(sprite, playerIndex);
             return;

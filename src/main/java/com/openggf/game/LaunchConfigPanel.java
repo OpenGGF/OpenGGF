@@ -173,6 +173,7 @@ public final class LaunchConfigPanel {
         focusIndex = Math.clamp(focusIndex, 0, items.size() - 1);
         if (MenuInput.up(inputHandler)) focusIndex = Math.floorMod(focusIndex - 1, items.size());
         if (MenuInput.down(inputHandler)) focusIndex = (focusIndex + 1) % items.size();
+        if (pointer.inside()) focusIndex = Math.clamp(focusIndex - pointer.wheel(), 0, items.size() - 1);
         refreshRowScroll();
         Item item = items.get(focusIndex);
 
@@ -302,8 +303,10 @@ public final class LaunchConfigPanel {
         if (MenuInput.left(input)) promptChoice = Math.floorMod(promptChoice - 1, 3);
         if (MenuInput.right(input)) promptChoice = (promptChoice + 1) % 3;
         boolean choose = MenuInput.accept(input);
+        int maxPromptScroll = Math.max(0, changeSummaryLines().size() - summaryCapacity());
         if (MenuInput.up(input)) promptScroll = Math.max(0, promptScroll - 1);
-        if (MenuInput.down(input)) promptScroll = Math.min(Math.max(0, changeSummaryLines().size() - summaryCapacity()), promptScroll + 1);
+        if (MenuInput.down(input)) promptScroll = Math.min(maxPromptScroll, promptScroll + 1);
+        if (pointer.inside()) promptScroll = Math.clamp(promptScroll - pointer.wheel(), 0, maxPromptScroll);
         List<PromptButton> buttons = promptButtons(viewportWidth);
         for (int i = 0; i < buttons.size(); i++) {
             PromptButton button = buttons.get(i);

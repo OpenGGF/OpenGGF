@@ -215,13 +215,22 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         platformRecreateIndex = 0;
         tubeRecreateIndex = 0;
         requestStartupAssets();
-        queueBossArtDuringConstruction();
+        if (isCameraInRange()) {
+            queueBossArtDuringConstruction();
+        }
         spawnInitialVisuals();
     }
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
-        serviceBossArtQueue();
+        // Obj_LBZEndBoss: Check_CameraInRange must admit loc_73906 before
+        // Queue_Kos_Module may submit ArtKosM_LBZEndBoss. Once admitted, the
+        // native object skips the camera check on all subsequent dispatches.
+        // Construction may already own the submitted job before the first update
+        // latches camera admission. Keep servicing that owner after camera exit.
+        if (bossArtOrdinal >= 0 || cameraRangeLatched || isCameraInRange()) {
+            serviceBossArtQueue();
+        }
         if (paletteRuntimeIntegrationPending) {
             requestStartupAssets();
         }
@@ -913,7 +922,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             if (svc.gameState() != null) {
                 svc.gameState().setCurrentBossId(0);
             }
-            svc.playMusic(Sonic3kMusic.LBZ2.id);
+            svc.playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(svc, Sonic3kMusic.LBZ2.id));
         }
         if (deferredExplosionControllerChild != null) {
             deferredExplosionControllerChild.finishParentWindow();

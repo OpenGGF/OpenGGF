@@ -4830,3 +4830,16 @@ landing). `36aaddb37` landed at 1969 too, so this is an older engine difference,
 regression above. The five manifests carry the entry, the five lag facts and a `BIZHAWK` stamp:
 **engine-qualified, native-diverged at row 1969**. Fixing the landing would move the repaired
 routes off their `36aaddb37` run at 1969, so it is left for the solid-contact owner.
+
+## Diagonal bridge transfer and arrival animation (2026-11-03)
+
+`TestS3kSszDiagonalTransfers` exercises rolling transfers between the permanent
+native diagonal bridge placements for Sonic/Tails and Tails at320/800. All four
+cases retain rolling, restore/replay every registry key across the transfer,
+and reject re-grounding an actual jump. `TestS3kSszArrivalHeadless` now checks
+that the helper releases Tails' dormant mapping lock during the scripted swing.
+The existing four collapse-presentation and20compatibility cases pass, as do
+both cold-route checks and nine traversal cases. This is local contract coverage;
+full-act, donor and participant breadth beyond these cases remains inherited.
+See the [ROM and trace audit](../../audits/2026-11-03-s3k-ssz-diagonal-transfer.md)
+for executed branch evidence, profile coverage and the remaining frontiers.

@@ -19,6 +19,7 @@ import java.util.List;
  * {@code loc_54E9C}. Uses {@code Map_MHZEndBossMisc} and
  * {@code Ani_MHZEndPropellers}.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class MhzShipPropellerInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private static final int OBJECT_ID = 0;
     private static final int[] ANIMATION_FRAMES = {5, 6, 7};

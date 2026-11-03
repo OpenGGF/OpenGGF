@@ -11,6 +11,25 @@ import static org.mockito.Mockito.when;
 /** Locked-on oracle for Obj_FBZ2Subboss (sonic3k.asm:148033-148695). */
 class TestFbzAct2Subboss {
     @Test
+    void roofEmittersFlipVerticallyWhileFloorEmittersKeepTheirOrientation() {
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ2_SUBBOSS))
+                .thenReturn(renderer);
+        var services = new com.openggf.level.objects.StubObjectServices() {
+            @Override public com.openggf.level.objects.ObjectRenderManager renderManager() { return renderManager; }
+        };
+        var root = boss();
+        for (int subtype : Fbz2SubbossCornerChild.nativeSubtypes()) {
+            var child = new Fbz2SubbossCornerChild(root, subtype);
+            child.setServices(services);
+            child.appendRenderCommands(new java.util.ArrayList<>());
+            org.mockito.Mockito.verify(renderer).drawFrameIndex(1, child.getX(), child.getY(), false, subtype < 4);
+        }
+    }
+
+    @Test
     void visibleChildrenRetainNativeArtPriorityIndependentlyOfSatBucket() {
         var root = boss();
         var children = java.util.List.of(

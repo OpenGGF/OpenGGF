@@ -148,6 +148,48 @@ class TestBundledModPackager {
                 System.getProperty("java.class.path"), System.out));
     }
 
+    @Test void generatedOverlayIsPackedIntoEveryModBeforeHashingAndReadableAsAnAsset() throws Exception {
+        Path overlay = Files.createDirectories(temp.resolve("overlay"));
+        BundledNetworkDefaults.write(overlay, "next", "multi-next.openggf.com");
+        BundledModManifest manifest = BundledModPackager.packageProjects(BASEDIR, temp.resolve("next"),
+                temp.resolve("next.json"), List.of("examples/hello-scene"), overlay,
+                System.getProperty("java.class.path"), System.out);
+        BundledModManifest.Entry entry = manifest.mods().getFirst();
+        Path jar = temp.resolve("next").resolve(entry.file());
+        try (var assets = com.openggf.io.ModAssetRoot.jar(temp.resolve("next"), jar)) {
+            String text = new String(assets.readBounded(BundledNetworkDefaults.RESOURCE, 1024), StandardCharsets.UTF_8);
+            assertTrue(text.contains("multiplayer.defaultMaster=multi-next.openggf.com\n"), text);
+        }
+        // The overlay is part of the hashed jar: another channel's build pins a different hash.
+        BundledNetworkDefaults.write(overlay, "master", "multi.openggf.com");
+        BundledModManifest master = BundledModPackager.packageProjects(BASEDIR, temp.resolve("master"),
+                temp.resolve("master.json"), List.of("examples/hello-scene"), overlay,
+                System.getProperty("java.class.path"), System.out);
+        assertNotEquals(entry.sha256(), master.mods().getFirst().sha256());
+        // Broken case: a generated entry may never replace a committed project resource.
+        Files.createDirectories(overlay.resolve("META-INF"));
+        Files.writeString(overlay.resolve("META-INF/openggf-mod.yaml"), "shadow");
+        IllegalArgumentException collision = assertThrows(IllegalArgumentException.class,
+                () -> BundledModPackager.packageProjects(BASEDIR, temp.resolve("shadow"), temp.resolve("shadow.json"),
+                        List.of("examples/hello-scene"), overlay, System.getProperty("java.class.path"), System.out));
+        assertTrue(collision.getMessage().contains("collides"), collision.getMessage());
+        assertThrows(IllegalArgumentException.class, () -> BundledModPackager.packageProjects(BASEDIR,
+                temp.resolve("missing"), temp.resolve("missing.json"), List.of("examples/hello-scene"),
+                temp.resolve("no-overlay"), System.getProperty("java.class.path"), System.out));
+    }
+
+    @Test void buildWiringGeneratesNetworkDefaultsBeforePackagingWithTheOverlay() throws Exception {
+        String pom = Files.readString(BASEDIR.resolve("pom.xml"));
+        int generate = pom.indexOf("<id>generate-bundled-mod-resources</id>");
+        int packageMods = pom.indexOf("<id>prepare-bundled-mods</id>");
+        assertTrue(generate > 0 && generate < packageMods, "the overlay is generated before packaging");
+        assertTrue(pom.contains("<argument>--catalogue=${project.basedir}/racing/deploy/master-channels.properties</argument>"));
+        assertTrue(pom.contains("<argument>--channel=${openggf.multiplayer.channel}</argument>"));
+        assertTrue(pom.contains("<argument>--overlay=${project.build.directory}/bundled-mod-overlay</argument>"));
+        assertTrue(pom.contains("<openggf.multiplayer.channel>develop</openggf.multiplayer.channel>"),
+                "local builds default to develop's master");
+    }
+
     @Test void buildWiringEmbedsUniversalJarsAndPackagesNativeBundledMods() throws Exception {
         String pom = Files.readString(BASEDIR.resolve("pom.xml"));
         assertTrue(pom.contains("<id>prepare-bundled-mods</id>"));

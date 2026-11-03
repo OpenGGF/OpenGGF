@@ -14,6 +14,6 @@ public record MenuContentFrame(int surfaceWidth, int width, int left) {
     public MenuInput.Pointer local(MenuInput.Pointer pointer) {
         int x = pointer.x() - left;
         return new MenuInput.Pointer(x, pointer.y(), pointer.inside() && x >= 0 && x < width,
-                pointer.leftPressed(), pointer.rightPressed());
+                pointer.leftPressed(), pointer.rightPressed(), pointer.wheel());
     }
 }

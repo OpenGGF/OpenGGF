@@ -77,7 +77,9 @@ public record PlayerMovementRules(
          * lands has the charge animation replaced by Walk on the landing frame while
          * the ROM holds it until release — visible for as long as the charge is held.
          */
-        boolean landingWalkWriteSkippedWhileSpindashing) {
+        boolean landingWalkWriteSkippedWhileSpindashing,
+        /** Powered rolling friction override; zero keeps acceleration / 2. */
+        short poweredRollFriction) {
 
     public boolean objectSolidHurtLandingRetainsRoutine() {
         return landing.objectSolidHurtLandingRetainsRoutine();

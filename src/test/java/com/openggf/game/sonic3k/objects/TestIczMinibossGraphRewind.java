@@ -91,10 +91,11 @@ class TestIczMinibossGraphRewind {
                 .activeObjectsOfType(IczMinibossExplosionControllerChild.class).getFirst();
         assertSame(h.boss(), field(controller, "parent").get(controller));
         assertTrue(h.boss().getChildComponents().isEmpty(), "defeat worker owns a managed SST");
-        assertRoundTrip(h, 100 - defeatTicks);
+        assertRoundTrip(h, 220 - defeatTicks);
         assertTrue(h.manager.activeObjectsOfType(IczMinibossInstance.class).isEmpty());
         assertTrue(h.manager.activeObjectsOfType(IczMinibossExplosionControllerChild.class).isEmpty());
-        assertEquals(1, h.manager.activeObjectsOfType(IczMinibossPostBossPaletteController.class).size());
+        assertEquals(0, h.manager.activeObjectsOfType(IczMinibossPostBossPaletteController.class).size(),
+                "the independently started palette script has finished by this late tail");
         assertEquals(1, h.manager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class).size());
     }
 
@@ -166,6 +167,9 @@ class TestIczMinibossGraphRewind {
                 }
             };
             StubObjectServices services = new StubObjectServices() {
+                @Override public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+                    return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, List::of);
+                }
                 @Override public ObjectManager objectManager() { return manager; }
                 @Override public Camera camera() { return camera; }
                 @Override public ObjectRenderManager renderManager() { return renderManager; }

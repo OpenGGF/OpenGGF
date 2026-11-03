@@ -120,7 +120,7 @@ public final class RacingDeploymentSmokeTool {
         PlayerIdentity identity = PlayerIdentity.loadOrCreate(data.resolve("client"));
         String fingerprint = attempt.recording().start().fingerprint();
         URI socket = new URI("wss", null, base.getHost(), base.getPort(), "/master", null, null);
-        try (MasterClient master = MasterClient.connect(socket, identity, DISPLAY_NAME, fingerprint, null)
+        try (MasterClient master = MasterClient.connect(socket.toString(), identity, DISPLAY_NAME, fingerprint, null)
                 .get(15, TimeUnit.SECONDS)) {
             String roomId = master.createRoom(new ControlMessage.RoomDescriptor(
                     "Deployment smoke", "s1", 0, 0, "LOCKED", "sonic", 2, true),

@@ -399,3 +399,7 @@ Unknown; the items predate the trace-replay suite and no trace exercises them.
 
 Remove each bullet once it is reproduced against the current engine and either fixed with a ROM citation or
 shown to match the ROM. Remove the entry when no bullet remains.
+
+## Music-transition audit follow-up — 2026-11-02
+
+S1 Japanese REV01 score-threshold jingles and S2 competition-results music ownership remain open. Frontend timing and audible equivalence are not certified. See the [cross-game audit](../architecture/audits/2026-11-02-music-transitions.md) for corrected owners, source revisions and remaining obligations.

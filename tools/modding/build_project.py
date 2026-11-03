@@ -95,7 +95,7 @@ def convert_starter_resources(project, classes, cli):
                         "--out", str(output)], check=True)
 
 
-def build(project, engine, sdk, *, run=False, roms=None, testkit=None, test=False):
+def build(project, engine, sdk, *, run=False, roms=None, testkit=None, test=False, expert_legacy=False):
     project, engine, sdk = (Path(p).resolve() for p in (project, engine, sdk))
     for artifact in (engine, sdk):
         if not artifact.is_file():
@@ -113,7 +113,12 @@ def build(project, engine, sdk, *, run=False, roms=None, testkit=None, test=Fals
     sources = sorted((project / "src/main/java").rglob("*.java"))
     if sources:
         subprocess.run([java_tool("javac"), "--release", "25", "-cp", classpath,
+                        *(["-processorpath", classpath, "-Xplugin:OpenGGFSupported"] if not expert_legacy else []),
                         "-d", str(classes), *map(str, sources)], check=True)
+    if not expert_legacy:
+        subprocess.run([java_tool("java"), "-cp", classpath,
+                        "com.openggf.tools.modsdk.SupportedSourceCheckCli", str(classes),
+                        str(project / "src/main/resources/META-INF/openggf-mod.yaml")], check=True)
     copy_resources(project, classes)
     cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     convert_starter_resources(project, classes, cli)
@@ -290,6 +295,7 @@ def main(argv=None):
     parser.add_argument("--config", type=Path, help="explicit local JSON config (default: PROJECT/ggfmod.local.json)")
     parser.add_argument("--doctor", action="store_true", help="read-only prerequisites and candidate identity checks")
     parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--expert-legacy", action="store_true", help="expert lane: retain legacy unsupported-engine warnings")
     parser.add_argument("--run", action="store_true")
     parser.add_argument("--test", action="store_true", help="compile and run the authored Jupiter tests")
     parser.add_argument("--testkit", type=Path, help="verify an optional matching testkit before local test setup")
@@ -317,7 +323,7 @@ def main(argv=None):
         if findings:
             report(findings, "text")
             return 1
-        print(build(project, engine, sdk, run=args.run, roms=roms, testkit=values["testkit"], test=args.test))
+        print(build(project, engine, sdk, run=args.run, roms=roms, testkit=values["testkit"], test=args.test, expert_legacy=args.expert_legacy))
         return 0
     except (OSError, ValueError, KeyError, zipfile.BadZipFile, subprocess.SubprocessError) as error:
         if "--doctor" in argv:

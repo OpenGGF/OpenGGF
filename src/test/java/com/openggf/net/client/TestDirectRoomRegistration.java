@@ -234,7 +234,7 @@ class TestDirectRoomRegistration {
     }
 
     private static MasterClient connect(MasterServer broker, PlayerIdentity identity, String name) throws Exception {
-        return MasterClient.connect(URI.create("ws://127.0.0.1:" + broker.port() + "/master"),
+        return MasterClient.connect("ws://127.0.0.1:" + broker.port() + "/master",
                 identity, name, BUILD, null).get(15, TimeUnit.SECONDS);
     }
 

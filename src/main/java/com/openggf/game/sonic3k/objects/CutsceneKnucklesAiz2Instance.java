@@ -35,15 +35,12 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
     private static final int RUN_SPEED = 2;
     private static final int FLOOR_Y = 0x017D;
 
-    private static final int[] RUN_FRAMES = {0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11};
-    private static final int RUN_DELAY = 4;
-    private static final int[] JUMP_FRAMES = {8, 4, 8, 5, 8, 6, 8, 7};
-    private static final int JUMP_DELAY = 1;
-    // ROM: byte_666B9 plays $1C, $1C, $1D ONCE, then $F8-jumps to
-    // byte_666BF which LOOPS $1E, $1F ($FC = restart).
-    private static final int[] LAUGH_INTRO = {0x1C, 0x1C, 0x1D};
-    private static final int[] LAUGH_LOOP = {0x1E, 0x1F};
-    private static final int LAUGH_DELAY = 7;
+    // byte_6669F / byte_666AF / byte_666B9, locked-on ROM raw scripts.
+    private static final int RUN_SCRIPT = 0x6669F;
+    private static final int JUMP_SCRIPT = 0x666AF;
+    private static final int LAUGH_SCRIPT = 0x666B9;
+    private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
+    private transient S3kRawAnimation scripts;
 
     private enum Phase { INIT_WAIT, RUN_IN, LAUGH_1, JUMP, LAUGH_2 }
 
@@ -58,12 +55,6 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
     private boolean initialized;
     private boolean bounced;
 
-    // ROM: SetUp_ObjAttributesSlotted defaults mapping_frame to 0 (standing).
-    // Frame 0x1C is the laugh pose — only used during LAUGH_1/LAUGH_2 phases.
-    private int mappingFrame = 0;
-    private int animationTick;
-    private int animationIndex;
-    private boolean laughIntroFinished;
     /** ROM render_flags bit 0: true = facing right (hFlip in draw call). */
     private boolean facingRight = true;  // Starts facing right (running in from right side)
 
@@ -97,9 +88,11 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             initialized = true;
+            // ObjSlot_CutsceneKnux installs standing mapping $16, not frame zero.
+            animation.mappingFrame = 0x16;
             AizIntroArtLoader.loadAllIntroArt(services());
             AizIntroArtLoader.applyKnucklesPalette(services());
-            services().playMusic(Sonic3kMusic.KNUCKLES.id);
+            spawnFreeChild(() -> SongFadeTransitionInstance.transitionTo(Sonic3kMusic.KNUCKLES.id));
             Aiz2BossEndSequenceState.armCutsceneKnucklesSlot(getSlotIndex());
             Aiz2BossEndSequenceState.setActiveKnuckles(this);
             // Obj_CutsceneKnuckles installs the AIZ2 routine, then loc_61FC2
@@ -119,20 +112,17 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
     }
 
     private void updateInitWait() {
-        // ROM: Knuckles stands at frame 0 (default) during the initial wait.
         if (timer > 0) {
             timer--;
             return;
         }
         phase = Phase.RUN_IN;
-        animationTick = 0;
-        animationIndex = 0;
     }
 
     private void updateRunIn() {
         if (currentX - RUN_SPEED >= RUN_END_X) {
             currentX -= RUN_SPEED;
-            animateLoop(RUN_FRAMES, RUN_DELAY);
+            animate(RUN_SCRIPT);
             return;
         }
         currentX = RUN_END_X;
@@ -140,23 +130,11 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
         facingRight = false;
         phase = Phase.LAUGH_1;
         timer = LAUGH_TIMER;
-        animationTick = 0;
-        animationIndex = 0;
-        mappingFrame = 0x1C;
+        setAnimation(LAUGH_SCRIPT, 0x1C);
     }
 
     private void updateLaugh(boolean countdown) {
-        // ROM: byte_666B9 plays intro {$1C,$1C,$1D} once, then $F8-jumps
-        // to byte_666BF which loops {$1E,$1F} with $FC restart.
-        if (!laughIntroFinished) {
-            if (animateOnce(LAUGH_INTRO, LAUGH_DELAY)) {
-                laughIntroFinished = true;
-                animationTick = 0;
-                animationIndex = 0;
-            }
-        } else {
-            animateLoop(LAUGH_LOOP, LAUGH_DELAY);
-        }
+        animate(animation.script);
         if (!countdown) {
             return;
         }
@@ -167,14 +145,11 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
         phase = Phase.JUMP;
         xVel = -0x100;
         yVel = -0x400;
-        animationTick = 0;
-        animationIndex = 0;
-        laughIntroFinished = false;
-        mappingFrame = 8;
+        setAnimation(JUMP_SCRIPT, 8);
     }
 
     private void updateJump() {
-        animateLoop(JUMP_FRAMES, JUMP_DELAY);
+        animate(animation.script);
         // ROM: loc_620AA uses MoveSprite (moves X and Y) + gravity
         SubpixelMotion.State motion = new SubpixelMotion.State(
                 currentX, currentY, xSub, ySub, xVel, yVel);
@@ -194,7 +169,8 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
         if (!bounced) {
             // First landing — bounce back the other way
             bounced = true;
-            currentY = FLOOR_Y;
+            // loc_620AA reverses velocity without correcting first-contact penetration.
+            // Only loc_620D8 corrects Y on the second landing.
             xVel = -xVel;
             yVel = -yVel;
             return;
@@ -205,35 +181,23 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
         xVel = 0;
         yVel = 0;
         phase = Phase.LAUGH_2;
-        animationTick = 0;
-        animationIndex = 0;
-        laughIntroFinished = false;
-        mappingFrame = 0x1C;
+        setAnimation(LAUGH_SCRIPT, 0x1C);
     }
 
-    private void animateLoop(int[] frames, int delay) {
-        if (frames.length == 0) {
-            return;
-        }
-        if (animationTick <= 0) {
-            mappingFrame = frames[animationIndex];
-            animationIndex = (animationIndex + 1) % frames.length;
-            animationTick = delay;
-        }
-        animationTick--;
+    private void setAnimation(int script, int mappingFrame) {
+        S3kRawAnimation.set(animation, script);
+        animation.mappingFrame = mappingFrame;
     }
 
-    /** Plays through frames once without looping. Returns true when all frames have been shown. */
-    private boolean animateOnce(int[] frames, int delay) {
-        if (frames.length == 0) return true;
-        if (animationTick <= 0) {
-            if (animationIndex >= frames.length) return true;
-            mappingFrame = frames[animationIndex];
-            animationIndex++;
-            animationTick = delay;
+    private void animate(int script) {
+        if (scripts == null) {
+            try {
+                scripts = S3kRawAnimation.load(services().romReader(), RUN_SCRIPT, 0x666C3 - RUN_SCRIPT);
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("AIZ2 Knuckles raw animation", e);
+            }
         }
-        animationTick--;
-        return false;
+        scripts.animateNoSst(animation, script, () -> {});
     }
 
     /**
@@ -276,6 +240,6 @@ public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, facingRight, false);
+        renderer.drawFrameIndex(animation.mappingFrame, currentX, currentY, facingRight, false);
     }
 }

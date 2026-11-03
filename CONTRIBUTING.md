@@ -37,8 +37,12 @@ Runtime assets must come from the ROM through the engine's ROM-loading pipeline.
 fallbacks that read gameplay asset bytes from `docs/` disassembly/reference trees. Those files are
 for research, labels, and offset discovery only.
 
-The repository is licensed under GPLv3. By submitting a contribution, you agree that your changes
-are offered under the same license unless the maintainers explicitly agree otherwise.
+The repository is licensed under the GNU General Public License, version 3 only, with the
+[OpenGGF Mod Exception](LICENSES/OpenGGF-Mod-Exception.txt). By submitting a contribution, you
+agree that your changes are offered under the same terms, including the exception, unless the
+maintainers explicitly agree otherwise. Contributions to a part of the repository that carries its
+own `LICENSE` file, such as the MIT example mods or the MIT-0 mod starter material, are offered
+under that licence.
 
 ## Development Setup
 

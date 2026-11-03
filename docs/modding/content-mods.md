@@ -610,8 +610,10 @@ transport is separate from time-attack ghost races.
 
 
 Module title screens can read `MenuInput.pointer(input, width, height)`, an
-immutable logical-coordinate `Pointer` with `inside`, left/right press edges and
-`over(left, top, width, height)`. The engine shares its letterbox/framebuffer
+immutable logical-coordinate `Pointer` with `inside`, left/right press edges,
+`wheel` (whole notches this frame, positive away from the user) and
+`over(left, top, width, height)`. Every menu reading the pointer in one frame sees
+the same notches; unread notches are dropped at the end of the frame. The engine shares its letterbox/framebuffer
 mapper with mod scenes; menus own their hit regions and hover policy. A missing
 window, unseen pointer, headless graphics or logical movie override produces
 `Pointer.none()`. Mouse state is physical presentation input and never replaces

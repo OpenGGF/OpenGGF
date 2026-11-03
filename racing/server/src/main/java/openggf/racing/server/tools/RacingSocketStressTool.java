@@ -279,7 +279,7 @@ public final class RacingSocketStressTool {
         }
 
         private MasterClient master(PlayerIdentity identity, String name) throws Exception {
-            MasterClient client = future(MasterClient.connect(endpoint, identity, name, FP, null));
+            MasterClient client = future(MasterClient.connect(endpoint.toString(), identity, name, FP, null));
             masters.add(client);
             // All capacity identities are established: NEW identities have a deliberate high-fill gate.
             CompletableFuture<Void> promoted = new CompletableFuture<>();

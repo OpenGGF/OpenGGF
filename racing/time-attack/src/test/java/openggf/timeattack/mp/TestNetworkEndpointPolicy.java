@@ -57,7 +57,7 @@ class TestNetworkEndpointPolicy {
         for (String master : new String[]{"ws://example.com/master", "ws://localhost/master",
                 "ws://127.1/master", "wss://user@host.example/master", "wss://host.example/master#fragment"}) {
             assertThrows(IllegalArgumentException.class,
-                    () -> RecordingUploader.resolveUploadUrl("/recordings/a", master), master);
+                    () -> RecordingUploader.resolveUploadUrl("/recordings/a", java.net.URI.create(master)), master);
         }
     }
 
@@ -79,11 +79,11 @@ class TestNetworkEndpointPolicy {
     @Test
     void literalLoopbackAndTlsUploadOriginsRemainUsable() {
         assertEquals("http://127.0.0.1:8080/recordings/a", RecordingUploader.resolveUploadUrl(
-                "/recordings/a", "ws://127.0.0.1:8080/master"));
+                "/recordings/a", java.net.URI.create("ws://127.0.0.1:8080/master")));
         assertEquals("https://example.com/recordings/a", RecordingUploader.resolveUploadUrl(
-                "/recordings/a", "wss://example.com/master"));
+                "/recordings/a", java.net.URI.create("wss://example.com/master")));
         assertEquals("http://[::1]:8080/recordings/a", RecordingUploader.resolveUploadUrl(
-                "/recordings/a", "ws://[::1]:8080/master"));
+                "/recordings/a", java.net.URI.create("ws://[::1]:8080/master")));
         for (String host : new String[]{"localhost", "127.1", "0177.0.0.1", "127.0.0.1.example.com", "[::1%25eth0]"})
             assertFalse(NetworkEndpoints.literalLoopback(host), host);
     }

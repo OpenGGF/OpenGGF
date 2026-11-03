@@ -5,7 +5,6 @@ import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
@@ -478,13 +477,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         // 181900-181918,182027-182046).
         postOpenTimer = POST_OPEN_DELAY;
 
-        try {
-            services().playSfx(Sonic3kSfx.EXPLODE.id);
-        } catch (Exception e) {
-            // Ignore audio errors.
-        }
-
-        explosionController = new S3kBossExplosionController(currentX, currentY, 3, services().rng());
+        // sub_865DE selects subtype $08 (sonic3k.asm:181665-181667).
+        // CreateBossExp08 (sonic3k.asm:176802) makes seven normal explosions;
+        // each child owns sfx_Break.
+        explosionController = new S3kBossExplosionController(currentX, currentY, 8, services().rng());
         spawnAnimals();
         onParentOpen();
     }
@@ -499,14 +495,8 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         }
         var pending = explosionController.drainPendingExplosions();
         for (var entry : pending) {
-            if (entry.playSfx()) {
-                try {
-                    services().playSfx(Sonic3kSfx.EXPLODE.id);
-                } catch (Exception e) {
-                    // Ignore audio errors.
-                }
-            }
-            spawnChild(() -> new S3kBossExplosionChild(entry.x(), entry.y()));
+            spawnChild(() -> new FbzEndEggCapsuleExplosionController.FbzEndEggCapsuleNormalExplosion(
+                    new ObjectSpawn(entry.x(), entry.y(), 0, 0, 0, false, 0), services()));
         }
     }
 

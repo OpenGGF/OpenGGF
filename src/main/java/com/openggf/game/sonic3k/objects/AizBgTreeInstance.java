@@ -28,6 +28,7 @@ import java.util.List;
  * <p>The tree is fixed at screen Y = $69 (VDP $E9 - $80 = 105 pixels from
  * camera top) and deletes itself when the camera passes $4880.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizBgTreeInstance extends AbstractObjectInstance
         implements ZeroScalarArgsRewindRecreatable {
 

@@ -31,6 +31,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
@@ -3318,8 +3319,8 @@ public final class ObjectSolidContactController {
             absDistX = distX;
         }
 
-        Integer directTopLimit = topSolidOnly && !sticky && instance instanceof SlopedSolidProvider sloped
-                ? InitialObjectDispatchController.afterCallback(initialDispatch, sloped.getDirectTopLandingOverlapLimit()) : null;
+        Integer directTopLimit = topSolidOnly && !sticky
+                ? directTopLandingOverlapLimit(instance) : null;
         int distY;
         int absDistY;
         // Direct top helpers compare feet-relative overlap, even when it exceeds
@@ -3373,7 +3374,7 @@ public final class ObjectSolidContactController {
                 detectionDistY = distY + getTopLandingSnapAdjustment(instance, player);
             }
             boolean rejectsZeroDistanceTopLanding = detectionDistY == 0
-                    && rejectsZeroDistanceTopSolidLanding(instance);
+                    && (directTopLimit != null || rejectsZeroDistanceTopSolidLanding(instance));
             int overlapLimit = directTopLimit != null ? directTopLimit : 0x10;
             if (detectionDistY < 0 || detectionDistY >= overlapLimit || rejectsZeroDistanceTopLanding) {
                 if (rejectsZeroDistanceTopLanding) {
@@ -3400,7 +3401,9 @@ public final class ObjectSolidContactController {
                 // Their direct top-helper contract keeps the upright position
                 // arithmetic even when the world flag is set. Flat top-solid
                 // callers still select loc_1E4D6 through their normal path.
-                int newCenterY = directTopLimit == null && isReverseGravityActive(player)
+                boolean rawSlopedTopSurface = directTopLimit != null
+                        && instance instanceof SlopedSolidProvider;
+                int newCenterY = !rawSlopedTopSurface && isReverseGravityActive(player)
                         ? playerCenterY + landingSnap
                         : playerCenterY - landingSnap;
                 int newY = newCenterY - (player.getHeight() / 2);
@@ -4026,6 +4029,19 @@ public final class ObjectSolidContactController {
         return rules == null || rules.topSolidLandingAllowsZeroDist();
     }
 
+    private Integer directTopLandingOverlapLimit(ObjectInstance instance) {
+        var initialDispatch = InitialObjectDispatchController.currentReservation(objectManager);
+        if (instance instanceof TopSolidLandingWindowProvider provider) {
+            return InitialObjectDispatchController.afterCallback(initialDispatch,
+                    provider.getDirectTopLandingOverlapLimit());
+        }
+        if (instance instanceof SlopedSolidProvider provider) {
+            return InitialObjectDispatchController.afterCallback(initialDispatch,
+                    provider.getDirectTopLandingOverlapLimit());
+        }
+        return null;
+    }
+
     private boolean rejectsZeroDistanceTopSolidLanding(ObjectInstance instance) {
         return rejectsZeroDistanceTopSolidLanding(instance, currentPlayer);
     }
@@ -4473,6 +4489,15 @@ public final class ObjectSolidContactController {
                 playableSprite.setFlipTurned(false);
                 playableSprite.setFlipsRemaining(0);
                 playableSprite.setLookDelayCounter((short) 0);
+                // loc_17B6A (sonic3k.asm:32894-32907), Knux_TouchFloor's
+                // non-rolling tail, also runs for ordinary object landings.
+                // Clear the raw glide animation after the player animation pass;
+                // this frame's mapping remains owned by that earlier pass.
+                if (playableSprite.getSecondaryAbility() == SecondaryAbility.GLIDE
+                        && (playableSprite.getAnimationId() & 0xFF) >= 0x20) {
+                    playableSprite.setAnimationId(0);
+                }
+
                 if (!playableSprite.getPinballMode()
                         && instance instanceof SolidObjectProvider provider
                         && InitialObjectDispatchController.afterCallback(initialDispatch, provider.nonRollingLandingPublishesWalk(player))) {

@@ -39,17 +39,18 @@
  *
  * <h2>NOTICE: licensing</h2>
  * OpenGGF as a whole is distributed under the GNU General Public License,
- * version 3 (see {@code LICENSE} at the repository root). The files in this
+ * version 3 only, with the OpenGGF Mod Exception (see {@code LICENSE} and
+ * {@code LICENSES/OpenGGF-Mod-Exception.txt}). The files in this
  * package are a derivative work of blip_buf, Copyright (C) 2003-2009 Shay
  * Green, as modified for Genesis Plus GX, and remain licensed under the GNU
  * Lesser General Public License, version 2.1 or (at your option) any later
  * version ({@code LGPL-2.1-or-later}); the LGPL text is provided at
  * {@code LICENSES/LGPL-2.1.txt}. The files stay under that licence and may be
  * extracted and reused under it on their own; the per-file LGPL headers and
- * the upstream copyright notice are retained for that purpose. The combined
- * work — OpenGGF with this package linked in — is conveyed under GPL-3 by
- * applying the upgrade option of LGPL-2.1 section 3 to the combination, not
- * by relicensing these files. Modifications relative to the source are
+ * the upstream copyright notice are retained for that purpose. They are not
+ * converted to the GPL through LGPL-2.1 section 3: the rest of OpenGGF uses
+ * this package as a library, and distributions meet the LGPL's conditions for
+ * it, including section 6. Modifications relative to the source are
  * recorded in each file header (LGPL-2.1 section 2(b)): translation into
  * Java, the stereo-only configuration, and the state copy helpers and value
  * equality. The root {@code NOTICE.md} carries the same notice for

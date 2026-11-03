@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -175,7 +176,7 @@ class TestS3kIczMinibossObject {
             instance.update(frame, mock(PlayableEntity.class));
         }
 
-        assertEquals(Sonic3kMusic.MINIBOSS.id, services.lastMusicId);
+        assertEquals(Sonic3kMusic.MINIBOSS_S3.id, services.lastMusicId);
         assertTrue((Boolean) boss.getClass().getMethod("isArenaGateCompleteForTesting").invoke(boss));
     }
 
@@ -460,7 +461,13 @@ class TestS3kIczMinibossObject {
             invokeVoid(boss, "simulateHitForTest");
         }
 
-        for (int frame = 124; frame <= 260; frame++) {
+        for (int frame = 124; frame <= 187; frame++) {
+            instance.update(frame, mock(PlayableEntity.class));
+        }
+        assertTrue(services.spawnedChildren.stream().anyMatch(S3kBossDefeatSignpostFlow.class::isInstance),
+                "the 64th body dispatch starts the sign controller while explosions continue");
+
+        for (int frame = 188; frame <= 260; frame++) {
             instance.update(frame, mock(PlayableEntity.class));
             for (ObjectInstance child : List.copyOf(services.spawnedChildren)) {
                 if (child.getClass().getSimpleName().equals("IczMinibossExplosionControllerChild")
@@ -485,14 +492,14 @@ class TestS3kIczMinibossObject {
         assertEquals(S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_ICZ2_OBJECT_PALETTE,
                 readField(signpostFlow, "cleanupAction"),
                 "AfterBoss_ICZ2 reloads Pal_ICZ2 through PalLoad_Line1 so ICZ2 badniks do not keep the boss palette");
-        assertEquals(0x1D, readIntField(signpostFlow, "initialWaitCatchUpEntries"),
-                "the separate explosion-controller SST leaves 29 folded Obj_EndSignControl entries");
+        assertEquals(0, readIntField(signpostFlow, "initialWaitCatchUpEntries"),
+                "Obj_EndSignControl starts at the body wait boundary, independently of explosions");
         assertEquals(true, readField(signpostFlow, "preservesGroundedResultsDispatchBoundary"),
                 "the separately allocated flow must retain the grounded routine-$06 result dispatch");
         assertEquals(0, readIntField(signpostFlow, "resultsWaitDurationAdjustment"),
                 "the preloaded-act camera handoff does not add a results wait entry before control restoration");
-        assertTrue(instance.isDestroyed(),
-                "The boss body should delete only after queuing the persistent signpost flow");
+        assertTrue((Boolean) readField(boss, "defeatRenderComplete"),
+                "the body is hidden while independently falling ice remains live");
     }
 
     @Test
@@ -575,6 +582,35 @@ class TestS3kIczMinibossObject {
                 services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 0));
         assertEquals(S3kPaletteOwners.ICZ_MINIBOSS,
                 services.paletteOwnershipRegistry.ownerAt(PaletteSurface.NORMAL, 1, 15));
+    }
+
+    @Test
+    void spinupRunsTheNativeNormalRedYellowPaletteSequence() throws Exception {
+        Palette[] palettes = blankPalettes();
+        Level level = mock(Level.class);
+        when(level.getPaletteCount()).thenReturn(palettes.length);
+        when(level.getPalette(1)).thenReturn(palettes[1]);
+        RecordingServices services = new RecordingServices();
+        services.currentLevel = level;
+        var boss = new com.openggf.game.sonic3k.objects.IczMinibossInstance(
+                new ObjectSpawn(0x7F0,0x280,ICZ_MINIBOSS_ID,0,0,false,0));
+        boss.setServices(services);
+        boss.update(0,mock(PlayableEntity.class));
+        var start=boss.getClass().getDeclaredMethod("startAttackPalette",boolean.class);
+        start.setAccessible(true);
+        var tick=boss.getClass().getDeclaredMethod("updateAttackPalette");
+        tick.setAccessible(true);
+        start.invoke(boss,false);
+        tick.invoke(boss);
+        assertColorWord(palettes[1],10,0x222);
+        for(int frame=1;frame<8;frame++) tick.invoke(boss);
+        assertColorWord(palettes[1],10,0x222);
+        tick.invoke(boss);
+        assertColorWord(palettes[1],10,0xC22);
+        tick.invoke(boss);
+        assertColorWord(palettes[1],10,0xEE0);
+        tick.invoke(boss);
+        assertColorWord(palettes[1],10,0x222);
     }
 
     @Test
@@ -727,6 +763,7 @@ class TestS3kIczMinibossObject {
         private final PaletteOwnershipRegistry paletteOwnershipRegistry = new PaletteOwnershipRegistry();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
+        private int nextReservedSlot;
         private ObjectRenderManager renderManager;
         private Level currentLevel;
         private Rom rom;
@@ -741,10 +778,25 @@ class TestS3kIczMinibossObject {
                 ObjectInstance child = invocation.getArgument(0);
                 if (child instanceof AbstractObjectInstance instance) {
                     instance.setServices(this);
+                    instance.setSlotIndex(nextReservedSlot++);
                 }
                 spawnedChildren.add(child);
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any());
+            when(objectManager.allocateSlotAfter(anyInt())).thenAnswer(invocation -> {
+                int slot = Math.max(nextReservedSlot, (int) invocation.getArgument(0) + 1);
+                nextReservedSlot = slot + 1;
+                return slot;
+            });
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) {
+                    instance.setServices(this);
+                    instance.setSlotIndex(invocation.getArgument(1));
+                }
+                spawnedChildren.add(child);
+                return null;
+            }).when(objectManager).addDynamicObjectAtSlot(any(), anyInt());
         }
 
         private RecordingServices(PatternSpriteRenderer renderer) {

@@ -83,7 +83,7 @@ final class GameLoopPauseInput {
         if (!userPauseAllowed(mode)) {
             return false;
         }
-        // Live gamepad Start owns visible host pause. A recorded-input owner
+        // Live keyboard/gamepad Start owns visible host pause. A recorded-input owner
         // leaves that same edge to the native controller consumers instead.
         if (!overlayOwnsPause && !takeoverConsumed && (input.isKeyPressed(config.getInt(SonicConfiguration.PAUSE_KEY))
                 || (!RecordedInputOwnership.active(input)
@@ -95,6 +95,12 @@ final class GameLoopPauseInput {
             return !paused;
         }
         return paused;
+    }
+
+    /** Only recorded controller edges reach ROM pause; live Start owns host pause. */
+    static boolean nativeStartEdge(InputHandler input, PlaybackDebugManager playback) {
+        return playback.isCurrentForcedStartPress()
+                || (RecordedInputOwnership.active(input) && input.logical().player1().startPressed());
     }
 
     static boolean frameStep(InputHandler input, SonicConfigurationService config, boolean paused) {

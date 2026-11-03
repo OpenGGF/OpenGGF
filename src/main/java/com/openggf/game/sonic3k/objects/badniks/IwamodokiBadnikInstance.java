@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -205,7 +206,29 @@ public final class IwamodokiBadnikInstance extends AbstractObjectInstance
         } catch (Exception ignored) {
             // A probe-constructed badnik has no object manager; the state change still applies.
         }
+        displaceRiders();
         ObjectLifetimeOps.destroyLatched(this);
+    }
+
+    /**
+     * Obj_Iwamodoki's post-animation tail branches to loc_8FB36 once status bit 7 is set.
+     * Displace_PlayerOffObject clears OnObj and sets InAir for each standing player.
+     * This explicit ROM release belongs here, not in generic destroyed-support cleanup.
+     */
+    private void displaceRiders() {
+        var objectServices = tryServices();
+        if (objectServices == null || objectServices.objectManager() == null) {
+            return;
+        }
+        var manager = objectServices.objectManager();
+        for (var player : objectServices.playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (manager.hasObjectStandingBit(player, this)) {
+                manager.releaseRidingObject(player, this);
+                player.setOnObject(false);
+                player.setAir(true);
+            }
+        }
     }
 
     private static int indexOf(int[] fragment) {

@@ -74,7 +74,7 @@ class TestSparseUserConfig {
 
         Map<String, Object> persisted = readFlat(dir.resolve("config.yaml"));
         assertEquals(true, persisted.get(SonicConfiguration.CONFIG_PRESERVE_EXPLICIT_DEFAULTS.name()));
-        assertEquals(60, persisted.get(SonicConfiguration.FPS.name()),
+        assertEquals("AUTO", persisted.get(SonicConfiguration.FPS.name()),
                 "default-valued settings remain explicitly present");
         assertEquals("FAST", persisted.get(SonicConfiguration.LOAD_TIME_SIMULATION.name()));
         assertTrue(Files.readString(dir.resolve("config.yaml"))
@@ -82,7 +82,7 @@ class TestSparseUserConfig {
 
         SonicConfigurationService reloaded = SonicConfigurationService.createStandalone(dir);
         reloaded.saveConfig();
-        assertEquals(60, readFlat(dir.resolve("config.yaml")).get(SonicConfiguration.FPS.name()),
+        assertEquals("AUTO", readFlat(dir.resolve("config.yaml")).get(SonicConfiguration.FPS.name()),
                 "later saves must not remove the preserved default-valued settings");
     }
 

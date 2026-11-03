@@ -31,6 +31,21 @@ unrelated status bit and can grab or release the tree erratically.
 player DPLC routines as a semantic rule (not register emulation) and apply it
 to Player 2's ride test, or record a user-authorised exception.
 
+## Entry snapshot picture differences — 2026-11-03
+
+The [rendered cache audit](../architecture/audits/performance/2026-11-03-rewind-level-audit.md)
+found exact engine-picture differences after whole-registry restore at six-frame
+AIZ2, HCZ2, FBZ2 and ending entries. Each matched zero of five restored pictures on
+baseline `1b22c86eb` and on combined candidate `40d0d86e5`; all four reproduced in
+fresh JVMs. These are engine forward/restore comparisons, not emulator parity
+findings. Rendering/capture ownership and full-route impact remain unattributed.
+
+The cache performance assertions pass at those entries under their respective
+plane ownership rules. Their picture diagnostics remain separate and open; the
+SSZ2 cache fix is not a claim that these pictures are corrected. Investigation
+should first isolate palette, art and derived presentation restoration before
+changing gameplay or weakening picture comparison.
+
 ## DEZ original-input ring frontier at the second staircase — 2026-10-30
 
 The [fresh continuation](trace-frontier-log.md#2026-10-30--dez-original-input-second-staircase-ring-frontier)
@@ -261,7 +276,7 @@ Entries should include:
 31. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
 32. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
 33. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
-34. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
+34. [MGZ Swinging Platform Endpoint: Fractional Input Ownership](#mgz-swinging-platform-endpoint-fractional-input-ownership)
 35. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
 36. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
 37. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
@@ -6287,12 +6302,17 @@ against `sub_32F56` (sonic3k.asm:68990-69032) and Obj_Bumper
 
 ---
 
-## MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled
+## MGZ Swinging Platform Endpoint: Fractional Input Ownership
 
 - **Location** — `MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` (fitted angle/slot table, about lines 202-208); ROM `sub_34074` (`sonic3k.asm:70572-70575`), `GetSineCosine` (`:3025`), `Process_Sprites` (`:35983-35988`)
 - **Symptom** — The ROM's `swap d1 / asr.l #4` pushes the high word of `d1`, inherited from the previously executed object, into the per-link X step: `platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)`. The engine computes the `H == 0` case plus a fitted table, which is knowingly wrong: it carries at MGZ segment frame 10709 where the ROM does not, and misses the carry at `TestS3kMgzTraceReplay` frame 25770. See the frontier log (2026-07-17 slot-6/slot-7 split) for the current numbers.
 - **Suspected cause** — No model of inter-object register carry through `Process_Sprites`; the table is a runtime-invariant-3 violation kept only because removing it trades one measured red for another.
 - **Removal condition** — Model `d1`'s inherited high word for the SST slots that precede MGZ swinging platforms in execution order, compute the carry from the formula, delete the table. Never extend the table.
+
+- **Corrected (2026-11-03)** — `MGZSwingingPlatformObjectInstance` accumulates the cosine fraction at each link using `sub_34074 (sonic3k.asm:70569-70602)` and `GetSineCosine (sonic3k.asm:3053-3060)`. The fitted slot/angle table is removed.
+- **Input owners** — `Player_LevelBound (sonic3k.asm:23207-23213)` publishes the projected X fraction. Native animation-index and solid/touch-width reads clear it; terrain lookup publishes the signed chunk-address fraction. The value follows ordinary execution order and is captured in the object-manager snapshot. Spring `Animate_Sprite` reads use the cleared initial timer and preserve the input on timer-only passes.
+- **Native evidence** — The original Sonic+Tails segment reaches angle `$62` with incoming high word `$0000`, giving platform X `$23D4`; the short MGZ movie reaches angle `$6D` with `$FD00` inherited from Sonic's projected X fraction, giving platform X `$2A71`. The original table's reintroduction reproduces 3440 errors from row 10709. No trace values select runtime geometry.
+- **Coverage boundary** — The MGZ route, donor, viewport, team and presentation gaps in the [act matrix](../architecture/validation/levels/s3k-mgz-act1.md) remain inherited. The independent all-emerald giant-ring segment bootstrap issue below still requires policy A.
 
 ---
 
@@ -7202,3 +7222,7 @@ allocation/initial-animation-domain defects and the separate beam test identity
 context. Cold traversal, product breadth and physical KosM/VRAM/pixel evidence
 remain open. These local results do not widen the earlier producer run or certify
 the entire act.
+
+## Music-transition qualification — 2026-11-02
+
+The restored apparent-act/invincibility selection does not certify all Current_music overlaps or cartridge/driver products. CNZ miniboss retains its collapsed post-helper119-word gameplay wait, releasing boss/control ownership120 entries early. See the [cross-game audit](../architecture/audits/2026-11-02-music-transitions.md) for corrected owners, source revisions and remaining obligations.

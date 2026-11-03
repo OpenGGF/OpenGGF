@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
@@ -387,6 +388,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return sprite.currentLevelManager();
 	}
 
+	/** Homing and dash launches lag the camera exactly like the fire-shield dash below. */
+	private void applyHomingCameraLag() {
+		sprite.resetPositionAndStatTableHistory();
+		Camera camera = camera();
+		if (camera != null && camera.getFocusedSprite() == sprite) {
+			camera.setHorizScrollDelay(com.openggf.game.mutators.HomingAttackRuntime.CAMERA_LAG_FRAMES);
+		}
+	}
+
+	private com.openggf.game.mutators.HomingAttackRuntime homingAttack() {
+		return com.openggf.sprites.playable.PlayableSpriteInternalAccess.homingAttack(sprite);
+	}
+
 	private CollisionSystem collisionSystem() {
 		CollisionSystem current = sprite.currentCollisionSystemOrNull();
 		return current != null ? current : bootstrapCollisionSystem;
@@ -642,6 +656,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		if (motionMutators != null) {
 			motionMutators.beforeMovement(sprite);
+		}
+		var homingAttack = homingAttack();
+		if (homingAttack != null) {
+			homingAttack.beforeMovement(sprite);
 		}
 		storeInputState(up, down, left, right, jump);
 
@@ -1039,7 +1057,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sidekickCpu.applyFlyingCarryVerticalVelocity();
 				tailsFlightVerticalUpdatedThisFrame = true;
 			}
-			doChgJumpDir();
+			var homingAttack = homingAttack();
+			if (homingAttack == null || !homingAttack.steer(sprite)) {
+				doChgJumpDir();
+			}
 			doLevelBoundary();
 		}
 		if (!hurt && isCpuLevelBoundaryKillActive()) {
@@ -1488,6 +1509,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					inputJumpPress = false;
 					return;
 				}
+				// Homing-attack mutator: a live target outranks the native double-jump move;
+				// without one the native move runs and the forward air dash is the fallback.
+				var homingAttack = homingAttack();
+				if (homingAttack != null && homingAttack.tryLaunch(sprite)) {
+					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+					applyHomingCameraLag();
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
+					return;
+				}
 				if (sprite.getSecondaryAbility() == SecondaryAbility.FLY
 						&& tryActivateSuperFromAirAbility()) {
 					jumpReleasedSinceJump = false;
@@ -1516,6 +1547,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				}
 				if (tryShieldAbility()) {
 					jumpReleasedSinceJump = false;
+					return;
+				}
+				if (homingAttack != null && homingAttack.tryAirDash(sprite)) {
+					com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite, GameSound.SPINDASH_RELEASE, audioManager);
+					applyHomingCameraLag();
+					jumpReleasedSinceJump = false;
+					inputJumpPress = false;
 					return;
 				}
 			}
@@ -1924,6 +1962,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setYSpeed((short) (yVel + 0x20));
 		}
 
+		// Knuckles_Move_Glide .fallingFast (sonic3k.asm:31733-31746),
+		// also KiS2 Knuckles_GlideSpeedControl: signed word boundary compare,
+		// then ASR.W on both velocities. The -$100 minimum enables Y wrapping.
+		short minimumY = (short) camera().getMinY();
+		if (minimumY != (short) -0x100
+				&& sprite.getCentreY() < (short) (minimumY + 0x10)) {
+			sprite.setXSpeed((short) (sprite.getXSpeed() >> 1));
+			sprite.setGSpeed((short) (sprite.getGSpeed() >> 1));
+		}
+
 		// Collision is checked after doLevelCollision() in modeAirborne
 		setGlideAnimation();
 	}
@@ -1979,6 +2027,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setForcedAnimationId(-1);
 			sprite.setAir(false);
 			sprite.setJumping(false);
+			// Knux_TouchFloor / KiS2 Sonic_ResetOnFloor_Part3: the unsigned
+			// anim >= $20 tail writes Walk; lower animations remain unchanged.
+			if ((sprite.getAnimationId() & 0xFF) >= 0x20) {
+				sprite.setAnimationId(0);
+			}
 			return;
 		}
 
@@ -3359,7 +3412,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Natural deceleration
 		if (gSpeed != 0) {
-			short naturalDecel = (short) (sprite.getRunAccel() / 2);
+			// Sonic_RollSpeed (sonic3k.asm:22959-22966) and Tails_RollSpeed
+			// replace acceleration/2 with $06 for powered forms, including Hyper.
+			short naturalDecel = sprite.isSuperSonic() && movementRules != null
+					&& movementRules.poweredRollFriction() != 0
+					? movementRules.poweredRollFriction() : (short) (sprite.getRunAccel() / 2);
 			gSpeed = applyFriction(gSpeed, naturalDecel);
 		}
 
@@ -3711,7 +3768,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Sonic_LevelBound (_incObj/01 Sonic.asm:1057-1079; s2.asm:37233-37251),
 		// Player_LevelBound (sonic3k.asm:23207-23221).
 		int xPosition = (sprite.getCentreX() << 16) | (sprite.getXSubpixelRaw() & 0xFFFF);
-		int predictedX = (xPosition + (sprite.getXSpeed() << 8)) >>> 16;
+		int predictedPosition = xPosition + (sprite.getXSpeed() << 8);
+        int predictedX = predictedPosition >>> 16;
+        // Player_LevelBound (sonic3k.asm:23207-23213) passes the projected
+        // fraction to later sine/cosine arithmetic through its word swap.
+        var objects = levelManager() != null ? levelManager().getObjectManager() : null;
+        if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, sprite, predictedPosition);
 
 		int minX = camera.getMinX();
 		int maxX = camera.getMaxX();
@@ -4021,10 +4083,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_DoLevelCollision: Full airborne collision (s2.asm:37889) */
 	private void doLevelCollision(boolean forceFloorCheck) {
+		resolveObjectControlledLevelCollision(collisionSystem(), forceFloorCheck);
+	}
+
+	/** Shared native terrain dispatch for object-owned player movement. */
+	void resolveObjectControlledLevelCollision(CollisionSystem collisionSystem, boolean forceFloorCheck) {
 		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
 		Consumer<AbstractPlayableSprite> landingHandler =
 				usesDirectHitFloorLanding(quadrant) ? this::calculateDirectFloorLanding : this::calculateLanding;
-		CollisionSystem collisionSystem = collisionSystem();
 		// Keep the established virtual overload as the collision seam. The shared
 		// owner publishes wall/floor/ceiling writes during native execution; the
 		// player tail copies the final global pair after the dispatch returns.

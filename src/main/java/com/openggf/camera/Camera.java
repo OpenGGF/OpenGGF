@@ -43,6 +43,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short shakeOffsetX = 0;
 	private short shakeOffsetY = 0;
 
+    // Host presentation serial, intentionally outside gameplay snapshots.
+    long forcedRecentreSerial;
+
 	// Target boundaries for smooth easing (ROM: Camera_Max_Y_pos_target, etc.)
 	private short minXTarget;
 	private short minYTarget;
@@ -183,6 +186,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			updateObserver.onUpdatePosition(force);
 		}
 		if (force) {
+            forcedRecentreSerial++;
 			// Position camera using ROM's level-load formula:
 			//   v_screenposx = MainCharacter.x_pos - $A0  (subi.w #160,d1)
 			//   v_screenposy = MainCharacter.y_pos - $60  (subi.w  #96,d0)

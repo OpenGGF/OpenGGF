@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestMhzEndBossWeatherMachineRewind {
     private static final int PARENT_SIGNAL_FLAG_OFFSET = 0x38;
     private static final int PARENT_SIGNAL_FLAG = 0x04;
-    private static final int DESTRUCTION_WAIT_AFTER_SIGNAL_UPDATE = 0x3E;
+    private static final int DESTRUCTION_WAIT_AFTER_SIGNAL_UPDATE = 0x3F;
 
     @BeforeEach
     void initHeadlessGraphics() {

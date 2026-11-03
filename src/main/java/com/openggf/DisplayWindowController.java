@@ -26,12 +26,28 @@ final class DisplayWindowController {
     private final Desktop desktop;
     private Mode mode = Mode.WINDOWED;
     private Placement saved;
+    // Each controller belongs to one window context; its first observation opens an epoch.
+    private DisplayOutput output = DisplayOutput.UNKNOWN;
+    private Monitor observed;
 
     DisplayWindowController(long window) { this(new GlfwDesktop(window)); }
     DisplayWindowController(Desktop desktop) { this.desktop = desktop; }
     boolean isWindowed() { return mode == Mode.WINDOWED; }
 
+    /** Latest output; re-applying an unchanged mode on the same monitor keeps its epoch. */
+    DisplayOutput output() { return output; }
+
     boolean apply(String setting) {
+        boolean changed = applyMode(setting);
+        Monitor monitor = desktop.monitor();
+        if (changed || output.epoch() == 0 || !sameOutput(observed, monitor)) {
+            output = new DisplayOutput(output.epoch() + 1, monitor == null ? 0 : Math.max(0, monitor.refreshRate()));
+        }
+        observed = monitor;
+        return changed;
+    }
+
+    private boolean applyMode(String setting) {
         if (mode == Mode.WINDOWED) desktop.observeWindowed();
         Mode requested = Mode.parse(setting);
         if (requested == mode) return false;
@@ -45,6 +61,10 @@ final class DisplayWindowController {
         }
         mode = requested;
         return true;
+    }
+
+    private static boolean sameOutput(Monitor a, Monitor b) {
+        return a == null ? b == null : b != null && a.handle() == b.handle() && a.refreshRate() == b.refreshRate();
     }
 
     static Monitor monitorForWindow(long window) { return new GlfwDesktop(window).monitor(); }

@@ -1147,6 +1147,8 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        // The same native bounds that publish the render bit gate mapping expansion.
+        if (!isWithinRenderSpriteBounds(halfWidth, displayHeight)) return;
         ObjectRenderManager renderManager = getRenderManager();
         if (renderManager == null) {
             return;
@@ -1286,6 +1288,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (!isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight)) return;
             PatternSpriteRenderer renderer = getRenderer(artKey);
             if (renderer == null) {
                 return;

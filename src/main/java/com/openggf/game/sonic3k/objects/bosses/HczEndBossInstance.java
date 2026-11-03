@@ -148,14 +148,13 @@ public class HczEndBossInstance extends AbstractBossInstance
     // =========================================================================
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
-    /** Retains loc_6B03A for the next consolidated setup dispatch. */
-    private boolean pendingAttackSetupDispatch;
+    /** Retains HCZEndBoss_Init after the code-pointer-only camera callback. */
+    private boolean pendingMainInitialization;
     private boolean pendingDefeatDispatch;
     private boolean customFlashDirty;
     private S3kSharedBossCameraGate cameraGate;
 
     // Movement state (Task 6)
-    private int swingVelocity;
     private boolean swingDown;
     private int hoverCentreY;
     private int savedPatrolVel = -0x100;
@@ -223,7 +222,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         state.renderFlags = 0;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
-        pendingAttackSetupDispatch = false;
+        pendingMainInitialization = false;
         customFlashDirty = false;
         if (cameraGate == null) {
             cameraGate = new S3kSharedBossCameraGate();
@@ -233,7 +232,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         propellerActive = false;
         bladeFireSignal = false;
         defeatSignal = false;
-        swingVelocity = 0;
+        state.yVel = 0;
         swingDown = false;
         hoverCentreY = 0;
         savedPatrolVel = -0x100;
@@ -368,13 +367,6 @@ public class HczEndBossInstance extends AbstractBossInstance
             updateDynamicSpawn(state.x, state.y);
             return;
         }
-        if (pendingAttackSetupDispatch) {
-            pendingAttackSetupDispatch = false;
-            beginAttackPhase();
-            updateCustomFlash();
-            updateDynamicSpawn(state.x, state.y);
-            return;
-        }
 
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
@@ -477,6 +469,13 @@ public class HczEndBossInstance extends AbstractBossInstance
      * ROM: sets y_vel = 0x80 (descend) with wait timer 0xEF (239 frames).
      */
     private void onCameraLockComplete() {
+        // HCZEndBoss_StartMain (sonic3k.asm:140871-140875) replaces the code
+        // pointer and returns. HCZEndBoss_Init is a separate next-pass dispatch.
+        pendingMainInitialization = true;
+    }
+
+    private void initializeMain() {
+        pendingMainInitialization = false;
         LOG.info("HCZ End Boss: camera lock complete, spawning children");
         spawnChildren();
         // Begin descent into arena
@@ -494,7 +493,16 @@ public class HczEndBossInstance extends AbstractBossInstance
      * ROM: Used by DESCEND, ST_DESCEND, ST_RISE routines.
      */
     private void updateMoveAndWait() {
-        updateCameraLock();
+        // The camera callback and HCZEndBoss_Init do not fall through into
+        // HCZEndBoss_MoveWait (sonic3k.asm:140899-140921).
+        if (!cameraGate.isComplete()) {
+            updateCameraLock();
+            return;
+        }
+        if (pendingMainInitialization) {
+            initializeMain();
+            return;
+        }
         state.applyVelocity();
         tickWait();
     }
@@ -506,10 +514,9 @@ public class HczEndBossInstance extends AbstractBossInstance
      */
     private void updateSwingAndWait() {
         SwingMotion.Result result = SwingMotion.update(
-                SWING_ACCEL, swingVelocity, SWING_AMPLITUDE, swingDown);
-        swingVelocity = result.velocity();
+                SWING_ACCEL, state.yVel, SWING_AMPLITUDE, swingDown);
         swingDown = result.directionDown();
-        state.yVel = swingVelocity;
+        state.yVel = result.velocity();
 
         state.applyVelocity();
         tickWait();
@@ -525,9 +532,8 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void onDescentComplete() {
         state.routine = ROUTINE_HOVER_WAIT;
         hoverCentreY = state.y;
-        swingVelocity = SWING_AMPLITUDE;
+        state.yVel = SWING_AMPLITUDE;
         swingDown = false;
-        state.yVel = 0;
         directionCounter = 0x9F; // initial direction counter (ROM: loc_6AF80)
         setWait(0x3F, WaitCallback.PRE_ATTACK_WAIT_COMPLETE);
     }
@@ -568,8 +574,9 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void onStRiseComplete() {
         state.routine = ROUTINE_PRE_ATTACK;
         state.y = hoverCentreY;
-        state.yFixed = hoverCentreY << 16;
-        state.yVel = 0;
+        // HCZEndBoss_SetSidePassFromOrigin (sonic3k.asm:140961-140967)
+        // writes only y_pos and retains the rise's y_vel for Swing_UpAndDown.
+        state.yFixed = (hoverCentreY << 16) | (state.yFixed & 0xFFFF);
         setWait(0xFF, WaitCallback.BEGIN_ATTACK_PHASE);
     }
 
@@ -589,7 +596,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         attackPassCounter = 8;
         setWait(0xBF, WaitCallback.ATTACK_PASS_COMPLETE);
         // Re-init swing
-        swingVelocity = SWING_AMPLITUDE;
+        state.yVel = SWING_AMPLITUDE;
         swingDown = false;
     }
 
@@ -600,10 +607,9 @@ public class HczEndBossInstance extends AbstractBossInstance
     private void updateAttackPatrol() {
         // Swing oscillation
         SwingMotion.Result result = SwingMotion.update(
-                SWING_ACCEL, swingVelocity, SWING_AMPLITUDE, swingDown);
-        swingVelocity = result.velocity();
+                SWING_ACCEL, state.yVel, SWING_AMPLITUDE, swingDown);
         swingDown = result.directionDown();
-        state.yVel = swingVelocity;
+        state.yVel = result.velocity();
 
         // Apply velocity (both X and Y)
         state.applyVelocity();
@@ -689,7 +695,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         loadBossPalette();
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
-        // ROM loc_6BC1C: jmp (BossDefeated_StopTimer).l (sonic3k.asm:142163).
+        // HCZEndBoss_StartDefeat (sonic3k.asm:142110-142113): jmp (BossDefeated_StopTimer).l.
         stopLevelTimerOnBossDefeat();
         // Wait DEFEAT_WAIT frames for explosions, then begin flee
         setWait(DEFEAT_WAIT, WaitCallback.BEGIN_FLEE_SEQUENCE);
@@ -807,7 +813,7 @@ public class HczEndBossInstance extends AbstractBossInstance
         if (main != null && main.getInvincibleFrames() > 0) {
             music = services().gameModule().getAudioProfile().getInvincibilityMusicId();
         }
-        if (music >= 0) services().playMusic(music);
+        if (music >= 0) services().playMusic(com.openggf.game.sonic3k.audio.S3kLevelMusicRestore.resolve(services(), music));
 
         // AllocateObject writes only the new code owner here. The geyser's
         // existing Init later resolves live player/camera coordinates itself.
@@ -899,7 +905,10 @@ public class HczEndBossInstance extends AbstractBossInstance
             case PRE_ATTACK_WAIT_COMPLETE -> onPreAttackWaitComplete();
             case ST_DESCENT_COMPLETE -> onStDescentComplete();
             case ST_RISE_COMPLETE -> onStRiseComplete();
-            case BEGIN_ATTACK_PHASE -> pendingAttackSetupDispatch = true;
+            // Obj_Wait jumps directly to HCZEndBoss_StartSidePass on underflow;
+            // it does not replace the code pointer (sonic3k.asm:178040-178049,
+            // 140969-140978). Setup completes in this same object dispatch.
+            case BEGIN_ATTACK_PHASE -> beginAttackPhase();
             case ATTACK_PASS_COMPLETE -> onAttackPassComplete();
             case BEGIN_FLEE_SEQUENCE -> beginFleeSequence();
             case NONE -> {
@@ -916,7 +925,22 @@ public class HczEndBossInstance extends AbstractBossInstance
      * ROM: Alternates palette indices 0x0A, 0x0B, 0x0E in line 1 between
      * normal colors and white (0xEEE) each frame based on invulnerabilityTimer bit 0.
      */
+    @Override
+    protected boolean usesBaseHitHandler() {
+        return false;
+    }
+
     private void updateCustomFlash() {
+        // The ROM writes its custom palette row before decrementing $20.
+        // Keep timer ownership here so the base handler cannot invert the phase
+        // or suppress the final normal-colour write when the counter reaches 0.
+        applyCustomFlash();
+        if (!state.defeated && state.invulnerable && --state.invulnerabilityTimer <= 0) {
+            state.invulnerable = false;
+        }
+    }
+
+    private void applyCustomFlash() {
         if (state.defeated) {
             return;
         }

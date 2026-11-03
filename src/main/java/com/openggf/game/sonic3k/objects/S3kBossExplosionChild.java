@@ -33,6 +33,7 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
     private boolean nativeInitSfx;
     private boolean nativeInitSfxPlayed;
     private boolean pendingDelete;
+    private boolean nativeLevelRepeatOffset;
     private transient Rom rawRom;
     private transient RomByteReader rawReader;
 
@@ -50,6 +51,9 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
         return child;
     }
 
+    /** Obj_BossExplosionOffset participates in native world rebasing; Explosion1 does not. */
+    public void setNativeLevelRepeatOffset(boolean enabled) { nativeLevelRepeatOffset = enabled; }
+
     /** Native word-position writes performed after CreateChild6_Simple succeeds. */
     public void writeNativePositionWords(int x, int y) {
         updateDynamicSpawn(x & 0xFFFF, y & 0xFFFF);
@@ -65,6 +69,10 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
         if (pendingDelete) {
             setDestroyed(true);
             return;
+        }
+        if (nativeLevelRepeatOffset) {
+            var runtime = services().zoneRuntimeState();
+            if (runtime != null) writeNativePositionWords(getX() - runtime.levelRepeatOffset(), getY());
         }
         if (nativeInitSfx && !nativeInitSfxPlayed) {
             nativeInitSfxPlayed = true;

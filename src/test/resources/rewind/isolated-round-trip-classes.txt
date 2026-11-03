@@ -324,6 +324,7 @@ com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$Collapsing
 com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance$DisplayChild
 com.openggf.game.sonic3k.objects.AizDisappearingFloorObjectInstance
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance
+com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$BridgeExplosion
 com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance$FallingBridgeSegment
 com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance
 com.openggf.game.sonic3k.objects.AizEndBossDebrisChild
@@ -605,6 +606,7 @@ com.openggf.game.sonic3k.objects.IczIceBlockObjectInstance
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance
 com.openggf.game.sonic3k.objects.IczIceCubeObjectInstance$IceCubeDebris
 com.openggf.game.sonic3k.objects.IczIceSpikesObjectInstance
+com.openggf.game.sonic3k.objects.IczMinibossDebrisChild
 com.openggf.game.sonic3k.objects.IczMinibossExplosionControllerChild
 com.openggf.game.sonic3k.objects.IczMinibossInstance
 com.openggf.game.sonic3k.objects.IczMinibossPostBossPaletteController
@@ -726,6 +728,7 @@ com.openggf.game.sonic3k.objects.MgzEndBossKnuxCollapseEmitter$Particle
 com.openggf.game.sonic3k.objects.MgzEndBossKnuxDefeatPart
 com.openggf.game.sonic3k.objects.MgzEndBossKnuxEggCapsuleInstance
 com.openggf.game.sonic3k.objects.MgzEndBossKnuxInstance
+com.openggf.game.sonic3k.objects.MgzMinibossExplosionController
 com.openggf.game.sonic3k.objects.MgzMinibossInstance
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild

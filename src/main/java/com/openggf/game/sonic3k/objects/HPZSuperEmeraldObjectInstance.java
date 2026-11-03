@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.level.objects.ObjectVisualFacing;
 
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -19,7 +20,6 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -29,7 +29,7 @@ import java.util.List;
 
 /** ROM {@code Obj_HPZSuperEmerald} (SKL object $B4). */
 public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private final PlayerControlOwners directedControlPlayers =
             new PlayerControlOwners();

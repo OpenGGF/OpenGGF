@@ -9,7 +9,9 @@ import java.util.*;
 public final class RuntimeSaveContext {
     private record Progress(boolean live, int zone, int act, ZoneKey zoneKey, int lives, int continues,
                             List<Integer> chaosEmeralds, List<Integer> superEmeralds,
-                            boolean emeraldsConverted, List<Integer> emeraldStates) { }
+                            boolean emeraldsConverted, List<Integer> emeraldStates,
+                            int collectedSpecialRings, int currentSpecialStageIndex,
+                            com.openggf.level.BigRingReturnState specialStageReturn) { }
     private record SaveDetails(String gameCode, OptionalInt activeSlot, SelectedTeam team, boolean clear) {
         static SaveDetails capture(SaveSessionContext save) {
             return new SaveDetails(save.gameCode(),save.activeSlot(),save.selectedTeam(),save.isClear());
@@ -35,7 +37,7 @@ public final class RuntimeSaveContext {
         SaveDetails details=SaveDetails.capture(save);
         if (mode == null) {
             return new RuntimeSaveContext(new Progress(false,save.startZone(),save.startAct(),
-                    ZoneKey.stock(save.startZone()),3,0,List.of(),List.of(),false,List.of(0,0,0,0,0,0,0)),details,Map.of());
+                    ZoneKey.stock(save.startZone()),3,0,List.of(),List.of(),false,List.of(0,0,0,0,0,0,0),0,0,null),details,Map.of());
         }
         var level=mode.getLevelManager(); var state=mode.getGameStateManager();
         int zone=level.getCurrentZone(), act=level.getCurrentAct();
@@ -51,7 +53,8 @@ public final class RuntimeSaveContext {
         // asking the registry to identify a zone which was never loaded.
         boolean creditsSentinel=zones != null && zone == zones.getZoneCount() && act == 0;
         ZoneKey key=zones == null || creditsSentinel ? ZoneKey.stock(zone) : zones.zoneKey(zone);
-        Progress progress=new Progress(true,zone,act,key,lives,continues,chaos,supers,converted,emeralds);
+        Progress progress=new Progress(true,zone,act,key,lives,continues,chaos,supers,converted,emeralds,
+                com.openggf.game.NativeGameStateOps.specialRingCollection(state), state.getCurrentSpecialStageIndex(), level.getBigRingReturn());
         var provider=module == null ? null : module.getSaveSnapshotProvider();
         var runtime=mode.getZoneRuntimeRegistry();
         Map<String,Object> fields=provider == null ? Map.of() : provider.captureSaveFields(runtime == null ? null : runtime.current());
@@ -75,6 +78,9 @@ public final class RuntimeSaveContext {
     public List<Integer> superEmeralds() { return progress.superEmeralds(); }
     public boolean emeraldsConverted() { return progress.emeraldsConverted(); }
     public List<Integer> emeraldStates() { return progress.emeraldStates(); }
+    com.openggf.level.BigRingReturnState specialStageReturn() { return progress.specialStageReturn(); }
+    int collectedSpecialRings() { return progress.collectedSpecialRings(); }
+    int currentSpecialStageIndex() { return progress.currentSpecialStageIndex(); }
     /** Deeply frozen JSON values captured by the provider's optional input callback. */
     public Map<String,Object> capturedFields() { return capturedFields; }
 

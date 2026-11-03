@@ -58,9 +58,11 @@ public record ObjectManagerSnapshot(
          * the snapshot was captured before this field existed).
          */
         int dynamicObjectIdCounter,
-        CollisionResponseState collisionResponseState
+        CollisionResponseState collisionResponseState,
+        int sineCosineInputFraction
 ) {
     public ObjectManagerSnapshot {
+        sineCosineInputFraction &= 0xFFFF;
         usedSlotsBits = usedSlotsBits == null ? new long[0] : Arrays.copyOf(usedSlotsBits, usedSlotsBits.length);
         slots = List.copyOf(slots);
         childSpawns = List.copyOf(childSpawns);
@@ -74,6 +76,20 @@ public record ObjectManagerSnapshot(
                 ? TouchResponseOverlapState.empty() : touchResponseOverlap;
         collisionResponseState = collisionResponseState == null
                 ? CollisionResponseState.empty() : collisionResponseState;
+    }
+
+    /** Compatibility for snapshots predating the fractional arithmetic input. */
+    public ObjectManagerSnapshot(long[] usedSlotsBits, List<PerSlotEntry> slots,
+            int frameCounter, int vblaCounter, int currentExecSlot, int peakSlotCount,
+            boolean bucketsDirty, List<ChildSpawnEntry> childSpawns,
+            List<DynamicObjectEntry> dynamicObjects, PlacementSnapshot placement,
+            List<SolidContactRidingEntry> solidContactRiding, SolidContactState solidContactState,
+            PlaneSwitcherSnapshot planeSwitchers, TouchResponseOverlapState touchResponseOverlap,
+            int dynamicObjectIdCounter, CollisionResponseState collisionResponseState) {
+        this(usedSlotsBits, slots, frameCounter, vblaCounter, currentExecSlot, peakSlotCount,
+                bucketsDirty, childSpawns, dynamicObjects, placement, solidContactRiding,
+                solidContactState, planeSwitchers, touchResponseOverlap, dynamicObjectIdCounter,
+                collisionResponseState, 0);
     }
 
     /** Backward-compatible constructor before collision-list rewind state. */

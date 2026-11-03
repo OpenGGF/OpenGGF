@@ -251,6 +251,8 @@ class TestSceneMusicRom {
         AtomicLong consumed = new AtomicLong();
         OpenAlPcmSink.Device device = mock(OpenAlPcmSink.Device.class);
         when(device.initialize()).thenReturn(48_000);
+        // Flush starts a new source coordinate, just as the native device does.
+        doAnswer(ignored -> { consumed.set(0); return null; }).when(device).flush();
         when(device.consumedStereoFrames()).thenAnswer(ignored -> consumed.get());
         var sink = new OpenAlPcmSink(device, failure -> fail(failure), now::get, ignored -> { });
         var config = SonicConfigurationService.createStandalone();

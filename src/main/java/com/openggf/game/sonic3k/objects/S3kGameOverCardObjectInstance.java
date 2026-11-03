@@ -25,6 +25,7 @@ import com.openggf.level.objects.ObjectConstructionContext;
  *       (:62106-62115).</li>
  * </ul>
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class S3kGameOverCardObjectInstance extends AbstractGameOverCardObjectInstance {
 
     /** {@code move.w #8*60,anim_frame_timer(a0)}. */

@@ -14,8 +14,7 @@ import com.openggf.game.rewind.RewindStateful;
  * branch: speed becomes {@code -d0} and the returned offset is 0. The caller watches the speed
  * sign ({@code tst.l $2E(a0) / bmi}) to know the swing is still rising.
  *
- * <p>{@link SSZHPZTeleporterObjectInstance} keeps its own inline copy because its swing fields are
- * part of that class's rewind extra; this holder is the owner for objects written since.
+ * <p>Legacy scalar rewind owners use the same pure transition through {@link #advance}.
  */
 final class S3kGradualSwing implements RewindStateful<S3kGradualSwing.Value> {
     /** {@code $2E}/{@code $32}/{@code $36}. */
@@ -36,6 +35,15 @@ final class S3kGradualSwing implements RewindStateful<S3kGradualSwing.Value> {
 
     /** Returns the integer offset for this frame. */
     int step(int initialSpeed, int acceleration) {
+        restoreRewindStateValue(advance(captureRewindStateValue(), initialSpeed, acceleration));
+        return (short) (offset >> 16);
+    }
+
+    /** One ROM transition independent of how a caller stores its rewind state. */
+    static Value advance(Value value, int initialSpeed, int acceleration) {
+        int speed = value.speed();
+        int offset = value.offset();
+        boolean reversed = value.reversed();
         int stepValue = acceleration;
         if (reversed) {
             stepValue = -stepValue;
@@ -57,7 +65,7 @@ final class S3kGradualSwing implements RewindStateful<S3kGradualSwing.Value> {
                 reversed = true;
             }
         }
-        return (short) (offset >> 16);
+        return new Value(speed, offset, reversed);
     }
 
     /** {@code tst.l $2E(a0) / bmi}: the swing has not come back to its release point. */

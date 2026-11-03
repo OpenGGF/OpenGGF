@@ -15,13 +15,13 @@ import java.util.function.Consumer;
 
 /**
  * The Time Attack settings page: multiplayer display name and look ({@link ProfileView}), host
- * port, master server URL, the development-only master TLS switch, the multiplayer minimap and
- * the retry key. Every change attempts immediate checked publication; failed saves remain active
+ * port, master server (build default, a custom host name or URL, or Off), the development-only
+ * master TLS switch, the multiplayer minimap and the retry key. Every change attempts immediate checked publication; failed saves remain active
  * and retry.
  */
 public final class SettingsView {
 
-    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, CHAT_MODE, BACK }
+    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_SERVER, MASTER_TLS, MINIMAP, RETRY_KEY, CHAT_MODE, BACK }
 
     private final TimeAttackSettings settings;
     private final Runnable changed;
@@ -118,6 +118,15 @@ public final class SettingsView {
         }
         boolean toggle = input.left() || input.right() || input.accept();
         switch (focus) {
+            case MASTER_SERVER -> {
+                if (input.left() || input.right()) {
+                    cycleMaster(input.left() ? -1 : 1);
+                    changed();
+                } else if (input.accept()) {
+                    openEditor(focus);
+                    cues.accept(MenuCue.CONFIRM);
+                }
+            }
             case MASTER_TLS -> {
                 if (toggle) {
                     settings.setMasterTrustInsecure(!settings.masterTrustInsecure());
@@ -171,8 +180,10 @@ public final class SettingsView {
             case DISPLAY_NAME -> TextEntry.name("DISPLAY NAME", settings.displayName())
                     .withPrompt("Shown to other racers, in any script");
             case HOST_PORT -> new TextEntry("HOST PORT (1-65535)", Integer.toString(settings.hostPort()), 5, "");
-            case MASTER_URL -> new TextEntry("MASTER SERVER URL", settings.masterUrl(),
-                    TimeAttackSettings.MAX_TEXT_LENGTH, ".:/-_");
+            // Brackets admit IPv6 literal URLs such as wss://[2001:db8::5]:27900/master.
+            case MASTER_SERVER -> new TextEntry("MASTER SERVER", settings.customMasterText(),
+                    TimeAttackSettings.MAX_TEXT_LENGTH, ".:/-_[]")
+                    .withPrompt("Host name or wss:// URL. Empty: build default");
             default -> throw new IllegalStateException("Row " + row + " has no editor");
         };
     }
@@ -184,7 +195,7 @@ public final class SettingsView {
         editing = null;
         switch (row) {
             case DISPLAY_NAME -> settings.setDisplayName(value); // canonical: the field only accepts valid names
-            case MASTER_URL -> settings.setMasterUrl(value);
+            case MASTER_SERVER -> settings.setMasterSelection(MasterSelection.typed(value));
             case HOST_PORT -> {
                 int port;
                 try {
@@ -214,7 +225,7 @@ public final class SettingsView {
         return result;
     }
 
-    /** True while a text field (name, port, master URL) takes keyboard text. */
+    /** True while a text field (name, port, master server) takes keyboard text. */
     public boolean isEditingText() {
         return editor != null || capturingKey || (profile != null && profile.isEditingText());
     }
@@ -258,9 +269,8 @@ public final class SettingsView {
         }
         row(canvas, Row.LOOK, valueX, "Look", LookPresets.label(settings, gameId, character), MenuPage.TEXT, false);
         row(canvas, Row.HOST_PORT, valueX, "Host port", Integer.toString(settings.hostPort()), MenuPage.TEXT, false);
-        row(canvas, Row.MASTER_URL, valueX, "Master server",
-                settings.masterUrl().isBlank() ? "Not set" : settings.masterUrl(),
-                settings.masterUrl().isBlank() ? MenuPage.DIM : MenuPage.TEXT, false);
+        row(canvas, Row.MASTER_SERVER, valueX, "Master server", masterLabel(),
+                settings.masterAddress().isEmpty() ? MenuPage.DIM : MenuPage.TEXT, true);
         row(canvas, Row.MASTER_TLS, valueX, "Master TLS",
                 settings.masterTrustInsecure() ? "Trust any (local testing)" : "Verify certificate",
                 settings.masterTrustInsecure() ? MenuPage.AMBER : MenuPage.TEXT, true);
@@ -282,6 +292,10 @@ public final class SettingsView {
         List<MenuPage.Hint> hints = new java.util.ArrayList<>();
         hints.add(MenuPage.hint(MenuPage.ARROWS_UD, "Choose"));
         switch (focus) {
+            case MASTER_SERVER -> {
+                hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Mode"));
+                hints.add(MenuPage.hint(keys.confirm(), "Edit"));
+            }
             case MASTER_TLS, MINIMAP, CHAT_MODE -> hints.add(MenuPage.hint(MenuPage.ARROWS_LR, "Change"));
             case LOOK -> hints.add(MenuPage.hint(keys.confirm(), "Open"));
             case RETRY_KEY -> hints.add(MenuPage.hint(keys.confirm(), "Rebind"));
@@ -290,6 +304,26 @@ public final class SettingsView {
         }
         hints.add(MenuPage.hint(keys.back(), "Back"));
         MenuPage.footerWithDetails(canvas, keys, "", MenuPage.TEXT, hints);
+    }
+
+    /** Build default, then the last custom text when there is one, then Off. */
+    private void cycleMaster(int step) {
+        List<MasterSelection> modes = new java.util.ArrayList<>();
+        modes.add(new MasterSelection.BuildDefault());
+        if (!settings.customMasterText().isEmpty()) modes.add(new MasterSelection.Custom(settings.customMasterText()));
+        modes.add(new MasterSelection.Off());
+        int current = modes.indexOf(settings.masterSelection());
+        settings.setMasterSelection(modes.get(Math.floorMod(Math.max(current, 0) + step, modes.size())));
+    }
+
+    /** "Build default (multi-dev.openggf.com)", the custom text, or "Off (LAN only)". */
+    String masterLabel() {
+        return switch (settings.masterSelection()) {
+            case MasterSelection.BuildDefault ignored -> settings.buildDefaultMaster().isEmpty()
+                    ? "Build default (none)" : "Build default (" + settings.buildDefaultMaster() + ")";
+            case MasterSelection.Custom custom -> custom.address();
+            case MasterSelection.Off ignored -> "Off (LAN only)";
+        };
     }
 
     private static MenuPage.Tone tone(String message) {
@@ -314,7 +348,7 @@ public final class SettingsView {
                 .field("Name", settings.displayName().isBlank() ? "Not set (identity prefix)" : settings.displayName())
                 .field("Look", LookPresets.label(settings, gameId, character))
                 .field("Host port", Integer.toString(settings.hostPort()))
-                .field("Master server", settings.masterUrl().isBlank() ? "Not set" : settings.masterUrl())
+                .field("Master server", masterLabel())
                 .field("Master TLS", settings.masterTrustInsecure() ? "Trust any (local testing)" : "Verify certificate")
                 .field("Minimap", settings.minimap() ? "On" : "Off")
                 .field("Retry key", RetryKey.label(settings.retryKey()))

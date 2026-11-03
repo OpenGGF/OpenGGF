@@ -359,9 +359,10 @@ public final class LrzSpikeBallObjectInstance extends AbstractObjectInstance
         if (routine == Routine.ROLL && armed) {
             return false;
         }
-        // andi.w #$FF80,d0 / sub.w (Camera_X_pos_coarse_back).w,d0 / cmpi.w #$280,d0 / bhi.
-        int delta = ((baseX & 0xFF80) - cameraX) & 0xFFFF;
-        return delta > 0x280;
+        // loc_1B666 (sonic3k.asm:37412-37417) subtracts the coarse-back camera,
+        // not raw Camera_X_pos. loc_1B7F2 (sonic3k.asm:37591-37598) derives it
+        // as (cameraX - $80) & $FF80; preserve the placed-X anchor in $44(a0).
+        return isCoarseXOutOfRange(baseX, cameraX, 0x280);
     }
 
     // ===== Accessors =====

@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidContact;
@@ -318,10 +319,33 @@ class TestS3kIczCrushingColumnObject {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         TestableColumn column = new TestableColumn(spawn(1), renderer);
 
-        column.appendRenderCommands(new ArrayList<GLCommand>());
+        AbstractObjectInstance.updateCameraBounds(0x1760, 0x06B0, 0x18A0, 0x0790, 0);
+        try { column.appendRenderCommands(new ArrayList<GLCommand>()); }
+        finally { AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0); }
 
         verify(renderer).drawFrameIndex(0x0C, 0x1800, 0x0700, false, false, 2);
         verify(renderer).drawFrameIndex(0x0D, 0x1800, 0x07B0, false, false, 2);
+    }
+
+    @Test
+    void offscreenColumnAndDecorationDoNotSubmitTheirLargeMappingFrames() {
+        var renderer = mock(PatternSpriteRenderer.class);
+        var column = new TestableColumn(spawn(1), renderer);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        column.appendRenderCommands(new ArrayList<>());
+        org.mockito.Mockito.verifyNoInteractions(renderer);
+    }
+
+    @Test
+    void decorationKeepsItsOwnBoundsWhenTheParentIsAboveTheViewport() {
+        var renderer = mock(PatternSpriteRenderer.class);
+        var column = new TestableColumn(spawn(1), renderer);
+        AbstractObjectInstance.updateCameraBounds(0x1760, 0x07B0, 0x18A0, 0x0890, 0);
+        try {
+            column.appendRenderCommands(new ArrayList<>());
+            verify(renderer).drawFrameIndex(0x0D, 0x1800, 0x07B0, false, false, 2);
+            org.mockito.Mockito.verifyNoMoreInteractions(renderer);
+        } finally { AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0); }
     }
 
     @Test

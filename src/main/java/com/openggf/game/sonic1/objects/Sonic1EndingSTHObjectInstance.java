@@ -32,6 +32,7 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/s1disasm/_incObj/89 Ending Sequence STH.asm
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable, ObjectVisualFacing.NonDirectional {
 

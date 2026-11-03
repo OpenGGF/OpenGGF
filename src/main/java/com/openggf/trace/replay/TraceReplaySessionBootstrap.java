@@ -380,6 +380,13 @@ public final class TraceReplaySessionBootstrap {
             boolean interleaveSidekickPrelude =
                     shouldInterleaveS2TitleCardPrelude(trace, sidekickPreludeFrames, objectPreludeFrames)
                             && gameplayMode.getSpriteManager() != null;
+            // Obj01_Control calls Sonic_RecordPos even when Obj02 is absent.
+            // Reuse the same pre-counted object passes and leader fallback as
+            // the sidekick prelude; this records live state without moving the
+            // leader or importing comparison snapshots (KiS2 c336fed,
+            // Obj01_Control / Sonic_RecordPos).
+            boolean soloLeaderHistoryPrelude = sidekicks.isEmpty()
+                    && TraceReplayBootstrap.s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace) > 0;
             boolean tornadoPreludeOrder =
                     interleaveSidekickPrelude
                             && findRideStartTornado(objectManager) != null;
@@ -396,7 +403,7 @@ public final class TraceReplaySessionBootstrap {
                     ? player.getCentreY() - 4
                     : 0;
             for (int i = consumedPreludeFrames; i < objectDispatchFrames; i++) {
-                if (interleaveSidekickPrelude && !tornadoPreludeOrder) {
+                if ((interleaveSidekickPrelude || soloLeaderHistoryPrelude) && !tornadoPreludeOrder) {
                     gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(1, levelManager, player);
                 }
                 objectManager.update(cameraX, player, sidekicks,
@@ -1353,8 +1360,10 @@ public final class TraceReplaySessionBootstrap {
      * spawned player, re-apply S3K zone player state, refresh sidekick CPU bounds,
      * and snap the player to ground.
      *
-     * <p>The test fixture always runs these at build time because
-     * {@code TestEnvironment.resetPerTest()} cleared the transient managers. The
+     * <p>Unclassified entries retain the existing repeated setup. Explicit
+     * native entries retain the team, camera and events initialized by the load;
+     * only transient collision wiring, CPU bounds and ground attachment remain.
+     * The
      * headless trace-capture tool boots via {@code HeadlessGameBoot.boot}, which
      * only does {@code loadZoneAndAct}; it must call this so capture starts from
      * the same post-load state the tests do (otherwise physics drifts by the
@@ -1363,6 +1372,13 @@ public final class TraceReplaySessionBootstrap {
      * callers (e.g. pre-level-intro-prefix traces) where that method short-circuits.
      */
     public static void applyPostLoadLevelInit(TraceData trace) {
+        applyPostLoadLevelInit(trace, TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
+    }
+
+    /** Explicit native loads have already initialized their team, camera and events. */
+    public static void applyPostLoadLevelInit(TraceData trace,
+            com.openggf.game.session.LevelEntryProvenance provenance) {
+        java.util.Objects.requireNonNull(provenance, "provenance");
         var level = GameServices.levelOrNull();
         if (level == null) {
             return;
@@ -1370,13 +1386,20 @@ public final class TraceReplaySessionBootstrap {
         AbstractPlayableSprite sprite = GameServices.cameraOrNull() != null
                 ? GameServices.camera().getFocusedSprite()
                 : null;
-        GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), level);
+        GameplayTeamBootstrap.repositionRegisteredSidekicks(GameServices.module(), level, provenance);
         GroundSensor.setLevelManager(level);
-        level.initCameraForLevel();
-        level.initLevelEventsForLevel();
-        var levelEventProvider = GameServices.module().getLevelEventProvider();
-        if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
-            s3kLem.applyZonePlayerState();
+        if (provenance.isPositioned()) {
+            // The unclassified path retains its existing cold-camera behavior.
+            if (provenance == com.openggf.game.session.LevelEntryProvenance.UNCLASSIFIED_ENTRY) {
+                level.initCameraForLevel();
+            } else {
+                com.openggf.level.LevelEntryInitialization.initializeCamera(level, provenance);
+            }
+            level.initLevelEventsForLevel();
+            var levelEventProvider = GameServices.module().getLevelEventProvider();
+            if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
+                s3kLem.applyZonePlayerState();
+            }
         }
         refreshSidekickCpuBoundsFromCamera();
         var collision = GameServices.collisionOrNull();
@@ -1420,7 +1443,7 @@ public final class TraceReplaySessionBootstrap {
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
                     GameServices.module(),
-                    level);
+                    level, TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             if ("s2".equals(meta.game()) && meta.hasNativePreludeBootstrap()) {
                 for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
                     SidekickCpuController cpu = sidekick.getCpuController();
@@ -1431,7 +1454,8 @@ public final class TraceReplaySessionBootstrap {
             }
             GroundSensor.setLevelManager(level);
             if (!preserveProductionLoadCamera) {
-                com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(level);
+                com.openggf.level.LevelEntryInitialization.initializeCamera(level,
+                        TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             }
             level.initLevelEventsForLevel();
             // Re-apply zone player state after sidekick reposition. ROM's

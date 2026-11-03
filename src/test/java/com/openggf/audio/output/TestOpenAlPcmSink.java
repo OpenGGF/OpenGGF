@@ -40,9 +40,9 @@ class TestOpenAlPcmSink {
         OpenAlPcmSink sink = sink(device);
         AudioPresentationProducer producer = producer(sink, 48_000, 60);
         try {
-            for (int frame = 0; frame < 4; frame++) producer.present(frame, PresentationMode.SILENT);
+            for (int frame = 0; frame < 6; frame++) producer.present(frame, PresentationMode.SILENT);
             sink.updateDevice();
-            for (int frame = 4; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
+            for (int frame = 6; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
             device.consumed = 3_072;
             long expected = device.consumed + sink.droppedStereoFrames();
             for (int chunk = 0; chunk < 100; chunk++) assertEquals(expected * 100, queryCursor(sink, 100));
@@ -123,7 +123,7 @@ class TestOpenAlPcmSink {
         AudioPresentationProducer producer = producer(sink, 48_000, 60);
         long frame = 0;
         try {
-            for (int packet = 0; packet < 4; packet++) producer.present(frame++, PresentationMode.SILENT);
+            for (int packet = 0; packet < 6; packet++) producer.present(frame++, PresentationMode.SILENT);
             sink.updateDevice();
             for (int boundary = 0; boundary < 64; boundary++) {
                 for (int packet = 0; packet < 121; packet++) producer.present(frame++, PresentationMode.SILENT);
@@ -153,7 +153,7 @@ class TestOpenAlPcmSink {
         OpenAlPcmSink.Device device = new OpenAlPcmSink.Device() {
             @Override public int initialize() { return 48_000; }
             @Override public void enqueue(short[] pcm, int frames, int sampleRate) { }
-            @Override public int update() { return 0; }
+            @Override public QueueState update() { return new QueueState(0, 0, false); }
             @Override public void flush() { }
             @Override public void pause() { }
             @Override public void resume() { }
@@ -178,11 +178,11 @@ class TestOpenAlPcmSink {
         OpenAlPcmSink sink = sink(device);
         AudioPresentationProducer producer = producer(sink, 48_000, 60);
         try {
-            for (int frame = 0; frame < 4; frame++) producer.present(frame, PresentationMode.SILENT);
+            for (int frame = 0; frame < 6; frame++) producer.present(frame, PresentationMode.SILENT);
             sink.updateDevice();
             device.consumed = 3_072;
             device.underruns = 1;
-            assertEquals(128, sink.queuedStereoFrames());
+            assertEquals(1_728, sink.queuedStereoFrames());
             assertEquals(1, sink.underrunCount());
             assertEquals(1, sink.underrunCount(), "reading a transition must not count it again");
             sink.onReverseBoundary();
@@ -192,19 +192,117 @@ class TestOpenAlPcmSink {
     @Test
     void audibleClockSubtractsDeviceLatencyAndPreservesFractionalSampleOffset() {
         long tenAndAHalf = (10L << 32) + (1L << 31);
-        assertEquals(109, OpenAlPcmSink.audibleSampleFrame(100, tenAndAHalf, 1_500_000, 1_000));
-        assertEquals(0, OpenAlPcmSink.audibleSampleFrame(0, tenAndAHalf, 20_000_000, 1_000));
-        assertEquals(110, OpenAlPcmSink.audibleSampleFrame(100, tenAndAHalf, 0, 1_000));
+        assertEquals(109, OpenAlPcmSink.audibleSampleFrame(100, tenAndAHalf, 1_500_000, 1_000, 1.0));
+        assertEquals(0, OpenAlPcmSink.audibleSampleFrame(0, tenAndAHalf, 20_000_000, 1_000, 1.0));
+        assertEquals(110, OpenAlPcmSink.audibleSampleFrame(100, tenAndAHalf, 0, 1_000, 1.0));
     }
+    @Test
+    void audibleLatencyUsesPitchAndTheSlewApproximationIsSubFrame() {
+        long offset = 10_000L << 32;
+        assertEquals(5_176, OpenAlPcmSink.audibleSampleFrame(0, offset, 100_000_000, 48_000, 1.005));
+        assertEquals(5_224, OpenAlPcmSink.audibleSampleFrame(0, offset, 100_000_000, 48_000, 0.995));
+        double latencySeconds = 0.1;
+        double sourceFrameError = 0.5 * 48_000 * 0.0005 * latencySeconds * latencySeconds;
+        assertEquals(0.12, sourceFrameError, 1e-12,
+                "500 ppm/s over 100 ms needs no pitch-history ring");
+        long previous = 0;
+        for (int observation = 0; observation < 1_000; observation++) {
+            double ratio = 0.995 + Math.min(0.01, observation * 0.000001);
+            long cursor = OpenAlPcmSink.audibleSampleFrame(0,
+                    (10_000L + observation * 480L) << 32, 100_000_000, 48_000, ratio);
+            assertTrue(cursor >= previous);
+            previous = cursor;
+        }
+    }
+
+    @Test
+    void latencyRecalculationAtPauseCannotMoveAnObservedCursorBackward() {
+        var clock = new AtomicLong();
+        FakeDevice device = new FakeDevice(48_000);
+        device.supportsRate = true;
+        device.latencyNanos = 50_000_000;
+        device.queuedBuffers = 1;
+        OpenAlPcmSink sink = new OpenAlPcmSink(device,
+                failure -> { throw new AssertionError(failure); }, clock::get, ignored -> { });
+        try {
+            for (int i = 0; i <= 60; i++) {
+                clock.set(i * 1_000_000_000L);
+                sink.updateDevice();
+            }
+            assertEquals(0.995, device.ratio, 1e-12);
+            device.consumed = 2_500;
+            assertEquals(112, sink.consumedStereoFrames());
+            sink.pause();
+            assertEquals(1.0, device.ratio);
+            assertEquals(112, sink.consumedStereoFrames(), "unity latency subtraction alone would return 100");
+            sink.resume();
+            assertEquals(112, sink.consumedStereoFrames());
+            device.consumed += 1_000;
+            assertEquals(1_100, sink.consumedStereoFrames());
+            sink.onReverseBoundary();
+            assertEquals(0, sink.consumedStereoFrames(), "flush begins a fresh source coordinate");
+        } finally { sink.close(); }
+    }
+
+    @Test
+    void regulatedSpeakerLeavesCaptureHistoryClockAndProducerPcmIdentical() {
+        FakeDevice regulatedDevice = new FakeDevice(48_000);
+        regulatedDevice.supportsRate = true;
+        FakeDevice controlDevice = new FakeDevice(48_000);
+        AtomicLong clock = new AtomicLong();
+        OpenAlPcmSink regulated = new OpenAlPcmSink(regulatedDevice,
+                failure -> { throw new AssertionError(failure); }, clock::get, ignored -> { });
+        OpenAlPcmSink control = new OpenAlPcmSink(controlDevice,
+                failure -> { throw new AssertionError(failure); }, clock::get, ignored -> { });
+        short[] source = stereoRamp(48_000);
+        var producer = producer(regulated, 48_000, 60, sourceRegistry(48_000, source));
+        var nominal = producer(control, 48_000, 60, sourceRegistry(48_000, source));
+        try {
+            producer.setHistoryArmed(true);
+            nominal.setHistoryArmed(true);
+            try (var capture = producer.attachCapture(60); var reference = nominal.attachCapture(60)) {
+                short[] actual = new short[1_600], expected = new short[1_600];
+                for (int frame = 0; frame < 100; frame++) {
+                    clock.addAndGet(16_666_667L);
+                    producer.present(frame, PresentationMode.FORWARD);
+                    nominal.present(frame, PresentationMode.FORWARD);
+                    regulated.updateDevice();
+                    control.updateDevice();
+                    assertEquals(800, capture.drainPresentationFrame(actual));
+                    assertEquals(800, reference.drainPresentationFrame(expected));
+                    assertArrayEquals(expected, actual);
+                    assertEquals(nominal.transactionFingerprint().clock(), producer.transactionFingerprint().clock());
+                    assertEquals(nominal.transactionFingerprint().history(), producer.transactionFingerprint().history());
+                }
+                assertTrue(regulated.playbackRate() > 1, "the speaker servo must actually trim during this witness");
+                assertEquals(1.0, control.playbackRate());
+                producer.beginReverse(1);
+                nominal.beginReverse(1);
+                producer.present(100, PresentationMode.REVERSE);
+                nominal.present(100, PresentationMode.REVERSE);
+                assertEquals(800, capture.drainPresentationFrame(actual));
+                assertEquals(800, reference.drainPresentationFrame(expected));
+                assertArrayEquals(expected, actual, "reverse history bytes also stay unchanged");
+            }
+        } finally {
+            producer.close();
+            nominal.close();
+        }
+        assertEquals(regulatedDevice.enqueuedFrames, controlDevice.enqueuedFrames);
+        for (int packet = 0; packet < regulatedDevice.enqueuedSamples.size(); packet++) {
+            assertArrayEquals(controlDevice.enqueuedSamples.get(packet), regulatedDevice.enqueuedSamples.get(packet));
+        }
+    }
+
     @Test
     void audibleCursorIncludesDroppedSourceTimeOnlyAfterQueuedPredecessors() {
         FakeDevice device = new FakeDevice(48_000);
         OpenAlPcmSink sink = sink(device);
         AudioPresentationProducer producer = producer(sink, 48_000, 60);
         try {
-            for (int frame = 0; frame < 4; frame++) producer.present(frame, PresentationMode.SILENT);
+            for (int frame = 0; frame < 6; frame++) producer.present(frame, PresentationMode.SILENT);
             sink.updateDevice();
-            for (int frame = 4; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
+            for (int frame = 6; frame < 130; frame++) producer.present(frame, PresentationMode.SILENT);
             assertTrue(sink.droppedStereoFrames() > 0);
             assertEquals(0, sink.consumedStereoFrames());
             device.consumed = 3_072;
@@ -217,7 +315,7 @@ class TestOpenAlPcmSink {
     void primesThreeDeviceBuffersBeforeStartingPlayback() {
         FakeDevice device = new FakeDevice(57_600);
         OpenAlPcmSink sink = sink(device);
-        short[] source = stereoRamp(3_840);
+        short[] source = stereoRamp(4_800);
         AudioPresentationProducer producer = producer(
                 sink, 57_600, 60, sourceRegistry(57_600, source));
         int queued;
@@ -229,6 +327,9 @@ class TestOpenAlPcmSink {
             assertEquals(List.of(), device.enqueuedFrames);
             producer.present(3, PresentationMode.FORWARD);
             sink.updateDevice();
+            assertTrue(device.enqueuedFrames.isEmpty());
+            producer.present(4, PresentationMode.FORWARD);
+            sink.updateDevice();
             queued = sink.queuedStereoFrames();
         } finally { producer.close(); }
 
@@ -236,7 +337,7 @@ class TestOpenAlPcmSink {
                 device.enqueuedFrames);
         assertArrayEquals(java.util.Arrays.copyOf(source, 1_024 * 2),
                 device.enqueuedSamples.getFirst());
-        assertEquals(768, queued);
+        assertEquals(1_728, queued);
     }
 
     @Test
@@ -260,21 +361,21 @@ class TestOpenAlPcmSink {
         OpenAlPcmSink sink = sink(device);
         AudioPresentationProducer producer = producer(sink, 48_000, 60);
         try {
-            for (int frame = 0; frame < 4; frame++) {
+            for (int frame = 0; frame < 6; frame++) {
                 producer.present(frame, PresentationMode.FORWARD);
             }
             sink.updateDevice();
-            assertEquals(128, sink.queuedStereoFrames());
+            assertEquals(1_728, sink.queuedStereoFrames());
 
             sink.pause();
             sink.pause();
-            for (int frame = 4; frame < 184; frame++) {
+            for (int frame = 6; frame < 184; frame++) {
                 producer.present(frame, PresentationMode.SILENT);
                 sink.updateDevice();
             }
             sink.pause();
 
-            assertEquals(128, sink.queuedStereoFrames());
+            assertEquals(1_728, sink.queuedStereoFrames());
             assertEquals(1, device.pauseCount);
             sink.resume();
             assertEquals(1, device.resumeCount);
@@ -338,6 +439,7 @@ class TestOpenAlPcmSink {
             producer.present(0, PresentationMode.SILENT);
             producer.present(1, PresentationMode.SILENT);
             producer.present(2, PresentationMode.SILENT);
+            producer.present(3, PresentationMode.SILENT);
             sink.updateDevice();
             sink.updateDevice();
         } finally { producer.close(); }
@@ -512,8 +614,17 @@ class TestOpenAlPcmSink {
     private static final class FakeDevice implements OpenAlPcmSink.Device {
         long consumed;
         long underruns;
+        long latencyNanos;
+        boolean supportsRate;
+        double ratio = 1;
 
-        @Override public long consumedStereoFrames() { return consumed; }
+        @Override public boolean supportsPlaybackRate() { return supportsRate; }
+        @Override public void setPlaybackRate(double ratio) { this.ratio = ratio; }
+
+        @Override public long consumedStereoFrames() {
+            return latencyNanos == 0 ? consumed : OpenAlPcmSink.audibleSampleFrame(
+                    0, consumed << 32, latencyNanos, sampleRate, ratio);
+        }
         @Override public long underrunCount() { return underruns; }
         private final int sampleRate;
         private final List<Integer> enqueuedFrames = new ArrayList<>();
@@ -549,11 +660,11 @@ class TestOpenAlPcmSink {
         }
 
         @Override
-        public int update() {
+        public QueueState update() {
             if (failUpdate) {
                 throw new IllegalStateException("update");
             }
-            return queuedBuffers;
+            return new QueueState(queuedBuffers, (long) queuedBuffers * 1_024, queuedBuffers > 0);
         }
 
         @Override

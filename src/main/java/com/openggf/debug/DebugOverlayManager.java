@@ -48,6 +48,7 @@ public class DebugOverlayManager {
         }
     }
 
+    @com.openggf.game.EngineOnly
     public static synchronized DebugOverlayManager getInstance() {
         if (debugOverlayManager == null) {
             debugOverlayManager = new DebugOverlayManager();

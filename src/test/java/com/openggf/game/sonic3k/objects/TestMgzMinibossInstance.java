@@ -1,6 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.session.SessionManager;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
@@ -401,6 +407,86 @@ class TestMgzMinibossInstance {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void defeatRetainsControlSlotWhileIndependentExplosionsOverlapHandoff() throws Exception {
+        GraphicsManager.getInstance().initHeadless();
+        RecordingServices services = new RecordingServices(camera, true);
+        MgzMinibossInstance boss = createBoss(services);
+        services.objectManager.addDynamicObjectAtSlot(boss, 7);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2D00, (short) 0x0100);
+        boss.update(0, player);
+        int lowestFree = services.objectManager.allocateDynamicSlot();
+        services.objectManager.releaseDynamicSlot(lowestFree);
+        bossState(boss).hitCount = 1;
+        var arms = services.objectManager.getActiveObjects().stream()
+                .filter(o -> o.getClass().getSimpleName().equals("DrillArmChild")).toList();
+        assertEquals(2, arms.size());
+
+        boss.onPlayerAttack(player, ENEMY_HIT);
+        assertTrue(services.objectManager.activeObjectsOfType(
+                MgzMinibossInstance.MgzBossCameraScrollHelper.class).isEmpty(),
+                "player touch must not allocate ahead of the boss's own dispatch");
+        assertTrue(arms.stream().noneMatch(ObjectInstance::isDestroyed),
+                "arm slots must remain occupied until their own dispatches");
+        boss.update(1, player);
+
+        var helpers = services.objectManager.activeObjectsOfType(MgzMinibossInstance.MgzBossCameraScrollHelper.class);
+        assertEquals(1, helpers.size());
+        assertEquals(lowestFree, helpers.getFirst().getSlotIndex(), "camera helper uses global AllocateObject");
+        var explosions = services.objectManager.activeObjectsOfType(AbstractS3kBossExplosionObjectInstance.class);
+        assertEquals(1, explosions.size(), "CreateChild1_Normal creates an independent explosion SST on the killing hit");
+        var explosion = explosions.getFirst();
+        assertTrue(explosion.getSlotIndex() > 7, "explosion control is allocated after the boss");
+        assertEquals(0, defeatFragmentCount(services), "loc_887CA creates debris at the later control handoff");
+        assertTrue(arms.stream().allMatch(o -> ((AbstractObjectInstance) o).getSlotIndex() < explosion.getSlotIndex()));
+        for (var arm : arms) {
+            arm.update(1, player);
+            assertTrue(arm.isDestroyed());
+        }
+
+        explosion.update(1, player); // Later SST executes in the creation pass.
+        for (int frame = 2; frame <= 65; frame++) {
+            boss.update(frame, player);
+            explosion.update(frame, player);
+        }
+        var flows = services.objectManager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class);
+        assertEquals(1, flows.size());
+        var flow = flows.getFirst();
+        assertEquals(7, flow.getSlotIndex(), "Obj_EndSignControl replaces the same boss SST");
+        assertTrue(boss.isDestroyed());
+        assertFalse(explosion.isDestroyed(), "the explosion controller overlaps the retained control SST");
+        assertEquals(5, defeatFragmentCount(services));
+        assertTrue(services.objectManager.getActiveObjects().stream()
+                .filter(o -> o.getClass().getSimpleName().equals("DefeatFragmentChild"))
+                .allMatch(o -> ((AbstractObjectInstance) o).getSlotIndex() > flow.getSlotIndex()));
+
+        PerObjectRewindSnapshot phase = explosion.captureRewindState();
+        int remaining = explosion.remaining;
+        int wait = explosion.waitCounter;
+        var recreated = (AbstractS3kBossExplosionObjectInstance) ((RewindRecreatable) explosion)
+                .recreateForRewind(new RewindRecreateContext(explosion.getSpawn(), phase, services));
+        recreated.setServices(services);
+        recreated.restoreRewindState(phase);
+        assertEquals(remaining, recreated.remaining);
+        assertEquals(wait, recreated.waitCounter);
+        assertEquals(explosion.getX(), recreated.getX());
+        assertEquals(explosion.getY(), recreated.getY());
+        explosion.update(66, player);
+        explosion.update(67, player);
+        explosion.restoreRewindState(phase);
+        assertEquals(remaining, explosion.remaining);
+        assertEquals(wait, explosion.waitCounter);
+        for (int frame = 66; frame <= 94; frame++) explosion.update(frame, player);
+        assertTrue(explosion.isDestroyed(), "CreateBossExp00 eventually expires independently");
+        assertFalse(flow.isDestroyed(), "expiring explosions cannot retire EndSignControl");
+    }
+
+    private static long defeatFragmentCount(RecordingServices services) {
+        return services.objectManager.getActiveObjects().stream()
+                .filter(o -> o.getClass().getSimpleName().equals("DefeatFragmentChild")).count();
+    }
+
+    @Test
     void defeatCameraHelperAdvancesCameraAndLeftBoundWhileScrolling() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         MgzMinibossInstance boss = createBoss(services);
@@ -584,7 +670,17 @@ class TestMgzMinibossInstance {
         private int fadeOutCalls;
 
         private RecordingServices(Camera camera) {
+            this(camera, false);
+        }
+
+        private RecordingServices(Camera camera, boolean realPool) {
             this.camera = camera;
+            if (realPool) {
+                objectManager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(), 0, null, null,
+                        GraphicsManager.getInstance(), camera, this);
+                objectManager.reset(0);
+                return;
+            }
             this.objectManager = mock(ObjectManager.class);
             doAnswer(invocation -> {
                 ObjectInstance child = invocation.getArgument(0);
@@ -594,6 +690,12 @@ class TestMgzMinibossInstance {
                 spawnedChildren.add(child);
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any());
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                if (child instanceof AbstractObjectInstance instance) instance.setServices(this);
+                spawnedChildren.add(child);
+                return null;
+            }).when(objectManager).addDynamicObject(any());
         }
 
         @Override

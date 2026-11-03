@@ -40,6 +40,7 @@ import java.util.logging.Logger;
  *
  * @see AbstractResultsScreen
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         implements FixedRuntimeObjectInstance, ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ResultsScreenObjectInstance.class.getName());

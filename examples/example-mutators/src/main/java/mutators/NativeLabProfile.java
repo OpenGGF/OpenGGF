@@ -51,6 +51,8 @@ public final class NativeLabProfile implements MutatorSupportProfile {
             case DRY_SONIC_GRAVITY -> key.equals("sonic");
             case BIG_HEAD -> supportsNativeCharacter(key);
             case PLAYER_STEALTH -> supportsPlayer(key, leader);
+            // The attack belongs to the controlled leader; CPU sidekicks keep native moves.
+            case HOMING_ATTACK -> leader && supportsNativeCharacter(key);
             default -> false;
         };
     }

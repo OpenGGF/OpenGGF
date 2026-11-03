@@ -127,6 +127,12 @@ public final class DisplayShaderPickerController {
         open = false;
     }
 
+    /** Moves the selection by wheel notches (positive = away from the user, up the list), stopping at either end. */
+    public void scroll(int notches) {
+        if (!open || visibleItems.isEmpty()) return;
+        selectedIndex = Math.clamp(selectedIndex - notches, 0, visibleItems.size() - 1);
+    }
+
     private void moveSelection(int delta) {
         if (visibleItems.isEmpty()) {
             selectedIndex = 0;

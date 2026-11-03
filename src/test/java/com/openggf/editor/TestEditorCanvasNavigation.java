@@ -130,11 +130,15 @@ class TestEditorCanvasNavigation {
         assertTrue(handler.handleCanvasNavigation(input));
         assertEquals(2, controller.canvasView().zoom());
         assertEquals(new EditorCanvasNavigation.Pan(50, 40), controller.canvasView().consumePan());
+        input.update();
         input.handleMouseButton(GLFW_MOUSE_BUTTON_MIDDLE, GLFW_PRESS);
         assertTrue(handler.handleCanvasNavigation(input));
+        input.update();
         input.handleMouseMove(80, 60);
         assertTrue(handler.handleCanvasNavigation(input));
+        assertEquals(2, controller.canvasView().zoom(), "the notch zoomed once, in its own frame");
         assertEquals(new EditorCanvasNavigation.Pan(10, 10), controller.canvasView().consumePan());
+        input.update();
         assertFalse(controller.hasUndoHistory());
         assertEquals(0, controller.worldCursor().x());
         input.handleMouseButton(GLFW_MOUSE_BUTTON_MIDDLE, GLFW_RELEASE);

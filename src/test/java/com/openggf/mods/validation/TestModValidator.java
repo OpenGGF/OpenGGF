@@ -46,6 +46,42 @@ class TestModValidator {
     @TempDir Path temp;
 
     @Test
+    void supportedContractRejectsTerminalsAndAmbientMembersButAllowsProjection() {
+        var c = new SupportedModContract();
+        assertFalse(c.supportedType("com/openggf/control/InputActionMasks"));
+        assertFalse(c.supportedType("com/openggf/level/objects/RewindRecreateContext"));
+        assertTrue(c.supportedType(MOD_RECREATABLE));
+        assertFalse(c.consumableMember(MOD_RECREATABLE,"recreateForRewind",
+                "(L"+RECREATE_CONTEXT+";)L"+OBJECT_BASE+";"));
+        assertTrue(c.consumableMember(MOD_RECREATABLE,"recreateForRewind",
+                "(L"+MOD_RECREATE_CONTEXT+";)L"+OBJECT_BASE+";"));
+        assertFalse(c.consumableMember("com/openggf/graphics/GraphicsManager","getInstance",
+                "()Lcom/openggf/graphics/GraphicsManager;"));
+    }
+
+    @Test
+    void supportedModeChecksEveryPayloadClassAndBootstrapPayload() throws Exception {
+        ClassWriter helper = new ClassWriter(0);
+        helper.visit(Opcodes.V25, Opcodes.ACC_PUBLIC, "example/Helper", null,"java/lang/Object",null);
+        // A creator marking cannot grant engine authority.
+        helper.visitAnnotation("Lcom/openggf/game/ModApi;",true).visitEnd();
+        MethodVisitor m=helper.visitMethod(Opcodes.ACC_PUBLIC,"probe","()V",null,null);
+        m.visitCode();
+        Handle forbidden=new Handle(Opcodes.H_INVOKESTATIC,"com/openggf/graphics/GraphicsManager",
+                "getInstance","()Lcom/openggf/graphics/GraphicsManager;",false);
+        m.visitLdcInsn(new org.objectweb.asm.ConstantDynamic("test","Ljava/lang/Object;",
+                new Handle(Opcodes.H_INVOKESTATIC,"java/lang/invoke/ConstantBootstraps","nullConstant",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/Object;",false), forbidden));
+        m.visitInsn(Opcodes.POP); m.visitInsn(Opcodes.RETURN); m.visitMaxs(1,1); m.visitEnd(); helper.visitEnd();
+        Path payload=jar(Map.of(ENTRY,entrypoint(true,true),"example/Helper",helper.toByteArray()));
+        var legacy=new ModValidator().validate(payload,"example.Entry");
+        assertFalse(legacy.findings().stream().anyMatch(f->f.code().startsWith("UNSUPPORTED_")));
+        var strict=new ModValidator(ModValidator.ValidationMode.SUPPORTED_ONLY).validate(payload,"example.Entry");
+        assertTrue(strict.findings().stream().anyMatch(f->f.code().equals("UNSUPPORTED_ENGINE_MEMBER")
+                && f.className().equals("example/Helper") && f.member().equals("getInstance")), strict.findings().toString());
+    }
+
+    @Test
     void acceptsStructurallySafeEntrypointAndObjectWithoutLoadingClasses() throws Exception {
         Map<String, byte[]> classes = new LinkedHashMap<>();
         classes.put(ENTRY, entrypoint(true, true));

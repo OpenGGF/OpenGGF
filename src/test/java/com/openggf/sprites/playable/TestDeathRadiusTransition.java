@@ -1,6 +1,11 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.DamageCause;
 import com.openggf.game.GameModule;
+import com.openggf.game.sonic3k.objects.Sonic3kInvisibleHurtBlockHObjectInstance;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
@@ -12,6 +17,7 @@ import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -20,6 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 /** KillSonic/KillCharacter/Player_TouchFloor native position writes before death velocity. */
 @ExtendWith(SingletonResetExtension.class)
@@ -98,6 +105,49 @@ class TestDeathRadiusTransition {
         assertEquals(0x200, player.getCentreY());
         assertEquals(expectedRadius, player.getYRadius());
         assertEquals(0x3400, player.getYSubpixelRaw());
+    }
+
+    @Test
+    void crushDeathDrawsDirectlyAndFreezesThePreservedHurtTimer() {
+        AbstractPlayableSprite player = player(3, "sonic");
+        player.setInvulnerableFrames(120);
+        player.setHurt(true);
+        GameServices.level().resetLevelGamestate(new Sonic3kGameModule().createLevelState());
+        player.setRingCount(25);
+        assertEquals(25, player.getRingCount(), "fixture must own a live ring ledger");
+        assertTrue(player.applyCrushDeath());
+        assertFalse(player.isHurt());
+        for (int frame = 0; frame < 16; frame++) {
+            assertTrue(player.shouldRefreshRenderFlagThisFrame(),
+                    "routine 6 draws directly rather than blinking through Sonic_Display");
+            player.tickStatus();
+            player.endOfTick();
+            assertEquals(120, player.getInvulnerableFrames(),
+                    "death preserves the timer without executing Sonic_Display");
+            assertEquals(25, player.getRingCount(), "Kill_Character does not lose rings");
+        }
+    }
+
+    @Test
+    void crushedPlayerCannotReenterHurtOrQualifyForObjectRingLoss() {
+        AbstractPlayableSprite player = player(3, "sonic");
+        GameServices.level().resetLevelGamestate(new Sonic3kGameModule().createLevelState());
+        player.setRingCount(25);
+        assertEquals(25, player.getRingCount(), "fixture must own a live ring ledger");
+        assertTrue(player.applyCrushDeath());
+        assertTrue(player.getInvulnerable(), "object-owned damage must reject routine 6");
+        var services = mock(ObjectServices.class);
+        var hurtFloor = new Sonic3kInvisibleHurtBlockHObjectInstance(
+                new ObjectSpawn(0, 0, 0x6A, 0, 0, false, 0));
+        hurtFloor.setServices(services);
+        hurtFloor.onSolidContact(player, new SolidContact(true, false, false, true, false), 1);
+        verifyNoInteractions(services);
+        assertFalse(player.applyHurt(0));
+        assertFalse(player.applyHurtOrDeath(0, DamageCause.NORMAL, true));
+        assertFalse(player.applyHurtIgnoringIFrames(0, false));
+        assertFalse(player.isHurt());
+        assertEquals(-0x700, player.getYSpeed());
+        assertEquals(25, player.getRingCount());
     }
 
     private AbstractPlayableSprite player(int game, String character) {

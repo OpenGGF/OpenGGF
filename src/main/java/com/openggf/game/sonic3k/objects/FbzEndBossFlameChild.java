@@ -104,7 +104,10 @@ public final class FbzEndBossFlameChild extends AbstractFbzEndBossChild implemen
         } else {
             renderer = services().renderManager().getRenderer(Sonic3kObjectArtKeys.FBZ_END_BOSS);
         }
-        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(mappingFrame, x, y, false, false);
+        // ObjDat3_70EB0 selects palette 0 for the pilot flame, sharing the body art
+        // whose sheet defaults to palette 1. The fired flame/explosion sheets retain their defaults.
+        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(
+                mappingFrame, x, y, false, false, flameIndex == 8 ? 0 : -1);
     }
 
     int mappingFrameForTest() { return mappingFrame; }

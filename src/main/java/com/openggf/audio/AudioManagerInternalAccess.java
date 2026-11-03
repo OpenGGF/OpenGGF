@@ -13,6 +13,11 @@ public final class AudioManagerInternalAccess {
         Objects.requireNonNull(manager, "manager").servicePresentationDevice();
     }
 
+    /** Whether live output can follow the service clock without long-term speaker drift. */
+    public static boolean speakerRateRegulated(AudioManager manager) {
+        return Objects.requireNonNull(manager, "manager").isSpeakerRateRegulated();
+    }
+
     /** One explicit replay/capture driver owns packet duration until teardown. */
     public static OfflineServiceCadence offlineServiceCadence(AudioManager manager, int hz) {
         return new OfflineServiceCadence(Objects.requireNonNull(manager), hz);
@@ -37,6 +42,13 @@ public final class AudioManagerInternalAccess {
     public static void installMatchedSource(
             AudioManager manager, Rom rom, GameAudioProfile profile) {
         Objects.requireNonNull(manager, "manager").installMatchedSource(rom, profile);
+    }
+
+    /** Submits a ring award through its native owner, retaining ordinary music as the default. */
+    public static void playRingExtraLife(AudioManager manager) {
+        GameAudioProfile profile = Objects.requireNonNull(manager, "manager").getAudioProfile();
+        if (profile instanceof RingExtraLifeRequestOwner owner) owner.playRingExtraLife(manager);
+        else if (profile != null) manager.playMusic(profile.getExtraLifeMusicId());
     }
 
     public static void playSecondaryNativeRequest(AudioManager manager, int nativeId) {

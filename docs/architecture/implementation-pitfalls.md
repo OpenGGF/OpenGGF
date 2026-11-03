@@ -13,6 +13,24 @@ inventory includes reported recovery boundaries as well as unresolved fallback;
 review each owner rather than deleting catches indiscriminately. Remove retired
 rows; do not add new engine catch-and-fallback allowances.
 
+**A counter's name does not establish its native clock.** In S2 continuous
+loads, LevelManager's execution counter includes title object passes while the
+player gameplay counter resets at release. Obj2C needs the latter native level
+word (held at zero during the locked title), not execution or VInt count.
+Instrument the owning read before choosing a counter. A shared clock-hold
+experiment produced earlier physics failures even though it reduced the axis
+total; the producer-local correction restores the native RNG inventory. See the
+[executed clock evidence](research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03).
+
+
+**Position updates execute object code.** `LevelManager.updateObjectPositions()`
+is not a read-only placement refresh. In a positioned rendering fixture, calling it
+between production steps can admit a boss and consume its one-time palette load;
+the following frame-top `PaletteOwnershipRegistry.beginFrame()` then clears the
+pending write. Move the declared camera/player state and let the ordinary frame
+step execute admission. The MHZ2 rendering witness checks the admitted palette
+against the ROM and stages its camera without an extra object pass.
+
 
 **A handler capture is not proof of a stored world checkpoint.** Cold headless
 loading can leave parallax's active selection uninitialized even when a zone
@@ -950,11 +968,37 @@ the layout spawn. Submitted offscreen pieces still consume native line width;
 discarding them in the shared evaluator would break partially visible objects.
 AIZ's unculled plants exhausted line width and erased Sonic's lower body even
 though the ROM culled those plants. Keep any user option to relax line limits
-separate from producer correctness; masks and table capacity are separate rules.
+separate from producer correctness. Disabling limits removes table capacity as well
+as line budgets; explicit masks remain active.
 Normal play defaults `display.spriteScanlineLimit` to false. TraceCaptureTool scopes
 it to true for native image comparisons and restores it even on failure. Other
 ROM image probes must enable it explicitly and restore their caller preference;
 physics/aux trace comparisons do not depend on this presentation setting.
+
+**Reserve zero-X masking for explicit controls.** Normal mapping expansion uses
+`loc_1AF76` (sonic3k.asm:36604-36618) to replace a zero SAT X with one.
+`GraphicsManager.submitSpriteSatPiece` applies this protection; explicit control
+entries retain zero. Disabling count/pixel/table limits does not disable masks,
+so omitting the producer step can still erase later sprites. Low-level evaluator
+tests may use raw zero-X entries, while production pixel probes that intentionally
+exercise masking must submit control entries.
+
+**Multi-draw has two admission stages.** Every end-of-act tally element has
+render flag `$40`. `loc_1AE58` (sonic3k.asm:36481-36518) rejects whole offscreen
+elements; `loc_1B07A` (sonic3k.asm:36743-36766) also rejects mapping-piece origins
+at or beyond the padded raster boundaries (-32 exclusive through screen width /
+224 exclusive). Results retirement bounds alone do not implement drawing
+admission. Retain native piece dimensions and count accepted mapping pieces once.
+The same omission affected loaded world objects in ICZ2: being in the active
+placement window does not imply being inside Render_Sprites bounds. Ring loss,
+columns/decorations and collapsing bridges retain their own native extents.
+Tension bridge child groups use $40/$08, then cull their one-piece segment origins.
+Observe raw submissions before evaluator clipping; a plausible final table capped
+at 80 can hide a much larger producer excess. The ICZ2 route budget test does this
+without supplying any gameplay or admission values.
+Native picture/admission tests explicitly opt into budgets with the test-only
+`NativeSpriteLimits` scope and restore their caller's preference. Normal play's
+relaxed default is not a valid implicit setup for a ROM budget comparison.
 
 **Follower priority inheritance must be field-specific.** Hyper stars illustrate
 this: `Obj_HyperSonic_Stars_Init` fixes the display-list word at `$80`, while
@@ -1467,6 +1511,13 @@ A full level frame may retire results art, run Obj_LevelResultsCreate, publish t
 
 
 ### Physical retained planes and source-cache dimensions
+
+Recreating an S3K layout map with identical contents can still change its COW byte
+array identity. The next shared level restore then invalidates both tilemaps.
+Preserve the captured map-byte reference when restoring layout metadata, and only
+rebind derived geometry when its actual inputs changed. An unchanged full-layout
+background is camera-independent; camera windows and retained planes need their
+own restore rules. Origin: LRZ1/SOZ2 held-rewind investigation, 2026-11-02.
 
 An event-owned VDP Plane B is64x32 cells even when its source-world cache is
 taller. Native row writes into the first32 cache rows do not update the later
@@ -2729,3 +2780,16 @@ bits. Deriving priority from cast membership or the sheet name changes terrain
 occlusion. Likewise, Lava Reef's Robotnik head uses palette 0 while its machine
 sheet defaults to palette 1. Validate the actual owner and part, not only whether
 its mapping frame contains nonzero pixels. Origin: Typing section art, 2026-10-25.
+
+## Song-helper timing belongs to its own object
+
+S3K `sub_65DD6`, `Obj_Song_Fade_Transition` and
+`Obj_Song_Fade_ToLevelMusic` allocate in the lowest free slot. Use the
+lowest-free object path, not an after-current child allocator. The manager
+already decides whether that slot can execute in the current object pass.
+The helper initializer falls through into its first signed decrement: native
+wait words 90 and 120 complete on own entries 91 and 121, including initialization.
+An extra initialization return or unconditional next-frame deferral adds delay;
+do not offset that by fitting the caller's constant. Start the helper at its
+owning ROM trigger (MHZ1 uses the controller's player clamp, not its later generic
+actor). See the [music audit](audits/2026-11-02-music-transitions.md).

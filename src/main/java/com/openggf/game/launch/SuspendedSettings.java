@@ -34,7 +34,7 @@ public final class SuspendedSettings {
 
     /** Live runtime overrides supplied by Game Setup; Default releases their previous values. */
     private static final Set<SonicConfiguration> LIVE_PROFILE_OVERRIDES = Set.of(
-            SonicConfiguration.DISPLAY_ASPECT, SonicConfiguration.LIVE_REWIND_ENABLED,
+            SonicConfiguration.DISPLAY_ASPECT, SonicConfiguration.LIVE_REWIND_ENABLED, SonicConfiguration.REWIND_BUDGET_SCOPE,
             SonicConfiguration.DEBUG_VIEW_ENABLED);
 
     private final Map<SonicConfiguration, Object> overrides;

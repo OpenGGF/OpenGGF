@@ -276,7 +276,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         if (!act1BackgroundInitialized) {
             initializeAct1Background(player.getCentreX());
             retainedPlaneOwned = true;
-            levelManager().seedBackgroundVdpPlaneFromWorld(backgroundOutdoor ? 0x200 : 0);
+            seedAct1BackgroundPlane(backgroundOutdoor ? 0x200 : 0);
             submitAct1PaletteOwnership();
         }
         spawnOutdoorMotionController();
@@ -920,6 +920,20 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             planeBRedraw.replay(direction, backgroundRedrawProgress, targetOffset, replayY);
             finishPlaneBFrame();
         }
+    }
+
+    private void seedAct1BackgroundPlane(int sourceX) {
+        levelManager().seedBackgroundVdpPlaneFromWorld(sourceX);
+        if (sourceX != 0) return;
+        // loc_528A4: Reset_TileOffsetPositionEff supplies the effective BG Y
+        // to Refresh_PlaneFull, which fills sixteen consecutive block rows.
+        // A stage/checkpoint return can start beyond the first 256px of the map.
+        int firstY = effectiveBackgroundY() & 0xFF0;
+        for (int y = firstY; y < firstY + 0x100; y += 0x10) {
+            int dest = 0xE000 + ((y >>> 3) & 0x1F) * 0x80;
+            levelManager().copyBackgroundTileRowFromWorldToVdpPlane(0, y, dest, 0x20);
+        }
+        levelManager().uploadBackgroundTilemap();
     }
 
     /** Compatibility entry point retained for Act 1 callers and focused tests. */

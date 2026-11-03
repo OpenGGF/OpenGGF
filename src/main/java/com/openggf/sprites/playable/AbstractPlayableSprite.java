@@ -1379,7 +1379,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         PowerUpObject liveShield = resolveLiveShieldObjectAfterRewindRestore();
                         if (liveShield != null) {
                                 shieldObject = liveShield;
-                                if (invincibleFrames > 0) {
+                                if (invincibleFrames > 0 || superSonic) {
                                         shieldObject.setVisible(false);
                                 }
                                 shieldObject.refreshArtAfterRewindRestore();
@@ -1390,7 +1390,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 shieldObject = null;
                                 if (powerUpSpawner != null) {
                                         shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                                        if (shieldObject != null && invincibleFrames > 0) {
+                                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
                                                 shieldObject.setVisible(false);
                                         }
                                         if (shieldObject != null) {
@@ -1402,6 +1402,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 refreshPersistentInstaShieldRegistration(instaShieldRegistered);
                 refreshInvincibilityStarsAfterRewindRestore();
+                if (superSonic) {
+                        setShieldVisible(false);
+                }
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
@@ -1446,6 +1449,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
 
+                // Like tickStatus, defer the dormant Insta-Shield while a
+                // collected shield owns their shared fixed SST. Native
+                // SpawnLevelMainSprites_SpawnPowerup replaces that slot with the
+                // elemental shield (loc_6A02); Load_Level must not reclaim it.
+                if (hasShield()) {
+                        instaShieldRegistered = false;
+                        return;
+                }
                 powerUpSpawner.registerObject(instaShieldObject);
                 instaShieldRegistered = true;
                 instaShieldObject.invalidateDplcCache();
@@ -1500,10 +1511,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveShield(ShieldType type) {
-                // S2: Super Sonic cannot pick up shields
-                if (superSonic) {
-                        return;
-                }
+                // Monitor shield rewards set shield status even while transformed (S2 and S3K).
                 // Remove existing shield before granting new one
                 if (hasShield()) {
                         if (shieldObject != null) {
@@ -1523,8 +1531,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 ? powerUpSpawner.spawnShield(this, type)
                                 : null;
                         LOGGER.fine("DEBUG: ShieldObjectInstance created successfully: " + shieldObject);
-                        // If picked up while invincible, hide shield until invincibility ends
-                        if (shieldObject != null && invincibleFrames > 0) {
+                        // Retain the shield while powered up, but suppress its visual.
+                        if (shieldObject != null && (invincibleFrames > 0 || superSonic)) {
                                 shieldObject.setVisible(false);
                         }
                 } catch (Exception e) {
@@ -1806,7 +1814,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isHidden()) {
                         return false;
                 }
-                return PlayableSpriteArtPresentation.nativeBodyVisible(
+                // S3K loc_123AA (sonic3k.asm:24568-24573) draws routine 6 directly;
+                // the preserved hurt timer belongs only to the control display path.
+                return dead || PlayableSpriteArtPresentation.nativeBodyVisible(
                         invulnerableFrames, invulnerabilityDisplayTimerDecrementedThisFrame,
                         isHurt(), hurtRoutineOwnedDisplayThisFrame);
         }
@@ -2606,8 +2616,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public boolean getInvulnerable() {
-                // Debug mode and Super Sonic make player completely invulnerable
-                return debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt;
+                // Dead players cannot enter object-owned hurt/ring-loss paths.
+                // Debug mode and Super Sonic also make the player invulnerable
+                return dead || debugMode || superSonic || invulnerableFrames > 0 || invincibleFrames > 0 || hurt || com.openggf.game.mutators.HomingAttackRuntime.invulnerable(mutatorPolicySource, this);
         }
 
         public int getInvulnerableFrames() {
@@ -2768,8 +2779,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 invulnerabilityDisplayTimerTickedThisFrame = true;
                 // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
                 // During hurt routine (routine 4), DisplaySprite is called directly,
-                // so the timer stays frozen until Sonic lands.
-                if (invulnerableFrames > 0 && !hurt) {
+                // so the timer stays frozen until Sonic lands. Routine 6 also draws
+                // directly and leaves this timer frozen throughout death.
+                if (invulnerableFrames > 0 && !hurt && !dead) {
                         if (suppressNextInvulnerabilityDecrement) {
                                 suppressNextInvulnerabilityDecrement = false;
                         } else {
@@ -2789,7 +2801,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                         invincibilityObject = null;
                                 }
                                 if (shieldObject != null) {
-                                        shieldObject.setVisible(true);
+                                        shieldObject.setVisible(!superSonic);
                                 }
                                 restoreLevelMusicAfterInvincibility();
                         }
@@ -2820,7 +2832,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Lazy-register insta-shield with ObjectManager if not yet done (e.g. created before level load).
                 // When registered, ObjectManager drives update(); explicit call only needed for headless tests.
-                if (instaShieldObject != null && !instaShieldRegistered) {
+                // SpawnLevelMainSprites_SpawnPowerup replaces the initial Insta-Shield
+                // with the saved elemental shield (loc_6A02, sonic3k.asm:8326-8356).
+                // A deferred registration after return must not reclaim that shared
+                // fixed slot; wait until the elemental shield has been removed.
+                if (instaShieldObject != null && !instaShieldRegistered && !hasShield()) {
                         if (powerUpSpawner != null) {
                                 powerUpSpawner.registerObject(instaShieldObject);
                                 instaShieldRegistered = true;
@@ -3021,7 +3037,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private boolean isDamageBlocked(boolean ignoreIFrames) {
-                if (debugMode || invincibleFrames > 0 || isSuperSonic()) {
+                if (dead || debugMode || invincibleFrames > 0 || isSuperSonic()) {
                         return true;
                 }
                 // ROM Touch_Hurt (sonic3k.asm:21080-21083, s2.asm Touch_Hurt) gates

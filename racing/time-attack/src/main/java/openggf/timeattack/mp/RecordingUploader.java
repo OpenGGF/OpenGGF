@@ -175,9 +175,14 @@ public final class RecordingUploader implements AutoCloseable {
         }
     }
 
-    public static String resolveUploadUrl(String uploadUrlOrPath,
-                                          String configuredMasterUrl) {
-        URI masterOrigin = masterHttpOrigin(configuredMasterUrl);
+    /**
+     * Resolves a master-requested upload against the endpoint the master connection was actually
+     * admitted on ({@code MasterClient.endpoint()}, including a port found through DNS), never the
+     * settings text. Absolute URLs must share that origin; a portless HTTPS URL means port 443 and
+     * is cross-origin for a master on any other port.
+     */
+    public static String resolveUploadUrl(String uploadUrlOrPath, URI admittedMaster) {
+        URI masterOrigin = httpOrigin(admittedMaster);
         URI requested = URI.create(Objects.requireNonNull(uploadUrlOrPath,
                 "uploadUrlOrPath"));
         if (requested.getRawUserInfo() != null || requested.getRawFragment() != null
@@ -191,7 +196,7 @@ public final class RecordingUploader implements AutoCloseable {
             NetworkEndpoints.upload(requested);
             if (!sameOrigin(requested, masterOrigin)) {
                 throw new IllegalArgumentException(
-                        "upload URL must match the configured master origin");
+                        "upload URL must match the admitted master origin");
             }
             return requested.toString();
         }
@@ -204,25 +209,25 @@ public final class RecordingUploader implements AutoCloseable {
         }
     }
 
-    private static URI masterHttpOrigin(String configuredMasterUrl) {
-        if (configuredMasterUrl == null || configuredMasterUrl.isBlank()) {
-            throw new IllegalArgumentException("configured master URL is required");
+    private static URI httpOrigin(URI admittedMaster) {
+        if (admittedMaster == null) {
+            throw new IllegalArgumentException("an admitted master endpoint is required");
         }
-        URI master = NetworkEndpoints.webSocket(URI.create(configuredMasterUrl));
-        String scheme = switch (String.valueOf(master.getScheme()).toLowerCase()) {
+        URI master = NetworkEndpoints.webSocket(admittedMaster);
+        String scheme = switch (String.valueOf(master.getScheme()).toLowerCase(java.util.Locale.ROOT)) {
             case "ws" -> "http";
             case "wss" -> "https";
             default -> throw new IllegalArgumentException(
-                    "configured master URL must use WS(S)");
+                    "admitted master endpoint must use WS(S)");
         };
         if (master.getHost() == null || master.getHost().isBlank()) {
-            throw new IllegalArgumentException("configured master URL must include a host");
+            throw new IllegalArgumentException("admitted master endpoint must include a host");
         }
         try {
             return new URI(scheme, null, master.getHost(), master.getPort(),
                     null, null, null);
         } catch (java.net.URISyntaxException impossible) {
-            throw new IllegalArgumentException("invalid master URL", impossible);
+            throw new IllegalArgumentException("invalid master endpoint", impossible);
         }
     }
 

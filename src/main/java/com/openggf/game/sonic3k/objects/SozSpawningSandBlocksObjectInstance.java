@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -10,7 +11,7 @@ import java.util.List;
 
 /** SKL $39, Obj_SOZSpawningSandBlocks ($40276), including independently allocated blocks. */
 public final class SozSpawningSandBlocksObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     // Native cork/block, debris and vertical sand-column children are geometry without logical horizontal facing.
     // loc_402CC/loc_402EE read Oscillating_table+$16. The manager starts

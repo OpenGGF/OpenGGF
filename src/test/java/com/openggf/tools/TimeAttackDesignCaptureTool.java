@@ -158,7 +158,7 @@ public class TimeAttackDesignCaptureTool {
         tap(GLFW_KEY_ENTER);
         shot("ta18-settings-port-edit");
         tap(GLFW_KEY_ESCAPE);
-        focus(settingsView, "MASTER_URL");
+        focus(settingsView, "MASTER_SERVER");
         tap(GLFW_KEY_ENTER);
         type("ws://127.0.0.1:" + master.port() + "/master");
         shot("ta19-settings-master-edit");
@@ -497,7 +497,7 @@ public class TimeAttackDesignCaptureTool {
         type("Amélie Lindqvist-Øre");
         shot("tb05-name-long-typed");
         tap(GLFW_KEY_ENTER);
-        focus(settingsView, "MASTER_URL");
+        focus(settingsView, "MASTER_SERVER");
         tap(GLFW_KEY_ENTER);
         for (int i = 0; i < 80; i++) tap(GLFW_KEY_BACKSPACE);
         type("wss://master.racing-league.example.test/regions/europe-west/openggf/time-attack/master");
@@ -708,7 +708,8 @@ public class TimeAttackDesignCaptureTool {
         try (ServerSocket socket = new ServerSocket(0)) { invoke(settings, "setHostPort", socket.getLocalPort()); }
         invoke(settings, "setDisplayName", name);
         invoke(settings, "setChatMode", chat);
-        invoke(settings, "setMasterUrl", "ws://127.0.0.1:" + masterPort + "/master");
+        invoke(settings, "setMasterSelection", construct("openggf.timeattack.MasterSelection$Custom", 1,
+                "ws://127.0.0.1:" + masterPort + "/master"));
         Path identity = work.resolve(id + "-identity");
         Object ghosts = construct("openggf.timeattack.GhostStore", 1, work.resolve(id + "-ghosts"));
         Class<?> launcherType = fixture.loadClass("openggf.timeattack.mp.RaceSession$RunLauncher");

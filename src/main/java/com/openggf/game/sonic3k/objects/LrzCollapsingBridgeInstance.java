@@ -373,6 +373,14 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // loc_39CCC / loc_39CE8 (sonic3k.asm:77472-77488) call SolidObjectTop.
+        // loc_1E45A (sonic3k.asm:42044-42055) accepts only d0 in [-$10,-1]:
+        // unsigned cmpi.w #-$10 / blo rejects exact surface contact too.
+        return true;
+    }
+
+    @Override
     public boolean usesStickyContactBuffer() {
         // SolidObjectTop has no extra edge tolerance.
         return false;

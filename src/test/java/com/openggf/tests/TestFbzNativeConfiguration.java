@@ -8,6 +8,7 @@ import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileApplier;
+import com.openggf.game.launch.LaunchToggle;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.SessionManager;
@@ -45,7 +46,7 @@ class TestFbzNativeConfiguration {
             CrossGameFeatureProvider.getInstance().resetState();
             configuration.clearSessionOverrides();
             new LaunchProfileApplier(configuration).apply(
-                    new LaunchProfile(false, "off", false, "NATIVE_4_3",
+                    new LaunchProfile(LaunchToggle.OFF, "off", LaunchToggle.OFF, "NATIVE_4_3",
                             team.main(), team.launchSidekick()),
                     MasterTitleScreen.GameEntry.SONIC_3K);
             SessionManager.clear();

@@ -900,17 +900,16 @@ public class TestGameLoop {
     }
 
     @Test
-    public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
+    public void playbackStartInputFeedsNativePauseEdge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int stepInternal = source.indexOf("private void stepInternal()");
         int admission = source.indexOf("private boolean prepareAdmittedIteration(", stepInternal);
         assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
-        String outerFrameBody = source.substring(stepInternal, admission);
         int admissionEnd = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()", admission);
         String admissionBody = source.substring(admission, admissionEnd);
 
-        assertTrue(admissionBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
-                "Recorded P1 Start must route to the same gameplay pause edge as live Start");
+        assertTrue(admissionBody.contains("GameLoopPauseInput.nativeStartEdge(inputHandler, playbackDebugManager)"),
+                "Recorded P1 Start must route through the native pause owner");
     }
 
     @Test
@@ -1409,6 +1408,8 @@ public class TestGameLoop {
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(module.getTitleCardProvider()).thenReturn(titleCard);
         TestEnvironment.configureGameModuleFixture(module);
+        // This retained-module mock has no snapshot payload; live history is unrelated.
+        SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameLoop loop = new GameLoop(mockInputHandler);
         assertSame(titleCard, loop.getTitleCardProvider());
         GameplayModeContext presentation =

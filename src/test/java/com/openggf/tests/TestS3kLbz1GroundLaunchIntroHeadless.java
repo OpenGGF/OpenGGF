@@ -48,6 +48,29 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
     }
 
     @Test
+    void icz2FreshTransitionLaunchesSonicOutOfSnow() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 1)
+                .build();
+        var level = GameServices.level();
+        level.requestZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0, true);
+        boolean emerged = false;
+        for (int frame = 0; frame < 600; frame++) {
+            fixture.stepIdleFrames(1);
+            if (level.getCurrentZone() == Sonic3kZoneIds.ZONE_LBZ
+                    && !level.hasPendingFreshLevelTransitionBoundary()
+                    && (fixture.sprite().getCentreY() & 0xFFFF) < 0x05C0
+                    && !fixture.sprite().isControlLocked()) {
+                emerged = true;
+                break;
+            }
+        }
+        assertTrue(emerged, "The ICZ2 fresh-zone handoff must launch Sonic above the snow and release input.");
+        assertFalse(fixture.sprite().isObjectControlled());
+        assertFalse(hasGroundLaunchIntro());
+    }
+
+    @Test
     void lbz1StartsWithRomGroundLaunchIntro() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)

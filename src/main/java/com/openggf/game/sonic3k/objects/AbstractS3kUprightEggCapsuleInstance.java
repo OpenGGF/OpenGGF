@@ -5,12 +5,10 @@ import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
@@ -34,7 +32,7 @@ import java.util.List;
  * {@code child_dy=-$24} using {@code d1=$1B,d2=4,d3=6}. Standing contact with
  * that child sets the parent trigger bit consumed by the capsule-open routine.
  */
-public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjectInstance
+public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractS3kEggCapsuleInstance
         implements MultiPieceSolidProvider, com.openggf.level.objects.ObjectControlledSolidContactController {
     protected static final int PIECE_BODY = 0;
     protected static final int PIECE_BUTTON = 1;
@@ -45,20 +43,15 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private static final int BUTTON_HALF_WIDTH = 0x1B;
     private static final int BUTTON_AIR_HALF_HEIGHT = 4;
     private static final int BUTTON_GROUND_HALF_HEIGHT = 6;
-    private static final int POST_OPEN_DELAY = 0x40;
 
     private int centreX;
     private int centreY;
     private boolean buttonTriggered;
-    private boolean opened;
-    private boolean resultsStarted;
+    protected boolean resultsStarted;
     private boolean sidekickEndPoseWaiting;
     private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
 
-    private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
-
-    private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
-    private int postOpenTimer;
+    protected final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
     protected S3kBossExplosionController explosionController;
     // Recreated capsules must resume Obj_CreateBossExplosion's timers; its children draw the
     // shared Random_Number seed, which the RNG owner restores separately.
@@ -105,10 +98,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
                 sprite.setForcedAnimationId(-1);
             }
         }
-        for (var sprite : sidekickControlOwners.players()) {
-            if (sprite.getCpuController() != null) sprite.getCpuController().setController2SignedLocked(false);
-        }
-        sidekickControlOwners.clear();
+        super.releasePlayersForVisualDirection();
         sidekickPoseOwners.clear();
     }
 
@@ -125,11 +115,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     @Override
     public boolean isPersistent() {
         return true;
-    }
-
-    @Override
-    public int getPriorityBucket() {
-        return RenderPriority.clamp(5);
     }
 
     @Override
@@ -243,11 +228,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         return true;
     }
 
-    /** ROM {@code sub_865DE}: every upright route except MGZ sets signed {@code Ctrl_2_locked}. */
-    protected boolean locksNativeP2CpuOnOpen() {
-        return true;
-    }
-
     protected void updateAfterResultsStarted(int frameCounter, PlayableEntity player) {
     }
 
@@ -268,40 +248,29 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
                 services().configuration());
     }
 
-    private void triggerButton() {
+    protected final void triggerButton() {
         buttonTriggered = true;
     }
 
-    private void openCapsule() {
+    protected final void openCapsule() {
         if (opened) {
             return;
         }
-        opened = true;
-        postOpenTimer = POST_OPEN_DELAY;
-        if (locksNativeP2CpuOnOpen()
-                && services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
-                && sidekick.getCpuController() != null) {
-            // The capsule slot runs after Player_2, so this suppresses CPU input
-            // generation beginning with the following player pass while the
-            // already-latched Ctrl_2_logical word continues to drive physics.
-            sidekickControlOwners.add(sidekick);
-            sidekick.getCpuController().setController2SignedLocked(true);
-        }
-        services().playSfx(Sonic3kSfx.EXPLODE.id);
-        explosionController = new S3kBossExplosionController(centreX, centreY, 3, services().rng());
+        initializeCapsuleOpening();
+        // sub_865DE selects subtype $08 (sonic3k.asm:181665-181667).
+        // CreateBossExp08 (sonic3k.asm:176802) uses normal explosions with child-owned sfx_Break.
+        explosionController = new S3kBossExplosionController(centreX, centreY, 8, services().rng());
         spawnAnimals();
     }
 
-    private void tickExplosionController() {
+    protected final void tickExplosionController() {
         if (explosionController == null || explosionController.isFinished()) {
             return;
         }
         explosionController.tick();
         for (var entry : explosionController.drainPendingExplosions()) {
-            if (entry.playSfx()) {
-                services().playSfx(Sonic3kSfx.EXPLODE.id);
-            }
-            spawnChild(() -> new S3kBossExplosionChild(entry.x(), entry.y()));
+            spawnChild(() -> new FbzEndEggCapsuleExplosionController.FbzEndEggCapsuleNormalExplosion(
+                    new ObjectSpawn(entry.x(), entry.y(), 0, 0, 0, false, 0), services()));
         }
     }
 
@@ -312,8 +281,17 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
             int delay = i * 4;
             int artVariant = services().rng().nextBits(1);
             ObjectSpawn animalSpawn = new ObjectSpawn(animalX, animalY, 0x28, 0, 0, false, 0);
-            spawnChild(() -> new EggPrisonAnimalInstance(animalSpawn, delay, artVariant));
+            spawnCapsuleAnimal(animalSpawn, delay, artVariant);
         }
+    }
+
+    /** Preserve native allocation ownership when the capsule has real child SST slots. */
+    protected void spawnCapsuleAnimal(ObjectSpawn animalSpawn, int delay, int artVariant) {
+        spawnChild(() -> new EggPrisonAnimalInstance(animalSpawn, delay, artVariant));
+    }
+
+    protected final boolean isButtonTriggered() {
+        return buttonTriggered;
     }
 
     private void startResults(AbstractPlayableSprite player) {
@@ -441,7 +419,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex(opened ? 1 : 0, centreX, centreY, false, false);
+        drawCapsuleBody();
         renderer.drawFrameIndex(buttonTriggered ? 0x0C : 5,
                 centreX, centreY + BUTTON_Y_OFFSET, false, false);
     }

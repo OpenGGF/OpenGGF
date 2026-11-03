@@ -78,6 +78,14 @@ public final class SszFloatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public int getY() { return y; }
     @Override public SolidObjectParams getSolidParams() { return SOLID; }
     @Override public boolean isTopSolidOnly() { return true; }
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // loc_44ABE (sonic3k.asm:90041-90049) calls SolidObjectTop.
+        // loc_1E45A (sonic3k.asm:42044-42055) accepts only d0 in [-$10,-1]:
+        // unsigned cmpi.w #-$10 / blo rejects exact surface contact too.
+        return true;
+    }
+
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public int getOnScreenHalfWidth() { return 0x20; }
     @Override public int getOnScreenHalfHeight() { return 0x11; }

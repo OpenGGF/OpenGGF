@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectManagerInternalAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -390,6 +391,10 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     private void trigger(AbstractPlayableSprite player) {
         animationState.setAnimId(ANIM_TRIGGERED);
+        // sub_23190 (sonic3k.asm:47935-47937) and loc_2350A
+        // (sonic3k.asm:48244-48246) write both anim and prev_anim, restarting
+        // even a retrigger before the idle script has dispatched.
+        animationState.resetFrameIndex();
 
         int subtype = spawn.subtype();
 
@@ -548,7 +553,29 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
             }
         }
 
-        animationState.update();
+        if (springType != TYPE_HORIZONTAL) {
+            // Obj_Spring_Up (sonic3k.asm:47700-47727) and loc_23362
+            // (sonic3k.asm:48080-48098) run each reaction before animation. A launch
+            // restarts the script on this pass, including its fractional-input
+            // read; deferring the reaction shifts every later idle read by one.
+            List<PlayableEntity> participants = new ArrayList<>(nativeSpringParticipants(playerEntity));
+            for (PlayableEntity candidate : services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (!containsIdentity(participants, candidate)) participants.add(candidate);
+            }
+            for (PlayableEntity candidate : participants) {
+                var contact = checkpointPlayer(candidate);
+                if (contact == null || contact.kind() == ContactKind.NONE) continue;
+                onSolidContact(candidate, new SolidContact(contact.standingNow(),
+                        contact.kind() == ContactKind.SIDE, contact.kind() == ContactKind.BOTTOM,
+                        contact.kind() == ContactKind.TOP, contact.pushingNow()), vIntRunCount);
+            }
+        }
+
+        animationState.updateNativeSprite(() -> {
+            if (tryServices() != null && services().objectManager() != null)
+                ObjectManagerInternalAccess.publishSineCosineInputFraction(services().objectManager(), 0);
+        });
         mappingFrame = animationState.getMappingFrame();
     }
 
@@ -590,12 +617,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidExecutionMode solidExecutionMode() {
-        // Only Obj_Spring_Horizontal has object-local logic after its solid
-        // passes whose ordering is observable. Other variants retain the
-        // shared automatic post-update contact path.
-        return springType == TYPE_HORIZONTAL
-                ? SolidExecutionMode.MANUAL_CHECKPOINT
-                : SolidExecutionMode.AUTO_AFTER_UPDATE;
+        // Every native variant reacts before its animation pass.
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     /**

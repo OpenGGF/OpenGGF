@@ -81,6 +81,7 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     // ROM: anim_frame_timer.
     private int animTimer;
     private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
 
     public BubblesBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Bubbles Badnik",
@@ -91,15 +92,16 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
 
-        // Obj_BubblesBadnik starts with Obj_WaitOffscreen (sonic3k.asm:184691,
-        // helper at 180266-180298). Its own routine does not run, and
-        // collision_flags is not written, until Render_Sprites marks it visible.
+        // Obj_WaitOffscreen (sonic3k.asm:180362-180394) consumes the preceding
+        // Render_Sprites bit 7. loc_85B02 restores the continuation and RETURNS;
+        // BubblesBadnik_Init runs on the next object pass, without movement.
         if (waitingForOnscreen) {
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
-                updateDynamicSpawn(currentX, currentY);
-                return;
+            if (placeholderRenderedOnscreen) {
+                waitingForOnscreen = false;
+                placeholderRenderedOnscreen = false;
             }
-            waitingForOnscreen = false;
+            updateDynamicSpawn(currentX, currentY);
+            return;
         }
 
         switch (state) {
@@ -264,8 +266,16 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     @Override
-    public int getCollisionFlags() {
+    public void refreshPostCameraRenderState() {
         if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
+        }
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        if (waitingForOnscreen || state == State.INIT) {
             return 0;
         }
         if (mappingFrame == HURT_MAPPING_FRAME) {

@@ -5,6 +5,12 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
+The five saved rewind allowance preferences (`REWIND_BUDGET_SCOPE`,
+`REWIND_BUDGET_SECONDS`, `REWIND_REFILL_ON_LIFE_LOSS`, `REWIND_BONUS_STAGES`,
+`REWIND_SPECIAL_STAGES`) are appended to `SonicConfiguration`, preserving existing
+ordinals. The mutable `0.7` signature pin and candidate description include them;
+the release descriptor remains candidate `0.7.0`, with no publication or topology change.
+
 `SonicConfiguration.DISPLAY_SPRITE_SCANLINE_LIMIT` adds the saved presentation
 preference `display.spriteScanlineLimit`, enabled by default. It is appended
 to preserve existing enum ordinals. The mutable `0.7` signature pin and
@@ -370,6 +376,16 @@ the claim-owner reads, `GameplayFrameController.capturesKeyboardText`,
 `CourseControl.typedText/keyDown/keyPressed` and `SceneContext.typedText/
 captureKeyboardText`. All are additive defaults; the descriptor/runtime version
 remains unpublished 0.7.0 and the normalized signature pin is regenerated in place.
+
+Hostname-only multiplayer endpoints (2026-11-01, user-authorized) replace
+`MasterClient.connect(URI, ...)` with `connect(String address, ...)`: the address is a
+bare DNS host name, whose port comes from `_openggf._tcp` SRV records naming that same
+host, or an explicit `ws(s)` URL. `MasterClient.endpoint()` returns the admitted URI,
+`CONNECT_DEADLINE_MILLIS` bounds the whole operation, and `MasterDiscoveryException`
+(with its `Reason`) reports fail-closed discovery. Every caller was migrated; no URI
+overload is retained. DNS types stay package-private. This changes the unpublished 0.7
+candidate; the normalized pin is regenerated in place and the descriptor/runtime
+version remains 0.7.0.
 
 Before changing the candidate surface:
 
@@ -1252,3 +1268,16 @@ The mutable `0.7`
 signature pin is regenerated in place; the descriptor and runtime API version
 remain candidate `0.7.0`. Compiled multiplayer mods must rebuild and use the
 protocol 8 admission and launch shapes. Published pins remain unchanged.
+
+### Supported member consumption
+
+`@EngineOnly` marks methods, fields and constructors used by the engine itself.
+These members are excluded from recursive signature traversal, annotation traversal
+and normalized compatibility pins, even on an `@ModApi` type. Candidate 0.7
+consumption additionally requires a reachable engine-owned marked declaring type
+and a signature without engine-internal terminals (including generic bounds and
+throws). Inherited references resolve to the declaring owner. Merely inheriting a
+terminal-bearing default bridge is allowed; calling, referencing or overriding it
+is unsupported. Creator annotations and the legacy validator allowlist grant no
+supported access. The SDK's `OpenGGFSupported` javac plugin checks attributed source
+before constant folding; `ModValidator.SUPPORTED_ONLY` checks compiled payloads.

@@ -42,6 +42,8 @@ class TestFbzBossPillarInstance {
         AbstractObjectInstance.updateCameraBounds(0x3200, 0x3C, 0x3340, 0x11C, 0);
         pillar.appendRenderCommands(new ArrayList<>());
 
+        assertTrue(pillar.isHighPriority(), "pillar art must remain visible above terrain");
+        assertEquals(6, pillar.getPriorityBucket());
         assertEquals(0x323C, pillar.getX());
         assertEquals(-0x50, pillar.getY(), "native y_pos word must remain sign-extended at the endpoint");
         assertEquals(0xFFB0, pillar.getSpawn().y(), "ObjectSpawn stores the same signed word in canonical unsigned form");
@@ -51,6 +53,26 @@ class TestFbzBossPillarInstance {
         assertEquals(List.of(
                 new DrawCall(0, 0x323C, 0x30, false, false),
                 new DrawCall(0, 0x323C, -0xD0, false, false)), renderer.calls);
+    }
+
+    @Test
+    void closurePlaysImpactOnceAtGround() {
+        var occupant = player(0x2DDF, 0x600, false);
+        var base = services(new RecordingBridge(0, 0), null, occupant, List.of());
+        var service = org.mockito.Mockito.spy(base);
+        var pillar = new FbzBossPillarInstance();
+        pillar.setServices(service);
+        for (int i = 0; i < 8; i++) pillar.update(i, occupant);
+        assertEquals(0x540, pillar.getY());
+        when(occupant.getCentreX()).thenReturn((short) 0x2E10);
+        for (int i = 0; i < 7; i++) pillar.update(i, occupant);
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never()).playSfx(
+                com.openggf.game.sonic3k.audio.Sonic3kSfx.SPIKE_BALLS.id);
+        pillar.update(7, occupant);
+        assertEquals(0x580, pillar.getY());
+        pillar.update(8, occupant);
+        org.mockito.Mockito.verify(service).playSfx(
+                com.openggf.game.sonic3k.audio.Sonic3kSfx.SPIKE_BALLS.id);
     }
 
     @Test

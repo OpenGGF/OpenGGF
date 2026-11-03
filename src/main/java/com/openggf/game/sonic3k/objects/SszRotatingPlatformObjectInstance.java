@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.S3kTopSolidProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -14,7 +15,6 @@ import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
-import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -48,7 +48,7 @@ import java.util.List;
  * {@link SszCarriedPlayerPose}. Any A/B/C press releases with {@code y_vel -$680} and a roll.
  */
 public final class SszRotatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements S3kTopSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // Native post/arm/carrier phases rotate geometric parts; captured players own their own facing.
     /** {@code move.w #$100,priority(a0)}. */

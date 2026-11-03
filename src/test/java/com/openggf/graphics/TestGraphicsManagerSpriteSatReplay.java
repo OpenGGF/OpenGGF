@@ -71,6 +71,24 @@ public class TestGraphicsManagerSpriteSatReplay {
         }
     }
 
+    @Test
+    void ordinaryOffscreenPiecesCannotBecomeZeroXMasks() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        for (boolean limits : new boolean[]{false, true}) {
+            for (int zeroX : new int[]{-128, 384}) {
+                graphicsManager.commands.clear();
+                SpriteSatInternalAccess.bindLineLimitSource(graphicsManager, () -> limits);
+                SpriteSatInternalAccess.beginCollection(graphicsManager, SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));
+                for (int x : new int[]{8, zeroX, 80}) {
+                    graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                            x, 20, 1, 1, 0, 0, 0, false, false, false, false, 0, 1));
+                }
+                graphicsManager.endSpriteSatCollectionAndReplay();
+                assertEquals(2, graphicsManager.commands.size(), "ordinary X=" + zeroX + ", limits=" + limits);
+            }
+        }
+    }
+
     private int overfullRowSize() {
         graphicsManager.commands.clear();
         graphicsManager.beginSpriteSatCollection();

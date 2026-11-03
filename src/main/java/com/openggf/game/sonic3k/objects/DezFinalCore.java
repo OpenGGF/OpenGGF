@@ -11,7 +11,8 @@ import java.io.UncheckedIOException;
 
 /** loc_804F0: eight-hit core, enabled by the mouth's _unkFAA9 publication. */
 final class DezFinalCore extends DezFinalBossSprite
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseAttackable {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseAttackable,
+        com.openggf.level.objects.homing.HomingTargetSource {
     private DezFinalBossSprite parent;
     private int routine;
     private int collision;
@@ -101,6 +102,10 @@ final class DezFinalCore extends DezFinalBossSprite
         hitByP2=player!=null && player==services().playerQuery().nativeP2OrNull();
     }
     @Override public int getCollisionFlags() { return touchPublished?collision:0; }
+    /** Homing priority 2: the core takes the damage once the button opens the mouth (loc_804F0). */
+    @Override public com.openggf.level.objects.homing.HomingTarget homingTarget(com.openggf.game.PlayableEntity player) {
+        return com.openggf.level.objects.HomingTargets.bossPart(this,2);
+    }
     @Override public boolean publishesTouchResponseListEntryThisFrame() { return touchPublished; }
     @Override public int getCollisionProperty() { return collisionProperty; }
     @Override public boolean requiresContinuousTouchCallbacks() { return true; }

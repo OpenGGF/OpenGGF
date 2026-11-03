@@ -6,19 +6,14 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
-import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
-import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.render.PatternSpriteRenderer;
 
-import java.util.List;
 
 /**
  * Cutscene buttons for the CNZ Act 2 rival-Knuckles encounters.
@@ -29,13 +24,7 @@ import java.util.List;
  * 6 runs {@code loc_65CAC}: shakes the screen and spawns the vacuum-tube
  * controllers used by the second encounter.
  */
-public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
-    private static final int INIT_Y_OFFSET = 4;
-    private static final int PRIORITY = 4;
-    private static final int RANGE_LEFT = -0x18;
-    private static final int RANGE_RIGHT = RANGE_LEFT + 0x30;
-    private static final int RANGE_TOP = -0x18;
-    private static final int RANGE_BOTTOM = RANGE_TOP + 0x30;
+public final class Cnz2CutsceneButtonInstance extends AbstractS3kCutsceneButtonInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int CNZ2_CUTSCENE_WATER_TARGET_Y = 0x0350;
     /** ROM: {@code Mean_water_level = Camera_Y_pos + $100} in loc_65C78. */
     private static final int CNZ2_CUTSCENE_WATER_MEAN_OFFSET = 0x0100;
@@ -48,27 +37,12 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
     private static final int VACUUM_LAYOUT_START_Y = 14;
     private static final int[] VACUUM_LAYOUT_VALUES = {0x14, 0x0F, 0x0F, 0x88};
 
-    private int x;
-    private int y;
     private int subtype;
-    private boolean pressed;
     private CnzLightsFlashChildInstance spawnedFlash;
 
     public Cnz2CutsceneButtonInstance(ObjectSpawn spawn) {
         super(spawn, "CutsceneButtonCNZ2");
-        this.x = spawn.x();
-        this.y = spawn.y() + INIT_Y_OFFSET;
         this.subtype = spawn.subtype();
-    }
-
-    @Override
-    public int getX() {
-        return x;
-    }
-
-    @Override
-    public int getY() {
-        return y;
     }
 
     @Override
@@ -93,31 +67,10 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
         }
     }
 
-    @Override
-    public boolean isHighPriority() {
-        return true;
-    }
-
-    @Override
-    public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
-    }
-
-    @Override
-    public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        if (pressed) {
-            return;
-        }
-
-        AbstractObjectInstance knuckles = activeKnucklesForSubtype();
-        if (knuckles == null) {
-            return;
-        }
-        int dx = knuckles.getX() - x;
-        int dy = knuckles.getY() - y;
-        if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
-            press();
-        }
+    @Override protected TargetPosition targetPosition() {
+        // Native pointer publication is not yet shared by the CNZ actor owners.
+        var knuckles = activeKnucklesForSubtype();
+        return knuckles == null ? null : new TargetPosition(knuckles.getX(), knuckles.getY());
     }
 
     private AbstractObjectInstance activeKnucklesForSubtype() {
@@ -138,8 +91,7 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
      * presses the water-level button.
      *
      */
-    private void press() {
-        pressed = true;
+    @Override protected void onPressed(PlayableEntity player) {
         ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), getSpawn());
         if (subtype == VACUUM_TUBE_SUBTYPE) {
             pressVacuumTubeButton();
@@ -219,12 +171,4 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance imp
         return pressed;
     }
 
-    @Override
-    public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.BUTTON);
-        if (renderer == null || !renderer.isReady()) {
-            return;
-        }
-        renderer.drawFrameIndex(pressed ? 1 : 0, x, y, false, false);
-    }
 }

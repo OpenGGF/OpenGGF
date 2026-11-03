@@ -44,6 +44,11 @@ public enum SonicConfiguration {
 	 */
 	FPS,
 	/**
+	 * Live window cadence: AUTO locks services to a qualified display refresh; EXACT keeps host time.
+	 */
+	DISPLAY_PACING,
+	DISPLAY_INTERPOLATION,
+	/**
 	 * Normal-play simulation policy for ROM-backed load queues.
 	 */
 	LOAD_TIME_SIMULATION,
@@ -90,11 +95,9 @@ public enum SonicConfiguration {
 	 */
 	JUMP,
 	/**
-	 * Player 1 Start. Drives ROM in-game pause (Game_paused / Pause_Loop): a
-	 * Start-press edge during level gameplay freezes the level update for the
-	 * frame while the frame counter still advances, then a second press resumes.
-	 * Distinct from {@link #PAUSE_KEY}, which is the engine's loop/timing-level
-	 * window/keyboard pause that also halts audio.
+	 * Player 1 Start (Enter by default). During live gameplay it toggles the
+	 * same visible pause as {@link #PAUSE_KEY}; menus retain Start semantics.
+	 * Recorded controller input retains the ROM-native pause behavior.
 	 */
 	START,
 	P2_UP,
@@ -205,6 +208,7 @@ public enum SonicConfiguration {
 	 * Key to cycle the display color profile at runtime.
 	 */
 	DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
+	DISPLAY_INTERPOLATION_TOGGLE_KEY,
 
 	/** Display aspect preset (NATIVE_4_3, WIDE_16_10, WIDE_16_9, ULTRA_21_9, SUPER_32_9). Resolves to SCREEN_WIDTH_PIXELS; height stays 224. */
 	DISPLAY_ASPECT,
@@ -706,6 +710,13 @@ public enum SonicConfiguration {
 	UI_LANGUAGE,
 
 	/** Enforce native per-line sprite count/pixel budgets; presentation only. */
-	DISPLAY_SPRITE_SCANLINE_LIMIT;
+	DISPLAY_SPRITE_SCANLINE_LIMIT,
+
+	/** Live rewind allowance controls; appended to preserve existing enum ordinals. */
+	REWIND_BUDGET_SCOPE,
+	REWIND_BUDGET_SECONDS,
+	REWIND_REFILL_ON_LIFE_LOSS,
+	REWIND_BONUS_STAGES,
+	REWIND_SPECIAL_STAGES;
 
 }

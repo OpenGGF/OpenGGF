@@ -75,7 +75,7 @@ class TestMasterTitleScreenLayout {
 
     @Test
     void previewAnimationFrame_advancesUntilSelectionChanges() {
-        MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone());
+        MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone(tempDir));
 
         screen.advancePreviewAnimationFrame();
         screen.advancePreviewAnimationFrame();
@@ -89,7 +89,7 @@ class TestMasterTitleScreenLayout {
 
     @Test
     void previewAnimationFrame_doesNotResetWhenSelectionStaysTheSame() {
-        MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone());
+        MasterTitleScreen screen = new MasterTitleScreen(SonicConfigurationService.createStandalone(tempDir));
 
         screen.advancePreviewAnimationFrame();
         screen.setSelectedIndexForTest(MasterTitleScreen.GameEntry.SONIC_2.ordinal());

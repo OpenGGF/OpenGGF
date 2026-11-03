@@ -198,7 +198,8 @@ public final class EditorInputHandler {
         if (inputHandler.isKeyPressed(GLFW_KEY_L)) {
             handleAction(Action.TOGGLE_LAYER);
         }
-        if (rawModeCycle || logical.menuStart()) {
+        // Enter owns descent even when it is also the configured P1 Start key.
+        if (rawModeCycle || (logical.menuStart() && !inputHandler.isKeyPressed(GLFW_KEY_ENTER))) {
             handleAction(Action.CYCLE_SPAWN_EDIT_MODE);
         }
         if (regionDelete) handleAction(Action.DELETE_REGION);
@@ -421,7 +422,7 @@ public final class EditorInputHandler {
         var view = controller.canvasView();
         view.setViewportSize(graphics.getProjectionWidth(), Math.max(224, (int) graphics.getScreenHeight()));
         int[] point = EditorMouseTransform.logicalPoint(input, graphics);
-        int wheel = com.openggf.control.MouseWheel.of(input).takeNotches();
+        int wheel = com.openggf.control.MouseWheel.of(input).notches();
         boolean middle = input.isMouseButtonDown(org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_MIDDLE);
         if (!middle) panningCanvas = false;
         if (point[2] == 0) {

@@ -365,6 +365,7 @@ public abstract class AbstractTraceReplayTest {
         slotOccupancyProbe = SlotOccupancyProbe.createIfEnabled(trace, game() + "_" + zone() + act());
         try {
             HeadlessTestFixture.Builder fixtureBuilder = HeadlessTestFixture.builder()
+                .withEntryProvenance(TraceReplayBootstrap.entryProvenanceForTraceReplay(trace))
                 .withRecording(bk2Path)
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                 .withHardwareReadinessAdmissionPolicy(

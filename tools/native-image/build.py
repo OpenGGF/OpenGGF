@@ -23,6 +23,11 @@ IMPLEMENTATION_ROOTS = (
     'com.openggf.game.session.WorldSessionPolicyProvider',
     'com.openggf.game.session.WorldSessionPolicyState',
 )
+# Master discovery (MasterClient.connect with a bare host name) uses the JDK's JNDI DNS
+# provider. Computed modules only scan java.*, and -H:Preserve retains classes by package,
+# so the provider module and its reflectively created factory are named explicitly.
+DNS_PROVIDER_MODULE = 'jdk.naming.dns'
+DNS_CONTEXT_FACTORY = 'com.sun.jndi.dns.DnsContextFactory'
 JDK_PACKAGES = {
     'java.lang', 'java.lang.invoke', 'java.lang.runtime', 'java.lang.reflect',
     'java.util', 'java.util.function', 'java.util.stream', 'java.nio.charset',
@@ -50,6 +55,27 @@ def native_dependencies(dependencies):
     dependency_paths = [p for p in dependency_paths if Path(p).name != regular and p not in unsafe]
     dependencies = os.pathsep.join([*unsafe, *dependency_paths])
     return dependencies
+
+
+def reflection_metadata():
+    entries = [{'name': 'sun.net.www.protocol.jar.Handler', 'allDeclaredConstructors': True},
+               {'name': DNS_CONTEXT_FACTORY, 'allDeclaredConstructors': True}]
+    return json.dumps(entries, separators=(',', ':')) + '\n'
+
+
+def image_modules(computed):
+    # Time Attack also consumes java.net.http; master discovery needs the JNDI DNS provider.
+    return {'java.logging', DNS_PROVIDER_MODULE, *computed}
+
+
+def verify_master_discovery(arguments, reflect_json):
+    """Refuse a recipe that lost the DNS provider master discovery needs at run time."""
+    modules = [module for argument in arguments if argument.startswith('--add-modules=')
+               for module in argument.removeprefix('--add-modules=').split(',')]
+    if DNS_PROVIDER_MODULE not in modules:
+        raise ValueError(f'Native image omits {DNS_PROVIDER_MODULE}; master discovery would fail')
+    if DNS_CONTEXT_FACTORY not in {entry.get('name') for entry in json.loads(reflect_json)}:
+        raise ValueError(f'Native reflection metadata omits {DNS_CONTEXT_FACTORY}')
 
 
 def compile_prepared(graal, output):
@@ -115,7 +141,8 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
     shutil.copy2(contract / 'members.tsv', output / 'native-mod-members.tsv')
     metadata = work / 'metadata'
     metadata.mkdir()
-    (metadata / 'reflect-config.json').write_text('[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]\n')
+    reflect_json = reflection_metadata()
+    (metadata / 'reflect-config.json').write_text(reflect_json)
     packages = JDK_PACKAGES | set((contract / 'jdk-preserve-packages.txt').read_text().splitlines())
     retained_paths = [str(contract / 'preserved-engine.jar'),
                       *(contract / 'dependency-preserve-paths.txt').read_text().splitlines()]
@@ -123,15 +150,16 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
     # Keep the prepared image input immutable across the separate CI stages.
     native_cp = os.pathsep.join((str(host), str(contract / 'preserved-engine.jar'), str(engine), dependencies))
     # Preserve requests are resolved before ordinary reachability resolves modules.
-    # Include the owning JDK modules (Time Attack also consumes java.net.http).
-    modules = {'java.logging'}
+    # Include the owning JDK modules.
+    computed = set()
     requested_paths = {p.replace('.', '/') for p in packages}
     for module in (graal / 'jmods').glob('java.*.jmod'):
         with zipfile.ZipFile(module) as contents:
             if any(name.startswith('classes/') and name.endswith('.class')
                    and name.removeprefix('classes/').rsplit('/', 1)[0] in requested_paths
                    for name in contents.namelist()):
-                modules.add(module.stem)
+                computed.add(module.stem)
+    modules = image_modules(computed)
     # macos-15 has 7 GiB: retain its qualified small-runner recipe. The
     # 16 GiB Linux/Windows runners can afford default -O2 and an 8 GiB heap.
     # Two workers / three active processors bound compiler and G1 overhead;
@@ -148,6 +176,7 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
         '-J--add-exports=org.graalvm.nativeimage.shared/com.oracle.svm.shared.option=ALL-UNNAMED',
         '--features=com.openggf.tools.nativeimage.NativeModFeature', '-cp', native_cp,
         'com.openggf.tools.nativeimage.NativeEngine', str(output / 'OpenGGF')]
+    verify_master_discovery(arguments, reflect_json)
     argfile = work / 'native-image.args'
     argfile.write_text('\n'.join(json.dumps(a) for a in arguments), encoding='utf-8')
     notices = output / 'native-licenses/GraalVM'

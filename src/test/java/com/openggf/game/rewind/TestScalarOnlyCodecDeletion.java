@@ -1208,7 +1208,7 @@ public class TestScalarOnlyCodecDeletion {
                             "flipX", "frame"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance",
-                            "fixedX", "fixedY"));
+                            "centreX", "centreY"));
 
     private static final List<MutableFieldCoverageCandidate> BATCH176_MUTABLE_FIELDS =
             List.of(

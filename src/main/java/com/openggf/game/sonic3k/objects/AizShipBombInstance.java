@@ -36,6 +36,7 @@ import java.util.List;
  * it is actually released, matching the ROM's {@code Translate_Camera2ObjPosition}
  * and {@code Translate_Camera2ObjX} calls.
  */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public class AizShipBombInstance extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
     private static final int GRAVITY = 0x20;       // 8:8 fixed-point
     private static final int Y_RADIUS = 0x10;

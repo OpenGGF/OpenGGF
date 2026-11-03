@@ -71,8 +71,8 @@ class TestSettingsResponsiveLayout {
         var screen = new EngineSettingsScreen(SonicConfigurationService.createStandalone(directory), font);
         screen.render(800);
         int rowY = font.draws.stream().filter(d -> d.text().equals("Window mode")).findFirst().orElseThrow().y();
-        assertFalse(screen.updatePointer(new MenuInput.Pointer(20, rowY, true, true, false)));
-        assertTrue(screen.updatePointer(new MenuInput.Pointer(220, rowY, true, true, false)));
+        assertFalse(screen.updatePointer(new MenuInput.Pointer(20, rowY, true, true, false, 0)));
+        assertTrue(screen.updatePointer(new MenuInput.Pointer(220, rowY, true, true, false, 0)));
     }
 
     @Test void childButtonsUseTheSameCenteredPointerFrame() {
@@ -83,16 +83,16 @@ class TestSettingsResponsiveLayout {
         var input = new InputHandler();
         var picker = new LanguagePickerScreen("auto", selected::add);
         picker.render(font, frame.width());
-        assertFalse(picker.update(input, frame.local(new MenuInput.Pointer(15, 44, true, true, false))));
+        assertFalse(picker.update(input, frame.local(new MenuInput.Pointer(15, 44, true, true, false, 0))));
         assertTrue(selected.isEmpty());
-        assertTrue(picker.update(input, frame.local(new MenuInput.Pointer(215, 44, true, true, false))));
+        assertTrue(picker.update(input, frame.local(new MenuInput.Pointer(215, 44, true, true, false, 0))));
         assertEquals(List.of("auto"), selected);
 
         var details = new MenuDetailsScreen("Details", "Full text");
         font.draws.clear(); details.render(font, frame.width());
         Draw back = font.draws.stream().filter(d -> d.text().equals("Back")).findFirst().orElseThrow();
-        assertFalse(details.update(input, frame.local(new MenuInput.Pointer(back.x(), back.y(), true, true, false))));
-        assertTrue(details.update(input, frame.local(new MenuInput.Pointer(frame.left() + back.x(), back.y(), true, true, false))));
+        assertFalse(details.update(input, frame.local(new MenuInput.Pointer(back.x(), back.y(), true, true, false, 0))));
+        assertTrue(details.update(input, frame.local(new MenuInput.Pointer(frame.left() + back.x(), back.y(), true, true, false, 0))));
     }
 
     @Test void ordinaryRowsWrapWithoutEllipsesInEveryLanguageAndWidth() {

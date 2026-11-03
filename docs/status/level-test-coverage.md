@@ -1,5 +1,93 @@
 # Level test coverage backlog
 
+MGZ swinging-platform arithmetic (2026-11-03): the [MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03) records native fractional input ownership, spring timer/read and rewind bindings, and the unchanged wider route/configuration/presentation obligations.
+
+HCZ slice parity (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#native-capsuleresults-handoff-and-green-slice--2026-11-03) records the green native Sonic+Tails cross-act slice, unchanged sibling frontiers, 97 focused/terminal/rewind/startup checks, absent aux schemas and remaining breadth/restore limits.
+
+HCZ2 boss setup (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#end-boss-setup-and-platform-animation--2026-11-03) records callback/init/movement and raw-animation controls, unchanged sibling trace results and the remaining pending-initialization restore obligation. Broader route/configuration gaps remain inherited.
+
+S3K shake/visibility maintenance (2026-11-03): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md) records pending shake
+phase and rewind checks; the [LRZ1 matrix](../architecture/validation/levels/s3k-lrz-act1.md)
+records big-door off-screen completion and shake release. These are bounded local
+obligations; the existing broader route/configuration gaps remain open.
+
+MGZ Bubbles activation (2026-11-03): the
+[MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#bubbles-offscreen-continuation--2026-11-03)
+records the wait/restore/init boundary, object restore/forward regression and
+bounded native-pair trace evidence. Wider route, donor, viewport and team
+obligations remain inherited.
+
+## Shared act-reload shield ownership
+
+The 2026-11-02 shield continuity regression
+`TestS3kActTransitionShieldContinuity` covers AIZ, HCZ, MGZ, CNZ, FBZ,
+ICZ, LBZ, MHZ, SOZ, LRZ and DEZ act-1 to act-2 reloads with their production
+object-survival policies. Each positioned check grants a fire shield with either
+pending or already-registered Insta-Shield state, executes the shared reload
+executor, and checks retained identity and animation progress through normal
+object-manager dispatch. SSZ and DDZ have no act-1 to act-2 reload.
+The separate FBZ event regression covers all three elemental shield types;
+the shared refresh regression covers deferred registration and shield loss for
+every shield type. This checks the reload/registration mechanism, not every
+zone's boss trigger, offset/camera script, donor/team/viewport combination,
+rendered pixels or whole-world replay; those matrix obligations remain inherited.
+
+
+S3K common object ownership (2026-11-02): see the [HCZ2 maintenance record](../architecture/validation/levels/s3k-hcz2.md)
+and [shared routine ownership audit](../architecture/object-implementation-reference.md#shared-rom-routine-ownership).
+Capsule opening/effect rewind, shared cutscene-button bounds/actions and explosion
+allocation/RNG checks are bounded maintenance coverage. Cold routes, pixel/audio
+and broader lifecycle products remain open; HCZ/CNZ button native-pointer
+authority remains an explicit inherited gap.
+
+MGZ seamless horizontal lock (2026-11-02): the
+[MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#seamless-horizontal-lock--2026-11-02)
+records the bounded transition correction and inherited wider route/rewind gaps.
+
+MGZ EndSignControl allocation (2026-11-02): the
+[MGZ1 allocation follow-up](../architecture/validation/levels/s3k-mgz-act1.md#endsigncontrol-allocation-2026-11-02)
+records native helper creation, arm retirement, the retained control SST and
+independent explosion lifetime. Wider route, donor/viewport and native whole-boss
+rewind obligations remain inherited gaps.
+
+AIZ2 ending animation (2026-11-02): [Knuckles and shield controls](../architecture/validation/levels/s3k-aiz2.md#ending-knuckles-and-shield-animation-2026-11-02)
+cover native script publication/cadence, deferred switches, elemental freeze,
+actual object recreation and forward replay. Fresh original-movie observations
+match 90 fire-shield and 70 Knuckles animation/position samples at actual V-int
+values, including the native first-bounce penetration. This is bounded evidence; whole-act, native floor/bounce and wider
+viewport/donor/team obligations remain inherited gaps.
+
+Upright S3K capsule effects (2026-11-02):
+`TestStageplayCapsuleControlRelease` checks the shared upright and separate HCZ
+owners for seven normal explosions, priority and child-owned break sound,
+alongside the floating regression. This is focused effect coverage; existing
+route, rewind lifecycle, pixel/audio capture and allocation-exhaustion gaps
+remain open.
+
+AIZ2 ending drawbridge presentation (2026-11-02): the [act maintenance matrix](../architecture/validation/levels/s3k-aiz2.md#ending-drawbridge-presentation-2026-11-02) records native twelve-log geometry, delayed collapse puffs, focused lifecycle/recreation checks and original-movie visual comparison. Broader configuration and route obligations remain open.
+
+Post-results transition music (2026-11-02): the [ICZ2 corridor](../architecture/validation/levels/s3k-icz-act2.md#post-results-transition-music-2026-11-02)
+and [AIZ2 cutscene](../architecture/validation/levels/s3k-aiz2.md#post-results-transition-music-2026-11-02)
+track single-owner music restoration after results. Request-level checks retain
+the existing wider route, audio-output and lifecycle coverage gaps.
+
+
+S3K Act 1 music handoff (2026-11-01): results-owner regressions cover no
+premature music request across Act 1 zones and one request at the carried
+title wait gate. The existing title/transition lifecycle checks remain the
+integration coverage. This bounded correction does not certify audible output,
+whole-act routes, or broader character/donor/viewport and rewind matrices;
+those inherited obligations remain open.
+
+
+Floating S3K capsule effects (2026-11-01): the focused
+`TestStageplayCapsuleControlRelease` regression checks subtype-$08 completion,
+seven normal explosion children, sprite priority and child-owned break sound.
+This shared AIZ2/MGZ2 owner correction does not certify route completion;
+pixel/audio captures, allocation exhaustion and broader route/lifecycle coverage
+remain inherited gaps.
+
 DEZ original-input bumper slot order (2026-10-30): the [Act1 handoff](../architecture/validation/levels/s3k-dez-act1.md#original-input-bumper-slot-order-boundary--2026-10-30)
 records native bumper slot13 after turbine12 versus engine bumper11 before
 movement. Strict engine parity ends at row13730; row13731 stays red. This leaf
@@ -495,6 +583,8 @@ both acts, and 154 focused passes without skips. Gameplay capture is blocked
 by this environment's GLSL support; inherited route/configuration and native
 whole-scene coverage gaps remain open.
 
+SOZ2 opening-priority follow-up (2026-11-02): the [Act2 matrix](../architecture/validation/levels/s3k-soz-act2.md#opening-sandfall-priority-regression-2026-11-02) records the exact-entry path-trigger regression and its bounded coverage; broader route and presentation gaps remain.
+
 SOZ1 Knuckles bonus-route follow-up (2026-10-21): the
 [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#natural-knuckles-glowing-sphere-release-2026-10-21)
 records an independent natural `$1400` title/release/first ordinary input tick
@@ -525,6 +615,15 @@ extends this component floor with ordinary orbit exhaustion/no-art and
 ring-loss-after-activation entry, all three bonus families and destructive
 restore/replay. The HCZ2 matrix retains its route and configuration gaps.
 
+Draw ownership follow-up (2026-10-31) adds bounded redraw/rewind obligations to the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#draw-ownership-follow-up-2026-10-31),
+[ICZ1 matrix](../architecture/validation/levels/s3k-icz-act1.md#draw-ownership-follow-up-2026-10-31), and
+[FBZ2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#draw-ownership-follow-up-2026-10-31).
+The three-frame GHZ1/EHZ1/AIZ1 rendering smoke witness compares registered state
+before and after repeated pictures. These checks do not certify routes or cover
+the frozen logical draw-write debt listed in the
+[live frame pacing design](../architecture/designs/2026-10-31-live-frame-pacing-design.md#implementation-units).
+
 ## Historical S&K campaign snapshot — 2026-09-28
 
 This September snapshot reconciles its dated milestones against integrated
@@ -537,8 +636,8 @@ native presentation obligations remain in the linked matrices.
 
 | Zone | Observed route coverage | Current work / remaining acceptance |
 | --- | --- | --- |
-| [MHZ](../architecture/validation/levels/s3k-mhz-act2.md) | Native Sonic, Tails and native pair complete both acts; 800px Sonic completes both acts and reaches playable FBZ, with 25 whole-world replay windows. | Native camera/pillar corrections and persistent vine-rider rewind are integrated (`a6df1f1d0`, `936292c33`). Broader viewport/donor and native presentation obligations remain. MHZ Knuckles expansion remains excluded by the accepted scope. |
-| [FBZ](../architecture/validation/levels/s3k-fbz-act1.md) | Act 1 native Sonic, Tails, Knuckles and 320/400 native pair reach released Act 2; frozen Tails/Knuckles inputs pass 44/50 whole-world replay windows. Act 2 retains its documented completion matrix. | Tails debris corrections and Knuckles input recovery are integrated (`10b066947`, `192a9956d`). Wider/donor and native presentation obligations remain. |
+| [MHZ](../architecture/validation/levels/s3k-mhz-act2.md) | Native Sonic, Tails and native pair complete both acts; 800px Sonic completes both acts and reaches playable FBZ, with 25 whole-world replay windows. | The [six-issue boss follow-up](../architecture/validation/levels/s3k-mhz-act2.md#end-boss-lifecycle-follow-up--2026-11-02) adds positioned burst/camera/ring and rewind checks; native and full-route limits remain explicit. Native camera/pillar corrections and persistent vine-rider rewind are integrated (`a6df1f1d0`, `936292c33`). Broader viewport/donor and native presentation obligations remain. MHZ Knuckles expansion remains excluded by the accepted scope. |
+| [FBZ](../architecture/validation/levels/s3k-fbz-act1.md) | Act 1 native Sonic, Tails, Knuckles and 320/400 native pair reach released Act 2; frozen Tails/Knuckles inputs pass 44/50 whole-world replay windows. Act 2 retains its documented completion matrix. | Shield ownership and elemental animation across the act reload, plus attack-warning eye-overlay draw and ROM art/color checks, are recorded in the Act 1 matrix. Tails debris corrections and Knuckles input recovery are integrated (`10b066947`, `192a9956d`). Wider/donor and native presentation obligations remain. |
 | [SOZ](../architecture/validation/levels/s3k-soz-act2.md) | Native solo Sonic, Tails and Knuckles complete both acts; Knuckles also completes Act 2 at 800px with whole-world replay. | The Knuckles reset and repaired routes are integrated (`49586cd86`, `38f799053`). The 2026-10-13 wide recording refresh (`8837dc657`) preserves native hurt gravity; all nine cold-route cases pass on `a2280d37b`. Other viewport/donor products and native presentation acceptance remain. |
 | [LRZ](../architecture/validation/levels/s3k-lrz-act2.md) | Native Sonic/team, solo Tails and Knuckles chains reach the appropriate next stage; repaired Knuckles route reaches HPZ; solo Sonic clears the cold boss act into HPZ ([2026-10-16](../architecture/validation/levels/s3k-lrz-boss.md#solo-sonic-cold-fight-2026-10-16)). | The transport/glide repair and revised route are integrated in `49586cd86`; the [cold800 first-crusher follow-up](../architecture/validation/levels/s3k-lrz-act1.md#2026-09-28--lrz-cold-widescreen-crusher-lock-and-explosion-rewind) is integrated in `25609a0ab`, with40 two-cycle full-registry checkpoints and the native full-zone clear rechecked on destination. Broader widths/donors and native presentation remain. |
 | [SSZ](../architecture/validation/levels/s3k-ssz-act1.md) | Native Sonic, Tails and pair complete Act 1; Tails and the pair complete 800px into DEZ. The new paired route retains44 two-cycle world spots and actual load/control/history boundaries. Opening Death Egg camera tracking has focused signed-delta and five-width graph-recreation/replay coverage. The actual Knuckles two-fight fixture continues through flight, both credits and terminal/title at320/800 for all three emerald-progress values. | Selected original-game fight presentation is corroborated; this is not whole-scene parity or a joined cold LRZ-to-ending campaign. Remaining donor/roster, lifecycle and presentation products stay open. |
@@ -752,7 +851,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_ANGEL_ISLAND_2` | [Second Strike hard-mode obligations (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md); [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. [R11 synchronous retained16](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17) qualifies the known559/unknown30 handoff and queued589 publication with twice-restored world replay (77 construction epoch +4 opaque-restore repair cases, no skips). Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_HYDROCITY_1` | [Sonic-route matrix](../architecture/validation/levels/s3k-hcz1-sonic.md); [local boss obligations and inherited gaps](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md#hcz1-affected-route-matrix). Other main routes and full conformance remain open |
 | S3K | `S3K_HYDROCITY_2` | [Act 2 matrix](../architecture/validation/levels/s3k-hcz2.md), including [snake coarse-cull/re-entry component coverage](../architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
-| S3K | `S3K_MARBLE_GARDEN_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mgz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); physical post 1 activation → hazard death → real post respawn with two-cycle world replay qualified for native320 Sonic, the native pair and the 30 supported solo preset/main/donor rows (2026-10-17; multi-participant rows open); two native320 Sonic+CPU Tails lightning-ring movie intervals with SST admission and registered restore/forward are bounded in the [ring qualification](../architecture/validation/levels/s3k-mgz-act1.md#native-attracted-ring-intervals-2026-10-22); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_MARBLE_GARDEN_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mgz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); physical post 1 activation → hazard death → real post respawn with two-cycle world replay qualified for native320 Sonic, the native pair and the 30 supported solo preset/main/donor rows (2026-10-17; multi-participant rows open); two native320 Sonic+CPU Tails lightning-ring movie intervals with SST admission and registered restore/forward are bounded in the [ring qualification](../architecture/validation/levels/s3k-mgz-act1.md#native-attracted-ring-intervals-2026-10-22); [collected-shield rewind ownership](../architecture/validation/levels/s3k-mgz-act1.md#collected-shield-rewind-ownership--2026-11-03) adds exact dormant/elemental identity and dispatch checks; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_MARBLE_GARDEN_2` | [Act 2 matrix](../architecture/validation/levels/s3k-mgz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction). The [packed warning-art correction](../architecture/validation/levels/s3k-mgz-act2.md#packed-byte-warning-art-correction--2026-10-20) adds literal native byte/tail/layout controls and states its scene/timing limits; the [update-owned blink candidate](../architecture/validation/levels/s3k-mgz-act2.md#update-owned-blink-candidate--2026-10-30) adds repeated/omitted-picture and object restore controls for both the base and Knuckles boss variants; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_1` | [Act 1 matrix](../architecture/validation/levels/s3k-cnz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); five native/off positioned-inlet miniboss→released-CNZ2 products (Sonic solo/pair at320/800, Knuckles solo at800) now qualify nine complete-world spots with two forward replays each (2026-10-17); cold/physical-post/native320-Knuckles and remaining axes stay open. The act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the [native320 Knuckles capsule handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-capsule-results-and-camera-opening--2026-10-20) locally qualifies real results, allocation retry, P1 control and gradual camera opening with two complete-world replay cycles. The [native beam and actual ICZ handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20) now qualify charge/lift, hide `$18`, camera rise, real fade/load and released ICZ with two full-world replay cycles from the positioned pre-results button inlet (affected 250/0F/0E/0S composition). The [native P1 vertical-bound operand](../architecture/validation/levels/s3k-cnz-act2.md#native-p1-vertical-bound-operand--2026-10-21) has separate declared registered-P2-focus component controls; stock cold-route impact is unproven. Cold traversal, broader products and native physical presentation remain open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
@@ -2347,3 +2446,169 @@ the main ring count first differs; the diagnostic15+10-field observation otherwi
 matches through16236. The shared ring owner is handed back without runtime or
 fixture-gate changes. Act2 row18670, whole-route rewind, configuration breadth and
 presentation/whole-act/campaign obligations remain open.
+
+MGZ2 to CNZ1 carry handoff (2026-11-01): the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#mgz2-to-cnz1-carry-handoff-regression-2026-11-01)
+and [CNZ1 matrix](../architecture/validation/levels/s3k-cnz-act1.md#mgz2-to-cnz1-carry-handoff-regression-2026-11-01)
+record the solo/configured-Tails rescue-to-entry regression and its bounded
+pickup, landing, control-release and destination replay scope. Automatic
+exit-route composition, donor/viewport breadth and cross-load rewind remain open.
+
+Native sprite producer maintenance (2026-11-01): ordinary mapping submission
+now reserves zero-X for explicit masks. End-of-act tally drawing applies native
+whole-element and mapping-piece culling before admission. The local regressions
+and remaining scene/route limits are recorded in the
+[AIZ1 maintenance matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#native-sprite-producer-maintenance-2026-11-01).
+
+ICZ2 sprite submission maintenance (2026-11-02): the
+[act2 matrix](../architecture/validation/levels/s3k-icz-act2.md#native-sprite-submission-maintenance-2026-11-02)
+records the actual cold controller replay, matched before/after samples, native
+whole-object and multi-draw culling corrections, and the permanent raw-table
+budget regression. This is a partial route witness with inherited breadth gaps;
+the longer strict-red act1 replay does not certify ICZ2.
+
+ICZ1 miniboss attack/destruction follow-up (2026-11-01): the
+[bounded obligation update](../architecture/validation/levels/s3k-icz-act1.md#miniboss-attack-and-destruction-correction--2026-11-01)
+tracks palette flashing, shard wait ordering, independent sign/explosion
+lifetimes and rewind of the falling-ice tail. Native pixel, complete-route and
+configuration breadth remain open, as does individual folded-child slot release.
+
+MGZ2 powered rescue follow-up (2026-11-01): the
+[MGZ2 matrix](../architecture/validation/levels/s3k-mgz-act2.md#powered-rescue-art-refresh--2026-11-01)
+records runtime art-refresh ownership, Super/Hyper palette-clock continuation
+and boss-timer reversion regressions. This bounded solo-Sonic coverage leaves
+the matrix's broader route, donor/team and rewind obligations open.
+
+LBZ1 box rewind follow-up (2026-11-01): `TestLbz1BoxRigRewind` covers fresh
+controller restoration with a progressed carried/standalone box, restoration
+before creation, and 180 updates of piece replay. The [act matrix](../architecture/validation/levels/s3k-lbz-act1.md)
+retains the inherited route, donor, roster and viewport gaps.
+
+LBZ1 fresh-entry follow-up (2026-11-01): the [act matrix](../architecture/validation/levels/s3k-lbz-act1.md) records the ICZ2 fade/load/title-to-ground-launch regression witness. Sonic-alone emergence and control release are bounded coverage; broader roster/viewport/donor and transition rewind obligations remain open.
+
+MHZ1 flame palette follow-up (2026-11-02): both miniboss flame slots now
+select ROM palette base 0 independently of the body sheet's base 1. See the
+[bounded matrix entry](../architecture/validation/levels/s3k-mhz-act1.md#miniboss-flame-palette--2026-11-02)
+for checks and inherited gaps; this does not certify the whole encounter.
+
+MHZ parachute landing correction (2026-11-02): the focused parachute test
+checks carried-player terrain dispatch and next-pass velocity-mismatch release.
+See the [MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md#mushroom-parachute-landing-correction--2026-11-02)
+and [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#mushroom-parachute-landing-correction--2026-11-02)
+for inherited route, configuration and rewind gaps.
+
+MHZ1 damage flash follow-up (2026-11-02): the boss now uses the ROM's four
+palette entries and pre-decrement 32-update alternation. The
+[local matrix](../architecture/validation/levels/s3k-mhz-act1.md#miniboss-damage-flash--2026-11-02)
+records checks and inherited route/pixel coverage limits.
+
+The same audit corrected custom-flash counter ordering for AIZ1, HCZ1 and HCZ2.
+Their local matrices record the all-32-row output contract; existing route
+qualification limits remain.
+
+MHZ2 cutscene music follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#cutscene-music-follow-up-2026-11-02) records the restored Knuckles-theme fade and bounded regression coverage; inherited route and configuration gaps remain open.
+
+
+MHZ2 end-boss rendering follow-up (2026-11-02): the
+[Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#end-boss-rendering-follow-up--2026-11-02)
+records the corrected pillar archive, ship/pilot/capsule sheets, flame palette,
+chase plane sources, helper lifetime and priority, plus the positioned rendering
+and rewind witness. Native pixel parity, intermediate redraw timing and broader
+route/configuration products remain open.
+
+MHZ2 ending capsule priority follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#ending-capsule-priority--2026-11-02)
+records the shared upright capsule sprite/tile attribute correction and bounded
+regression scope. Native pixel and route/configuration breadth remain open.
+
+The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#sanctuary-foreground-initialization-2026-11-02)
+records the local foreground-clear regression for sanctuary entry and Super
+Emerald results rebuilds; inherited route and native presentation gaps remain.
+
+Cross-game music ownership follow-up (2026-11-02): affected S3K act matrices link the [music audit](../architecture/audits/2026-11-02-music-transitions.md), including native request identity and apparent-act/invincibility restoration. Inherited route/configuration and audible timing obligations remain open.
+
+MHZ2 explosion-controller recreation now has an exact-parent adversarial graph
+witness and pending-retirement replay coverage; see the [MHZ2 matrix](../architecture/validation/levels/s3k-mhz-act2.md#explosion-controller-graph-receiving-repair-2026-11-02).
+
+
+LBZ2 camera-admission follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#camera-admitted-end-boss-art-ownership--2026-11-02)
+records the launcher-art admission boundary, pending/ready recreation and
+missing-owner controls. The local worker passes24 focused checks and advances
+its standalone replay249→239 errors, without qualifying a complete route.
+Combined integration passes25 boss/rewind checks, including the already-owned
+ready-job camera-exit edge, within322 functional cases with zero skips; both
+known replay frontiers remain red. Inherited cold traversal, roster/donor/viewport
+and presentation gaps remain open.
+
+
+LBZ2 EggRobo-head follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#eggrobo-head-producer-follow-up--2026-11-02)
+adds native one-time module admission, actual-main identity controls and graph
+rewind coverage. Standalone replay advances239→232 errors; composed functional
+checks pass with zero skips. Existing full-route and breadth gaps remain open.
+
+
+Big Arm INIT follow-up (2026-11-02): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#big-arm-init-producer-follow-up--2026-11-02)
+records exact module admission and initialized graph-rewind ownership. Composed
+checks pass80 controls, zero skips; replay remains232 errors with an identical
+profile. No full-route or roster/donor/viewport/presentation gap is closed.
+
+
+FBZ2 boss display follow-up (2026-11-02): focused regressions cover the shipped
+neutral rotation head, palette-zero pilot flame, and root/arm debug geometry.
+The S3K revert timer now retains invincibility until the next native eight-frame
+boundary. Arms remain harmful until native dismantling; this does not guarantee
+protection throughout the defeat sequence. Full-route, pixel and configuration
+coverage gaps above remain open.
+SOZ rappel-wire art follow-up (2026-11-02):
+`TestSozRapelWireArtWord` checks pulley/link/handle pattern identity and full
+mapping-word resolution. See the [local matrix record](../architecture/validation/levels/s3k-soz-act2.md#rappel-wire-pulley-art-2026-11-02).
+Inherited route breadth and native pixel acceptance remain open.
+
+HCZ1 miniboss release (2026-11-02): the [HCZ1 maintenance matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#miniboss-water-effect-release-2026-11-02)
+records independent native-player tracking and cooldown capture/restore before
+water-effect deletion. This local obligation does not certify broader route,
+character, donor or viewport coverage; inherited matrix gaps remain open.
+
+FBZ2 encounter presentation follow-up (2026-11-02): roof-emitter vertical flips
+and rising-floor entrance-pillar art priority have focused draw/priority checks;
+closure timing and its single impact sound are covered in the
+[Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md#encounter-presentation-follow-up--2026-11-02).
+Inherited route and native pixel coverage limits remain.
+
+SOZ2 vertical seam presentation follow-up (2026-11-02): the connected sand-carry
+route requires player art at its wrap, with independent SAT admission boundary
+checks. See the [SOZ2 matrix](../architecture/validation/levels/s3k-soz-act2.md#vertical-seam-sprite-admission-2026-11-02)
+for the bounded coverage and remaining manual/pixel obligations.
+
+SOZ push-switch overlap correction (2026-11-02): focused
+`TestSozMechanisms.handlePrecedesRailInSatButFollowsItInPainterOrder` pins
+the native main-handle-before-child-rail emission for both mounting sides and
+the reverse painter order. This local presentation fix changes no movement or
+rewind state; the SOZ matrix's inherited viewport/donor and native presentation
+acceptance gaps remain open.
+
+Iwamodoki self-destruct follow-up (2026-11-02): the
+[LRZ1](../architecture/validation/levels/s3k-lrz-act1.md#iwamodoki-rider-release-2026-11-02)
+and [LRZ2](../architecture/validation/levels/s3k-lrz-act2.md#iwamodoki-rider-release-2026-11-02)
+matrices record the bounded P1/P2 shield/rider regression and inherited route,
+breadth and rewind obligations.
+
+SSZ diagonal transfers and arrival animation (2026-11-03): the
+[act-1 local increment](../architecture/validation/levels/s3k-ssz-act1.md#diagonal-bridge-transfer-and-arrival-animation-2026-11-03)
+adds Sonic/Tails and Tails rolling-transfer restore/replay and real-jump controls
+at320/800, plus a scripted-arrival animation assertion. Existing collapse and
+compatibility checks remain green. This closes the local bridge handoff gap;
+full-act/native sequences and remaining donor/participant breadth stay open.
+
+S2 ARZ2 producer-clock follow-up (2026-11-03): the [clock-selection route matrix](../architecture/research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03) records native Sonic+Tails continuous/standalone controls, an independent halfpipe movie, KiS2 campaign limits, clock-word boundaries and actual restore/forward RNG checks. The row5084 frontier moves to inherited5512; newly admitted CNZ1 remains incomplete. Wider viewports, donor/team breadth and complete-act certification remain inherited gaps. Full-profile qualification is recorded in that artifact.
+
+LRZ Act1 local follow-up (2026-11-03): the [boulder lifetime audit](../architecture/audits/2026-11-03-lrz-boulder-lifetime.md)
+records unsigned coarse-camera boundary checks and LRZ trace/keep-green results.
+This is a local lifetime obligation; the Act1 matrix's broader route/rewind gaps remain open.
+
+LRZ Act1 corkscrew follow-up (2026-11-03): [P2 dispatch audit](../architecture/audits/2026-11-03-lrz-corkscrew-p2.md)
+adds a two-player held/resumed-pass witness and exercises the existing three
+rewind spots; comprehensive two-player route/rewind breadth remains open.
+
+LRZ Act1 invisible support follow-up (2026-11-03): the [status7 audit](../architecture/audits/2026-11-03-lrz-invisible-balance.md)
+records the real rider edge-balance witness and invisible-block rewind checks;
+full-route and broader matrix obligations remain open.

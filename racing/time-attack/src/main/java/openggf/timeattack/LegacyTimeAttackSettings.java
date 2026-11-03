@@ -95,7 +95,10 @@ final class LegacyTimeAttackSettings {
                     case "timeAttack.retryKey", "TIME_ATTACK_RETRY_KEY" -> settings.setRetryKey(RetryKey.parse(value));
                     case "timeAttack.net.hostPort", "TIME_ATTACK_NET_HOST_PORT" -> settings.setHostPort(Integer.parseInt(value));
                     case "timeAttack.net.displayName", "TIME_ATTACK_NET_DISPLAY_NAME" -> settings.setDisplayName(value);
-                    case "timeAttack.net.masterUrl", "TIME_ATTACK_NET_MASTER_URL" -> settings.setMasterUrl(value);
+                    // A non-blank old URL becomes a Custom master; blank keeps the build default.
+                    case "timeAttack.net.masterUrl", "TIME_ATTACK_NET_MASTER_URL" -> {
+                        if (!value.isBlank()) settings.setMasterSelection(MasterSelection.typed(value));
+                    }
                     case "timeAttack.net.masterTrustInsecure", "TIME_ATTACK_NET_MASTER_TRUST_INSECURE" -> {
                         if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false"))
                             settings.setMasterTrustInsecure(Boolean.parseBoolean(value));

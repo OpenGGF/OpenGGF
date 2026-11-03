@@ -18,6 +18,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** loc_5711E/loc_57156: the screen-positioned Death Egg in LRZ2's background. */
+@com.openggf.level.objects.CameraRelativeDraw(com.openggf.level.objects.CameraRelativeDraw.Use.SCREEN_POSITION)
 public final class LrzDeathEggBackgroundInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
     private boolean artQueued;
     private long artOrdinal = -1;

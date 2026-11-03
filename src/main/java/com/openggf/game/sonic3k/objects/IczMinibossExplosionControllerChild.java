@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
@@ -51,12 +52,25 @@ final class IczMinibossExplosionControllerChild extends AbstractObjectInstance
             return;
         }
 
-        int random = services().rng().nextRaw();
-        int x = spawn.x() + (random & ((RANGE * 2) - 1)) - RANGE;
-        int y = spawn.y() + ((random >>> 8) & ((RANGE * 2) - 1)) - RANGE;
-        services().playSfx(Sonic3kSfx.EXPLODE.id);
-        spawnChild(() -> new S3kBossExplosionChild(x, y));
         interval = DISPATCH_INTERVAL - 1;
+        var manager = services().objectManager();
+        if (manager == null) return;
+        // Obj_BossExpControl1 attempts CreateChild6_Simple before loc_83E90
+        // consumes Random_Number; a full SST consumes the attempt but not RNG/audio.
+        int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, getSlotIndex());
+        if (slot < 0) return;
+        try {
+            int random = services().rng().nextRaw();
+            int x = spawn.x() + S3kExplosionOffsets.xOffset(random, RANGE);
+            int y = spawn.y() + S3kExplosionOffsets.yOffset(random, RANGE);
+            var child = ObjectConstructionContext.with(services(), slot,
+                    () -> new S3kBossExplosionChild(x, y));
+            ObjectLifetimeOps.addDynamicAtReservedSlot(manager, child, slot);
+        } catch (RuntimeException | Error failure) {
+            manager.releaseDynamicSlot(slot);
+            throw failure;
+        }
+        services().playSfx(Sonic3kSfx.EXPLODE.id);
     }
 
     @Override

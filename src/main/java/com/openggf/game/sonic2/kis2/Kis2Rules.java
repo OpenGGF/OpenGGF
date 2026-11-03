@@ -62,7 +62,8 @@ public final class Kis2Rules {
                 movement.slopeResistAppliesAtZeroInertia(),
                 movement.tailsRollSpeedUsesEffectiveDecelQuarter(),
                 movement.waterVelocityChangeGatedByObjectControl(),
-                movement.landingWalkWriteSkippedWhileSpindashing());
+                movement.landingWalkWriteSkippedWhileSpindashing(),
+                movement.poweredRollFriction());
         ObjectInteractionRules interaction = base.objectInteraction();
         ObjectInteractionRules kis2Interaction = new ObjectInteractionRules(
                 interaction.bossHitNegatesGroundSpeed(),

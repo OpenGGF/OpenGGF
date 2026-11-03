@@ -7,7 +7,8 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including the saved sprite scanline-limit
+     * Current unpublished compiled-mod API candidate, including saved rewind budget scope,
+     * allowance and stage/life-loss controls, plus the saved sprite scanline-limit
      * presentation preference and BCP 47 host-interface
      * UI_LANGUAGE preference, detached CPU-only title-preview providers and their RGBA
      * image/animation sequence contract, run-scoped native HUD profiles,
@@ -18,6 +19,10 @@ public final class ModApiVersion {
      * plus native MHZ wind, LRZ echo-jet, FBZ extra-beat and SOZ light/ghost recipes.
      * Native HPZ feints, an SSZ Metropolis extra pair, DEZ alert guards and a
      * Doomsday delayed tail missile are finite unactivated campaign ingredients.
+     * The opt-in DISPLAY_INTERPOLATION preference and DISPLAY_INTERPOLATION_TOGGLE_KEY
+     * shortcut extend this unpublished candidate.
+     * EngineOnly members, initially ambient singleton accessors, are excluded from the
+     * supported surface; attributed source and bytecode consumption use the same contract.
      * The 0.7 candidate also includes
      * live window mode and display scaling preferences, configurable widescreen HUD anchoring,
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,

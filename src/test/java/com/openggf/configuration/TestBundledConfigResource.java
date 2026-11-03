@@ -21,8 +21,10 @@ class TestBundledConfigResource {
             ConfigFlattener.Result r = ConfigFlattener.flatten(nested);
             assertTrue(r.unknownKeys().isEmpty(), "bundled config has unknown keys: " + r.unknownKeys());
             assertTrue(r.flat().containsKey(SonicConfiguration.DEFAULT_ROM.name()));
-            assertTrue(r.flat().containsKey(SonicConfiguration.START.name()),
-                    "bundled config should expose Player 1 Start");
+            assertEquals("ENTER", r.flat().get(SonicConfiguration.START.name()),
+                    "bundled config should default Player 1 Start to Enter");
+            assertEquals("BACKSPACE", r.flat().get(SonicConfiguration.P2_START.name()),
+                    "bundled config should default Player 2 Start to Backspace");
             assertTrue(r.flat().containsKey(SonicConfiguration.CAPTURE_OUTPUT_DIR.name()),
                     "bundled config should expose trace capture outputDir");
             assertTrue(r.flat().containsKey(SonicConfiguration.CAPTURE_SCALE.name()),

@@ -231,6 +231,9 @@ class TestLbzFinalBoss1GraphRewind {
         final StubObjectServices services = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return manager; }
             @Override public Camera camera() { return camera; }
+            @Override public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+                return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, List::of);
+            }
             @Override public AudioManager audioManager() { return audio; }
             @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
         };
