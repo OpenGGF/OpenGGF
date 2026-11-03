@@ -159,6 +159,33 @@ class TestMasterTitleSupportNotice {
         assertNotNull(screen.supportNoticeForTest(), "the address stays readable on screen");
     }
 
+    @Test void theNoticeComesBeforeEndingASuspendedGame() {
+        var screen = screen(config());
+        var ended = new java.util.concurrent.atomic.AtomicInteger();
+        screen.setSuspendedGame(new MasterTitleEntry.Suspended(
+                new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1", true), 2, 2, new byte[16]);
+        screen.setSuspendedGameEndHandler(ended::incrementAndGet);
+        selectS3k(screen);
+
+        press(screen, GLFW_KEY_ENTER);
+        assertNotNull(screen.supportNoticeForTest(), "the notice opens before the end-game question");
+        assertFalse(screen.isEndPromptOpenForTest());
+        press(screen, GLFW_KEY_ESCAPE);
+        assertTrue(screen.hasSuspendedGame(), "backing out of the notice keeps the suspended game");
+        assertEquals(0, ended.get());
+
+        press(screen, GLFW_KEY_ENTER);
+        press(screen, GLFW_KEY_ENTER); // Continue
+        assertNull(screen.supportNoticeForTest());
+        assertTrue(screen.isEndPromptOpenForTest(), "Continue then asks before ending the suspended game");
+        assertFalse(screen.isGameSelected());
+        press(screen, GLFW_KEY_DOWN);
+        press(screen, GLFW_KEY_ENTER);
+        assertEquals(1, ended.get());
+        assertTrue(screen.isGameSelected());
+        assertEquals("s3k", screen.getSelectedGameId());
+    }
+
     @Test void ungatedGamesStartDirectlyAndTheGateListIsReplaceable() {
         var screen = screen(config());
         assertEquals("s2", screen.getSelectedGameId());

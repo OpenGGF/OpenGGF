@@ -1146,6 +1146,8 @@ public class MasterTitleScreen {
         MasterTitleEntry entry = selectedEntry();
         if (entry == null) { showActionError(UiMessages.text("hub.ui.start_game")); return; }
         if (entry instanceof MasterTitleEntry.Suspended) { requestResume(); return; }
+        // The notice comes before ending a suspended game, so backing out of it loses nothing.
+        if (isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock && openSupportNotice(stock)) return;
         if (isEntryAvailable(entry) && askToEndSuspended(UiMessages.text("hub.starting_ends_game", java.util.Map.of("game", entry.menuLabel())),
                 this::startSelectedEntry)) return;
         if (!isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock) {
@@ -1160,8 +1162,6 @@ public class MasterTitleScreen {
             standaloneActionOpen = true;
             standaloneActionIndex = 0;
             playConfirmSound();
-        } else if (entry instanceof MasterTitleEntry.Stock stock && openSupportNotice(stock)) {
-            return;
         } else confirmLaunch(new MasterTitleEntry.Launch(entry, MasterTitleEntry.Action.NEW_GAME), false);
     }
 
@@ -1186,7 +1186,11 @@ public class MasterTitleScreen {
                 if (supportNotice.dontShowAgain()) supportNotices.dismiss(stock.gameId(), supportNotice.stage());
                 supportNotice = null;
                 supportNoticeEntry = null;
-                confirmLaunch(new MasterTitleEntry.Launch(stock, MasterTitleEntry.Action.NEW_GAME), false);
+                var launch = new MasterTitleEntry.Launch(stock, MasterTitleEntry.Action.NEW_GAME);
+                if (!askToEndSuspended(UiMessages.text("hub.starting_ends_game", java.util.Map.of("game", stock.menuLabel())),
+                        () -> confirmLaunch(launch, false))) {
+                    confirmLaunch(launch, false);
+                }
             }
             // The address stays on screen, so a failed opener still leaves the player a way there.
             case OPEN_LINK -> supportNotice.focusedLink().ifPresent(link -> {
