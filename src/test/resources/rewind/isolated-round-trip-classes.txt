@@ -728,6 +728,7 @@ com.openggf.game.sonic3k.objects.MgzEndBossKnuxCollapseEmitter$Particle
 com.openggf.game.sonic3k.objects.MgzEndBossKnuxDefeatPart
 com.openggf.game.sonic3k.objects.MgzEndBossKnuxEggCapsuleInstance
 com.openggf.game.sonic3k.objects.MgzEndBossKnuxInstance
+com.openggf.game.sonic3k.objects.MgzMinibossExplosionController
 com.openggf.game.sonic3k.objects.MgzMinibossInstance
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingDebrisChild
 com.openggf.game.sonic3k.objects.MgzMinibossInstance$CeilingSpireChild

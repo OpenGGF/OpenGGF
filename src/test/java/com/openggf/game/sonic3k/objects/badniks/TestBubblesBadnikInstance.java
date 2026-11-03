@@ -49,4 +49,38 @@ class TestBubblesBadnikInstance {
         assertEquals(0, bubbles.getCollisionFlags(),
                 "Obj_WaitOffscreen returns before Obj_BubblesBadnik writes collision_flags");
     }
+    @Test
+    void offscreenContinuationReturnsBeforeInitializationAndReplaysAfterRestore() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            var spawn = new ObjectSpawn(160, 112, Sonic3kObjectIds.BUBBLES_BADNIK, 0, 0, false, 112);
+            var bubbles = new BubblesBadnikInstance(spawn);
+            bubbles.setServices(new TestObjectServices());
+            // Publish the preceding Render_Sprites visibility, then execute
+            // loc_85B02: restore the continuation and RETURN without init.
+            bubbles.refreshPostCameraRenderState();
+            bubbles.update(0, null);
+            assertEquals(0, bubbles.getCollisionFlags(),
+                    "Obj_WaitOffscreen's visible continuation does not initialize the badnik");
+            assertEquals(160, bubbles.getX());
+            assertEquals(112, bubbles.getY());
+
+            var restored = new BubblesBadnikInstance(spawn);
+            restored.setServices(new TestObjectServices());
+            restored.restoreRewindState(bubbles.captureRewindState());
+            for (var actor : java.util.List.of(bubbles, restored)) {
+                actor.update(1, null);
+                assertEquals(0x12, actor.getCollisionFlags(), "The next object pass owns init");
+                assertEquals(160, actor.getX());
+                assertEquals(112, actor.getY());
+                actor.update(2, null);
+                assertEquals(159, actor.getX(), "Swing starts only after the init-only pass");
+                assertEquals(112, actor.getY());
+            }
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
 }

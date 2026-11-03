@@ -37,6 +37,37 @@ class TestS3kActTransitionShieldContinuity {
                         new Reload(reload.zone(), reload.policy(), true)));
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ShieldType.class,
+            names = {"FIRE", "LIGHTNING", "BUBBLE"})
+    void capturedDormantInstaShieldRestoresWithoutTakingElementalDispatch(ShieldType type) throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(2, 0).build();
+        var player = fixture.sprite();
+        player.tickStatus();
+        player.giveShield(type);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+        var oldInsta = player.getInstaShieldObject();
+
+        registry.restore(saved);
+
+        assertNotSame(oldInsta, player.getInstaShieldObject(), "restore must rebind the captured owner");
+        var restored = registry.capture();
+        for (var key : java.util.List.of("object-manager", "sprites")) {
+            var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    key, saved.get(key), restored.get(key));
+            assertTrue(differences.isEmpty(), key + ": " + differences);
+        }
+        var shield = assertInstanceOf(AbstractObjectInstance.class, player.getShieldObject());
+        var before = shield.captureRewindState();
+        var objects = GameServices.level().getObjectManager();
+        for (int i = 0; i < 16; i++) {
+            objects.update(GameServices.camera().getX(), player, java.util.List.of(), i, false);
+        }
+        assertNotEquals(before, shield.captureRewindState(), "the elemental shield must keep receiving dispatch");
+        assertFalse(shield.isDestroyed());
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("reloads")
     void fireShieldKeepsUpdatingAcrossEveryActReload(Reload reload) throws Exception {

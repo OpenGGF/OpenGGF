@@ -920,15 +920,12 @@ final class ObjectTouchResponseController {
                         hpBeforeHit = objectCallbacks.call(
                                 instance, provider2::getCollisionProperty);
                     }
-                    // ROM parity (sonic3k.asm:20981-21026): Touch_EnemyNormal sets
-                    // status bit 7 on the badnik AND applies +/-$100 bounce to the
-                    // attacking player in the SAME function. The skip-when-destroyed
-                    // behaviour only applies to a SUBSEQUENT collision pass (e.g. after
-                    // P1 destroys a badnik in P1's TouchResponse, P2's pass naturally
-                    // skips because the object's (a0) was rewritten to Obj_Explosion).
-                    // We mirror that by capturing the pre-attack destroyed state and
-                    // gating the bounce only on prior destruction - never on the
-                    // sidekick's own kill (which would suppress her +/-$100 bounce).
+                    // Touch_EnemyNormal (sonic3k.asm:20981-21026) rewrites the
+                    // slot to Obj_Explosion WITHOUT clearing collision_flags.
+                    // A later player can still touch it until loc_1E626
+                    // (sonic3k.asm:42226-42243) initializes the explosion.
+                    // This Java retired-owner guard only gates attack/bounce;
+                    // it does not exclude the object from the later hurt pass.
                     boolean wasAlreadyDestroyed = instance instanceof AbstractObjectInstance preAoi
                             && preAoi.isDestroyed();
                     if (instance instanceof TouchResponseAttackable attackable) {

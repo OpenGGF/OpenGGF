@@ -1378,6 +1378,16 @@ like any other mod's.
 
 ---
 
+## Runtime queue diagnostics
+
+The JVM property `-Dopenggf.debug.kosm=true` adds S3K KosM submission messages
+at `java.util.logging` INFO level; the logger and its handlers must admit INFO.
+It defaults to false and is separate from `config.yaml`. FIFO overflow exceptions
+always include pending archive descriptors, direct children and readiness. With
+the property enabled they also include local submission timestamps and caller
+stacks, which are collected only then because each costs a stack walk. These host
+diagnostic receipts are not rewound and never select queue service or readiness.
+
 ## Test-only system properties
 
 JVM properties are supplied as `-D<name>=<value>`, separately from `config.yaml`.

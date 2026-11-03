@@ -11,6 +11,14 @@ Unreleased. The earlier development themes remain in
   restores art while the existing layout owner handles scene geometry. A rendered
   cache audit covers 68 stock act/scene entries across all three games.
 
+- S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
+  finish opening off screen before unloading. Both corrections preserve Tails CPU
+  respawn timing at the native visibility boundary.
+
+- MGZ Bubbles waits until the next object pass after its offscreen continuation
+  resumes, preserving native movement and collision timing. This restores Tails'
+  same-frame hurt response after Sonic destroys the badnik.
+
 - Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
 
 - FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
@@ -33,6 +41,9 @@ Unreleased. The earlier development themes remain in
 
 - **MGZ seamless transition:** Keep the shifted camera bounds until the native
   Act 2 release instead of easing toward the newly loaded level bounds.
+  The miniboss also retains its native EndSignControl slot while explosions
+  continue independently, so results restore player animations on the ROM's pass.
+  Results also use the native global allocator after waiting for the player to land.
 
 - S3K top-solid platforms, bonus flippers and curled vines now select the ROM’s
   1–16 pixel landing window on the native helper surface. Flat helpers use their
@@ -47,6 +58,11 @@ Unreleased. The earlier development themes remain in
 
 - S3K saves retain collected giant rings and Chaos Special Stage rotation after
   reload, and resume stock zones at their native starting act.
+
+- **S3K shield rewind:** Restore the captured dormant Insta-Shield identity
+  alongside collected elemental shields, keeping their native dispatch ownership
+  and animation continuity across rewind and seamless reloads. Unshielded cold
+  captures retain their existing animation binding through restore.
 
 - **S3K shield returns:** Elemental shields keep animating after Bonus/Special stages; deferred Insta-Shield registration no longer takes their shared object slot.
   Their native playback publishes the first frame on dispatch, defers animation
@@ -1739,6 +1755,10 @@ its original drawing priority.
   notches from `MenuInput.Pointer.wheel()`.
 
 ## Maintenance and release preparation
+
+- S3K bonus-return chain replay retains the first destination gameplay row,
+  preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
+  diagnostics now identify pending archive jobs, direct children and submitters.
 
 - Trace entry placement distinguishes native level boots from intentional
   positioned entries. Explicit native loads retain their ROM start history;
