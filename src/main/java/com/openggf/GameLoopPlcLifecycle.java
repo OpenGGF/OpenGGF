@@ -104,10 +104,7 @@ final class GameLoopPlcLifecycle {
                     () -> WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession()));
             // The caller already attempted to claim this token. Prepare only its
             // surviving title phase, after the scan and all hardware boundaries.
-            if (frame.isOwnedBy(PlcLifecyclePhase.LEVEL_TITLE_CARD)) {
-                LevelFrameStep.prepareTitleLoopTail(
-                        frameContext, frame, PlcLifecyclePhase.LEVEL_TITLE_CARD);
-            }
+            prepare(frame, PlcLifecyclePhase.LEVEL_TITLE_CARD);
         } else if (titleCard != null) {
             WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession());
         }

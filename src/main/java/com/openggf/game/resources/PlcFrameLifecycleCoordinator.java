@@ -649,18 +649,6 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             });
         }
 
-        /**
-         * A fresh load's setup frame claimed the title phase but reached no
-         * loc_62CC Process_Nem_Queue_Init: that loop first waits for VSync
-         * (sonic3k.asm:7769-7775). Accounts for the boundary without arming.
-         */
-        public void omitLevelSetupFrameTitleLoopTail() {
-            requireOpen();
-            if (owner != PlcLifecyclePhase.LEVEL_TITLE_CARD || prepared)
-                throw new IllegalStateException("No unexecuted title-loop tail");
-            prepared = true;
-        }
-
         /** Native transition returned before Animate_Tiles; no Init ran. */
         public void omitUnreachedLevelAnimationTail() {
             requireOpen();

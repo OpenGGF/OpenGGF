@@ -7,9 +7,9 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
-- S3K fresh level loads now dispatch the title card and arm its Nemesis queue
-  after the first title-loop VBlank, and count the terrain wait's final VBlank.
-  The remaining load-time lag frames are documented, not estimated.
+- S3K fresh level loads count the terrain wait's final VBlank in the live game
+  loop, as the recording driver already did. The remaining load-time lag
+  frames are documented, not estimated.
 
 - Held transition fades continue servicing VBlank work and the native clock
   after trace comparison closes, while preserving movie-row ownership.

@@ -7,10 +7,13 @@ under the 2026-11-03 trial ruling. Merge condition: every V-int count must come
 from a wait or loop the ROM states as game logic. No CPU-cycle, DMA or VDP
 bandwidth pricing, no fitted or measured constant, no fixture, zone or frame key.
 
-**Result: a proven boundary.** Two counted V-ints are ROM-structural and are
-implemented. The other 48 of the Mega witness's 53 residual V-ints are lag
-V-ints. Their number is set by the CPU time of synchronous work, so they can
-be closed only by cycle-level pricing. That is outside the engine boundary.
+**Result: a proven boundary.** One counted V-int per fresh load is
+ROM-structural and is implemented: the final `loc_7870` iteration. A second
+ROM-structural ordering (the title owner's first dispatch) is real natively,
+but implementing it regressed six represented traces. It was rejected; see
+below. The other 47 of the Mega witness's 53 residual V-ints are lag V-ints.
+Their number is set by the CPU time of synchronous work, so they can be closed
+only by cycle-level pricing. That is outside the engine boundary.
 
 ## Method
 
@@ -47,24 +50,26 @@ Deficits are native minus engine V-ints at each destination's admission.
 
 | Source | ROM citation | Status | Why |
 | --- | --- | --- | --- |
-| First title-loop `Wait_VSync` precedes `Obj_TitleCardInit` and the first `Process_Nem_Queue_Init` | `loc_62CC (sonic3k.asm:7769-7781)`, `Obj_TitleCardInit (sonic3k.asm:62161-62205)` | **Implemented** | The engine ran the init and armed Nemesis in the loading iteration. That iteration is `Level`'s own setup frame. Now both wait for the next serviced iteration |
-| Final `loc_7870` iteration's `Wait_VSync` before the last terrain module retires | `LoadLevelLoadBlock / loc_7870 (sonic3k.asm:9772-9782)` | **Implemented** | The release scan already serviced this VBlank's hardware boundaries but did not count it on the object clock. Native row 1406 of the Gumball return is a non-lag V-int on which module 20 retires |
+| Final `loc_7870` iteration's `Wait_VSync` before the last terrain module retires | `LoadLevelLoadBlock / loc_7870 (sonic3k.asm:9772-9782)` | **Implemented** | `GameLoop`'s release scan serviced this VBlank's hardware boundaries but did not count it on the object clock. `RecordingFrameDriver` already counted it. Native row 1406 of the Gumball return is a non-lag V-int on which module 20 retires |
+| First title-loop `Wait_VSync` precedes `Obj_TitleCardInit` and the first `Process_Nem_Queue_Init` | `loc_62CC (sonic3k.asm:7769-7781)`, `Obj_TitleCardInit (sonic3k.asm:62161-62205)` | Rejected (tried in `32f9ce34f`) | Natively real: R+2 on every observed load, including `aiz1_to_hcz_fullrun` rows 20791-20793. In the chain's parked-cursor gap the engine dispatched both in the loading iteration. But deferring them regressed six represented traces that were green at base (AIZ trace, AIZ/HCZ/MGZ slices, SOZ complete run, reference closure). Each gains an `x` error 65-76 rows after a fresh load, so their existing phase is native-correct. The Mega offset is therefore an artefact of the unrepresented chain gap, not of production timing. Attribution: with the release V-int disabled, the slices still failed identically |
 | Lag V-int while `Level` setup runs after the fade (`Clear_DisplayData` under `#$2700`, `clearRAM` and so on) | `Level (sonic3k.asm:7547-7769)`, `Clear_DisplayData (sonic3k.asm:1391-1420)` | Rejected | No wait is involved. Its existence depends on the DMA fill and CPU time |
 | KosM pieces that take more than one frame to decompress (Gumball 4, Slots 12) | `Set_Kos_Bookmark` / `Process_Kos_Queue (sonic3k.asm:2829-2885)` | Rejected | Decompression bookmarks across V-ints; its duration is CPU time per piece. The existing FAST manifest is measured and was not extended |
 | Post-terrain synchronous tail (Gumball 4, AIZ return 21, Slots 5) | `LoadLevelLoadBlock2 (sonic3k.asm:38714-38768)`, `loc_6310`/`j_LevelSetup` (7789-7803), `loc_6468` (7880-7915) | Rejected | Every recorded row is a lag row (`Lag_frame_count` increments) or a masked row. There is no `Wait_VSync` between `LoadLevelLoadBlock`'s return and `LevelLoop`. The count is CPU time |
 
-| Mega boundary | Deficit before | After | Left: setup lag / KosM overrun / sync tail |
-| --- | ---: | ---: | --- |
-| Gumball admitted | 11 | 9 | 1 / 4 / 4 |
-| Returned AIZ admitted (cumulative) | 33 | 30 | +21 sync tail; this load is represented, so recorded readiness aligns its queue phases |
-| Slots admitted (cumulative) | 53 | 48 | +1 / 12 / 5 |
+Deficits were measured by the probe at each step. Per-load values are new
+losses; the AIZ return and Slots columns are cumulative.
 
-The engine's `loc_62CC` exit is bound by its Nemesis drain, not by the card.
-Deferring only `Obj_TitleCardInit` therefore moved title-art completion by one
-row without moving the exit. Deferring the first Nemesis arm as well moved the
-exit; both are the same `loc_62CC` ordering. In the represented Gumball-return
-load, the loading iteration belongs to the bonus phase and arms no title PLC,
-so only the title owner and the release V-int change there.
+| Mega boundary | Before | Delivered (release V-int) | Rejected trial (+ title deferral) | Remaining: gap offset / setup lag / KosM overrun / sync tail |
+| --- | ---: | ---: | ---: | --- |
+| Gumball admitted | 11 | 10 | 9 | 1 / 1 / 4 / 4 |
+| Returned AIZ admitted | 33 | 31 | 30 | +21 sync tail (represented load) |
+| Slots admitted | 53 | 50 | 48 | +1 / 1 / 12 / 5 |
+
+"Gap offset" is the title-dispatch V-int that only the parked-cursor gap
+loses; see the rejected row above. The engine's `loc_62CC` exit is bound by
+its Nemesis drain, not by the card, so a fix must move both together. The
+sanctioned route is to drive the chain gap as represented rows, not to change
+production phase.
 
 ## S2 CNZ1 slot seed
 
@@ -92,6 +97,15 @@ route is the existing recorded per-row lag admission (the gap admission census
 `AbstractRunChainTest#admitLevelWhenReady` already uses for level→level gaps),
 extended to special-stage return gaps. It is not ROM pricing and is not part of
 this trial.
+
+## Witness effect
+
+With the release V-int alone, Mega Slots' first non-camera mismatch moves
+**later**, from 268 `y_speed` to 300 `y_speed`, and errors fall from 7891 to
+7505. The rejected trial instead moved it earlier, to 232 `rings` (ROM 75,
+engine 76). A partially corrected reel clock changes the payout arbitrarily.
+Slots' clock-seeded behaviour cannot be trusted until the gap is fully
+represented.
 
 ## Validation
 

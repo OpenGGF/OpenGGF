@@ -277,10 +277,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private int apparentAct = 0;
     int currentZone = 0;
     private boolean resetCounterPlacementAfterCameraSnap;
-    // Transient: a driver iteration is running, and whether it performed a
-    // fresh Level: load (that iteration is then Level's setup frame).
-    private boolean driverIterationOpen;
-    private boolean freshLevelSetupFrame;
     private long completedProductionLoadGeneration;
 
     private final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
@@ -1554,30 +1550,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * The engine renders those SSTs outside {@link ObjectManager}, so this must
      * not execute already-loaded level objects or advance level-frame state.
      */
-    /**
-     * Whether the latest driver iteration performed a fresh level load and no
-     * later iteration has opened. The S3K setup code from Pal_FadeToBlack's
-     * last wait to the title loop's first Wait_VSync, in Level
-     * (sonic3k.asm:7536-7775), is such a frame: it dispatches no object and
-     * arms no Nemesis piece. A load made
-     * outside any iteration has no such frame; the next iteration is the
-     * loop's first.
-     */
-    boolean isInFreshLevelSetupFrame() {
-        return freshLevelSetupFrame;
-    }
-
-    /** A production driver opens one represented iteration. */
-    void beginDriverIteration() {
-        driverIterationOpen = true;
-        freshLevelSetupFrame = false;
-    }
-
-    /** The iteration has closed; its setup-frame result stays observable. */
-    void endDriverIteration() {
-        driverIterationOpen = false;
-    }
-
     public void advanceTitleCardVblankOnly() {
         if (objectManager != null) {
             objectManager.advanceVblaCounter();
@@ -3795,7 +3767,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             if (objectManager != null) {
                 objectManager.initVblaCounter(inheritedVblaCounter);
                 objectManager.initVIntRunCounterPhaseOffset(inheritedVIntRunCounterPhaseOffset);
-                freshLevelSetupFrame = driverIterationOpen;
             }
 
             frameCounter = 0;

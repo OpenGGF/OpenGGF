@@ -762,9 +762,6 @@ public class GameLoop {
      * Call this method at your target FPS (typically 60fps).
      */
     public void step() {
-        LevelManager iterationLevel = levelManager;
-        // A fresh load inside this iteration makes it Level's setup frame.
-        com.openggf.level.LevelSetupFrameAccess.beginIteration(iterationLevel);
         try {
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
             int traceFastForwardSteps = traceSession == null
@@ -792,7 +789,6 @@ public class GameLoop {
                 pumpedFrames++;
             }
         } finally {
-            com.openggf.level.LevelSetupFrameAccess.endIteration(iterationLevel);
             runAfterStepMasterTitleLaunchCallbackIfPresent();
             presenceManager.tick();
         }

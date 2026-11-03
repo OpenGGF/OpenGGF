@@ -213,14 +213,6 @@ public class Sonic3kTitleCardManager
     private boolean freshLevelChildMovementObserved;
     private boolean freshLevelTitleReady;
     private boolean freshLevelTerrainStarted;
-    /**
-     * Obj_TitleCardInit has not yet queued its archives. Level installs this
-     * owner inside its own setup frame, and the title loop waits for VSync
-     * before it reaches Process_Sprites (loc_62B6/loc_62CC,
-     * sonic3k.asm:7762-7781), so an owner installed in that frame first
-     * executes on the loop's next dispatch.
-     */
-    private boolean titleInitPending;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -238,7 +230,6 @@ public class Sonic3kTitleCardManager
             boolean freshLevelChildMovementObserved,
             boolean freshLevelTitleReady,
             boolean freshLevelTerrainStarted,
-            boolean titleInitPending,
             boolean resetLevelGamestateOnInLevelDisplay,
             int resetLevelGamestateCountdown,
             boolean heldLevelCounterDispatchOwned,
@@ -318,7 +309,6 @@ public class Sonic3kTitleCardManager
                 freshLevelChildMovementObserved,
                 freshLevelTitleReady,
                 freshLevelTerrainStarted,
-                titleInitPending,
                 resetLevelGamestateOnInLevelDisplay, resetLevelGamestateCountdown,
                 heldLevelCounterDispatchOwned, retainedResultsHeldLevelCounterOwned,
                 inLevelPlayerControlLockOwned, inLevelGameplayOwnedExternally,
@@ -358,7 +348,6 @@ public class Sonic3kTitleCardManager
         freshLevelChildMovementObserved = snapshot.freshLevelChildMovementObserved();
         freshLevelTitleReady = snapshot.freshLevelTitleReady();
         freshLevelTerrainStarted = snapshot.freshLevelTerrainStarted();
-        titleInitPending = snapshot.titleInitPending();
         freshLevelTitleOwnerReplacedAtAssembly =
                 snapshot.freshLevelTitleOwnerReplacedAtAssembly();
         resetLevelGamestateOnInLevelDisplay =
@@ -478,16 +467,8 @@ public class Sonic3kTitleCardManager
         // Obj_TitleCardInit queues its archives on every Level: entry even
         // when this process already retains decoded art from the same act.
         artLoaded = false;
-        boolean deferInit = installedInLevelSetupFrame();
-        initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES, !deferInit);
+        initInternal(zoneIndex, actIndex, false, DISPLAY_HOLD_FRAMES);
         enterLevelRoutineTitleLoop(zoneIndex, actIndex);
-        titleInitPending = deferInit;
-    }
-
-    /** Whether loc_62B6 is installing this owner inside Level's setup frame. */
-    private static boolean installedInLevelSetupFrame() {
-        return com.openggf.level.LevelSetupFrameAccess.inFreshLevelSetupFrame(
-                GameServices.levelOrNull());
     }
 
     /**
@@ -926,29 +907,21 @@ public class Sonic3kTitleCardManager
             elemExited[i] = false;
         }
 
-        // Bonus art needs no zone/act. Obj_TitleCardInit queues it now unless
-        // the owner was installed in Level's setup frame (see titleInitPending).
-        boolean deferInit = installedInLevelSetupFrame();
-        if (!deferInit) {
+        // Load bonus art (no zone/act needed — bonus art is always the same)
+        if (!artLoaded || lastLoadedZone != -2) {
             loadBonusArt();
         }
+
         artCached = false;
         // The bonus card has no zone/act of its own; the loaded bonus zone's
         // LevelLoadBlock PLC fills the Nemesis queue loc_62CC waits on.
         var level = GameServices.level();
         enterLevelRoutineTitleLoop(level.getCurrentZone(), level.getCurrentAct());
-        titleInitPending = deferInit;
         LOG.info("S3K bonus title card initialized");
     }
 
     private void initInternal(
             int zoneIndex, int actIndex, boolean inLevel, int displayHoldFrames) {
-        initInternal(zoneIndex, actIndex, inLevel, displayHoldFrames, true);
-    }
-
-    private void initInternal(
-            int zoneIndex, int actIndex, boolean inLevel, int displayHoldFrames,
-            boolean queueArchivesNow) {
         // A new title owns a new sprite-table generation. Never redraw or
         // republish the preceding card across the level-load boundary.
         publishedCard = null;
@@ -985,10 +958,8 @@ public class Sonic3kTitleCardManager
                         RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         this.runtimeArtAdmissionLeaseId = admissionLease.id();
 
-        // Load art if needed. A Level-routine owner defers this to its
-        // Obj_TitleCardInit dispatch when installed in Level's setup frame.
-        if (queueArchivesNow
-                && (!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex)) {
+        // Load art if needed
+        if (!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex) {
             loadAllArt(zoneIndex, actIndex);
         }
 
@@ -1047,21 +1018,6 @@ public class Sonic3kTitleCardManager
     }
 
     private void updateOwnedChildren(com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService plc) {
-        if (titleInitPending) {
-            if (installedInLevelSetupFrame()) {
-                // Level's setup frame: loc_62CC has not yet reached its first
-                // Wait_VSync, so Process_Sprites has not dispatched this owner.
-                return;
-            }
-            titleInitPending = false;
-            // Obj_TitleCardInit queues the four title archives
-            // (sonic3k.asm:62161-62205); its Create routine polls them next.
-            if (bonusMode) {
-                loadBonusArt();
-            } else {
-                loadAllArt(currentZone, currentAct);
-            }
-        }
         if (freshLevelTransitionMode && freshLevelTerrainStarted) {
             // LoadLevelLoadBlock/loc_7870 services the queues but does not call
             // Process_Sprites. The carried title owner resumes in LevelLoop.
@@ -1368,7 +1324,6 @@ public class Sonic3kTitleCardManager
         freshLevelChildMovementObserved = false;
         freshLevelTitleReady = false;
         freshLevelTerrainStarted = false;
-        titleInitPending = false;
         freshLevelTitleOwnerReplacedAtAssembly = false;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
