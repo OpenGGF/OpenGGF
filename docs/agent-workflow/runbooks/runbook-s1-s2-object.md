@@ -104,5 +104,5 @@ Use `HeadlessTestRunner`, `@FullReset`/`SingletonResetExtension`, and `StubObjec
 
 - `CHANGELOG.md` + `Changelog: updated` for engine changes.
 - `docs/status/known-discrepancies.md` + `Known-Discrepancies: updated` if you add/resolve an intentional divergence.
-- Pitfall reuse → update `.agents/skills/s{1,2}-implement-object/rom-pitfalls.md` and the mirrored `.claude/skills/...`, set `Skills: updated`.
+- Pitfall reuse → update `.agents/skills/s{1,2}-implement-object/rom-pitfalls.md`, run `python3 tools/git/sync_skills.py`, set `Skills: updated`.
 - Fill all trailers with `updated` or `n/a`; never `--no-verify`.

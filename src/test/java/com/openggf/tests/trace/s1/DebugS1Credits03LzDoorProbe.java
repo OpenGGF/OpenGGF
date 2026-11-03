@@ -67,7 +67,7 @@ public class DebugS1Credits03LzDoorProbe {
 
             initialiseDemoPlayerState(fixture.sprite());
             // ROM-derived constants only — no trace hydration. See
-            // CLAUDE.md "Trace Replay Tests" comparison-only invariant.
+            // AGENTS.md "Trace Replay Tests" comparison-only invariant.
             Sonic1CreditsDemoBootstrap.applyLzLampostState(
                     fixture.sprite(), fixture.camera());
             resetStreamingWindows(fixture);

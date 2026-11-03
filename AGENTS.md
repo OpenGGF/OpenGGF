@@ -1,7 +1,10 @@
 # OpenGGF agent guidance
 
-Keep this file and `CLAUDE.md` identical. Skills are mirrored between
-`.agents/skills/` and `.claude/skills/`.
+This is the sole project instruction file: Codex reads it, and Claude Code
+loads it because the project has no `CLAUDE.md`. Never add one; it would
+replace this file for Claude Code. Edit skills only under `.agents/skills/`;
+`.claude/skills/` is a generated copy for Claude Code. Refresh it with
+`python3 tools/git/sync_skills.py` and stage both trees.
 
 ## Project and scope
 

@@ -67,7 +67,7 @@ class TestBuildToolingGuard {
     private static final String FRONTIER_GRANDFATHER_BASELINE = "9fb9f4011";
     private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
     private static final List<String> SESSION_DOCUMENTATION_FILES = List.of(
-            "AGENTS.md", "CLAUDE.md", "README.md",
+            "AGENTS.md", "README.md",
             "docs/guide/contributing/dev-setup.md",
             "docs/guide/contributing/testing.md",
             "docs/guide/contributing/trace-replay.md",
@@ -999,8 +999,7 @@ class TestBuildToolingGuard {
                         .forEach(prescriptive::add);
             }
         }
-        for (Path doc : List.of(Path.of("CLAUDE.md"), Path.of("AGENTS.md"),
-                Path.of("AGENTS_S3K.md"))) {
+        for (Path doc : List.of(Path.of("AGENTS.md"), Path.of("AGENTS_S3K.md"))) {
             if (Files.isRegularFile(doc)) {
                 prescriptive.add(doc);
             }
@@ -1023,16 +1022,16 @@ class TestBuildToolingGuard {
     @Test
     void supportedDocumentationMustUseQueuedMavenAndExplicitHookBootstrap() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
-        Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
         List<String> violations = new ArrayList<>();
 
-        if (Files.mismatch(agentsPath, claudePath) != -1) {
-            violations.add("AGENTS.md and CLAUDE.md are no longer byte-identical");
+        // Claude Code loads AGENTS.md only when the project has no CLAUDE.md.
+        if (Files.exists(Path.of("CLAUDE.md"))) {
+            violations.add("CLAUDE.md must not exist; AGENTS.md is the sole project instruction file");
         }
         if (!agents.contains("tools/testing/install-hooks.sh")
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
-            violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
+            violations.add("AGENTS.md does not document explicit hook bootstrap");
         }
         // Local Maven goes through the shared queue wrapper (tools/testing/maven_queue.py),
         // never bare mvn: direct mvn bypasses admission and the worktree slot.
@@ -1046,7 +1045,7 @@ class TestBuildToolingGuard {
                 "Do not share or\n  copy build trees.",
                 "Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.")) {
             if (!agents.contains(requiredText)) {
-                violations.add("AGENTS.md/CLAUDE.md do not contain required queued-Maven guidance: "
+                violations.add("AGENTS.md does not contain required queued-Maven guidance: "
                         + requiredText);
             }
         }
@@ -1101,7 +1100,7 @@ class TestBuildToolingGuard {
                 Path.of("src/main"), Path.of("tools/audio"), Path.of("tools/bizhawk"),
                 Path.of("tools/testing"), Path.of("pom.xml"), Path.of("dev.sh"),
                 Path.of("dev.cmd"), Path.of("run.sh"), Path.of("run.cmd"),
-                Path.of(".github/workflows"), Path.of("AGENTS.md"), Path.of("CLAUDE.md"),
+                Path.of(".github/workflows"), Path.of("AGENTS.md"),
                 Path.of("README.md"), Path.of("ROADMAP.md"), Path.of("docs/guide"),
                 Path.of("docs/agent-workflow"), Path.of(".agents/skills"),
                 Path.of(".claude/skills"));
@@ -4192,7 +4191,7 @@ class TestBuildToolingGuard {
         assertTrue(developerSetup.contains("git submodule update --init"),
                 "disassembly-backed development must retain an explicit opt-in command");
 
-        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+        for (String agentGuide : List.of("AGENTS.md")) {
             String guidance = Files.readString(Path.of(agentGuide))
                     .toLowerCase(Locale.ROOT)
                     .replaceAll("\\s+", " ");
@@ -4244,7 +4243,7 @@ class TestBuildToolingGuard {
                 "release validation must keep the optional TraceChaser subprocesses separate");
         assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
         assertTrue(pom.contains("<id>tracechaser-integration</id>"));
-        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+        for (String agentGuide : List.of("AGENTS.md")) {
             String guidance = Files.readString(Path.of(agentGuide));
             assertTrue(guidance.contains("optional pinned `tools/tracechaser/` submodule"));
             assertTrue(guidance.contains(

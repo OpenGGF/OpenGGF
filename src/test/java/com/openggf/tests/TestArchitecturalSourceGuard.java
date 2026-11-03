@@ -29,7 +29,6 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1135,12 +1134,11 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
-    void hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored() throws IOException {
+    void hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceHasOneSource() throws IOException {
         Path agents = Path.of("AGENTS.md");
-        Path claude = Path.of("CLAUDE.md");
         byte[] agentsBytes = Files.readAllBytes(agents);
-        assertArrayEquals(agentsBytes, Files.readAllBytes(claude),
-                "AGENTS.md and CLAUDE.md must remain byte-identical");
+        assertFalse(Files.exists(Path.of("CLAUDE.md")),
+                "AGENTS.md is the sole project instruction file; CLAUDE.md would replace it in Claude Code");
 
         String agentGuidance = new String(agentsBytes, StandardCharsets.UTF_8);
         assertTrue(agentGuidance.contains("Trace data is comparison-only by default."),

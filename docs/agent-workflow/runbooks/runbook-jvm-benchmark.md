@@ -14,7 +14,7 @@ Design rationale:
 ## 0. Preconditions
 
 - A ROM for the trace's game is discoverable in the project root (see the ROM
-  table in [`CLAUDE.md`](../../../CLAUDE.md); do not rename or copy one).
+  table in [`AGENTS.md`](../../../AGENTS.md); do not rename or copy one).
 - The trace you pick **passes its `*TraceReplay` test**. Benchmarking a trace
   that diverges measures whatever route the engine wandered down, not the game.
 - Close anything that competes for CPU. A background build will show up as tail

@@ -21,7 +21,7 @@ No ROM discovery is usually needed — this is engine plumbing. Inspect:
 | `src/main/java/com/openggf/game/mutation/ZoneLayoutMutationPipeline.java` | Deterministic queued/immediate layout edits + redraw sequencing. The gameplay entry point. |
 | `src/main/java/com/openggf/game/mutation/LevelMutationSurface.java` | Mutation surface abstraction. |
 | `src/main/java/com/openggf/level/objects/ObjectServices.java` | `services().zoneLayoutMutationPipeline()` accessor for object code. |
-| Terminology (CLAUDE.md): Pattern = 8x8, Chunk = 16x16, Block = 128x128. | |
+| Terminology (AGENTS.md): Pattern = 8x8, Chunk = 16x16, Block = 128x128. | |
 
 Per-frame dirty-region processing happens in `LevelFrameStep.processDirtyRegions()` (at the `com.openggf` package root, not under `level`).
 

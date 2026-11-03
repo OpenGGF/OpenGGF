@@ -179,7 +179,7 @@ public class BarrierObjectInstance extends AbstractObjectInstance
         }
 
         // ROM uses x_pos(a1) and y_pos(a1) which are CENTER coordinates
-        // Must use getCentreX/getCentreY to match ROM behavior (see CLAUDE.md)
+        // Must use getCentreX/getCentreY to match ROM behavior (see AGENTS.md)
         int charX = character.getCentreX();
         int charY = character.getCentreY();
 

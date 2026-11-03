@@ -57,9 +57,9 @@ Each value must start with `updated` or `n/a`.
 | `Guide` | `docs/guide/` | Player or contributor guide content changed. |
 | `Known-Discrepancies` | `docs/status/known-discrepancies.md` | A cross-game or non-S3K intentional divergence was added, changed, or resolved. |
 | `S3K-Known-Discrepancies` | `docs/S3K_KNOWN_DISCREPANCIES.md` | An S3K-specific intentional divergence was added, changed, or resolved. |
-| `Agent-Docs` | `AGENTS.md` and `CLAUDE.md` | Top-level agent guidance changed. Stage both files together. |
+| `Agent-Docs` | `AGENTS.md` | Top-level agent guidance changed. `AGENTS.md` is the only project instruction file; a staged `CLAUDE.md` is rejected. |
 | `Configuration-Docs` | `CONFIGURATION.md` | A config flag, key binding, startup behavior, or user-facing config default changed. |
-| `Skills` | `.agents/skills/` and `.claude/skills/` | Agent skill guidance changed. Stage both mirrored trees together. |
+| `Skills` | `.agents/skills/` | Agent skill guidance changed. Edit `.agents/skills/`, regenerate the `.claude/skills/` copy with `python3 tools/git/sync_skills.py` and stage both; the staged copy must match exactly. |
 
 If a mapped file is staged, the matching trailer must say `updated`. If the mapped file is not
 staged, the trailer should say `n/a`.

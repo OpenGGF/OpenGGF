@@ -3442,7 +3442,7 @@ owning routine for writes to anything shared — a register the caller relies on
 the loop reads, a field another object owns. And read the disassembly's comments: the
 un-fixed path is often annotated as a known bug by the people who disassembled it.
 
-**When you model one,** name the flag and the branch in a comment as CLAUDE.md requires.
+**When you model one,** name the flag and the branch in a comment as AGENTS.md requires.
 Once the side effect is implemented it becomes invisible again, and the comment is the
 only thing that will make a future bug-fixed-revision effort tractable.
 

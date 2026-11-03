@@ -36,8 +36,8 @@ it must say `n/a`. So "lying" in either direction fails the hook.
 
 Release procedure changes must keep
 [release publishing](../project/release-publishing.md),
-[release rollover](../project/release-rollover.md), `AGENTS.md`/`CLAUDE.md`,
-and the mirrored `release-publishing` skill consistent. Pushes to `master`
+[release rollover](../project/release-rollover.md), `AGENTS.md`,
+and the `release-publishing` skill consistent. Pushes to `master`
 automatically publish after successful validation and builds. Manual dispatch
 is validation-only. Confirm the actual release before reporting it shipped;
 do not instruct maintainers to create the version tag before the workflow.
@@ -107,12 +107,10 @@ supporting artifacts with the task. Do not create loose planning documents.
 ### 2. Reusable pitfalls — `rom-pitfalls.md` (mirrored)
 
 - **REQUIRED** if an object/badnik/trace fix revealed a reusable ROM-parity pitfall.
-  Add the entry to the relevant per-game file **and its mirror**:
-  - `.agents/skills/s2-implement-object/rom-pitfalls.md` **and**
-    `.claude/skills/s2-implement-object/rom-pitfalls.md`
-  - `.agents/skills/s3k-implement-object/rom-pitfalls.md` **and**
-    `.claude/skills/s3k-implement-object/rom-pitfalls.md`
-  - `.agents/skills/s1-implement-object/rom-pitfalls.md` and its `.claude` mirror.
+  Add the entry to the relevant per-game file, then regenerate the mirror (item 7):
+  - `.agents/skills/s2-implement-object/rom-pitfalls.md`
+  - `.agents/skills/s3k-implement-object/rom-pitfalls.md`
+  - `.agents/skills/s1-implement-object/rom-pitfalls.md`
 - Editing these files **stages skill changes**, so the `Skills` trailer becomes
   **REQUIRED** = `updated` (see item 7). Mark cross-game applicability when the
   pitfall is not game-specific.
@@ -163,22 +161,23 @@ supporting artifacts with the task. Do not create loose planning documents.
   `Configuration-Docs: updated`, and stage it.
 - **JUSTIFIED SKIP** = `n/a` if no configuration surface changed.
 
-### 7. Skills — `.agents/skills/` + `.claude/skills/`  →  trailer `Skills`
+### 7. Skills — `.agents/skills/`  →  trailer `Skills`
 
-- **REQUIRED** if you changed agent guidance/skills. Both trees must have staged
-  changes **together** (the gate fails if only one side is staged). Set
-  `Skills: updated`. Editing any `rom-pitfalls.md` (item 2) triggers this.
+- **REQUIRED** if you changed agent skills. Edit only `.agents/skills/`, run
+  `python3 tools/git/sync_skills.py` to regenerate the `.claude/skills/` copy that
+  Claude Code reads, stage both trees and set `Skills: updated`. The commit gate
+  fails when the staged copy differs from the canonical tree. Editing any
+  `rom-pitfalls.md` (item 2) triggers this.
 - **JUSTIFIED SKIP** = `n/a` if no skill files changed.
-- **Mirror rule:** any skill edit must be applied identically in both
-  `.agents/skills/<name>/` and `.claude/skills/<name>/`.
 
-### 8. Agent docs — `AGENTS.md` + `CLAUDE.md`  →  trailer `Agent-Docs`
+### 8. Agent docs — `AGENTS.md`  →  trailer `Agent-Docs`
 
-- **REQUIRED** if you changed top-level agent guidance. **Both** `AGENTS.md` **and**
-  `CLAUDE.md` must be staged together; set `Agent-Docs: updated`. (S3K-specific
-  guidance belongs in `AGENTS_S3K.md`, not `CLAUDE.md` — but `AGENTS_S3K.md` has no
-  separate trailer; it rides under agent-docs judgment.)
-- **JUSTIFIED SKIP** = `n/a` if neither root agent doc changed.
+- **REQUIRED** if you changed top-level agent guidance; set `Agent-Docs: updated`.
+  `AGENTS.md` is the only project instruction file. Claude Code loads it because
+  the project has no `CLAUDE.md`; the commit gate rejects a staged `CLAUDE.md`.
+  (S3K-specific guidance belongs in `AGENTS_S3K.md`, which has no separate
+  trailer; it rides under agent-docs judgment.)
+- **JUSTIFIED SKIP** = `n/a` if `AGENTS.md` did not change.
 
 ### 9. Guide — `docs/guide/`  →  trailer `Guide`
 
@@ -201,9 +200,9 @@ to non-merge commits by `prepare-commit-msg` — fill it in, do not delete it.
 | `Guide` | `docs/guide/` | directory prefix | Contributor/player guide tree. |
 | `Known-Discrepancies` | `docs/status/known-discrepancies.md` | exact file | Cross-game intentional divergences. |
 | `S3K-Known-Discrepancies` | `docs/S3K_KNOWN_DISCREPANCIES.md` | exact file | S3K-specific parity gaps. |
-| `Agent-Docs` | `AGENTS.md` **and** `CLAUDE.md` | both, exact | Must stage both together when `updated`. |
+| `Agent-Docs` | `AGENTS.md` | exact file | A staged `CLAUDE.md` is rejected. |
 | `Configuration-Docs` | `CONFIGURATION.md` | exact file | Config flags / key bindings / toggles. |
-| `Skills` | `.agents/skills/` **and** `.claude/skills/` | both, prefix | Must stage both mirrors together when `updated`. |
+| `Skills` | `.agents/skills/` (+ generated `.claude/skills/`) | prefix | Staged `.claude/skills/` must equal `.agents/skills/`; run `tools/git/sync_skills.py`. |
 
 `docs/status/trace-frontier-log.md` has **no trailer** — it is a separate branch policy
 obligation (item 1). Update it in the same commit as the trace work it documents.
@@ -267,7 +266,7 @@ intended co-author lines are present.
 - Changed a known divergence? → `Known-Discrepancies` and/or
   `S3K-Known-Discrepancies` = `updated`.
 - Changed a config flag/binding? → `Configuration-Docs: updated`.
-- Changed skill files? → both trees staged + `Skills: updated`.
-- Changed `AGENTS.md`/`CLAUDE.md`? → both staged + `Agent-Docs: updated`.
+- Changed skill files? → `sync_skills.py`, both trees staged + `Skills: updated`.
+- Changed `AGENTS.md`? → `Agent-Docs: updated`.
 - Changed `docs/guide/`? → `Guide: updated`.
 - Everything else → `n/a` (bare is fine except the `Changelog` engine-change rule).

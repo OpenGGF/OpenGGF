@@ -1791,6 +1791,12 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- `AGENTS.md` is now the only project instruction file. Claude Code loads it
+  because the repository has no `CLAUDE.md`, and the commit hook rejects one.
+  Skills are edited only under `.agents/skills/`; `tools/git/sync_skills.py`
+  regenerates the `.claude/skills/` copy, and the hook rejects a staged copy that
+  differs from the source tree.
+
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
   diagnostics now identify pending archive jobs, direct children and submitters.

@@ -6,8 +6,8 @@ This is an **index** of the existing per-game ROM-behaviour pitfall catalogues. 
 
 | Game | Source file (mirrored skill paths) | Entries |
 |------|------------------------------------|---------|
-| S2 | `.agents/skills/s2-implement-object/rom-pitfalls.md` and `.claude/skills/s2-implement-object/rom-pitfalls.md` | P1–P41 (origin narrative for the whole catalogue) |
-| S3K | `.agents/skills/s3k-implement-object/rom-pitfalls.md` and `.claude/skills/s3k-implement-object/rom-pitfalls.md` | P1–P15, P17, P18 |
+| S2 | `.agents/skills/s2-implement-object/rom-pitfalls.md` | P1–P41 (origin narrative for the whole catalogue) |
+| S3K | `.agents/skills/s3k-implement-object/rom-pitfalls.md` | P1–P15, P17, P18 |
 | S1 | (none yet — no `rom-pitfalls.md` under `s1-implement-object`) | — |
 
 Notes for readers:
@@ -15,7 +15,7 @@ Notes for readers:
 - **Cross-game default.** The S3K file states up front that the patterns "were first surfaced during S2 frontier advancement … but are cross-game: each applies to S3K objects unless the entry explicitly says otherwise." So a pattern shared between both files (same P-number) is cross-game; an entry that appears only in the S2 file is still usually cross-game in mechanism, with an S2 ROM citation. Per-entry cross-game notes below call out the exceptions (entries scoped to one game's streaming / event ordering).
 - **P-numbers are shared.** The same P-number describes the same bug class in both files (e.g. `P14` is the touch-response polling pitfall in both). Where both files carry an entry, the index lists both paths.
 - **Where to read the entry.** Each entry in the source file carries: symptom, root cause, what-to-check, ROM citation, and originating fix commit. Open the source file and search for the `## P<n>` heading.
-- **Skill mirror rule.** If you edit any `rom-pitfalls.md`, mirror the identical change in both `.agents/skills/...` and `.claude/skills/...`. This index is a standalone doc under `docs/agent-workflow/` and is the preferred place to grow the cross-cutting index without mutating skill files.
+- **Skill mirror rule.** Edit `rom-pitfalls.md` only under `.agents/skills/...`, then run `python3 tools/git/sync_skills.py` to regenerate `.claude/skills/...`. This index is a standalone doc under `docs/agent-workflow/` and is the preferred place to grow the cross-cutting index without mutating skill files.
 - The S3K file points readers at the trace-replay update loop (`.agents/skills/trace-replay-bug-fixing/SKILL.md`, Phase 5) as the source of new catalogue entries.
 
 ---
@@ -125,7 +125,7 @@ No dedicated zone-set entry currently exists in `rom-pitfalls.md`. Zone-set reso
 ### S3K S&K-side vs Sonic 3 standalone address confusion
 
 No dedicated entry currently exists in `rom-pitfalls.md`. The S&K-side address rule (prefer `sonic3k.asm`, `< 0x200000`, via `RomOffsetFinder --game s3k`; an `s3.asm` reference is a rare, verified fallback only when an object has no S&K equivalent) is enforced by guidance in:
-- `.agents/skills/s3k-disasm-guide/SKILL.md` and the S&K-side note in `CLAUDE.md` / `AGENTS_S3K.md`.
+- `.agents/skills/s3k-disasm-guide/SKILL.md` and the S&K-side note in `AGENTS.md` / `AGENTS_S3K.md`.
 
 (Add a mirrored pitfall entry if a reusable wrong-half-address bug class is surfaced by a trace fix.)
 

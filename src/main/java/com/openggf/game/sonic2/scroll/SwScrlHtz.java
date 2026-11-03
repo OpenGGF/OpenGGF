@@ -281,7 +281,7 @@ public class SwScrlHtz extends AbstractZoneScrollHandler implements ScrollProjec
         // the ROM's periodic 2-frame stutter, which is why it was once chosen here
         // -- but the stutter is shipped behaviour and the fixed path desyncs any
         // trace column that observes this accumulator. See the FixBugs note in
-        // CLAUDE.md / AGENTS.md.
+        // AGENTS.md.
         d0 = d2;
         // move.w d0,d1 (d1 takes the delta before d0 is halved)
         short d1w = d0;
