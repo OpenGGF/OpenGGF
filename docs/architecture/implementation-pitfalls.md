@@ -1,5 +1,15 @@
 # Shared implementation pitfalls
 
+**A counter's name does not establish its native clock.** In S2 continuous
+loads, LevelManager's execution counter includes title object passes while the
+player gameplay counter resets at release. Obj2C needs the latter native level
+word (held at zero during the locked title), not execution or VInt count.
+Instrument the owning read before choosing a counter. A shared clock-hold
+experiment produced earlier physics failures even though it reduced the axis
+total; the producer-local correction restores the native RNG inventory. See the
+[executed clock evidence](research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03).
+
+
 **Position updates execute object code.** `LevelManager.updateObjectPositions()`
 is not a read-only placement refresh. In a positioned rendering fixture, calling it
 between production steps can admit a boss and consume its one-time palette load;

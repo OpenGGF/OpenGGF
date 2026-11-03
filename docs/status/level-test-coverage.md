@@ -2592,3 +2592,5 @@ adds Sonic/Tails and Tails rolling-transfer restore/replay and real-jump control
 at320/800, plus a scripted-arrival animation assertion. Existing collapse and
 compatibility checks remain green. This closes the local bridge handoff gap;
 full-act/native sequences and remaining donor/participant breadth stay open.
+
+S2 ARZ2 producer-clock follow-up (2026-11-03): the [clock-selection route matrix](../architecture/research/2026-10-22-s2-chain-pacing.md#obj2c-clock-selection-and-arz2-rng-2026-11-03) records native Sonic+Tails continuous/standalone controls, an independent halfpipe movie, KiS2 campaign limits, clock-word boundaries and actual restore/forward RNG checks. The row5084 frontier moves to inherited5512; newly admitted CNZ1 remains incomplete. Wider viewports, donor/team breadth and complete-act certification remain inherited gaps. Full-profile qualification is recorded in that artifact.
