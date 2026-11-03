@@ -55,7 +55,8 @@ public record TraceMetadata(
     @JsonProperty("segment_index") Integer segmentIndex,
     @JsonProperty("bonus_stage_type") String bonusStageType,
     @JsonProperty("fresh_load") Boolean freshLoad,
-    @JsonProperty("v_int_run_count") Integer vIntRunCount
+    @JsonProperty("v_int_run_count") Integer vIntRunCount,
+    @JsonProperty("level_entry_placement_source") String levelEntryPlacementSourceWire
 ) {
     private static final List<String> REMOVED_VERSION_FIELDS = List.of(
             "lua_script_version", "csv_version", "ss_csv_version",
@@ -76,6 +77,17 @@ public record TraceMetadata(
      */
     public int preTraceOscillationFrames() {
         return preTraceOscFrames != null ? preTraceOscFrames : 0;
+    }
+
+    /**
+     * The ROM branch that placed the player for this segment's level load, as
+     * observed by the recorder when the load began; {@code null} when the
+     * recorder did not observe it (older fixtures, or no load of this zone).
+     * Observed ROM state only: replay may use it to take the branch the ROM
+     * took, never to supply gameplay values.
+     */
+    public LevelEntryPlacementSource levelEntryPlacementSource() {
+        return LevelEntryPlacementSource.fromWire(levelEntryPlacementSourceWire);
     }
 
     /** Whether the fixture includes frame-zero native-prelude evidence. */
@@ -494,7 +506,14 @@ public record TraceMetadata(
                 throw new IllegalArgumentException(metadataFile.getFileName()
                         + ": trace_schema must be integer 5");
             }
-            return mapper.treeToValue(root, TraceMetadata.class);
+            JsonNode placement = root.get("level_entry_placement_source");
+            if (placement != null && !placement.isTextual()) {
+                throw new IllegalArgumentException(metadataFile.getFileName()
+                        + ": level_entry_placement_source must be a string");
+            }
+            TraceMetadata metadata = mapper.treeToValue(root, TraceMetadata.class);
+            metadata.levelEntryPlacementSource(); // reject unknown values at load
+            return metadata;
         }
     }
 }

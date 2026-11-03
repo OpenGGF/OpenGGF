@@ -135,6 +135,8 @@ public final class TraceReplayDriver {
                 GameServices.module(),
                 GameServices.sprites(),
                 GameServices.configuration());
+        com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                GameServices.level(), TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
         GameServices.level().loadZoneAndAct(zone, act);
         loop.setGameMode(GameMode.LEVEL);
 

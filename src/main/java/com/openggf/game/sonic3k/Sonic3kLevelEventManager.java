@@ -1033,8 +1033,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *       park CPU Tails in routine-$0A dormant marker (loc_690A / loc_13A74)</li>
      *   <li>LRZ1 ($0900) non-Knuckles: anim $1B, airborne (loc_68A6); Knuckles
      *       is explicitly excluded by the ROM's {@code Player_mode} gate</li>
-     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6); this manager's
-     *       standard level bootstrap does not expose that boss slot</li>
+     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6), every Player_mode</li>
      * </ul>
      */
     public void applyZonePlayerState() {
@@ -1072,6 +1071,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // sonic3k.asm:8193-8197 (Player_mode != 3).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
+        }
+        // loc_6896 (sonic3k.asm:8198-8201): the LRZ3 boss act $1600 takes the
+        // same loc_68A6 falling intro (8204-8210) for every Player_mode.
+        if (currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0) {
+            applySimpleFallingIntro("LRZ3 boss");
         }
         if (currentZone == Sonic3kZoneIds.ZONE_LRZ && currentAct == 0
                 && getPlayerCharacter() != PlayerCharacter.KNUCKLES
@@ -1128,9 +1132,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return false;
         }
         var level = GameServices.level();
+        // SpawnLevelMainSprites skips every zone intro when Last_star_post_hit
+        // or Special_bonus_entry_flag is set (sonic3k.asm:8147-8150). A
+        // standalone boot learns that from its recorded entry kind.
         return level.hasBigRingReturn()
                 || level.isBonusStageReturn()
-                || level.getCheckpointState().isActive();
+                || level.getCheckpointState().isActive()
+                || com.openggf.level.LevelEntryInitialization.isDeclaredReturnEntry(level);
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
