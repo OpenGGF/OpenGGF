@@ -157,10 +157,10 @@ public final class EndingSceneResourceHandoff {
         @Override public void restore(GeometrySnapshot snapshot){
             if(snapshot.layout()==null)return;
             var manager=GameServices.level();var level=(Sonic3kLevel)manager.getCurrentLevel();
-            level.restoreSceneLayout(snapshot.layout());
             level.applyPatternOverlay(snapshot.patterns(),0,true);
             Sonic3kPlcLoader.refreshAffectedRenderers(List.of(new Sonic3kPlcLoader.TileRange(0,snapshot.patterns().length/32)),manager);
-            manager.setLevel(level);lastPatterns=snapshot.patterns();lastLayout=snapshot.layout();
+            // The later collision-layout adapter owns scene dimensions and COW map restoration.
+            lastPatterns=snapshot.patterns();lastLayout=snapshot.layout();
         }
         private static boolean sameLayout(Sonic3kLevel.SceneLayoutSnapshot a,Sonic3kLevel.SceneLayoutSnapshot b){
             return b!=null&&a.mapData()==b.mapData()&&a.width()==b.width()&&a.height()==b.height()
