@@ -75,6 +75,25 @@ class TestHczEndBossWaterColumnControlPolicy {
     }
 
     @Test
+    void carriedP1ConsumesTheRangeWordBeforeP2Bounds() throws Exception {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x4000, (short) 0x0FD8);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x4000, (short) 0x1000);
+        HczEndBossWaterColumn column = newWaterColumn();
+        column.setServices(new TestObjectServices() {
+            @Override public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> p1, () -> List.of(p2));
+            }
+        }.withConfiguration(SonicConfigurationService.createStandalone()));
+        setIntField(column, "segmentCount", 4);
+        invokeGrab(column, p1, true);
+        invokePrivate(column, "applySuction", p1);
+        assertTrue(p1.isObjectControlled());
+        assertFalse(p2.isObjectControlled(),
+                "P1 consumes -$38; P2 top uses the next word +$88, excluding this player");
+        assertEquals(0x1000, p2.getCentreY() & 0xFFFF);
+    }
+
+    @Test
     void bladeImpactUsesNativeHarmfulCollisionDuringFirstThreeFrames() throws Exception {
         HczEndBossImpactFixture fixture = newImpactFixture();
         HczEndBossBladeImpactExplosion impact = fixture.impact();

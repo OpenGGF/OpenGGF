@@ -5,6 +5,8 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.
+
 - HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.
 
 - HCZ2 end-boss startup preserves native callback/init dispatches and the water platform's cleared animation timer.

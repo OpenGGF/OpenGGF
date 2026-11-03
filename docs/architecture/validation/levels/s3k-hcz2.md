@@ -1139,3 +1139,26 @@ the new paired-suction control passes separately after correcting its fixture's
 inherited-field setup and below-water placement. That control covers paired
 right-side players, skipped P1, and exact X equality. Earlier fixture errors
 and a misplaced wrapper flag were failed attempts, not gameplay evidence.
+
+
+## End-boss paired grab range — 2026-11-03
+
+`HCZEndBossColumn_ProcessPlayers` (sonic3k.asm:141861-141874) selects the
+range once. `HCZEndBossColumn_PushHeldPlayer` (sonic3k.asm:141919-141925)
+consumes one word before its top check, including on a subsequent release.
+The native P2 therefore sees the shifted range after P1 reaches this path.
+The shipped FixBugs=0 behavior is preserved; extension participants use fresh
+ranges. A shifted final pair may read the following code word as data, obtained
+from the supplied ROM rather than clamped or interpreted as instructions.
+
+The temporary branch probe at row 28879 shows carried P1 `(40BD,07C4)`,
+uncontrolled P2 `(40D7,07F0)`, spray Y `07B8`, and segment 4. The old independent
+range grabs P2 and lifts it to `07EE`; the native retained cursor uses `+$88`
+as its top offset and excludes P2. These are local encounter observations,
+not new route/configuration or pending-setup restore qualification.
+
+The local grab-range control and focused boss/graph/keep-green selection pass
+85 cases without failures, errors or skips. The slice moves from 635 error
+groups at row 28879 to 600 at row 28970 `tails_y`; all ten sibling error lists
+remain identical to the paired-suction baseline. The next frontier is an early
+P2 turbine contact, with the native boss/turbine one pixel above the engine.

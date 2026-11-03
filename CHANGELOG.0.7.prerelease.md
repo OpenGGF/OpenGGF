@@ -7,6 +7,8 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.
+
 - HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.
 
 - HCZ2 end-boss camera release preserves the separate main-initialization dispatch,

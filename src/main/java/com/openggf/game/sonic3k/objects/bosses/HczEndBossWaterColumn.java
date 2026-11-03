@@ -723,11 +723,14 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
         int sprayY = getSprayY();
 
         NativePlayerSlots slots = nativePlayerSlots(player);
-        if (slots.p1() != null) {
-            applyGrabAndCarry(slots.p1(), 0, sprayY);
-        }
+        // HCZEndBossColumn_ProcessPlayers retains the selected range pointer;
+        // PushHeldPlayer consumes one word even when its top check releases P1
+        // (sonic3k.asm:141861-141874,141920-141925). FixBugs=0 retains that
+        // P2 range shift; independently resetting the range would fix the ROM bug.
+        boolean consumedRangeWord = slots.p1() != null
+                && applyGrabAndCarry(slots.p1(), 0, sprayY, 0);
         if (slots.p2() != null) {
-            applyGrabAndCarry(slots.p2(), 1, sprayY);
+            applyGrabAndCarry(slots.p2(), 1, sprayY, consumedRangeWord ? 1 : 0);
         }
         // HCZEndBossColumn_PushPlayersFromWater initializes d2 once, then
         // retains each negation across P1/P2 (sonic3k.asm:141825-141854).
@@ -739,7 +742,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
             applySuctionTo(slots.p2(), displacement);
         }
         for (AbstractPlayableSprite extension : extendedParticipants(player, slots)) {
-            applyGrabAndCarry(extension, -1, sprayY);
+            applyGrabAndCarry(extension, -1, sprayY, 0);
             applySuctionTo(extension, 2);
         }
     }
@@ -774,7 +777,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
      * @param isPlayer1 true for main player, false for sidekick
      * @param sprayY    precomputed spray Y position for this frame
      */
-    private void applyGrabAndCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY) {
+    private boolean applyGrabAndCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY, int rangeWordOffset) {
         boolean isGrabbed = isGrabbed(sprite, playerIndex);
 
         // ROM: btst #7,status(a3) — if boss defeated, release
@@ -782,7 +785,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
             if (isGrabbed) {
                 releasePlayer(sprite, playerIndex);
             }
-            return;
+            return false;
         }
 
         // ROM: cmpi.b #6,routine(a2) — dead/dying → displace off
@@ -791,7 +794,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
                 clearGrabFlag(sprite, playerIndex);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b invulnerability_timer(a2) — invulnerable → displace off
@@ -800,7 +803,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
                 clearGrabFlag(sprite, playerIndex);
                 ObjectControlState.none().applyTo(sprite);
             }
-            return;
+            return false;
         }
 
         // ROM: tst.b object_control(a2) — check if player is controlled
@@ -810,42 +813,57 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
                 // Another object has control. Fall through to range check
                 // (ROM falls through to loc_6BA32). But since we don't own
                 // this player, just skip.
-                return;
+                return false;
             }
             // We own this player — go to carry logic (loc_6BA6C)
-            doCarry(sprite, playerIndex, sprayY);
-            return;
+            doCarry(sprite, playerIndex, sprayY, rangeWordOffset);
+            return true;
         }
 
         // Player is NOT object-controlled — range check + initial grab (loc_6BA32)
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
+        int wordIndex = idx * 2 + rangeWordOffset;
 
         int spriteY = sprite.getCentreY();
-        int yTop = sprayY + zone[0];
-        int yHeight = zone[1];
+        int yTop = (sprayY + grabZoneWord(wordIndex)) & 0xFFFF;
 
         // ROM: add.w (a1),d0; cmp.w d0,d2; blo locret — player above zone top
         if (spriteY < yTop) {
-            return;
+            return false;
         }
         // ROM: add.w 2(a1),d0; cmp.w d0,d2; bhs locret — player below zone bottom
-        if (spriteY >= yTop + yHeight) {
-            return;
+        if (spriteY >= ((yTop + grabZoneWord(wordIndex + 1)) & 0xFFFF)) {
+            return false;
         }
 
         // ROM: x range check: sub.w d2,d0; addi.w #$10,d0; cmpi.w #$20,d0
         int spriteX = sprite.getCentreX();
         int hDist = currentX - spriteX + GRAB_H_DIST;
         if (hDist < 0 || hDist >= (GRAB_H_DIST * 2)) {
-            return;
+            return false;
         }
 
         // In range — initial grab (sub_6BADA)
         doInitialGrab(sprite, playerIndex);
 
         // Immediately enter carry logic this frame (ROM falls through to loc_6BA6C)
-        doCarry(sprite, playerIndex, sprayY);
+        doCarry(sprite, playerIndex, sprayY, rangeWordOffset);
+        return true;
+    }
+
+
+    private int grabZoneWord(int wordIndex) {
+        if (wordIndex < GRAB_ZONES.length * 2) {
+            return GRAB_ZONES[wordIndex / 2][wordIndex & 1];
+        }
+        // The shifted last pair reads the following CapturePlayer instruction
+        // as data (sonic3k.asm:141959-141975). Read that word from the supplied
+        // ROM, rather than inventing a clamped range or simulating instructions.
+        try {
+            return services().romReader().readS16BE(0x6BAC2 + wordIndex * 2);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Cannot read HCZ end-boss grab range", e);
+        }
     }
 
     /**
@@ -896,13 +914,12 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements S3kTopSo
      *   subq.w #2,y_pos(a2)
      * </pre>
      */
-    private void doCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY) {
+    private void doCarry(AbstractPlayableSprite sprite, int playerIndex, int sprayY, int rangeWordOffset) {
         int idx = Math.min(segmentCount, GRAB_ZONES.length - 1);
-        int[] zone = GRAB_ZONES[idx];
         int spriteY = sprite.getCentreY();
 
         // ROM: check if player has risen above the top of grab zone → release
-        int yTop = sprayY + zone[0];
+        int yTop = (sprayY + grabZoneWord(idx * 2 + rangeWordOffset)) & 0xFFFF;
         if (spriteY < yTop) {
             releasePlayer(sprite, playerIndex);
             return;
