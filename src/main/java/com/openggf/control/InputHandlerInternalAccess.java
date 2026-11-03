@@ -82,6 +82,16 @@ public final class InputHandlerInternalAccess {
     public static TextInputSession.Lease captureKeyboardText(InputHandler handler, Object owner) {
         return handler.captureKeyboardText(owner);
     }
+    /** Player 1's keyboard Start key, or -1 when there is no handler or binding. */
+    public static int player1StartKey(InputHandler handler) {
+        InputBindings bindings = handler == null ? null : handler.currentBindings();
+        return bindings == null ? -1 : bindings.p1Start();
+    }
+    /** Player 1's input without the keyboard mapping: pads, or recorded input that owns the row. */
+    public static PlayerInputState player1WithoutKeyboard(InputHandler handler) {
+        LogicalInputSnapshot snapshot = handler == null ? null : handler.menuWithoutMappedKeyboard();
+        return snapshot == null ? PlayerInputState.neutral() : snapshot.player1();
+    }
     public static void prepareKeyboardTextConsumer(InputHandler handler, Object owner) {
         if (handler != null) handler.prepareKeyboardTextConsumer(owner);
     }

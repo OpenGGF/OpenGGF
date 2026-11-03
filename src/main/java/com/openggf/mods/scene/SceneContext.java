@@ -27,7 +27,9 @@ public interface SceneContext {
 
     /**
      * True while any of {@code buttons} ({@link SceneButtons} bits, combined with {@code |}) is
-     * held on player 1's pad or the keyboard keys mapped to it.
+     * held on player 1's pad or the keyboard keys mapped to it. Once the scene reads player 1's
+     * Start key itself through {@link #keyDown} or {@link #keyPressed}, that key reports only as a
+     * key and {@link SceneButtons#START} comes from pads alone, so one press never means two things.
      */
     boolean buttonDown(int buttons);
 

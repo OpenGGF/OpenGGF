@@ -79,7 +79,8 @@ Upright S3K Act 2 capsules now also use normal explosions and the break sound.
   and snow corridor, including ICZ2’s run toward LBZ1.
 
 - Default Player 1 Start to Enter and Player 2 Start to Backspace; unify live Start with the visible pause,
-  preventing a second native pause when resuming.
+  preventing a second native pause when resuming. A mod scene that reads the Start key itself now owns
+  it, so one Enter press no longer also counts as Start; pads still send Start.
 
 S3K elemental shields keep animating after returning from Bonus/Special stages.
 Their frame publication, animation switches and invincibility/blank-player pauses
