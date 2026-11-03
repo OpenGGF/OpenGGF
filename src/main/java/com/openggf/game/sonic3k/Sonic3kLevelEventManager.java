@@ -114,7 +114,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
     private static final int CNZ2_CAMERA_MIN_Y = 0x0580;
     private static final int CNZ2_CAMERA_MAX_Y = 0x1000;
-    private static final int EXTRA_MANAGER_BYTES = 30;
+    private static final int EXTRA_MANAGER_BYTES = 31;
 
     private Sonic3kLoadBootstrap bootstrap = Sonic3kLoadBootstrap.NORMAL;
     private Sonic3kAIZEvents aizEvents;
@@ -149,6 +149,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     // Tracks whether the intro-fall forced animation is active on each player.
     // Cleared per-player when they land (air → ground transition).
     private boolean introFallActiveOnPlayer;
+    // Player_1 Tails' Tails_CPU_routine for the solo CNZ1/MHZ1 fly-in: 0 (not
+    // owned), $20 (loc_1425C seed), $22 (loc_14286 hold until landing) or 6
+    // (landed; the pad returns next frame).
+    private int tailsSoloFlyInRoutine;
     private boolean introFallActiveOnSidekick;
     private boolean skipSimpleFallingIntroForLoad;
 
@@ -230,6 +234,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
+        tailsSoloFlyInRoutine = 0;
         skipSimpleFallingIntroForLoad = false;
         boolean seamlessActAdvance = fixedAirCountdownZone == zone
                 && fixedAirCountdownAct + 1 == act;
@@ -782,6 +787,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updatePrePhysics() {
+        updateTailsSoloFlyIn();
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
         // ordinary animator's post-object tail retains only its late resolution.
         if(endingEvents!=null && currentZone==0x0D && currentAct==1)
@@ -1111,7 +1117,73 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             com.openggf.game.sonic3k.sidekick.Sonic3kIntroCarryParticipants.installIfNeeded(
                     GameServices.module(), getPlayerCharacter(), currentZone, currentAct);
         }
+        // loc_68C2/loc_68D0 -> loc_68FC (sonic3k.asm:8212-8236): Tails alone at
+        // CNZ1, or at MHZ1 with SK_alone_flag clear, starts Tails_CPU_routine $20.
+        if (getPlayerCharacter() == PlayerCharacter.TAILS_ALONE && currentAct == 0
+                && (currentZone == Sonic3kZoneIds.ZONE_CNZ
+                || (currentZone == Sonic3kZoneIds.ZONE_MHZ && !Sonic3kCartridgePolicy.isStandaloneSk()))) {
+            tailsSoloFlyInRoutine = 0x20;
+        }
         primeSidekickIntroPresentation();
+    }
+
+    /**
+     * Player_1 Tails runs Tails_CPU_Control from Tails_Control when Ctrl_1 is
+     * unlocked and Tails_CPU_routine is at least $1A (loc_13808,
+     * sonic3k.asm:26222-26248). Player_1 is the first object, so this pre-object
+     * slot is the same point in the frame.
+     */
+    private void updateTailsSoloFlyIn() {
+        if (tailsSoloFlyInRoutine == 0) {
+            return;
+        }
+        AbstractPlayableSprite tails = GameServices.sprites().getMainPlayable();
+        if (tails == null || !com.openggf.game.CharacterKey.TAILS.equals(tails.characterKey())) {
+            tailsSoloFlyInRoutine = 0;
+            return;
+        }
+        if (tailsSoloFlyInRoutine == 6) {
+            // Routine 6 is below $1A: Tails_Control copies Ctrl_1 again from
+            // the frame after landing.
+            tailsSoloFlyInRoutine = 0;
+            tails.setControlLocked(false);
+            tails.clearForcedInputMask();
+            return;
+        }
+        if (tailsSoloFlyInRoutine == 0x20) {
+            // loc_1425C (sonic3k.asm:27144-27152): enter flight moving right.
+            tails.setDoubleJumpFlag(1);
+            tails.setDoubleJumpProperty((byte) ((8 * 60) / 2));
+            tails.setAir(true);
+            tails.setRolling(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setDirection(com.openggf.physics.Direction.RIGHT);
+            tails.setXSpeed((short) 0x100);
+            tails.setYSpeed((short) 0);
+            tails.setGSpeed((short) 0);
+            tailsSoloFlyInRoutine = 0x22;
+        }
+        // loc_14286 (sonic3k.asm:27153-27173): Ctrl_2_logical replaces the pad,
+        // pressing Right on every 32nd Level_frame_counter low byte.
+        tails.setControlLocked(true);
+        tails.setForcedInputMask((GameServices.level().getFrameCounter() & 0x1F) == 0
+                ? AbstractPlayableSprite.INPUT_RIGHT : 0);
+        if (!tails.getAir()) {
+            // The landing frame still moves with this Ctrl_2_logical.
+            tailsSoloFlyInRoutine = 6;
+            tails.setForcedAnimationId(-1);
+            tails.setAnimationId(0);
+            tails.setXSpeed((short) 0);
+            tails.setYSpeed((short) 0);
+            tails.setGSpeed((short) 0);
+            // move.b #1<<Status_InAir,status(a0): the shipped routine marks the
+            // landed body airborne again (FixBugs-independent).
+            tails.setAir(true);
+            tails.setRolling(false);
+            tails.setMoveLockTimer(0);
+            tails.setHighPriority(false);
+        }
     }
 
     private void primeSidekickIntroPresentation() {
@@ -2571,6 +2643,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
         buf.put((byte) (introFallActiveOnPlayer  ? 1 : 0));
+        buf.put((byte) tailsSoloFlyInRoutine);
         buf.put((byte) (introFallActiveOnSidekick ? 1 : 0));
         buf.put((byte) (hczPendingPostTransitionCutscene ? 1 : 0));
         buf.put((byte) (mgzPendingPostTransitionRelease  ? 1 : 0));
@@ -2660,6 +2733,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         Sonic3kLoadBootstrap.Mode mode = (modeOrdinal < modes.length) ? modes[modeOrdinal] : Sonic3kLoadBootstrap.Mode.NORMAL;
         bootstrap = new Sonic3kLoadBootstrap(mode, bootstrap.introStartPosition());
         introFallActiveOnPlayer           = buf.get() != 0;
+        tailsSoloFlyInRoutine             = buf.get() & 0xFF;
         introFallActiveOnSidekick         = buf.get() != 0;
         hczPendingPostTransitionCutscene  = buf.get() != 0;
         mgzPendingPostTransitionRelease   = buf.get() != 0;

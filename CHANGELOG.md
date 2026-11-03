@@ -19,6 +19,9 @@ readable and historical versions can be referenced directly.
   entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
   objects (the DDZ fly-in, the shrine) have already moved.
 
+- Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
+  fly-in: CPU-held flight to the right until landing.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
 - HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.
