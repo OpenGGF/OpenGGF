@@ -6,6 +6,12 @@ phase and rewind checks; the [LRZ1 matrix](../architecture/validation/levels/s3k
 records big-door off-screen completion and shake release. These are bounded local
 obligations; the existing broader route/configuration gaps remain open.
 
+MGZ Bubbles activation (2026-11-03): the
+[MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#bubbles-offscreen-continuation--2026-11-03)
+records the wait/restore/init boundary, object restore/forward regression and
+bounded native-pair trace evidence. Wider route, donor, viewport and team
+obligations remain inherited.
+
 ## Shared act-reload shield ownership
 
 The 2026-11-02 shield continuity regression

@@ -9,6 +9,10 @@ Unreleased. The earlier development themes remain in
   finish opening off screen before unloading. Both corrections preserve Tails CPU
   respawn timing at the native visibility boundary.
 
+- MGZ Bubbles waits until the next object pass after its offscreen continuation
+  resumes, preserving native movement and collision timing. This restores Tails'
+  same-frame hurt response after Sonic destroys the badnik.
+
 - Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
 
 - FBZ2’s spiked-arm boss uses the shipped rotation expression and correct pilot-light
