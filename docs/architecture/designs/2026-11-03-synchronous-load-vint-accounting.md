@@ -169,3 +169,16 @@ The old cross-chain survey was inspected, not rerun. No runtime change remains,
 so the conditional full-profile gate was not invoked. Temporary probes were
 removed; staged whitespace, local links and strict disassembly citations were
 checked. No green replay or full-profile pass is claimed.
+
+
+## Bonus-entry follow-up
+
+The [source-tail experiment](../audits/2026-11-03-s3k-load-clock-causal-accounting.md#bonus-entry-ownership-follow-up)
+recovered 20 admission-clock ticks by retaining recorded readiness during native
+bonus loading, but is rejected as a standalone correction. The totals leave the
+measured 33 synchronous-load interrupts, while each bonus title remains one tick
+short and its terrain wait becomes one tick long. Matching totals therefore do
+not establish correct phase ownership. Mega reaches an earlier ownership failure,
+and the independent cold-start control does not reach its bonus. Both adapters,
+title-gate ordering and a valid continuous second movie remain qualification
+obligations. This proposal remains deferred; no runtime load price is introduced.

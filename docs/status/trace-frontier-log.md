@@ -123134,3 +123134,38 @@ retain the known stage_exit assertion failure (one test/failure, zero
 errors/skips); the Slots report remains 7891 at first non-camera row268
 `y_speed`. No runtime correction, fixture replacement or green trace claim.
 See the [phase census, commands and limits](../architecture/audits/2026-11-03-s3k-load-clock-causal-accounting.md).
+
+
+## 2026-11-03 — Bonus-entry source-tail readiness experiment rejected
+
+Base `278401593`; evidence and exact rejected-patch identity are in the
+[load-clock causal audit](../architecture/audits/2026-11-03-s3k-load-clock-causal-accounting.md#bonus-entry-ownership-follow-up).
+Gameplay comparison closes at `levelLoopRowCount()`, but bonus fade/title work
+still occupies recorded source rows. Declaring a gap and seeking the destination
+before that load marks production terrain jobs unrepresented.
+
+A timing-only drive to the complete source endpoint fails at Mega BK2 cursor
+5565: BONUS_STAGE gameplay has begun while the level segment remains open.
+The refined drive stops at native bonus release or source coverage end. Its
+first-Gumball job-membership witness passes, and admission clocks become
+5524/6930/9064, versus native 5529/6957/9097. The cumulative deficit is now
+5/27/33. This does not prove all explicit phases: titles remain 69/80/82 versus
+native 70/80/83, while terrain waits become 11/26/27 versus native 10/26/26.
+The one-tick bonus phase errors cancel in the admission totals.
+
+Completed refined command: the audit's display-free JDK25/EGL environment with
+`python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kMegaRunChain,TestS3kKnucklesSuperEmeraldRunChain#firstPachinkoLoadRetainsRecordedSourceAuthority' '-Ds3k.rom.path=<absolute original ROM>' test`.
+Result 3 tests, 2 failures, 0 errors/skips. Mega now loses Slots production
+ownership in TITLE_CARD at shared cursor 10086; first noncamera difference is
+row 264, rings 75/74, versus original row 268, y_speed 0/-$0400. Its partial 6315
+errors through row 943 are not comparable to the longer original 7891 total.
+The independent super-emerald movie's segment 4 cold start fails before Pachinko
+at cursor 22129, with rings 3/0 already different on row 0; it is not a valid
+continuous-carry witness. No missing state was hydrated and no comparison was
+weakened.
+
+All candidate Java and temporary prints were removed. This is an investigation,
+not a green campaign or a landed timing fix. Both adapter handoffs, the early
+bonus title gate, semantic synchronous-load clocks and a distinct continuous
+BK2 remain open. Exact queue and total wall time are unknown; credited refined
+Maven execution was 57.244s after a last observed 602s queue wait.

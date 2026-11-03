@@ -196,6 +196,113 @@ No runtime correction is included.
 The [earlier ledger proposal](../designs/2026-11-03-synchronous-load-vint-accounting.md)
 remains deferred, and cannot absorb the explicit-wait discrepancies.
 
+## Bonus-entry ownership follow-up
+
+The follow-up starts from `278401593`. Headless source comparison ends at
+`levelLoopRowCount()`, while the descriptor retains the full recorded
+`rowCount()`. Those are different boundaries. On bonus entry,
+`completeSourceTailReportingOnFailure()` completes the gameplay portion;
+`prepareIntoInterior()` then declares an unrepresented timing gap and seeks
+the destination offset before waiting for its title load. That skips the
+source's represented load rows while production is still submitting work.
+`PhysicalMovieRowDrive` already supports preparing and publishing one such
+physical movie row without inventing a V-int.
+
+A rejected diagnostic detached gameplay comparison at its existing logical
+boundary and retained the source timing schedule while driving every remaining
+source row. It completed one Mega test with one assertion failure, no errors
+or skips: segment 0 lost production ownership in `BONUS_STAGE` at shared BK2
+cursor 5565, before the source coverage end 5569. This is kill evidence for
+blindly driving to `rowCount()`: native title release can happen before that
+recorded endpoint, and another production iteration then runs bonus gameplay
+against source-tail input. It does not justify weakening the ownership check,
+waiting a fitted number of frames, or replaying recorded gameplay values.
+
+The refined experiment retained source readiness only while native fade/title
+production still owned the load, bounded by actual source coverage. It stopped
+at native bonus-mode release, then used the existing close/gap/destination-offset
+handoff. No gameplay values, budgets, completion identities or service boundaries
+were changed. The production timing service and replay port were unchanged.
+
+The completed refined replay ran three tests: the bounded first-Gumball
+membership witness passed; the original Mega chain and a cold-start control
+from the independent super-emerald movie failed. There were no errors or skips.
+The two bonus terrain submissions now observed active recorded-row authority.
+Their actual queue jobs remained represented in the passing Gumball witness.
+
+| Measured boundary | Native | Original engine | Refined experiment |
+| --- | ---: | ---: | ---: |
+| Gumball pre-loop setup / engine admission | 5529 | 5518 | 5524 |
+| Returned AIZ pre-loop setup / engine admission | 6957 | 6924 | 6930 |
+| Slots pre-loop setup / engine admission | 9097 | 9044 | 9064 |
+
+The experiment gains 6 and 14 ticks on the two bonus entries, 20 overall.
+Its cumulative admission deficits are 5, 27 and 33; the new per-load losses
+are exactly the measured 5, 22 and 6 zero-routine interrupts. This scalar
+agreement does **not** certify the explicit phases:
+
+| Explicit span | Gumball native / experiment | AIZ return native / experiment | Slots native / experiment |
+| --- | ---: | ---: | ---: |
+| Locked-title waits | 70 / 69 | 80 / 80 | 83 / 82 |
+| Terrain waits | 10 / 11 | 26 / 26 | 26 / 27 |
+
+The terrain markers are still sampled before their enclosing tick: completed
+handoff clocks are 5513, 6904 and 9037. Release clocks are 5524, 6930 and 9064.
+Both bonus titles remain one tick short; recorded readiness adds one extra
+terrain tick that cancels each title error in the admission total. The loss of
+row authority explains a real queue-admission defect, but repairing that alone
+is not evidence that title ownership is correct.
+
+The Mega experiment stops earlier than the original stage-exit-boundary failure:
+segment 3 loses production ownership in `TITLE_CARD`, shared BK2 cursor 10086,
+with the returned AIZ world already loaded. Slots first differs at row 264,
+`rings` ROM 75 / engine 74, versus the original first noncamera mismatch at
+row 268, `y_speed` ROM 0 / engine -$0400. The new Slots report's `errorCount`
+6315 covers only the partial prefix through row 943; it cannot be ranked against
+the original 7891 over the longer comparison. Initial and returned AIZ gameplay
+reports remain zero-error partial reports, not completed physical-tail proofs.
+
+The independent movie control cold-started at segment 4 `aiz_3` of
+`s3k-knuckles-complete-superemeralds`. It fails before reaching Pachinko:
+source ownership is lost at BK2 cursor 22129 after an AIZ act change. Its first
+comparison already differs at row zero, rings ROM 3 / engine 0. Therefore this
+cold start is not a valid continuous-carry control and supplies no generalization
+claim for the bonus-entry correction. Do not hydrate its missing carry state to
+make the experiment pass; qualify from continuous production instead.
+
+All candidate Java changes and the temporary clock prints were removed.
+The exact rejected diagnostic patch remains in the owned external directory,
+SHA-256 `3ea63d6152493350caf6c67aa7e4cb5e8ea0142c70bbc41febd602682db62296`.
+It applies to `278401593`, introduces the bounded witness methods named above,
+and is not part of delivered engine or test code. Its refined Maven selection
+was `-Dtest=TestS3kMegaRunChain,TestS3kKnucklesSuperEmeraldRunChain#firstPachinkoLoadRetainsRecordedSourceAuthority`,
+using the reproduction environment below. Maven execution was 57.244 seconds;
+the last observed queue wait was 602 seconds, so exact queue and total wall time
+are unknown. The rejected full-tail diagnostic executed for 101 seconds, after
+a last observed queue wait of 1083 seconds. A preparatory invocation stopped at
+test compilation on an incorrect enum name; after correction, build-only
+`test-compile` passed in 32.962 seconds before the credited replay.
+
+The production launcher is a separate adapter obligation. Its completion test
+uses `comparator.isComplete()`, and title admission can explicitly deactivate
+represented row authority after the outer physical driver prepared it. The
+headless correction alone cannot establish production parity. A production
+correction must preserve the active physical owner through title admission and
+complete semantic destination admission before the next bonus gameplay tick.
+
+The next correction needs three separately verified owners: the bonus title's
+one-tick-early producer gate; semantic accounting for direct decode/layout,
+unmask service and initial-object work; and one source-tail handoff contract
+implemented by both adapters. Preserve cache-hit equivalence and production job
+identity. None calls for CPU/cycle simulation or a fitted per-load delay. The
+5/22/6 census remains evidence about this movie, not runtime constants. Require
+phase correctness and a distinct continuous BK2 before promoting the handoff.
+
+Delivery includes documentation only, on updated `develop` base `5e534b0c2`.
+Upstream adds opt-in network tests and verified-ROM discovery tooling; it changes
+none of the gameplay or replay-owner Java measured by these probes. The rejected
+experiments remain attributed to `278401593` plus their diagnostic patches.
+
 ## Reproduction and verification
 
 The engine probes only add prints at `GameLoopPlcLifecycle.runLogicalIteration`
