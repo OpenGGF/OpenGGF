@@ -109,5 +109,24 @@ represented.
 
 ## Validation
 
-See the lane report for the queued commands, focused tests and three-profile
-before/after comparison.
+Full `-Ptrace-replay`, `-Ptrace-replay-r7` and `-Ptrace-segments` runs were
+made on `e6a8b4a34` and on `dfd7716ae`. They gave 886/117/70 tests with
+10F 1E 7S / 84F 11E / 46F 8E on both commits. Every test outcome, message and
+trace report is identical except Mega's Slots segment 3. A temporary
+comparator error dump was used, then removed. Mega segments 0-2 are identical.
+For Slots, 6917 errors are removed, 6531 added and 974 retained. The first
+difference removes row 268 `y_speed`, and the first addition is row 300
+`y_speed`. Every added error lies on a row that already had a base error.
+At row 300, ROM player/camera is `$0460/$0430`, speeds 0/0, camera
+`$03C0/$03C0`. The base engine is already at `$046A/$035A`, speeds
+`$00B8/-$0940`, camera `$03CA/$02EA`. After the change only `y_speed`
+(`$0400`) differs.
+
+`TestS3kFreshLevelReleaseVint` covers both drivers. With the `GameLoop` tick
+removed, its live-loop case fails (127 versus 128). The recording-driver case
+passes because that driver already counted the V-int. The rejected trial's full
+profiles regressed the six classes above; its focused recheck and attribution
+runs are summarised in the rejected row. Focused unit and keep-green classes
+pass (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` and title/PLC
+owners).
