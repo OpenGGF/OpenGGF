@@ -86,23 +86,8 @@ final class GameLoopBonusStageSession {
      * Captures current state, fades to black, loads the bonus zone.
      */
     void enterBonusStage(BonusStageType type) {
-        if (host.currentMode() != GameMode.LEVEL || !host.runPolicy().bonusStageEntry()) {
-            return;
-        }
-
-        BonusStageProvider provider = host.module().getBonusStageProvider();
-        if (!provider.hasBonusStages()) {
-            LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
-            return;
-        }
-
-        if (type == null || type == BonusStageType.NONE) {
-            LOGGER.fine("Bonus stage entry ignored: NONE type");
-            return;
-        }
-
-        if (host.fade().isActive()) {
-            LOGGER.fine("Bonus stage entry ignored: fade already in progress");
+        BonusStageProvider provider = admittedBonusStageProvider(type);
+        if (provider == null) {
             return;
         }
 
@@ -132,6 +117,30 @@ final class GameLoopBonusStageSession {
                 () -> doEnterBonusStage(provider, type, savedState));
 
         LOGGER.info("Starting fade-to-black for Bonus Stage " + type);
+    }
+
+    /** The bonus provider when an entry request may start, otherwise null. */
+    private BonusStageProvider admittedBonusStageProvider(BonusStageType type) {
+        if (host.currentMode() != GameMode.LEVEL || !host.runPolicy().bonusStageEntry()) {
+            return null;
+        }
+
+        BonusStageProvider provider = host.module().getBonusStageProvider();
+        if (!provider.hasBonusStages()) {
+            LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
+            return null;
+        }
+
+        if (type == null || type == BonusStageType.NONE) {
+            LOGGER.fine("Bonus stage entry ignored: NONE type");
+            return null;
+        }
+
+        if (host.fade().isActive()) {
+            LOGGER.fine("Bonus stage entry ignored: fade already in progress");
+            return null;
+        }
+        return provider;
     }
 
     /**

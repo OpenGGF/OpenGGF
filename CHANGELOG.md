@@ -21,7 +21,16 @@ readable and historical versions can be referenced directly.
 - The Lava Reef boss act (`$1600`) starts with the native falling intro on a
   fresh entry, for every character.
 
+- Fresh S3K trace segments derive the entry camera from the ROM start-location
+  entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
+  objects (the DDZ fly-in, the shrine) have already moved.
+
+- Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
+  fly-in: CPU-held flight to the right until landing.
+
 - S3K fresh level loads count the terrain wait's final VBlank in the live game loop, as in the ROM.
+
+- Doomsday queues its misc and boss Master Emerald art through the native module queue, and the S3K ending load queues its terrain art and waits for it before the ending scene starts.
 
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
@@ -95,7 +104,8 @@ Upright S3K Act 2 capsules now also use normal explosions and the break sound.
   and snow corridor, including ICZ2’s run toward LBZ1.
 
 - Default Player 1 Start to Enter and Player 2 Start to Backspace; unify live Start with the visible pause,
-  preventing a second native pause when resuming.
+  preventing a second native pause when resuming. A mod scene that reads the Start key itself now owns
+  it, so one Enter press no longer also counts as Start; pads still send Start.
 
 S3K elemental shields keep animating after returning from Bonus/Special stages.
 Their frame publication, animation switches and invincibility/blank-player pauses

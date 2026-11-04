@@ -15,6 +15,22 @@ final class DdzObjectSupport {
     private DdzObjectSupport() {
     }
 
+    /**
+     * A DDZ {@code Queue_Kos_Module} call with no readiness wait: the global module owner
+     * claims the job, so the submitting sprite may advance or delete. The ROM routine has
+     * no full-FIFO branch, so a rejected submission is an engine fault.
+     */
+    static void queueGlobalModule(ObjectServices services, int source, int tile, String what) {
+        try {
+            if (!com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.queueGlobalPatternModule(
+                    services, source, tile * 32)) {
+                throw new IllegalStateException(what + " module FIFO is full");
+            }
+        } catch (IOException failure) {
+            throw new java.io.UncheckedIOException("Unable to submit " + what + " art", failure);
+        }
+    }
+
     static DdzZoneRuntimeState ddz(ObjectServices services) {
         var registry = services.zoneRuntimeRegistry();
         return registry == null ? null : S3kRuntimeStates.currentDdz(registry).orElse(null);

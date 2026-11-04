@@ -44,6 +44,43 @@ class TestTitleCardManagerNativeExitTiming {
     }
 
     @Test
+    void onlyTheBackgroundOutInitIterationRunsTheLevelScrollAndEventStep() {
+        TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
+        manager.beginOmittedPresentationLeave(3, 0);
+        // The pass after the load (s2.asm:5006) runs objects only.
+        assertTrue(manager.shouldRunPlayerPhysics());
+        assertFalse(manager.runsLevelScrollAndEventsThisLockedPass());
+        manager.completeLockedIteration();
+        int scrollPasses = 0;
+        for (int wait = 1; wait <= 25; wait++) {
+            manager.update();
+            boolean scrolls = manager.runsLevelScrollAndEventsThisLockedPass();
+            assertEquals(wait == 17, scrolls, "leave iteration " + wait);
+            if (scrolls) scrollPasses++;
+            manager.completeLockedIteration();
+        }
+        assertEquals(1, scrollPasses, "the leave loop reaches DeformBgLayer once");
+    }
+
+    @Test
+    void theArrivalLoopSpendsOneMoreVblankBeforeTheZoneTileUpload() throws Exception {
+        TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
+        setField(manager, "state", TitleCardState.DISPLAY);
+
+        // The pattern cue is empty: Level_TtlCard's re-loop test passes on this
+        // iteration and the routine waits for one more VBlank (s2.asm:4925-4926).
+        manager.update();
+        assertEquals(TitleCardState.ZONE_TILE_UPLOAD, manager.getState());
+        assertFalse(manager.shouldRunPlayerPhysics());
+
+        // With no zone art loaded the upload itself costs nothing, so the next
+        // VBlank's iteration is the s2.asm:5006 object pass.
+        manager.update();
+        assertEquals(TitleCardState.EXIT_LEFT_SWOOSH, manager.getState());
+        assertTrue(manager.shouldRunPlayerPhysics());
+    }
+
+    @Test
     void releaseFollowsTheTwentySixthObjectPassWithoutAnotherVblank() throws Exception {
         TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
         setField(manager, "state", TitleCardState.ZONE_TILE_UPLOAD);

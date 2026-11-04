@@ -258,13 +258,16 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
-        if (objectManager != null) {
-            objectManager.clearRidingObject(player);
-        }
 
         // ROM Obj26_Break only forces the character airborne when the monitor's
-        // own standing/pushing bits were set for that character.
+        // own standing/pushing bits were set for that character
+        // (docs/s2disasm/s2.asm:25675-25688). Touch_Monitor's break branch
+        // otherwise only negates y_vel (s2.asm:85463-85473), so a roller
+        // carried by another platform keeps that support.
         if (touchingMonitorAsSolid) {
+            if (objectManager != null) {
+                objectManager.clearRidingObject(player);
+            }
             player.setOnObject(false);
             player.setPushing(false);
             player.setAir(true);

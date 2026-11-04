@@ -2027,6 +2027,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_DDZ_MISC = 0x02DB;
     /** {@code ArtKosM_BossMasterEmerald} / {@code Map_BossMasterEmerald}. */
     public static final int ART_KOSM_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    /** Native {@code ArtTile_BossMasterEmerald}, loc_819CE's Queue_Kos_Module destination. */
+    public static final int ARTTILE_BOSS_MASTER_EMERALD = 0x04D0;
     /** Two-entry infinite Run_PalRotationScript tables, DEZ line 2 / DDZ line 3. */
     public static final int PAL_DEZ_MASTER_EMERALD_SCRIPT_ADDR = 0x813AA;
     public static final int PAL_DDZ_MASTER_EMERALD_SCRIPT_ADDR = 0x8141E;

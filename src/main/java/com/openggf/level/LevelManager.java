@@ -3433,6 +3433,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
         if (presentationSuppressed) {
+            var suppressedOwner = activeGameModule().getTitleCardProvider();
+            if (ctx.isQueueFreshLevelRuntimeArt()
+                    && suppressedOwner instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                    && boundary.freshLevelTitleOwnerDeletesAtInit(currentZone, currentAct)) {
+                // The owner deletes itself without presentation, but the Level
+                // routine's title and terrain waits still precede gameplay.
+                suppressedOwner.requestFreshLevelRuntimeArtHandoff(ctx.getLevelIndex());
+                requestTitleCard(currentZone, apparentAct);
+                return;
+            }
             // No title-card object exists on this path, so there is no residual
             // Obj_TitleCardWait2 owner to retire before gameplay begins.
             completeInitialTitleCardPresentation();
@@ -3965,11 +3975,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @throws IOException if level data loading fails
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
-        actTransitionExecutor.execute(request);
+        seamlessTransitionExecutor.publishLevelFrameCompletion(actTransitionExecutor.execute(request));
     }
 
-    void markActTransitionOscillationAdvancedDuringFrame() {
-        actTransitionExecutor.markOscillationAdvancedDuringFrame();
+    /** Executes a driver-owned transition-only row without publishing level-frame effects. */
+    void reloadActAtFrameBoundary(SeamlessLevelTransitionRequest request) throws IOException {
+        actTransitionExecutor.execute(request);
     }
 
     /**
@@ -3978,22 +3989,22 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * this frame's ordinary loop-tail advance.
      */
     public boolean consumeActTransitionExecutedDuringFrame() {
-        return actTransitionExecutor.consumeExecutedDuringFrame();
+        return seamlessTransitionExecutor.consumeExecutedDuringFrame();
     }
 
     /**
      * Consumes the one-shot rewind boundary published by a completed in-place
-     * act reload. Frame-top seamless transitions consume this signal through
-     * {@link LevelSeamlessTransitionExecutor}; reloads executed inside the
+     * act reload. Frame-top seamless transitions publish no level-frame marker;
+     * their driver owns the transition-only boundary. Reloads executed inside the
      * level-event pass leave it for {@code GameLoop} to apply after recording
      * the rest of the logical frame.
      */
     public boolean consumeActTransitionRewindBoundaryDuringFrame() {
-        return actTransitionExecutor.consumeRewindBoundaryDuringFrame();
+        return seamlessTransitionExecutor.consumeRewindBoundaryDuringFrame();
     }
 
     public boolean consumeActTransitionOscillationAdvancedDuringFrame() {
-        return actTransitionExecutor.consumeOscillationAdvancedDuringFrame();
+        return seamlessTransitionExecutor.consumeOscillationAdvancedDuringFrame();
     }
 
     /** @see LevelTransitionCoordinator#hasPendingLevelExit() */
@@ -4672,7 +4683,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         apparentAct = 0;
         frameCounter = 0;
         seamlessTransitionExecutor.resetFrameCounterBridge();
-        actTransitionExecutor.resetFrameMarkers();
+        seamlessTransitionExecutor.resetFrameMarkers();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -4703,7 +4714,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void resetFrameCounter() {
         this.frameCounter = 0;
         seamlessTransitionExecutor.resetFrameCounterBridge();
-        actTransitionExecutor.resetFrameMarkers();
+        seamlessTransitionExecutor.resetFrameMarkers();
     }
 
     public void setClearColor() {
@@ -4823,11 +4834,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /**
      * Applies a seamless transition immediately.
      * <p>
-     * Routes through {@link #executeActTransition} for RELOAD types,
-     * which bypasses the profile system and matches ROM behavior.
+     * Runs RELOAD types as driver-owned frame-boundary operations, bypassing
+     * the profile system without publishing effects into the next level frame.
      */
     public void applySeamlessTransition(SeamlessLevelTransitionRequest request) {
-        seamlessTransitionExecutor.execute(request, true);
+        seamlessTransitionExecutor.execute(request);
     }
 
     /** Executes a ScreenEvents-owned reload before that same frame's tail work. */
