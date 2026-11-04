@@ -32,7 +32,7 @@ The initial native/default binding covers all three solo mains at 320; the finit
 
 ## Native P1 vertical-bound operand — 2026-10-21
 
-Native `CNZ2_ScreenEvent` (`sonic3k.asm:107927..107943`, reference commit
+Native `CNZ2_ScreenEvent` (`sonic3k.asm:107932..107943`, reference commit
 `044fa46725c71187399e13f5ddb70e11d32dc024`, blob
 `0f10a373ff0e3d5c0033ed7d13c678bcb927c7b0`) reads unsigned
 `Player_1+x_pos`. Below `$0940` it writes minY `$0580`; `$0940..$45FF`

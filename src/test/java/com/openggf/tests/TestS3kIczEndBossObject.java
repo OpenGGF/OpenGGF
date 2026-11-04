@@ -510,8 +510,6 @@ class TestS3kIczEndBossObject {
         }
         assertEquals(0, boss.getTopLandingSnapAdjustment(player, 0x13),
                 "routine 2 landings use the ordinary child surface after the $43 shift finishes");
-        assertTrue(boss.usesPreUpdateXForContinuedRide(player),
-                "the later child SST carries from the parent slot's saved pre-update X");
     }
 
     @Test

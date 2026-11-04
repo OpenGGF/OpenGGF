@@ -1691,7 +1691,7 @@ merge.
 ### Drown routine export (3475)
 
 `AirCountdown_ReduceAir` writes routine $C to the drowning player, and
-`loc_1857C` later writes 6 (sonic3k.asm:33539-33575). S1 and S2 keep routine 2
+`loc_1857C` later writes 6 (sonic3k.asm:33579-33615). S1 and S2 keep routine 2
 while drowning (`0A LZ Drowning Countdown.asm`:266; s2.asm:42172).
 
 The exporter now asks the active module's `TracePlaybackProfile` for the byte:
@@ -1821,7 +1821,7 @@ The 3832 monitor at ($2D9C,$0270), type RINGS, subtype 3:
 
 - Native and engine both break it at 3800 (engine print-only diagnostic).
 - Natively the award lands at 3832. The broken shell (`loc_1D61A` via
-  `Obj_MonitorAnimate`, sonic3k.asm:40504-40516) is deleted by
+  `Obj_MonitorAnimate`, sonic3k.asm:40549-40561) is deleted by
   `Sprite_OnScreen_Test`, but `Obj_MonitorContents` is a separate object
   that completes its rise and award.
 - The engine keeps the icon state machine and the award in the shell, and

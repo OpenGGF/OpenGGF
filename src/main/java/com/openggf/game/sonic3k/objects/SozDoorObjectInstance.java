@@ -24,11 +24,11 @@ public final class SozDoorObjectInstance extends AbstractObjectInstance
         int delta=(spawn.renderFlags() & 1)==0 ? -displacement : displacement;
         if (horizontal()) x=(spawn.x()+delta)&0xFFFF;
         else y=(spawn.y()+delta)&0xFFFF;
-        checkpointAll();
+        // loc_41C16 loads the current x_pos into d4 for its full-solid call (sonic3k.asm:87054-87064).
+        checkpointAll(getX());
     }
     private boolean horizontal() { return (spawn.subtype() & 0xF0)!=0; }
     // loc_41C16 captures d4 after movement; horizontal doors do not carry X.
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public SolidObjectParams getSolidParams() { return horizontal() ? SolidObjectParams.of(75,12,13) : SolidObjectParams.of(23,64,65); }

@@ -40,7 +40,7 @@ bookkeeping row.
 
 | First frame | Field | Root reading |
 |---|---|---|
-| f0–f22 | `*_present`, all player fields | ROM's `SpecialStage:` entry runs `Pal_FadeToWhite` first (`s2.asm:6546`), a 22-iteration `WaitForVint` loop (`s2.asm:3570-3582`) executed with `Game_Mode` already `0x10` and the player object slots still empty; the engine spawns both players immediately |
+| f0–f22 | `*_present`, all player fields | ROM's `SpecialStage:` entry runs `Pal_FadeToWhite` first (`s2.asm:6546`), a 22-iteration `WaitForVint` loop (`s2.asm:3955-3967`) executed with `Game_Mode` already `0x10` and the player object slots still empty; the engine spawns both players immediately |
 | f0 | `speed_factor` exp 0 act 12 | ROM sets player object ids only at `s2.asm:6628-6634` and `SS_New_Speed_Factor=$C0000` at `s2.asm:6640`, all after the fade; engine initializes 12 at construction. (The PLC/track wait loops at `s2.asm:6644-6658` run *after* object creation — they are not the source of this window) |
 | f4 | `track_anim_frame` +1 | track animation starts on the wrong phase relative to mode entry |
 | f195 | `current_segment` 0 vs 1 | engine track playback runs ahead (accumulated phase shift) |

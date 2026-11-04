@@ -78,7 +78,7 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
         // LevelOnly_Object_RAM (docs/s2disasm/s2.constants.asm:1144-1152).
         // Obj05 reads `anim(a2)` at its own late execution point
         // (docs/s2disasm/s2.asm:41735), so the Walk animation this landing
-        // writes via Sonic_ResetOnFloor_Part2 (docs/s2disasm/s2.asm:37780-37786)
+        // writes via Sonic_ResetOnFloor_Part2 (docs/s2disasm/s2.asm:38127-38133)
         // must already be visible to it. Running the oil surface in the
         // post-camera level-event pass instead left Obj05 reading the stale Roll
         // anim on the landing frame and minted a directional DPLC transfer the

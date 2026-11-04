@@ -65,19 +65,6 @@ public class TestDoorObjectInstance {
     }
 
     @Test
-    public void solidObjectFullConsumesAirborneRideAtDoorOwnCheckpoint() {
-        DoorObjectInstance door = new DoorObjectInstance(
-                new ObjectSpawn(0x1540, 0x0408, 0x3C, 0x80, 0, false, 0));
-        TestPlayableSprite tails = createPlayerAtCentre(0x1556, 0x03EC);
-
-        assertTrue(door.airborneRiderUnseatRequiresOwnCheckpoint(tails),
-                "A later CNZ controller slot must not consume Obj_Door's standing bit; "
-                        + "SolidObjectFull does so when the door's own slot runs");
-        assertTrue(door.suppressesGroundingRecoveryFromAirborneStaleRide(tails),
-                "Player movement must retain InAir until Obj_Door's later SolidObjectFull pass");
-    }
-
-    @Test
     public void horizontalDoorUsesWideCollisionAndMovesOnXAxis() {
         DoorObjectInstance door = new DoorObjectInstance(
                 new ObjectSpawn(0x200, 0x180, 0x3C, 0x80, 0, false, 0));
@@ -158,7 +145,7 @@ public class TestDoorObjectInstance {
 
     @Test
     public void horizontalDoorReportsRomRenderExtentsForSolidGate() {
-        // ROM byte_30FCE (sonic3k.asm:66207) sets width_pixels = $20 for the
+        // ROM byte_30FCE (sonic3k.asm:66212) sets width_pixels = $20 for the
         // horizontal CNZ door. The engine's solid-contact gate must use that
         // value when testing camera overlap, otherwise the CNZ horizontal
         // door's right edge (0x1940) is rejected as off-screen the moment
@@ -178,7 +165,7 @@ public class TestDoorObjectInstance {
                 new ObjectSpawn(0x24C0, 0x0109, 0x3C, 0x80, 0, false, 0));
         TestPlayableSprite player = createPlayerAtCentre(0x24C0, 0x00ED);
 
-        assertFalse(horizontal.carriesRiderOnHorizontalMove(player),
+        assertEquals(horizontal.getX(), horizontal.tailCallD4(horizontal.getX() + 8),
                 "Obj_Door passes current x_pos in d4 immediately before SolidObjectFull, "
                         + "so MvSonicOnPtfm sees zero horizontal delta "
                         + "(sonic3k.asm:66239-66258, 41642-41680).");

@@ -56,6 +56,7 @@ public final class StageplayRouteContract {
         document.worldCommands().forEach(a -> ids.add(a.id()));
         document.puppets().forEach(p -> p.commands().forEach(c -> ids.add(c.id())));
         document.objectActors().forEach(p -> p.commands().forEach(c -> ids.add(c.id())));
+        document.inputTracks().forEach(t -> ids.add(t.id()));
         return ids;
     }
 

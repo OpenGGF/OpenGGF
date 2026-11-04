@@ -18,7 +18,7 @@ class TestTraceRunDynamicArtGapJournal {
 
     @Test
     void requiresObservedCloseBeforeGapAndComparesObservedDestinationOpen() {
-        DynamicArtLifecycleService lifecycle = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService lifecycle = new DynamicArtLifecycleService(null);
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         TraceRunDynamicArtGapJournal journal =
@@ -35,7 +35,7 @@ class TestTraceRunDynamicArtGapJournal {
 
     @Test
     void terminalTailClosesWithoutFabricatingADestinationSegment() {
-        DynamicArtLifecycleService lifecycle = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService lifecycle = new DynamicArtLifecycleService(null);
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         TraceRunDynamicArtGapJournal journal =

@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.SolidCall;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 
@@ -52,29 +53,42 @@ final class ObjectExecutionController {
         SolidExecutionRegistry registry = objects.solidExecutionRegistry();
         var frame = original != null ? com.openggf.game.solid.SolidExecutionFrames.capture(registry) : null;
         SolidExecutionMode mode = null;
+        SolidEntryRegisters entry = null;
         if (instance instanceof SolidObjectProvider provider) {
             SolidExecutionMode providerMode = objects.callObjectCallback(instance, provider::solidExecutionMode);
             if (inlineSolidResolution || providerMode == SolidExecutionMode.MANUAL_CHECKPOINT) {
                 mode = providerMode;
+                // d4 for every solid call this routine makes: x_pos when the
+                // routine is entered, before it moves its body.
+                entry = SolidEntryRegisters.capture(objects, instance, provider);
             }
         }
+        SolidEntryRegisters entryRegisters = entry;
         ObjectSolidExecutionContext.Resolver resolver =
                 mode == SolidExecutionMode.MANUAL_CHECKPOINT
                         ? new ObjectSolidExecutionContext.Resolver() {
                             @Override
-                            public SolidCheckpointBatch resolveNow() {
+                            public SolidCheckpointBatch resolve(SolidCall call) {
                                 InitialObjectDispatchController.requireCurrent(original);
-                                var batch = objects.processManualSolidCheckpoint(instance, player, sidekicks, solidPostMovement);
+                                var batch = objects.processManualSolidCheckpoint(
+                                        instance, player, sidekicks, solidPostMovement,
+                                        entryRegisters.withCall(call));
                                 InitialObjectDispatchController.requireCurrent(original);
                                 return batch;
                             }
 
                             @Override
-                            public SolidCheckpointBatch resolvePlayer(PlayableEntity participant) {
+                            public SolidCheckpointBatch resolvePlayer(PlayableEntity participant, SolidCall call) {
                                 InitialObjectDispatchController.requireCurrent(original);
-                                var batch = objects.solidContacts().processParticipantCheckpoint(instance, participant, solidPostMovement);
+                                var batch = objects.solidContacts().processParticipantCheckpoint(
+                                        instance, participant, solidPostMovement, entryRegisters.withCall(call));
                                 InitialObjectDispatchController.requireCurrent(original);
                                 return batch;
+                            }
+
+                            @Override
+                            public SolidCall entryCall() {
+                                return entryRegisters.call();
                             }
                         }
                         : null;
@@ -100,7 +114,8 @@ final class ObjectExecutionController {
             }
             if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE
                     && !objects.callObjectCallback(instance, instance::isDestroyed)) {
-                var checkpoint = objects.processCompatibilitySolidCheckpoint(instance, player, sidekicks, solidPostMovement);
+                var checkpoint = objects.processCompatibilitySolidCheckpoint(
+                        instance, player, sidekicks, solidPostMovement, entryRegisters.forTailCall());
                 InitialObjectDispatchController.requireCurrent(original);
                 registry.publishCheckpoint(checkpoint);
             }

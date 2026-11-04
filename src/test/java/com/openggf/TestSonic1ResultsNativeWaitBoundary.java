@@ -2,7 +2,6 @@ package com.openggf;
 
 import com.openggf.control.InputHandler;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
@@ -69,9 +68,9 @@ class TestSonic1ResultsNativeWaitBoundary {
         var service = h.mode().dynamicArtLifecycle();
         // Independent ROM work at the ordinary production staging port. The
         // continuous movie separately proves the player's actual mapping producer.
-        service.observePlayerDplc(GameId.S1, "sonic", mapping, art.get(mapping));
+        service.observePlayerDplc("sonic", mapping, art.get(mapping));
         var prepared = service.capture();
-        assertEquals(mapping, prepared.s1Preparation().mappingFrame());
+        assertEquals(mapping, prepared.stagedPreparation().mappingFrame());
         List<GapEdge> history = List.copyOf(service.gapEdges());
         var registry = h.mode().getRewindRegistry();
         var saved = registry.capture();
@@ -79,13 +78,13 @@ class TestSonic1ResultsNativeWaitBoundary {
         assertTrue(saved.containsKey(DynamicArtLifecycleService.REWIND_KEY));
         var objects = h.mode().getLevelManager().getObjectManager();
         objects.removeDynamicObject(h.card());
-        service.observePlayerDplc(GameId.S1, "sonic", 0x35, art.get(0x35));
+        service.observePlayerDplc("sonic", 0x35, art.get(0x35));
         registry.restore(saved);
         var restored = objects.activeObjectsOfType(Sonic1ResultsScreenObjectInstance.class).getFirst();
         assertNotSame(h.card(), restored, "restore must recreate the removed fixed-slot card");
         assertEquals(Sonic1FixedEndCardSlot.SLOT, restored.getSlotIndex());
         assertEquals(180, timer(restored));
-        assertEquals(prepared.s1Preparation(), service.capture().s1Preparation());
+        assertEquals(prepared.stagedPreparation(), service.capture().stagedPreparation());
         assertEquals(history, service.gapEdges());
         assertFalse(h.mode().getFadeManager().hasPendingCompletion(),
                 "the snapshot is before any transient transition callback exists");
@@ -185,7 +184,7 @@ class TestSonic1ResultsNativeWaitBoundary {
 
         // Independent ROM-backed work staged through the production port;
         // the actual GameLoop token must issue it before Got_NextLevel runs.
-        service.observePlayerDplc(GameId.S1, "sonic", 0x31, art.get(0x31));
+        service.observePlayerDplc("sonic", 0x31, art.get(0x31));
         var prepared = service.capture();
         List<GapEdge> history = List.copyOf(service.gapEdges());
         loop.step();
@@ -263,7 +262,7 @@ class TestSonic1ResultsNativeWaitBoundary {
         DynamicArtDiagnosticsSnapshot prefix = publishExternalPrefix(h);
         var service = h.mode().dynamicArtLifecycle();
         List<GapEdge> history = List.copyOf(service.gapEdges());
-        service.observePlayerDplc(GameId.S1, "sonic", 0x31, art.get(0x31));
+        service.observePlayerDplc("sonic", 0x31, art.get(0x31));
         var prepared = service.capture();
 
         loop.step();
@@ -297,7 +296,7 @@ class TestSonic1ResultsNativeWaitBoundary {
         DynamicArtDiagnosticsSnapshot prefix = publishExternalPrefix(h);
         var service = h.mode().dynamicArtLifecycle();
         List<GapEdge> history = List.copyOf(service.gapEdges());
-        service.observePlayerDplc(GameId.S1, "sonic", 0x31, art.get(0x31));
+        service.observePlayerDplc("sonic", 0x31, art.get(0x31));
         var prepared = service.capture();
 
         // This control explicitly owns a standalone structural terminal. It
@@ -307,7 +306,7 @@ class TestSonic1ResultsNativeWaitBoundary {
 
         assertFalse(service.isComparisonSegmentOpen());
         assertEquals(prefix, service.latestSnapshot());
-        assertEquals(prepared.s1Preparation(), service.capture().s1Preparation(),
+        assertEquals(prepared.stagedPreparation(), service.capture().stagedPreparation(),
                 "terminal completion cannot invent the physical S1 buffer DMA");
         assertEquals(prepared.nextTransferId(), service.capture().nextTransferId());
         assertEquals(prepared.nextEdgeOrdinal(), service.capture().nextEdgeOrdinal());
@@ -330,7 +329,7 @@ class TestSonic1ResultsNativeWaitBoundary {
         service.openComparisonSegment();
         assertTrue(service.isComparisonSegmentOpen());
         assertFalse(service.latestSnapshot().published());
-        service.observePlayerDplc(GameId.S1, "sonic", 9, art.get(9));
+        service.observePlayerDplc("sonic", 9, art.get(9));
         loop.step();
         DynamicArtDiagnosticsSnapshot prefix = service.latestSnapshot();
         assertTrue(prefix.published());

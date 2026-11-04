@@ -128,7 +128,7 @@ public class TestS2Htz1Headless {
     }
 
     /**
-     * ROM: Obj30 subtype 4 uses jsrto (JSR) for DropOnFloor at s2.asm:49149,
+     * ROM: Obj30 subtype 4 uses jsrto (JSR) for DropOnFloor at s2.asm:49520,
      * which returns and falls through to Obj30_HurtSupportedPlayers (line 49151).
      * Sonic should take lava damage when standing on the subtype 4 platform.
      */

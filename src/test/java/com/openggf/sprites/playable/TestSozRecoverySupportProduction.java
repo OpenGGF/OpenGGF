@@ -29,7 +29,7 @@ class TestSozRecoverySupportProduction {
         int nativeInteract=tails.getInteractSlotIndex();
         assertTrue(manager.hasObjectStandingBit(tails,rock));
         tails.setOnObject(false);tails.setAir(true);
-        assertTrue(manager.hasGroundingObjectSupport(tails),"reproduce retained engine cache during recovery");
+        assertTrue(manager.isRidingObject(tails),"reproduce the retained ride record during recovery");
         short[] x=new short[64],y=new short[64],input=new short[64];byte[] status=new byte[64];
         java.util.Arrays.fill(x,(short)0x700);java.util.Arrays.fill(y,(short)0x100);
         leader.hydrateRecordedHistory(x,y,input,status,16);leader.setCentreX((short)0x700);leader.setCentreY((short)0x100);
@@ -38,7 +38,7 @@ class TestSozRecoverySupportProduction {
         var registry=f.gameplayMode().getRewindRegistry();var before=registry.capture();
         cpu.update(1);
         assertEquals(SidekickCpuController.State.NORMAL,cpu.getState());
-        assertFalse(manager.hasGroundingObjectSupport(tails));assertNull(manager.getRidingObject(tails));
+        assertFalse(manager.isRidingObject(tails));assertNull(manager.getRidingObject(tails));
         assertEquals(nativeInteract,tails.getInteractSlotIndex(),"native interact byte is deliberately stale");
         assertTrue(manager.hasObjectStandingBit(tails,rock),"only the object owner clears its native standing bit");
         f.stepFrame(false,false,false,false,false);

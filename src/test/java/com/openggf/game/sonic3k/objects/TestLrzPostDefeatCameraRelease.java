@@ -97,7 +97,7 @@ class TestLrzPostDefeatCameraRelease {
                 .toList();
     }
 
-    /** {@code tst.b (End_of_level_flag).w / beq.w locret_78536} (sonic3k.asm:160582-160583). */
+    /** {@code tst.b (End_of_level_flag).w / beq.w locret_78536} (sonic3k.asm:160097-160098). */
     @Test
     void theWaiterDoesNothingAndAllocatesNothingUntilTheLevelHasEnded() {
         LrzPostDefeatCameraReleaseInstance waiter = waiter();

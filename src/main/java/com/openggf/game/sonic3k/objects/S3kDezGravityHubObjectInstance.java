@@ -26,7 +26,7 @@ import java.util.List;
  * there, and fires them out along whichever of the four exits the placement allows and the
  * player presses.
  *
- * <p>{@code Obj_DEZGravityHub} runs {@code sub_492D4} twice (:95592-95599), once with
+ * <p>{@code Obj_DEZGravityHub} runs {@code sub_492D4} twice (:95607-95614), once with
  * {@code a1 = Player_1, a2 = $30(a0), d1 = Ctrl_1_logical} and once with
  * {@code a1 = Player_2, a2 = $32(a0), d1 = Ctrl_2_logical}, so each player gets an
  * independent two-byte block: {@code (a2)} is the state and {@code 1(a2)} the pose counter.
@@ -76,7 +76,7 @@ public final class S3kDezGravityHubObjectInstance extends AbstractObjectInstance
     private static final int DIRECTION_MASK =
             BUTTON_UP | BUTTON_DOWN | BUTTON_LEFT | BUTTON_RIGHT;
 
-    /** {@code RawAni_493DA} (:95683): the held-in-the-hub pose, one entry per four frames. */
+    /** {@code RawAni_493DA} (:95698): the held-in-the-hub pose, one entry per four frames. */
     private static final int[] POSE_FRAMES = {
         0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x31, 0x32, 0x33,
         0x76, 0x77, 0x6C, 0x6D, 0x6E, 0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75
@@ -130,7 +130,7 @@ public final class S3kDezGravityHubObjectInstance extends AbstractObjectInstance
             return;
         }
         if (state.state < STATE_CENTRED) {
-            // loc_49348 :95395-95444: pull toward the centre, then animate.
+            // loc_49348 :95591-95640: pull toward the centre, then animate.
             pullTowardCentre(player, state);
             animate(player, state);
             return;
@@ -186,7 +186,7 @@ public final class S3kDezGravityHubObjectInstance extends AbstractObjectInstance
         state.state = STATE_CAPTURED;
     }
 
-    /** {@code loc_49348} :95395-95444: eight pixels per axis per frame, then a snap. */
+    /** {@code loc_49348} :95591-95640: eight pixels per axis per frame, then a snap. */
     private void pullTowardCentre(AbstractPlayableSprite player, HubState state) {
         int dx = (short) (player.getCentreX() - getX());
         int stepX = dx < 0 ? -CENTRE_STEP : CENTRE_STEP;

@@ -457,7 +457,7 @@ class TestFbzMinibossChildren {
                 assertEquals(0, player.getYSpeed());
                 // A later CPU jump consumes an established standing bit, not
                 // the same-frame landing preservation path.
-                manager.updateSolidContacts(player);
+                com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
                 player.setRolling(true);
                 player.applyRollingRadii(false);
                 player.setCentreX((short) (body.getX() - 0x1B));

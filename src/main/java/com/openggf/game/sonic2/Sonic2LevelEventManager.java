@@ -189,7 +189,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
         // ROM's reserved object-RAM band (CPZPylon / WaterSurface1 aliased with
         // Oil / WaterSurface2) sits between the player object slots and
-        // Dynamic_Object_RAM (docs/s2disasm/s2.constants.asm:1128-1137), so it
+        // Dynamic_Object_RAM (docs/s2disasm/s2.constants.asm:1135-1144), so it
         // runs after player physics and before every dynamic level object.
         Sonic2ZoneEvents handler = getActiveHandler();
         if (handler != null) {
@@ -259,7 +259,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
      * locks the left boundary to that value and submits {@code PLCID_Signpost}
      * through {@code LoadPLC2} — ClearPLC-then-copy, i.e. a replace, not an
      * append (docs/s2disasm/s2.asm:2103-2124). {@code PLCptr_Signpost} is index
-     * 39 in {@code ArtLoadCues} (docs/s2disasm/s2.asm:89194-89262) and holds a
+     * 39 in {@code ArtLoadCues} (docs/s2disasm/s2.asm:89309-89377) and holds a
      * single {@code plreq ArtTile_ArtNem_Signpost, ArtNem_Signpost}
      * (docs/s2disasm/s2.asm:89658-89660), i.e. 78 patterns into tile $0434.
      * <p>

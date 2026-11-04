@@ -367,6 +367,16 @@ public class Sonic2GameModule implements GameModule, com.openggf.game.internal.S
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
+            return type.cast(new com.openggf.game.resources.PlayerArtTransferPlan(java.util.Map.of(
+                    "sonic", new com.openggf.game.resources.PlayerArtBank(
+                            Sonic2Constants.ART_UNC_SONIC_ADDR, 0xF000, -1, 0, -1),
+                    "tails", new com.openggf.game.resources.PlayerArtBank(
+                            Sonic2Constants.ART_UNC_TAILS_ADDR, 0xF400, -1, 0, -1),
+                    "tails-tails", new com.openggf.game.resources.PlayerArtBank(
+                            Sonic2Constants.ART_UNC_TAILS_ADDR, 0xF600, -1, 0, -1)),
+                    com.openggf.game.resources.PlayerArtTransferPlan.TransferModel.QUEUED_FOR_VBLANK));
+        }
         if (type == com.openggf.game.internal.StandingInputPolicy.class)
             return type.cast(com.openggf.game.internal.StandingInputPolicy.UP_FIRST);
         if (type == com.openggf.data.RetailRomRevision.class) return type.cast(retailRevision());

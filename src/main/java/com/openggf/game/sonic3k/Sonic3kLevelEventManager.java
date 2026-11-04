@@ -43,7 +43,6 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
-import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -84,7 +83,7 @@ import java.util.logging.Logger;
 
 /**
  * Sonic 3&K implementation of dynamic level events.
- * ROM equivalent: ScreenEvents (sonic3k.asm:102274)
+ * ROM equivalent: ScreenEvents (sonic3k.asm:102279)
  *
  * S3K uses dual foreground/background event routines (Events_routine_fg
  * and Events_routine_bg) with a stride of 4 per state transition.
@@ -455,32 +454,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
         return fixedAirCountdownManager.ownsCadenceFor(player);
-    }
-
-    @Override
-    public boolean isSidekickObjectOrderFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return Sonic3kSidekickFollowContext.isObjectOrderFollowSteeringContext(sidekick, effectiveLeader);
-    }
-
-    @Override
-    public boolean isSidekickObjectOrderFollowNudgeContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return Sonic3kSidekickFollowContext.isObjectOrderFollowNudgeContext(sidekick, effectiveLeader);
-    }
-
-    @Override
-    public boolean isSidekickDoorSupportGraceFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            ObjectInstance ridingObject) {
-        return Sonic3kSidekickFollowContext.isDoorSupportGraceFollowSteeringContext(sidekick, ridingObject);
-    }
-
-    @Override
-    public boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(AbstractPlayableSprite sidekick) {
-        return Sonic3kSidekickFollowContext.usesRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
     }
 
     @Override
@@ -1033,8 +1006,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *       park CPU Tails in routine-$0A dormant marker (loc_690A / loc_13A74)</li>
      *   <li>LRZ1 ($0900) non-Knuckles: anim $1B, airborne (loc_68A6); Knuckles
      *       is explicitly excluded by the ROM's {@code Player_mode} gate</li>
-     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6); this manager's
-     *       standard level bootstrap does not expose that boss slot</li>
+     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6), every Player_mode</li>
      * </ul>
      */
     public void applyZonePlayerState() {
@@ -1072,6 +1044,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // sonic3k.asm:8193-8197 (Player_mode != 3).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
+        }
+        // loc_6896 (sonic3k.asm:8198-8201): the LRZ3 boss act $1600 takes the
+        // same loc_68A6 falling intro (8204-8210) for every Player_mode.
+        if (currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0) {
+            applySimpleFallingIntro("LRZ3 boss");
         }
         if (currentZone == Sonic3kZoneIds.ZONE_LRZ && currentAct == 0
                 && getPlayerCharacter() != PlayerCharacter.KNUCKLES
@@ -1128,9 +1105,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return false;
         }
         var level = GameServices.level();
+        // SpawnLevelMainSprites skips every zone intro when Last_star_post_hit
+        // or Special_bonus_entry_flag is set (sonic3k.asm:8147-8150). A
+        // standalone boot learns that from its recorded entry kind.
         return level.hasBigRingReturn()
                 || level.isBonusStageReturn()
-                || level.getCheckpointState().isActive();
+                || level.getCheckpointState().isActive()
+                || com.openggf.level.LevelEntryInitialization.isDeclaredReturnEntry(level);
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {

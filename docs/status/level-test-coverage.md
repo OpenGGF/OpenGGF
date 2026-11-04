@@ -2619,3 +2619,11 @@ rewind spots; comprehensive two-player route/rewind breadth remains open.
 LRZ Act1 invisible support follow-up (2026-11-03): the [status7 audit](../architecture/audits/2026-11-03-lrz-invisible-balance.md)
 records the real rider edge-balance witness and invisible-block rewind checks;
 full-route and broader matrix obligations remain open.
+
+
+LBZ phase-one shower lifetime (2026-11-03): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#independent-phase-one-explosion-lifetime--2026-11-03)
+adds boss-deletion snapshot, destructive restoration and forward replay for
+the independent explosion controller.102 functional controls pass across the
+combined/final selective checks, zero skips. The standalone replay now reaches
+its comparison gate with263 divergences instead of aborting at1454. Inherited
+full-route and breadth gaps remain open.

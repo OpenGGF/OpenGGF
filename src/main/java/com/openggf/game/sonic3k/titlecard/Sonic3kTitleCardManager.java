@@ -62,7 +62,7 @@ public class Sonic3kTitleCardManager
     private static final int SLIDE_SPEED_OUT = 32;
 
     // Display hold duration (frames). ROM: Obj_TitleCardInit stores 90; Level/loc_64DC
-    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62202, 7908-7910),
+    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62202, 7918-7920),
     // synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
@@ -728,12 +728,6 @@ public class Sonic3kTitleCardManager
     }
 
     @Override
-    public boolean projectsRetainedResultsSpriteCadence() {
-        return inLevelMode
-                && retainedResultsHeldLevelCounterOwned;
-    }
-
-    @Override
     public boolean ownsInLevelPlayerControlLock() {
         return inLevelPlayerControlLockOwned;
     }
@@ -871,7 +865,7 @@ public class Sonic3kTitleCardManager
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62522). A bonus
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62527). A bonus
      * stage is entered through the same {@code Level:} routine as any zone, so
      * this owner takes the same loc_62CC gates and loc_64DC hold.
      */
@@ -1116,6 +1110,13 @@ public class Sonic3kTitleCardManager
     @Override
     public boolean shouldPublishFreshLevelTransitionInitialBoundary() {
         return freshLevelTransitionMode ? freshLevelTerrainStarted : shouldReleaseControl();
+    }
+
+    @Override
+    public boolean releaseScanServicesLoadLoopVBlank() {
+        // Only a Level-routine owner waits in LoadLevelLoadBlock's loc_7870
+        // loop; its release is observed after that loop's last Wait_VSync.
+        return freshLevelTransitionMode && freshLevelTerrainStarted;
     }
 
     @Override

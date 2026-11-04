@@ -135,6 +135,8 @@ public final class TraceReplayDriver {
                 GameServices.module(),
                 GameServices.sprites(),
                 GameServices.configuration());
+        com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                GameServices.level(), TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
         GameServices.level().loadZoneAndAct(zone, act);
         loop.setGameMode(GameMode.LEVEL);
 
@@ -220,7 +222,7 @@ public final class TraceReplayDriver {
                     TraceMetadata meta = trace.metadata();
                     preSnapSprite.setCentreX(meta.startX());
                     preSnapSprite.setCentreY(meta.startY());
-                    GameServices.collision().resolveGroundAttachment(preSnapSprite, 14, () -> false);
+                    GameServices.collision().placeOnTerrain(preSnapSprite, 14);
                 }
             }
             TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(

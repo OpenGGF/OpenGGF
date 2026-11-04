@@ -87,7 +87,7 @@ class TestTraceRunReplayWalkerControlFlow {
     @Test
     void advertisedRunSpecialStageRowsUseProductionCoordinatorSnapshots() {
         DynamicArtLifecycleService lifecycle =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =

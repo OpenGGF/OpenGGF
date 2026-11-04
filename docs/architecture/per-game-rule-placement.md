@@ -12,6 +12,10 @@ This guide describes the ownership model for per-game rule gates. Game-wide shar
 4. If the behavior is character ability availability or cross-game donation, use `PlayerCapabilityRules` or current `DonorCapabilities`, as appropriate. Cross-game donation may only donate explicitly listed capability fields.
 5. If the behavior is shared runtime logic that differs by game across broad systems, target the narrowest `GameRules` record consumed by that system:
    - `PlayerMovementRules`: movement, roll, slope, jump, control, and boundary movement rules.
+     Landing animation writes belong to its `PlayerLandingRules` group, including
+     the native spindash Walk-write gate. The unpublished 0.7 candidate retains
+     the flat constructor/accessor for compatibility; record components use the
+     nested landing group.
    - `CollisionRules`: collision model, terrain probe, wall-push, platform contact, and collision ordering.
    - `PlayerAnimationRules`: animation-state divergences tied to shared player animation logic.
    - `CameraRules`: camera scroll, wrap, visibility, and tracking rules.

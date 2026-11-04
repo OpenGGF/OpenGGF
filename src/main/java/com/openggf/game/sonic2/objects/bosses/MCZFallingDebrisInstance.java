@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * MCZ Boss falling debris - stones and spikes spawned during descent phases.
- * ROM Reference: Obj57_FallingStuff (s2.asm:65856-65861)
+ * ROM Reference: Obj57_FallingStuff (s2.asm:66498-66503)
  *
  * Stones: frame 0x0D (13) in Obj57_MapUnc_316EC, no collision hazard
  * Spikes: frame 0x14 (20) in Obj57_MapUnc_316EC, collision_flags 0xB1 (hazard)

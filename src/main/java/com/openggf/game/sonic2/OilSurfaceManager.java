@@ -48,7 +48,7 @@ public class OilSurfaceManager {
     private boolean frameAdvancedThisTick = false;
     private int registeredOilPlayers = 0;
 
-    // OilSlides_Chunks table (ROM: s2.asm:5647-5650)
+    // OilSlides_Chunks table (ROM: s2.asm:5651-5654)
     // 32 block IDs that trigger oil slide behavior
     private static final int[] OIL_CHUNKS = {
             0x2F, 0x30, 0x31, 0x33, 0x35, 0x38, 0x3A, 0x3C,
@@ -57,7 +57,7 @@ public class OilSurfaceManager {
             0xEC, 0xED, 0xF1, 0xF2, 0xF3, 0xF4, 0xFA, 0xFD
     };
 
-    // OilSlides_Speeds table (ROM: s2.asm:5642-5644)
+    // OilSlides_Speeds table (ROM: s2.asm:5646-5648)
     // Speed target for each corresponding chunk: -8, 0, or +8
     private static final int[] OIL_SPEEDS = {
             -8, -8, -8,  8,  8,  0,  0,  0, -8, -8,  0,  8,  8,  8,  0,  8,
@@ -173,7 +173,7 @@ public class OilSurfaceManager {
         }
 
         if (state.standingOnOil) {
-            // ROM: Obj07_CheckKillChar1 (s2.asm:49695-49698)
+            // ROM: Obj07_CheckKillChar1 (s2.asm:50160-50163)
             if (state.submersion <= 0) {
                 // Suffocate - instant death (ROM: JmpTo3_KillCharacter)
                 clearOilTrackingOnly(state);
@@ -213,7 +213,7 @@ public class OilSurfaceManager {
             }
 
             // ROM: when already standing (status bit set), the standing branch of
-            // PlatformObject_SingleCharacter calls MvSonicOnPtfm (s2.asm:35402-35421),
+            // PlatformObject_SingleCharacter calls MvSonicOnPtfm (s2.asm:35622-35641),
             // which positions y_pos(a1) = y_pos(a0) - d3 - y_radius
             // = oilY - submersion - yRadius. MvSonicOnPtfm does NOT touch x_vel,
             // inertia, or y_vel - those evolve through normal player physics.
@@ -228,7 +228,7 @@ public class OilSurfaceManager {
             player.setCentreYPreserveSubpixel((short) targetY);
         } else {
             // Not on oil - recover submersion counter
-            // ROM: Obj07_Main (s2.asm:49689-49692)
+            // ROM: Obj07_Main (s2.asm:50147-50150)
             //   cmpi.b #$30, oil_char1submersion ; beq + ; addq.b #1, oil_char1submersion
             if (state.submersion < submersionMax) {
                 state.submersion++;
@@ -269,7 +269,7 @@ public class OilSurfaceManager {
                 player.setGSpeed(player.getXSpeed());
                 player.setAngle((byte) 0);
 
-                // ROM: PlatformObject_ChkYRange (s2.asm:35696-35712) snaps the
+                // ROM: PlatformObject_ChkYRange (s2.asm:35968-35984) snaps the
                 // player so that y_pos(a1) + y_radius + 4 = platform_top + 3,
                 // i.e. y_pos(a1) = oilY - submersion - yRadius - 1.
                 // (The "+3" in ROM applies after the +4 grace was subtracted, so
@@ -281,7 +281,7 @@ public class OilSurfaceManager {
                 int targetY = oilY - state.submersion - player.getYRadius() - 1;
                 player.setCentreYPreserveSubpixel((short) targetY);
 
-                // ROM Sonic_ResetOnFloor_Part2 (s2.asm:37780-37786): when
+                // ROM Sonic_ResetOnFloor_Part2 (s2.asm:38127-38133): when
                 // landing while rolling, clear the rolling bit, restore the
                 // standing collision radii, and lift y_pos by 5 (the radius
                 // diff between rolling y_radius=14 and standing y_radius=19)
@@ -323,7 +323,7 @@ public class OilSurfaceManager {
             return false;
         }
 
-        // ROM PlatformObject_ChkYRange (s2.asm:35696-35705):
+        // ROM PlatformObject_ChkYRange (s2.asm:35968-35977):
         //   d0 = y_pos(a0) - d3 - (y_pos(a1) + y_radius + 4)
         //   bhi  return        ; d0 unsigned > 0 -> player too high above top, abort
         //   cmpi.w #-$10, d0

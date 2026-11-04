@@ -138,7 +138,6 @@ class TestS3kCpuFollowGroundWallPipeline {
     private static LevelManager declaredTerrain(ObservedCollision collision) {
         var level = mock(LevelManager.class);
         when(level.getCurrentLevel()).thenReturn(mock(Level.class));
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         var solid = mock(ChunkDesc.class);
         when(solid.isSolidityBitSet(anyInt())).thenReturn(true);
         when(solid.getChunkIndex()).thenReturn(1);

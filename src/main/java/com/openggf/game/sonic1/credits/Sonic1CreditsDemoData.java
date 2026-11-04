@@ -5,10 +5,10 @@ package com.openggf.game.sonic1.credits;
  * <p>
  * From the S1 disassembly:
  * <ul>
- *   <li>{@code EndingDemoLoad} (sonic.asm:3827) — credits demo entry point</li>
+ *   <li>{@code EndingDemoLoad} (sonic.asm:3903) — credits demo entry point</li>
  *   <li>{@code EndDemo_Levels} (sonic.asm:3865) — level order</li>
- *   <li>{@code DemoEndDataPtr} (MoveSonicInDemo.asm:100) — demo input pointers</li>
- *   <li>{@code EndDemo_LampVar} (sonic.asm:3879) — LZ lamppost state</li>
+ *   <li>{@code DemoEndDataPtr} (MoveSonicInDemo.asm:105) — demo input pointers</li>
+ *   <li>{@code EndDemo_LampVar} (sonic.asm:3955) — LZ lamppost state</li>
  * </ul>
  */
 public final class Sonic1CreditsDemoData {

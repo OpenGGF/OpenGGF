@@ -190,8 +190,8 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // docs/s1disasm/_inc/BuildSprites.asm:47-58). The engine previously used
         // isOnScreenX(160) (raw [cam-160, cam+480]) which keeps shrapnel alive far
         // longer than ROM, changing the FindFreeObj survival set (SLZ3 f3249).
-        // isWithinSolidContactBounds() is the ROM obRender bit-7 render-box test.
-        if (!isWithinSolidContactBounds()) {
+        // isWithinOnScreenRenderBounds() is the ROM obRender bit-7 render-box test.
+        if (!isWithinOnScreenRenderBounds()) {
             destroyed = true;
             setDestroyed(true);
             return;
@@ -238,7 +238,7 @@ public class Sonic1BombShrapnelInstance extends AbstractObjectInstance
         // ROM Bom_Shrapnel keeps the shrapnel only while obRender bit 7 is set
         // (the render-box on-screen test, same bound as the self-delete above);
         // align the keep-alive with that bound, not the raw isOnScreenX(160).
-        return !destroyed && isWithinSolidContactBounds();
+        return !destroyed && isWithinOnScreenRenderBounds();
     }
 
     /**

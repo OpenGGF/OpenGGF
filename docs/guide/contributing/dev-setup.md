@@ -75,15 +75,15 @@ ROMs. This includes `TestS2CompleteRunStateDecoder` and
 `TestS3kCompleteRunStateDecoder`, which use assumptions when their ROM is absent.
 Explicit external-reference lanes have stricter prerequisites; see [Testing](testing.md).
 
-ROM paths are passed per game as system properties -- note the S3K property is
-`s3k.rom.path`, not `sonic3k.rom.path`:
+The queue wrapper finds these ROMs by SHA-1 in the repository root (and, from a linked
+worktree, the main checkout) and passes absolute per-game system properties:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading \
-    -Ds3k.rom.path=/abs/path/s3k.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading test
 ```
 
-Use **absolute** paths. From a git worktree (or any directory that is not the repository
+To pin another dump, pass the property yourself -- note the S3K property is
+`s3k.rom.path`, not `sonic3k.rom.path` -- and use **absolute** paths. From a git worktree (or any directory that is not the repository
 root) a relative path resolves against the Surefire fork's working directory, the ROM is not
 found, and every ROM-gated class is silently skipped and reported green.
 
@@ -123,7 +123,6 @@ arrow keys and press Space. If a ROM file is missing, you will see an error mess
 ```bash
 # Inspect the change-based smoke selection against your pinned integration base.
 python3 tools/testing/run_categories.py --base <pre-task-commit>
-python3 tools/testing/run_categories.py --base <pre-task-commit> --preflight
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run
 
 # Run a single test class or method.
@@ -133,8 +132,11 @@ python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCollisionLogic#testCo
 
 Use focused checks for bounded changes and the change-based smoke selection for
 shared or uncertain changes. Routine validation never selects the release-only
-`-Pfull-suite`. Inspect executed tests and skips, then acknowledge category-runner
-results with `python3 tools/testing/run_categories.py --acknowledge <run-id>`.
+`-Pfull-suite`. The category runner checks tool prerequisites automatically and
+ends with a `VERDICT` that includes coverage and skip classification. Unexplained
+or required skips make the run incomplete. Passing runs clean up automatically;
+for failed or incomplete runs, inspect `results.json`, then remove the diagnostics
+with `python3 tools/testing/run_categories.py --acknowledge <run-id>`.
 See [Testing](testing.md) and the [testing tools](../../../tools/testing/README.md)
 for selection, queue admission and diagnostics.
 

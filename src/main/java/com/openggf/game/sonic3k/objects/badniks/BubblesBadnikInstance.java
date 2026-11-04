@@ -221,7 +221,7 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     /**
-     * Port of Animate_RawMultiDelay (sonic3k.asm:177649). Decrements
+     * Port of Animate_RawMultiDelay (sonic3k.asm:177654). Decrements
      * anim_frame_timer; when it underflows, advances anim_frame by 2 and loads the
      * next (mapping_frame, delay) pair. Script pair 0 is only re-read via the $FC
      * loop command — normal advances start at pair 1. Returns true on a successful

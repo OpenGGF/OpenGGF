@@ -15,7 +15,7 @@ import com.openggf.game.GameServices;
  * Disassembly References:
  * <ul>
  *   <li>CNZ_Visible_bumpers_start/end (s2.asm line 32176-32187)</li>
- *   <li>Check_CNZ_bumpers (s2.asm line 32277)</li>
+ *   <li>Check_CNZ_bumpers (s2.asm line 32499)</li>
  * </ul>
  */
 public class CNZBumperManager {

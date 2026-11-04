@@ -79,7 +79,7 @@ awk 'BEGIN{FS="[\\t ,]+"}
   "docs/s1disasm/_inc/Pattern Load Cues.asm"
 ```
 
-S2's `ArtLoadCues` table is at `docs/s2disasm/s2.asm:89194`; its primary list region
+S2's `ArtLoadCues` table is at `docs/s2disasm/s2.asm:89320`; its primary list region
 ends before the duplicate layout lists at line 89880. The 67 `PLCptr_*` rows address
 59 distinct primary `PlrList_*: plrlistheader` definitions. The region contains 251
 `plreq` requests and 173 distinct normalized destination/art-source pairs:

@@ -1,6 +1,5 @@
 package com.openggf.trace.live;
 
-import com.openggf.game.GameId;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtGapTransition;
 import com.openggf.game.resources.DynamicArtLifecycleService;
@@ -50,16 +49,17 @@ class TestAdoptedOpeningRowComparison {
      * zero, and returns the lifecycle parked at the moment of admission.
      */
     private static DynamicArtLifecycleService gapWithTrailingDestinationRow() {
-        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic2.Sonic2GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         service.beginRun();
         // Iteration one: gap work that stays gap work.
-        service.observePlayerDplc(GameId.S2, "tails", 16,
+        service.observePlayerDplc("tails", 16,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(1, 1))));
         service.serviceProductionVBlank();
         service.finishProductionIteration(false);
         // Iteration two: the destination segment's row zero, run before the
         // destination's readiness was observable.
-        service.observePlayerDplc(GameId.S2, "sonic", 15,
+        service.observePlayerDplc("sonic", 15,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1))));
         service.serviceProductionVBlank();
         service.finishProductionIteration(false);

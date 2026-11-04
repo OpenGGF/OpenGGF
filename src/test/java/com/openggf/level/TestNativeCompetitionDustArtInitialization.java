@@ -192,7 +192,6 @@ class TestNativeCompetitionDustArtInitialization {
         when(level.getWorldSession()).thenReturn(gameplay.getWorldSession());
         var objects = mock(ObjectManager.class);
         when(level.getObjectManager()).thenReturn(objects);
-        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
         when(objects.objectLoopReachedFixedInLevelSlots()).thenReturn(true);
         var terrain = mock(TerrainCollisionManager.class);
         gameplay.attachLevelManagers(new WaterSystem(), new ParallaxManager(), terrain,

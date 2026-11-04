@@ -77,7 +77,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
     private static final int FIRE_ANIM_COUNTDOWN = 0x20;
 
     // ==================== Animation Data ====================
-    // From Ani_objB6 (s2.asm lines 79610-79624)
+    // From Ani_objB6 (s2.asm lines 80246-80260)
     //
     // ROM animation format: first byte = delay, then frame indices, then terminal byte.
     // Terminal bytes: $FF=loop, $FE=loop_back, $FD=switch_anim, $FA=advance routine_secondary
@@ -455,7 +455,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
 
     /**
      * Load animation data for the given animation ID.
-     * From Ani_objB6 (s2.asm lines 79610-79624).
+     * From Ani_objB6 (s2.asm lines 80246-80260).
      */
     private void loadAnimationData(int id) {
         switch (id) {
@@ -642,7 +642,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
      * Spawn VerticalLaser child (ObjB7) at this platform's position.
      * From loc_3B7F8: AllocateObjectAfterCurrent, set ObjID_VerticalLaser with subtype $72.
      * <p>
-     * ObjB7 behavior (s2.asm lines 79632-79663):
+     * ObjB7 behavior (s2.asm lines 80262-80293):
      * - Init: LoadSubObject (subtype $72 -> ObjB7_SubObjData), set objoff_2A = $20 (32 frames)
      * - Main: decrement timer, delete at 0. Toggle objoff_2B bit 0 each frame;
      *   when clear, skip MarkObjGone (invisible). When set, call MarkObjGone (visible).

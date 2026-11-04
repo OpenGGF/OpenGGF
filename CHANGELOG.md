@@ -5,7 +5,21 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`develop` and `next` / 0.7)
 
+- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress and shield, and special stages pick their stage and layout set as the ROM does.
+
 - MGZ swinging platforms use native fractional chain arithmetic instead of fitted slot/angle carry tables; spring solid reactions precede native animation.
+
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Fixtures without the field keep their previous setup.
+
+- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
+  fresh entry, for every character.
+
+- S3K fresh level loads count the terrain wait's final VBlank in the live game loop, as in the ROM.
 
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
@@ -136,7 +150,8 @@ and row-owned trace-ghost animation whose
 seeks preserve observed historical context. The level editor menu now opens on a
 short front page with Exit to title. Creator tooling now includes task recipes,
 local build/test/run configuration for all seven starter purposes, read-only
-preflight and actionable SDK reports.
+preflight and actionable SDK reports. Object-service failures now remain visible,
+with a source guard preventing new broad catch-and-fallback handlers.
 
 ## Release files
 

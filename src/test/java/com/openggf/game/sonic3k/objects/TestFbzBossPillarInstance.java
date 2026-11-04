@@ -118,7 +118,7 @@ class TestFbzBossPillarInstance {
         pillar.snapshotPreUpdatePosition();
         setPillarCameraBounds();
 
-        manager.updateSolidContacts(positiveControl);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, positiveControl);
 
         assertTrue(positiveControl.getPushing(),
                 "SolidObjectFull's bhi gate includes relX == d1*2 for positive object_control");
@@ -126,7 +126,7 @@ class TestFbzBossPillarInstance {
         TestPlayableSprite bitSevenControl = solidPlayerAt(
                 0x2DE0 + pillar.getSolidParams().halfWidth(), 0x580);
         bitSevenControl.setObjectControlled(true);
-        manager.updateSolidContacts(bitSevenControl);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, bitSevenControl);
 
         assertFalse(bitSevenControl.getPushing(),
                 "SolidObject_cont rejects signed bit-7 object_control before side classification");
@@ -141,7 +141,7 @@ class TestFbzBossPillarInstance {
         ObjectManager manager = managerWithPillar(pillar, bridge, player);
         setPillarCameraBounds();
         manager.forceRidingObjectForBootstrap(player, pillar);
-        manager.updateSolidContacts(player);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
         manager.clearRidingObject(player);
         player.setAir(true);
         player.setOnObject(false);

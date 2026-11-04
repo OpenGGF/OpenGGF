@@ -396,6 +396,7 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
                 // bclr #3,obStatus(a1) — clear standing-on-object
                 // move.b #2,obRoutine(a1) — reset player routine
                 player.setAir(true);
+                player.setOnObject(false);
                 var objectManager = services().objectManager();
                 if (objectManager != null) {
                     objectManager.clearRidingObject(player);

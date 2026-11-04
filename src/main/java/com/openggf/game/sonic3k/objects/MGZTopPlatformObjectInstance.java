@@ -925,7 +925,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         player.setControlLocked(false);
         player.setOnObject(false);
         player.setAir(true);
-        // ROM loc_34F84 (sonic3k.asm:71844-71857) arms object_control and
+        // ROM loc_34F84 (sonic3k.asm:71859-71872) arms object_control and
         // Status_InAir, but does not touch x_vel/y_vel.
         player.applyCustomRadii(player.getXRadius(), player.getStandYRadius() + 0x18);
         ObjectServices svc = tryServices();
@@ -1511,7 +1511,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         NativePositionOps.writeYPosPreserveSubpixel(player, snapY);
         // ROM sub_35202 (sonic3k.asm:72091-72098) only snaps x_pos/y_pos and
         // clears the carry latch. It deliberately preserves the x_vel written by
-        // sub_35504/loc_3554E (sonic3k.asm:72392-72394) earlier in the frame.
+        // sub_35504/loc_3554E (sonic3k.asm:72397-72399) earlier in the frame.
         nextCarryLatched = false;
     }
 

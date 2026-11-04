@@ -1149,7 +1149,7 @@ public final class Sonic3kPlcArtRegistry {
                     -1
             ));
             // MGZ2 end-boss debris art (ArtKosM_MGZEndBossDebris + Map_MGZEndBossDebris).
-            // ROM: ObjDat3_6D7A8 (sonic3k.asm:144634) uses make_art_tile(ArtTile_MGZEndBossDebris,2,1)
+            // ROM: ObjDat3_6D7A8 (sonic3k.asm:144639) uses make_art_tile(ArtTile_MGZEndBossDebris,2,1)
             // — palette line 2. Used by the 10 debris chunks spawned during drilldown
             // (ChildObjDat_6D7EA at sonic3k.asm:144662).
             standalone.add(new StandaloneArtEntry(

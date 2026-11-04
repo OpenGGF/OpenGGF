@@ -70,7 +70,7 @@ public class CogObjectInstance extends AbstractObjectInstance
     // Render priority from disassembly: move.b #4,priority(a1)
     private static final int PRIORITY = 4;
 
-    // Obj70_Positions table (s2.asm lines 54741-54778)
+    // Obj70_Positions table (s2.asm lines 55304-55341)
     // 4 rotation steps x 8 teeth x 3 bytes (x_offset, y_offset, mapping_frame)
     // Values are signed bytes for x/y offsets.
     private static final byte[] POSITIONS = {
@@ -200,7 +200,7 @@ public class CogObjectInstance extends AbstractObjectInstance
 
         ensureSlotChildrenSpawned();
 
-        // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
+        // ROM Obj70_Main (s2.asm:55256-55259): move.b (Level_frame_counter+1).w,d0;
         // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
         // label, not an increment of the value, and LevelManager now advances its
         // counter at the loop top as the ROM does, so this reads the ROM's own
@@ -334,7 +334,7 @@ public class CogObjectInstance extends AbstractObjectInstance
 
     /**
      * Returns collision parameters for a specific tooth based on its mapping frame.
-     * From byte_28706 table (s2.asm line 54723).
+     * From byte_28706 table (s2.asm line 55321).
      */
     private SolidObjectParams getParamsForFrame(int mappingFrame) {
         // ROM: mapping_frame * 2, andi.w #$1E - index into 16-entry table
@@ -399,7 +399,7 @@ public class CogObjectInstance extends AbstractObjectInstance
     @Override
     public boolean usesInclusiveRightEdge() {
         // ROM SolidObject_cont accepts relX == width*2; only relX > width*2
-        // branches out via `bhi.w SolidObject_TestClearPush` (s2.asm:35150-35158).
+        // branches out via `bhi.w SolidObject_TestClearPush` (s2.asm:35456-35464).
         return true;
     }
 
@@ -424,7 +424,7 @@ public class CogObjectInstance extends AbstractObjectInstance
         // (JmpTo16_SolidObject, s2.asm:55132). SolidObject's standing branch
         // (s2.asm:35021-35044) runs first: when the ridden tooth's standing bit
         // d6 is set on the player AND Status_InAir is set, it branches to
-        // loc_1975A (s2.asm:35035-35040) which clears Status_OnObj/d6, sets
+        // loc_1975A (s2.asm:35041-35046) which clears Status_OnObj/d6, sets
         // Status_InAir and returns d4=0 WITHOUT reaching SolidObject_cont — so
         // the platform carry (MvSonicOnPtfm, s2.asm:35635-35659) and the
         // SolidObject_AtEdge side push (s2.asm:35432-35444) are both skipped on

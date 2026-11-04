@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Standalone LBZ1 miniboss box for star-post restarts.
  *
- * <p>ROM: {@code Obj_LBZMinibossBox} at {@code sonic3k.asm:192456}. When the
+ * <p>ROM: {@code Obj_LBZMinibossBox} at {@code sonic3k.asm:192461}. When the
  * player restarts from the lamppost after the building collapse, the Robotnik
  * intro never runs ({@code _unkFAAB} clear), so this layout object re-stages
  * the fight: it locks the camera, hosts the closed box pieces, fades to the

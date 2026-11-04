@@ -100,7 +100,7 @@ public final class PlayablePuppet implements AutoCloseable {
             var result = new PlayablePuppet(context, actor);
             // Native attachment adjusts position/angle without fabricating a grounded
             // status or a controller edge before the first ordinary physics tick.
-            if (snapToFloor) context.collision.resolveGroundAttachment(actor, 14, () -> false);
+            if (snapToFloor) context.collision.placeOnTerrain(actor, 14);
             return result;
         } catch (RuntimeException | Error failure) {
             try { audio.getBackend().destroy(); }

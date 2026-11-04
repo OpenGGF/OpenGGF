@@ -132,7 +132,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     /** HP = 12 (final boss, NOT the usual 8) */
     private static final int DEATH_EGG_ROBOT_HP = 12;
 
-    /** Per-child collision flags from ObjC7_ChildCollision (s2.asm:83296-83306)
+    /** Per-child collision flags from ObjC7_ChildCollision (s2.asm:83968-83978)
      *  Order matches ROM spawn order at loc_3D52A: Shoulder, FrontForearm, FrontLowerLeg, ... */
     static final int[] CHILD_COLLISION = {
             0x00,  // Shoulder
@@ -919,7 +919,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
                     actionTimer = 0x40;
                 }
             }
-            case 6 -> { // prev_anim 6 — ROM loc_3D89E (s2.asm:82848-82857)
+            case 6 -> { // prev_anim 6 — ROM loc_3D89E (s2.asm:83057-83066)
                 // ROM loc_3D89E: subq.b #1,anim_frame_duration; bmi.s + ; rts
                 //   On underflow: addq.b #2,prev_anim (6->8);
                 //                 bset #p1_pushing,status(a0) (BACK punch signal, ONCE);
@@ -1048,10 +1048,10 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     private void updateDefeatWalkPlayer(int vIntRunCount, AbstractPlayableSprite player) {
         if (player != null) {
             // ROM splits the ending handoff across two body dispatches:
-            // loc_3D922 locks Control_Locked (s2.asm:82966-82975), so Obj01_Control
+            // loc_3D922 locks Control_Locked (s2.asm:83128-83137), so Obj01_Control
             // skips the Ctrl_1 -> Ctrl_1_Logical copy (s2.asm:36233-36235) and the
             // previous logical jump/left word survives for Sonic_JumpHeight.
-            // loc_3D93C writes forced RIGHT on the next dispatch (s2.asm:82978-82980).
+            // loc_3D93C writes forced RIGHT on the next dispatch (s2.asm:83140-83142).
             int latchedLogicalInput = player.getLogicalInputState();
             visualControlOwners.acquire(player).setControlLocked(true);
             if (defeatWalkFrameCounter == 0) {
@@ -2236,7 +2236,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
 
     // ========================================================================
     // INNER CLASS: SensorChild - Targeting sensor with velocity-tracked animation
-    // ROM: ObjC7_TargettingSensor (s2.asm:82951-83044)
+    // ROM: ObjC7_TargettingSensor (s2.asm:83564-83657)
     // ========================================================================
 
     static class SensorChild extends AbstractBossChild implements RewindRecreatable {

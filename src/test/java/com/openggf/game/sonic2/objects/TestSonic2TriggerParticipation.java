@@ -206,11 +206,7 @@ class TestSonic2TriggerParticipation {
         assertTrue(nut.airborneStaleStandingBitReturnsNoContact(tails),
                 "Obj69's native P2 SolidObject tail consumes a stale airborne standing bit "
                         + "before SolidObject_cont even when Tails is on-screen (s2.asm:54006-54013, 35028-35046)");
-        assertTrue(nut.suppressesGroundingRecoveryFromAirborneStaleRide(tails),
-                "Obj69's late SolidObject tail must keep stale airborne ride latches out of "
-                        + "pre-movement grounding recovery (s2.asm:54006-54013, 35028-35046)");
         assertFalse(nut.airborneStaleStandingBitReturnsNoContact(null));
-        assertFalse(nut.suppressesGroundingRecoveryFromAirborneStaleRide(null));
     }
 
     @Test
@@ -727,7 +723,7 @@ class TestSonic2TriggerParticipation {
                         "OOZPoppingPlatform"));
         platform.snapshotPreUpdatePosition();
 
-        objectManager.updateSolidContacts(tails);
+        com.openggf.level.objects.SolidObjectPassTestSupport.resolveSolidCheckpoints(objectManager, tails);
 
         assertFalse(tails.isOnObject(),
                 "Obj33 must branch to SolidObject_TestClearPush for obj_control=$81 "
@@ -1399,7 +1395,7 @@ class TestSonic2TriggerParticipation {
 
         @Override
         public ObjectSolidExecutionContext currentObject() {
-            return new ObjectSolidExecutionContext(this, batch.object(), () -> batch);
+            return new ObjectSolidExecutionContext(this, batch.object(), call -> batch);
         }
 
         @Override

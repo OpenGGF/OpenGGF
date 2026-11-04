@@ -39,7 +39,7 @@ public class SteamPuffObjectInstance extends AbstractObjectInstance
         return xFlipped ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
     }
 
-    // ROM: move.b #$18,width_pixels(a1) at loc_2674C (s2.asm line 52111).
+    // ROM: move.b #$18,width_pixels(a1) at loc_2674C (s2.asm line 52582).
     // In the ROM this width feeds the MarkObjGone off-screen culling test. The
     // engine culls dynamic objects centrally (ObjectManager.Placement) and the
     // puff exposes no per-object width hook (it implements only

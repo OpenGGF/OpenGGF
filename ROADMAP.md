@@ -138,7 +138,7 @@ avoid starting wide new zone work unless it directly advances a route slice or r
   `b4c8fbd8a`) because its fixes produced audible regressions the suite could not detect. It was
   then re-derived piecemeal between 2026-08-28 and 2026-09-04 against emulator-captured
   per-service driver-state and chip write-stream oracles, each a hard assertion, with every engine
-  fix citing the driver routine it models (`README.md` "September 4 audio handover",
+  fix citing the driver routine it models ([2026-09-04 audio parity handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md),
   `docs/changelog/v0.6-release-summary.md` Audio). Complete SMPS parity and release listening
   approval remain open; full-game parity is deferred to 0.7.
 - Performance work has moved from generic cleanup to measured release work, including rewind/audio

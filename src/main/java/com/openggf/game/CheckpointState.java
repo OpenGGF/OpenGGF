@@ -178,7 +178,7 @@ public class CheckpointState implements RespawnState {
      * at :61843-61845).
      *
      * <p>{@code Timer} is minute/second/frame with {@code Timer_frame} counting
-     * UP and rolling at 60 in {@code HudUpdate} (docs/s2disasm/s2.asm:87775-87786),
+     * UP and rolling at 60 in {@code HudUpdate} (docs/s2disasm/s2.asm:87869-87880),
      * so elapsed frames are {@code minute*3600 + second*60 + frame}. Forcing
      * frame to 59 and rolling the second back one therefore discards the stored
      * partial second and re-ticks it on the very next HUD update: elapsed

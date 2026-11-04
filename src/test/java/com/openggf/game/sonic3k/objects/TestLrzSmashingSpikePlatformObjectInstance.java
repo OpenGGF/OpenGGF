@@ -88,7 +88,7 @@ class TestLrzSmashingSpikePlatformObjectInstance {
     }
 
     /**
-     * {@code RawAni_43196} (:88635) and the {@code beq} that follows the {@code move.b} (:88630):
+     * {@code RawAni_43196} (:88635) and the {@code beq} that follows the {@code move.b} (:88635):
      * the twenty-entry table is stepped once a frame and the trailing zero freezes
      * {@code anim_frame}, so the block sits on frame 0 for the last eleven of the thirty hold
      * frames.

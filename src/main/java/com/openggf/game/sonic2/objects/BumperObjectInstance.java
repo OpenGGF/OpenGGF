@@ -101,7 +101,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
     /**
      * Collision box half-width = 8 pixels.
      * <p>
-     * ROM Reference: Touch_Sizes[0x17] at s2.asm line 84574
+     * ROM Reference: Touch_Sizes[0x17] at s2.asm line 85271
      * (collision_flags $D7 -> index 0x17 -> 8,8 = 16x16 total box)
      */
     private static final int COLLISION_HALF_WIDTH = 8;
@@ -109,7 +109,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
     /**
      * Collision box half-height = 8 pixels.
      * <p>
-     * ROM Reference: Touch_Sizes[0x17] at s2.asm line 84574
+     * ROM Reference: Touch_Sizes[0x17] at s2.asm line 85271
      */
     private static final int COLLISION_HALF_HEIGHT = 8;
 
@@ -289,7 +289,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
         // S2 TouchResponse iterates collision_flags directly with no
         // render_flags.on_screen gate (s2.asm:84537-84551). Obj44 depends on
         // that path: Touch_Special increments collision_property, then
-        // Obj44_Main consumes it for P1/P2 bounce bits (s2.asm:44653-44667).
+        // Obj44_Main consumes it for P1/P2 bounce bits (s2.asm:45093-45107).
         return false;
     }
 

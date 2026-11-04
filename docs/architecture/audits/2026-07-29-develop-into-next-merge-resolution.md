@@ -322,7 +322,7 @@ dispatch published *and* consumed a wait frame in the same pass instead of retur
 ## Backport candidates for `develop`
 
 Fixes made here that are not `next`-specific are tracked in
-[docs/architecture/audits/testing/develop-backport-candidates.md](docs/architecture/audits/testing/develop-backport-candidates.md),
+[docs/architecture/audits/testing/develop-backport-candidates.md](testing/develop-backport-candidates.md),
 with the defect stated as it exists on `develop` today: the
 `AutomaticTunnelObjectInstance` direct playable-position writes, the AWT in
 `WindowIconLoader`, the unidentifiable `RewindRegistry` capture failure, and the

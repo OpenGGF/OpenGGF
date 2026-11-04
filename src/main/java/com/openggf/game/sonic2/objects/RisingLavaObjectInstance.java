@@ -196,7 +196,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
         // Store frame counter for use in onSolidContact callback
         this.lastVIntRunCount = vIntRunCount;
 
-        // ROM: Obj30_Main (s2.asm:49083-49086)
+        // ROM: Obj30_Main (s2.asm:49573-49576)
         // y_pos = objoff_32 + Camera_BG_Y_offset (ONLY bgYOffset, no shake)
         // Ripple shake is a global screen-space effect applied via Camera shake offsets,
         // so objects don't add it to their world positions.
@@ -353,7 +353,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // ROM: Subtypes 4 and 6 fall through to Obj30_HurtSupportedPlayers (s2.asm:49151).
+        // ROM: Subtypes 4 and 6 fall through to Obj30_HurtSupportedPlayers (s2.asm:49620).
         // Subtype 4 uses jsrto (JSR) for DropOnFloor at line 49149, so execution returns
         // and falls directly into the hurt routine. Subtype 6 has an explicit bra.s to it.
         // Subtypes 0/2/8 use jmpto (JMP = tail call) so they never reach the hurt code.
@@ -370,51 +370,6 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
     @Override
     public boolean dropOnFloor() {
         return true;
-    }
-
-    @Override
-    public boolean usesSidekickCpuCurrentPushObjectOrderInputDelay(PlayableEntity player) {
-        // Obj30 subtype 6 runs SolidObject_Always, DropOnFloor, then the
-        // supported-player hurt path after TailsCPU_Normal has already sampled
-        // Ctrl_2 (docs/s2disasm/s2.asm:49636-49643,39291-39294). The HTZ2
-        // lower-route platform keeps that object-order push visible to the CPU
-        // slot only on the left/probed side of the support. On the right side,
-        // TailsCPU_Normal keeps the already-loaded d1 history word from the same
-        // slot as d4 (s2.asm:39285-39300); re-reading the adjacent older input
-        // manufactures stale LEFT on HTZ2 f4442.
-        return subtype == 6
-                && player != null
-                && player.isCpuControlled()
-                && ((short) (player.getCentreX() - getX())) <= 0;
-    }
-
-    @Override
-    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
-        // HTZ2 Obj30 subtype 6 keeps its SST status visible through the
-        // interact(a0) slot when TailsCPU_Normal tests Status_Push at
-        // s2.asm:39297-39300, before Obj30's later SolidObject_Always /
-        // DropOnFloor pass refreshes supported-player state (s2.asm:49635-49642).
-        return subtype == 6
-                && player != null
-                && player.isCpuControlled();
-    }
-
-    @Override
-    public boolean preservesSidekickDelayedLeaderPushFromInteractSlot(PlayableEntity player) {
-        // Same Obj30 object-order window, but for the delayed d4 Status_Push
-        // fall-through at s2.asm:39297-39300 after the current push grace has
-        // decayed and Tails is stationary on the released interact target.
-        return preservesSidekickCpuPushGraceFromInteractSlot(player);
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 9 : Integer.MIN_VALUE;
     }
 
     @Override

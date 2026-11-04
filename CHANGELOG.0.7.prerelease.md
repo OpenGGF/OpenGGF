@@ -5,11 +5,28 @@
 Unreleased. The earlier development themes remain in
 [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
+- Add an opt-in `external-master` test profile for live master discovery, TLS, player admission and room browsing; normal test runs remain offline.
+
 ## Gameplay and presentation
 
 - Seamless reloads preserve runtime-art admission, title camera-release timing
   and independent end-state flags. Frame-boundary reloads no longer leave a
   second rewind-boundary marker or suppress the following gameplay oscillator tick.
+
+- **Metropolis Zone boss draw layer:** The boss now takes its display layer from
+  its height as the shipped game does, so it moves from layer 3 to layer 4 once it
+  descends to its pacing height. It previously stayed on layer 3, which is the
+  disassembly's `fixBugs` behaviour.
+
+- **Sky Sanctuary cutscene bridge:** Walking off either end clears that
+  player's standing bit on the same frame, as the shipped game does. The bit
+  previously lingered for one more frame after the player had left.
+
+- **Sky Sanctuary rotating platforms:** Jumping off a spinning post or its
+  carrier bar clears the player's "standing on an object" status on the next
+  frame, as the shipped game does. The status previously stayed set until
+  another object cleared it, so the player could run flat through the next
+  slopes instead of following them.
 
 - S3K invisible solid and hurt blocks suppress edge balancing as their native status bit requires.
 
@@ -19,8 +36,24 @@ Unreleased. The earlier development themes remain in
 
 - MGZ swinging platforms use native fractional chain arithmetic and execution-order inputs instead of fitted slot/angle carry tables; spring animation starts from the native cleared timer.
 
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Fixtures without the field keep their previous setup.
+
+- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
+  fresh entry, for every character.
+
+- S3K fresh level loads count the terrain wait's final VBlank in the live game
+  loop, as the recording driver already did. The remaining load-time lag
+  frames are documented, not estimated.
+
 - Held transition fades continue servicing VBlank work and the native clock
-  after trace comparison closes, while preserving movie-row ownership.
+  after trace comparison closes, while preserving movie-row ownership. Bonus entry
+  also reserves its fade-completion iteration, preventing premature title-loop
+  resource preparation.
 
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain; the ending resource adapter
   restores art while the existing layout owner handles scene geometry. A rendered
@@ -278,6 +311,15 @@ Unreleased. The earlier development themes remain in
 - **Sonic 2 sidekick visibility:** Tails resets his off-screen respawn counter
   directly from the native on-screen flag, removing an extra entry delay.
 
+- **Sidekick CPU follow routine:** The CPU sidekick's ground-follow routine is
+  now a direct translation of S2 `TailsCPU_Normal` and S3K Tails CPU routine 6.
+  Push-grace windows, object-order and interact-slot push bridges, fast-leader,
+  sliding-leader and underwater push heuristics, deferred follow nudges,
+  frame-counter projections and trace-bootstrap entry branches that had been
+  tuned to individual trace fixtures are removed, with the object, level-event,
+  title-card and rule hooks that fed them. Affected trace frontiers are recorded
+  in the [audit](docs/architecture/audits/2026-10-31-sidekick-cpu-fitted-logic-removal.md).
+
 - **Sonic 2 object-slot timing:** Defeated objects with folded children release
   those children as the object walk reaches their slots. This preserves native
   allocation and lost-ring bounce timing in Chemical Plant.
@@ -426,6 +468,21 @@ Unreleased. The earlier development themes remain in
   presentation, honoring both automatic-playlist suppression owners. Their common
   object art loads without a native zone header; native stages retain their title
   timing and zone-owned spring art.
+
+- **Route tapes in both editors:** the in-engine editor's Routes workspace and
+  OpenGGF Editor open `<stem>.route.json` routes and edit both pads' physical
+  button rows on a two-lane timeline with undo. Replay and qualified saves run in
+  a separate worker; the editors show qualified or the first row a replay cannot
+  complete, draw the replayed path over the route's level, list the manifest's
+  launch and native observations (display only), and export a BizHawk movie on
+  demand. Saving changes the files only after a passing replay; unfinished work
+  saves as a draft that tests and native checks refuse. Repair keeps a route's
+  rows where play still tracks a reference and reports the share it kept.
+  Stageplay's applied routes are now input rows; **Edit input rows** opens them in
+  the same timeline and applies edits back to the scene as one undo step.
+  Routes carry goal legs (reach, board, ride, attach, hold, await a phase, defeat,
+  cross) on placed or runtime-spawned objects, picked from a scan of live objects;
+  Plan searches rows that complete them after a kept prefix.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
@@ -1795,6 +1852,34 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Shared route planner:** Reference-path authoring, Stageplay player routes
+  and the SSZ and DEZ boss input authors now share one planner. A route is a
+  frozen list of controller rows with a manifest (`.route.json` and `.script`);
+  it counts as qualified only after a cold replay of those rows, and BK2 movies
+  are exported from it. Stageplay saves planned player routes as frozen input
+  tracks (document version 9). Bridges, platforms, updrafts, vines and bosses
+  report their phase, attachment or hit points, so route goals can target them.
+  Repair keeps a route's original rows and searches only where play drifts from
+  a track recorded on the engine the rows were written for; an exact repair
+  edits single rows until both runs agree field for field again. Twelve Sky
+  Sanctuary Act 1 cold routes are repaired this way (one or two edited rows
+  each) and replay their original runs. Native checks compose the route after a
+  recorded entry movie with one filler row per observed lag frame.
+
+- **Object service failures:** AIZ intro camera calls, Lava Reef lava-fall clocks
+  and launch/drop sound calls propagate service failures instead of silently
+  continuing. S2 object PLC submissions retry only queue-capacity rejection;
+  ROM, art and renderer failures remain visible. A ROM-free source guard ratchets
+  existing broad catch handlers across main Java sources, with explicit legacy
+  inventory and adversarial scanner controls.
+
+- Standalone S3K run segments enter with the run state the ROM carried in:
+  rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
+  Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
+  the segment's recorded entry row; nothing is written after entry. Standalone
+  special stages select their stage and Chaos or Super layout set through the
+  ROM's own search instead of defaulting to the Chaos set.
+
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
   diagnostics now identify pending archive jobs, direct children and submitters.
@@ -1922,3 +2007,5 @@ its original drawing priority.
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
   require every named case to execute without skips. Original ROMs remain local
   or private; hosted builds and automatic publication retain their existing flow.
+
+- LBZ phase-one explosion showers retain their own controller through boss deletion and rewind, allowing Knuckles' Big Arm replay to finish its comparisons.

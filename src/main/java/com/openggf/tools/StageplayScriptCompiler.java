@@ -66,6 +66,7 @@ public final class StageplayScriptCompiler {
                             "dialogueSkins",
                             "voices",
                             "objectCast",
+                            "inputTracks",
                             "order");
             int version = integer(script, "version", -1);
             if (version != VERSION)
@@ -325,6 +326,9 @@ public final class StageplayScriptCompiler {
                 offset += duration;
             }
             document.put("durationFrames", offset);
+            // Frozen physical input tracks use absolute scene frames and pass through unchanged.
+            document.set("inputTracks", script.has("inputTracks") ? array(script, "inputTracks").deepCopy()
+                    : JSON.createArrayNode());
             if (script.has("order"))
                 applyOrder(
                         document,

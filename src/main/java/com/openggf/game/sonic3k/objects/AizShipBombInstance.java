@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Individual bomb dropped from the AIZ2 Flying Battery battleship.
  *
- * <p>ROM: Obj_AIZShipBomb (sonic3k.asm:105408).
+ * <p>ROM: Obj_AIZShipBomb (sonic3k.asm:105413).
  * Three states matching the ROM:
  * <ol>
  *   <li><b>READY_DROP</b>: Bomb descends slowly (2px/frame) in the ship's bomb port

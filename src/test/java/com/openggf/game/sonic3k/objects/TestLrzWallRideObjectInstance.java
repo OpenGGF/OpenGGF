@@ -159,7 +159,7 @@ class TestLrzWallRideObjectInstance {
         assertEquals(161, LrzWallRideObjectInstance.rideYOffset(0x80, true), "leftward amplitude");
     }
 
-    /** {@code RawAni_42792} through {@code divu.w #$16} (sonic3k.asm:87930-87934). */
+    /** {@code RawAni_42792} through {@code divu.w #$16} (sonic3k.asm:87935-87939). */
     @Test
     void rideMappingFrameIndexesTheTwelveRawFrames() {
         assertEquals(0xEF, LrzWallRideObjectInstance.rideMappingFrame(0x00));

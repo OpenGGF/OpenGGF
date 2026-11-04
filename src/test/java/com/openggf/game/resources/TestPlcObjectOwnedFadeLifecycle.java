@@ -33,7 +33,7 @@ class TestPlcObjectOwnedFadeLifecycle {
      * (docs/s2disasm/s2.asm:4764-4765) and then writes the level palette
      * straight to the active palette with {@code bsr.w PalLoad_Now} (:4881);
      * there is no {@code Pal_FadeFromBlack} anywhere between {@code Level:}
-     * (:4757) and {@code Level_MainLoop} (:5087). The assertion is inverted
+     * (:4757) and {@code Level_MainLoop} (:5091). The assertion is inverted
      * rather than dropped: the coordinator must claim no {@code PALETTE_FADE}
      * on the following token at all.
      */

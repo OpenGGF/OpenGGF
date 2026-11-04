@@ -31,6 +31,9 @@ public interface EditorWindowChrome extends AutoCloseable {
 
         /** Shared directing workspace; null for hosts without Stageplay support. */
         default com.openggf.editor.stageplay.StageplayWorkspace stageplay() { return null; }
+
+        /** Shared route tape workspace; null for hosts without route tape support. */
+        default com.openggf.editor.route.RouteTapeWorkspace routeTapes() { return null; }
     }
 
     /** Requires a current GL context; initialisation failures propagate to the engine. */

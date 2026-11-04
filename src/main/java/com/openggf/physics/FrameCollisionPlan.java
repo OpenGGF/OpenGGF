@@ -7,9 +7,10 @@ import java.util.List;
  * Describes the collision phases a caller intends to run for a frame.
  *
  * <p>The plan is deliberately descriptive: terrain probes stay in
- * {@link TerrainCollisionManager}, solid object resolution stays in
- * {@code ObjectManager.SolidContacts}, and {@link CollisionSystem} only
- * orchestrates the requested phases. Playable movement still owns its
+ * {@link TerrainCollisionManager} and {@link CollisionSystem} only
+ * orchestrates the requested phases. Solid objects are not a player
+ * collision phase: each object resolves its own solid calls in its own
+ * object slot, as the ROM's SolidObject family does. Playable movement still owns its
  * ROM-order ground-mode recomputation at the call sites that perform
  * terrain attachment or air landing, so the current named factories leave
  * {@link Phase#POST_RESOLUTION_GROUND_MODE} disabled.</p>
@@ -17,23 +18,20 @@ import java.util.List;
 @com.openggf.game.ModApi
 public record FrameCollisionPlan(
         boolean runsTerrainProbes,
-        boolean runsSolidObjectResolution,
         boolean runsPostResolutionGroundMode,
         boolean recordsTrace) {
 
     @com.openggf.game.ModApi
     public enum Phase {
         TERRAIN_PROBES,
-        SOLID_OBJECT_RESOLUTION,
         POST_RESOLUTION_GROUND_MODE
     }
 
     /**
-     * Legacy full playable collision pass: terrain probes followed by the
-     * batched solid-object pass, with trace events emitted around those phases.
+     * Full playable terrain pass, with trace events emitted around the probes.
      */
     public static FrameCollisionPlan playableFrame() {
-        return new FrameCollisionPlan(true, true, false, true);
+        return new FrameCollisionPlan(true, false, true);
     }
 
     /**
@@ -41,24 +39,13 @@ public record FrameCollisionPlan(
      * use their existing terrain-probe instrumentation explicitly.
      */
     public static FrameCollisionPlan terrainOnly() {
-        return new FrameCollisionPlan(true, false, false, false);
-    }
-
-    /**
-     * Solid-object resolution only. Used by frame-order paths that already
-     * performed terrain movement and need only the object-solid checkpoint.
-     */
-    public static FrameCollisionPlan objectResolutionOnly() {
-        return new FrameCollisionPlan(false, true, false, false);
+        return new FrameCollisionPlan(true, false, false);
     }
 
     public List<Phase> orderedPhases() {
-        List<Phase> phases = new ArrayList<>(3);
+        List<Phase> phases = new ArrayList<>(2);
         if (runsTerrainProbes) {
             phases.add(Phase.TERRAIN_PROBES);
-        }
-        if (runsSolidObjectResolution) {
-            phases.add(Phase.SOLID_OBJECT_RESOLUTION);
         }
         if (runsPostResolutionGroundMode) {
             phases.add(Phase.POST_RESOLUTION_GROUND_MODE);

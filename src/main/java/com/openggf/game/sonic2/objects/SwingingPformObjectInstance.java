@@ -236,7 +236,7 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
         //   _beq.s +                       (docs/s2disasm/s2.asm:57205-57206)
         // and the '+' label lands past BOTH JmpTo23_SolidObject and loc_2A432,
         // so an object whose flag is clear is neither solid nor swinging that
-        // frame. loc_2A432 (docs/s2disasm/s2.asm:57340-57365) holds the
+        // frame. loc_2A432 (docs/s2disasm/s2.asm:57455-57480) holds the
         // objoff_3E angle counter as well as the CalcSine y_pos write, so the
         // freeze covers the angle: an off-screen platform mid-decay stays at its
         // current offset instead of returning to objoff_30.
@@ -319,7 +319,7 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_2A392 in disassembly.
      */
     private void updateFalling() {
-        // ROM loc_2A392 (docs/s2disasm/s2.asm:57203-57205):
+        // ROM loc_2A392 (docs/s2disasm/s2.asm:57381-57383):
         //   jsrto JmpTo16_ObjectMove   ; move y_pos by the CURRENT y_vel first
         //   addi_.w #8,y_vel(a0)        ; THEN add gravity for next frame
         // ObjectMove (docs/s2disasm/s2.asm:30192-30197) does
@@ -353,7 +353,7 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_2A3B6 in disassembly.
      */
     private void updateRising() {
-        // ROM loc_2A3B6 (docs/s2disasm/s2.asm:57218-57220):
+        // ROM loc_2A3B6 (docs/s2disasm/s2.asm:57396-57398):
         //   jsrto JmpTo16_ObjectMove   ; move y_pos by the CURRENT y_vel first
         //   subi_.w #8,y_vel(a0)        ; THEN apply anti-gravity for next frame
         // Same move-then-accelerate order as the falling routine above; apply the

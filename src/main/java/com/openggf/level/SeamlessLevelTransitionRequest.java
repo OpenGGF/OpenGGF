@@ -45,7 +45,6 @@ public final class SeamlessLevelTransitionRequest {
     private final int inLevelTitleCardExitAdditionalDispatches;
     private final int inLevelTitleCardExitPhaseOneDispatchOverlap;
     private final int inLevelTitleCardPreloadedActCameraReleaseDispatches;
-    private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
     private final Integer postTransitionMinX;
     private final Integer postTransitionMaxX;
@@ -95,7 +94,6 @@ public final class SeamlessLevelTransitionRequest {
                 builder.inLevelTitleCardExitPhaseOneDispatchOverlap;
         this.inLevelTitleCardPreloadedActCameraReleaseDispatches =
                 builder.inLevelTitleCardPreloadedActCameraReleaseDispatches;
-        this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
         this.postTransitionMinX = builder.postTransitionMinX;
         this.postTransitionMaxX = builder.postTransitionMaxX;
@@ -196,10 +194,6 @@ public final class SeamlessLevelTransitionRequest {
      */
     public int inLevelTitleCardPreloadedActCameraReleaseDispatches() {
         return inLevelTitleCardPreloadedActCameraReleaseDispatches;
-    }
-
-    public boolean forceAirOnStaleObjectSupportLoss() {
-        return forceAirOnStaleObjectSupportLoss;
     }
 
     public boolean preserveOffsetCameraPosition() {
@@ -306,7 +300,6 @@ public final class SeamlessLevelTransitionRequest {
         this.inLevelTitleCardExitAdditionalDispatches = source.inLevelTitleCardExitAdditionalDispatches;
         this.inLevelTitleCardExitPhaseOneDispatchOverlap = source.inLevelTitleCardExitPhaseOneDispatchOverlap;
         this.inLevelTitleCardPreloadedActCameraReleaseDispatches = source.inLevelTitleCardPreloadedActCameraReleaseDispatches;
-        this.forceAirOnStaleObjectSupportLoss = source.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = source.preserveOffsetCameraPosition;
         this.postTransitionMinX = source.postTransitionMinX;
         this.postTransitionMaxX = source.postTransitionMaxX;
@@ -362,7 +355,6 @@ public final class SeamlessLevelTransitionRequest {
         private int inLevelTitleCardExitAdditionalDispatches;
         private int inLevelTitleCardExitPhaseOneDispatchOverlap;
         private int inLevelTitleCardPreloadedActCameraReleaseDispatches = -1;
-        private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
         private Integer postTransitionMinX;
         private Integer postTransitionMaxX;
@@ -477,11 +469,6 @@ public final class SeamlessLevelTransitionRequest {
         public Builder inLevelTitleCardPreloadedActCameraReleaseDispatches(int dispatches) {
             this.inLevelTitleCardPreloadedActCameraReleaseDispatches = dispatches < 0
                     ? -1 : dispatches;
-            return this;
-        }
-
-        public Builder forceAirOnStaleObjectSupportLoss(boolean forceAirOnStaleObjectSupportLoss) {
-            this.forceAirOnStaleObjectSupportLoss = forceAirOnStaleObjectSupportLoss;
             return this;
         }
 

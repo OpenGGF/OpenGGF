@@ -16,7 +16,7 @@ import java.util.List;
  * Each fragment receives a scattered velocity from a ROM velocity table
  * and falls with gravity until offscreen, then deletes itself.
  *
- * ROM: BreakObjectToPieces (sonic3k.asm:45812) gives each fragment a unique
+ * ROM: BreakObjectToPieces (sonic3k.asm:45817) gives each fragment a unique
  * mapping piece from the parent's broken frame. The cork floor's frame 1 has
  * 12 pieces, one per fragment. Each fragment renders only its assigned piece
  * via {@code drawFramePieceByIndex}.

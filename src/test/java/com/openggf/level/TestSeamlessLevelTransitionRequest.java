@@ -27,7 +27,6 @@ class TestSeamlessLevelTransitionRequest {
                 .inLevelTitleCardExitAdditionalDispatches(10)
                 .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
                 .inLevelTitleCardPreloadedActCameraReleaseDispatches(8)
-                .forceAirOnStaleObjectSupportLoss(true)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(101).postTransitionMaxX(102)
                 .postTransitionMinY(103).postTransitionMaxY(104)

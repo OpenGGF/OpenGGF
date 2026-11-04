@@ -1,7 +1,6 @@
 package com.openggf.game.resources;
 
 import com.openggf.data.RomByteReader;
-import com.openggf.game.GameId;
 import com.openggf.game.rules.DynamicArtDmaServiceModel;
 import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.level.render.SpriteDplcFrame;
@@ -35,17 +34,18 @@ class TestSonic1PaletteFadePlayerArtService {
     @EnumSource(value = PlcLifecyclePhase.class, names = {
             "ORDINARY_LEVEL", "LEVEL_TITLE_CARD", "NORMAL_PAUSE", "SPECIAL_STAGE"})
     void paletteFadeRetainsStagingUntilAnEligibleNativeHandler(PlcLifecyclePhase eligible) {
-        var service = new DynamicArtLifecycleService();
+        var service = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic1.Sonic1GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         service.beginRun();
         var coordinator = coordinator(service, DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX);
-        service.observePlayerDplc(GameId.S1, "sonic", 0x32, rollingArt);
-        var pending = service.capture().s1Preparation();
+        service.observePlayerDplc("sonic", 0x32, rollingArt);
+        var pending = service.capture().stagedPreparation();
         assertNotNull(pending, "Sonic_LoadGfx has prepared art, not submitted a DMA");
 
         for (int row = 10; row < 13; row++) {
             service.setMovieLogicalFrame(row);
             claim(coordinator, PlcLifecyclePhase.PALETTE_FADE);
-            assertEquals(pending, service.capture().s1Preparation(),
+            assertEquals(pending, service.capture().stagedPreparation(),
                     "VBlank_PaletteFade neither uploads nor drops Sonic's staged buffer");
             assertTrue(service.gapEdges().isEmpty(), "no submit/completion is invented during the fade");
             assertEquals(0L, service.capture().nextTransferId());
@@ -55,25 +55,26 @@ class TestSonic1PaletteFadePlayerArtService {
         claim(coordinator, eligible);
         assertTransfer(service, 0x32, 13, List.of(
                 DynamicArtDiagnosticsSnapshot.Request.rom(0x28190, 732, 0xF000, 512)));
-        assertNull(service.capture().s1Preparation(), "eligible service consumes staging once");
+        assertNull(service.capture().stagedPreparation(), "eligible service consumes staging once");
         claim(coordinator, eligible);
         assertEquals(2, service.gapEdges().size(), "another VBlank cannot duplicate the consumed transfer");
     }
 
     @Test
     void aLaterPlayerPreparationReplacesTheUnservicedBufferWithoutPublishingTheOldOne() {
-        var service = new DynamicArtLifecycleService();
+        var service = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic1.Sonic1GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         service.beginRun();
         var coordinator = coordinator(service, DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX);
-        service.observePlayerDplc(GameId.S1, "sonic", 0x32, rollingArt);
+        service.observePlayerDplc("sonic", 0x32, rollingArt);
         claim(coordinator, PlcLifecyclePhase.PALETTE_FADE);
         assertTrue(service.gapEdges().isEmpty());
 
         // Sonic_LoadGfx owns one buffer: a genuine later decision replaces it.
         // This models overwrite only; it does not stand in for a load's RAM clear.
         service.clearPlayerDplcDedupRegistersForLevelLoad();
-        service.observePlayerDplc(GameId.S1, "sonic", 1, waitingArt);
-        assertEquals(1, service.capture().s1Preparation().mappingFrame());
+        service.observePlayerDplc("sonic", 1, waitingArt);
+        assertEquals(1, service.capture().stagedPreparation().mappingFrame());
         claim(coordinator, PlcLifecyclePhase.PALETTE_FADE);
         assertTrue(service.gapEdges().isEmpty());
         service.setMovieLogicalFrame(20);
@@ -88,10 +89,11 @@ class TestSonic1PaletteFadePlayerArtService {
 
     @Test
     void anEveryClaimModelStillServicesPaletteFadeUsingTheSameProductionCoordinator() {
-        var service = new DynamicArtLifecycleService();
+        var service = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic1.Sonic1GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         service.beginRun();
         var coordinator = coordinator(service, DynamicArtDmaServiceModel.EVERY_CLAIM);
-        service.observePlayerDplc(GameId.S1, "sonic", 0x32, rollingArt);
+        service.observePlayerDplc("sonic", 0x32, rollingArt);
         service.setMovieLogicalFrame(30);
 
         claim(coordinator, PlcLifecyclePhase.PALETTE_FADE);

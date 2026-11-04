@@ -265,7 +265,7 @@ public class Sonic3kObjectArt {
      * Builds the Animated Still Sprites sheet used by AIZ (firefly + leaf animations).
      *
      * <p>Disassembly reference:
-     * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60464+).
+     * Map_AnimatedStillSprites / Ani_AnimatedStillSprites (sonic3k.asm:60469+).
      * art_tile = make_art_tile(ArtTile_AIZMisc2,3,0). Frames 0-8.
      */
     public ObjectSpriteSheet buildAnimatedStillSpritesSheet(int artTileBase) {

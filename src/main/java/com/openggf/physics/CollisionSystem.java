@@ -17,7 +17,6 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -113,12 +112,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
-     * Compatibility wrapper for older callers that expect the legacy full
-     * playable-frame pass. New callers should choose a named
+     * Compatibility wrapper for older callers that expect the full
+     * playable-frame terrain pass. New callers should choose a named
      * {@link FrameCollisionPlan} and invoke {@link #run(FrameCollisionPlan,
-     * AbstractPlayableSprite, Sensor[], Sensor[])} or
-     * {@link #runSolidObjectResolution(FrameCollisionPlan, AbstractPlayableSprite,
-     * boolean, boolean)}.
+     * AbstractPlayableSprite, Sensor[], Sensor[])}. Solid objects resolve in
+     * their own object slots, never from a player collision pass.
      */
     @Deprecated(since = "0.6.prerelease", forRemoval = false)
     public void step(AbstractPlayableSprite sprite, Sensor[] groundSensors, Sensor[] ceilingSensors) {
@@ -128,8 +126,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     /**
      * Execute the collision phases requested by {@code plan} for a playable
      * sprite. The plan documents whether this frame is doing terrain probes,
-     * batched solid-object resolution, trace recording, or a future
-     * post-resolution ground-mode phase.
+     * trace recording, or a future post-resolution ground-mode phase.
      *
      * @param plan explicit phase plan for this frame
      * @param sprite playable sprite to process
@@ -158,10 +155,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             if (effectivePlan.recordsTrace()) {
                 trace.onTerrainProbesComplete(sprite.getCentreX(), sprite.getCentreY(), sprite.getAngle());
             }
-        }
-
-        if (effectivePlan.runsSolidObjectResolution()) {
-            runSolidObjectResolution(effectivePlan, sprite, false, false);
         }
     }
 
@@ -223,59 +216,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     /**
-     * Phase 2: Resolve solid object contacts for the legacy batched path.
-     * Inline-order modules resolve object solids during object execution instead.
-     */
-    public void resolveSolidContacts(AbstractPlayableSprite sprite) {
-        runSolidObjectResolution(FrameCollisionPlan.objectResolutionOnly(), sprite, false, false);
-    }
-
-    public void runSolidObjectResolution(FrameCollisionPlan plan, AbstractPlayableSprite sprite,
-                                         boolean postMovement, boolean deferSideToPostMovement) {
-        FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
-        if (!effectivePlan.runsSolidObjectResolution() || sprite == null || sprite.getDead()
-                || sprite.isDebugMode()) {
-            return;
-        }
-        if (effectivePlan.recordsTrace()) {
-            trace.onSolidContactsStart(sprite.getCentreX(), sprite.getCentreY());
-        }
-
-        if (objectManager != null) {
-            objectManager.updateSolidContacts(sprite, postMovement, deferSideToPostMovement);
-        }
-
-        if (effectivePlan.recordsTrace()) {
-            trace.onSolidContactsComplete(
-                objectManager != null && objectManager.isRidingObject(sprite),
-                sprite.getCentreX(), sprite.getCentreY()
-            );
-        }
-    }
-
-    /**
-     * Check if player has standing contact with any solid object.
-     * Convenience method that delegates to SolidContacts.
-     */
-    public boolean hasStandingContact(AbstractPlayableSprite player) {
-        if (player == null || player.getYSpeed() < 0 || objectManager == null) {
-            return false;
-        }
-        return objectManager.latestStandingSnapshot(player);
-    }
-
-    /**
-     * Get headroom distance to nearest solid object above player.
-     * Convenience method that delegates to SolidContacts.
-     */
-    public int getHeadroomDistance(AbstractPlayableSprite player, int hexAngle) {
-        if (objectManager == null) {
-            return Integer.MAX_VALUE;
-        }
-        return objectManager.latestHeadroomSnapshot(player, hexAngle);
-    }
-
-    /**
      * Check if player is currently riding an object.
      */
     public boolean isRidingObject(AbstractPlayableSprite player) {
@@ -304,40 +244,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (objectManager != null) {
             objectManager.clearRidingObjectForJump(player);
         }
-    }
-
-    public boolean hasObjectSupport(AbstractPlayableSprite player) {
-        return isRidingObject(player) || hasStandingContact(player) || hasActiveLatchedObjectSupport(player);
-    }
-
-    public boolean hasGroundingObjectSupport(AbstractPlayableSprite player) {
-        if (player == null || objectManager == null) {
-            return false;
-        }
-        return objectManager.hasGroundingObjectSupport(player);
-    }
-
-    private boolean hasActiveLatchedObjectSupport(AbstractPlayableSprite player) {
-        if (player == null || objectManager == null || !player.isOnObject()
-                || player.getLatchedSolidObjectId() == 0) {
-            return false;
-        }
-        ObjectInstance latchedInstance = player.getLatchedSolidObjectInstance();
-        if (latchedInstance == null
-                && player.getInteractSlotIndex() == AbstractPlayableSprite.SYNTHETIC_INTERACT_SLOT) {
-            // Manager-hosted ROM supports, such as S2 Obj07 oil, still own
-            // Status_OnObj until their manager clears it. ROM AnglePos gates on
-            // that status bit, not on whether the support has an object instance.
-            return true;
-        }
-        if (!objectManager.isActiveObjectInstance(latchedInstance)) {
-            return false;
-        }
-        // ROM AnglePos exits on Status_OnObj before terrain attachment in all
-        // games (S1 Sonic AnglePos.asm:5-11, S2 s2.asm:42559-42571,
-        // S3K sonic3k.asm:18764-18777). Non-solid controllers such as S2
-        // Obj06 own that bit until their object routine clears it.
-        return true;
     }
 
     public boolean hasEnoughHeadroom(AbstractPlayableSprite player, int hexAngle) {
@@ -556,7 +462,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 sprite.setGSpeed((short) 0);
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
-                    sprite.markPushFromGroundWallCollision();
                 }
             }
             case 0x80 -> sprite.setYSpeed((short) (sprite.getYSpeed() - velocityAdjustment));
@@ -565,7 +470,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 sprite.setGSpeed((short) 0);
                 if (shouldSetGroundWallPush(sprite, mode)) {
                     sprite.setPushing(true);
-                    sprite.markPushFromGroundWallCollision();
                 }
             }
             default -> {
@@ -632,10 +536,23 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (objects != null) ObjectManagerInternalAccess.publishSineCosineInputFraction(objects, sprite, 0xFFFF);
     }
 
-    public void resolveGroundAttachment(AbstractPlayableSprite sprite,
-                                        int positiveThreshold,
-                                        BooleanSupplier hasObjectSupport) {
-        resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold, hasObjectSupport);
+    public void resolveGroundAttachment(AbstractPlayableSprite sprite, int positiveThreshold) {
+        resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold);
+    }
+
+    /**
+     * Tool placement (trace bootstrap, Stageplay, puppets): attach the sprite to
+     * terrain regardless of any object support it was seeded with. Not a gameplay
+     * path: during play only object routines clear Status_OnObj.
+     */
+    public void placeOnTerrain(AbstractPlayableSprite sprite, int positiveThreshold) {
+        if (sprite == null) {
+            return;
+        }
+        if (!sprite.isObjectControlled()) {
+            sprite.setOnObject(false);
+        }
+        resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold);
     }
 
     /**
@@ -654,15 +571,14 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
      */
     public void resolveGroundAttachment(FrameCollisionPlan plan,
                                         AbstractPlayableSprite sprite,
-                                        int positiveThreshold,
-                                        BooleanSupplier hasObjectSupport) {
+                                        int positiveThreshold) {
         if (!isReverseGravity(sprite)) {
-            resolveGroundAttachmentAtRawAngle(plan, sprite, positiveThreshold, hasObjectSupport);
+            resolveGroundAttachmentAtRawAngle(plan, sprite, positiveThreshold);
             return;
         }
         mirrorSpriteAngle(sprite);
         try {
-            resolveGroundAttachmentAtRawAngle(plan, sprite, positiveThreshold, hasObjectSupport);
+            resolveGroundAttachmentAtRawAngle(plan, sprite, positiveThreshold);
         } finally {
             mirrorSpriteAngle(sprite);
         }
@@ -674,8 +590,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
 
     private void resolveGroundAttachmentAtRawAngle(FrameCollisionPlan plan,
                                                    AbstractPlayableSprite sprite,
-                                                   int positiveThreshold,
-                                                   BooleanSupplier hasObjectSupport) {
+                                                   int positiveThreshold) {
         requireTerrainOnlyPlan(plan, "resolveGroundAttachment");
         // ROM: btst #0,object_control(a0) at sonic3k.asm:21591-21597 skips the
         // entire status-based dispatch (which includes terrain probes and
@@ -688,22 +603,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             return;
         }
         // ROM: S1 Sonic_AnglePos, S2 AnglePos, and S3K Player_AnglePos all
-        // return early only when the player's Status_OnObj bit is set
-        // (S3K: docs/skdisasm/sonic3k.asm:18771-18777). Object-side standing
-        // masks can be stale after release; they must not suppress terrain
-        // walk-off and airborne transition checks.
+        // return early when the player's Status_OnObj bit is set
+        // (S3K: docs/skdisasm/sonic3k.asm:18771-18777). Player code never
+        // clears the bit: only object routines and their solid helpers do.
         if (sprite.isOnObject()) {
-            if (hasObjectSupport == null
-                    || hasObjectSupport.getAsBoolean()
-                    || sprite.isObjectControlled()
-                    || hasPendingStaleObjectSupportLoss(sprite)) {
-                return;
-            }
-            // Engine-side object support can outlive the object/controller that set it
-            // across transitions. The ROM's Player_AnglePos early return only applies
-            // to a live Status_OnObj owner (sonic3k.asm:18771-18777); stale support must
-            // fall through to the terrain walk-off path at sonic3k.asm:18875-18878.
-            sprite.setOnObject(false);
+            return;
         }
 
         updateGroundMode(sprite);
@@ -787,20 +691,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         // 43216-43218, 43283-43285, 43350-43352), and S3K
         // (sonic3k.asm:18876-18878, 19001-19003, 19073-19075, 19145-19147).
         sprite.publishRunAsPreviousAnimation();
-    }
-
-    private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
-        // AIZ1->AIZ2 reload order is a special case of that same Status_OnObj
-        // rule. The ROM performs Load_Level/LoadSolids and player coordinate
-        // offsets in the level-event path (docs/skdisasm/sonic3k.asm:104771-104802),
-        // then the next player slot still sees Status_OnObj and skips AnglePos.
-        // Later in that ExecuteObjects pass, Obj_AIZTransitionFloor observes
-        // Current_act != 0, moves to x=$7FFF, and still calls SolidObjectTop
-        // (104777-104790); the standing branch then clears OnObj/sets InAir
-        // without moving the player (41793-41818, 41642-41679). Preserve the
-        // status-bit skip until ObjectManager's inline finalizer consumes the
-        // pending loss marker.
-        return objectManager != null && objectManager.hasPendingStaleObjectSupportLoss(sprite);
     }
 
     private boolean preservesRightWallPenetrationOnDeepProbe(AbstractPlayableSprite sprite) {
@@ -1097,7 +987,6 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     private static void requireTerrainOnlyPlan(FrameCollisionPlan plan, String operation) {
         FrameCollisionPlan effectivePlan = Objects.requireNonNull(plan, "plan");
         if (!effectivePlan.runsTerrainProbes()
-                || effectivePlan.runsSolidObjectResolution()
                 || effectivePlan.runsPostResolutionGroundMode()) {
             throw new IllegalArgumentException(operation + " requires a terrain-only FrameCollisionPlan");
         }

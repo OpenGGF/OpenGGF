@@ -207,7 +207,7 @@ public class Sonic2SpecialStageCheckpoint {
     /**
      * Supplies the combined ring count ({@code Ring_count + Ring_count_2P}) as it
      * stands when the checkpoint result is resolved. The ROM reads those words at
-     * {@code loc_35978} (s2.asm:71843-71853), i.e. after the checkpoint rainbow has
+     * {@code loc_35978} (s2.asm:71958-71968), i.e. after the checkpoint rainbow has
      * finished and the object deletes itself — not when the checkpoint marker was
      * passed — so rings collected while the rainbow plays still count.
      */
@@ -491,7 +491,7 @@ public class Sonic2SpecialStageCheckpoint {
 
     private void resolveCheckpointResult() {
         ringRequirement = pendingRingRequirement;
-        // ROM loc_35978 (s2.asm:71843-71853) reads (Ring_count) + (Ring_count_2P)
+        // ROM loc_35978 (s2.asm:71958-71968) reads (Ring_count) + (Ring_count_2P)
         // here, at the end of the rainbow, and compares against
         // (SS_Ring_Requirement); the count captured when the marker was passed is
         // already stale by then. Fall back to that capture only when no live
@@ -717,7 +717,7 @@ public class Sonic2SpecialStageCheckpoint {
     private void executeNativeHand() {
         if (nativeHandRoutine == 0xC) {
             if (--nativeHandTimer == 0) {
-                // Obj5A_RingCheckTrigger -> SSClearObjs (s2.asm:71986-71993,
+                // Obj5A_RingCheckTrigger -> SSClearObjs (s2.asm:72615-72622,
                 // 72619-72650) clears fixed owners and persistent hidden UI too.
                 nativeSlotPool.clear();
                 nativeHandCompleted = true;

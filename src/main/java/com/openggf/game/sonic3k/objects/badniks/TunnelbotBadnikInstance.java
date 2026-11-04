@@ -376,7 +376,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     }
 
     /**
-     * Port of Animate_RawGetFaster (sonic3k.asm:177840).
+     * Port of Animate_RawGetFaster (sonic3k.asm:177845).
      * Plays animation frames with decreasing delay per loop.
      * After DRILL_ANIM_LOOP_COUNT complete loops, transitions to TUNNELING.
      */
@@ -946,7 +946,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private static final class TunnelbotDebris extends AbstractObjectInstance
             implements RewindRecreatable {
 
-        // MoveSprite_LightGravity (sonic3k.asm:178443): moveq #$20,d1
+        // MoveSprite_LightGravity (sonic3k.asm:178448): moveq #$20,d1
         private static final int GRAVITY = 0x20;
 
         private int debrisX;

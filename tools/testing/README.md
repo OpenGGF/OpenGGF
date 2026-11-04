@@ -120,6 +120,42 @@ reduced their combined reported class time from 37.92 seconds to 24.70–25.06
 seconds, with a small increase in sampled test-process RSS. This measures those
 two audits, not a new complete-suite duration or low-heap qualification.
 
+## Coordination and progress
+
+- Give delegated work a bounded outcome, owned files/worktree, focused checks
+  and a stopping condition. Delegate independent work that can advance the task;
+  do not create extra workers just to watch the same job or repeat an unchanged review.
+- One lead owns the delivery-wide validation plan and schedules combined smoke
+  coverage when the policy below requires it. Workers validate their own changes
+  with relevant focused checks; do not assign the same broad run to every worker.
+- Before submitting costly validation, check the task's existing queued/running
+  jobs. For the same unchanged worktree/source fingerprint (including uncommitted
+  inputs), selection, fixtures, flags and environment, use the existing job
+  instead of submitting another copy. A completed result is
+  reusable only when current policy permits it and its tested state and coverage
+  match; a branch name or identical command alone is insufficient. New edits,
+  failures or unresolved risk still require the affected checks.
+- Keep one command session and one observer per job. Prefer completion
+  notifications or a bounded wait. For lengthy jobs that need polling, back off
+  to 30–60 seconds or longer, read only changed status or a bounded final
+  summary, and avoid repeated full-log reads or identical progress commands.
+  Report meaningful progress to the user independently of the polling cadence.
+- Queue waiting is pending work, not a failed run. Keep the existing request
+  alive and advance independent work while it waits. Cancel only task-owned jobs
+  that are no longer needed; do not restart a request merely because admission is
+  slow. Coordination never bypasses the Maven queue, changes resource limits or
+  forces unrelated worktrees to serialize.
+- At a work-slice boundary, handoff, compaction or changed blocker, update a
+  compact checkpoint in the existing task plan/status or a task message: outcome,
+  current/tested SHA and relevant uncommitted changes, ownership,
+  validation selection/results/limits, live job
+  handles, blocker and next action. Reuse that summary; load only the references
+  needed for the next question. Do not create pass caches, validation receipts or
+  extra log archives; existing diagnostic cleanup still applies.
+- Distinguish queue delay, execution, user-response waits and unmeasured time in
+  status reports. Parallel worker/process intervals overlap; their sum is not
+  elapsed delivery time. Report unavailable timing as unknown.
+
 ## Test categories
 
 Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
@@ -226,12 +262,18 @@ matrix instead; supply all three verified ROM paths as described in the
 Run that additional lane for FBZ traversal changes and exhaustive ROM validation.
 The category runner's ordinary/guard result does not include this lane.
 
-The runner discovers existing root `.gen` files by the documented SHA-1 identities and passes
-absolute ROM paths. In an isolated worktree, use `--rom-directory /absolute/original/ROM/directory`
-to discover the originals there as well, including the documented KiS2 lock-on dump when present.
-Each path is one Maven argument, including filenames with spaces. This avoids Java environment
-injection and creates no ROM links or copies. Missing ROMs still require inspecting
-skips; a successful exit alone does not establish ROM-backed coverage.
+The runner and the focused queue share `rom_inputs.py`, which identifies existing `.gen`
+files by the documented SHA-1 identities and passes absolute ROM paths. It searches the
+worktree root first, then an explicit `--rom-directory /absolute/original/ROM/directory`,
+then the repository's main checkout when the root is a linked worktree. No other worktree
+is searched. The first original found for a property wins, including the documented KiS2
+lock-on dump when present. Each path is one Maven argument, including filenames with spaces.
+This avoids Java environment injection and creates no ROM links or copies. A ROM property
+already set in `MAVEN_ARGS`, `MAVEN_OPTS`, the JVM option variables, `.mvn` configuration or
+the `SONIC_1/2/3K_ROM_PATH` variables stays the caller's choice. Discovery runs once per
+invocation; the plan and verdict name the found, caller-supplied and missing ROM properties,
+never ROM contents. A test skipped for a missing ROM has no skip-policy rule, so the run
+reports incomplete rather than passed.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
 working-tree fingerprint, ordinary worker count and selected source classes; command arrays record the exact Maven
@@ -241,8 +283,8 @@ interrupted or timed-out preparation launches no batches and leaves the run
 incomplete. `results.json` aggregates each lane's worker count, totals,
 completed/planned batch counts, skipped cases and failure details, and `status.json`
 distinguishes passed, failed and incomplete runs. Diagnostic lists are capped at 1,000 records
-per kind with explicit omitted counts; messages/stacks are bounded excerpts. Inspect skips,
-omissions and domain coverage before delivery. The runner checks exit status and nonempty
+per kind with explicit omitted counts; messages/stacks are bounded excerpts; skip
+classification counts are never capped. The runner checks exit status and nonempty
 execution and rejects a changed working tree at completion. A failed Maven batch
 without JUnit failure reports stops further execution and preserves the failed
 batch identity and causal log; remaining coverage is incomplete. It does not cache or authenticate
@@ -260,11 +302,91 @@ preparation and queue waits, may overlap across two forks, and do not attribute
 work in a crashed JVM that produced no report. Existing acknowledgment/cleanup
 rules remove these diagnostics along with the rest of the run.
 
+### Validation decisions and failure attribution
+
+Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs; PowerShell quotes
+`-D...` arguments. Surefire inherits Maven's JVM; set `JAVA_HOME` to JDK 25.
+Maven output belongs in the current worktree's `target/` directory. Do not share or
+copy build trees. Per-Surefire-fork LWJGL extraction uses `target/test-tmp`.
+Keep diagnostic output bounded with targeted searches and reads.
+
+Use headless engine tests for behavior and offscreen captures for routine visual
+validation and promo footage. Never automate focus or keyboard input on the user's
+shared desktop. Window/focus/close diagnostics must use an owned isolated display
+and fail before Engine launch if isolation is unavailable; never fall back to the
+ambient X11/Wayland session. Keep such diagnostics separate from routine tests.
+
+**Proportionate validation:** choose checks from changed behavior, consumers
+and plausible failure modes. Focused regression/integration checks can replace
+broad smoke when impact is bounded and understood and no cross-cutting risk
+remains. Inspect the change-based plan and explain a disproportionate selection;
+no further approval is needed. Shared algorithm, public contract, build/selection-policy,
+timing/physics or uncertain changes normally use change-based smoke. Documentation-only
+changes use syntax, links, mirrors, policy and scenario checks. Required affected
+ROM/trace/domain checks remain separate; routine validation is not an exhaustive trace sweep.
+Do not manually narrow the runner's selection; add semantic dependencies with `--category`.
+
+Before broad smoke, state candidate class count, expected cost and stopping rule.
+Complete required checks once; repeat for new edits, failures, repaired prerequisites
+or unresolved risk. Do not rerun unchanged smoke on baseline, development and
+integrated trees as a ceremony. Attribute disputed failures with bounded matched
+baseline/current checks, comparing exact test identities, assertions and skips.
+New/worsened failures block delivery. After a red broad run, fix regressions caused
+by the change and verify narrowly; do not fix unrelated donor paths, graphics helpers
+or platform tooling merely to turn it green. Unattributed failures remain explicitly
+unattributed. Report remaining failures and incomplete coverage; partial validation
+is never fully green and does not waive applicable CI/release gates.
+
+For changes confined to the Python category-runner implementation/tests and its prose
+(no POM, selection-policy, Java, workflow or hook changes), run the Python safety suite
+and actual tool preflight, not the engine suite. Broader changes follow change-based validation.
+A smoke/category/focused pass is bounded validation, never a full-suite pass.
+Record exact commands, outcomes, skips and coverage limits. Public releases retain
+full ordinary (`-Pfull-suite`), guards and required ROM/trace validation.
+Before reporting suite results, read the
+[measurement-hazard table](../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output);
+attribute results to the command, commit and completed run and inspect skips.
+The focused wrapper preserves Maven output/exit status and adds no test timeout;
+local category timeouts do not alter CI/release timeouts.
+
+### Skip classification and verdict
+
+Every ordinary and guard skip is classified with `classify_surefire_skips.py` against
+`release-skip-policy.json`, the release workflow's exact `class#method` policy. Each
+lane records uncapped `skip_classification` counts and a bounded `unexplained_skips`
+list. A skip that is unclassified, required (its input is declared present), depends
+on an undeclared input, or lacks a report identity leaves the lane and run
+**incomplete** with exit 1. Test failures take precedence (**failed**), and a lane
+whose every case skipped still fails even when each skip is allowed.
+
+The runner declares only inputs it can establish from the launch: `gl` is present
+when `DISPLAY` or `WAYLAND_DISPLAY` is set, matching the release gate's display check
+(this capability describes display-backed GL; explicit EGL fixtures enforce
+their own backend requirements); `s2_bk2` and
+`s3k_observations` are present when `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`,
+`_JAVA_OPTIONS` or `MAVEN_ARGS` passes their `-D` property; generated local
+references are absent. Unparseable options and new policy inputs stay undeclared,
+so their skips fail closed. A malformed policy stops `--run` and `--preflight`
+before any tool or Maven launch.
+
+Every run ends with one `VERDICT PASSED|FAILED|INCOMPLETE` line: tested head and
+source fingerprint, selection mode and candidate classes, completed/planned batches
+per lane, test/failure/error/skip totals with allowed/unexplained counts, missing ROM
+properties, declared skip inputs, any stop reason, and the statement that it is a
+bounded smoke selection, not a full-suite pass. Up to 20 unexplained skips per lane
+are printed above it. Quote that line when reporting the run.
+
+Rationale (2026-11-03): manual `results.json` inspection and acknowledgment after
+every pass was ceremony, while a run whose skips nobody read could still report
+success with missing ROMs or required inputs. Classifying with the existing release
+policy keeps one authority; a separate wrapper or new selection/queue behaviour was
+not needed. Add a policy rule only for a verified explicit opt-in gate or optional
+input: the release classifier uses the same rules, so a rule also accepts that skip
+there. Real failures and mandatory prerequisites never get rules.
+
 ### Cost, prerequisites and stopping
 
-Run `python3 tools/testing/run_categories.py --base <pinned-base> --preflight` in the
-same environment as the intended test command. Every `--run` also performs these checks:
-Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
+Every `--run` checks prerequisites before any test lane: Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
 default `lua`) and `pwsh` on PATH. Failures are collected before any test lane starts.
 The Maven version probe holds a shared build-activity lease, inherited by its JVM,
 so it waits for isolated measurements without joining the test queue. Its 20-second
@@ -277,6 +399,9 @@ run a suppressed `java -version` helper before the Maven launcher itself.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the
 first graphics launch, especially after a documented sandbox failure.
+`--preflight` runs the same checks alone and also prints the skip-policy rule count,
+declared skip inputs and found/missing ROM properties; it is optional, not a
+required step before `--run`.
 
 All-category selections and selections of at least 500 candidate classes print a cost warning.
 These are bounded smoke selections, not exhaustive release validation.
@@ -305,6 +430,18 @@ worktree (PowerShell accepts the same Python command):
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
 python3 tools/testing/maven_queue.py -Dmse=off package
 ```
+
+Test lifecycles (`test`, `package` or `verify`, optionally with `clean`) receive the same
+verified ROM discovery as the category runner, so ordinary focused ROM-backed tests need
+no hand-assembled `-D...rom.path` flags. The wrapper prints one line naming the found,
+caller-supplied and missing properties. Admission, estimates and automatic lean
+qualification use the command as typed, before ROM paths are appended. A command that
+names any ROM property, including an intentionally empty `-Ds3k.rom.path=`, keeps exactly
+its own ROM set; use that to pin a different dump or prove a skip. Build-only commands,
+plugin goals, alternate POMs/reactor selections, custom `.mvn/maven.config`,
+`MAVEN_ARGS`, `--stats` and `--dashboard` are never changed.
+A missing ROM never blocks a ROM-free test; its ROM-gated tests skip, which is not a
+ROM-backed pass. Discovery does not select a graphics backend.
 
 Build-only commands bypass the shared test scheduler automatically, including its
 resource reservations, priority and serial override:
@@ -384,9 +521,15 @@ classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
 profiles, custom properties/JVM settings and expensive fixture annotations keep
 normal admission. Prepared category batches also use the separately reviewed
 `BATCH_ONLY_CLASSES` pool; those registrations do not extend automatic focused
-lifecycle admission, because full-project test compilation can exceed a 1 GiB
-Maven heap. The wrapper prints when it selects the smaller budget. Use
+admission, which needs separate evidence for its standalone execution. The
+wrapper prints when it selects the smaller budget. Use
 `--normal` before Maven arguments to retain the larger heap.
+
+To qualify a frequently used small class permanently, review its source and
+fixtures, verify the exact focused command with `--lean`, add it to
+`QUALIFIED_CLASSES` in `maven_small.py` and run the Python safety checks. Keep the
+registry's source and invocation guards; a fast runtime or one low RSS sample is
+not sufficient evidence.
 
 For other focused tests with known bounded memory needs, explicitly use the lean lane:
 
@@ -394,14 +537,29 @@ For other focused tests with known bounded memory needs, explicitly use the lean
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test
 ```
 
-It caps both Maven and the reused test JVM at **1 GiB heap each**, preserving the
-Mockito agent, CDS setting and macOS first-thread flag, and reserves **4 GiB RAM / 4
-cores** rather than the normal 7 GiB / 8 cores. The same headroom, three-run ceiling,
-worktree exclusion and waiting order apply. An out-of-memory result is a failed run;
-rerun that test with `--normal` and report the lean failure. Full suites, wildcard
-selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launch
-settings are rejected by `--lean`. Explicit lean remains a development option; it
-does not qualify an unknown class for the aged-head backfill allowance below.
+Automatic and explicit lean runs have two stages. First the caller's command, with
+`test` replaced by `test-compile` (including any `clean`), compiles under the normal
+Maven environment like a build: it holds this worktree's lock and the build activity
+lease, but no test admission. The wrapper then releases the activity lease, keeps
+the worktree lock, and queues once for test admission. Execution runs the caller's
+selectors, properties and discovered ROMs with `surefire:test` in place of `test`,
+so it never recompiles or cleans. It caps both Maven and the reused test JVM at
+**1 GiB heap each**, preserving the Mockito agent, CDS setting and macOS
+first-thread flag, and reserves **4 GiB RAM / 4 cores** rather than the normal
+7 GiB / 8 cores. The same headroom, three-run ceiling and waiting order apply;
+queue wait/hold telemetry covers only the test stage.
+
+A failed compilation returns its exit status and launches no tests. A tracked or
+untracked source edit during compilation or the admission wait stops the run
+before tests launch. A POM that `test-compile` plus `surefire:test` could not
+reproduce (the category runner's preparation contract) keeps an automatic
+command on the normal lane and rejects explicit `--lean`. An out-of-memory test
+run is a failed run; rerun that test with `--normal` and report the lean failure.
+Nothing is retried automatically. Full suites, wildcard selectors, goals other
+than `[clean] test`, explicit profiles, custom build/JVM overrides and custom
+`.mvn` launch settings are rejected by `--lean`. Explicit lean remains a
+development option; it does not qualify an unknown class for the aged-head
+backfill allowance below.
 Required broad, trace, native and release checks keep their coverage and lanes.
 Ordinary category batches use bounded heaps only when every candidate qualifies. Qualified classes are grouped into separate batches of at
 most 50, preserving their order within that pool and preserving the complete
@@ -433,6 +591,12 @@ Exact POM defaults `-Dsurefire.forkCount=1` and `-Dsurefire.reuseForks=true`
 retain shared admission, including for trace/audio profiles. Other fork counts,
 reuse settings, heap overrides or unknown profiles remain exclusive. A safe flag
 does not neutralize an unsafe flag elsewhere in the command.
+
+OS locks release automatically; never delete Maven queue/slot/worktree lock files
+to force access. Waiting requires no permission or manual lock cleanup. Cancellation
+releases a waiting request or stops its running Maven process tree; the slot is held
+only during execution. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
+Do not clear required graphics flags to get a slot.
 
 #### Queue telemetry
 
@@ -705,7 +869,7 @@ so CPU time is a lower bound. It measures ordinary and guard lanes, not separate
 trace/native profiles. Inspect category results and skips before describing coverage.
 `complete` means the runner exited, not that tests passed. Record useful measurements
 and conditions in the task's existing architecture artifact; remove temporary JSON
-and acknowledge category diagnostics after consuming them.
+and acknowledge retained failed/incomplete category diagnostics after consuming them.
 
 ### Automatic storage cleanup
 
@@ -714,8 +878,10 @@ It can overlap resource-aware Maven runs in other worktrees, but waits for write
 in its own tree and for legacy/serial exclusive clients. It does not occupy a JVM
 slot, join the admission queue or require CPU/memory headroom.
 
-Diagnostics are temporary, not a run history. After inspecting `results.json` (including
-skip reasons and failures) and any relevant log tail, acknowledge consumption:
+Diagnostics are temporary, not a run history. A passing CLI run prints its verdict and
+deletes its run directory; nothing remains to acknowledge. Failed or incomplete runs keep
+bounded diagnostics. After reading `results.json` (including unexplained skips and
+failures) and any relevant log tail, acknowledge consumption:
 
 ```bash
 python3 tools/testing/run_categories.py --acknowledge <run-id>
@@ -723,18 +889,20 @@ python3 tools/testing/run_categories.py --acknowledge <run-id>
 
 This deletes the **entire run directory**, including summaries, plans and commands, without
 running Maven. Only exact runner IDs are accepted, never paths or symlinked directories.
-A repeated acknowledgment is harmless. Agents must acknowledge consumed results before
+A repeated acknowledgment is harmless. Agents must acknowledge consumed, retained failed/incomplete results before
 delivery; there is no background process that can detect when a human has read a file.
 
-- Success logs and raw XML are deleted immediately after extracting results. The compact
-  results remain temporarily so skips can be inspected before acknowledgment.
+- Success logs and raw XML are deleted immediately after extracting results. A passing
+  run's compact results are deleted after the verdict unless `--keep-diagnostics` was given.
+  Direct `run_plan` callers (Python tests) keep passing runs for inspection.
 - Failed/interrupted results include rolling log tails until acknowledged. Each Maven
   invocation keeps two chunks of at most **2 MiB each** while running. Read `.log.1` before
   `.log`. Raw XML is deleted after summary extraction.
 - Before launching another run, the runner deletes all unacknowledged, recognized prior
   run directories, including legacy retained runs. This also cleans abandoned diagnostics;
   it never follows symlinks or prunes unrelated target contents.
-- Only an explicit `--keep-diagnostics` on `--run` retains a run across later launches.
+- Only an explicit `--keep-diagnostics` on `--run` retains a passing run, or any run
+  across later launches.
   Use it only at the user's request. Opt-in retention remains bounded to **two runs /
   100 MiB**, and acknowledgment deletes these folders too. Raw XML and temporary fixture
   data are still removed; this flag retains bounded logs and JSON, not complete build output.
@@ -760,6 +928,15 @@ execution admission after compilation releases those leases. Their fixed 128 MiB
 children use the existing 4 GiB/4-core small-job reservation and inherit their
 leases; they do not reserve a normal 7 GiB Maven/engine job. These controls can wait behind isolated measurements even
 though the rest of the Python safety suite uses private repositories or mocks.
+
+## CI selection and scheduling
+
+CI runs smoke on develop/next after a 30-minute quiet period. Non-draft pull
+requests run branch policy, smoke and separate guards; manual CI uses smoke and
+guards too. Feature/bugfix pushes run nothing. Direct integration pushes are not
+guard-checked by CI. Master pushes run Release's explicit `-Pfull-suite`, guards,
+packaging and publication. Manual Release dispatch is public-release preparation:
+it validates/builds with full-suite without publishing. Routine CI dispatch never selects it.
 
 ## Local exact-candidate release pilot
 
@@ -981,7 +1158,8 @@ This is negative-case post-processing, not a complete outcome inventory or suite
 certification. Independently verify selection, source fingerprint, terminal run
 status, and baseline reuse authority. It neither runs tests nor changes runner
 selection or diagnostic cleanup. Inspect the comparison, then acknowledge the
-category run normally. The complete inventory tools below cover all outcomes.
+category run if its failed/incomplete diagnostics were retained. Passing runs clean themselves.
+The complete inventory tools below cover all outcomes.
 
 ## Complete Surefire outcome inventories
 

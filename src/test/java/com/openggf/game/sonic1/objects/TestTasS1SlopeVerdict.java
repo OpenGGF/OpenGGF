@@ -29,7 +29,8 @@ class TestTasS1SlopeVerdict {
             assertTrue(s.isOnObject());assertFalse(s.getAir());
             if(offscreen)f.camera().setY((short)200);
             f.camera().setFrozen(true);
-            AbstractObjectInstance.updateCameraBounds(f.camera().getX(),f.camera().getY(),f.camera().getX()+320,f.camera().getY()+224,0);
+            // The BuildSprites pass that sees the moved camera writes the obRender bit.
+            objects.refreshPostCameraRenderState();
             assertEquals(!offscreen,block.isWithinSolidContactBounds(),"Reach the native obRender collision gate");
             s.setGSpeed((short)0x600);s.setXSpeed((short)0x600);
             int edge=block.getX()+64+11;

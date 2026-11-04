@@ -212,7 +212,7 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         // loc_24F02 tests render_flags bit 7 before calling SolidObjectTop.
-        return !intangible && !isDestroyed() && isWithinSolidContactBounds();
+        return !intangible && !isDestroyed() && isWithinOnScreenRenderBounds();
     }
 
     @Override

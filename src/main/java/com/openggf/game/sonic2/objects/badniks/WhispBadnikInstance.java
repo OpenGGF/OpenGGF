@@ -147,7 +147,7 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
      * When visible, decrement attacks and start chase (matching loc_36970 flow).
      */
     private void updateWaitOnscreen(AbstractPlayableSprite player) {
-        // Obj8C_WaitUntilOnscreen (s2.asm:73199-73202): test render_flags.on_screen,
+        // Obj8C_WaitUntilOnscreen (s2.asm:73350-73353): test render_flags.on_screen,
         // and on a set bit branch to loc_36970. Headless replay has no separate
         // BuildSprites producer for this local flag, so compute the same ROM
         // overlap predicate here before taking the ROM branch/fallthrough.
@@ -240,7 +240,7 @@ public class WhispBadnikInstance extends AbstractBadnikInstance implements Rewin
             int playerX = target.getCentreX();
             int playerY = target.getCentreY();
 
-            // Obj_GetOrientationToPlayer (s2.asm:72836-72848) leaves d0/d1 at
+            // Obj_GetOrientationToPlayer (s2.asm:72951-72963) leaves d0/d1 at
             // index 0 when object-pos minus player-pos is zero. Obj8C therefore
             // treats equality as the left/up delta, not the right/down delta.
             if (playerX <= currentX) {

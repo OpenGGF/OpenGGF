@@ -381,6 +381,8 @@ already models the native early return; the elevator now opts into it together
 with `airborneRiderUnseatRequiresOwnCheckpoint`. The first flag alone fails the
 same regression: earlier checkpoints have already consumed the riding record.
 Both declarations are required to retain ownership through the native return.
+(2026-10-31: the second declaration was deleted; every object now releases an
+airborne rider only at its own helper call.)
 Shared collision code is unchanged. The real cold-route regression fails before this
 change (expected1421,actual1417), preserving the exact native launch assertion.
 

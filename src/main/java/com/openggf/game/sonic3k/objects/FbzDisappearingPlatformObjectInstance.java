@@ -10,7 +10,7 @@ import java.util.List;
 /** Locked-on Obj_FBZDisappearingPlatform ($79), sonic3k.asm $3BADE-$3BB98. */
 public final class FbzDisappearingPlatformObjectInstance
     extends AbstractObjectInstance
-    implements SolidObjectProvider, SolidObjectListener,
+    implements SolidObjectProvider, SolidObjectListener, com.openggf.level.objects.observe.PhaseSource,
                SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
   private static final int[] PHASE_MASKS = {0x7F, 0xFF, 0x1FF, 0x3FF};
   private static final int[] SOLID_DURATIONS = {0x3C, 0x78, 0xB4, 0xF0};
@@ -66,6 +66,16 @@ public final class FbzDisappearingPlatformObjectInstance
     coarseCull(spawn.x());
   }
   private void coarseCull(int anchor) { coarseXCullViewport(anchor); }
+  /** Route observation: hidden until loc_3BB08's Level_frame_counter gate, then appearing, solid, vanishing. */
+  private static final java.util.List<String> PHASES = java.util.List.of("hidden", "appearing", "solid", "vanishing");
+  @Override public java.util.List<String> phaseNames() { return PHASES; }
+  @Override public String phase() {
+    if (state == 0) return "hidden";
+    return scriptStep == 0 ? "appearing" : scriptStep == 1 ? "solid" : "vanishing";
+  }
+  @Override public com.openggf.level.objects.observe.PhaseClock phaseClock() {
+    return com.openggf.level.objects.observe.PhaseClock.LEVEL_FRAME_COUNTER;
+  }
   private void detachRider(PlayableEntity player) {
     int slot = riders.slot(player);
     if (!riders.flag(slot, 0))

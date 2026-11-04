@@ -93,7 +93,7 @@ public class TestS3kAiz1SpindashLoopTraversal {
         Camera camera = fixture.camera();
         camera.updatePosition(true);
         sprite.updateSensors(sprite.getX(), sprite.getY());
-        GameServices.collision().resolveGroundAttachment(sprite, 14, () -> false);
+        GameServices.collision().placeOnTerrain(sprite, 14);
         sprite.setAir(false);
         GameServices.level().getObjectManager().reset(camera.getX());
     }

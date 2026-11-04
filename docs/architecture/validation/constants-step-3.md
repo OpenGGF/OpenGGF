@@ -68,7 +68,7 @@ protected int getCollisionSizeIndex() {
 move.b	#$F,collision_flags(a0)
 ```
 
-**Touch_Sizes Table (s2.asm:84574-84595):**
+**Touch_Sizes Table (s2.asm:85250-85271):**
 ```assembly
 Touch_Sizes:
 	dc.b $18,$18	; $0F - 24×24 pixels ← CORRECT INDEX
@@ -118,10 +118,10 @@ protected int getCollisionSizeIndex() {
 2. **Cross-reference with ROM:**
    - `docs/s2disasm/s2.constants.asm` (constant definitions)
    - `docs/s2disasm/s2.asm` (actual usage in boss code)
-   - Touch_Sizes table (s2.asm:84574)
+   - Touch_Sizes table (s2.asm:85271)
 
 3. **Verify boss initialization:**
-   - Obj56_Init (s2.asm:62743-62772)
+   - Obj56_Init (s2.asm:63347-63376)
    - Collision flag setup
    - Hit count, sound IDs
 

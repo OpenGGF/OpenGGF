@@ -43,7 +43,7 @@ package com.openggf.level.objects;
  * <p><strong>Sonic 3&amp;K has it too</strong>, in the same object and with the
  * same selector: {@code Obj_Animal}'s {@code loc_2CAE4}
  * ({@code docs/skdisasm/sonic3k.asm:61224-61234}), reached from
- * {@code tst.b subtype(a0) / bne.s loc_2CAE4} at sonic3k.asm:61186 and :61218
+ * {@code tst.b subtype(a0) / bne.s loc_2CAE4} at sonic3k.asm:61226 and :61224
  * and unconditionally from :61259, deleting through {@code loc_2C9DA}
  * ({@code jmp (Delete_Current_Sprite).l}, sonic3k.asm:61141). It is
  * instruction-for-instruction the Sonic 2 routine: {@code bcs} near edge,

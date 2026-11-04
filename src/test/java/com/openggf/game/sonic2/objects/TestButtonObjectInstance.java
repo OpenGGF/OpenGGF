@@ -76,7 +76,7 @@ class TestButtonObjectInstance {
         }
 
         @Override
-        public boolean isWithinSolidContactBounds() {
+        protected boolean isWithinOnScreenRenderBounds() {
             return true;
         }
     }

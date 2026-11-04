@@ -1417,11 +1417,47 @@ public class TestS1Ghz1Headless {
     }
 
     /**
-     * Regression: terrain slope-repel must not run while standing on a solid object.
-     * If it does, Sonic can be forced airborne and jump input is missed on platforms.
+     * Regression: a rider never slips off a flat solid object, so jump input is
+     * not missed on platforms. S1 Sonic_SlopeRepel has no Status_OnObj test
+     * (01 Sonic.asm:1404-1430); what keeps it quiet is the angle. SolidObject's
+     * landing clears obAngle (sub SolidObject.asm:371) and Sonic_AnglePos returns
+     * while Status_OnObj is set (Sonic AnglePos.asm:6-12), so it stays 0.
      */
     @Test
     public void testStandingOnObjectDoesNotTriggerSlopeRepel() {
+        landOnCollisionTestbedObject();
+        assertEquals(0, fixture.sprite().getAngle() & 0xFF, "Landing on an object clears Sonic's angle");
+
+        fixture.stepFrame(false, false, false, false, false);
+        assertFalse(fixture.sprite().getAir(), "Sonic should remain grounded while standing on an object");
+        assertTrue(fixture.sprite().isOnObject(), "Sonic should still be standing on the object");
+        assertEquals(0, fixture.sprite().getAngle() & 0xFF, "Sonic_AnglePos leaves a rider's angle alone");
+
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(fixture.sprite().getAir(), "Jump from object should enter airborne state");
+        assertTrue(fixture.sprite().getYSpeed() < 0, "Jump from object should apply upward velocity");
+    }
+
+    /**
+     * S1 Sonic_SlopeRepel runs for a rider (no Status_OnObj test, 01 Sonic.asm:1404-1430):
+     * a wall angle at rest sets Status_InAir, and SolidObject's standing branch then
+     * releases him and clears Status_OnObj (sub SolidObject.asm:18-43).
+     */
+    @Test
+    public void testWallAngleOnObjectSlipsOffLikeSonic1SlopeRepel() {
+        landOnCollisionTestbedObject();
+
+        fixture.sprite().setAngle((byte) 0x20);
+        fixture.sprite().setGSpeed((short) 0);
+        fixture.sprite().setXSpeed((short) 0);
+        fixture.sprite().setYSpeed((short) 0);
+
+        fixture.stepFrame(false, false, false, false, false);
+        assertTrue(fixture.sprite().getAir(), "Sonic_SlopeRepel sets Status_InAir at a wall angle");
+        assertFalse(fixture.sprite().isOnObject(), "SolidObject releases an airborne rider");
+    }
+
+    private void landOnCollisionTestbedObject() {
         int objectX = COLLISION_TESTBED_X;
         int objectY = COLLISION_TESTBED_FLOOR_Y;
         int halfWidth = 0x60;
@@ -1449,19 +1485,6 @@ public class TestS1Ghz1Headless {
             }
         }
         assertTrue(landedOnObject, "Sonic should land on the test object");
-
-        // Simulate residual non-flat ground angle while on the object.
-        fixture.sprite().setAngle((byte) 0x20);
-        fixture.sprite().setGSpeed((short) 0);
-        fixture.sprite().setXSpeed((short) 0);
-        fixture.sprite().setYSpeed((short) 0);
-
-        fixture.stepFrame(false, false, false, false, false);
-        assertFalse(fixture.sprite().getAir(), "Sonic should remain grounded while standing on an object");
-
-        fixture.stepFrame(false, false, false, false, true);
-        assertTrue(fixture.sprite().getAir(), "Jump from object should enter airborne state");
-        assertTrue(fixture.sprite().getYSpeed() < 0, "Jump from object should apply upward velocity");
     }
 
     /**

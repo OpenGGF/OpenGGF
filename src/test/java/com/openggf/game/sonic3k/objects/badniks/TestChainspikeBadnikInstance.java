@@ -229,7 +229,7 @@ class TestChainspikeBadnikInstance {
     }
 
     /**
-     * {@code sub_91E7E} :199462-199463: {@code cmpi.w #$10,d2 / bhs} — a player has to be
+     * {@code sub_91E7E} :199467-199468: {@code cmpi.w #$10,d2 / bhs} — a player has to be
      * within sixteen pixels horizontally, which is far closer than the Spikebonker's
      * {@code $60}.
      */

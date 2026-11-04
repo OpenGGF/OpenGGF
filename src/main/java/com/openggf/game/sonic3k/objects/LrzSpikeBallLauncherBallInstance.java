@@ -97,7 +97,7 @@ public final class LrzSpikeBallLauncherBallInstance extends AbstractObjectInstan
             // loc_44954 is a bare Sprite_CheckDeleteTouch3: the ball sits, and still hurts.
             return;
         }
-        // subq.b #1,anim_frame_timer(a0) / bpl.s loc_44934 (:89963-89964).
+        // subq.b #1,anim_frame_timer(a0) / bpl.s loc_44934 (:89968-89969).
         spinTimer = (spinTimer - 1) & 0xFF;
         if (spinTimer > 0x7F) {
             spinTimer = SPIN_RELOAD;

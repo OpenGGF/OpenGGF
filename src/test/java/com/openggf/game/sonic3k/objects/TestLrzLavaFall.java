@@ -22,9 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code Obj_LRZLavaFall} (sonic3k.asm:88816-88854, ROM {@code $436A0}) and the drops it allocates
  * ({@code loc_4374C} / {@code loc_43764}, :88859-88873).
  *
- * <p>The emitter has no level clock of its own in this harness, so each case drives {@code update}
- * with the clock value the ROM would have read in {@code vIntRunCount} -- which is what
- * {@code levelFrameCounterOrFallback} falls back to when no {@code LevelManager} is attached.
+ * <p>The harness supplies Level_frame_counter explicitly. V_int_run_count passed to update is
+ * a separate clock and must never substitute for it.
  */
 class TestLrzLavaFall {
 
@@ -54,7 +53,7 @@ class TestLrzLavaFall {
         assertEquals(0x60, fall.clockThreshold());
 
         for (int clock = 0; clock < 0x60; clock++) {
-            fall.update(clock, null);
+            harness.tick(fall, clock);
         }
         assertEquals(0, harness.drops().size(), "the fall is off below its threshold");
         assertEquals(0, fall.dropTimer(), "and the drop timer never ran");
@@ -70,7 +69,7 @@ class TestLrzLavaFall {
         LrzLavaFallObjectInstance fall = harness.fall(0x60);
 
         for (int clock = 0x60; clock < 0x60 + 18; clock++) {
-            fall.update(clock, null);
+            harness.tick(fall, clock);
         }
         // Frames $60, $66 and $6C: the counter starts at the zero of a cleared slot, so the first
         // frame above the threshold already emits.
@@ -87,7 +86,7 @@ class TestLrzLavaFall {
         LrzLavaFallObjectInstance fall = harness.fall(0x60);
 
         for (int clock = 0x60; clock < 0x60 + 24; clock++) {
-            fall.update(clock, null);
+            harness.tick(fall, clock);
         }
         List<LrzLavaFallDropInstance> drops = harness.drops();
         assertEquals(4, drops.size());
@@ -116,13 +115,13 @@ class TestLrzLavaFall {
         LrzLavaFallDropInstance drop = harness.drop(false, false);
 
         for (int frame = 1; frame <= 4; frame++) {
-            drop.update(frame, null);
+            harness.tick(drop, frame);
         }
         assertEquals(BASE_Y + 32, drop.getCentreY(), "four frames of $800 is thirty-two pixels");
         assertEquals(BASE_X, drop.getCentreX(), "x never moves");
 
         for (int frame = 5; frame <= 0x1D; frame++) {
-            drop.update(frame, null);
+            harness.tick(drop, frame);
         }
         assertTrue(drop.isDestroyed(), "$1C + 1 frames and the drop is gone");
     }
@@ -145,12 +144,16 @@ class TestLrzLavaFall {
                 hazard.getTouchResponseProfile().shieldDeflectCapability());
     }
 
-    private record Harness(ObjectManager objectManager) {
+    private record Harness(ObjectManager objectManager, java.util.concurrent.atomic.AtomicInteger clock) {
 
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
+            var clock = new java.util.concurrent.atomic.AtomicInteger();
+            var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+            org.mockito.Mockito.when(level.getFrameCounter()).thenAnswer(invocation -> clock.get());
             ObjectServices services = new StubObjectServices() {
+                @Override public com.openggf.level.LevelManager levelManager() { return level; }
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
@@ -166,7 +169,12 @@ class TestLrzLavaFall {
                     services);
             holder[0] = objectManager;
             objectManager.reset(0);
-            return new Harness(objectManager);
+            return new Harness(objectManager, clock);
+        }
+
+        void tick(AbstractObjectInstance object, int levelFrame) {
+            clock.set(levelFrame);
+            object.update(levelFrame + 0x80, null);
         }
 
         LrzLavaFallObjectInstance fall(int subtype) {

@@ -17,7 +17,8 @@ public record StageplayRouteResult(
         List<StageplayRoutePoint> path,
         int expandedNodes,
         int simulatedTicks,
-        boolean nativeVerified) {
+        boolean nativeVerified,
+        StageplayDocument.FrozenInputTrack track) {
     public enum Status {
         VERIFIED,
         VISUAL_TERRAIN,
@@ -43,6 +44,17 @@ public record StageplayRouteResult(
         if (success != (candidate != null) || nativeVerified != (status == Status.VERIFIED))
             throw new IllegalArgumentException(
                     "Route candidate and verification status do not agree");
+        if (track != null && (candidate == null || !candidate.inputTracks().contains(track)))
+            throw new IllegalArgumentException("A route's frozen track must be installed in its candidate");
+    }
+
+    /** A result without a frozen input track (visual object routes and failures). */
+    public StageplayRouteResult(Status status, String message, String fingerprint, StageplayRouteRequest request,
+            StageplayDocument candidate, List<StageplayDocument.PuppetCommand> commands,
+            List<StageplayDocument.ObjectCommand> objectCommands, List<StageplayRoutePoint> path, int expandedNodes,
+            int simulatedTicks, boolean nativeVerified) {
+        this(status, message, fingerprint, request, candidate, commands, objectCommands, path, expandedNodes,
+                simulatedTicks, nativeVerified, null);
     }
 
     public boolean success() {

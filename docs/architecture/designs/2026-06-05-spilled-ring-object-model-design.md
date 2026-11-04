@@ -12,9 +12,9 @@ overlapping object" — where a lower-slot spilled ring suppresses a later hazar
 ## Problem
 
 In ROM, scattered rings (Obj37, `collision_flags = $47`) are **real objects in `Dynamic_Object_RAM`**.
-`TouchResponse` (docs/s2disasm/s2.asm:84956-85046) checks placed/level rings first (`Touch_Rings`),
+`TouchResponse` (docs/s2disasm/s2.asm:85118-85208) checks placed/level rings first (`Touch_Rings`),
 then runs `Touch_Loop` over the object RAM **in slot order, breaking on the first overlapping object**
-(`Touch_CheckCollision` → `Touch_ChkValue` → `rts`). `Touch_ChkValue` (s2.asm:85196-85219) routes
+(`Touch_CheckCollision` → `Touch_ChkValue` → `rts`). `Touch_ChkValue` (s2.asm:85405-85428) routes
 `collision_flags & $C0` in `$40–$7F` (size `!= $46`) to the ring/collectible branch: if the toucher is
 not invulnerable (`invulnerable_time < 90`) it collects the ring (`move.b #4,routine(a1)`,
 `move.w a0,parent(a1)`) and `rts` — and either way the overlap **ends the loop**, so any
@@ -81,7 +81,7 @@ set for the renderer. Bespoke physics/collection/rewind are removed.
 |---|---|---|
 | `LostRingObjectInstance` (new) | ROM Obj37, **per-ring** state only: position/velocity/`lifetime`/`phaseOffset` (+ collected flag, `sparkleStartFrame`); `updateMovement()` = bounce physics (gravity, per-game floor cadence, lifetime countdown, off-bottom delete); `collision_flags=$47`. **Reads** the shared spin frame for its displayed mapping — it does NOT own the spin counter. | Mirrors current per-ring `LostRing.java` state + `LostRingPool.updatePhysics` math, relocated into an object. ROM Obj37 / `Obj_LostRings`. |
 | **Shared spill-animation owner** (kept) | Owns the **global** ROM spill-spin state `Ring_spill_anim_counter` / `Ring_spill_anim_accum` / `Ring_spill_anim_frame` (decelerating spin: accumulator += counter each frame). Ticked **once per frame** (not per ring); each ring renders `sharedSpillAnimFrame + phaseOffset`. | RingManager.java:1121-1124. This state is GLOBAL in ROM, not per-object — moving it into per-ring instances would desync the spin. Stays in the slimmed `LostRingPool` (or a dedicated `SpillAnimationState`) and ticks in `RingManager.update()`. |
-| `ObjectManager.TouchResponses` lost-ring handler | A **dedicated branch evaluated every frame on overlap** (NOT edge-triggered), **keyed on the `LostRingObjectInstance` type / an explicit lost-ring collectible marker** (with `collision_flags == $47`) — NOT on the raw `$40–$7F`/size byte shape. On overlap: collect-if-not-invulnerable (`invulnerable_time ≥ 90` skip-collection gate), then **break**. Placed before the SPECIAL edge-trigger gate (ObjectManager.java:5378) OR via a lost-ring touch profile whose `requiresContinuousTouchCallbacks()` is true — so the ring still collects once `invulnerable_time` drops below 90 while the player is *continuously* overlapping (no new overlap edge occurs). | Models `Touch_ChkValue` ring branch, s2.asm:85196-85219, which re-runs every frame in the loop. **Type-keyed** so it does NOT capture other SPECIAL objects that share the `$47` byte shape — notably S1 placed rings (`Sonic1RingInstance.RING_COLLISION_FLAGS = 0x47`, Sonic1RingInstance.java:34/167), preserving the "placed rings unchanged" non-goal. Shared across players/sidekick. |
+| `ObjectManager.TouchResponses` lost-ring handler | A **dedicated branch evaluated every frame on overlap** (NOT edge-triggered), **keyed on the `LostRingObjectInstance` type / an explicit lost-ring collectible marker** (with `collision_flags == $47`) — NOT on the raw `$40–$7F`/size byte shape. On overlap: collect-if-not-invulnerable (`invulnerable_time ≥ 90` skip-collection gate), then **break**. Placed before the SPECIAL edge-trigger gate (ObjectManager.java:5378) OR via a lost-ring touch profile whose `requiresContinuousTouchCallbacks()` is true — so the ring still collects once `invulnerable_time` drops below 90 while the player is *continuously* overlapping (no new overlap edge occurs). | Models `Touch_ChkValue` ring branch, s2.asm:85405-85428, which re-runs every frame in the loop. **Type-keyed** so it does NOT capture other SPECIAL objects that share the `$47` byte shape — notably S1 placed rings (`Sonic1RingInstance.RING_COLLISION_FLAGS = 0x47`, Sonic1RingInstance.java:34/167), preserving the "placed rings unchanged" non-goal. Shared across players/sidekick. |
 | `RingManager` / `LostRingPool` (slimmed) | `spawnLostRings()` → atomic slot allocation + spawn instances (see Allocation contract below); own the shared spill-anim state; hold live-ring registry for `RingRenderer`. Remove per-ring `updatePhysics`, `checkCollection`, bespoke per-ring rewind snapshot. | RingManager.java:1105-1523. |
 | `LostRingRewindCodec` (new) | A `RewindDynamicObjectCodec` registered centrally for `LostRingObjectInstance`: captures per-ring fields and **recreates** the ring via a factory on restore (through `ObjectManager.recreateDynamicObject`). Without it, lost rings are diagnostic-only and **vanish on seek**. | See Rewind section. Precedent: Shield + Stars dynamic codecs. ObjectManager.java:3127, 3264, 3404. |
 | `RingRenderer` | Reads the live `LostRingObjectInstance` set (registry) for positions and the shared spill-anim frame, keeping cached pattern rendering. | RingManager `RingRenderer`. |
@@ -98,7 +98,7 @@ BEFORE                                        AFTER
         checkCollection() (separate)
 ```
 
-### Touch handler semantics (ROM `Touch_ChkValue`, s2.asm:85196-85219)
+### Touch handler semantics (ROM `Touch_ChkValue`, s2.asm:85405-85428)
 
 On overlap with a spilled ring in slot order (the engine branch is **keyed on the
 `LostRingObjectInstance` type / lost-ring marker**, with `collision_flags == $47`, so it never matches

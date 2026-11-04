@@ -212,7 +212,7 @@ public class SpringObjectInstance extends BoxObjectInstance
         // off. Without this clear, OnObj remains true into subsequent frames where
         // ROM has it cleared, biasing leader-OnObj reads in CPU follow steering.
         player.setOnObject(false);
-        // ROM loc_189CA (s2.asm:33735): move.b #2,routine(a1)
+        // ROM loc_189CA (s2.asm:33926): move.b #2,routine(a1)
         // Unconditionally forces the player back to Obj01_Control routine. When the
         // player was in the Hurt routine (routine=4), this clears the hurt state so
         // subsequent airborne frames use Obj01_MdAir's +$38 gravity and the
@@ -332,7 +332,7 @@ public class SpringObjectInstance extends BoxObjectInstance
         // ROM diagonal spring trigger mirrors Obj41_Up (s2.asm:33732-33733):
         // bset Status_InAir then bclr Status_OnObj.
         player.setOnObject(false);
-        // ROM loc_18DD8 (s2.asm:34090) / loc_18EE6 (s2.asm:34173): move.b #2,routine(a1)
+        // ROM loc_18DD8 (s2.asm:34272) / loc_18EE6 (s2.asm:34355): move.b #2,routine(a1)
         // — clears Hurt routine. Matches Up/Down springs.
         player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
@@ -564,8 +564,8 @@ public class SpringObjectInstance extends BoxObjectInstance
      * ROM divergence: every S2 spring variant uses
      * {@code SolidObject_Always_SingleCharacter}
      * (s2.asm:33709/33718/33784/33802) which jumps directly to
-     * {@code SolidObject_cont} (s2.asm:35147) without traversing the
-     * {@code SolidObject_OnScreenTest} on-screen gate at s2.asm:35140-35145.
+     * {@code SolidObject_cont} (s2.asm:35344) without traversing the
+     * {@code SolidObject_OnScreenTest} on-screen gate at s2.asm:35337-35342.
      * Off-screen springs therefore still resolve push and side contact in
      * the ROM. Mirrors the S3K {@code SolidObjectFull2_1P} behaviour
      * (sonic3k.asm:41105-41107). The S2 CollisionRules currently keep
@@ -602,7 +602,7 @@ public class SpringObjectInstance extends BoxObjectInstance
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        // ROM: SolidObject_cont X gate rejects with bhi (s2.asm:35147-35150),
+        // ROM: SolidObject_cont X gate rejects with bhi (s2.asm:35344-35347),
         // so relX == halfWidth*2 is a valid side contact — match with inclusive edge.
         return true;
     }
@@ -672,7 +672,7 @@ public class SpringObjectInstance extends BoxObjectInstance
             }
         }
 
-        // ROM loc_18BC6 (s2.asm:34076-34077): the `cmpi.b #3,anim(a0)` triggered-
+        // ROM loc_18BC6 (s2.asm:34082-34083): the `cmpi.b #3,anim(a0)` triggered-
         // animation guard is read ONCE, AFTER the push passes above, before either
         // character is tested. Capturing the lock here (post-push) means a push
         // launch this frame suppresses the proximity path (they are mutually

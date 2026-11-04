@@ -225,7 +225,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         if (inFragmentPhase) {
             if (fragmentPhaseDelay > 0) {
                 fragmentPhaseDelay--;
-                // ROM: sub_10B36 (s2.asm:23730-23737) clears only
+                // ROM: sub_10B36 (s2.asm:23848-23855) clears only
                 // Status_OnObj and Status_Push when the parent-fragment
                 // delay expires. Status_InAir is left for normal player
                 // movement to set on the next unsupported frame.

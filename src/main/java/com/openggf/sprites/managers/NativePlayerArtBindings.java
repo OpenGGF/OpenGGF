@@ -4,7 +4,7 @@ import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
-import com.openggf.game.resources.PlayerArtTransferProfile;
+import com.openggf.game.resources.PlayerArtTransferPlan;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -191,9 +191,9 @@ final class NativePlayerArtBindings {
             var lifecycle = GameServices.dynamicArtLifecycleOrNull();
             if (module == null || lifecycle == null || module.getRules() == null
                     || !module.getRules().dynamicArtDmaService().supportsPlayerDynamicArtAudit()) return null;
-            var bank = module instanceof PlayerArtTransferProfile profile ? profile.convertedPlayerArtBank(owner) : null;
-            if (bank == null && !owner.equals("sonic") && !owner.equals("tails") && !owner.equals("tails-tails")) return null;
-            return new DynamicArtDecisionOwner(lifecycle, module.getGameId(), owner, renderer, bank);
+            var plan = module.getGameService(PlayerArtTransferPlan.class);
+            if (plan == null || plan.bank(owner) == null) return null;
+            return new DynamicArtDecisionOwner(lifecycle, owner, renderer);
         }
     }
 }

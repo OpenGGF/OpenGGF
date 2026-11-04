@@ -124,9 +124,12 @@ final class GameLoopBonusStageSession {
         audioManager.fadeOutMusic();
 
         bonusStageTransitionPending = true;
-        host.fade().startFadeToBlack(() -> {
-            doEnterBonusStage(provider, type, savedState);
-        });
+        // Level/loc_5FF6 enters Pal_FadeToBlack before the loc_62CC title loop.
+        // Keep its completion iteration fade-owned when the callback installs
+        // TITLE_CARD, just as on bonus return; newly queued title work must not
+        // acquire the VBlank that completed the fade.
+        GameLoopPlcLifecycle.startToBlack(host.resolvedGameplayContext(), host.fade(),
+                () -> doEnterBonusStage(provider, type, savedState));
 
         LOGGER.info("Starting fade-to-black for Bonus Stage " + type);
     }

@@ -13,4 +13,14 @@ public interface FreshLevelTitleBoundaryPublication {
     }
 
     boolean shouldPublishFreshLevelTransitionInitialBoundary();
+
+    /**
+     * Whether the dispatch that observes this owner's fresh-level release is
+     * itself a serviced loop iteration whose V-int the object clock still owes.
+     * S3K's terrain wait ends inside LoadLevelLoadBlock's loc_7870 loop, after
+     * that iteration's Wait_VSync; owners without such a loop keep the default.
+     */
+    default boolean releaseScanServicesLoadLoopVBlank() {
+        return false;
+    }
 }

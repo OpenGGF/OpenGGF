@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * <p><strong>Which spring the inverted player actually meets.</strong> {@code Spring_Up}'s
  * init jumps to the {@code Obj_Spring_Down} body under the flag and {@code Spring_Down}'s to
- * {@code Obj_Spring_Up}'s (:47616-47677, already covered). Under reverse gravity the player
+ * {@code Obj_Spring_Up}'s (:47661-47722, already covered). Under reverse gravity the player
  * falls <em>up</em> the screen and stands on ceilings, so it is the authored <em>down</em>
  * spring that ends up underfoot there, running the up-spring body — and that body's launch
  * velocity, negative, integrates through {@code MoveSprite_TestGravity}'s negated copy into

@@ -1387,23 +1387,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
-     * Returns true when the active module executes objects after player physics and
-     * solid checkpoints are resolved during object execution. Driven by the
-     * {@link ObjectInteractionRules#objectsExecuteAfterPlayerPhysics()} flag — independent
-     * of collision model so S1 (UNIFIED) and S2/S3K (DUAL_PATH) can share the
-     * post-physics ordering per the 2026-04-18-solid-ordering-rom-accuracy plan.
-     */
-    public boolean objectsExecuteAfterPlayerPhysics() {
-        GameModule activeModule = activeGameModule();
-        if (activeModule == null
-                || activeModule.getRules() == null
-                || activeModule.getRules().objectInteraction() == null) {
-            return false;
-        }
-        return activeModule.getRules().objectInteraction().objectsExecuteAfterPlayerPhysics();
-    }
-
-    /**
      * Returns true when the active module advances the dynamic water level (move
      * toward target) BEFORE the player's underwater check, matching S1/S2 ROM
      * order ({@code LZWaterFeatures}/{@code WaterEffects} run before
@@ -1494,21 +1477,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (advanceOscillation) {
             advanceGlobalOscillation();
         }
-    }
-
-    /**
-     * Runs legacy post-player object hooks after the playable step has completed.
-     * This is for ROM behaviors where later SST slots read Sonic's current
-     * post-movement state and write globals for the following frame.
-     */
-    public void updateObjectPostPlayerHooks() {
-        if (objectManager == null) {
-            return;
-        }
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        AbstractPlayableSprite playable =
-                player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
-        objectManager.runPostPlayerHooks(playable, frameCounter);
     }
 
     /**
@@ -1640,7 +1608,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
         if (zoneFeatureProvider != null && level != null && playable != null) {
-            playable.capturePreZoneFeatureSnapshot();
             zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
         }
     }
@@ -1725,14 +1692,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameRuntimeUpdater.updateLevelState(playable, worldSession);
 
         frameRuntimeUpdater.updateParallaxAndAnimatedContent();
-
-        // Legacy object-before-physics modules update playable water state here.
-        // Inline-order modules run this immediately after the player slot in
-        // LevelFrameStep, before ExecuteObjects, matching S3K's Sonic_Water /
-        // Tails_Water ordering.
-        if (!objectsExecuteAfterPlayerPhysics()) {
-            updatePlayableWaterStatesForCurrentLevel();
-        }
     }
 
     /**
@@ -3584,7 +3543,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         profile.completeInitialPresentationPlcs();
         // Only an OMITTED presentation needs its player object passes replayed.
         // A presented card really dispatches them: the provider runs the ROM's
-        // own pre-Level_MainLoop passes (S2: the s2.asm:5006 RunObjects plus
+        // own pre-Level_MainLoop passes (S2: the s2.asm:5089 RunObjects plus
         // the 25 iterations of the s2.asm:5060-5066 leave loop) with player
         // physics live, so replaying them here would advance the animation and
         // the persistent last-loaded-DPLC byte a second time.
@@ -4125,12 +4084,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 playable.markInstaShieldForReregistration();
                 playable.getInstaShieldObject().invalidateDplcCache();
             }
-            // ROM Load_Level clears Dynamic_object_RAM. If the player was riding
-            // an act-1 transition helper, the next ExecuteObjects pass clears the
-            // stale on-object bit and produces the one-frame airborne handoff.
-            if (request.forceAirOnStaleObjectSupportLoss() && objectManager != null) {
-                objectManager.forceAirOnStaleObjectSupportLoss(playable);
-            }
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
             int newX = sidekick.getCentreX() + request.playerOffsetX();
@@ -4139,9 +4092,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             sidekick.setCentreYPreserveSubpixel((short) newY);
             if (sidekick.getSpriteRenderer() != null) {
                 sidekick.getSpriteRenderer().invalidateDplcCache();
-            }
-            if (request.forceAirOnStaleObjectSupportLoss() && objectManager != null) {
-                objectManager.forceAirOnStaleObjectSupportLoss(sidekick);
             }
         }
         // The transition owns both the live and copied camera words. Use the

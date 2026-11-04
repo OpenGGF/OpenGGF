@@ -82,7 +82,7 @@ class TestStageplayPlayerRouteRom {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(ints = {300, 419})
     @RequiresRom(SonicGame.SONIC_1)
-    void ghzWalkAdviceDoesNotDisappearAtTheDefaultAttemptWindow(int frames) throws Exception {
+    void ghzWalkStopsWithinItsCountBudgetsAndOffersNoApplicableRows(int frames) throws Exception {
         try (var library = SceneRomLibrary.open(Map.of("s1", Path.of(System.getProperty("sonic1.rom.path"))));
                 var resources = new StageplayResources(library, false)) {
             retireInitialWorld(library);
@@ -93,14 +93,11 @@ class TestStageplayPlayerRouteRom {
                     .withDurationFrames(800).withActors(List.of(actor)).withPuppets(List.of(track));
             var request = new StageplayRouteRequest("hero", 0, 5860, 620, frames);
             try (var probe = resources.createRouteProbe(scene.set(), actor, actor.keys().getFirst(), track)) {
-                var result = StageplayRoutePlanner.search(scene, request, probe, () -> false,
-                        System.nanoTime() + 60_000_000_000L);
-                assertFalse(result.found());
-                assertTrue(result.message().contains("needs Run"), result.message());
-                if (frames == 300) assertTrue(result.message().contains("more Attempt frames"), result.message());
-                assertTrue(result.commands().isEmpty(), "Diagnostic evidence never becomes an applicable route");
-                assertTrue(result.nodes() <= request.maxNodes());
-                assertTrue(result.ticks() <= request.maxTicks());
+                // A Walk stroll cannot climb the GHZ loop: the one search stops; it never offers rows.
+                var result = StageplayRoutePlanner.draft(scene, request, probe, () -> false);
+                var stopped = assertInstanceOf(com.openggf.route.PlanResult.Stopped.class, result);
+                assertTrue(stopped.work().expansions() <= request.maxNodes());
+                assertTrue(stopped.work().searchSteps() <= request.maxTicks() + 2 * 12);
             }
         }
     }

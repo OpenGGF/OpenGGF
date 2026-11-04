@@ -70,6 +70,10 @@ public final class StageplayWorkspace {
             throw new IOException(UiMessages.text("editor.stageplay_workspace.route_helper_is_unavailable_in_this_host_266462"));
         }
         default void cancelRoute() { }
+        /** Opens a frozen input track's rows in the route tape editor; applying returns them here. */
+        default void editInputRows(com.openggf.editor.route.RouteTapeWorkspace.SceneRows rows) throws IOException {
+            throw new IOException(UiMessages.text("editor.route_tape.stageplay_rows_unavailable"));
+        }
         default void export(StageplayDocument document, Path source, Path output) throws IOException {
             throw new IOException(UiMessages.text("editor.stageplay_workspace.film_export_is_unavailable_in_this_host_tmyb0l"));
         }
@@ -86,7 +90,7 @@ public final class StageplayWorkspace {
         SCENE_CHANGES("editor.stageplay_workspace.scene_changes_transitions_12bmha4"), FILM_FORMAT("editor.stageplay_workspace.film_format_presets_3yt45j"), CAPTION("editor.stageplay_workspace.captions_8nvjh"), DIALOGUE("editor.stageplay_workspace.dialogue_lines_1el2v2v"),
         DIALOGUE_TYPERS("editor.stageplay_workspace.dialogue_typers_9i6ioz"), DIALOGUE_SKINS("editor.stageplay_workspace.dialogue_decorations_1k831qz"), SPEAKER_VOICE("editor.stageplay_workspace.speaker_voice_1hf42pd"), AUDIO("editor.stageplay_workspace.audio_cues_1lmdfpm"),
         RECORD("editor.menu.stageplay_action.record"), PLAY("editor.stageplay_workspace.play_pause_1kh277d"), STOP("editor.stageplay_workspace.stop_1jgo2"),
-        UNDO("editor.stageplay_workspace.undo_1klxg"), REDO("editor.stageplay_workspace.redo_1iiam"), EXPORT("editor.stageplay_workspace.export_film_1r01u1c"), DETAILS("editor.stageplay_workspace.direction_details_1nra075"), EXIT("editor.stageplay_workspace.level_editor_i7o04p");
+        UNDO("editor.stageplay_workspace.undo_1klxg"), REDO("editor.stageplay_workspace.redo_1iiam"), EXPORT("editor.stageplay_workspace.export_film_1r01u1c"), DETAILS("editor.stageplay_workspace.direction_details_1nra075"), INPUT_ROWS("editor.route_tape.stageplay_input_rows"), EXIT("editor.stageplay_workspace.level_editor_i7o04p");
         private final String label;
         Action(String label) { this.label = label; }
         public String label() { return UiMessages.text(label); }
@@ -336,6 +340,7 @@ public final class StageplayWorkspace {
                 case REDO -> { controller.redo(); cameraDraft = null; }
                 case EXPORT -> exportForm();
                 case DETAILS -> directionDetails();
+                case INPUT_ROWS -> inputRows();
                 case EXIT -> deactivate();
             }
         } catch (RuntimeException failure) { report(failure); }
@@ -1699,6 +1704,11 @@ public final class StageplayWorkspace {
         var result = routeUpdate.result();
         var overlay=result==null?null:new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false);
         String summary=(result == null ? (routeUpdate.phase() == StageplayRouteJob.Phase.CHECKING ? UiMessages.text("editor.stageplay_workspace.checking_route_inputs_1yd52g") : UiMessages.text("editor.stageplay_workspace.finding_a_route_x66d8b")) : overlay.summary());
+        if (routeUpdate.result() != null && routeUpdate.result().track() != null) {
+            var rows = routeUpdate.result().track();
+            menu.setSubtitle(UiMessages.text("editor.route_tape.stageplay_review_rows", Map.of(
+                    "rows", String.valueOf(rows.frameCount()), "from", String.valueOf(rows.startFrame()))));
+        }
         menu.setHelp(UiMessages.text("editor.stageplay_workspace.review_the_path_before_applying_it_1s4jqwk"),(result == null ? ((routeUpdate.message())) : String.valueOf((String.valueOf((UiMessages.text("editor.stageplay_workspace.samples_nodes_ticks_1lkghm8", Map.of("value0", String.valueOf(result.message() + "\n" + overlay.motionSummary() + "\n" + result.path().size()), "value1", String.valueOf(result.expandedNodes()), "value2", String.valueOf(result.simulatedTicks())))))))));
         menu.setStatusLine(summary,result==null?EditorProjectMenu.Tone.INFO:result.success()?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
         if(result!=null) configureRouteDetails(result,overlay,indices);
@@ -1885,6 +1895,41 @@ public final class StageplayWorkspace {
             host.export(controller.document(),path,Path.of(v.get("out")).toAbsolutePath().normalize());
             status=UiMessages.text("editor.stageplay_workspace.film_export_started_in_a_separate_process_see_the_expor_t4an3i");
         })));
+    }
+
+    /**
+     * Opens the selected Puppet's frozen input rows (the track covering the current frame, else the
+     * next one) in the route tape editor. Applying returns them as one scene undo step; the scene's
+     * playback is their check.
+     */
+    private void inputRows() {
+        var document = controller.document();
+        String actor = controller.selectedActorId();
+        int frame = controller.frame();
+        var tracks = document.inputTracks().stream().filter(t -> t.binds(actor)).toList();
+        var track = tracks.stream().filter(t -> t.startFrame() <= frame && frame < t.endFrame()).findFirst()
+                .or(() -> tracks.stream().filter(t -> t.startFrame() > frame).findFirst())
+                .or(() -> tracks.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(tracks.getLast()))
+                .orElseThrow(() -> new IllegalStateException(UiMessages.text("editor.route_tape.stageplay_no_rows")));
+        String name = document.actors().stream().filter(a -> a.id().equals(actor)).map(Actor::name).findFirst().orElse(actor);
+        var source = document;
+        var rows = new com.openggf.editor.route.RouteTapeWorkspace.SceneRows(
+                UiMessages.text("editor.route_tape.stageplay_rows_title", Map.of("actor", name, "track", track.id())),
+                UiMessages.text("editor.route_tape.stageplay_rows_detail", Map.of("from", String.valueOf(track.startFrame()),
+                        "to", String.valueOf(track.endFrame() - 1))),
+                com.openggf.stageplay.route.StageplayRoutes.tape(track), edited -> {
+                    if (!controller.document().equals(source)) {
+                        throw new IllegalStateException(UiMessages.text("editor.route_tape.stageplay_rows_stale"));
+                    }
+                    var written = com.openggf.stageplay.route.StageplayRoutes.track(track.id(), actor, track.startFrame(), edited);
+                    // Keep the track's own lane bindings (a P2 binding included); only its rows change.
+                    var replaced = new FrozenInputTrack(track.id(), track.startFrame(), track.lanes(), written.rows(),
+                            written.sha256());
+                    edit(doc -> com.openggf.stageplay.route.StageplayRoutes.install(doc, replaced));
+                    appliedOverlay = null;
+                    status = UiMessages.text("editor.route_tape.stageplay_rows_applied");
+                }, this::activate);
+        io(() -> host.editInputRows(rows));
     }
 
     private void edit(UnaryOperator<StageplayDocument> operation) { controller.edit(operation); cameraDraft = null; status=UiMessages.text("editor.stageplay_workspace.scene_edited_w7itst"); }

@@ -36,7 +36,7 @@ import java.util.List;
  *
  * <ol>
  *   <li><b>Capture</b> ({@code loc_48C44}, :94985-95036).</li>
- *   <li><b>Spin-up</b> ({@code loc_48D2C}, :95038-95052), which ramps {@code 4(a4)} to
+ *   <li><b>Spin-up</b> ({@code loc_48D2C}, :95043-95057), which ramps {@code 4(a4)} to
  *       {@code $300} and only then launches.</li>
  *   <li><b>Ride</b> ({@code loc_48DCA}, :95110-95204), which owns the flag write and the
  *       exit nudge.</li>
@@ -81,7 +81,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     /** ROM {@code move.b #6,2(a4)} when {@code Status_Facing} is set (:95104). */
     private static final int POSE_PHASE_FACING_LEFT = 6;
 
-    /** {@code RawAni_48DB2} (:95097): the twelve captured-player mapping frames. */
+    /** {@code RawAni_48DB2} (:95104): the twelve captured-player mapping frames. */
     private static final int[] POSE_FRAMES = {
         0x55, 0x59, 0x5A, 0x5B, 0x5A, 0x59, 0x55, 0x56, 0x57, 0x58, 0x57, 0x56
     };
@@ -210,7 +210,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         state.spin = 0;
     }
 
-    /** {@code loc_48D2C} (:95038-95052), then the shared pose update. */
+    /** {@code loc_48D2C} (:95043-95057), then the shared pose update. */
     private void spinUp(AbstractPlayableSprite player, RiderState state) {
         state.spin += SPIN_STEP;
         if (state.spin == SPIN_LAUNCH) {
@@ -326,7 +326,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_48D66} (:95054-95068). The pose phase is a word that advances by the spin
+     * {@code loc_48D66} (:95069-95083). The pose phase is a word that advances by the spin
      * ramp and wraps at {@code $C00}; its <em>high</em> byte ({@code move.b 2(a4),d0} on a
      * big-endian word) indexes the twelve-entry tables. The reverse-gravity row is
      * {@code ori.b #2,d0} on the flip byte (:95064-95066), which the engine already composes

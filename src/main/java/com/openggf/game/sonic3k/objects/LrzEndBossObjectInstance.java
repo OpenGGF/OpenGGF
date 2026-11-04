@@ -19,7 +19,7 @@ import java.util.List;
 
 /** Obj_LRZEndBoss: damage comes exclusively from the floating mines' status-bit publication. */
 public final class LrzEndBossObjectInstance extends AbstractObjectInstance
-        implements ZeroArgRewindRecreatable, TouchResponseProvider, RomObjectCodePointerProvider {
+        implements com.openggf.level.objects.observe.HitPointSource, ZeroArgRewindRecreatable, TouchResponseProvider, RomObjectCodePointerProvider {
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0,0,0,0,0,0);
     private int entry, routine, timer, callback, shots, shotInterval, hits, flash;
     private boolean hitPending, defeated, childrenReleased, flipped;
@@ -221,7 +221,10 @@ public final class LrzEndBossObjectInstance extends AbstractObjectInstance
     }
     boolean flipped() { return flipped; }
     boolean hitPending() { return hitPending; }
-    boolean defeated() { return defeated; }
+    /** Route observation: the owner's own defeat flag (set when its hit count reaches zero). */
+    @Override public boolean defeated() { return defeated; }
+    /** Route observation: hits left; 14 are armed when it first rises (routine 0 leaves the count unset). */
+    @Override public int hitsRemaining() { return routine == 0 && !defeated ? 14 : hits; }
     boolean childrenReleased() { return childrenReleased; }
     int hits() { return hits; }
     @Override public int getX() { return (short)motion.x; }
@@ -239,4 +242,5 @@ public final class LrzEndBossObjectInstance extends AbstractObjectInstance
         var renderer=getRenderer(Sonic3kObjectArtKeys.LRZ_END_BOSS);
         if(renderer!=null && renderer.isReady()) renderer.drawFrameIndex(0,getX(),getY(),flipped,false);
     }
+
 }
