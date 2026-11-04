@@ -90,7 +90,7 @@ class TestSonicCdPastAnimalWorld {
                 + "TIME_POST_DIRECTION TIME_POST_SUB_CPU MONITOR_BODY TIME_POST_BODY CLEAR_DEMO_INDEX POST_OBJECT_GUARDS "
                 + "DEAD_CAMERA_FREEZE DRAW_OBJECTS PALETTE_CYCLE UPDATE_SECTION PREPARE_PLCS UPDATE_GLOBAL_ANIMATIONS "
                 + "ORDINARY_MAIN_RETURN FLOAT_BLOCK_SOLID FLOAT_BLOCK_BODY").split(" ");
-        assertEquals(oldNames.length + 10, calls.length);
+        assertEquals(oldNames.length + 14, calls.length);
         for (int i = 0; i < oldNames.length; i++) assertEquals(oldNames[i], calls[i].name(), "Existing ordinal " + i);
         assertEquals("ANIMAL_PRESENCE", calls[oldNames.length].name());
         assertEquals("PATA_BATA_BODY", calls[oldNames.length + 1].name());
@@ -102,6 +102,10 @@ class TestSonicCdPastAnimalWorld {
         assertEquals("ANTON_BODY", calls[oldNames.length + 7].name());
         assertEquals("ROBOT_GENERATOR_BODY", calls[oldNames.length + 8].name());
         assertEquals("EXPLOSION_BODY", calls[oldNames.length + 9].name());
+        assertEquals("GOAL_POST_BODY", calls[oldNames.length + 10].name());
+        assertEquals("SIGNPOST_BODY", calls[oldNames.length + 11].name());
+        assertEquals("BIG_RING_BODY", calls[oldNames.length + 12].name());
+        assertEquals("RESULTS_BODY", calls[oldNames.length + 13].name());
         assertCachedAnimal(p, null);
     }
 

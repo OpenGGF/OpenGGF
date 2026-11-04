@@ -230,7 +230,25 @@ public final class CdR11bAssets {
         // _Objects/Level End/Main.asm:615,677,688-702 and Data/Mappings (Post).asm at native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
         // Actual original USA B Init MOVE.L atD6E8 and PC-indexed WORD read atD776 authenticate these complete spans.
         MAP_SPR_GOAL_SIGNPOST("MapSpr_GoalSignpost", 0x1D9B4, 126, 0, 0, 0, 0, false),
-        GOAL_POST_BASE_TILES("ObjGoalPost_SetBaseTile.TileIDs", 0xD78E, 112, 0, 0, 0, 0, false);
+        GOAL_POST_BASE_TILES("ObjGoalPost_SetBaseTile.TileIDs", 0xD78E, 112, 0, 0, 0, 0, false),
+
+        // _Objects/Level End/Main.asm:792-794,845-891 and Data/Animations (Signpost).asm at native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+        // Actual original USA B Spin LEA atD8B8 and StartResults PC-indexed WORD store atD962.
+        ANI_SIGNPOST("Ani_Signpost", 0x1D9A6, 14, 0, 0, 0, 0, false),
+        LEVEL_END_TIME_BONUSES("StartResults.TimeBonuses", 0xD978, 42, 0, 0, 0, 0, false),
+
+        // _Objects/Level End/Main.asm:385-423,429-522 and complete Big Ring/Flash Data includes at native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+        // Actual original USA B stores/LEAs atD5AA/D62E andD528/D530; subtype nonzero selects the same-ID flash first.
+        ANI_BIG_RING("Ani_BigRing", 0x1D8EE, 8, 0, 0, 0, 0, false),
+        MAP_SPR_BIG_RING("MapSpr_BigRing", 0x1D8F6, 176, 0, 0, 0, 0, false),
+        ANI_BIG_RING_FLASH("Ani_BigRingFlash", 0xD9DA, 12, 0, 0, 0, 0, false),
+        MAP_SPR_BIG_RING_FLASH("MapSpr_BigRingFlash", 0xD9E6, 416, 0, 0, 0, 0, false),
+
+        // _Objects/Results/Main.asm:90-148,355-366 and complete Data/Mappings.asm at native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+        // Actual ID3A entry20DFA8 selects WaitPLC's LEA atDFF8 and four mapping stores atE03A/E04A/E054/E064.
+        // Both source spans have duplicate copies; these reached operands select the original live views.
+        RESULTS_INIT_DATA("ObjResults_InitData", 0xE268, 24, 0, 0, 0, 0, false),
+        MAP_SPR_RESULTS("MapSpr_ResultsBad/MapSpr_ResultsBadSSZ3/MapSpr_ResultsGood/MapSpr_ResultsGoodSSZ3", 0xE280, 622, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

@@ -49,6 +49,10 @@ final class SonicCdPastLoadingVisit {
     private final CdAnton anton;
     private final CdRobotGenerator robotGenerator;
     private final CdExplosion explosion;
+    private final CdGoalPost goalPost;
+    private final CdSignpost signpost;
+    private final CdBigRing bigRing;
+    private final CdResults results;
     private final CdTunnelDoor tunnelDoor;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
@@ -69,6 +73,10 @@ final class SonicCdPastLoadingVisit {
     private transient SpikesInvocation activeSpikes;
     private transient AntonInvocation activeAnton;
     private transient MachineInvocation activeMachine;
+    private transient GoalInvocation activeGoal;
+    private transient SignpostInvocation activeSignpost;
+    private transient BigRingInvocation activeBigRing;
+    private transient ResultsInvocation activeResults;
     private transient TunnelDoorInvocation activeTunnelDoor;
     private transient MonitorInvocation activeMonitor;
     private transient DrainInvocation activeDrain;
@@ -97,6 +105,14 @@ final class SonicCdPastLoadingVisit {
     private boolean drawingSpikes;
     private boolean antonPort;
     private boolean drawingAnton;
+    private boolean bigRingPort;
+    private boolean drawingBigRing;
+    private boolean resultsPort;
+    private boolean drawingResults;
+    private boolean signpostPort;
+    private boolean drawingSignpost;
+    private boolean goalPort;
+    private boolean drawingGoal;
     private boolean machinePort;
     private boolean drawingMachine;
     private boolean tunnelDoorPort;
@@ -238,6 +254,15 @@ final class SonicCdPastLoadingVisit {
         spikes = CdSpikes.fromPastAssetsWithPrefix(placement, assets, sharedSolid, this::commitSpikesSolid,
                 this::commitSpikesYRewind, this::commitSpikesHurt, this::drawSpikes);
         anton = CdAnton.fromPastAssets(placement, assets, sharedTerrain, this::commitAntonPrimaryAngle, this::drawAnton);
+        results = new CdResults(placement, CdResults.Assets.fromPastAssets(assets), this::readResults,
+                this::storeResultsBonus, this::addResultsPoints, this::loadResultsPlc, this::soundResults, this::drawResults,
+                null, null); // Native NextLevel's first MOVE.W#2,levelRestart remains unowned, before its write.
+        bigRing = new CdBigRing(placement, CdBigRing.Assets.fromPastAssets(assets), this::readBigRing,
+                this::storeBigRingSpecialStage, this::storeBigRingPlayer, this::storeBigRingScrollLock, this::soundBigRing, this::drawBigRing);
+        signpost = new CdSignpost(placement, CdSignpost.Assets.fromPastAssets(assets), this::readSignpost,
+                this::storeSignpost, this::soundSignpost, this::drawSignpost);
+        goalPost = new CdGoalPost(placement, CdGoalPost.Assets.fromPastAssets(assets), this::readGoalPlayerWord,
+                this::storeGoalReached, this::loadGoalPlc, this::readGoalPlcHead, this::drawGoal);
         robotGenerator = new CdRobotGenerator(placement, CdRobotGenerator.Assets.fromPastAssets(assets), sharedSolid,
                 this::commitRobotSolid, this::storeRobotGoodFuture, this::addRobotPoints, this::playRobotFm, this::drawRobot);
         explosion = CdExplosion.fromPastAssets(placement, assets, this::drawExplosion);
@@ -321,13 +346,13 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || drawQueue != null)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
     private void requireCallback() {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !servicing || loadingSaved || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat) throw new IllegalStateException("No actual Past selectorC callback");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !servicing || loadingSaved || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat) throw new IllegalStateException("No actual Past selectorC callback");
     }
     private void call(SonicCdGameModule.PastLoadCall call) {
         var calls = new ArrayList<>(values.calls()); calls.add(call);
@@ -442,7 +467,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (activeMachine != null || machinePort || drawingMachine || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || drawQueue != null)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -493,6 +518,14 @@ final class SonicCdPastLoadingVisit {
                     runSpikes(whole); call(SPIKES_BODY);
                 } else if (id == CdAnton.OBJECT_ID) {
                     runAnton(whole); call(ANTON_BODY);
+                } else if (id == CdResults.OBJECT_ID) {
+                    runResults(whole); call(RESULTS_BODY);
+                } else if (id == CdBigRing.OBJECT_ID) {
+                    runBigRing(whole); call(BIG_RING_BODY);
+                } else if (id == CdSignpost.OBJECT_ID) {
+                    runSignpost(whole); call(SIGNPOST_BODY);
+                } else if (id == CdGoalPost.OBJECT_ID) {
+                    runGoal(whole); call(GOAL_POST_BODY);
                 } else if (id == CdRobotGenerator.OBJECT_ID) {
                     runMachine(whole, true); call(ROBOT_GENERATOR_BODY);
                 } else if (id == CdExplosion.OBJECT_ID) {
@@ -578,7 +611,7 @@ final class SonicCdPastLoadingVisit {
                                 Optional<CdPlayerBody.DisplayEligibility> display) { }
 
     private void runPrimaryMain(int levelFrame) {
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || reservedPort || drawingReserved
                 || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
@@ -737,7 +770,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activeMachine != null || machinePort || drawingMachine || invocation == null || activePrimary != invocation || invocation.owner != this
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || invocation == null || activePrimary != invocation || invocation.owner != this
                 || !runningObjects || servicing || loadingSaved || activeDrain != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
@@ -801,7 +834,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private CdObjectDrawQueue.LiveDrawSlot primaryLiveSlot() {
-        if (activeMachine != null || machinePort || drawingMachine || activeDrain == null || !queuePort || drawQueue == null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeDrain == null || !queuePort || drawQueue == null
                 || drawQueue.phase() != CdObjectDrawQueue.Phase.DRAINING)
             throw new IllegalStateException("Primary live pointer dereference belongs only to actual DrawObjects");
         var state = frame.state(); var motion = state.motion(); var header = state.header();
@@ -854,7 +887,7 @@ final class SonicCdPastLoadingVisit {
     /** Native Main405-432. Only the actual completed physical pass can reach this continuation. */
     private void finishOrdinaryMain() {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null || activeReserved != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
@@ -953,7 +986,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var actual = placement.capture();
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || invocation == null || activeDrain != invocation
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || invocation == null || activeDrain != invocation
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort
                 || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
@@ -1040,6 +1073,10 @@ final class SonicCdPastLoadingVisit {
         var mosquiDamaged = assets.view(CdR11bAssets.Asset.MAP_SPR_MOSQUI_DAMAGED);
         var spikesView = assets.view(CdR11bAssets.Asset.MAP_SPR_SPIKES);
         var antonView = assets.view(CdR11bAssets.Asset.MAP_SPR_ANTON);
+        var bigRingView = assets.view(CdR11bAssets.Asset.MAP_SPR_BIG_RING);
+        var bigRingFlashView = assets.view(CdR11bAssets.Asset.MAP_SPR_BIG_RING_FLASH);
+        var resultsView = assets.view(CdR11bAssets.Asset.MAP_SPR_RESULTS);
+        var goalView = assets.view(CdR11bAssets.Asset.MAP_SPR_GOAL_SIGNPOST);
         var robotView = assets.view(CdR11bAssets.Asset.MAP_SPR_ROBOT_GENERATOR);
         var explosionView = assets.view(CdR11bAssets.Asset.MAP_SPR_EXPLOSION);
         var tunnelDoorView = assets.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR);
@@ -1076,6 +1113,14 @@ final class SonicCdPastLoadingVisit {
                 new CdObjectMappings.DeclaredTable(mosquiDamaged.range().nativeAddress(), mosquiDamaged.bytes(), 0, 5),
                 new CdObjectMappings.DeclaredTable(spikesView.range().nativeAddress(), spikesView.bytes(), 0, 1),
                 new CdObjectMappings.DeclaredTable(antonView.range().nativeAddress(), antonView.bytes(), 0, 4),
+                new CdObjectMappings.DeclaredTable(bigRingView.range().nativeAddress(), bigRingView.bytes(), 0, 4),
+                new CdObjectMappings.DeclaredTable(bigRingFlashView.range().nativeAddress(), bigRingFlashView.bytes(), 0, 8),
+                // Results four roots retain the SAME complete622B source, including shared bodies and real pads.
+                new CdObjectMappings.DeclaredTable(resultsView.range().nativeAddress(), resultsView.bytes(), 0, 5),
+                new CdObjectMappings.DeclaredTable(resultsView.range().nativeAddress(), resultsView.bytes(), 10, 5),
+                new CdObjectMappings.DeclaredTable(resultsView.range().nativeAddress(), resultsView.bytes(), 20, 5),
+                new CdObjectMappings.DeclaredTable(resultsView.range().nativeAddress(), resultsView.bytes(), 30, 5),
+                new CdObjectMappings.DeclaredTable(goalView.range().nativeAddress(), goalView.bytes(), 0, 6),
                 new CdObjectMappings.DeclaredTable(robotView.range().nativeAddress(), robotView.bytes(), 0, 8),
                 new CdObjectMappings.DeclaredTable(explosionView.range().nativeAddress(), explosionView.bytes(), 0, 7),
                 new CdObjectMappings.DeclaredTable(tunnelDoorView.range().nativeAddress(), tunnelDoorView.bytes(), 0, 2)),
@@ -1096,6 +1141,10 @@ final class SonicCdPastLoadingVisit {
                         : activeBoulder != null ? readBoulderDrawSlot(ref)
                         : activeSpikes != null ? readSpikesDrawSlot(ref)
                         : activeAnton != null ? readAntonDrawSlot(ref)
+                        : activeResults != null ? readResultsDrawSlot(ref)
+                        : activeBigRing != null ? readBigRingDrawSlot(ref)
+                        : activeSignpost != null ? readSignpostDrawSlot(ref)
+                        : activeGoal != null ? readGoalDrawSlot(ref)
                         : activeMachine != null ? readMachineDrawSlot(ref)
                         : activeTunnelDoor != null ? readTunnelDoorDrawSlot(ref)
                         : activeMonitor != null ? readMonitorDrawSlot(ref) : readRingDrawSlot(ref);
@@ -1114,6 +1163,10 @@ final class SonicCdPastLoadingVisit {
                 else if (activeBoulder != null) writeBoulderOnScreen(ref, onScreen);
                 else if (activeSpikes != null) writeSpikesOnScreen(ref, onScreen);
                 else if (activeAnton != null) writeAntonOnScreen(ref, onScreen);
+                else if (activeResults != null) writeResultsOnScreen(ref, onScreen);
+                else if (activeBigRing != null) writeBigRingOnScreen(ref, onScreen);
+                else if (activeSignpost != null) writeSignpostOnScreen(ref, onScreen);
+                else if (activeGoal != null) writeGoalOnScreen(ref, onScreen);
                 else if (activeMachine != null) writeMachineOnScreen(ref, onScreen);
                 else if (activeTunnelDoor != null) writeTunnelDoorOnScreen(ref, onScreen);
                 else if (activeMonitor != null) writeMonitorOnScreen(ref, onScreen);
@@ -1163,7 +1216,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
@@ -1191,7 +1244,7 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -1205,7 +1258,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activeMachine != null || machinePort || drawingMachine || activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
@@ -1230,7 +1283,7 @@ final class SonicCdPastLoadingVisit {
 
     private CdAssetBytes readReservedHud(int whole) {
         var invocation = requireReservedInvocation(whole);
-        if (activeMachine != null || machinePort || drawingMachine || reservedPort || drawingReserved || queuePort)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || reservedPort || drawingReserved || queuePort)
             throw new IllegalStateException("Reserved HUD read reentry");
         reservedPort = true;
         try {
@@ -1244,7 +1297,7 @@ final class SonicCdPastLoadingVisit {
 
     private void writeReservedHud(int whole, CdAssetBytes expected, CdAssetBytes next) {
         var invocation = requireReservedInvocation(whole);
-        if (activeMachine != null || machinePort || drawingMachine || reservedPort || drawingReserved || queuePort || invocation.drawn
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || reservedPort || drawingReserved || queuePort || invocation.drawn
                 || expected == null || next == null || expected.length() != 64 || next.length() != 64
                 || !sameBytes(expected, reservedImage(whole))
                 || invocation.storeCursor >= invocation.stores.size())
@@ -1289,7 +1342,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawReservedHud(int whole) {
         var invocation = requireReservedInvocation(whole);
-        if (activeMachine != null || machinePort || drawingMachine || reservedPort || drawingReserved || queuePort || invocation.drawn || !invocation.drawExpected
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || reservedPort || drawingReserved || queuePort || invocation.drawn || !invocation.drawExpected
                 || invocation.storeCursor != invocation.stores.size())
             throw new IllegalStateException("Reserved DrawObject is not at its actual once-only cut");
         invocation.drawn = true;
@@ -1309,7 +1362,7 @@ final class SonicCdPastLoadingVisit {
 
     private CdObjectDrawQueue.LiveDrawSlot readReservedDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireReservedInvocation(Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingReserved || reservedPort || queuePort)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingReserved || reservedPort || queuePort)
             throw new IllegalStateException("No actual reserved queue dereference");
         queuePort = true;
         try {
@@ -1326,7 +1379,7 @@ final class SonicCdPastLoadingVisit {
 
     private void writeReservedOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireReservedInvocation(Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingReserved || reservedPort || queuePort || onScreen)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingReserved || reservedPort || queuePort || onScreen)
             throw new IllegalStateException("Only actual DrawObject may clear reserved bit7");
         queuePort = true;
         try {
@@ -1435,7 +1488,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runRing(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -1475,7 +1528,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private RingInvocation requireRingInvocation(RingInvocation invocation, CdObjectPool pool, int whole) {
-        if (activeMachine != null || machinePort || drawingMachine || invocation == null || activeRing != invocation || invocation.pool != pool || pool != placement.pool()
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || invocation == null || activeRing != invocation || invocation.pool != pool || pool != placement.pool()
                 || invocation.whole != whole || whole < 32 || whole >= 128 || pool.state(whole).id() != 0x10
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
             throw new IllegalStateException("No actual cached Ring callback for this live physical pointer");
@@ -1486,7 +1539,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyRingInvocation(RingInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeRing != invocation || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeRing != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
                 || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -1535,7 +1588,7 @@ final class SonicCdPastLoadingVisit {
 
     private CdRingGlobals readRingGlobals(RingInvocation invocation) {
         requireRingInvocation(invocation, invocation.pool, invocation.whole);
-        if (activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.readRing != null || invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.readRing != null || invocation.drawn)
             throw new IllegalStateException("Ring globals read is not at its actual once-only cut");
         var before = placement.capture();
         ringPort = true;
@@ -1551,7 +1604,7 @@ final class SonicCdPastLoadingVisit {
 
     private void writeRingGlobals(RingInvocation invocation, CdRingGlobals next) {
         requireRingInvocation(invocation, invocation.pool, invocation.whole);
-        if (activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.routine != 4 || invocation.readRing == null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.routine != 4 || invocation.readRing == null
                 || invocation.rewardWritten || invocation.soundRequested || invocation.drawn
                 || values.ring() != invocation.readRing || next == null)
             throw new IllegalStateException("Ring reward requires its actual routine4 read and once-only publication");
@@ -1599,7 +1652,7 @@ final class SonicCdPastLoadingVisit {
 
     private void ringSound(RingInvocation invocation, SonicCdGameModule.PastSound sound) {
         requireRingInvocation(invocation, invocation.pool, invocation.whole);
-        if (activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.routine != 4 || !invocation.rewardWritten
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.routine != 4 || !invocation.rewardWritten
                 || invocation.soundRequested || invocation.drawn
                 || (ringGainsLife(invocation.readRing)
                 ? !(sound instanceof SonicCdGameModule.PastRingSubCpu subCpu && subCpu.command() == CdRing.SubCpuCommand.SCMD_YESSFX)
@@ -1619,7 +1672,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawRing(RingInvocation invocation, CdObjectPool pool, int whole) {
         requireRingInvocation(invocation, pool, whole);
-        if (activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.drawn
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || ringPort || drawingRing || queuePort || invocation.drawn
                 || invocation.routine == 4 && !invocation.soundRequested)
             throw new IllegalStateException("Ring DrawObject is not at its actual once-only source cut");
         var before = placement.capture();
@@ -1644,7 +1697,7 @@ final class SonicCdPastLoadingVisit {
     private CdObjectDrawQueue.LiveDrawSlot readRingDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = activeRing;
         requireRingInvocation(invocation, placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingRing || ringPort || queuePort)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingRing || ringPort || queuePort)
             throw new IllegalStateException("No actual Ring queue dereference");
         var before = placement.capture();
         queuePort = true;
@@ -1664,7 +1717,7 @@ final class SonicCdPastLoadingVisit {
     private void writeRingOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = activeRing;
         requireRingInvocation(invocation, placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingRing || ringPort || queuePort || onScreen || invocation.screenCleared)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingRing || ringPort || queuePort || onScreen || invocation.screenCleared)
             throw new IllegalStateException("Only actual DrawObject may clear this live Ring's bit7 once");
         var before = placement.capture();
         var current = invocation.pool.state(invocation.whole);
@@ -1719,7 +1772,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runSpring(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdSpring.OBJECT_ID || values.phase() != BEGIN_LEVEL
@@ -1755,7 +1808,7 @@ final class SonicCdPastLoadingVisit {
     private void verifySpringInvocation(SpringInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeSpring != invocation || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeSpring != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || reservedPort || drawingReserved || ringPort || drawingRing
                 || invocation.body != spring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -1813,7 +1866,7 @@ final class SonicCdPastLoadingVisit {
     private void commitSpringSolid(CdSpring.SolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requireSpringInvocation(placement.pool(), call.result().object().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.solidResult != null || invocation.launched
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.solidResult != null || invocation.launched
                 || invocation.sounded || invocation.drawn || invocation.entry.unsignedByte(CdObjectState.ByteField.ROUTINE_2) == 5)
             throw new IllegalStateException("Spring Solid is not at its once-only native cut");
         var pool = invocation.pool; var cut = call.callCut(); var result = call.result();
@@ -1866,7 +1919,7 @@ final class SonicCdPastLoadingVisit {
     private void commitSpringLaunch(CdSpring.LaunchCall call) {
         Objects.requireNonNull(call);
         var invocation = requireSpringInvocation(placement.pool(), call.identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.solidResult == null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.solidResult == null
                 || invocation.launched || invocation.sounded || invocation.drawn)
             throw new IllegalStateException("Spring launch is not after its one actual Solid");
         var solid = invocation.solidResult;
@@ -1920,7 +1973,7 @@ final class SonicCdPastLoadingVisit {
 
     private void playSpringFm(CdSpring.FmSound sound) {
         var invocation = requireSpringInvocation(placement.pool(), activeSpring == null ? -1 : activeSpring.whole);
-        if (activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || !invocation.launched || invocation.sounded || invocation.drawn
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || !invocation.launched || invocation.sounded || invocation.drawn
                 || sound != CdSpring.FmSound.FM_SPRING)
             throw new IllegalStateException("Spring sound is not its once-only postlaunch call");
         var before = placement.capture(); var ledger = new ArrayList<>(sounds);
@@ -1954,7 +2007,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawSpring(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireSpringInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.launched != invocation.sounded)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.launched != invocation.sounded)
             throw new IllegalStateException("Spring DrawObject is not at its actual once-only cut");
         var before = placement.capture(); var current = pool.state(invocation.whole);
         var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
@@ -1975,7 +2028,7 @@ final class SonicCdPastLoadingVisit {
 
     private CdObjectDrawQueue.LiveDrawSlot readSpringDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireSpringInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingSpring || springPort || queuePort) throw new IllegalStateException("No actual Spring queue read");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingSpring || springPort || queuePort) throw new IllegalStateException("No actual Spring queue read");
         var before = placement.capture(); queuePort = true;
         try {
             var current = invocation.pool.state(invocation.whole);
@@ -1990,7 +2043,7 @@ final class SonicCdPastLoadingVisit {
 
     private void writeSpringOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireSpringInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingSpring || springPort || queuePort || onScreen || invocation.screenCleared)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingSpring || springPort || queuePort || onScreen || invocation.screenCleared)
             throw new IllegalStateException("Only actual Spring DrawObject may clear bit7 once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
         var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
@@ -2113,7 +2166,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runAnimal(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -2153,7 +2206,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyAnimalContext(AnimalInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || !invocation.active || invocation.body != animal || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !invocation.active || invocation.body != animal || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -2202,6 +2255,1451 @@ final class SonicCdPastLoadingVisit {
             throw new IllegalStateException("Animal changed source identity or placement cursors");
     }
 
+
+    /** Missing live knowledge stays a reached, addressed read boundary, never a zero time. */
+    static final class UnsupportedSignpostRead extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final CdSignpost.ReadField field; private final int nativeAddress;
+        private UnsupportedSignpostRead(CdSignpost.ReadField field, int nativeAddress) {
+            super("Actual Signpost " + field + " requires known live byte $" + Integer.toHexString(nativeAddress));
+            this.field = field; this.nativeAddress = nativeAddress;
+        }
+        CdSignpost.ReadField field() { return field; }
+        int nativeAddress() { return nativeAddress; }
+    }
+    static final class UnsupportedSignpostBonus extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final CdSignpost.StoreField field;
+        private UnsupportedSignpostBonus(CdSignpost.StoreField field) {
+            super("Actual Signpost " + field + " has no complete existing bonus preimage"); this.field = field;
+        }
+        CdSignpost.StoreField field() { return field; }
+    }
+    enum ResultsReadBoundary { BONUS_PREIMAGE }
+    static final class UnsupportedResultsRead extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final ResultsReadBoundary boundary;
+        private UnsupportedResultsRead(ResultsReadBoundary boundary) {
+            super("Actual Results has no complete existing value at " + boundary); this.boundary = boundary;
+        }
+        ResultsReadBoundary boundary() { return boundary; }
+    }
+    private enum ResultsCut {
+        INVALID, PLC, HEAD, WAIT_ZONE, CAMERA, PLAYER_X, ROW_ZONE, ROW_GOOD, ROW_ACT,
+        UPDATE, TIME, TIME_STORE, RING, RING_STORE, CHECK_TIME, CHECK_RING, SPECIAL,
+        TALLY, KACHING, WARP, POINTS, DRAW, RETURN, ALLOCATION_STOP, PROGRAMME
+    }
+    /** Private actual producer/order proof; descriptive public callbacks and Effects cannot mint it. */
+    private final class ResultsInvocation {
+        private final CdResults body = results;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object stage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final SonicCdGameModule.LevelProgramState program = module.levelProgramState();
+        private Values base = values;
+        private List<SonicCdGameModule.PastSound> ledger = sounds;
+        private final CdObjectDrawQueue.CameraWords camera;
+        private final Object world; private final long generation; private final int whole;
+        private final CdObjectState entry;
+        private CdObjectPool.Snapshot expectedPool;
+        private ResultsCut next;
+        private int row, selected, rowRoot, edge, time, rings, points;
+        private boolean drawn, screenCleared;
+        private CdObjectState drawSource;
+        private ResultsInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole); expectedPool = before.pool(); selected = whole;
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            camera = new CdObjectDrawQueue.CameraWords(scroll.state().cameraX(), scroll.state().cameraYWord());
+            next = switch (entry.routine()) {
+                case 0 -> ResultsCut.PLC;
+                case 2 -> ResultsCut.HEAD;
+                case 4 -> ResultsCut.DRAW;
+                case 6 -> ResultsCut.UPDATE;
+                case 8 -> ResultsCut.PROGRAMME;
+                default -> ResultsCut.INVALID;
+            };
+            if (entry.routine() == 0) {
+                expectResultsImage(this, entry.addByte(CdObjectState.ByteField.RESULTS_TIMER, -1));
+                if (resultsSource(this).unsignedByte(CdObjectState.ByteField.RESULTS_TIMER) != 0) next = ResultsCut.RETURN;
+            } else if (entry.routine() == 4) prepareResultsMove(this);
+        }
+    }
+    private boolean resultsForeignScope() {
+        return activeBigRing != null || bigRingPort || drawingBigRing || bigRingForeignScope();
+    }
+    private void runResults(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (resultsForeignScope() || activeResults != null || resultsPort || drawingResults || queuePort
+                || !runningObjects || servicing || loadingSaved || whole < 32 || whole >= 128 || values.phase() != BEGIN_LEVEL
+                || placement.pool().state(whole).id() != CdResults.OBJECT_ID
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past Results dispatch");
+        var i = new ResultsInvocation(whole); activeResults = i;
+        try {
+            var result = results.run(whole); verifyResults(i); validateResultsImages(i);
+            if (i.next != ResultsCut.RETURN || i.drawn != i.screenCleared || !result.state().equals(resultsSource(i)))
+                throw new IllegalStateException("Results returned before its genuine conditional native tail");
+        } catch (RuntimeException | Error original) { verifyResultsFailure(i, original); throw original; }
+        finally { activeResults = null; }
+    }
+    private ResultsInvocation requireResults(int whole) {
+        var i = activeResults;
+        if (i == null || i.whole != whole || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual selected Results callback");
+        verifyResults(i); return i;
+    }
+    private void verifyResults(ResultsInvocation i) {
+        module.requirePastLoadingVisit(this); var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeResults != i || resultsForeignScope() || !runningObjects || servicing || loadingSaved
+                || i.body != results || i.sourceFrame != frame || i.sourceAssets != assets || i.stage != frame.stageSource()
+                || i.pool != placement.pool() || i.queue != drawQueue || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING || values.phase() != BEGIN_LEVEL
+                || i.world != mode.getWorldSession() || i.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || i.base != values || i.ledger != sounds || i.program != module.levelProgramState()
+                || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
+                || !frame.state().equals(i.actor.state()) || !frame.environment().equals(i.shared.environment())
+                || !presentation.samePastScroll(i.scroll) || !placement.status().equals(i.before.status()))
+            throw new IllegalStateException("Results retained another World/Frame/queue/programme cut or changed a foreign owner");
+        placement.validateRestore(i.before); i.pool.validateRestore(i.expectedPool);
+    }
+    private CdObjectState resultsSource(ResultsInvocation i) { return i.expectedPool.slots().get(i.whole - 32); }
+    /** Verifier images only: this helper never publishes a gameplay store. */
+    private void expectResultsImage(ResultsInvocation i, CdObjectState image) {
+        i.expectedPool = CdObjectPool.overlay(i.expectedPool, List.of(image));
+    }
+    private void validateResultsImages(ResultsInvocation i) {
+        var now = placement.capture();
+        if (!now.pool().slots().equals(i.expectedPool.slots()) || !now.status().equals(i.before.status())
+                || !sameBytes(now.savedFlags(), i.before.savedFlags()))
+            throw new IllegalStateException("Results differs from its reached full96 dirty-row prefix or saved/cursor nonwrites");
+    }
+    private void validateResultsCut(ResultsInvocation i, CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) {
+        verifyResults(i); placement.validateRestore(Objects.requireNonNull(cut)); validateResultsImages(i);
+        var now = placement.capture();
+        if (!source.equals(resultsSource(i)) || !source.identity().equals(i.entry.identity())
+                || !source.equals(i.pool.state(i.whole)) || !cut.pool().slots().equals(now.pool().slots())
+                || !cut.status().equals(now.status()) || !sameBytes(cut.savedFlags(), now.savedFlags()))
+            throw new IllegalStateException("Results callback lacks its fresh complete actual placement/source");
+    }
+    private void requireResultsSite(ResultsInvocation i, ResultsCut site, CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) {
+        if (resultsPort || drawingResults || queuePort || i.drawn || i.next != site)
+            throw new IllegalStateException("Results callback lacks its actual once-only reached native position");
+        validateResultsCut(i, cut, source);
+    }
+    private void prepareResultsMove(ResultsInvocation i) {
+        var s = resultsSource(i);
+        if (s.word(CdObjectState.WordField.RESULTS_TIMER_WORD) != 0) s = s.addWord(CdObjectState.WordField.RESULTS_TIMER_WORD, -1);
+        int x = s.centreX(), target = s.word(CdObjectState.WordField.RESULTS_DEST_X);
+        if (x != target) s = s.addWord(CdObjectState.WordField.X, (short) target < (short) x ? -8 : 8);
+        else if (s.unsignedByte(CdObjectState.ByteField.MAP_FRAME) == 0) s = s.addByte(CdObjectState.ByteField.ROUTINE, 2);
+        expectResultsImage(i, s); i.next = s.word(CdObjectState.WordField.RESULTS_TIMER_WORD) < 472 ? ResultsCut.DRAW : ResultsCut.RETURN;
+    }
+    private void beginResultsRows(ResultsInvocation i) {
+        expectResultsImage(i, resultsSource(i).moveWord(CdObjectState.WordField.RESULTS_TIMER_WORD, 480));
+        i.row = 0; i.selected = i.whole; prepareResultsRow(i);
+    }
+    private void prepareResultsRow(ResultsInvocation i) {
+        var s = i.expectedPool.slots().get(i.selected - 32);
+        expectResultsImage(i, s.moveWord(CdObjectState.WordField.RESULTS_TIMER_WORD, 480)
+                .moveByte(CdObjectState.ByteField.ID, CdResults.OBJECT_ID).moveByte(CdObjectState.ByteField.ROUTINE, 4)
+                .moveWord(CdObjectState.WordField.TILE, 0x83C4));
+        i.next = ResultsCut.ROW_ZONE;
+    }
+    private void finishResultsRow(ResultsInvocation i) {
+        if (++i.row == 3) { i.next = ResultsCut.RETURN; return; }
+        i.selected = -1;
+        for (var s : i.expectedPool.slots()) if (s.id() == 0) { i.selected = s.identity().wholeIndex(); break; }
+        if (i.selected < 0) { i.next = ResultsCut.ALLOCATION_STOP; return; }
+        prepareResultsRow(i);
+    }
+    private void prepareResultsRowData(ResultsInvocation i) {
+        var data = assets.view(CdR11bAssets.Asset.RESULTS_INIT_DATA).bytes(); int at = i.row * 8;
+        var s = i.expectedPool.slots().get(i.selected - 32)
+                .moveWord(CdObjectState.WordField.RESULTS_SCREEN_Y_WORD, data.unsignedWord(at))
+                .moveWord(CdObjectState.WordField.X, data.unsignedWord(at + 2))
+                .moveWord(CdObjectState.WordField.RESULTS_DEST_X, data.unsignedWord(at + 4))
+                .moveByte(CdObjectState.ByteField.MAP_FRAME, data.unsignedByte(at + 7));
+        expectResultsImage(i, s);
+        if (i.row == 2) i.next = ResultsCut.ROW_ACT; else finishResultsRow(i);
+    }
+    private void prepareResultsNoBonus(ResultsInvocation i) {
+        var s = resultsSource(i).addWord(CdObjectState.WordField.RESULTS_TIMER_WORD, -1);
+        int timer = s.word(CdObjectState.WordField.RESULTS_TIMER_WORD);
+        if ((short) timer < 0) s = s.addByte(CdObjectState.ByteField.ROUTINE, 2);
+        expectResultsImage(i, s); i.next = timer == 30 ? ResultsCut.SPECIAL : ResultsCut.DRAW;
+    }
+    private void prepareResultsHaveBonus(ResultsInvocation i) {
+        var s = resultsSource(i);
+        if (s.word(CdObjectState.WordField.RESULTS_TIMER_WORD) != 0) s = s.addWord(CdObjectState.WordField.RESULTS_TIMER_WORD, -1);
+        expectResultsImage(i, s);
+        // Native memory BTST#0 at offset$32 selects HIGH timer BYTE, not WORD parity.
+        i.next = (s.unsignedByte(CdObjectState.ByteField.RESULTS_TIMER) & 1) == 0 ? ResultsCut.TALLY : ResultsCut.POINTS;
+    }
+    private CdLevelHud.BonusValues resultsBonus() {
+        return values.globals().bonus().orElseThrow(() -> new UnsupportedResultsRead(ResultsReadBoundary.BONUS_PREIMAGE));
+    }
+    private int readResults(CdResults.ReadCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        var site = i.next;
+        boolean reached = switch (call.field()) {
+            case PLC_HEAD_LONG -> site == ResultsCut.HEAD;
+            case ZONE_ACT_WORD -> site == ResultsCut.WAIT_ZONE || site == ResultsCut.ROW_ZONE;
+            case CAMERA_X_WORD -> site == ResultsCut.CAMERA;
+            case PLAYER_X_WORD -> site == ResultsCut.PLAYER_X;
+            case GOOD_FUTURE_BYTE -> site == ResultsCut.ROW_GOOD;
+            case ACT_BYTE -> site == ResultsCut.ROW_ACT;
+            case TIME_BONUS_WORD -> site == ResultsCut.TIME || site == ResultsCut.CHECK_TIME;
+            case RING_BONUS_WORD -> site == ResultsCut.RING || site == ResultsCut.CHECK_RING;
+            case SPECIAL_STAGE_BYTE -> site == ResultsCut.SPECIAL;
+            case TIME_ATTACK_MODE_BYTE, TIME_STONES_BYTE, GOOD_FUTURE_FLAGS_BYTE -> false; // Behind the absent programme store.
+        };
+        if (!reached) throw new IllegalStateException("Results operand is not at its genuine source-conditional read");
+        requireResultsSite(i, site, call.actualCut(), call.expectedSource());
+        int value = switch (call.field()) {
+            case PLC_HEAD_LONG -> (int) values.section().queue().headSource();
+            case ZONE_ACT_WORD -> frame.environment().movement().gates().zoneAct();
+            case CAMERA_X_WORD -> presentation.pastForegroundImage().cameraX();
+            case PLAYER_X_WORD -> frame.state().motion().centreX16_16() >>> 16;
+            case GOOD_FUTURE_BYTE -> values.globals().retainedDev().goodFuture();
+            case ACT_BYTE -> frame.environment().movement().gates().zoneAct() & 255;
+            case TIME_BONUS_WORD -> resultsBonus().timeBonusWord();
+            case RING_BONUS_WORD -> resultsBonus().ringBonusWord();
+            case SPECIAL_STAGE_BYTE -> i.program.specialStage();
+            case TIME_ATTACK_MODE_BYTE, TIME_STONES_BYTE, GOOD_FUTURE_FLAGS_BYTE -> throw new IllegalStateException("Unreached programme operand");
+        };
+        resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+            switch (site) {
+                case HEAD -> i.next = value == 0 ? ResultsCut.WAIT_ZONE : ResultsCut.RETURN;
+                case WAIT_ZONE -> { if (value == 0x502) beginResultsRows(i); else i.next = ResultsCut.CAMERA; }
+                case CAMERA -> { i.edge = (value + 336) & 0xFFFF; i.next = ResultsCut.PLAYER_X; }
+                case PLAYER_X -> { if (i.edge < value) beginResultsRows(i); else i.next = ResultsCut.RETURN; }
+                case ROW_ZONE -> {
+                    var s = i.expectedPool.slots().get(i.selected - 32);
+                    if (value == 0x502) s = s.moveWord(CdObjectState.WordField.TILE, 0x82F2);
+                    i.rowRoot = assets.view(CdR11bAssets.Asset.MAP_SPR_RESULTS).range().nativeAddress() + (value == 0x502 ? 10 : 0);
+                    expectResultsImage(i, s.moveLong(CdObjectState.LongField.MAPPINGS, i.rowRoot)); i.next = ResultsCut.ROW_GOOD;
+                }
+                case ROW_GOOD -> {
+                    if (value != 0) expectResultsImage(i, i.expectedPool.slots().get(i.selected - 32).moveLong(CdObjectState.LongField.MAPPINGS, i.rowRoot + 20));
+                    prepareResultsRowData(i);
+                }
+                case ROW_ACT -> {
+                    expectResultsImage(i, i.expectedPool.slots().get(i.selected - 32).addByte(CdObjectState.ByteField.MAP_FRAME, value)); finishResultsRow(i);
+                }
+                case TIME -> { i.time = value; i.next = value == 0 ? ResultsCut.RING : ResultsCut.TIME_STORE; }
+                case RING -> { i.rings = value;
+                    if (value != 0) i.next = ResultsCut.RING_STORE;
+                    else if (i.time == 0) prepareResultsNoBonus(i); else i.next = ResultsCut.CHECK_TIME; }
+                case CHECK_TIME -> { if (value != 0) prepareResultsHaveBonus(i); else i.next = ResultsCut.CHECK_RING; }
+                case CHECK_RING -> { if (value != 0) prepareResultsHaveBonus(i); else i.next = ResultsCut.KACHING; }
+                case SPECIAL -> i.next = value == 0 ? ResultsCut.DRAW : ResultsCut.WARP;
+                default -> throw new IllegalStateException("No reached Results read transition");
+            }
+            verifyResults(i); return value;
+        } finally { resultsPort = false; }
+    }
+    private Values resultsValues(CdR11bSectionArt.State section, CdRingGlobals ring, LoadingGlobals globals) {
+        var o = values;
+        return new Values(o.phase(), section, o.cpuPalette(), o.fadePalette(), o.displayedPalette(), o.cpuSat(), o.displayedSat(),
+                o.displayedHScroll(), o.displayedVScrollLongBits(), o.foregroundPlane(), ring, o.level(), globals, o.hudObjects(),
+                o.fadeProgress(), o.calls(), o.loop());
+    }
+    private void storeResultsBonus(CdResults.BonusStoreCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        var site = switch (call.field()) {
+            case UPDATE_HUD_BONUS_BYTE -> ResultsCut.UPDATE;
+            case TIME_BONUS_WORD -> ResultsCut.TIME_STORE;
+            case RING_BONUS_WORD -> ResultsCut.RING_STORE;
+        };
+        requireResultsSite(i, site, call.actualCut(), call.expectedSource());
+        int operand = call.field() == CdResults.BonusField.UPDATE_HUD_BONUS_BYTE ? 1
+                : ((call.field() == CdResults.BonusField.TIME_BONUS_WORD ? i.time : i.rings) - 100) & 0xFFFF;
+        if (call.value() != operand) throw new IllegalStateException("Results bonus store differs from its actual native subtract/update operand");
+        var b = resultsBonus(); var g = values.globals();
+        var readyBonus = new CdLevelHud.BonusValues(call.field() == CdResults.BonusField.TIME_BONUS_WORD ? operand : b.timeBonusWord(),
+                call.field() == CdResults.BonusField.RING_BONUS_WORD ? operand : b.ringBonusWord(),
+                call.field() == CdResults.BonusField.UPDATE_HUD_BONUS_BYTE ? 1 : b.updateHudBonusByte());
+        var ready = resultsValues(values.section(), values.ring(), new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
+                g.tail(), Optional.of(readyBonus), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+        resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource()); values = ready; i.base = ready;
+            if (site == ResultsCut.UPDATE) i.next = ResultsCut.TIME;
+            else { i.points += 10; i.next = site == ResultsCut.TIME_STORE ? ResultsCut.RING : ResultsCut.CHECK_TIME; }
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+        } finally { resultsPort = false; }
+    }
+    private void addResultsPoints(CdResults.PointsCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        requireResultsSite(i, ResultsCut.POINTS, call.actualCut(), call.expectedSource());
+        if (call.points() != i.points || i.points != 10 && i.points != 20) throw new IllegalStateException("Results AddPoints lacks its actual nonzero bonus subtracts");
+        var old = values.ring(); var g = values.globals(); var beforeScore = g.score();
+        var result = CdPlayerTouchResponse.addPoints(new CdPlayerTouchResponse.WorldGlobals(old.rings(), old.lives(), old.updateHudLives(),
+                beforeScore.score(), beforeScore.nextLifeScore(), beforeScore.updateHudScore()), call.points());
+        var w = result.world();
+        var readyRing = new CdRingGlobals(w.rings(), w.lives(), old.livesFlags(), old.updateHudRings(), w.updateHudLives(),
+                old.timeStopTimer(), old.ringAnimationTimer(), old.ringAnimationFrame());
+        var ready = resultsValues(values.section(), readyRing, new LoadingGlobals(g.live(), g.contact(),
+                new CdOpeningObjectRuntime.ScoreGlobals(w.score(), w.nextLifeScore(), w.updateHudScore()), g.drownTimerWord(),
+                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+        var ledger = new ArrayList<>(sounds);
+        result.command().ifPresent(command -> ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactSubCpuCommand(command))));
+        var readySounds = List.copyOf(ledger); resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+            values = ready; sounds = readySounds; i.base = ready; i.ledger = readySounds; i.next = ResultsCut.DRAW;
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+        } finally { resultsPort = false; }
+    }
+    private void loadResultsPlc(CdResults.PlcCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        requireResultsSite(i, ResultsCut.PLC, call.actualCut(), call.expectedSource());
+        if (call.nativeId() != 16) throw new IllegalStateException("Results requested another actual PLC site");
+        CdR11bSectionArt.State section; CdR11bSectionArt.SectionArtException stopped = null;
+        try { section = art.appendList(values.section(), 16); }
+        catch (CdR11bSectionArt.SectionArtException failure) { section = failure.state(); stopped = failure; }
+        var ready = resultsValues(section, values.ring(), values.globals()); resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource()); values = ready; i.base = ready;
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+            if (stopped == null) { expectResultsImage(i, resultsSource(i).addByte(CdObjectState.ByteField.ROUTINE, 2)); i.next = ResultsCut.HEAD; }
+        } finally { resultsPort = false; }
+        if (stopped != null) throw stopped; // Publish the real queue prefix and preserve its exact original failure.
+    }
+    private void soundResults(CdResults.SoundCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        var site = switch (call.sound()) { case FM_TALLY -> ResultsCut.TALLY; case DRIVER_KACHING -> ResultsCut.KACHING; case FM_SSWARP -> ResultsCut.WARP; };
+        requireResultsSite(i, site, call.actualCut(), call.expectedSource());
+        var ledger = new ArrayList<>(sounds); ledger.add(new SonicCdGameModule.PastResultsSound(call.sound()));
+        var ready = List.copyOf(ledger); resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource()); sounds = ready; i.ledger = ready;
+            if (site == ResultsCut.KACHING) {
+                var s = resultsSource(i);
+                if (s.word(CdObjectState.WordField.RESULTS_TIMER_WORD) < 45) expectResultsImage(i, s.moveWord(CdObjectState.WordField.RESULTS_TIMER_WORD, 45));
+            }
+            i.next = site == ResultsCut.WARP ? ResultsCut.DRAW : ResultsCut.POINTS; verifyResults(i);
+        } finally { resultsPort = false; }
+    }
+    private void drawResults(CdResults.DrawCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        requireResultsSite(i, ResultsCut.DRAW, call.actualCut(), call.expectedSource());
+        var source = call.expectedSource(); i.drawSource = source; i.drawn = true; drawingResults = true;
+        try {
+            // DrawObject uses world Y for culling only when dirty flags request a world-camera mode.
+            // Screen mode uses the distinct WORD oYScr($0A) at actual DrawObjects dereference below.
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole), source.spriteFlags(),
+                    source.centreX(), source.centreY(), source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    source.unsignedByte(CdObjectState.ByteField.WIDTH), source.unsignedByte(CdObjectState.ByteField.PRIORITY)), i.camera);
+            verifyResults(i); validateResultsImages(i);
+            if (!i.screenCleared) throw new IllegalStateException("Results Draw omitted its native source BCLR7");
+            i.next = ResultsCut.RETURN;
+        } finally { drawingResults = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readResultsDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i = requireResults(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingResults || resultsPort || queuePort || !i.drawn || !i.screenCleared)
+            throw new IllegalStateException("No actual Results collecting queue dereference");
+        validateResultsImages(i); var before = placement.capture(); queuePort = true;
+        try {
+            var s = i.pool.state(i.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(s.id(), s.spriteFlags(), s.centreX(), s.centreY(),
+                    s.word(CdObjectState.WordField.RESULTS_SCREEN_Y_WORD), s.longBits(CdObjectState.LongField.MAPPINGS),
+                    s.unsignedByte(CdObjectState.ByteField.MAP_FRAME), s.word(CdObjectState.WordField.TILE));
+            verifyResults(i); validateResultsImages(i);
+            if (!before.pool().slots().equals(placement.capture().pool().slots())) throw new IllegalStateException("Results queue read changed its full placement");
+            return live;
+        } finally { queuePort = false; }
+    }
+    private void writeResultsOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var i = requireResults(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingResults || resultsPort || queuePort || !i.drawn || i.screenCleared || onScreen || !i.drawSource.equals(resultsSource(i)))
+            throw new IllegalStateException("Only the actual Results Draw may clear its source bit7 once");
+        validateResultsImages(i); var next = resultsSource(i).moveByte(CdObjectState.ByteField.SPRITE_FLAGS, resultsSource(i).spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(i.expectedPool, List.of(next)); i.pool.validateRestore(ready); queuePort = true;
+        try {
+            verifyResults(i); i.pool.write(next); i.expectedPool = ready; i.screenCleared = true; verifyResults(i); validateResultsImages(i);
+        } finally { queuePort = false; }
+    }
+    private void verifyResultsFailure(ResultsInvocation i, Throwable original) {
+        try {
+            verifyResults(i); validateResultsImages(i);
+            if (original instanceof CdResults.UnsupportedResults stop) {
+                if (stop.wholeIndex() != i.whole) throw new IllegalStateException("Results stopped at another actual source");
+                boolean exact = switch (stop.boundary()) {
+                    case ROUTINE_DISPATCH -> i.next == ResultsCut.INVALID && stop.value() == i.entry.routine();
+                    case ALLOCATION_ADDRESS -> i.next == ResultsCut.ALLOCATION_STOP && stop.value() == CdObjectPool.END_WHOLE_INDEX;
+                    case PROGRAMME_STORE_OWNER -> i.next == ResultsCut.PROGRAMME && stop.value() == CdResults.ProgrammeField.LEVEL_RESTART_WORD.ordinal();
+                    default -> false; // Actual authenticated133 views/owned callbacks cannot produce another component boundary.
+                };
+                if (!exact) throw new IllegalStateException("Results failed at a different unowned instruction than its private actual site");
+            }
+        } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    private enum BigRingCut {
+        RINGS, STONES, ATTACK, XR, X, YR, Y, SPECIAL, CAMERA_TOUCH, PLAYER_X, LOCK, HOLD, XV, GV,
+        SCROLL, FM, CAMERA_DESPAWN, PERIOD_DESPAWN, COPIED_PERIOD, DIRECTION, TAIL, DRAW, RETURN
+    }
+    /** The actual producer scope, never manufactured by the component's descriptive public records. */
+    private final class BigRingInvocation {
+        private final CdBigRing body = bigRing;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object stage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final Values base = values;
+        private List<SonicCdGameModule.PastSound> ledger = sounds;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private SonicCdGameModule.LevelProgramState program = module.pastBigRingProgramImage(SonicCdPastLoadingVisit.this);
+        private final CdObjectDrawQueue.CameraWords camera;
+        private final Object world; private final long generation; private final int whole;
+        private final CdObjectState entry; private CdObjectState source, drawSource;
+        private final boolean flash;
+        private BigRingCut next;
+        private boolean lowRings, remove, animate, deleted, drawn, screenCleared;
+        private int width, height, cameraTouch, copiedPeriod, direction, child = -1;
+        private CdObjectState childImage;
+        private BigRingInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole); source = entry; flash = entry.subtype() != 0;
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            camera = new CdObjectDrawQueue.CameraWords(scroll.state().cameraX(), scroll.state().cameraYWord());
+            next = flash ? BigRingCut.TAIL : BigRingCut.RINGS;
+        }
+    }
+    private boolean bigRingForeignScope() {
+        return activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal
+                || activeMachine != null || machinePort || drawingMachine || machineForeignScope();
+    }
+    private void runBigRing(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (bigRingForeignScope() || activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || queuePort
+                || !runningObjects || servicing || loadingSaved || whole < 32 || whole >= 128 || values.phase() != BEGIN_LEVEL
+                || placement.pool().state(whole).id() != CdBigRing.OBJECT_ID
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past Big Ring dispatch");
+        var invocation = new BigRingInvocation(whole); activeBigRing = invocation;
+        try {
+            var result = bigRing.run(whole); verifyBigRing(invocation);
+            prepareBigRingTail(invocation, null);
+            boolean draw = invocation.flash || !invocation.lowRings && invocation.source.routine() != 4;
+            if (draw != invocation.drawn || invocation.drawn && (!invocation.screenCleared || invocation.next != BigRingCut.RETURN)
+                    || !invocation.drawn && invocation.next != BigRingCut.TAIL)
+                throw new IllegalStateException("Big Ring returned before its genuine conditional tail");
+            validateBigRingImages(invocation, true);
+            if (!result.state().equals(invocation.pool.state(whole))) throw new IllegalStateException("Big Ring result lost its actual source");
+        } catch (RuntimeException | Error original) { verifyBigRingFailure(invocation, original); throw original; }
+        finally { activeBigRing = null; }
+    }
+    private BigRingInvocation requireBigRing(int whole) {
+        var invocation = activeBigRing;
+        if (invocation == null || invocation.whole != whole || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual selected Big Ring callback");
+        verifyBigRing(invocation); return invocation;
+    }
+    private void verifyBigRing(BigRingInvocation invocation) {
+        module.requirePastLoadingVisit(this); var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeBigRing != invocation || bigRingForeignScope() || !runningObjects || servicing || loadingSaved
+                || invocation.body != bigRing || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.stage != frame.stageSource() || invocation.pool != placement.pool() || invocation.queue != drawQueue
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING || values.phase() != BEGIN_LEVEL
+                || invocation.world != mode.getWorldSession() || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || invocation.base != values || invocation.ledger != sounds || module.pastBigRingProgramImage(this) != invocation.program
+                || !placement.status().equals(invocation.before.status()) || !frame.captureActor().equals(invocation.actor)
+                || !frame.captureShared().equals(invocation.shared) || !frame.state().equals(invocation.actor.state())
+                || !frame.environment().equals(invocation.shared.environment()) || !presentation.samePastScroll(invocation.scroll))
+            throw new IllegalStateException("Big Ring changed another owner or retained a stale World/Frame/programme cut");
+        invocation.pool.validateRestore(invocation.before.pool());
+    }
+    private void validateBigRingImages(BigRingInvocation invocation, boolean tail) {
+        if (!invocation.source.equals(invocation.pool.state(invocation.whole))) throw new IllegalStateException("Big Ring source differs from its exact full64 prefix");
+        for (var old : invocation.before.pool().slots()) {
+            int whole = old.identity().wholeIndex(); if (whole == invocation.whole) continue;
+            var expected = tail && whole == invocation.child ? invocation.childImage : old;
+            if (!expected.equals(invocation.pool.state(whole))) throw new IllegalStateException("Big Ring changed an unrelated image or its dirty first-free flash bytes");
+        }
+        var bank = invocation.before.savedFlags().copy();
+        if (tail && invocation.lowRings && invocation.remove && invocation.entry.savedFlagsId() != 0) {
+            int period = invocation.copiedPeriod & 0x7F;
+            if ((invocation.copiedPeriod & 0x80) != 0) period = Math.max(0, Math.min((short) ((period - (byte) invocation.direction) & 0xFFFF), 2));
+            int at = 2 + (short) ((3 * invocation.entry.savedFlagsId() + period) & 0xFFFF);
+            if (at < 2 || at >= bank.length) throw new IllegalStateException("Big Ring has no represented saved flag address");
+            bank[at] = (byte) (bank[at] & 0x7F);
+        }
+        var now = placement.capture();
+        if (!Arrays.equals(bank, now.savedFlags().copy()) || !now.status().equals(invocation.before.status()))
+            throw new IllegalStateException("Big Ring changed unrelated saved bytes or spawner cursors");
+    }
+    private void validateBigRingCut(BigRingInvocation invocation, CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, boolean tail) {
+        verifyBigRing(invocation); placement.validateRestore(Objects.requireNonNull(cut)); validateBigRingImages(invocation, tail);
+        var now = placement.capture();
+        if (!source.equals(invocation.source) || !source.identity().equals(invocation.entry.identity())
+                || !cut.pool().slots().equals(now.pool().slots()) || !cut.status().equals(now.status()) || !sameBytes(cut.savedFlags(), now.savedFlags()))
+            throw new IllegalStateException("Big Ring port lacks its genuine fresh full-placement/source cut");
+    }
+    private int readBigRing(CdBigRing.ReadCall call) {
+        Objects.requireNonNull(call); var i = requireBigRing(call.expectedSource().identity().wholeIndex());
+        if (bigRingPort || drawingBigRing || queuePort || i.drawn || !bigRingReadAt(i.next, call.field()))
+            throw new IllegalStateException("Big Ring read lacks its native conditional position");
+        validateBigRingCut(i, call.actualCut(), call.expectedSource(), false);
+        int value = switch (call.field()) {
+            case RINGS_WORD -> values.ring().rings();
+            case TIME_STONES_BYTE -> module.pastBigRingTimeStones(this, i.program);
+            case TIME_ATTACK_BYTE -> frame.environment().globals().timeAttackMode();
+            case PLAYER_X_RADIUS_BYTE -> frame.state().motion().xRadius();
+            case PLAYER_Y_RADIUS_BYTE -> frame.state().motion().yRadius();
+            case PLAYER_X_WORD -> frame.state().motion().centreX16_16() >>> 16;
+            case PLAYER_Y_WORD -> frame.state().motion().centreY16_16() >>> 16;
+            case CAMERA_X_WORD -> presentation.pastForegroundImage().cameraX();
+            case TIME_ZONE_BYTE -> frame.environment().movement().gates().timeZone();
+            case TIME_WARP_DIRECTION_BYTE -> frame.environment().movement().gates().timeWarpDirection();
+        };
+        bigRingPort = true;
+        try {
+            verifyBigRing(i); validateBigRingCut(i, call.actualCut(), call.expectedSource(), false);
+            switch (call.field()) {
+                case RINGS_WORD -> {
+                    i.lowRings = value < 50;
+                    if (i.lowRings) i.next = i.entry.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0 ? BigRingCut.CAMERA_DESPAWN : BigRingCut.PERIOD_DESPAWN;
+                    else i.next = switch (i.entry.routine()) { case 0 -> BigRingCut.STONES; case 2 -> BigRingCut.XR; default -> BigRingCut.TAIL; };
+                    if (!i.lowRings && i.entry.routine() == 4) i.animate = true;
+                }
+                case TIME_STONES_BYTE -> { i.deleted = value == 0x7F; i.next = i.deleted ? BigRingCut.TAIL : BigRingCut.ATTACK; }
+                case TIME_ATTACK_BYTE -> {
+                    i.deleted = value != 0; i.next = i.deleted ? BigRingCut.TAIL : BigRingCut.XR;
+                    if (!i.deleted) i.source = i.source.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                            .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, i.source.spriteFlags() | 4).moveWord(CdObjectState.WordField.TILE, 0x2488)
+                            .moveLong(CdObjectState.LongField.MAPPINGS, bigRing.assets().ringMappingsAddress())
+                            .moveByte(CdObjectState.ByteField.X_RADIUS, 32).moveByte(CdObjectState.ByteField.WIDTH, 32).moveByte(CdObjectState.ByteField.Y_RADIUS, 32);
+                }
+                case PLAYER_X_RADIUS_BYTE -> { i.width = ((byte) value + 16) & 0xFFFF; i.next = BigRingCut.X; }
+                case PLAYER_X_WORD -> { int dx = (value - i.source.centreX() + i.width) & 0xFFFF;
+                    i.next = (short) dx < 0 || dx >= ((2 * i.width) & 0xFFFF) ? BigRingCut.TAIL : BigRingCut.YR;
+                    if (i.next == BigRingCut.TAIL) i.animate = true; }
+                case PLAYER_Y_RADIUS_BYTE -> { i.height = ((byte) value + 32) & 0xFFFF; i.next = BigRingCut.Y; }
+                case PLAYER_Y_WORD -> { int dy = (value - i.source.centreY() + i.height) & 0xFFFF;
+                    i.next = (short) dy < 0 || dy >= ((2 * i.height) & 0xFFFF) ? BigRingCut.TAIL : BigRingCut.SPECIAL;
+                    if (i.next == BigRingCut.TAIL) i.animate = true; }
+                case CAMERA_X_WORD -> {
+                    if (i.next == BigRingCut.CAMERA_TOUCH) { i.cameraTouch = value; i.next = BigRingCut.PLAYER_X; }
+                    else { int distance = ((i.entry.centreX() & 0xFF80) - (((value - 0x80) & 0xFFFF) & 0xFF80)) & 0xFFFF;
+                        i.remove = distance > 0x280; i.next = i.remove ? bigRingRemovalCut(i) : BigRingCut.PERIOD_DESPAWN; }
+                }
+                case TIME_ZONE_BYTE -> {
+                    if (i.next == BigRingCut.PERIOD_DESPAWN) { i.remove = (value & 0x80) != 0; i.next = i.remove ? bigRingRemovalCut(i) : BigRingCut.TAIL; }
+                    else { i.copiedPeriod = value; i.next = (value & 0x80) != 0 ? BigRingCut.DIRECTION : BigRingCut.TAIL; }
+                }
+                case TIME_WARP_DIRECTION_BYTE -> { i.direction = value; i.next = BigRingCut.TAIL; }
+            }
+            verifyBigRing(i); return value;
+        } finally { bigRingPort = false; }
+    }
+    private static BigRingCut bigRingRemovalCut(BigRingInvocation i) { return i.entry.savedFlagsId() == 0 ? BigRingCut.TAIL : BigRingCut.COPIED_PERIOD; }
+    private static boolean bigRingReadAt(BigRingCut cut, CdBigRing.ReadField field) {
+        return switch (field) {
+            case RINGS_WORD -> cut == BigRingCut.RINGS;
+            case TIME_STONES_BYTE -> cut == BigRingCut.STONES;
+            case TIME_ATTACK_BYTE -> cut == BigRingCut.ATTACK;
+            case PLAYER_X_RADIUS_BYTE -> cut == BigRingCut.XR;
+            case PLAYER_X_WORD -> cut == BigRingCut.X;
+            case PLAYER_Y_RADIUS_BYTE -> cut == BigRingCut.YR;
+            case PLAYER_Y_WORD -> cut == BigRingCut.Y;
+            case CAMERA_X_WORD -> cut == BigRingCut.CAMERA_TOUCH || cut == BigRingCut.CAMERA_DESPAWN;
+            case TIME_ZONE_BYTE -> cut == BigRingCut.PERIOD_DESPAWN || cut == BigRingCut.COPIED_PERIOD;
+            case TIME_WARP_DIRECTION_BYTE -> cut == BigRingCut.DIRECTION;
+        };
+    }
+    private void requireBigRingStore(BigRingInvocation i, BigRingCut cut, CdObjectPlacementRuntime.Snapshot actual, CdObjectState source) {
+        if (bigRingPort || drawingBigRing || queuePort || i.drawn || i.next != cut) throw new IllegalStateException("Big Ring store lacks its once-only native order");
+        validateBigRingCut(i, actual, source, false);
+    }
+    /** Module's programme CAS is reachable only inside this actual once-only private native store site. */
+    void requireBigRingProgramPublication(SonicCdGameModule.LevelProgramState expected) {
+        var i = activeBigRing;
+        if (i == null || i.program != expected || i.next != BigRingCut.SPECIAL || drawingBigRing || queuePort)
+            throw new IllegalStateException("No genuine Big Ring specialStage source transaction");
+        verifyBigRing(i);
+    }
+    private void storeBigRingSpecialStage(CdBigRing.SpecialStageCall call) {
+        Objects.requireNonNull(call); var i = requireBigRing(call.expectedSource().identity().wholeIndex());
+        requireBigRingStore(i, BigRingCut.SPECIAL, call.actualCut(), call.expectedSource());
+        var ready = module.preparePastBigRingSpecialStage(this, frame, i.program);
+        var source = i.source.addByte(CdObjectState.ByteField.ROUTINE, 2); bigRingPort = true;
+        try {
+            verifyBigRing(i); validateBigRingCut(i, call.actualCut(), call.expectedSource(), false);
+            module.validatePreparedPastBigRingSpecialStage(ready); module.applyPreparedPastBigRingSpecialStage(ready);
+            i.program = ready.result(); i.source = source; i.next = BigRingCut.CAMERA_TOUCH; verifyBigRing(i);
+        } finally { bigRingPort = false; }
+    }
+    private void storeBigRingPlayer(CdBigRing.PlayerStore call) {
+        Objects.requireNonNull(call); var i = requireBigRing(call.expectedSource().identity().wholeIndex());
+        var cut = switch (call) {
+            case CdBigRing.PlayerXWord x -> BigRingCut.PLAYER_X;
+            case CdBigRing.ControlLockBit0 x -> BigRingCut.LOCK;
+            case CdBigRing.ControlHold0808 x -> BigRingCut.HOLD;
+            case CdBigRing.XVelocityZero x -> BigRingCut.XV;
+            case CdBigRing.GroundVelocityZero x -> BigRingCut.GV;
+        };
+        requireBigRingStore(i, cut, call.actualCut(), call.expectedSource());
+        if (call instanceof CdBigRing.PlayerXWord x && x.value() != ((i.cameraTouch + 336) & 0xFFFF))
+            throw new IllegalStateException("Big Ring forced X differs from its actual camera plus native336");
+        var ready = frame.prepareObjectBigRingPlayerStore(i.actor.state(), i.shared.environment(), call);
+        var actor = new CdPlayerFrameRuntime.ActorState(i.actor.owner(), ready.finalState(), i.actor.display());
+        var shared = new CdPlayerFrameRuntime.SharedState(i.shared.owner(), ready.finalEnvironment(), i.shared.artState(), i.shared.paused(), i.shared.vIntClock());
+        bigRingPort = true;
+        try {
+            verifyBigRing(i); validateBigRingCut(i, call.actualCut(), call.expectedSource(), false);
+            frame.validatePreparedObjectSolidPublication(ready); frame.applyPreparedObjectSolidPublication(ready);
+            i.actor = actor; i.shared = shared;
+            i.next = switch (cut) { case PLAYER_X -> BigRingCut.LOCK; case LOCK -> BigRingCut.HOLD; case HOLD -> BigRingCut.XV;
+                case XV -> BigRingCut.GV; case GV -> BigRingCut.SCROLL; default -> throw new IllegalStateException("Big Ring player cursor"); };
+            verifyBigRing(i);
+        } finally { bigRingPort = false; }
+    }
+    private void storeBigRingScrollLock(CdBigRing.ScrollLockHighByteOne call) {
+        Objects.requireNonNull(call); var i = requireBigRing(call.expectedSource().identity().wholeIndex());
+        requireBigRingStore(i, BigRingCut.SCROLL, call.actualCut(), call.expectedSource());
+        var ready = presentation.preparePastBigRingScrollLockHighByteOne(frame, i.scroll); bigRingPort = true;
+        try {
+            verifyBigRing(i); validateBigRingCut(i, call.actualCut(), call.expectedSource(), false);
+            presentation.validatePreparedPastGoalPostDestLeftBound(ready); presentation.applyPreparedPastGoalPostDestLeftBound(ready);
+            i.scroll = ready.result(); i.next = BigRingCut.FM; verifyBigRing(i);
+        } finally { bigRingPort = false; }
+    }
+    private void soundBigRing(CdBigRing.SoundCall call) {
+        Objects.requireNonNull(call); var i = requireBigRing(call.expectedSource().identity().wholeIndex());
+        requireBigRingStore(i, BigRingCut.FM, call.actualCut(), call.expectedSource());
+        var ledger = new ArrayList<>(sounds); ledger.add(new SonicCdGameModule.PastBigRingFm()); var ready = List.copyOf(ledger);
+        int first = -1; CdObjectState child = null;
+        for (var old : call.actualCut().pool().slots()) if (old.id() == 0) {
+            first = old.identity().wholeIndex(); child = old.moveByte(CdObjectState.ByteField.ID, CdBigRing.OBJECT_ID)
+                    .moveWord(CdObjectState.WordField.X, i.source.centreX()).moveWord(CdObjectState.WordField.Y, i.source.centreY())
+                    .moveByte(CdObjectState.ByteField.SUBTYPE, 1); break;
+        }
+        bigRingPort = true;
+        try {
+            verifyBigRing(i); validateBigRingCut(i, call.actualCut(), call.expectedSource(), false);
+            sounds = ready; i.ledger = ready; i.child = first; i.childImage = child;
+            i.next = first < 0 ? BigRingCut.XR : BigRingCut.TAIL; i.animate = first >= 0; verifyBigRing(i);
+        } finally { bigRingPort = false; }
+    }
+    /** Independent raw-script verification only; never invokes the shared successful animator again. */
+    private CdObjectState bigRingAnimationImage(CdObjectState original, boolean flash, CdBigRing.UnsupportedBoundary stop) {
+        var out = original; int id = original.unsignedByte(CdObjectState.ByteField.ANIMATION);
+        if (id != original.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION)) out = out
+                .moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, id).moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0)
+                .moveByte(CdObjectState.ByteField.ANIMATION_TIME, 0);
+        out = out.addByte(CdObjectState.ByteField.ANIMATION_TIME, -1);
+        if (out.signedByte(CdObjectState.ByteField.ANIMATION_TIME) >= 0 || stop == CdBigRing.UnsupportedBoundary.ANIMATION_DIRECTORY_READ
+                || stop == CdBigRing.UnsupportedBoundary.ANIMATION_SPEED_READ) return out;
+        if (id != 0) throw new IllegalStateException("Big Ring successful animation has no actual directory row");
+        var bytes = flash ? bigRing.assets().flashAnimations() : bigRing.assets().ringAnimations();
+        int script = (short) bytes.unsignedWord(0), index = out.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME);
+        out = out.moveByte(CdObjectState.ByteField.ANIMATION_TIME, bytes.unsignedByte(script));
+        if (stop != null) return out;
+        int selected = bytes.unsignedByte(script + 1 + index);
+        if (selected == 0xFF) { index = 0; selected = bytes.unsignedByte(script + 1); }
+        if (selected == 0xFC) return out.addByte(CdObjectState.ByteField.ROUTINE, 2);
+        if (selected >= 0x80) throw new IllegalStateException("Big Ring raw script selected an undeclared command");
+        int rotated = ((selected << 3) | (selected >>> 5)) & 255;
+        return out.moveByte(CdObjectState.ByteField.MAP_FRAME, selected & 31).moveByte(CdObjectState.ByteField.ANIMATION_FRAME, (index + 1) & 255)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, (out.spriteFlags() & 0xFC) | ((rotated ^ out.flags()) & 3));
+    }
+    private void prepareBigRingTail(BigRingInvocation i, CdBigRing.UnsupportedBoundary stop) {
+        if (i.drawn || i.next != BigRingCut.TAIL) return;
+        if (i.flash) {
+            switch (i.entry.routine()) {
+                case 0 -> { i.source = i.entry.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, i.entry.spriteFlags() | 4)
+                        .addByte(CdObjectState.ByteField.ROUTINE, 2).moveWord(CdObjectState.WordField.TILE, 0x03EF)
+                        .moveLong(CdObjectState.LongField.MAPPINGS, bigRing.assets().flashMappingsAddress()); i.animate = true; }
+                case 2 -> i.animate = true;
+                case 4 -> i.deleted = true;
+                default -> { return; }
+            }
+        }
+        if (i.deleted || i.lowRings && i.remove) {
+            var cleared = i.pool.state(i.whole);
+            if (!cleared.identity().equals(i.entry.identity()) || !Arrays.equals(new byte[CdObjectState.BYTE_SIZE], cleared.copyBytes()))
+                throw new IllegalStateException("Big Ring DeleteObject must clear all64 actual source bytes");
+            i.source = cleared;
+        }
+        else if (i.animate) i.source = bigRingAnimationImage(i.source, i.flash, stop);
+        i.animate = false;
+    }
+    private void drawBigRing(CdBigRing.DrawCall call) {
+        Objects.requireNonNull(call); var i = requireBigRing(call.expectedSource().identity().wholeIndex());
+        if (bigRingPort || drawingBigRing || queuePort || i.drawn || i.lowRings || i.next != BigRingCut.TAIL)
+            throw new IllegalStateException("Big Ring Draw lacks its native conditional tail");
+        prepareBigRingTail(i, null);
+        if (!i.flash && i.source.routine() == 4) throw new IllegalStateException("Parent routine4 suppresses Draw");
+        validateBigRingCut(i, call.actualCut(), call.expectedSource(), true);
+        i.drawSource = i.source; i.drawn = true; i.next = BigRingCut.DRAW; drawingBigRing = true;
+        try {
+            var source = i.source;
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole), source.spriteFlags(),
+                    source.centreX(), source.centreY(), source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    source.unsignedByte(CdObjectState.ByteField.WIDTH), source.unsignedByte(CdObjectState.ByteField.PRIORITY)), i.camera);
+            verifyBigRing(i); if (!i.screenCleared) throw new IllegalStateException("Big Ring Draw omitted its genuine BCLR7"); i.next = BigRingCut.RETURN;
+        } finally { drawingBigRing = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readBigRingDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i = requireBigRing(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingBigRing || bigRingPort || queuePort || !i.drawn) throw new IllegalStateException("No actual Big Ring queue read");
+        validateBigRingImages(i, true); queuePort = true;
+        try {
+            var s = i.pool.state(i.whole); var live = new CdObjectDrawQueue.LiveDrawSlot(s.id(), s.spriteFlags(), s.centreX(), s.centreY(),
+                    s.word(CdObjectState.WordField.X_FRACTION), s.longBits(CdObjectState.LongField.MAPPINGS),
+                    s.unsignedByte(CdObjectState.ByteField.MAP_FRAME), s.word(CdObjectState.WordField.TILE));
+            verifyBigRing(i); validateBigRingImages(i, true); return live;
+        } finally { queuePort = false; }
+    }
+    private void writeBigRingOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var i = requireBigRing(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingBigRing || bigRingPort || queuePort || !i.drawn || i.screenCleared || onScreen || !i.source.equals(i.drawSource))
+            throw new IllegalStateException("Only actual Big Ring Draw clears bit7 once");
+        validateBigRingImages(i, true); var next = i.source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, i.source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(placement.capture().pool(), List.of(next)); i.pool.validateRestore(ready); queuePort = true;
+        try { verifyBigRing(i); i.pool.write(next); i.source = next; i.screenCleared = true; verifyBigRing(i); validateBigRingImages(i, true); }
+        finally { queuePort = false; }
+    }
+    private void verifyBigRingFailure(BigRingInvocation i, Throwable original) {
+        try {
+            verifyBigRing(i);
+            if (original instanceof CdBigRing.UnsupportedBigRing stop) {
+                if (stop.wholeIndex() != i.whole) throw new IllegalStateException("Big Ring stopped at another source");
+                switch (stop.boundary()) {
+                    case ANIMATION_DIRECTORY_READ, ANIMATION_SPEED_READ, ANIMATION_FRAME_READ, ANIMATION_OPERAND_READ -> prepareBigRingTail(i, stop.boundary());
+                    case SAVED_FLAGS_ADDRESS -> { validateBigRingImages(i, false); return; }
+                    default -> { }
+                }
+            }
+            validateBigRingImages(i, i.next == BigRingCut.TAIL || i.drawn);
+        } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    private enum SignpostCut {
+        ZONE, Y, X, CAMERA_LEFT, LEFT, CAMERA_DEST, DEST, HUD_TIME, SPEED, INVINCIBLE, FM,
+        PERIOD, FADE, MUSIC, LOCK, HOLD, ZONE_ACT, HOLD_ZERO, BONUS, MINUTES, SECONDS,
+        TIME_BONUS, RINGS, RING_BONUS, DRAW, RETURN
+    }
+    /** Private actual producer scope; public component records cannot mint or replay it. */
+    private final class SignpostInvocation {
+        private final CdSignpost body = signpost;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final Object world; private final long generation; private final int whole;
+        private final CdObjectState entry;
+        private Values base = values;
+        private List<SonicCdGameModule.PastSound> ledger = sounds;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private SignpostCut next;
+        private boolean zoneRead, hit, resultsPrefix, drawn, screenCleared;
+        private int zone, y, x, observedCamera, period, zoneAct, minutes, seconds, rings;
+        private int child = -1; private CdObjectState childImage, drawSource;
+        private SignpostInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            camera = new CdObjectDrawQueue.CameraWords(scroll.state().cameraX(), scroll.state().cameraYWord());
+            next = switch (entry.routine()) {
+                case 0 -> SignpostCut.ZONE;
+                case 2 -> SignpostCut.Y;
+                case 6 -> ((entry.unsignedByte(CdObjectState.ByteField.LEVEL_END_TIMER) - 1) & 255) == 0
+                        ? SignpostCut.PERIOD : SignpostCut.DRAW;
+                default -> SignpostCut.DRAW;
+            };
+        }
+    }
+    private boolean signpostForeignScope() {
+        return activeGoal != null || goalPort || drawingGoal || goalForeignScope();
+    }
+    private void runSignpost(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (signpostForeignScope() || activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || queuePort
+                || !runningObjects || servicing || loadingSaved || whole < 32 || whole >= 128 || values.phase() != BEGIN_LEVEL
+                || placement.pool().state(whole).id() != CdSignpost.OBJECT_ID
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past Signpost dispatch");
+        var invocation = new SignpostInvocation(whole); activeSignpost = invocation;
+        try {
+            var result = signpost.run(whole); verifySignpost(invocation);
+            if (!invocation.drawn || !invocation.screenCleared || invocation.next != SignpostCut.RETURN)
+                throw new IllegalStateException("Signpost returned before its genuine unconditional Draw tail");
+            validateSignpostImages(invocation, signpostSource(invocation), false, false);
+            if (!result.state().equals(invocation.pool.state(whole))) throw new IllegalStateException("Signpost result lost its live physical source");
+            // A real ID3A child remains in this same increasing physical walk and reaches the cached Results owner.
+        } catch (RuntimeException | Error original) { verifySignpostFailure(invocation, original); throw original; }
+        finally { activeSignpost = null; }
+    }
+    private SignpostInvocation requireSignpost(int whole) {
+        var invocation = activeSignpost;
+        if (invocation == null || invocation.whole != whole || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual selected Signpost callback");
+        verifySignpost(invocation); return invocation;
+    }
+    private void verifySignpost(SignpostInvocation invocation) {
+        module.requirePastLoadingVisit(this); var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeSignpost != invocation || signpostForeignScope() || !runningObjects || servicing || loadingSaved
+                || invocation.body != signpost || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool() || invocation.queue != drawQueue
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING || values.phase() != BEGIN_LEVEL
+                || invocation.world != mode.getWorldSession()
+                || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || invocation.base != values || invocation.ledger != sounds || !placement.status().equals(invocation.before.status())
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !frame.state().equals(invocation.actor.state()) || !frame.environment().equals(invocation.shared.environment())
+                || !presentation.samePastScroll(invocation.scroll))
+            throw new IllegalStateException("Signpost changed another owner or retained a stale World/Frame cut");
+        invocation.pool.validateRestore(invocation.before.pool());
+    }
+    private CdObjectState signpostInitHeader(SignpostInvocation invocation) {
+        return invocation.entry.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.entry.spriteFlags() | 4)
+                .moveByte(CdObjectState.ByteField.X_RADIUS, 24).moveByte(CdObjectState.ByteField.WIDTH, 24)
+                .moveByte(CdObjectState.ByteField.Y_RADIUS, 32).moveByte(CdObjectState.ByteField.PRIORITY, 4)
+                .moveWord(CdObjectState.WordField.TILE, 0x043C);
+    }
+    private CdObjectState signpostAnimation(SignpostInvocation invocation) {
+        var original = invocation.entry;
+        var out = CdObjectAnimation.step(new CdObjectAnimation.State(original.unsignedByte(CdObjectState.ByteField.ANIMATION),
+                original.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION), original.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME),
+                original.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME), original.unsignedByte(CdObjectState.ByteField.MAP_FRAME),
+                original.spriteFlags(), original.flags(), original.routine(), original.unsignedByte(CdObjectState.ByteField.ROUTINE_2)),
+                new CdObjectAnimation.AnimationTable(assets.view(CdR11bAssets.Asset.ANI_SIGNPOST).bytes(), 0, 1));
+        return original.moveByte(CdObjectState.ByteField.ANIMATION, out.animationId())
+                .moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, out.previousId()).moveByte(CdObjectState.ByteField.ANIMATION_FRAME, out.scriptIndex())
+                .moveByte(CdObjectState.ByteField.ANIMATION_TIME, out.timer()).moveByte(CdObjectState.ByteField.MAP_FRAME, out.mapFrame())
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, out.spriteFlags()).moveByte(CdObjectState.ByteField.FLAGS, out.statusFlags())
+                .moveByte(CdObjectState.ByteField.ROUTINE, out.routine()).moveByte(CdObjectState.ByteField.ROUTINE_2, out.routine2());
+    }
+    private CdObjectState signpostSource(SignpostInvocation invocation) {
+        var source = invocation.entry;
+        if (source.routine() == 0) {
+            source = signpostInitHeader(invocation);
+            if (invocation.zoneRead) source = source.moveWord(CdObjectState.WordField.TILE, invocation.zone == 3 ? 0x043C : 0x843C)
+                    .moveLong(CdObjectState.LongField.MAPPINGS, assets.view(CdR11bAssets.Asset.MAP_SPR_GOAL_SIGNPOST).range().nativeAddress());
+        }
+        if (invocation.hit) source = source.moveByte(CdObjectState.ByteField.LEVEL_END_TIMER, 120)
+                .moveByte(CdObjectState.ByteField.MAP_FRAME, 0).addByte(CdObjectState.ByteField.ROUTINE, 2);
+        if (invocation.entry.routine() == 4) {
+            source = signpostAnimation(invocation).addByte(CdObjectState.ByteField.LEVEL_END_TIMER, -1);
+            if (source.unsignedByte(CdObjectState.ByteField.LEVEL_END_TIMER) == 0) source = source.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                    .moveByte(CdObjectState.ByteField.MAP_FRAME, 3).moveByte(CdObjectState.ByteField.LEVEL_END_TIMER, 60);
+        }
+        if (invocation.entry.routine() == 6) {
+            source = source.addByte(CdObjectState.ByteField.LEVEL_END_TIMER, -1);
+            if (invocation.resultsPrefix) source = source.moveByte(CdObjectState.ByteField.LEVEL_END_TIMER, 180).addByte(CdObjectState.ByteField.ROUTINE, 2);
+        }
+        if (invocation.screenCleared) source = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        return source;
+    }
+    /** Only the actual first-free ID3A and its delay byte may differ from this invocation's other96 images. */
+    private void validateSignpostImages(SignpostInvocation invocation, CdObjectState expectedSource,
+                                        boolean admitChild, boolean admitChildIdPrefix) {
+        if (!expectedSource.equals(invocation.pool.state(invocation.whole))) throw new IllegalStateException("Signpost source differs from its reached full64 prefix");
+        int first = -1;
+        for (var old : invocation.before.pool().slots()) if (old.id() == 0) { first = old.identity().wholeIndex(); break; }
+        for (var old : invocation.before.pool().slots()) {
+            int whole = old.identity().wholeIndex(); if (whole == invocation.whole) continue;
+            var live = invocation.pool.state(whole);
+            if (whole == invocation.child) {
+                if (!live.equals(invocation.childImage)) throw new IllegalStateException("Signpost rewrote its already-created Results child");
+                continue;
+            }
+            if (old.equals(live)) continue;
+            if (!admitChild || !invocation.resultsPrefix || invocation.child >= 0 || whole != first)
+                throw new IllegalStateException("Signpost changed an unrelated full64 physical image");
+            var idOnly = old.moveByte(CdObjectState.ByteField.ID, CdSignpost.RESULTS_ID);
+            var complete = idOnly.moveByte(CdObjectState.ByteField.RESULTS_TIMER, 16);
+            if (!live.equals(complete) && !(admitChildIdPrefix && live.equals(idOnly)))
+                throw new IllegalStateException("Signpost Results allocation changed dirty bytes beyond ID/delay");
+            invocation.child = whole; invocation.childImage = live;
+        }
+        var now = placement.capture();
+        if (!sameBytes(now.savedFlags(), invocation.before.savedFlags()) || !now.status().equals(invocation.before.status()))
+            throw new IllegalStateException("Signpost has no saved-bank or spawner-cursor writes");
+    }
+    private void validateSignpostCut(SignpostInvocation invocation, CdObjectPlacementRuntime.Snapshot cut,
+                                     CdObjectState source, boolean admitChild) {
+        verifySignpost(invocation); placement.validateRestore(Objects.requireNonNull(cut));
+        validateSignpostImages(invocation, signpostSource(invocation), admitChild, false);
+        var now = placement.capture();
+        if (!source.equals(invocation.pool.state(invocation.whole)) || !source.identity().equals(invocation.entry.identity())
+                || !cut.pool().slots().equals(now.pool().slots()) || !cut.status().equals(now.status())
+                || !sameBytes(cut.savedFlags(), now.savedFlags()))
+            throw new IllegalStateException("Signpost port lacks its actual complete fresh placement/source cut");
+    }
+    private int readSignpost(CdSignpost.ReadCall call) {
+        Objects.requireNonNull(call); var invocation = requireSignpost(call.expectedSource().identity().wholeIndex());
+        if (signpostPort || drawingSignpost || queuePort || invocation.drawn || !signpostReadAt(invocation.next, call.field()))
+            throw new IllegalStateException("Signpost read lacks its genuine native conditional position");
+        validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+        int value = switch (call.field()) {
+            case ZONE_BYTE -> frame.environment().movement().gates().zoneAct() >>> 8;
+            case PLAYER_Y_WORD -> frame.state().motion().centreY16_16() >>> 16;
+            case PLAYER_X_WORD -> frame.state().motion().centreX16_16() >>> 16;
+            case CAMERA_X_WORD -> presentation.pastForegroundImage().cameraX();
+            case TIME_ZONE_BYTE -> frame.environment().movement().gates().timeZone();
+            case ZONE_ACT_WORD -> frame.environment().movement().gates().zoneAct();
+            case TIME_MINUTES_BYTE -> signpostClock(CdCheckpointLiveAux.TimeByte.MINUTES, call.field());
+            case TIME_SECONDS_BYTE -> signpostClock(CdCheckpointLiveAux.TimeByte.SECONDS, call.field());
+            case RINGS_WORD -> values.ring().rings();
+        };
+        signpostPort = true;
+        try {
+            verifySignpost(invocation); validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+            switch (call.field()) {
+                case ZONE_BYTE -> { invocation.zone = value; invocation.zoneRead = true; invocation.next = SignpostCut.Y; }
+                case PLAYER_Y_WORD -> { invocation.y = value; int dy = (value - invocation.entry.centreY() + 128) & 0xFFFF;
+                    invocation.next = (short) dy < 0 || dy >= 256 ? SignpostCut.DRAW : SignpostCut.X; }
+                case PLAYER_X_WORD -> { invocation.x = value; invocation.next = value > invocation.entry.centreX() ? SignpostCut.CAMERA_LEFT : SignpostCut.DRAW; }
+                case CAMERA_X_WORD -> { invocation.observedCamera = value; invocation.next = invocation.next == SignpostCut.CAMERA_LEFT ? SignpostCut.LEFT : SignpostCut.DEST; }
+                case TIME_ZONE_BYTE -> { invocation.period = value; invocation.next = value == 0 ? SignpostCut.FADE : SignpostCut.MUSIC; }
+                case ZONE_ACT_WORD -> { invocation.zoneAct = value; invocation.next = value == 0x502 ? SignpostCut.HOLD_ZERO : SignpostCut.BONUS;
+                    if (value != 0x502) invocation.resultsPrefix = true; }
+                case TIME_MINUTES_BYTE -> { invocation.minutes = value; invocation.next = SignpostCut.SECONDS; }
+                case TIME_SECONDS_BYTE -> { invocation.seconds = value; invocation.next = SignpostCut.TIME_BONUS; }
+                case RINGS_WORD -> { invocation.rings = value; invocation.next = SignpostCut.RING_BONUS; }
+            }
+            verifySignpost(invocation); return value;
+        } finally { signpostPort = false; }
+    }
+    private static boolean signpostReadAt(SignpostCut cut, CdSignpost.ReadField field) {
+        return switch (field) {
+            case ZONE_BYTE -> cut == SignpostCut.ZONE;
+            case PLAYER_Y_WORD -> cut == SignpostCut.Y;
+            case PLAYER_X_WORD -> cut == SignpostCut.X;
+            case CAMERA_X_WORD -> cut == SignpostCut.CAMERA_LEFT || cut == SignpostCut.CAMERA_DEST;
+            case TIME_ZONE_BYTE -> cut == SignpostCut.PERIOD;
+            case ZONE_ACT_WORD -> cut == SignpostCut.ZONE_ACT;
+            case TIME_MINUTES_BYTE -> cut == SignpostCut.MINUTES;
+            case TIME_SECONDS_BYTE -> cut == SignpostCut.SECONDS;
+            case RINGS_WORD -> cut == SignpostCut.RINGS;
+        };
+    }
+    private int signpostClock(CdCheckpointLiveAux.TimeByte byteField, CdSignpost.ReadField field) {
+        // Exact existing native aliases: timeMinutes FF1515 / timeSeconds FF1516, Main CPU Variables67-68.
+        // Do not require the unrelated leading time byte or expand an unknown byte to a fabricated zero.
+        return values.globals().live().knownByte(byteField.nativeAddress())
+                .orElseThrow(() -> new UnsupportedSignpostRead(field, byteField.nativeAddress()));
+    }
+    private void storeSignpost(CdSignpost.StoreCall call) {
+        Objects.requireNonNull(call); var invocation = requireSignpost(call.expectedSource().identity().wholeIndex());
+        if (signpostPort || drawingSignpost || queuePort || invocation.drawn || !signpostStoreAt(invocation.next, call.field()))
+            throw new IllegalStateException("Signpost store lacks its actual once-only mixed-owner order");
+        validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), call.field() == CdSignpost.StoreField.UPDATE_HUD_BONUS_BYTE);
+        int expected = switch (call.field()) {
+            case LEFT_BOUND_WORD, DEST_LEFT_BOUND_WORD -> invocation.observedCamera;
+            case UPDATE_HUD_TIME_BYTE, SPEED_SHOES_BYTE, INVINCIBLE_BYTE -> 0;
+            case CONTROL_LOCK_BIT0, UPDATE_HUD_BONUS_BYTE -> 1;
+            case PLAYER_CONTROL_HOLD_WORD -> invocation.next == SignpostCut.HOLD_ZERO ? 0 : 0x0808;
+            case TIME_BONUS_WORD -> assets.view(CdR11bAssets.Asset.LEVEL_END_TIME_BONUSES).bytes()
+                    .unsignedWord(Math.min(((invocation.minutes * 60 + invocation.seconds) & 0xFFFF) / 15, 20) * 2);
+            case RING_BONUS_WORD -> (invocation.rings * 100) & 0xFFFF;
+        };
+        if (call.value() != expected) throw new IllegalStateException("Signpost store differs from its genuine reached native operand");
+        boolean frameStore = switch (call.field()) {
+            case LEFT_BOUND_WORD, SPEED_SHOES_BYTE, INVINCIBLE_BYTE, CONTROL_LOCK_BIT0, PLAYER_CONTROL_HOLD_WORD -> true;
+            default -> false;
+        };
+        if (frameStore) publishSignpostFrame(invocation, call);
+        else if (call.field() == CdSignpost.StoreField.DEST_LEFT_BOUND_WORD) publishSignpostDestination(invocation, call);
+        else publishSignpostValues(invocation, call);
+        invocation.next = switch (call.field()) {
+            case LEFT_BOUND_WORD -> SignpostCut.CAMERA_DEST;
+            case DEST_LEFT_BOUND_WORD -> SignpostCut.HUD_TIME;
+            case UPDATE_HUD_TIME_BYTE -> SignpostCut.SPEED;
+            case SPEED_SHOES_BYTE -> SignpostCut.INVINCIBLE;
+            case INVINCIBLE_BYTE -> SignpostCut.FM;
+            case CONTROL_LOCK_BIT0 -> SignpostCut.HOLD;
+            case PLAYER_CONTROL_HOLD_WORD -> invocation.next == SignpostCut.HOLD_ZERO ? SignpostCut.BONUS : SignpostCut.ZONE_ACT;
+            case UPDATE_HUD_BONUS_BYTE -> SignpostCut.MINUTES;
+            case TIME_BONUS_WORD -> SignpostCut.RINGS;
+            case RING_BONUS_WORD -> SignpostCut.DRAW;
+        };
+        if (call.field() == CdSignpost.StoreField.UPDATE_HUD_TIME_BYTE) invocation.hit = true;
+        if (call.field() == CdSignpost.StoreField.PLAYER_CONTROL_HOLD_WORD && call.value() == 0) invocation.resultsPrefix = true;
+        verifySignpost(invocation);
+    }
+    private static boolean signpostStoreAt(SignpostCut cut, CdSignpost.StoreField field) {
+        return switch (field) {
+            case LEFT_BOUND_WORD -> cut == SignpostCut.LEFT;
+            case DEST_LEFT_BOUND_WORD -> cut == SignpostCut.DEST;
+            case UPDATE_HUD_TIME_BYTE -> cut == SignpostCut.HUD_TIME;
+            case SPEED_SHOES_BYTE -> cut == SignpostCut.SPEED;
+            case INVINCIBLE_BYTE -> cut == SignpostCut.INVINCIBLE;
+            case CONTROL_LOCK_BIT0 -> cut == SignpostCut.LOCK;
+            case PLAYER_CONTROL_HOLD_WORD -> cut == SignpostCut.HOLD || cut == SignpostCut.HOLD_ZERO;
+            case UPDATE_HUD_BONUS_BYTE -> cut == SignpostCut.BONUS;
+            case TIME_BONUS_WORD -> cut == SignpostCut.TIME_BONUS;
+            case RING_BONUS_WORD -> cut == SignpostCut.RING_BONUS;
+        };
+    }
+    private Values signpostValues(CdLevelGlobals level, LoadingGlobals globals) {
+        var old = values;
+        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(), old.cpuSat(), old.displayedSat(),
+                old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(), level, globals, old.hudObjects(),
+                old.fadeProgress(), old.calls(), old.loop());
+    }
+    private void publishSignpostFrame(SignpostInvocation invocation, CdSignpost.StoreCall call) {
+        var ready = frame.prepareObjectSignpostStore(invocation.actor.state(), invocation.shared.environment(), call.field(), call.value());
+        var actor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), ready.finalState(), invocation.actor.display());
+        var shared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), ready.finalEnvironment(), invocation.shared.artState(),
+                invocation.shared.paused(), invocation.shared.vIntClock());
+        signpostPort = true;
+        try {
+            verifySignpost(invocation); validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+            frame.validatePreparedObjectSolidPublication(ready); frame.applyPreparedObjectSolidPublication(ready);
+            invocation.actor = actor; invocation.shared = shared; verifySignpost(invocation);
+        } finally { signpostPort = false; }
+    }
+    private void publishSignpostDestination(SignpostInvocation invocation, CdSignpost.StoreCall call) {
+        var ready = presentation.preparePastGoalPostDestLeftBound(frame, invocation.scroll, call.value());
+        signpostPort = true;
+        try {
+            verifySignpost(invocation); validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+            presentation.validatePreparedPastGoalPostDestLeftBound(ready); presentation.applyPreparedPastGoalPostDestLeftBound(ready);
+            invocation.scroll = ready.result(); verifySignpost(invocation);
+        } finally { signpostPort = false; }
+    }
+    private void publishSignpostValues(SignpostInvocation invocation, CdSignpost.StoreCall call) {
+        var level = values.level(); var globals = values.globals();
+        if (call.field() == CdSignpost.StoreField.UPDATE_HUD_TIME_BYTE) {
+            level = new CdLevelGlobals(level.levelRestart(), call.value(), level.checkpoint(), level.spawnMode(), level.plcLoadFlags(),
+                    level.flowerCount(), level.fadeEnableDisplay(), level.powerup(), level.timeOver());
+        } else {
+            var before = globals.bonus().orElseThrow(() -> new UnsupportedSignpostBonus(call.field()));
+            var bonus = new CdLevelHud.BonusValues(call.field() == CdSignpost.StoreField.TIME_BONUS_WORD ? call.value() : before.timeBonusWord(),
+                    call.field() == CdSignpost.StoreField.RING_BONUS_WORD ? call.value() : before.ringBonusWord(),
+                    call.field() == CdSignpost.StoreField.UPDATE_HUD_BONUS_BYTE ? call.value() : before.updateHudBonusByte());
+            globals = new LoadingGlobals(globals.live(), globals.contact(), globals.score(), globals.drownTimerWord(), globals.tail(),
+                    Optional.of(bonus), globals.layoutRam(), globals.debugBlockWord(), globals.pauseMusicBit(), globals.retainedDev());
+        }
+        var ready = signpostValues(level, globals); signpostPort = true;
+        try {
+            verifySignpost(invocation); validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+            values = ready; invocation.base = ready; verifySignpost(invocation);
+        } finally { signpostPort = false; }
+    }
+    private void soundSignpost(CdSignpost.SoundCall call) {
+        Objects.requireNonNull(call); var invocation = requireSignpost(call.expectedSource().identity().wholeIndex());
+        boolean expected = switch (call.sound()) {
+            case FM_SIGNPOST -> invocation.next == SignpostCut.FM;
+            case SCMD_FADEPCM -> invocation.next == SignpostCut.FADE && invocation.period == 0;
+            case SCMD_RESULTMUS -> invocation.next == SignpostCut.MUSIC;
+        };
+        if (signpostPort || drawingSignpost || queuePort || invocation.drawn || !expected)
+            throw new IllegalStateException("Signpost sound lacks its actual once-only native site");
+        validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+        var ledger = new ArrayList<>(sounds); ledger.add(new SonicCdGameModule.PastSignpostSound(call.sound()));
+        var ready = List.copyOf(ledger); signpostPort = true;
+        try {
+            verifySignpost(invocation); validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+            sounds = ready; invocation.ledger = ready;
+            invocation.next = call.sound() == CdSignpost.Sound.FM_SIGNPOST ? SignpostCut.DRAW
+                    : call.sound() == CdSignpost.Sound.SCMD_FADEPCM ? SignpostCut.MUSIC : SignpostCut.LOCK;
+            verifySignpost(invocation);
+        } finally { signpostPort = false; }
+    }
+    private void drawSignpost(CdSignpost.DrawCall call) {
+        Objects.requireNonNull(call); var invocation = requireSignpost(call.expectedSource().identity().wholeIndex());
+        if (signpostPort || drawingSignpost || queuePort || invocation.drawn || invocation.next != SignpostCut.DRAW)
+            throw new IllegalStateException("Signpost Draw lacks its genuine returned-body tail");
+        validateSignpostCut(invocation, call.actualCut(), call.expectedSource(), false);
+        var source = call.expectedSource(); invocation.drawSource = source; invocation.drawn = true; drawingSignpost = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole), source.spriteFlags(),
+                    source.centreX(), source.centreY(), source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    source.unsignedByte(CdObjectState.ByteField.WIDTH), source.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            verifySignpost(invocation);
+            if (!invocation.screenCleared) throw new IllegalStateException("Signpost Draw omitted the actual source BCLR7");
+            invocation.next = SignpostCut.RETURN;
+        } finally { drawingSignpost = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readSignpostDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireSignpost(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingSignpost || signpostPort || queuePort || !invocation.drawn)
+            throw new IllegalStateException("No actual Signpost collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var source = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(source.id(), source.spriteFlags(), source.centreX(), source.centreY(),
+                    source.word(CdObjectState.WordField.X_FRACTION), source.longBits(CdObjectState.LongField.MAPPINGS),
+                    source.unsignedByte(CdObjectState.ByteField.MAP_FRAME), source.word(CdObjectState.WordField.TILE));
+            verifySignpost(invocation);
+            if (!before.pool().slots().equals(placement.capture().pool().slots()) || !sameBytes(before.savedFlags(), placement.capture().savedFlags()))
+                throw new IllegalStateException("Signpost queue read changed its actual full placement");
+            return live;
+        } finally { queuePort = false; }
+    }
+    private void writeSignpostOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireSignpost(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingSignpost || signpostPort || queuePort || !invocation.drawn || invocation.screenCleared || onScreen)
+            throw new IllegalStateException("Only actual Signpost Draw clears bit7 once");
+        var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Signpost changed before its actual BCLR7");
+        var next = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(ready); queuePort = true;
+        try {
+            verifySignpost(invocation); invocation.pool.write(next); invocation.screenCleared = true; verifySignpost(invocation);
+            if (!ready.slots().equals(invocation.pool.capture().slots()) || !sameBytes(before.savedFlags(), placement.capture().savedFlags()))
+                throw new IllegalStateException("Signpost Draw changed more than its source bit7");
+        } finally { queuePort = false; }
+    }
+    /** Genuine animation-read stop prefix; never a second successful animation or adoption. */
+    private CdObjectState signpostAnimationStop(SignpostInvocation invocation, CdSignpost.UnsupportedSignpost stopped) {
+        var source = invocation.entry; int animation = source.unsignedByte(CdObjectState.ByteField.ANIMATION);
+        if (animation != source.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION)) source = source
+                .moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, animation).moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0)
+                .moveByte(CdObjectState.ByteField.ANIMATION_TIME, 0);
+        source = source.addByte(CdObjectState.ByteField.ANIMATION_TIME, -1);
+        if (stopped.boundary() == CdSignpost.UnsupportedBoundary.ANIMATION_DIRECTORY_READ) return source;
+        var bytes = assets.view(CdR11bAssets.Asset.ANI_SIGNPOST).bytes(); int script = (short) bytes.unsignedWord(animation * 2);
+        if (stopped.boundary() == CdSignpost.UnsupportedBoundary.ANIMATION_SPEED_READ) return source;
+        source = source.moveByte(CdObjectState.ByteField.ANIMATION_TIME, bytes.unsignedByte(script));
+        return source; // Original finite source has FF only; malformed raw frame/index stops precede timer decrement.
+    }
+    private void verifySignpostFailure(SignpostInvocation invocation, Throwable original) {
+        try {
+            verifySignpost(invocation); CdObjectState source;
+            if (original instanceof CdSignpost.UnsupportedSignpost stopped) {
+                if (stopped.wholeIndex() != invocation.whole) throw new IllegalStateException("Signpost stopped at another physical source");
+                source = switch (stopped.boundary()) {
+                    case ANIMATION_DIRECTORY_READ, ANIMATION_SPEED_READ, ANIMATION_FRAME_READ, ANIMATION_OPERAND_READ -> signpostAnimationStop(invocation, stopped);
+                    default -> signpostSource(invocation);
+                };
+            } else source = signpostSource(invocation);
+            validateSignpostImages(invocation, source, invocation.resultsPrefix, true);
+        } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /** Actual GoalPost scope. Public component records/effects cannot create or resume this invocation. */
+    private enum GoalSite { Y, X, GOAL, GOAL_PLC, TIDAL_PLC, HEAD, DRAW, RETURN }
+    private final class GoalInvocation {
+        private final CdGoalPost body = goalPost;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final CdGoalPost.Globals globals;
+        private final CdObjectDrawQueue.CameraWords camera;
+        private Values base = values;
+        private final List<SonicCdGameModule.PastSound> ledger = sounds;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private GoalSite next;
+        private int y, x, plcHead;
+        private boolean yRead, xRead, passed, headRead, goalStored, plcTaken, drawn, screenCleared;
+        private CdObjectState drawSource;
+        private GoalInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            camera = new CdObjectDrawQueue.CameraWords(scroll.state().cameraX(), scroll.state().cameraYWord());
+            var gates = shared.environment().movement().gates();
+            globals = new CdGoalPost.Globals(gates.zoneAct(), gates.timeZone(), values.globals().retainedDev().goodFuture(),
+                    gates.timeWarpDirection(), camera.xWord());
+            boolean tidal = globals.zoneAct() == 0x201 && globals.timeZone() == 1;
+            next = entry.routine() == 0 && tidal ? entry.subtype() == 0 ? GoalSite.TIDAL_PLC : GoalSite.HEAD
+                    : entry.routine() == 0 || entry.routine() == 2 ? GoalSite.Y : GoalSite.DRAW;
+        }
+    }
+    private boolean goalForeignScope() {
+        return activeMachine != null || machinePort || drawingMachine || machineForeignScope();
+    }
+    private void runGoal(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (goalForeignScope() || activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || queuePort || !runningObjects
+                || servicing || loadingSaved || whole < 32 || whole >= 128 || values.phase() != BEGIN_LEVEL
+                || placement.pool().state(whole).id() != CdGoalPost.OBJECT_ID
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past GoalPost dispatch");
+        var invocation = new GoalInvocation(whole); activeGoal = invocation;
+        try {
+            var result = goalPost.run(whole, invocation.globals);
+            verifyGoal(invocation);
+            if ((invocation.globals.zoneAct() & 255) == 2 ? invocation.drawn
+                    : !invocation.drawn || !invocation.screenCleared)
+                throw new IllegalStateException("GoalPost skipped or repeated its native act-byte Draw selection");
+            if (invocation.next != GoalSite.RETURN && !((invocation.globals.zoneAct() & 255) == 2 && invocation.next == GoalSite.DRAW))
+                throw new IllegalStateException("GoalPost returned before its actual conditional read/store/PLC order");
+            verifyGoalTail(invocation, true);
+            if (!result.state().equals(invocation.pool.state(whole))) throw new IllegalStateException("GoalPost result is not its live source image");
+        } catch (RuntimeException | Error original) {
+            verifyGoalFailure(invocation, original); throw original;
+        } finally { activeGoal = null; }
+    }
+    private GoalInvocation requireGoal(int whole) {
+        var invocation = activeGoal;
+        if (invocation == null || invocation.whole != whole || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual selected GoalPost callback");
+        verifyGoal(invocation); return invocation;
+    }
+    private void verifyGoal(GoalInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != invocation || goalForeignScope() || !runningObjects || servicing || loadingSaved
+                || invocation.body != goalPost || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || invocation.world != mode.getWorldSession()
+                || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || values != invocation.base || values.phase() != BEGIN_LEVEL || sounds != invocation.ledger
+                || !placement.status().equals(invocation.before.status()) || !presentation.samePastScroll(invocation.scroll)
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !frame.state().equals(invocation.actor.state()) || !frame.environment().equals(invocation.shared.environment()))
+            throw new IllegalStateException("GoalPost changed another owner or retained a stale World/Frame cut");
+        invocation.pool.validateRestore(invocation.before.pool());
+    }
+    /** Native Init:612-619 prefix before its reached finite tile WORD. No reset of dirty collision/animation bytes. */
+    private CdObjectState goalHeader(GoalInvocation invocation) {
+        return invocation.entry.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.entry.spriteFlags() | 4)
+                .moveByte(CdObjectState.ByteField.PRIORITY, 4)
+                .moveLong(CdObjectState.LongField.MAPPINGS, assets.view(CdR11bAssets.Asset.MAP_SPR_GOAL_SIGNPOST).range().nativeAddress())
+                .moveByte(CdObjectState.ByteField.X_RADIUS, 16).moveByte(CdObjectState.ByteField.WIDTH, 16)
+                .moveByte(CdObjectState.ByteField.Y_RADIUS, 32).moveByte(CdObjectState.ByteField.MAP_FRAME, 5);
+    }
+    /** Native SetBaseTile:664-681 uses BYTE shift/add wrap, then a finite source WORD, then zone3 priority exception. */
+    private CdObjectState goalInitialMainSource(GoalInvocation invocation) {
+        var g = invocation.globals; int index = ((g.zoneAct() & 0xFF00) | ((g.zoneAct() << 7) & 255)) >>> 4;
+        int period = g.timeZone(); if (period == 2) period = (period + g.goodFuture()) & 255;
+        index = (index & 0xFF00) | ((index + ((period * 2) & 255)) & 255);
+        var tiles = assets.view(CdR11bAssets.Asset.GOAL_POST_BASE_TILES).bytes();
+        if ((short) index < 0 || index > tiles.length() - 2)
+            throw new IllegalStateException("GoalPost reached another finite base-tile operand");
+        int tile = tiles.unsignedWord(index); if ((g.zoneAct() >>> 8) != 3) tile |= 0x8000;
+        return goalHeader(invocation).moveWord(CdObjectState.WordField.TILE, tile);
+    }
+    private CdObjectState goalSource(GoalInvocation invocation) {
+        var source = invocation.entry;
+        if (source.routine() == 0) {
+            boolean tidal = invocation.globals.zoneAct() == 0x201 && invocation.globals.timeZone() == 1;
+            if (tidal && source.subtype() == 0) source = source.moveByte(CdObjectState.ByteField.SUBTYPE, 1);
+            else if (!tidal || invocation.headRead && invocation.plcHead == 0) source = goalInitialMainSource(invocation);
+        }
+        if (invocation.passed) source = source.addByte(CdObjectState.ByteField.ROUTINE, 2);
+        if (invocation.screenCleared) source = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        return source;
+    }
+    private void validateGoalCut(GoalInvocation invocation, CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) {
+        verifyGoal(invocation); placement.validateRestore(Objects.requireNonNull(cut));
+        var expected = goalSource(invocation); var now = placement.capture();
+        var expectedPool = CdObjectPool.overlay(invocation.before.pool(), List.of(expected));
+        if (!expected.equals(source) || !source.equals(invocation.pool.state(invocation.whole))
+                || !cut.pool().slots().equals(now.pool().slots()) || !now.pool().slots().equals(expectedPool.slots())
+                || !cut.status().equals(now.status()) || !sameBytes(cut.savedFlags(), now.savedFlags())
+                || !sameBytes(now.savedFlags(), invocation.before.savedFlags()))
+            throw new IllegalStateException("GoalPost port lacks its actual full96/source/native-prefix cut");
+    }
+    private int readGoalPlayerWord(CdGoalPost.ReadCall call) {
+        Objects.requireNonNull(call); var invocation = requireGoal(call.expectedSource().identity().wholeIndex());
+        boolean y = call.field() == CdGoalPost.PlayerField.Y_WORD;
+        if (goalPort || drawingGoal || queuePort || invocation.drawn || (y ? invocation.next != GoalSite.Y || invocation.yRead
+                : invocation.next != GoalSite.X || !invocation.yRead || invocation.xRead))
+            throw new IllegalStateException("GoalPost player read lacks its genuine Y-before-conditional-X position");
+        validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        var motion = frame.state().motion(); int value = y ? motion.centreY16_16() >>> 16 : motion.centreX16_16() >>> 16;
+        goalPort = true;
+        try {
+            verifyGoal(invocation); validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+            if (y) {
+                invocation.yRead = true; invocation.y = value;
+                int distance = (value - call.expectedSource().centreY() + 128) & 0xFFFF;
+                invocation.next = (short) distance < 0 || distance >= 256 ? GoalSite.DRAW : GoalSite.X;
+            } else {
+                invocation.xRead = true; invocation.x = value; invocation.passed = value >= call.expectedSource().centreX();
+                invocation.next = invocation.passed ? GoalSite.GOAL : GoalSite.DRAW;
+            }
+            verifyGoal(invocation); return value;
+        } finally { goalPort = false; }
+    }
+    private Values goalValues(CdR11bSectionArt.State section, LoadingGlobals globals) {
+        var old = values;
+        return new Values(old.phase(), section, old.cpuPalette(), old.fadePalette(), old.displayedPalette(), old.cpuSat(),
+                old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(),
+                old.level(), globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
+    }
+    private void storeGoalReached(CdGoalPost.GoalReachedCall call) {
+        Objects.requireNonNull(call); var invocation = requireGoal(call.expectedSource().identity().wholeIndex());
+        int dy = (invocation.y - invocation.entry.centreY() + 128) & 0xFFFF;
+        if (goalPort || drawingGoal || queuePort || invocation.drawn || invocation.goalStored || invocation.next != GoalSite.GOAL
+                || !invocation.yRead || !invocation.xRead || !invocation.passed || (short) dy < 0 || dy >= 256
+                || invocation.x < invocation.entry.centreX() || call.cameraXWord() != invocation.camera.xWord())
+            throw new IllegalStateException("GoalPost store lacks the actual accepted native Y/X/camera cut");
+        validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        var readyFrame = frame.prepareObjectGoalPostReached(invocation.actor.state(), invocation.shared.environment(), call.cameraXWord());
+        var readyScroll = presentation.preparePastGoalPostDestLeftBound(frame, invocation.scroll, call.cameraXWord());
+        var g = values.globals();
+        var readyValues = goalValues(values.section(), new LoadingGlobals(g.live(),
+                new CdPlayerBody.ContactGlobals(0, g.contact().shield(), g.contact().combineRing()), g.score(), g.drownTimerWord(),
+                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
+                invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        goalPort = true;
+        try {
+            verifyGoal(invocation); validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            presentation.validatePreparedPastGoalPostDestLeftBound(readyScroll);
+            // Every pair/reference and the full native preimage is ready. No callbacks or allocation between stores.
+            frame.applyPreparedObjectSolidPublication(readyFrame);
+            presentation.applyPreparedPastGoalPostDestLeftBound(readyScroll); values = readyValues;
+            invocation.actor = readyActor; invocation.shared = readyShared; invocation.scroll = readyScroll.result();
+            invocation.base = readyValues; invocation.goalStored = true; invocation.next = GoalSite.GOAL_PLC;
+            verifyGoal(invocation); validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        } finally { goalPort = false; }
+    }
+    private void loadGoalPlc(CdGoalPost.PlcCall call) {
+        Objects.requireNonNull(call); var invocation = requireGoal(call.expectedSource().identity().wholeIndex());
+        boolean tidal = call.site() == CdGoalPost.PlcSite.TIDAL_INIT;
+        if (goalPort || drawingGoal || queuePort || invocation.drawn || invocation.plcTaken
+                || (tidal ? invocation.next != GoalSite.TIDAL_PLC || call.nativeId() != 0x13
+                : invocation.next != GoalSite.GOAL_PLC || !invocation.goalStored || call.nativeId() != 0x12))
+            throw new IllegalStateException("GoalPost LoadPLC lacks its actual once-only native cue cut");
+        validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        CdR11bSectionArt.State next; CdR11bSectionArt.SectionArtException stopped = null;
+        try { next = art.appendList(values.section(), call.nativeId()); }
+        catch (CdR11bSectionArt.SectionArtException failure) { next = failure.state(); stopped = failure; }
+        var ready = goalValues(next, values.globals()); goalPort = true;
+        try {
+            verifyGoal(invocation); validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+            values = ready; invocation.base = ready;
+            if (stopped == null) { invocation.plcTaken = true; invocation.next = GoalSite.DRAW; }
+            verifyGoal(invocation); validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        } finally { goalPort = false; }
+        if (stopped != null) throw stopped; // Preserve the actual queue prefix and identical source exception.
+    }
+    private int readGoalPlcHead(CdGoalPost.PlcHeadCall call) {
+        Objects.requireNonNull(call); var invocation = requireGoal(call.expectedSource().identity().wholeIndex());
+        if (goalPort || drawingGoal || queuePort || invocation.drawn || invocation.headRead || invocation.next != GoalSite.HEAD)
+            throw new IllegalStateException("GoalPost PLC-head read lacks its actual Tidal retry cut");
+        validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        int value = (int) values.section().queue().headSource(); goalPort = true;
+        try {
+            verifyGoal(invocation); invocation.plcHead = value; invocation.headRead = true;
+            invocation.next = value == 0 ? GoalSite.Y : GoalSite.DRAW; verifyGoal(invocation); return value;
+        } finally { goalPort = false; }
+    }
+    private void drawGoal(CdGoalPost.DrawCall call) {
+        Objects.requireNonNull(call); var invocation = requireGoal(call.expectedSource().identity().wholeIndex());
+        if (goalPort || drawingGoal || queuePort || invocation.drawn || invocation.next != GoalSite.DRAW
+                || (invocation.globals.zoneAct() & 255) == 2)
+            throw new IllegalStateException("GoalPost Draw lacks its actual returned-body/act-byte cut");
+        validateGoalCut(invocation, call.actualCut(), call.expectedSource());
+        var source = call.expectedSource(); invocation.drawSource = source; invocation.drawn = true; drawingGoal = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    source.spriteFlags(), source.centreX(), source.centreY(), source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    source.unsignedByte(CdObjectState.ByteField.WIDTH), source.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            verifyGoal(invocation);
+            if (!invocation.screenCleared) throw new IllegalStateException("GoalPost Draw omitted its actual BCLR7");
+            invocation.next = GoalSite.RETURN;
+        } finally { drawingGoal = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readGoalDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireGoal(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingGoal || goalPort || queuePort || !invocation.drawn)
+            throw new IllegalStateException("No actual GoalPost collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var source = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(source.id(), source.spriteFlags(), source.centreX(), source.centreY(),
+                    source.word(CdObjectState.WordField.X_FRACTION), source.longBits(CdObjectState.LongField.MAPPINGS),
+                    source.unsignedByte(CdObjectState.ByteField.MAP_FRAME), source.word(CdObjectState.WordField.TILE));
+            verifyGoal(invocation);
+            if (!placement.capture().pool().slots().equals(before.pool().slots()) || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("GoalPost queue read changed full placement images");
+            return live;
+        } finally { queuePort = false; }
+    }
+    private void writeGoalOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireGoal(Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingGoal || goalPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+            throw new IllegalStateException("Only actual GoalPost Draw clears bit7 once");
+        var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        if (!source.equals(invocation.drawSource)) throw new IllegalStateException("GoalPost changed before its actual BCLR7");
+        var next = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(ready); queuePort = true;
+        try {
+            verifyGoal(invocation); invocation.pool.write(next); invocation.screenCleared = true; verifyGoal(invocation);
+            if (!invocation.pool.capture().slots().equals(ready.slots()) || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("GoalPost Draw changed more than its actual source bit7");
+        } finally { queuePort = false; }
+    }
+    private void verifyGoalTail(GoalInvocation invocation, boolean completed) {
+        var expected = goalSource(invocation); byte[] bank = invocation.before.savedFlags().copy();
+        boolean outside = expected.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0
+                && (((expected.centreX() & 0xFF80) - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
+        boolean delete = outside || (invocation.globals.timeZone() & 0x80) != 0;
+        if (delete && expected.savedFlagsId() != 0) {
+            int period = invocation.globals.timeZone() & 0x7F;
+            if ((invocation.globals.timeZone() & 0x80) != 0) {
+                int direction = invocation.goalStored ? 0 : invocation.globals.timeWarpDirection();
+                period = Math.max(0, Math.min(2, (short) ((period - (byte) direction) & 0xFFFF)));
+            }
+            int index = 2 + (short) ((3 * expected.savedFlagsId() + period) & 0xFFFF);
+            if (index < 2 || index >= bank.length) {
+                if (completed) throw new IllegalStateException("GoalPost returned through an unowned native saved-bank read");
+                delete = false;
+            } else bank[index] &= 0x7F;
+        }
+        var live = invocation.pool.state(invocation.whole);
+        if (delete) {
+            if (!Arrays.equals(live.copyBytes(), new byte[64])) throw new IllegalStateException("GoalPost omitted its full native delete");
+        } else if (!expected.equals(live)) throw new IllegalStateException("GoalPost changed unowned dirty source bytes");
+        var expectedPool = CdObjectPool.overlay(invocation.before.pool(), List.of(live));
+        if (!expectedPool.slots().equals(invocation.pool.capture().slots()) || !Arrays.equals(bank, placement.capture().savedFlags().copy()))
+            throw new IllegalStateException("GoalPost changed another full64 image or an unowned saved byte");
+    }
+    private void verifyGoalFailure(GoalInvocation invocation, Throwable original) {
+        try {
+            verifyGoal(invocation);
+            if (original instanceof CdGoalPost.UnsupportedGoalPost stopped && stopped.wholeIndex() != invocation.whole)
+                throw new IllegalStateException("GoalPost stopped at another physical source");
+            if (original instanceof CdGoalPost.UnsupportedGoalPost stopped
+                    && stopped.boundary() == CdGoalPost.UnsupportedBoundary.BASE_TILE_READ) {
+                var expectedPool = CdObjectPool.overlay(invocation.before.pool(), List.of(goalHeader(invocation)));
+                if (!expectedPool.slots().equals(invocation.pool.capture().slots())
+                        || !sameBytes(invocation.before.savedFlags(), placement.capture().savedFlags()))
+                    throw new IllegalStateException("GoalPost finite tile stop lost its exact Init header prefix");
+            } else if (invocation.next == GoalSite.RETURN) verifyGoalTail(invocation, false);
+            else {
+                var expectedPool = CdObjectPool.overlay(invocation.before.pool(), List.of(goalSource(invocation)));
+                if (!expectedPool.slots().equals(invocation.pool.capture().slots())
+                        || !sameBytes(invocation.before.savedFlags(), placement.capture().savedFlags()))
+                    throw new IllegalStateException("GoalPost failure exceeds its genuine reached object prefix");
+            }
+        } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
 
     /** One cached Robot/Explosion producer. Public cuts and completed effects never create this scope. */
     private enum MachineSite { BODY, GOOD_FUTURE, POINTS, SOLID, GET_OFF, FM, DRAW }
@@ -2254,7 +3752,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void runMachine(int whole, boolean generator) {
         module.requirePastLoadingVisit(this);
-        if (machineForeignScope() || activeMachine != null || machinePort || drawingMachine || queuePort
+        if (machineForeignScope() || activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || queuePort
                 || !runningObjects || servicing || loadingSaved || whole < 32 || whole >= 128
                 || values.phase() != BEGIN_LEVEL || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
                 || placement.pool().state(whole).id() != (generator ? CdRobotGenerator.OBJECT_ID : CdExplosion.OBJECT_ID))
@@ -2286,7 +3784,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyMachine(MachineInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != invocation || machineForeignScope() || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != invocation || machineForeignScope() || !runningObjects || servicing || loadingSaved
                 || invocation.body != (invocation.generator ? robotGenerator : explosion)
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
                 || invocation.pool != placement.pool() || invocation.queue != drawQueue || drawQueue == null
@@ -2575,7 +4073,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runAnton(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null || activeReserved != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null
                 || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeAnton != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
@@ -2608,7 +4106,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyAntonInvocation(AntonInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || activeAnton != invocation || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || activeAnton != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null || activeSpring != null
                 || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null
                 || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeTunnelDoor != null || activeMonitor != null
@@ -2647,7 +4145,7 @@ final class SonicCdPastLoadingVisit {
     private void commitAntonPrimaryAngle(CdAnton.PrimaryAngleCall call) {
         Objects.requireNonNull(call);
         var invocation = requireAntonInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || antonPort || drawingAnton || queuePort || invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || antonPort || drawingAnton || queuePort || invocation.drawn)
             throw new IllegalStateException("Anton angle is outside its actual pre-Draw floor call");
         var pool = invocation.pool; var cut = call.callCut(); pool.validateRestore(cut);
         var source = pool.state(invocation.whole); requireAntonOtherImages(invocation);
@@ -2674,7 +4172,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawAnton(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireAntonInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || antonPort || drawingAnton || queuePort || invocation.drawn || !invocation.angleSeen
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || antonPort || drawingAnton || queuePort || invocation.drawn || !invocation.angleSeen
                 || !identity.equals(invocation.entry.identity()) || pool.state(invocation.whole).id() != CdAnton.OBJECT_ID)
             throw new IllegalStateException("Anton DrawObject lacks its genuine live physical source");
         requireAntonOtherImages(invocation);
@@ -2691,7 +4189,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readAntonDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireAntonInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingAnton || antonPort || queuePort || !invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingAnton || antonPort || queuePort || !invocation.drawn)
             throw new IllegalStateException("No actual Anton collecting queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -2705,7 +4203,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeAntonOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireAntonInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingAnton || antonPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingAnton || antonPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
             throw new IllegalStateException("Only actual Anton DrawObject may clear bit7 once");
         var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
         if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Anton changed its Draw source before BCLR7");
@@ -2757,7 +4255,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runBoulder(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -2796,7 +4294,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyBoulderInvocation(BoulderInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeBoulder != invocation || activeAnton != null || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeBoulder != invocation || activeAnton != null || !runningObjects || servicing || loadingSaved
                 || activeDrain != null || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -2827,7 +4325,7 @@ final class SonicCdPastLoadingVisit {
     private void commitBoulderSolid(CdBoulder.PrefixSolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requireBoulderInvocation(placement.pool(), activeBoulder == null ? -1 : activeBoulder.whole);
-        if (activeMachine != null || machinePort || drawingMachine || boulderPort || spikesPort || drawingBoulder || mosquiPort || drawingMosqui || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.solidTaken || invocation.stopped || invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || boulderPort || spikesPort || drawingBoulder || mosquiPort || drawingMosqui || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.solidTaken || invocation.stopped || invocation.drawn)
             throw new IllegalStateException("Boulder Solid lacks its actual once-only pre-Draw helper cut");
         var pool = invocation.pool; var cut = call.callCut(); pool.validateRestore(cut);
         var source = pool.state(invocation.whole);
@@ -2893,7 +4391,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawBoulder(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireBoulderInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || boulderPort || spikesPort || drawingBoulder || mosquiPort || drawingMosqui || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || boulderPort || spikesPort || drawingBoulder || mosquiPort || drawingMosqui || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.stopped
                 || !identity.equals(invocation.entry.identity()) || pool.state(invocation.whole).id() != CdBoulder.OBJECT_ID)
             throw new IllegalStateException("Boulder DrawObject lacks its genuine live physical source");
         requireBoulderOtherImages(invocation);
@@ -2910,7 +4408,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readBoulderDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireBoulderInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingBoulder || antonPort || drawingAnton || boulderPort || spikesPort || queuePort || !invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingBoulder || antonPort || drawingAnton || boulderPort || spikesPort || queuePort || !invocation.drawn || invocation.stopped)
             throw new IllegalStateException("No actual Boulder collecting queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -2928,7 +4426,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeBoulderOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireBoulderInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingBoulder || antonPort || drawingAnton || boulderPort || spikesPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingBoulder || antonPort || drawingAnton || boulderPort || spikesPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Only actual Boulder DrawObject may clear bit7 once");
         var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
         if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Boulder changed its native Draw source before BCLR7");
@@ -2983,7 +4481,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runSpikes(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || activeMosqui != null || mosquiPort || drawingMosqui || activeAnton != null || antonPort || drawingAnton || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeMosqui != null || mosquiPort || drawingMosqui || activeAnton != null || antonPort || drawingAnton || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeSpikes != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -3020,7 +4518,7 @@ final class SonicCdPastLoadingVisit {
     private void verifySpikesInvocation(SpikesInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeMosqui != null || mosquiPort || drawingMosqui || activeAnton != null || antonPort || drawingAnton || activeSpikes != invocation || activeBoulder != null || boulderPort || drawingBoulder || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeMosqui != null || mosquiPort || drawingMosqui || activeAnton != null || antonPort || drawingAnton || activeSpikes != invocation || activeBoulder != null || boulderPort || drawingBoulder || !runningObjects || servicing || loadingSaved
                 || activeDrain != null || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -3052,7 +4550,7 @@ final class SonicCdPastLoadingVisit {
     private void commitSpikesSolid(CdSpikes.PrefixSolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requireSpikesInvocation(placement.pool(), activeSpikes == null ? -1 : activeSpikes.whole);
-        if (activeMachine != null || machinePort || drawingMachine || spikesPort || drawingSpikes || queuePort || invocation.solidTaken || invocation.stopped || invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || spikesPort || drawingSpikes || queuePort || invocation.solidTaken || invocation.stopped || invocation.drawn)
             throw new IllegalStateException("Spikes Solid lacks its actual once-only pre-Draw helper cut");
         var pool = invocation.pool; var cut = call.actualCut(); pool.validateRestore(cut);
         var source = pool.state(invocation.whole);
@@ -3123,7 +4621,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawSpikes(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireSpikesInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || spikesPort || drawingSpikes || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || spikesPort || drawingSpikes || queuePort || invocation.drawn || invocation.stopped
                 || invocation.yRewound != invocation.hurtTaken || !identity.equals(invocation.entry.identity()) || pool.state(invocation.whole).id() != CdSpikes.OBJECT_ID)
             throw new IllegalStateException("Spikes DrawObject lacks its genuine live physical source");
         requireSpikesOtherImages(invocation);
@@ -3140,7 +4638,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readSpikesDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireSpikesInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingSpikes || spikesPort || queuePort || !invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingSpikes || spikesPort || queuePort || !invocation.drawn || invocation.stopped)
             throw new IllegalStateException("No actual Spikes collecting queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -3158,7 +4656,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeSpikesOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireSpikesInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingSpikes || spikesPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingSpikes || spikesPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Only actual Spikes DrawObject may clear bit7 once");
         var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
         if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Spikes changed its native Draw source before BCLR7");
@@ -3190,7 +4688,7 @@ final class SonicCdPastLoadingVisit {
     }
     private SpikesInvocation requireSpikesMutation(CdObjectState.Identity identity) {
         var invocation = requireSpikesInvocation(placement.pool(), Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || spikesPort || drawingSpikes || queuePort || invocation.stopped || invocation.drawn
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || spikesPort || drawingSpikes || queuePort || invocation.stopped || invocation.drawn
                 || !identity.equals(invocation.entry.identity())
                 || placement.pool().state(invocation.whole).id() != CdSpikes.OBJECT_ID
                 || placement.pool().state(invocation.whole).routine() != 2)
@@ -3380,7 +4878,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runTamabboh(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeFloat != null || activePata != null || activeTunnelDoor != null || activeMonitor != null
                 || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || reservedPort || drawingReserved || ringPort || drawingRing
@@ -3417,7 +4915,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyTamabbohInvocation(TamabbohInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeTamabboh != invocation || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeTamabboh != invocation || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -3461,7 +4959,7 @@ final class SonicCdPastLoadingVisit {
     /** Every reached floor store uses this exact current primary byte; no player/state aggregate is written. */
     private void commitTamabbohPrimaryAngle(CdTamabboh.PrimaryAngleCall call) {
         Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.expectedRangeX != null)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.expectedRangeX != null)
             throw new IllegalStateException("Tamabboh angle is outside its genuine floor call");
         var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
         if ((live.subtype() == 1 ? live.routine() != 2 : live.routine() != 2 && live.routine() != 4)
@@ -3482,7 +4980,7 @@ final class SonicCdPastLoadingVisit {
     }
     private int readTamabbohPlayerWord(CdTamabboh.PlayerReadCall call) {
         Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn)
             throw new IllegalStateException("Tamabboh player read is outside its actual range call");
         var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
         if (live.routine() != 4 || live.subtype() != 0 || live.word(CdObjectState.WordField.TAMABBOH_COOLDOWN) != 0
@@ -3507,7 +5005,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void playTamabbohFm(CdTamabboh.FmCall call) {
         Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.sounded)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.sounded)
             throw new IllegalStateException("Tamabboh FM lacks its actual first Fire request");
         var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
         if (live.routine() != 4 || live.subtype() != 0 || live.word(CdObjectState.WordField.TAMABBOH_COOLDOWN) != 0x78
@@ -3530,7 +5028,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawTamabboh(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireTamabbohInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
             throw new IllegalStateException("Tamabboh DrawObject lacks its actual once-only physical source");
         var current = pool.state(invocation.whole);
         boolean clearedMissile = invocation.entry.subtype() == 1 && invocation.entry.routine() == 2
@@ -3553,7 +5051,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readTamabbohDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireTamabbohInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || tamabbohPort || queuePort || !invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || tamabbohPort || queuePort || !invocation.drawn)
             throw new IllegalStateException("No actual collecting Tamabboh queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -3568,7 +5066,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeTamabbohOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireTamabbohInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || tamabbohPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || tamabbohPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
             throw new IllegalStateException("Only actual Tamabboh DrawObject may clear bit7 once");
         var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
         if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Tamabboh changed its DrawObject source before BCLR7");
@@ -3630,7 +5128,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runMosqui(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeCollapse != null || activeFloat != null || activePata != null || activeTamabboh != null
                 || activeBoulder != null || activeMosqui != null || activeAnton != null || activeTunnelDoor != null || activeMonitor != null
@@ -3670,7 +5168,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyMosquiInvocation(MosquiInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || activeMosqui != invocation || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeSpikes != null || spikesPort || drawingSpikes || activeMosqui != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeCollapse != null || activeFloat != null
                 || activePata != null || activeTamabboh != null || activeBoulder != null || activeAnton != null || activeTunnelDoor != null || activeMonitor != null
@@ -3749,7 +5247,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void commitMosquiPrimaryAngle(CdMosqui.PrimaryAngleCall call) {
         Objects.requireNonNull(call); var invocation = requireMosquiInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || mosquiPort || drawingMosqui || queuePort || invocation.drawn || invocation.sounded
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || mosquiPort || drawingMosqui || queuePort || invocation.drawn || invocation.sounded
                 || (invocation.next != MosquiCut.BODY && invocation.next != MosquiCut.FLOOR)
                 || invocation.angleStores == 0 && call.value() != 0)
             throw new IllegalStateException("Mosqui angle lacks its genuine ordered floor prezero/raw store");
@@ -3781,7 +5279,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void playMosquiFm(CdMosqui.FmCall call) {
         Objects.requireNonNull(call); var invocation = requireMosquiInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || mosquiPort || drawingMosqui || queuePort || invocation.drawn || invocation.sounded
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || mosquiPort || drawingMosqui || queuePort || invocation.drawn || invocation.sounded
                 || invocation.next != MosquiCut.FLOOR || invocation.angleStores == 0 || call.sound() != CdMosqui.Sound.FM_A7
                 || invocation.entry.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0)
             throw new IllegalStateException("Mosqui FM lacks its actual once-only post-floor visible Dive cut");
@@ -3799,7 +5297,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void drawMosqui(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireMosquiInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || mosquiPort || drawingMosqui || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || mosquiPort || drawingMosqui || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
             throw new IllegalStateException("Mosqui DrawObject lacks its actual once-only physical source");
         var current = pool.state(invocation.whole);
         boolean clearedWait = invocation.entry.routine() == 8 && invocation.entry.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0
@@ -3825,7 +5323,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readMosquiDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireMosquiInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingMosqui || mosquiPort || queuePort || !invocation.drawn || invocation.next != MosquiCut.DRAW)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingMosqui || mosquiPort || queuePort || !invocation.drawn || invocation.next != MosquiCut.DRAW)
             throw new IllegalStateException("No actual Mosqui collecting queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -3840,7 +5338,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeMosquiOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireMosquiInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingMosqui || mosquiPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.next != MosquiCut.DRAW)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingMosqui || mosquiPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.next != MosquiCut.DRAW)
             throw new IllegalStateException("Only actual Mosqui DrawObject may clear bit7 exactly once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
         if (!current.equals(invocation.drawSource)) throw new IllegalStateException("Mosqui changed before its actual Draw BCLR7");
@@ -3894,7 +5392,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runPataBata(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeFloat != null || activeTunnelDoor != null || activeMonitor != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -3924,7 +5422,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyPataInvocation(PataInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || invocation == null || activePata != invocation || activeMosqui != null || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || invocation == null || activePata != invocation || activeMosqui != null || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeFloat != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -4164,7 +5662,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawPataBata(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requirePataInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
             throw new IllegalStateException("Pata-Bata DrawObject lacks its actual once-only native source");
         validatePataSource(invocation, PataSite.DRAW);
         var before = placement.capture(); invocation.drawSource = pool.state(invocation.whole);
@@ -4183,7 +5681,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readPataDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || !invocation.drawn) throw new IllegalStateException("No actual Pata-Bata collecting queue read");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || !invocation.drawn) throw new IllegalStateException("No actual Pata-Bata collecting queue read");
         var before = placement.capture(); queuePort = true;
         try {
             verifyPataCallback(invocation, before); var current = invocation.pool.state(invocation.whole);
@@ -4197,7 +5695,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writePataOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
             throw new IllegalStateException("Only actual Pata-Bata DrawObject may clear bit7 once");
         var before = placement.capture(); verifyPataCallback(invocation, before);
         var next = invocation.drawSource.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.drawSource.spriteFlags() & 0x7F);
@@ -4287,7 +5785,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runFloatBlock(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -4329,7 +5827,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyFloatInvocation(FloatInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeFloat != invocation || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || !runningObjects || servicing || loadingSaved || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeFloat != invocation || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || !runningObjects || servicing || loadingSaved || activeDrain != null
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -4589,7 +6087,7 @@ final class SonicCdPastLoadingVisit {
     private void commitFloatSolid(CdFloatBlock.PrefixTopSolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requireFloatInvocation(placement.pool(), activeFloat == null ? -1 : activeFloat.whole);
-        if (activeMachine != null || machinePort || drawingMachine || floatPort || drawingFloat || queuePort || invocation.stopped || invocation.drawn
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || floatPort || drawingFloat || queuePort || invocation.stopped || invocation.drawn
                 || invocation.ordinal >= 4 || call.callCut() == invocation.lastCut || call.outcome() == invocation.adoptedOutcome)
             throw new IllegalStateException("FloatBlock Top lacks its next actual private helper cut");
         validateFloatSource(invocation, FloatSite.SOLID);
@@ -4673,7 +6171,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawFloatBlock(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireFloatInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || floatPort || drawingFloat || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || floatPort || drawingFloat || queuePort || invocation.drawn || invocation.stopped
                 || !identity.equals(invocation.entry.identity()))
             throw new IllegalStateException("FloatBlock DrawObject lacks its actual once-only native source");
         validateFloatSource(invocation, FloatSite.DRAW);
@@ -4693,7 +6191,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readFloatDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireFloatInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingFloat || floatPort || queuePort) throw new IllegalStateException("No actual FloatBlock queue read");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingFloat || floatPort || queuePort) throw new IllegalStateException("No actual FloatBlock queue read");
         var before = placement.capture(); queuePort = true;
         try {
             if (!before.pool().slots().equals(invocation.currentPool.slots()))
@@ -4709,7 +6207,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeFloatOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireFloatInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingFloat || floatPort || queuePort || onScreen || invocation.screenCleared)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingFloat || floatPort || queuePort || onScreen || invocation.screenCleared)
             throw new IllegalStateException("Only actual FloatBlock DrawObject may clear bit7 once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
         if (!before.pool().slots().equals(invocation.currentPool.slots()) || !current.equals(invocation.expectedSource))
@@ -4794,7 +6292,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runCollapse(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null
                 || activeTamabboh != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || activeCollapse != null || reservedPort || drawingReserved
@@ -4826,7 +6324,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyCollapseInvocation(CollapseInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeCollapse != invocation || !runningObjects || servicing || loadingSaved || activeDrain != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeCollapse != invocation || !runningObjects || servicing || loadingSaved || activeDrain != null
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -4949,7 +6447,7 @@ final class SonicCdPastLoadingVisit {
 
     private void commitCollapseSolid(CdCollapsePlatform.SolidCall call) {
         Objects.requireNonNull(call); var invocation = requireCollapseInvocation(placement.pool(), activeCollapse == null ? -1 : activeCollapse.whole);
-        if (activeMachine != null || machinePort || drawingMachine || collapsePort || drawingCollapse || queuePort || invocation.drawn || invocation.next == CollapseStep.STOPPED
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || collapsePort || drawingCollapse || queuePort || invocation.drawn || invocation.next == CollapseStep.STOPPED
                 || call.actualCut() == invocation.lastCut || call.outcome() == invocation.adopted)
             throw new IllegalStateException("Collapse Solid lacks its next fresh actual call");
         var cut = call.actualCut(); invocation.pool.validateRestore(cut);
@@ -4999,7 +6497,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void playCollapseFm(int nativeId) {
         var invocation = requireCollapseInvocation(placement.pool(), activeCollapse == null ? -1 : activeCollapse.whole);
-        if (activeMachine != null || machinePort || drawingMachine || collapsePort || drawingCollapse || queuePort || invocation.next != CollapseStep.FM || invocation.sounded)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || collapsePort || drawingCollapse || queuePort || invocation.next != CollapseStep.FM || invocation.sounded)
             throw new IllegalStateException("Collapse A3 is outside its actual post-GetOff/pre-ADDQ cut");
         var before = placement.capture(); var source = before.pool().slots().get(invocation.whole - 32);
         if (source.id() != CdCollapsePlatform.OBJECT_ID || source.routine() != 2 || !before.pool().slots().equals(invocation.currentPool.slots())
@@ -5027,7 +6525,7 @@ final class SonicCdPastLoadingVisit {
         var invocation = requireCollapseInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
         boolean ownOnly = invocation.next == CollapseStep.ENTRY && (invocation.entry.routine() == 4
                 && pool.state(invocation.whole).unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER) == 0 || invocation.entry.routine() == 6);
-        if (activeMachine != null || machinePort || drawingMachine || collapsePort || drawingCollapse || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity())
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || collapsePort || drawingCollapse || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity())
                 || !ownOnly && invocation.next != CollapseStep.DRAW && invocation.next != CollapseStep.BREAKUP)
             throw new IllegalStateException("Collapse DrawObject is outside its actual once-only wrapper cut");
         acceptCollapseBodyCut(invocation, pool.capture(), invocation.next == CollapseStep.BREAKUP);
@@ -5048,7 +6546,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readCollapseDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireCollapseInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingCollapse || collapsePort || queuePort) throw new IllegalStateException("No actual Collapse queue read");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingCollapse || collapsePort || queuePort) throw new IllegalStateException("No actual Collapse queue read");
         var before = placement.capture(); queuePort = true;
         try {
             var current = invocation.pool.state(invocation.whole);
@@ -5060,7 +6558,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeCollapseOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireCollapseInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingCollapse || collapsePort || queuePort || onScreen || invocation.screenCleared) throw new IllegalStateException("Only actual Collapse DrawObject may clear bit7 once");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingCollapse || collapsePort || queuePort || onScreen || invocation.screenCleared) throw new IllegalStateException("Only actual Collapse DrawObject may clear bit7 once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole); var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
         queuePort = true;
         try { invocation.pool.write(next); invocation.screenCleared = true; verifyCollapseCallback(invocation, before, next); }
@@ -5134,7 +6632,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runPlatform(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
@@ -5173,7 +6671,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyPlatformInvocation(PlatformInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -5311,7 +6809,7 @@ final class SonicCdPastLoadingVisit {
     private void commitPlatformSolid(CdPlatform.SolidCall call) {
         Objects.requireNonNull(call);
         var invocation = requirePlatformInvocation(placement.pool(), activePlatform == null ? -1 : activePlatform.whole);
-        if (activeMachine != null || machinePort || drawingMachine || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Platform Solid lacks its current actual helper cut");
         var pool = invocation.pool; var cut = call.actualCut();
         pool.validateRestore(cut);
@@ -5371,7 +6869,7 @@ final class SonicCdPastLoadingVisit {
     private void commitPlatformPrimaryAngle(CdPlatform.PrimaryAngleCall call) {
         Objects.requireNonNull(call);
         var invocation = requirePlatformInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Platform angle lacks its current rising call cut");
         var pool = invocation.pool; var cut = call.actualCut(); var source = pool.state(invocation.whole);
         pool.validateRestore(cut);
@@ -5430,7 +6928,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawPlatform(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requirePlatformInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
             throw new IllegalStateException("Platform DrawObject is not its actual once-only normal return");
         var before = placement.capture(); var current = pool.state(invocation.whole);
         var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
@@ -5449,7 +6947,7 @@ final class SonicCdPastLoadingVisit {
 
     private CdObjectDrawQueue.LiveDrawSlot readPlatformDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requirePlatformInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingPlatform || platformPort || queuePort) throw new IllegalStateException("No actual Platform queue read");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingPlatform || platformPort || queuePort) throw new IllegalStateException("No actual Platform queue read");
         var before = placement.capture(); queuePort = true;
         try {
             var current = invocation.pool.state(invocation.whole);
@@ -5464,7 +6962,7 @@ final class SonicCdPastLoadingVisit {
 
     private void writePlatformOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requirePlatformInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingPlatform || platformPort || queuePort || onScreen || invocation.screenCleared)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingPlatform || platformPort || queuePort || onScreen || invocation.screenCleared)
             throw new IllegalStateException("Only actual Platform DrawObject may clear bit7 once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
         var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
@@ -5532,7 +7030,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runTunnelDoor(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
@@ -5580,7 +7078,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyTunnelDoorInvocation(TunnelDoorInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeTunnelDoor != invocation || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeTunnelDoor != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || monitorPort || drawingMonitor || invocation.body != tunnelDoor
@@ -5613,7 +7111,7 @@ final class SonicCdPastLoadingVisit {
     /** This port is observational, including faults; ZERO admission belongs to the reached component read. */
     private CdAssetBytes readTunnelDoorSecondary() {
         var invocation = requireTunnelDoorInvocation(placement.pool(), activeTunnelDoor == null ? -1 : activeTunnelDoor.whole);
-        if (activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.stopped || invocation.drawn)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.stopped || invocation.drawn)
             throw new IllegalStateException("No reached Tunnel Door secondary-source read");
         var before = placement.capture();
         tunnelDoorPort = true;
@@ -5640,7 +7138,7 @@ final class SonicCdPastLoadingVisit {
     private CdTunnelDoor.LiveSolid preflightTunnelDoorSolid(CdTunnelDoor.PrefixSolidCut cut) {
         Objects.requireNonNull(cut);
         var invocation = requireTunnelDoorInvocation(placement.pool(), cut.objectIdentity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
                 || invocation.pendingCut != null || !cut.objectIdentity().equals(invocation.entry.identity()))
             throw new IllegalStateException("Tunnel Door Solid lacks its once-only actual preflight");
         var before = placement.capture();
@@ -5686,7 +7184,7 @@ final class SonicCdPastLoadingVisit {
         Objects.requireNonNull(call);
         var cut = call.cut();
         var invocation = requireTunnelDoorInvocation(placement.pool(), cut.objectIdentity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
                 || invocation.pendingCut != cut || invocation.adoptedOutcome == call.outcome())
             throw new IllegalStateException("Tunnel Door commit lacks the actual pending preflight identity");
         var pool = invocation.pool;
@@ -5967,7 +7465,7 @@ final class SonicCdPastLoadingVisit {
 
     private void playTunnelDoorFm(CdTunnelDoor.FmSound sound) {
         var invocation = requireTunnelDoorInvocation(placement.pool(), activeTunnelDoor == null ? -1 : activeTunnelDoor.whole);
-        if (activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
                 || invocation.primaryPreflight || invocation.secondaryRead || invocation.sounded
                 || sound != CdTunnelDoor.FmSound.FM_A4)
             throw new IllegalStateException("Tunnel Door A4 lacks its genuine primary dirty-child prefix");
@@ -5990,7 +7488,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawTunnelDoor(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireTunnelDoorInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped
                 || invocation.pendingCut != null)
             throw new IllegalStateException("Tunnel Door DrawObject is not its once-only actual normal return");
         var before = placement.capture(); var current = pool.state(invocation.whole);
@@ -6016,7 +7514,7 @@ final class SonicCdPastLoadingVisit {
 
     private CdObjectDrawQueue.LiveDrawSlot readTunnelDoorDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireTunnelDoorInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingTunnelDoor || tunnelDoorPort || queuePort)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingTunnelDoor || tunnelDoorPort || queuePort)
             throw new IllegalStateException("No actual Tunnel Door queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -6033,7 +7531,7 @@ final class SonicCdPastLoadingVisit {
 
     private void writeTunnelDoorOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireTunnelDoorInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingTunnelDoor || tunnelDoorPort || queuePort || onScreen || invocation.screenCleared)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingTunnelDoor || tunnelDoorPort || queuePort || onScreen || invocation.screenCleared)
             throw new IllegalStateException("Only actual Tunnel Door DrawObject may clear bit7 once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
         validateTunnelDoorPrefix(invocation, before.pool(), current);
@@ -6094,7 +7592,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runMonitor(int whole) {
         module.requirePastLoadingVisit(this);
-        if (activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
@@ -6143,7 +7641,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyMonitorInvocation(MonitorInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMachine != null || machinePort || drawingMachine || activeMonitor != invocation || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || !runningObjects || servicing || loadingSaved
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || activeMonitor != invocation || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
@@ -6444,7 +7942,7 @@ final class SonicCdPastLoadingVisit {
     private CdMonitor.LiveSolid preflightMonitorSolid(CdMonitor.PrefixSolidCut cut) {
         Objects.requireNonNull(cut);
         var invocation = requireMonitorInvocation(placement.pool(), cut.objectIdentity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.stopped
                 || invocation.solidPreflight || invocation.pendingCut != null || !cut.objectIdentity().equals(invocation.entry.identity()))
             throw new IllegalStateException("Monitor Solid lacks its once-only actual preflight");
         var before = placement.capture(); monitorPort = true;
@@ -6511,7 +8009,7 @@ final class SonicCdPastLoadingVisit {
     private CdMonitor.LiveSolid commitMonitorSolid(CdMonitor.PrefixSolidCall call) {
         Objects.requireNonNull(call); var cut = call.cut();
         var invocation = requireMonitorInvocation(placement.pool(), cut.objectIdentity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.stopped
                 || invocation.pendingCut != cut || invocation.adoptedOutcome == call.outcome())
             throw new IllegalStateException("Monitor commit lacks the actual pending preflight identity");
         var pool = invocation.pool; pool.validateRestore(cut.callCut());
@@ -6581,7 +8079,7 @@ final class SonicCdPastLoadingVisit {
     /** Every genuine ObjGetFloorDist store: pre-zero first, then all recursive raw writes with no count cap. */
     private void commitMonitorPrimaryAngle(int expected, int angle) {
         var invocation = currentMonitorInvocation();
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.stopped
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.stopped
                 || invocation.solidPreflight || (angle & ~0xFF) != 0
                 || frame.environment().movement().globals().primaryAngle() != expected
                 || invocation.floorWrites == 0 && angle != 0)
@@ -6617,7 +8115,7 @@ final class SonicCdPastLoadingVisit {
     private void commitTimePostDirection(CdTimePost.DirectionCall call) {
         Objects.requireNonNull(call);
         var invocation = requireMonitorInvocation(placement.pool(), call.identity().wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || !invocation.post || invocation.drawn || invocation.voiced
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || !invocation.post || invocation.drawn || invocation.voiced
                 || invocation.directionStores > 1 || invocation.directionStores == 1 && invocation.entry.subtype() == 8
                 || call.rawDirection() != (invocation.directionStores == 0 ? 0xFF : 1))
             throw new IllegalStateException("Post direction lacks its native FF/conditional01 operation");
@@ -6645,7 +8143,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void playTimePostSubCpu(CdTimePost.SubCpuCommand command) {
         Objects.requireNonNull(command); var invocation = currentMonitorInvocation();
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || !invocation.post || invocation.drawn || invocation.voiced
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || !invocation.post || invocation.drawn || invocation.voiced
                 || invocation.directionStores != (invocation.entry.subtype() == 8 ? 1 : 2)
                 || command != (invocation.entry.subtype() == 8 ? CdTimePost.SubCpuCommand.SCMD_PASTSFX : CdTimePost.SubCpuCommand.SCMD_FUTURESFX))
             throw new IllegalStateException("Post voice lacks completed direction stores or exact native77/76 command");
@@ -6663,7 +8161,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void playMonitorFm(CdMonitor.FmSound sound) {
         var invocation = currentMonitorInvocation();
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.sounded
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.post || invocation.drawn || invocation.sounded
                 || invocation.entry.routine() != 4 || invocation.solidPreflight || invocation.floorStarted
                 || sound != CdMonitor.FmSound.FM_DESTROY)
             throw new IllegalStateException("Monitor FM96 is not its native pre-Break-store cut");
@@ -6695,7 +8193,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawMonitor(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireMonitorInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped || invocation.pendingCut != null)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped || invocation.pendingCut != null)
             throw new IllegalStateException("Monitor/Post DrawObject lacks its once-only genuine native return");
         validateMonitorPrefix(invocation, MonitorSite.DRAW);
         if (invocation.noDraw) throw new IllegalStateException("ID19 attempted Draw on a native direct-return branch");
@@ -6714,7 +8212,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readMonitorDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireMonitorInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingMonitor || monitorPort || queuePort) throw new IllegalStateException("No actual ID19 queue read");
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingMonitor || monitorPort || queuePort) throw new IllegalStateException("No actual ID19 queue read");
         var before = placement.capture(); queuePort = true;
         try {
             acceptMonitorPool(invocation, invocation.expectedSource, List.of(), invocation.expectedSaved.copy());
@@ -6729,7 +8227,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeMonitorOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireMonitorInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (activeMachine != null || machinePort || drawingMachine || !drawingMonitor || monitorPort || queuePort || onScreen || invocation.screenCleared)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || !drawingMonitor || monitorPort || queuePort || onScreen || invocation.screenCleared)
             throw new IllegalStateException("Only actual ID19 DrawObject may clear bit7 once");
         var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
         acceptMonitorPool(invocation, invocation.expectedSource, List.of(), invocation.expectedSaved.copy());

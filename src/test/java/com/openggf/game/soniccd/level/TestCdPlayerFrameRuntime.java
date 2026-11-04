@@ -6,7 +6,10 @@ import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
+import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
+import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
+import com.openggf.game.soniccd.objects.CdSignpost;
 import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
@@ -5362,5 +5365,423 @@ class TestCdPlayerFrameRuntime {
         }
     }
     // END Goal Post reached Frame pair preparation.
+
+    // BEGIN Signpost's five Frame-owned stores. All appended Java is UNRUN here.
+    @Test void signpostLeftBoundPreparationChangesOnlyTheRawLeftWordAndKeepsWarpAndActorValues() throws IOException {
+        var fixture = new Fixture();
+        try (var f = spinTunnelDirtyFrame(fixture)) {
+            var old = f.captureShared(); var e = old.environment(); var m = e.movement();
+            var dirty = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),
+                    new CdPlayerMovement.Bounds(0x1234, 0x2345, 0x3456, 0xF3),
+                    new CdPlayerMovement.Gates(0xBEEF, 0xFE, 0x81, 0x82, 0x83, 0x84, 0xFF), m.globals()),
+                    e.controls(), e.globals(), e.dynamicSlots());
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(old.owner(), dirty, old.artState(), true, old.vIntClock()));
+            var actor = f.captureActor(); var shared = f.captureShared(); var before = observe(f); int uploads = fixture.dmas.size();
+            f.bindArtPublication((dma, state) -> fail("A Signpost store cannot publish art"));
+            var ready = f.prepareObjectSignpostStore(actor.state(), dirty, CdSignpost.StoreField.LEFT_BOUND_WORD, 0xFF00);
+            var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),
+                    new CdPlayerMovement.Bounds(0xFF00, 0x2345, 0x3456, 0xF3), dirty.movement().gates(), m.globals()),
+                    dirty.controls(), dirty.globals(), dirty.dynamicSlots());
+            assertSame(actor.state(), ready.expectedState()); assertSame(actor.state(), ready.finalState());
+            assertSame(dirty, ready.expectedEnvironment()); assertEquals(expected, ready.finalEnvironment());
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(before, observe(f));
+            f.validatePreparedObjectSolidPublication(ready); assertEquals(before, observe(f));
+            f.applyPreparedObjectSolidPublication(ready);
+            assertSame(actor.state(), f.state()); assertSame(actor.state().timers(), f.state().timers());
+            assertSame(ready.finalEnvironment(), f.environment()); assertEquals(expected, f.environment());
+            assertSame(dirty.movement().gates(), f.environment().movement().gates()); assertSame(dirty.globals(), f.environment().globals());
+            assertSame(dirty.controls(), f.environment().controls()); assertSame(m.physics(), f.environment().movement().physics());
+            assertEquals(Set.of("bounds"), differences(before, observe(f)));
+            assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+            assertTrue(f.paused()); assertEquals(uploads, fixture.dmas.size());
+        }
+    }
+
+    @Test void signpostPowerupClearsOnlyTheirGlobalBytesAndNeverTheirTimersOrPhysics() throws IOException {
+        for (var field : List.of(CdSignpost.StoreField.SPEED_SHOES_BYTE, CdSignpost.StoreField.INVINCIBLE_BYTE)) {
+            var fixture = new Fixture();
+            try (var f = spinTunnelDirtyFrame(fixture)) {
+                var old = f.captureShared(); var e = old.environment(); var m = e.movement(); var g = m.gates(); var b = e.globals();
+                var dirty = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                        new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(), g.windTunnel(), 0xE7, 0xFF), m.globals()),
+                        e.controls(), new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(),
+                        b.debugCheat(), b.timeWarpTimer(), 0xA5, b.bossMusic()), e.dynamicSlots());
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(old.owner(), dirty, old.artState(), old.paused(), old.vIntClock()));
+                var actor = f.captureActor(); var shared = f.captureShared(); var before = observe(f); int uploads = fixture.dmas.size();
+                var expectedMovement = field == CdSignpost.StoreField.SPEED_SHOES_BYTE
+                        ? new CdPlayerMovement.Environment(m.physics(), m.bounds(), new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(),
+                        g.miniSonic(), g.waterSlide(), g.windTunnel(), 0, 0xFF), m.globals()) : dirty.movement();
+                var expectedBody = field == CdSignpost.StoreField.INVINCIBLE_BYTE
+                        ? new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(),
+                        b.timeWarpTimer(), 0, b.bossMusic()) : dirty.globals();
+                var expected = new CdPlayerBody.Environment(expectedMovement, dirty.controls(), expectedBody, dirty.dynamicSlots());
+                var ready = f.prepareObjectSignpostStore(actor.state(), dirty, field, 0);
+                assertSame(actor.state(), ready.finalState()); assertEquals(expected, ready.finalEnvironment());
+                assertEquals(before, observe(f)); f.applyPreparedObjectSolidPublication(ready);
+                assertEquals(expected, f.environment()); assertSame(actor.state(), f.state()); assertSame(actor.state().timers(), f.state().timers());
+                assertEquals(new CdPlayerBody.Timers(0x1357, 0x2468, 0x369A, 0x48BC), f.state().timers());
+                assertSame(m.physics(), f.environment().movement().physics()); assertSame(m.bounds(), f.environment().movement().bounds());
+                assertSame(m.globals(), f.environment().movement().globals()); assertSame(dirty.controls(), f.environment().controls());
+                assertEquals(0xFF, f.environment().movement().gates().timeWarpDirection()); assertEquals(0x5678, f.environment().globals().timeWarpTimer());
+                assertEquals(Set.of(field == CdSignpost.StoreField.SPEED_SHOES_BYTE ? "gates" : "invincible"), differences(before, observe(f)));
+                assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock()); assertEquals(uploads, fixture.dmas.size());
+            }
+        }
+    }
+
+    @Test void signpostLogicalControlWordAndBsetRetainRawInputAndEveryOtherControlBit() throws IOException {
+        for (int word : new int[]{0x0808, 0}) {
+            try (var f = spinTunnelDirtyFrame(new Fixture())) {
+                var actor = f.captureActor(); var e = f.environment(); var before = observe(f);
+                var ready = f.prepareObjectSignpostStore(actor.state(), e, CdSignpost.StoreField.PLAYER_CONTROL_HOLD_WORD, word);
+                var expected = new CdPlayerBody.Environment(e.movement(), word == 0
+                        ? new CdPlayerBody.Controls(0x2C, 0x24, 0, 0, 0x81)
+                        : new CdPlayerBody.Controls(0x2C, 0x24, 8, 8, 0x81), e.globals(), e.dynamicSlots());
+                assertEquals(expected, ready.finalEnvironment()); assertEquals(before, observe(f));
+                f.applyPreparedObjectSolidPublication(ready); assertEquals(expected, f.environment()); assertSame(actor.state(), f.state());
+                assertSame(e.movement(), f.environment().movement()); assertSame(e.globals(), f.environment().globals());
+            }
+        }
+        int[][] vectors = {{0, 1}, {0x80, 0x81}, {0xA4, 0xA5}, {0xFE, 0xFF}, {0xFF, 0xFF}};
+        for (var vector : vectors) {
+            try (var f = spinTunnelDirtyFrame(new Fixture())) {
+                var shared = f.captureShared(); var e = shared.environment();
+                var dirty = new CdPlayerBody.Environment(e.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 0x10, vector[0]), e.globals(), e.dynamicSlots());
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), dirty, shared.artState(), shared.paused(), shared.vIntClock()));
+                var actor = f.captureActor();
+                var ready = f.prepareObjectSignpostStore(actor.state(), dirty, CdSignpost.StoreField.CONTROL_LOCK_BIT0, 1);
+                assertEquals(new CdPlayerBody.Environment(e.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 0x10, vector[1]),
+                        e.globals(), e.dynamicSlots()), ready.finalEnvironment());
+                f.applyPreparedObjectSolidPublication(ready); assertSame(actor.state(), f.state());
+            }
+        }
+    }
+
+    @Test void signpostSameValueStoresKeepTheActualEnvironmentReferenceAndAreReusableValueCas() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            for (var field : List.of(CdSignpost.StoreField.LEFT_BOUND_WORD, CdSignpost.StoreField.SPEED_SHOES_BYTE,
+                    CdSignpost.StoreField.INVINCIBLE_BYTE, CdSignpost.StoreField.PLAYER_CONTROL_HOLD_WORD)) {
+                var actor = f.captureActor(); var shared = f.captureShared();
+                var ready = f.prepareObjectSignpostStore(actor.state(), shared.environment(), field, 0);
+                assertSame(actor.state(), ready.finalState()); assertSame(shared.environment(), ready.finalEnvironment());
+                f.applyPreparedObjectSolidPublication(ready); f.applyPreparedObjectSolidPublication(ready);
+                assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            }
+        }
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var s = f.state(); var e = f.environment(); assertEquals(0x81, e.controls().controlLocked());
+            var ready = f.prepareObjectSignpostStore(s, e, CdSignpost.StoreField.CONTROL_LOCK_BIT0, 1);
+            assertSame(s, ready.finalState()); assertSame(e, ready.finalEnvironment());
+            f.applyPreparedObjectSolidPublication(ready); f.applyPreparedObjectSolidPublication(ready);
+            assertSame(s, f.state()); assertSame(e, f.environment());
+        }
+    }
+
+    @Test void signpostEqualButDistinctExpectedPairIsAcceptedWithoutReplacingUntouchedActualReferences() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var s = f.state(); var e = f.environment();
+            var equalState = new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+            var equalEnvironment = new CdPlayerBody.Environment(e.movement(), e.controls(), e.globals(), e.dynamicSlots());
+            assertNotSame(s, equalState); assertEquals(s, equalState); assertNotSame(e, equalEnvironment); assertEquals(e, equalEnvironment);
+            var same = f.prepareObjectSignpostStore(equalState, equalEnvironment, CdSignpost.StoreField.SPEED_SHOES_BYTE, 0);
+            assertSame(s, same.expectedState()); assertSame(s, same.finalState()); assertSame(e, same.expectedEnvironment()); assertSame(e, same.finalEnvironment());
+            var changed = f.prepareObjectSignpostStore(equalState, equalEnvironment, CdSignpost.StoreField.LEFT_BOUND_WORD, 0xFFFF);
+            assertSame(s, changed.expectedState()); assertSame(s, changed.finalState()); assertSame(e, changed.expectedEnvironment());
+            assertEquals(0xFFFF, changed.finalEnvironment().movement().bounds().left());
+            f.applyPreparedObjectSolidPublication(changed); assertSame(s, f.state());
+        }
+    }
+
+    @Test void signpostRejectsOtherOwnersNullsAndEveryNonNativeStoreValueWithoutChangingTheFrame() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var s = f.state(); var e = f.environment(); var before = observe(f);
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSignpostStore(null, e, CdSignpost.StoreField.LEFT_BOUND_WORD, 0));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSignpostStore(s, null, CdSignpost.StoreField.LEFT_BOUND_WORD, 0));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSignpostStore(s, e, null, 0));
+            for (var field : CdSignpost.StoreField.values()) {
+                if (Set.of(CdSignpost.StoreField.LEFT_BOUND_WORD, CdSignpost.StoreField.SPEED_SHOES_BYTE, CdSignpost.StoreField.INVINCIBLE_BYTE,
+                        CdSignpost.StoreField.CONTROL_LOCK_BIT0, CdSignpost.StoreField.PLAYER_CONTROL_HOLD_WORD).contains(field)) continue;
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(s, e, field, 0));
+            }
+            for (int value : new int[]{-1, 65536, Integer.MIN_VALUE, Integer.MAX_VALUE})
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(s, e, CdSignpost.StoreField.LEFT_BOUND_WORD, value));
+            for (var field : List.of(CdSignpost.StoreField.SPEED_SHOES_BYTE, CdSignpost.StoreField.INVINCIBLE_BYTE))
+                for (int value : new int[]{-1, 1, 255, 256})
+                    assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(s, e, field, value));
+            for (int value : new int[]{-1, 0, 2, 255, 256})
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(s, e, CdSignpost.StoreField.CONTROL_LOCK_BIT0, value));
+            for (int value : new int[]{-1, 1, 0x0800, 0x0008, 0x0809, 0xFFFF, 65536})
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(s, e, CdSignpost.StoreField.PLAYER_CONTROL_HOLD_WORD, value));
+            assertSame(s, f.state()); assertSame(e, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void signpostPreparationAndExistingAdoptionRejectStaleCompletePairsAndReplayAfterRestore() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment(); var before = observe(f);
+            for (String field : List.of("RESET", "HISTORY_BYTES", "STAND_OBJECT")) {
+                var stale = framePortChangedState(s, field);
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(stale, e, CdSignpost.StoreField.LEFT_BOUND_WORD, 0x200));
+            }
+            for (String field : List.of("GATE_TIME_WARP_DIRECTION", "BODY_TIME_WARP_TIMER", "RAW_HELD", "DYNAMIC_SLOTS")) {
+                var stale = framePortChangedEnvironment(e, field);
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSignpostStore(s, stale, CdSignpost.StoreField.LEFT_BOUND_WORD, 0x200));
+            }
+            assertEquals(before, observe(f));
+            var ready = f.prepareObjectSignpostStore(s, e, CdSignpost.StoreField.LEFT_BOUND_WORD, 0x200);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), framePortChangedState(s, "ROTATION_ANGLE"), actor.display()));
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class); f.restoreActor(actor);
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), framePortChangedEnvironment(e, "RAW_TAP"), shared.artState(), shared.paused(), shared.vIntClock()));
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class); f.restoreShared(shared);
+            f.applyPreparedObjectSolidPublication(ready); var after = f.captureShared();
+            f.restoreActor(actor); f.restoreShared(shared); f.applyPreparedObjectSolidPublication(ready);
+            assertEquals(actor, f.captureActor()); assertEquals(after, f.captureShared());
+        }
+    }
+
+    @Test void signpostStoreRetainsExistingPendingActiveEntitledAndClosedGuardOrderAndGrantsNoBodyAuthority() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var ready = f.prepareObjectSignpostStore(f.state(), f.environment(), CdSignpost.StoreField.LEFT_BOUND_WORD, 0);
+            f.applyPreparedObjectSolidPublication(ready); assertThrows(IllegalStateException.class, () -> f.runBody(1));
+            var selection = f.prepareInput(0);
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectSignpostStore(null, null, null, -1));
+            f.serviceVBlank(selection.phase(), () -> assertThrows(IllegalStateException.class, () -> f.prepareObjectSignpostStore(null, null, null, -1)));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectSignpostStore(null, null, null, -1));
+            f.runBody(1);
+            assertDoesNotThrow(() -> f.prepareObjectSignpostStore(f.state(), f.environment(), CdSignpost.StoreField.PLAYER_CONTROL_HOLD_WORD, 0x0808));
+            var s = f.state(); var e = f.environment(); var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+            f.close(); assertThrows(IllegalStateException.class, () -> f.prepareObjectSignpostStore(null, null, null, -1));
+            assertSame(s, f.state()); assertSame(e, f.environment()); assertSame(art, f.artState()); assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+        }
+    }
+    // END Signpost's five Frame-owned stores.
+
+    // BEGIN Big Ring's five Frame-owned stores. Constructed component vectors; ALL appended Java UNRUN.
+    @Test void bigRingPlayerStoresPrebuildOnlyTheirNativeFieldsAndRetainAllOtherPartitions() throws IOException {
+        for (int kind = 0; kind < 5; kind++) {
+            var fixture = new Fixture();
+            try (var f = spinTunnelDirtyFrame(fixture)) {
+                var old = f.captureShared(); var e = old.environment();
+                var dirty = new CdPlayerBody.Environment(e.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 0x10, 0xA4),
+                        e.globals(), e.dynamicSlots());
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(old.owner(), dirty, old.artState(), true, old.vIntClock()));
+                var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var before = observe(f);
+                int uploads = fixture.dmas.size(); var placement = bigRingFramePlacement(); var cut = placement.capture();
+                f.bindArtPublication((dma, value) -> fail("Big Ring player data cannot publish art"));
+                var operation = bigRingFrameStores(placement, 0x2345).get(kind);
+                var expectedState = switch (kind) {
+                    case 0 -> framePortReplaceState(s, "CENTRE_X", 0x2345);
+                    case 3 -> framePortReplaceState(s, "X_VELOCITY", 0);
+                    case 4 -> framePortReplaceState(s, "GROUND_VELOCITY", 0);
+                    default -> s;
+                };
+                var expectedEnvironment = kind == 1
+                        ? new CdPlayerBody.Environment(dirty.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 0x10, 0xA5), dirty.globals(), dirty.dynamicSlots())
+                        : kind == 2 ? new CdPlayerBody.Environment(dirty.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 8, 0xA4), dirty.globals(), dirty.dynamicSlots()) : dirty;
+                var ready = f.prepareObjectBigRingPlayerStore(s, dirty, operation);
+                assertSame(s, ready.expectedState()); assertSame(dirty, ready.expectedEnvironment());
+                assertEquals(expectedState, ready.finalState()); assertEquals(expectedEnvironment, ready.finalEnvironment());
+                assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(before, observe(f));
+                f.validatePreparedObjectSolidPublication(ready); assertEquals(before, observe(f));
+                f.applyPreparedObjectSolidPublication(ready);
+                assertSame(ready.finalState(), f.state()); assertSame(ready.finalEnvironment(), f.environment());
+                assertEquals(expectedState, f.state()); assertEquals(expectedEnvironment, f.environment());
+                assertSame(s.animation(), f.state().animation()); assertSame(s.header(), f.state().header());
+                assertSame(s.timers(), f.state().timers()); assertSame(s.history(), f.state().history());
+                assertSame(s.objectLinks(), f.state().objectLinks()); assertEquals(s.rotationAngle(), f.state().rotationAngle());
+                assertEquals(s.rotationDistance(), f.state().rotationDistance()); assertSame(dirty.movement(), f.environment().movement());
+                assertSame(dirty.globals(), f.environment().globals()); assertSame(dirty.dynamicSlots(), f.environment().dynamicSlots());
+                if (kind == 1 || kind == 2) assertSame(s, f.state()); else assertSame(dirty, f.environment());
+                assertEquals(Set.of(kind == 1 ? "controlLocked" : kind == 2 ? "logicalTap" : "motion"), differences(before, observe(f)));
+                assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState());
+                assertSame(shared.vIntClock(), f.vIntClock()); assertTrue(f.paused()); assertEquals(uploads, fixture.dmas.size());
+                assertEquals(cut.pool().slots(), placement.capture().pool().slots());
+                assertEquals(cut.status(), placement.status()); assertArrayEquals(cut.savedFlags().copy(), placement.capture().savedFlags().copy());
+            }
+        }
+    }
+
+    @Test void bigRingPlayerXWordPreservesEveryFractionBitAtRawWordEdgesAndWrappedCameraOutputs() throws IOException {
+        int[][] vectors = {{0xFFFC1234, 0, 0x00001234}, {0xFFFFBEEF, 0xFFFF, 0xFFFFBEEF},
+                {0x0000FFFF, 0x8000, 0x8000FFFF}, {0x80000000, 0x7FFF, 0x7FFF0000},
+                {0xABCD0001, 0xFFFF, 0xFFFF0001}, {0xFFFF2468, 0x014F, 0x014F2468}};
+        // $FFFF+336 wraps to$014F in the source caller. Frame consumes only the literal reached WORD.
+        for (var vector : vectors) {
+            try (var f = spinTunnelDirtyFrame(new Fixture())) {
+                var old = f.captureActor(); var state = framePortReplaceState(framePortReplaceState(old.state(),
+                        "CENTRE_X", vector[0] >>> 16), "X_FRACTION", vector[0] & 0xFFFF);
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(old.owner(), state, old.display()));
+                var shared = f.captureShared(); var placement = bigRingFramePlacement(); var before = observe(f);
+                var ready = f.prepareObjectBigRingPlayerStore(state, shared.environment(), bigRingFrameStores(placement, vector[1]).getFirst());
+                assertEquals(vector[2], ready.finalState().motion().centreX16_16());
+                assertEquals(framePortReplaceState(state, "CENTRE_X", vector[1]), ready.finalState());
+                assertSame(shared.environment(), ready.finalEnvironment()); assertEquals(before, observe(f));
+                if (vector[0] == vector[2]) assertSame(state, ready.finalState());
+                f.applyPreparedObjectSolidPublication(ready);
+                assertEquals(vector[2], f.state().motion().centreX16_16()); assertSame(shared.environment(), f.environment());
+                assertSame(state.history(), f.state().history()); assertSame(state.timers(), f.state().timers());
+                assertSame(state.animation(), f.state().animation()); assertSame(state.header(), f.state().header());
+                assertSame(state.objectLinks(), f.state().objectLinks()); assertEquals(state.rotationAngle(), f.state().rotationAngle());
+                assertEquals(state.rotationDistance(), f.state().rotationDistance());
+            }
+        }
+    }
+
+    @Test void bigRingControlLockIsBsetZeroAndRetainsRawLogicalAndOtherLockBits() throws IOException {
+        int[][] vectors = {{0, 1}, {0x80, 0x81}, {0xA4, 0xA5}, {0xFE, 0xFF}, {0xFF, 0xFF}};
+        for (var vector : vectors) {
+            try (var f = spinTunnelDirtyFrame(new Fixture())) {
+                var shared = f.captureShared(); var e = shared.environment();
+                var dirty = new CdPlayerBody.Environment(e.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 0x10, vector[0]), e.globals(), e.dynamicSlots());
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), dirty, shared.artState(), shared.paused(), shared.vIntClock()));
+                var state = f.state(); var before = observe(f);
+                var ready = f.prepareObjectBigRingPlayerStore(state, dirty, bigRingFrameStores(bigRingFramePlacement(), 0).get(1));
+                assertEquals(new CdPlayerBody.Environment(e.movement(), new CdPlayerBody.Controls(0x2C, 0x24, 8, 0x10, vector[1]), e.globals(), e.dynamicSlots()), ready.finalEnvironment());
+                assertSame(state, ready.finalState()); assertEquals(before, observe(f));
+                if (vector[0] == vector[1]) assertSame(dirty, ready.finalEnvironment());
+                f.applyPreparedObjectSolidPublication(ready); assertSame(state, f.state());
+            }
+        }
+    }
+
+    @Test void bigRingSameValueStoresReuseActualReferencesAndRepeatedDataAdoptionGrantsNoBodyEntitlement() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var placement = bigRingFramePlacement();
+            for (var operation : bigRingFrameStores(placement, f.state().motion().centreX16_16() >>> 16)) {
+                var initial = f.prepareObjectBigRingPlayerStore(f.state(), f.environment(), operation);
+                f.applyPreparedObjectSolidPublication(initial);
+                var actor = f.captureActor(); var shared = f.captureShared();
+                var same = f.prepareObjectBigRingPlayerStore(actor.state(), shared.environment(), operation);
+                assertSame(actor.state(), same.expectedState()); assertSame(shared.environment(), same.expectedEnvironment());
+                assertSame(actor.state(), same.finalState()); assertSame(shared.environment(), same.finalEnvironment());
+                f.applyPreparedObjectSolidPublication(same); f.applyPreparedObjectSolidPublication(same);
+                assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+                assertThrows(IllegalStateException.class, () -> f.runBody(1));
+            }
+        }
+    }
+
+    @Test void bigRingEqualForeignExpectedPairRetainsThisFramesActualReferencesForEveryOperation() throws IOException {
+        try (var a = spinTunnelDirtyFrame(new Fixture()); var b = spinTunnelDirtyFrame(new Fixture())) {
+            var state = a.state(); var environment = a.environment(); var foreignState = b.state(); var foreignEnvironment = b.environment();
+            assertEquals(state, foreignState); assertNotSame(state, foreignState);
+            assertEquals(environment, foreignEnvironment); assertNotSame(environment, foreignEnvironment);
+            for (var operation : bigRingFrameStores(bigRingFramePlacement(), state.motion().centreX16_16() >>> 16)) {
+                var ready = a.prepareObjectBigRingPlayerStore(foreignState, foreignEnvironment, operation);
+                assertSame(state, ready.expectedState()); assertSame(environment, ready.expectedEnvironment());
+                assertSame(state.animation(), ready.finalState().animation()); assertSame(state.header(), ready.finalState().header());
+                assertSame(state.timers(), ready.finalState().timers()); assertSame(state.history(), ready.finalState().history());
+                assertSame(state.objectLinks(), ready.finalState().objectLinks());
+                assertSame(environment.movement(), ready.finalEnvironment().movement()); assertSame(environment.globals(), ready.finalEnvironment().globals());
+                if (operation instanceof CdBigRing.PlayerXWord || operation instanceof CdBigRing.ControlLockBit0)
+                    assertSame(state, ready.finalState());
+                if (!(operation instanceof CdBigRing.ControlHold0808)) assertSame(environment, ready.finalEnvironment());
+            }
+            assertSame(state, a.state()); assertSame(environment, a.environment()); assertSame(foreignState, b.state()); assertSame(foreignEnvironment, b.environment());
+        }
+    }
+
+    @Test void bigRingPreparationCasChecksEveryRepresentedStateFieldBeforeBuildingAnyStore() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            for (var operation : bigRingFrameStores(bigRingFramePlacement(), 0x1234))
+                for (String field : new String[]{"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "SCRIPT_INDEX", "ANIMATION_TIMER", "MAP_FRAME", "SLOT_ID", "MAPPING_ADDRESS", "TILE", "PRIORITY", "WIDTH", "HURT", "INVINCIBILITY", "SPEED_SHOES", "RESET", "HISTORY_INDEX", "ROTATION_DISTANCE", "PUSH_OBJECT", "STAND_OBJECT", "ROTATION_ANGLE", "HISTORY_BYTES"}) {
+                    var changed = framePortChangedState(state, field); assertNotEquals(state, changed, field);
+                    assertThrows(IllegalArgumentException.class, () -> f.prepareObjectBigRingPlayerStore(changed, environment, operation));
+                }
+            assertEquals(before, observe(f)); assertSame(state, f.state()); assertSame(environment, f.environment());
+        }
+    }
+
+    @Test void bigRingPreparationCasChecksEveryRepresentedEnvironmentFieldIncludingRawControlsAndWarp() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            for (var operation : bigRingFrameStores(bigRingFramePlacement(), 0x1234))
+                for (String field : new String[]{"TOP_SPEED", "ACCELERATION", "DECELERATION", "BOUND_LEFT", "BOUND_RIGHT", "BOUND_BOTTOM", "BOUND_BOSS_FIGHT", "GATE_ZONE_ACT", "GATE_TIME_ZONE", "GATE_MINI_SONIC", "GATE_WATER_SLIDE", "GATE_WIND_TUNNEL", "GATE_SPEED_SHOES", "GATE_TIME_WARP_DIRECTION", "MOVEMENT_LOOK_MODE", "MOVEMENT_CAMERA_Y_CENTRE", "MOVEMENT_PRIMARY_ANGLE", "MOVEMENT_SECONDARY_ANGLE", "MOVEMENT_BORED_TIMER", "MOVEMENT_SCORE_CHAIN", "MOVEMENT_DEBUG_ANGLE", "MOVEMENT_DEBUG_ANGLE_SHIFT", "MOVEMENT_DEBUG_QUADRANT", "MOVEMENT_DEBUG_FLOOR_DISTANCE", "RAW_HELD", "RAW_TAP", "LOGICAL_HELD", "LOGICAL_TAP", "CONTROL_LOCKED", "BODY_LEVEL_FRAMES", "BODY_CAMERA_X_CENTRE", "BODY_TIME_ATTACK_MODE", "BODY_DEBUG_MODE", "BODY_DEBUG_CHEAT", "BODY_TIME_WARP_TIMER", "BODY_INVINCIBLE", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS"}) {
+                    var changed = framePortChangedEnvironment(environment, field); assertNotEquals(environment, changed, field);
+                    assertThrows(IllegalArgumentException.class, () -> f.prepareObjectBigRingPlayerStore(state, changed, operation));
+                }
+            assertEquals(before, observe(f)); assertSame(state, f.state()); assertSame(environment, f.environment());
+        }
+    }
+
+    @Test void bigRingPreparedPairRejectsInterveningActorAndSharedChangesAndReplaysViaExistingAdoption() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared();
+            var ready = f.prepareObjectBigRingPlayerStore(actor.state(), shared.environment(), bigRingFrameStores(bigRingFramePlacement(), 0x4321).getFirst());
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), framePortChangedState(actor.state(), "HISTORY_BYTES"), actor.display()));
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class); f.restoreActor(actor);
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), framePortChangedEnvironment(shared.environment(), "RAW_TAP"), shared.artState(), shared.paused(), shared.vIntClock()));
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class); f.restoreShared(shared);
+            f.applyPreparedObjectSolidPublication(ready); var afterActor = f.captureActor(); var afterShared = f.captureShared();
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class);
+            f.restoreActor(actor); f.restoreShared(shared); f.applyPreparedObjectSolidPublication(ready);
+            assertEquals(afterActor, f.captureActor()); assertEquals(afterShared, f.captureShared());
+            assertSame(ready.finalState(), f.state()); assertSame(shared.environment(), f.environment());
+        }
+    }
+
+    @Test void bigRingNullArgumentsRejectBeforeAnyOwnerValueChanges() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            var operation = bigRingFrameStores(bigRingFramePlacement(), 0).getFirst();
+            assertThrows(NullPointerException.class, () -> f.prepareObjectBigRingPlayerStore(null, environment, operation));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectBigRingPlayerStore(state, null, operation));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectBigRingPlayerStore(state, environment, null));
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void bigRingUsesExistingPendingActiveEntitledAndClosedGuardsBeforeArgumentChecks() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var operation = bigRingFrameStores(bigRingFramePlacement(), 0).getFirst();
+            var selection = f.prepareInput(0);
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectBigRingPlayerStore(null, null, null));
+            f.serviceVBlank(selection.phase(), () -> assertThrows(IllegalStateException.class, () -> f.prepareObjectBigRingPlayerStore(null, null, null)));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectBigRingPlayerStore(null, null, null));
+            f.runBody(1);
+            assertDoesNotThrow(() -> f.prepareObjectBigRingPlayerStore(f.state(), f.environment(), operation));
+            var state = f.state(); var environment = f.environment(); var display = f.display(); var art = f.artState(); var clock = f.vIntClock();
+            f.close(); assertThrows(IllegalStateException.class, () -> f.prepareObjectBigRingPlayerStore(null, null, null));
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertSame(display, f.display());
+            assertSame(art, f.artState()); assertSame(clock, f.vIntClock());
+        }
+    }
+
+    @Test void bigRingOperationCutAndCarrierRemainReusableValuesWithoutPoolOrFrameInvocationAuthority() throws IOException {
+        try (var a = new Fixture().runtime(); var b = new Fixture().runtime()) {
+            var actorA = a.captureActor(); var sharedA = a.captureShared(); var actorB = b.captureActor(); var sharedB = b.captureShared();
+            var placement = bigRingFramePlacement(); var operation = bigRingFrameStores(placement, 0xFFFF).getFirst();
+            // Descriptive public records cannot supply a private reached producer. Frame is only the value builder;
+            // World must reject this now-stale placement before calling it in gameplay.
+            placement.pool().write(placement.pool().state(32).moveByte(CdObjectState.ByteField.COLLISION_STATUS, 0xA5));
+            var cut = placement.capture();
+            var ready = a.prepareObjectBigRingPlayerStore(actorB.state(), sharedB.environment(), operation);
+            assertSame(actorA.state(), ready.expectedState()); assertSame(sharedA.environment(), ready.expectedEnvironment());
+            b.validatePreparedObjectSolidPublication(ready); b.applyPreparedObjectSolidPublication(ready);
+            assertSame(ready.finalState(), b.state()); assertSame(sharedA.environment(), b.environment());
+            assertSame(actorB.owner(), b.captureActor().owner()); assertNotSame(actorA.owner(), actorB.owner());
+            assertThrows(IllegalStateException.class, () -> b.runBody(1));
+            assertThrows(IllegalArgumentException.class, () -> b.restoreActor(actorA));
+            assertEquals(actorA, a.captureActor()); assertEquals(sharedA, a.captureShared());
+            assertEquals(cut.pool().slots(), placement.capture().pool().slots()); assertEquals(cut.status(), placement.status());
+            assertArrayEquals(cut.savedFlags().copy(), placement.capture().savedFlags().copy());
+        }
+    }
+
+    /** Constructed bounded format and descriptive records, never an authenticated placement or private producer. */
+    private static CdObjectPlacementRuntime bigRingFramePlacement() {
+        var placement = new CdObjectPlacementRuntime(CdObjectPlacements.decodeLayout(
+                HexFormat.of().parseHex("000c0014ffff000000000000ffff000000000000ffff00000000")));
+        placement.pool().write(placement.pool().state(32).moveByte(CdObjectState.ByteField.ID, 0x14));
+        return placement;
+    }
+    private static List<CdBigRing.PlayerStore> bigRingFrameStores(CdObjectPlacementRuntime placement, int xWord) {
+        var source = placement.pool().state(32);
+        return List.of(new CdBigRing.PlayerXWord(xWord, placement.capture(), source),
+                new CdBigRing.ControlLockBit0(placement.capture(), source), new CdBigRing.ControlHold0808(placement.capture(), source),
+                new CdBigRing.XVelocityZero(placement.capture(), source), new CdBigRing.GroundVelocityZero(placement.capture(), source));
+    }
+    // END Big Ring's five Frame-owned stores.
 
 }

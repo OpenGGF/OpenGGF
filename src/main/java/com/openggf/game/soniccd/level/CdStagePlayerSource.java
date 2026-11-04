@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * Read-only stage/player format binding over an existing aggregate. Native pin1ecc5f3a:
  * Sonic/Main.asm:146 selects MapSpr_Sonic; the actual authenticated R11A profile and
- * R11B asset descriptors bind its program-local address. No source bytes are read here.
+ * R11B/R12A asset descriptors bind its program-local address. No source bytes are read here.
  *
  * <p>Aggregate factories own media authentication. Consistent constructed package
  * fixtures remain data, not authenticated media. Reference relations below confer
@@ -22,6 +22,8 @@ import java.util.Objects;
 public final class CdStagePlayerSource {
     private final CdR11aAssets present;
     private final CdR11bAssets past;
+    private final CdR12aTerrainAssets act2Terrain;
+    private final CdR12aPlayerAssets act2Player;
     private final CdStageTerrain terrain;
     private final CdR11aPlayerAssets player;
     private final CdSonicVisualAssets sonic;
@@ -36,6 +38,8 @@ public final class CdStagePlayerSource {
         }
         this.present = present;
         this.past = past;
+        this.act2Terrain = null;
+        this.act2Player = null;
         CdStageTerrain.Shape expectedShape;
         if (present != null) {
             var identity = Objects.requireNonNull(present.identity(), "Present identity");
@@ -78,6 +82,47 @@ public final class CdStagePlayerSource {
         }
     }
 
+    private CdStagePlayerSource(CdR12aTerrainAssets terrainAssets, CdR12aPlayerAssets playerAssets) {
+        present = null; past = null; act2Terrain = terrainAssets; act2Player = playerAssets;
+        var terrainIdentity = Objects.requireNonNull(terrainAssets.identity(), "Act2 terrain identity");
+        var playerIdentity = Objects.requireNonNull(playerAssets.identity(), "Act2 player identity");
+        var terrainProfile = Objects.requireNonNull(terrainAssets.profile(), "Act2 terrain profile");
+        var playerProfile = Objects.requireNonNull(playerAssets.profile(), "Act2 player profile");
+        variant = Objects.requireNonNull(terrainIdentity.variant(), "Act2 variant");
+        stage = Objects.requireNonNull(terrainIdentity.stage(), "Act2 stage");
+        if (variant != CdReleaseVariant.USA || !stage.equals(CdStagePayload.R12A.stage())
+                || terrainIdentity.file() != CdNativeFile.R12A || terrainIdentity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                || !terrainIdentity.equals(playerIdentity)
+                || variant != terrainProfile.variant() || variant != playerProfile.variant()
+                || !stage.equals(terrainProfile.stage()) || !stage.equals(playerProfile.stage())
+                || terrainIdentity.file() != terrainProfile.file() || terrainIdentity.file() != playerProfile.file()
+                || terrainIdentity.domain() != terrainProfile.domain() || terrainIdentity.domain() != playerProfile.domain()
+                || !terrainIdentity.mmdSha256().equals(terrainProfile.expectedMmdSha256())
+                || !terrainIdentity.mmdSha256().equals(playerProfile.expectedMmdSha256())
+                || !terrainProfile.range(CdR12aProfile.Asset.MAP_SPR_SONIC).equals(playerProfile.range(CdR12aProfile.Asset.MAP_SPR_SONIC))) {
+            throw new IllegalArgumentException("Act2 terrain/player original source, profiles or disc lineage differ");
+        }
+        terrain = Objects.requireNonNull(terrainAssets.terrain(), "Act2 terrain");
+        player = Objects.requireNonNull(playerAssets.player(), "Act2 player data");
+        sonic = Objects.requireNonNull(playerAssets.sonic(), "Act2 Sonic visuals");
+        if (terrain.shape() != CdStageTerrain.Shape.PPZ2_PRESENT)
+            throw new IllegalArgumentException("Act2 identity and explicit native terrain format differ");
+        if (player.sonic() != sonic)
+            throw new IllegalArgumentException("Player and Sonic visuals must be the same borrowed product");
+        mappingAddress = playerProfile.range(CdR12aProfile.Asset.MAP_SPR_SONIC).nativeAddress();
+        ordinaryPeriod = 1;
+    }
+
+    /**
+     * Explicit original R12A data relation. Equal source identities include complete-file and
+     * observed-disc lineage; the factories retain authentication responsibility. Independent
+     * immutable aggregates may be paired, without implying a private source lease or programme join.
+     */
+    public static CdStagePlayerSource fromAct2(CdR12aTerrainAssets terrain, CdR12aPlayerAssets player) {
+        return new CdStagePlayerSource(Objects.requireNonNull(terrain, "Act2 terrain assets"),
+                Objects.requireNonNull(player, "Act2 player assets"));
+    }
+
     /** Present format/identity consistency only; opens no optional bank or media source. */
     public static CdStagePlayerSource fromPresent(CdR11aAssets assets) {
         return new CdStagePlayerSource(Objects.requireNonNull(assets, "Present assets"), null);
@@ -100,4 +145,8 @@ public final class CdStagePlayerSource {
 
     public boolean ownsPresent(CdR11aAssets assets) { return present != null && present == assets; }
     public boolean ownsPast(CdR11bAssets assets) { return past != null && past == assets; }
+    /** Exact selected immutable pair only; equal metadata or one matching aggregate is insufficient. */
+    public boolean ownsAct2(CdR12aTerrainAssets terrain, CdR12aPlayerAssets player) {
+        return act2Terrain != null && act2Player != null && act2Terrain == terrain && act2Player == player;
+    }
 }

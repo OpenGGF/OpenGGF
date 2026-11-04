@@ -59,7 +59,7 @@ class TestCdR11bPataBataAssets {
 
     @Test void exactlyThreeFiniteViewsAppendWithoutChangingAnyReaderOrPlcCount() throws Exception {
         var a = retail().assets();
-        assertEquals(125, CdR11bAssets.Asset.values().length);
+        assertEquals(133, CdR11bAssets.Asset.values().length);
         assertEquals(TABLES, Arrays.asList(CdR11bAssets.Asset.values()).subList(92, 95));
         assertEquals(90, ANI_FLOAT_BLOCK.ordinal()); assertEquals(91, MAP_SPR_FLOAT_BLOCK.ordinal());
         String[] labels = {"Ani_PataBata", "MapSpr_PataBata1", "MapSpr_PataBata2"};

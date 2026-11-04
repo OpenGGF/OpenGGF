@@ -54,7 +54,11 @@ public final class CdObjectState {
         // SUBQ.B addresses the HIGH byte of the big-endian steps WORD; these are storage aliases only.
         TUNNEL_PATH_STEPS_HIGH(0x2E), TUNNEL_PATH_SCRATCH(0x32), TUNNEL_PATH_INDEX(0x3A), TUNNEL_PATH_END(0x3B),
         // Robot Generator/Main.asm:133,159,166: BYTE operations address the HIGH byte of its timer WORD.
-        ROBOT_GENERATOR_TIMER_HIGH(0x2A);
+        ROBOT_GENERATOR_TIMER_HIGH(0x2A),
+        // Level End/Main.asm:775,796,800,818,837: MOVE.B/SUBQ.B address oVar2A; not a WORD timer.
+        LEVEL_END_TIMER(0x2A),
+        // Results/Main.asm:8 defines oResultsTimer=oVar32; Level End/Main.asm:842 writes MOVE.B #16.
+        RESULTS_TIMER(0x32);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -99,7 +103,10 @@ public final class CdObjectState {
         TUNNEL_PATH_STEPS(0x2E), TUNNEL_PATH_TARGET_X(0x36), TUNNEL_PATH_TARGET_Y(0x38),
         TUNNEL_PATH_INDEX_END(0x3A), TUNNEL_PATH_ROUTINE_WORD(0x24),
         // Robot Generator/Main.asm:65-67,98,169,182-193: overlapping native WORD fields only.
-        ROBOT_GENERATOR_TIMER(0x2A), ROBOT_GENERATOR_BASE_Y(0x30), ROBOT_GENERATOR_FLOAT_STEP(0x32);
+        ROBOT_GENERATOR_TIMER(0x2A), ROBOT_GENERATOR_BASE_Y(0x30), ROBOT_GENERATOR_FLOAT_STEP(0x32),
+        // Results/Main.asm:97,108,136-138,158-173: overlapping native screen-Y/destination/timer WORDs.
+        // Init alone SUBQ.B's RESULTS_TIMER at HIGH $32 (:62); preserve its separate BYTE alias.
+        RESULTS_SCREEN_Y_WORD(0x0A), RESULTS_DEST_X(0x2A), RESULTS_TIMER_WORD(0x32);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

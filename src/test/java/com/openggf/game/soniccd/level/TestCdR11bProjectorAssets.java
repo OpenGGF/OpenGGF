@@ -49,7 +49,7 @@ class TestCdR11bProjectorAssets {
         String[] hashes = {"2b431fb6fc08fbccef96299a1c83c99327b680924c8420b2eb56ef98eff4aa6f",
                 "2e180977b04b20230e5aced68385346b6f992bed19139df617477bd30780cda3",
                 "5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3"};
-        assertEquals(125, CdR11bAssets.Asset.values().length);
+        assertEquals(133, CdR11bAssets.Asset.values().length);
         assertEquals(KEYS, Arrays.asList(CdR11bAssets.Asset.values()).subList(120, 123));
         for (int i = 0; i < KEYS.size(); i++) {
             var key = KEYS.get(i); var view = a.view(key);

@@ -51,7 +51,7 @@ class TestCdR11bGoalPostAssets {
         String[] labels = {"MapSpr_GoalSignpost", "ObjGoalPost_SetBaseTile.TileIDs"};
         String[] hashes = {"610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8",
                 "82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724"};
-        assertEquals(125, CdR11bAssets.Asset.values().length);
+        assertEquals(133, CdR11bAssets.Asset.values().length);
         assertEquals(KEYS, Arrays.asList(CdR11bAssets.Asset.values()).subList(123, 125));
         for (int i = 0; i < KEYS.size(); i++) {
             var key = KEYS.get(i); var view = a.view(key);

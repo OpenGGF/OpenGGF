@@ -1428,6 +1428,62 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         scrollState = foreground;
         return cameras;
     }
+    /** Prepared scalar update of the existing foreground image; no rewind restore or execution authority. */
+    static final class GoalPostBoundPublication {
+        private final PastSource source;
+        private final ScrollCapture expected;
+        private final ScrollCapture result;
+        private GoalPostBoundPublication(PastSource source, ScrollCapture expected, ScrollCapture result) {
+            this.source = source; this.expected = expected; this.result = result;
+        }
+        ScrollCapture result() { return result; }
+    }
+
+    /** GoalPost Main:640-645, native pin1ecc5f3a. Build every value before any owning assignment. */
+    GoalPostBoundPublication preparePastGoalPostDestLeftBound(CdPlayerFrameRuntime sourceFrame,
+                                                             ScrollCapture expected, int cameraXWord) {
+        var source = requirePastClosedSource();
+        if (sourceFrame != source.frame() || !samePastScroll(Objects.requireNonNull(expected)))
+            throw new IllegalArgumentException("Stale GoalPost source or complete scroll cut");
+        if ((cameraXWord & ~0xFFFF) != 0) throw new IllegalArgumentException("GoalPost camera is a native WORD");
+        var f = expected.state();
+        var next = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), f.horizontalCrossed(),
+                f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), f.destBottomBound(),
+                cameraXWord, f.bottomBoundShift(), f.scrollLock());
+        return new GoalPostBoundPublication(source, expected, new ScrollCapture(expected.owner(), next,
+                expected.background(), expected.plane(), expected.copies()));
+    }
+
+    /** ObjBigRing Level End/Main.asm:385-562, BYTE1 at scrollLock's high byte; retain the low byte and every other scroll value. */
+    GoalPostBoundPublication preparePastBigRingScrollLockHighByteOne(CdPlayerFrameRuntime sourceFrame,
+                                                                    ScrollCapture expected) {
+        var source = requirePastClosedSource();
+        if (sourceFrame != source.frame() || !samePastScroll(Objects.requireNonNull(expected)))
+            throw new IllegalArgumentException("Stale Big Ring source or complete scroll cut");
+        var f = expected.state();
+        var next = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), f.horizontalCrossed(),
+                f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), f.destBottomBound(),
+                f.destLeftBound(), f.bottomBoundShift(), 0x0100 | (f.scrollLock() & 0xFF));
+        return new GoalPostBoundPublication(source, expected, new ScrollCapture(expected.owner(), next,
+                expected.background(), expected.plane(), expected.copies()));
+    }
+
+    void validatePreparedPastGoalPostDestLeftBound(GoalPostBoundPublication publication) {
+        var source = requirePastClosedSource(); Objects.requireNonNull(publication);
+        if (publication.source != source || !samePastScroll(publication.expected))
+            throw new IllegalArgumentException("Stale prepared GoalPost destination-left-bound cut");
+    }
+
+    /** Caller prevalidates Frame/scroll/Values together; CAS/adopt performs no capture, callback or allocation. */
+    void applyPreparedPastGoalPostDestLeftBound(GoalPostBoundPublication publication) {
+        requirePastRenderIdle(); var source = requirePastSource(); Objects.requireNonNull(publication);
+        var expected = publication.expected;
+        if (publication.source != source || expected.owner() != scrollCaptureOwner || expected.state() != scrollState
+                || expected.background() != backgroundState || expected.plane() != planeState || expected.copies() != drawCopies)
+            throw new IllegalArgumentException("Stale prepared GoalPost destination-left-bound adoption");
+        scrollState = publication.result.state();
+    }
+
     // END ordinary Past post-object camera value cuts.
 
     // BEGIN explicit R11B loading source ports. These data relations are not Module authority.

@@ -156,6 +156,14 @@ MAP_SPR_PROJECTOR ed84 68 2e180977b04b20230e5aced68385346b6f992bed19139df617477b
 PROJECTOR_EXPLOSION_SCHEDULE edc8 38 5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3
 MAP_SPR_GOAL_SIGNPOST 1d9b4 126 610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8
 GOAL_POST_BASE_TILES d78e 112 82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724
+ANI_SIGNPOST 1d9a6 14 9912394f852b914651884191ea8532d60421a3bd40293510a3f356f86c69e691
+LEVEL_END_TIME_BONUSES d978 42 be40c9a172da6d18e694f0b8cfe698fa674eb88ab210958f4fa82713e0cf0861
+ANI_BIG_RING 1d8ee 8 b8997affb40b5e6a6e2aff4f5013c56226e1ce0ff2d25c8396f6193939ba1ba6
+MAP_SPR_BIG_RING 1d8f6 176 c6edd39fb1e1cc977c264d87e2301816d01ff2c10660fb63f89d9148afdb30c4
+ANI_BIG_RING_FLASH d9da 12 b4dbc8e16c7b27313dd1d0443cc0a9f6226470e751fd826adaac47dcc12a4d0f
+MAP_SPR_BIG_RING_FLASH d9e6 416 b48a9c17b2359210ba747bf79d3c07a7af111639eef836d7315811b285226e10
+RESULTS_INIT_DATA e268 24 8fdebd3a15a4a74f401c329bbbaf9750596828e9578df9121565cd24f4c165f8
+MAP_SPR_RESULTS e280 622 3421ca10ca8d30d20ebc792104211ebc360321c4e6a4509abf2fa0b9a6ea73e9
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -240,7 +248,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(125, rows.size()); assertEquals(125, CdR11bAssets.Asset.values().length);
+        assertEquals(133, rows.size()); assertEquals(133, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());
@@ -581,7 +589,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
         var keys = new CdR11bAssets.Asset[]{ANI_FLOAT_BLOCK, MAP_SPR_FLOAT_BLOCK};
         String[] labels = {"Ani_FloatBlock", "MapSpr_FloatBlock"};
         int[] offsets = {0xA234, 0xA252}; int[] lengths = {30, 76};
-        assertEquals(125, CdR11bAssets.Asset.values().length);
+        assertEquals(133, CdR11bAssets.Asset.values().length);
         assertEquals(89, ANI_MONITOR.ordinal());
         for (int i = 0; i < keys.length; i++) {
             var key = keys[i]; var view = a.view(key);

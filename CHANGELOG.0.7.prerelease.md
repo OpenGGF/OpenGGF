@@ -147,12 +147,19 @@ Unreleased. The earlier development themes remain in
   the original score arithmetic and ordered one-up request, preserving existing
   touch-response behavior. Cached Past World bodies now publish immediate good-future,
   score, Solid and ordered explosion-child effects through the existing owners.
-  The unchanged five-jump controller replays through the healthy9000 bound; this
-  loops within terrain and does not certify the act exit or further level distance.
+  An input-only run-up, mature spindash and Spring-avoidance jump now clear that
+  terrain and reach the native Goal Post, Signpost and low-ring Big Ring path.
+  Complete full/course replay is checked through9856 and the genuine Results
+  tally10394, before its first next-level programme-store boundary. Goal9598 and
+  Results10394 have real selected-pixel and resource-retirement checks; the next-act
+  programme handoff remains separate work.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
-  goal-bound and warp clears; live Goal Post World and act-end admission remain
-  separate work. Original Projector and shared Signpost metadata reuse existing art.
+  goal-bound and warp clears. Live Signpost and Results bindings preserve native
+  physical child order, BYTE/WORD timers, screen coordinates, score, PLC and sound
+  requests through existing owners. Original Projector metadata reuses existing art.
+  Original-USA Act2 terrain and player factories now retain their own source bytes
+  and immutable binding, without widening playable stage admission.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

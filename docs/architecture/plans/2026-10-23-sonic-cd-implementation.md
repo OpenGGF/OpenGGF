@@ -1,5 +1,67 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — native goal, Signpost, Results and Act2 prerequisites
+
+Private `98280f733` plus the owned engine delta qualifies the controller route
+through9856 with complete full/course9855→9856 comparison before each forward.
+Only controller inputs clear the earlier terrain: a run-up, native mature
+spindash and a jump ahead of the horizontal Spring. Goal2→4 occurs9582; all five
+Frame/scroll/contact stores are checked. The positive9598 case draws actual
+selected engine pixels, checks visible primary/Goal omissions and exact atlas
+retirement. Signpost's native6→8 creates earlier physical32 Results with only
+ID3A and timer-high16 written; it first executes on the following physical pass.
+Low-ring BigRing remains gated before parent routine admission and Draw. Actual
+World >=50 touch, programme/player/FM/flash allocation and cycle remain gaps.
+
+Results uses the same live bonus, shared score, queue/current art and draw owners.
+Its four raw mapping roots retain all622 source bytes; screen mode reads WORD0A,
+not dirty worldY0C. Native Init decrements BYTE32; USA rows use WORD480/472, and
+tally tests bit0 of memory32's high byte. Actual observer returns10394 with three
+Results rows and a Ready475-pattern selection, then10395 stops before the first
+NextLevel restartWORD2 store. A later positive10394 case now qualifies complete
+full/course10393→10394 and actual selected Results pixels/omission/retirement.
+It observes100 score awards,1100 internal point units, zero tally requests and
+one Kaching request, exactly following the high-byte timer gate. This is not a
+completed next-programme handoff. No failed owner is restored.
+
+Validation is deliberately separated by source and scope:
+
+- Broad997:995pass, one BigRing CPU-projection fixture failure, one original
+  controller frontier error,0skips. Frame776, metadata correction4, Goal positive
+  and component26 pass. Refreshed BigRing12 pass in the following selection.
+- Broad303:295pass, seven World fixture failures/errors, one original programme
+  frontier error,0skips. Results32 and terrain70 pass. Two fixtures inspect a
+  retired queue; three misuse reference CAS for replay value comparison; two
+  retain the obsolete unowned-Results frontier. Root fixes tests only.
+- Fresh98 across seven classes:0failures/errors/skips, including ResultsWorld10,
+  Signpost6, positive9856, R12A player12/terrain10, StageSource25 and legacy
+  stage-body/movement34. Source before/after
+  `085fa5875f62462753b6740820bb356d7d99ee56889b34d3ab2bfa72ac9f9bfd`;
+  execution18:42:05.464272–18:42:38.645667Z,5s queue,106s normal compilation.
+- Fresh two-case EGL run rechecks Goal9598 and qualifies Results10394, including
+  portable optional export guards. Both pass with0skips; source before/after
+  `25bfe7d82a858ea02bd76214e2dc894c9f83186b077126389fb1cef69e6ba626`,
+  execution18:51:38.163559–18:51:48.322570Z,10s queue,47.108s compilation.
+  The actual10394 PNG is16236bytes, SHA256
+  `f09873ba9ab3a86040a42f0ce7f5e5928fb8615193b247b4aac239e4daec73b2`.
+
+The303 terminal stdout was truncated before its fingerprint lines; the separately
+reobserved unchanged source is `2edf232a6fd43b4bc0accff5cd6d0e6b83f2927caadad5ff56c7b3c7362c2f51`.
+It is not presented as a recovered run fingerprint. Fresh identities, Java25,
+private cwd, original-media and EGL properties were independently inspected.
+These are bounded selections, never one combined all-green total or full suite.
+Independent static Goal/Signpost/BigRing/Results reviews found no productionP1/P2;
+the retired-queue finding is corrected exactly. Static review is not execution.
+
+R12A's original MMD, terrain/collision, loader inputs, player tables, mappings,
+DPLCs and full art are authenticated separately. Its26-row profile retains the
+earlier17 terrain descriptors and real Nemesis lookahead. Existing decoders and
+immutable StagePlayerSource relation are reused; Body/Frame/World admission stays
+strict. Next work is the actual post-Results programme stores, old-program black
+fade/return and source-ordered R12A entry, including its missing palette knowledge.
+Native audio/image parity, complete acts, other eras/stages and JP/EU remain open.
+All captures/research stay in Downloads; main stays untouched and nothing is pushed.
+
 ## 4 November 2026 — GoalPost raw component and same-Frame preparation
 
 Private3f9317f98 plus owned source adds native GoalPost16 ctor7/run2 and exact

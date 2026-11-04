@@ -7,7 +7,9 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
+import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdSolidObject;
+import com.openggf.game.soniccd.objects.CdSignpost;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
@@ -1913,5 +1915,124 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
                         body.debugCheat(), 0, body.invincible(), body.bossMusic()), actualEnvironment.dynamicSlots());
         return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
+    }
+
+    /**
+     * Prepare one Frame-owned Signpost store without adopting it. Native pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Level End/Main.asm:771,779-780,830-834.
+     * _Include/Main CPU Variables.inc:74-75 defines the two powerup BYTE flags;
+     * _Definitions.inc:83-85 defines separate player timer WORDs, which these stores do not clear.
+     * _Definitions.inc:181-186 places logical playerCtrlHold/high and playerCtrlTap/low before
+     * separate raw p1 held/tap bytes; Sonic/Main.asm:297-299 owns their ordinary copy gate.
+     * BSET0 retains every other ctrlLocked bit (_Definitions.inc:327; Level End:830).
+     *
+     * Root authenticates the actual private source/phase, native order and reached store site,
+     * including the exact zoneAct $0502 zero-control override. These reusable complete-value CAS
+     * values confer no invocation or exactly-once authority. No other Signpost store belongs to
+     * Frame. No Body, art, clock, callback, sound, GoalPost reset or adoption is executed here.
+     */
+    public ObjectSolidPublication prepareObjectSignpostStore(CdPlayerBody.State expectedState,
+                                                             CdPlayerBody.Environment expectedEnvironment,
+                                                             CdSignpost.StoreField field, int value) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Signpost player State");
+        Objects.requireNonNull(expectedEnvironment, "Signpost player Environment");
+        Objects.requireNonNull(field, "Signpost store field");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Signpost player State/Environment cut");
+        }
+        var actualState = state; var actualEnvironment = environment;
+        var movement = actualEnvironment.movement(); var bounds = movement.bounds(); var gates = movement.gates();
+        var controls = actualEnvironment.controls(); var body = actualEnvironment.globals();
+        var nextMovement = movement; var nextControls = controls; var nextBody = body;
+        switch (field) {
+            case LEFT_BOUND_WORD -> {
+                if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Signpost left bound requires an unsigned native word");
+                if (bounds.left() != value) nextMovement = new CdPlayerMovement.Environment(movement.physics(),
+                        new CdPlayerMovement.Bounds(value, bounds.right(), bounds.bottom(), bounds.bossFight()), gates, movement.globals());
+            }
+            case SPEED_SHOES_BYTE -> {
+                if (value != 0) throw new IllegalArgumentException("Signpost clears only the speedShoes byte flag");
+                if (gates.speedShoes() != 0) nextMovement = new CdPlayerMovement.Environment(movement.physics(), bounds,
+                        new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
+                                gates.windTunnel(), 0, gates.timeWarpDirection()), movement.globals());
+            }
+            case INVINCIBLE_BYTE -> {
+                if (value != 0) throw new IllegalArgumentException("Signpost clears only the invincible byte flag");
+                if (body.invincible() != 0) nextBody = new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(),
+                        body.timeAttackMode(), body.debugMode(), body.debugCheat(), body.timeWarpTimer(), 0, body.bossMusic());
+            }
+            case CONTROL_LOCK_BIT0 -> {
+                if (value != 1) throw new IllegalArgumentException("Signpost sets only control-lock bit zero");
+                int locked = controls.controlLocked() | 1;
+                if (locked != controls.controlLocked()) nextControls = new CdPlayerBody.Controls(controls.rawHeld(), controls.rawTap(),
+                        controls.logicalHeld(), controls.logicalTap(), locked);
+            }
+            case PLAYER_CONTROL_HOLD_WORD -> {
+                if (value != 0x0808 && value != 0) throw new IllegalArgumentException("Signpost logical control word is $0808 or zero");
+                int held = value >>> 8, tap = value & 0xFF;
+                if (held != controls.logicalHeld() || tap != controls.logicalTap())
+                    nextControls = new CdPlayerBody.Controls(controls.rawHeld(), controls.rawTap(), held, tap, controls.controlLocked());
+            }
+            default -> throw new IllegalArgumentException("Signpost store is not Frame-owned: " + field);
+        }
+        var nextEnvironment = nextMovement == movement && nextControls == controls && nextBody == body
+                ? actualEnvironment : new CdPlayerBody.Environment(nextMovement, nextControls, nextBody, actualEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
+    }
+
+    /**
+     * Prepare one Frame-owned ObjBigRing_Main store without adopting it. Native pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Level/_Objects/Level End/Main.asm:488-503.
+     * MOVE.W oX preserves the fraction word; BSET0 preserves every other ctrlLocked bit.
+     * _Definitions.inc:181-186 places logical playerCtrlHold/high and playerCtrlTap/low before
+     * separate raw p1 held/tap bytes; Sonic/Main.asm:297-299 owns their ordinary copy gate.
+     * XVel and playerGVel clear independently, preserving all Y motion and other actor fields.
+     *
+     * Root owns the actual private Big Ring source/camera+336, placement cut, reached gates and
+     * native store order. The public operation and its descriptive placement/source values confer
+     * no pool, Frame, invocation or exactly-once authority here. This complete-value CAS executes
+     * no Body, input, clock, callback, capture, sound, art, scroll, object allocation or adoption work.
+     */
+    public ObjectSolidPublication prepareObjectBigRingPlayerStore(CdPlayerBody.State expectedState,
+                                                                  CdPlayerBody.Environment expectedEnvironment,
+                                                                  CdBigRing.PlayerStore operation) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Big Ring player State");
+        Objects.requireNonNull(expectedEnvironment, "Big Ring player Environment");
+        Objects.requireNonNull(operation, "Big Ring player store");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Big Ring player State/Environment cut");
+        }
+        var actualState = state; var actualEnvironment = environment;
+        var motion = actualState.motion(); var controls = actualEnvironment.controls();
+        int x = motion.centreX16_16(), xVelocity = motion.xVelocity(), groundVelocity = motion.groundVelocity();
+        var nextControls = controls;
+        switch (operation) {
+            case CdBigRing.PlayerXWord store -> x = (store.value() << 16) | (x & 0xFFFF);
+            case CdBigRing.ControlLockBit0 ignored -> {
+                int locked = controls.controlLocked() | 1;
+                if (locked != controls.controlLocked()) nextControls = new CdPlayerBody.Controls(controls.rawHeld(), controls.rawTap(),
+                        controls.logicalHeld(), controls.logicalTap(), locked);
+            }
+            case CdBigRing.ControlHold0808 ignored -> {
+                if (controls.logicalHeld() != 8 || controls.logicalTap() != 8)
+                    nextControls = new CdPlayerBody.Controls(controls.rawHeld(), controls.rawTap(), 8, 8, controls.controlLocked());
+            }
+            case CdBigRing.XVelocityZero ignored -> xVelocity = 0;
+            case CdBigRing.GroundVelocityZero ignored -> groundVelocity = 0;
+        }
+        var nextState = actualState;
+        if (x != motion.centreX16_16() || xVelocity != motion.xVelocity() || groundVelocity != motion.groundVelocity()) {
+            var nextMotion = new CdPlayerMotionState(x, motion.centreY16_16(), xVelocity, motion.yVelocity(), groundVelocity,
+                    motion.routine(), motion.angle(), motion.flags(), motion.spriteFlags(), motion.xRadius(), motion.yRadius(),
+                    motion.animation(), motion.previousAnimation(), motion.playerJump(), motion.charge(), motion.moveLock(),
+                    motion.stick(), motion.playerControl(), motion.previousPrimaryAngle(), motion.previousSecondaryAngle());
+            nextState = new CdPlayerBody.State(nextMotion, actualState.animation(), actualState.header(), actualState.timers(),
+                    actualState.history(), actualState.rotationDistance(), actualState.objectLinks(), actualState.rotationAngle());
+        }
+        var nextEnvironment = nextControls == controls ? actualEnvironment
+                : new CdPlayerBody.Environment(actualEnvironment.movement(), nextControls, actualEnvironment.globals(), actualEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(actualState, actualEnvironment, nextState, nextEnvironment);
     }
 }

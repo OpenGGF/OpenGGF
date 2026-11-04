@@ -34,6 +34,9 @@ import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
 import com.openggf.game.soniccd.objects.CdMonitor;
 import com.openggf.game.soniccd.objects.CdTimePost;
+import com.openggf.game.soniccd.objects.CdSignpost;
+import com.openggf.game.soniccd.objects.CdBigRing;
+import com.openggf.game.soniccd.objects.CdResults;
 import com.openggf.game.soniccd.objects.CdTamabboh;
 import com.openggf.game.soniccd.objects.CdMosqui;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -117,7 +120,7 @@ public final class SonicCdGameModule implements GameModule {
         MONITOR_SOLID, MONITOR_FLOOR_ANGLE, MONITOR_FM, TIME_POST_DIRECTION, TIME_POST_SUB_CPU, MONITOR_BODY, TIME_POST_BODY,
         CLEAR_DEMO_INDEX, POST_OBJECT_GUARDS, DEAD_CAMERA_FREEZE, DRAW_OBJECTS, PALETTE_CYCLE,
         UPDATE_SECTION, PREPARE_PLCS, UPDATE_GLOBAL_ANIMATIONS, ORDINARY_MAIN_RETURN,
-        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY, TAMABBOH_BODY, COLLAPSE_PLATFORM_BODY, BOULDER_BODY, MOSQUI_BODY, SPIKES_BODY, ANTON_BODY, ROBOT_GENERATOR_BODY, EXPLOSION_BODY
+        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY, TAMABBOH_BODY, COLLAPSE_PLATFORM_BODY, BOULDER_BODY, MOSQUI_BODY, SPIKES_BODY, ANTON_BODY, ROBOT_GENERATOR_BODY, EXPLOSION_BODY, GOAL_POST_BODY, SIGNPOST_BODY, BIG_RING_BODY, RESULTS_BODY
     }
     enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
@@ -128,7 +131,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm { }
+    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound { }
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }
@@ -156,6 +159,16 @@ public final class SonicCdGameModule implements GameModule {
     }
     record PastMosquiFm(CdMosqui.Sound sound) implements PastSound {
         PastMosquiFm { Objects.requireNonNull(sound); }
+    }
+    record PastSignpostSound(CdSignpost.Sound sound) implements PastSound {
+        PastSignpostSound { Objects.requireNonNull(sound); }
+    }
+    record PastBigRingFm() implements PastSound {
+        int nativeId() { return CdBigRing.FM_BIG_RING; }
+    }
+    record PastResultsSound(CdResults.Sound sound) implements PastSound {
+        PastResultsSound { Objects.requireNonNull(sound); }
+        int nativeId() { return sound.nativeId(); }
     }
     record PastRobotGeneratorFm(int nativeId) implements PastSound {
         PastRobotGeneratorFm { if (nativeId != 0x9E && nativeId != 0xD9) throw new IllegalArgumentException("Robot Generator native FM"); }
@@ -249,6 +262,58 @@ public final class SonicCdGameModule implements GameModule {
         levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
                 p.palFadeFlags(), p.gameMode() & 0x7F, 1, p.whiteFadeSteps(), p.phase());
     }
+    enum BigRingProgramBoundary { TIME_STONES_READ, SPECIAL_STAGE_STORE }
+    static final class UnsupportedBigRingProgram extends UnsupportedOperationException {
+        private final BigRingProgramBoundary boundary;
+        private UnsupportedBigRingProgram(BigRingProgramBoundary boundary) {
+            super("Big Ring has no actual programme preimage at " + boundary); this.boundary = boundary;
+        }
+        BigRingProgramBoundary boundary() { return boundary; }
+    }
+    /** Identity observation only: a low-ring invocation never reads programme scalars. */
+    LevelProgramState pastBigRingProgramImage(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); return levelProgram;
+    }
+    int pastBigRingTimeStones(SonicCdPastLoadingVisit visit, LevelProgramState expected) {
+        if (expected == null || levelProgram == null) throw new UnsupportedBigRingProgram(BigRingProgramBoundary.TIME_STONES_READ);
+        requirePastLoadingVisit(visit);
+        if (levelProgram != expected) throw new IllegalStateException("Stale Big Ring programme read");
+        return expected.timeStones();
+    }
+    static final class BigRingProgramPublication {
+        private final SonicCdPastLoadingVisit visit;
+        private final CdPlayerFrameRuntime frame;
+        private final LevelProgramState expected, result;
+        private BigRingProgramPublication(SonicCdPastLoadingVisit visit, CdPlayerFrameRuntime frame,
+                                          LevelProgramState expected, LevelProgramState result) {
+            this.visit = visit; this.frame = frame; this.expected = expected; this.result = result;
+        }
+        LevelProgramState result() { return result; }
+    }
+    BigRingProgramPublication preparePastBigRingSpecialStage(SonicCdPastLoadingVisit visit,
+                                                            CdPlayerFrameRuntime frame, LevelProgramState expected) {
+        if (expected == null || levelProgram == null) throw new UnsupportedBigRingProgram(BigRingProgramBoundary.SPECIAL_STAGE_STORE);
+        requirePastLoadingVisit(visit);
+        if (playerFrame != frame || levelProgram != expected) throw new IllegalStateException("Stale Big Ring programme preimage");
+        visit.requireBigRingProgramPublication(expected);
+        var p = expected;
+        var result = new LevelProgramState(p.demoMode(), p.timeStones(), 1, p.usePlayer2(), p.palFadeFlags(),
+                p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), p.phase());
+        return new BigRingProgramPublication(visit, frame, expected, result);
+    }
+    void validatePreparedPastBigRingSpecialStage(BigRingProgramPublication ready) {
+        Objects.requireNonNull(ready); requirePastLoadingVisit(ready.visit);
+        if (playerFrame != ready.frame || levelProgram != ready.expected) throw new IllegalStateException("Stale Big Ring programme publication");
+        ready.visit.requireBigRingProgramPublication(ready.expected);
+    }
+    /** Validated reference adoption; no programme selection, callback, allocation or load. */
+    void applyPreparedPastBigRingSpecialStage(BigRingProgramPublication ready) {
+        if (ready == null || pastLoading != ready.visit || playerFrame != ready.frame || levelProgram != ready.expected)
+            throw new IllegalStateException("Stale Big Ring programme adoption");
+        ready.visit.requireBigRingProgramPublication(ready.expected);
+        levelProgram = ready.result;
+    }
+
     void validatePastLoadRequest(LevelLoadContext context) {
         var mode = SessionManager.getCurrentGameplayMode();
         if (!coldProgramStartAdmission || stagedPast == null || context == null || context != stagedPastContext

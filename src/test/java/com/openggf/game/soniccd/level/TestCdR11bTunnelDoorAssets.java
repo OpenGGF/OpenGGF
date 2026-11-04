@@ -61,7 +61,7 @@ class TestCdR11bTunnelDoorAssets {
         int[] offsets = {0x1D6B6, 0x1D6C4}; int[] lengths = {14, 28};
         String[] hashes = {"398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0",
                 "7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92"};
-        assertEquals(125, CdR11bAssets.Asset.values().length);
+        assertEquals(133, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < DOOR_TABLES.size(); i++) {
             var key = DOOR_TABLES.get(i); var view = a.view(key);
             assertEquals(87 + i, key.ordinal()); assertEquals(labels[i], key.nativeLabel());
