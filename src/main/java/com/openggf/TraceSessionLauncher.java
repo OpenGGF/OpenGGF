@@ -834,7 +834,11 @@ public final class TraceSessionLauncher {
                                     .descriptorHardwareTimingSegments(runSegments),
                             com.openggf.trace.timing
                                     .HardwareTimingInterstitialStreamLoader
-                                    .load(entry.runDir()));
+                                    .load(entry.runDir()),
+                            com.openggf.trace.timing.InitializationTimingStreamLoader.loadRun(
+                                    entry.runDir(), entry.runManifest(), movie.getFrameCount()),
+                            com.openggf.trace.timing.InitializationHardwareTimingStream.loadRun(
+                                    entry.runDir(), entry.runManifest(), movie.getFrameCount()));
             this.runCoordinator = TraceRunPlaybackCoordinator.fromDescriptors(
                     entry.runManifest(),
                     GameServices.module().getTracePlaybackProfile(),
@@ -1055,7 +1059,10 @@ public final class TraceSessionLauncher {
             return runStructuralComparator != null
                     && runStructuralComparator.allRowsConsumed();
         }
-        return comparator != null && comparator.isComplete();
+        return comparator != null && (comparator.isComplete()
+                || (runCoordinator != null
+                        && runCoordinator.hasMatchingBonusRequest()
+                        && comparator.cursor() >= runSegments.get(index).levelLoopRowCount()));
     }
 
     private void abortLaunchFailure(
@@ -1178,7 +1185,7 @@ public final class TraceSessionLauncher {
         }
         if (ssCursor >= ssStageFinishedFrame) {
             if (fixture != null) {
-                fixture.closeHardwareTimingReplayRun();
+                closeReplayTiming();
             }
             beginSpecialStageTerminalExit();
             return;
@@ -1633,10 +1640,9 @@ public final class TraceSessionLauncher {
         }
         int frame = runBoundaryProbe.observation().observedBk2Frame();
         RunBoundarySignal signal = switch (boundary.entryKind()) {
-            case "starpost_bonus" -> mode == GameMode.BONUS_STAGE
-                    && GameServices.bonusStageOrNull() != null
+            case "starpost_bonus" -> runBoundaryProbe.observation().bonusType() != null
                     ? new RunBoundarySignal.BonusRequest(frame,
-                            GameServices.bonusStageOrNull().getActiveType()) : null;
+                            runBoundaryProbe.observation().bonusType()) : null;
             // The provider's current stage is the stage it has LOADED, not the
             // one a pending request will enter: the entry's index is chosen by
             // SpecialStageProvider#consumeStageIndexForEntry inside
@@ -1667,7 +1673,22 @@ public final class TraceSessionLauncher {
         for (TraceRunPlaybackCoordinator.Action action : actions) {
             if (action instanceof TraceRunPlaybackCoordinator.AdmitDestination admit) {
                 applyRunDestinationAdmission(admit.receipt());
+            } else if (action instanceof TraceRunPlaybackCoordinator.BeginSourceLoadTail) {
+                // Logical gameplay admission ended, but the physical source
+                // rows still own their existing comparison checks. Keep the
+                // delegate and terminal-art lease until actual source closure;
+                // SOURCE_LOAD_ROW separately prevents destination gameplay.
             } else if (action instanceof TraceRunPlaybackCoordinator.CloseSegment close) {
+                if (activeRunDisposition == TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW) {
+                    var source = runSegments.get(close.segmentIndex());
+                    int end = Math.addExact(source.segment().bk2FrameOffset(), source.rowCount());
+                    int cursor = GameServices.playbackDebug().getCursorFrame();
+                    if (cursor < end) {
+                        LOGGER.info("Source load released before source coverage end: BK2 ["
+                                + cursor + ", " + end + "), " + (end - cursor)
+                                + " source rows remain uncompared; production released before recorded coverage ended");
+                    }
+                }
                 closeRunSegment(close.segmentIndex());
             } else if (action instanceof TraceRunPlaybackCoordinator.EnterTransitionGap gap) {
                 enterRunUnrepresentedGap(gap.sourceSegmentIndex());
@@ -2468,7 +2489,7 @@ public final class TraceSessionLauncher {
         failure = detachAndCloseRunPayload(failure);
         if (fixture != null) {
             failure = cleanupFailure(
-                    failure, fixture::closeHardwareTimingReplayRun);
+                    failure, this::closeReplayTiming);
         }
         failure = cleanupFailure(failure, this::startFadeOut);
         throwUnchecked(failure);
@@ -2747,6 +2768,8 @@ public final class TraceSessionLauncher {
      */
     void beforeProductionIteration() {
         productionIterationInProgress = true;
+        // Source loading rows keep the same read-only comparisons as ordinary
+        // visual replay, including any deferred dynamic-art publication.
         productionIterationComparator = comparator;
         GameLoop loop = Engine.currentGameLoop();
         runProductionOwnerObservation = runCoordinator != null && loop != null
@@ -2806,7 +2829,12 @@ public final class TraceSessionLauncher {
         return mode == GameMode.LEVEL
                 && isRunFrameDriverActive()
                 && !allowsRunLogicalGameplayInput()
+                && !isSourceLoadRow()
                 && !hasRunDisposition(TraceRunFrameDriver.Disposition.TERMINAL_TAIL);
+    }
+
+    static boolean isSourceLoadRow() {
+        return hasRunDisposition(TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW);
     }
 
     private static boolean hasRunDisposition(TraceRunFrameDriver.Disposition disposition) {
@@ -3210,7 +3238,7 @@ public final class TraceSessionLauncher {
             TraceRunFrameDriver.Disposition disposition) {
         return switch (disposition) {
             case PRESENTATION_VBLANK, PRESENTATION_SUPPRESSED_CLOSURE,
-                    PRESENTATION_ADVANCE_ONLY, SHARED_GAP, TERMINAL_TAIL -> true;
+                    PRESENTATION_ADVANCE_ONLY, SOURCE_LOAD_ROW, SHARED_GAP, TERMINAL_TAIL -> true;
             case GAMEPLAY_SHARED, SPECIAL_LOCAL, OFFSET_HANDOFF -> false;
         };
     }
@@ -3304,14 +3332,15 @@ public final class TraceSessionLauncher {
             return;
         }
         switch (disposition) {
-            case GAMEPLAY_SHARED, PRESENTATION_VBLANK,
+            case GAMEPLAY_SHARED, SOURCE_LOAD_ROW, PRESENTATION_VBLANK,
                     PRESENTATION_SUPPRESSED_CLOSURE,
                     PRESENTATION_ADVANCE_ONLY ->
                     runHardwareTiming.beginPlaybackFrame(
                             GameServices.playbackDebug().currentFrameOrThrow());
             case SPECIAL_LOCAL -> prepareRunSpecialStageHardwareTimingRow();
             case SHARED_GAP, TERMINAL_TAIL ->
-                    fixture.enterHardwareTimingGap();
+                    runHardwareTiming.beginGapFrame(
+                            GameServices.playbackDebug().currentFrameOrThrow());
             case OFFSET_HANDOFF -> throw new IllegalStateException(
                     "offset handoff cannot prepare hardware timing");
         }
@@ -3470,7 +3499,7 @@ public final class TraceSessionLauncher {
             fixture.runTerminalDynamicArtIteration();
             closeRunDynamicArtSegments();
             comparator.finalizeTerminalDynamicArtComparison();
-            fixture.closeHardwareTimingReplayRun();
+            closeReplayTiming();
         }
         completionArmed = true;
         completionHoldFrames =
@@ -3487,7 +3516,7 @@ public final class TraceSessionLauncher {
         }
         if (fixture != null) {
             failure = cleanupFailure(
-                    failure, fixture::closeHardwareTimingReplayRun);
+                    failure, this::closeReplayTiming);
         }
         failure = detachAndCloseRunPayload(failure);
         failure = cleanupFailure(failure, this::startFadeOut);
@@ -3510,6 +3539,13 @@ public final class TraceSessionLauncher {
      */
     public void prepareHardwareTimingForAdmission(GameMode mode) {
         if (fixture == null) {
+            return;
+        }
+        if (activeRunDisposition == TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW
+                || (activeRunDisposition == TraceRunFrameDriver.Disposition.SHARED_GAP
+                    && runHardwareTiming != null && runHardwareTiming.representsInitializationRow())) {
+            // The physical driver prepared this source row before production.
+            // Re-beginning it here would reset service-boundary ordering.
             return;
         }
         if (fadeStarted) {
@@ -3576,7 +3612,10 @@ public final class TraceSessionLauncher {
     }
 
     public void deactivateHardwareTimingForAdmission() {
-        if (fixture != null) {
+        if (fixture != null
+                && activeRunDisposition != TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW
+                && !(activeRunDisposition == TraceRunFrameDriver.Disposition.SHARED_GAP
+                    && runHardwareTiming != null && runHardwareTiming.representsInitializationRow())) {
             fixture.enterHardwareTimingGap();
         }
     }
@@ -4061,7 +4100,7 @@ public final class TraceSessionLauncher {
         SessionManager.clearNextGameplayAdmissionPolicy();
         if (fixture != null) {
             failure = cleanupFailure(failure,
-                    fixture::abortHardwareTimingReplayRun);
+                    this::abortReplayTiming);
         }
         failure = cleanupFailure(failure, this::abortRunDynamicArtSegments);
         failure = detachAndCloseRunPayload(failure);
@@ -4750,6 +4789,16 @@ public final class TraceSessionLauncher {
         config.resolveDisplayAspect();
     }
 
+    private void closeReplayTiming() {
+        if (runHardwareTiming != null) runHardwareTiming.close();
+        else if (fixture != null) fixture.closeHardwareTimingReplayRun();
+    }
+
+    private void abortReplayTiming() {
+        if (runHardwareTiming != null) runHardwareTiming.abort();
+        else if (fixture != null) fixture.abortHardwareTimingReplayRun();
+    }
+
     /** Thin live-engine implementation of {@link TraceReplayFixture}. */
     private static final class LiveFixture implements TraceReplayFixture {
         private final PlaybackDebugManager playback;
@@ -4788,6 +4837,25 @@ public final class TraceSessionLauncher {
                     hardwareTimingObserver);
             hardwareTimingGameplayMode.setHardwareTimingReplayCloseHook(
                     this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+                HardwareTimingSchedule readiness,
+                java.util.Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+            hardwareTimingReplayPort.beginInitializationGapReplay(row, readiness, prefix);
+        }
+
+        @Override
+        public void beginInitializationGapFrame(int rawFrame) {
+            hardwareTimingReplayPort.beginRawFrame(rawFrame);
+        }
+
+        @Override
+        public void endInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+            hardwareTimingReplayPort.endInitializationGapReplay(row);
         }
 
         @Override

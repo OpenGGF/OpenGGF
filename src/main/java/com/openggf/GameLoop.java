@@ -879,7 +879,8 @@ public class GameLoop {
         return modSceneActBridge.isTransitioning() || specialStageLifecycle.transitionPending()
                 || bonusSession.isTransitionPending()
                 || endingSession.isTransitionPending()
-                || com.openggf.level.LevelTransitionHostAccess.freezesHostIteration(levelManager);
+                || com.openggf.level.LevelTransitionHostAccess.freezesHostIteration(levelManager)
+                || (levelManager != null && com.openggf.level.NativeLevelLoadAccess.isPending(levelManager));
     }
 
     /**
@@ -986,6 +987,13 @@ public class GameLoop {
      * (docs/s2disasm/s2.asm:38907).
      */
     private boolean runGapRowContinuesSourceLevelMainLoop() {
+        if (TraceSessionLauncher.isSourceLoadRow()
+                && currentGameMode != GameMode.TITLE_CARD
+                && (currentGameMode != GameMode.LEVEL
+                        || !isNonRewindableTransitionPending())) {
+            throw new IllegalStateException(
+                    "source load row has no production fade/title owner: " + currentGameMode);
+        }
         boolean levelExitWritten = levelManager == null
                 || levelManager.hasPendingLevelExit()
                 || titleCardReleasedIntoLevelThisIteration
@@ -1123,6 +1131,12 @@ public class GameLoop {
         updateAudioPauseState();
     }
 
+    private boolean holdsSourceGameplayDuringFade() {
+        return (currentGameMode == GameMode.LEVEL || currentGameMode == GameMode.BONUS_STAGE)
+                && isNonRewindableTransitionPending()
+                || specialStageLifecycle.holdsNativeResultsExitFade();
+    }
+
     private void stepInternal() {
         nativeMenus.beginFrame();
         if (consumeSuspendedOrResetFrame()) return;
@@ -1159,7 +1173,7 @@ public class GameLoop {
         }
         Runnable productionIteration = () -> {
             GameLoopPlcLifecycle.runLogicalIteration(lifecycleContext.plcFrameLifecycle(),
-                    lifecycleContext, continueScreen::updateFade, frame -> {
+                    lifecycleContext, holdsSourceGameplayDuringFade(), continueScreen::updateFade, frame -> {
                         activePlcLifecycleFrame = frame;
                         try {
                             stepInternalBody();
@@ -1838,7 +1852,8 @@ public class GameLoop {
             // still owns it. See consumeTransitionFreezeRow for the ROM
             // citations and why the ownership question is asked, not assumed.
             if (freezeForNonRewindableTransition
-                    && !TraceSessionLauncher.isRunFrameDriverActive()) {
+                    && (!TraceSessionLauncher.isRunFrameDriverActive()
+                            || TraceSessionLauncher.isSourceLoadRow())) {
                 levelIterationAdmission.consumeTransitionFreezeRow(
                         playbackDebugManager,
                         levelManager != null ? levelManager.getObjectManager() : null,

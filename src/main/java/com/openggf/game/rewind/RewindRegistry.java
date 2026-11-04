@@ -177,6 +177,7 @@ public final class RewindRegistry {
     }
 
     public CompositeSnapshot capture() {
+        requireSnapshotBoundary();
         if (profiler != null) {
             profiler.beginSection("rewind.capture");
         }
@@ -203,6 +204,7 @@ public final class RewindRegistry {
 
     public void restore(CompositeSnapshot cs) {
         Objects.requireNonNull(cs, "cs");
+        requireSnapshotBoundary();
         if (profiler != null) {
             profiler.beginSection("rewind.restore");
         }
@@ -228,6 +230,7 @@ public final class RewindRegistry {
 
     /** Captures a course partition, omitting only the session controller by identity. */
     public CompositeSnapshot captureCourse() {
+        requireSnapshotBoundary();
         var values = new LinkedHashMap<String, Object>();
         entries.forEach((key, adapter) -> {
             if (adapter != modeAdapter) values.put(key, Objects.requireNonNull(adapter.capture(), key));
@@ -245,6 +248,7 @@ public final class RewindRegistry {
 
     /** Restores the exact course partition while retaining the match/mode ledger. */
     public void restoreCourse(CompositeSnapshot snapshot) {
+        requireSnapshotBoundary();
         requireCourseLayout(snapshot);
         for (var entry : entries.entrySet()) {
             String key = entry.getKey();
@@ -256,6 +260,12 @@ public final class RewindRegistry {
     }
 
     @SuppressWarnings("unchecked")
+    private void requireSnapshotBoundary() {
+        for (RewindSnapshottable<?> entry : entries.values()) {
+            if (entry instanceof RewindOperationGuard guard) guard.requireSnapshotBoundary();
+        }
+    }
+
     private static void restoreAdapter(RewindSnapshottable<?> adapter, Object snapshot) {
         ((RewindSnapshottable<Object>) adapter).restore(snapshot);
     }

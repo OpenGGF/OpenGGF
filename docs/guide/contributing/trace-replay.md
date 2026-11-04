@@ -359,6 +359,19 @@ Adding a new event type:
 ## Compressing trace payloads
 
 Dedicated `hardware_timing.jsonl` streams also load transparently from `.gz`.
+S3K complete runs may additionally carry run-root `initialization_timing.jsonl`
+(or `.gz`). Its `raw_frame` uses absolute zero-based BK2 rows, including loading
+gaps, rather than segment-local physics rows. It may hold/resume only a matching
+prepared production load phase and select zero-routine interrupt service; it
+accepts no clock values, gameplay state or decoder progress. Missing, reordered
+or mismatched observations fail once a represented phase starts. Exact live-play
+load duration remains outside this replay input's scope. See the
+[dedicated timing contract](../../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#2026-11-03-approved-extension-synchronous-initialization-phases).
+Loads outside structural segments can additionally carry
+`initialization_hardware_timing.jsonl.gz`, containing actual matching queue
+completion observations for that load. The producer publishes both initialization
+companions compressed; do not reconstruct timing input from interstitial
+`bk2_frame` provenance or recompress candidate payloads by hand.
 Use `gzip -9 -n hardware_timing.jsonl` when publishing new timing payloads;
 the native compression threshold and the helper below apply to physics and
 auxiliary payloads. Do not leave a plain timing sibling beside its gzip: the

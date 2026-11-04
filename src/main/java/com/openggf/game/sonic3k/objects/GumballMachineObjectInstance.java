@@ -440,19 +440,32 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
 
     // ===== State machine =====
 
+    /**
+     * Prepares the native machine state without creating children or advancing gameplay.
+     * Obj_GumballMachine seeds RNG before CreateChild1_Normal allocates children
+     * (sonic3k.asm:127458-127480, pinned 8b2cf3c4178f2382f844da67798de4befc50c5e0).
+     * This is a real initialization boundary: a loading owner may prepare it before
+     * servicing an interrupt, then let the ordinary initial sprite pass create children.
+     * Rewind captures driftInitialized, preserving both preparation and later RNG evolution.
+     */
+    public void prepareInitialMachineState() {
+        if (driftInitialized) {
+            return;
+        }
+        prepareInitialMachineState(services().objectManager().getVblaCounter());
+    }
+
+    private void prepareInitialMachineState(int vIntRunCount) {
+        if (driftInitialized) {
+            return;
+        }
+        services().rng().setSeed(Integer.toUnsignedLong(vIntRunCount));
+        initDrift();
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // Initialize drift state on first update (separated from child spawning
-        // so tests can exercise drift logic without requiring services()).
-        if (!driftInitialized) {
-            // Obj_GumballMachine, sonic3k.asm:127466: move.l
-            // (V_int_run_count).w,(RNG_seed).w. This replaces prior gameplay
-            // entropy with the full native long on the first object pass only.
-            // Rewind captures driftInitialized, so restoring an initialized
-            // machine preserves the captured evolving seed instead of reseeding.
-            services().rng().setSeed(Integer.toUnsignedLong(vIntRunCount));
-            initDrift();
-        }
+        prepareInitialMachineState(vIntRunCount);
 
         // Spawn children on first update — can't do it in constructor because
         // services() isn't available until ObjectManager injects them.

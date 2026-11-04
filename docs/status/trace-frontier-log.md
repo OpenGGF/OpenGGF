@@ -123701,3 +123701,142 @@ The focused r7 Mega still fails only on its known two axes; all six complete
 JSONs exactly match the pre-upstream witness. The updated base therefore
 receives focused integration coverage; the three complete trace profiles
 above were run on `afdf37b29`, not relabelled as runs of the later merge.
+
+## 2026-11-04 — Resumable S3K load ownership and native initialization timing (in progress)
+
+Candidate: `.worktrees/load-phase-readiness`, branch
+`bugfix/ai-load-phase-readiness`, uncommitted on
+`aa26247c07b8b928c080946b651cffc91bbc51a9`; pre-task base
+`32d4e9aae457b8aae00abd67d172a530a75d6c71`. The dedicated stream is evaluated
+from external literal-capture overlays; no new canonical companion is installed.
+See [design, rejected explanations and qualification](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md#integration-and-qualification-checkpoint-2026-11-04).
+
+Focused commands use `python3 tools/testing/maven_queue.py -Dmse=off -B
+-Ptrace-replay-r7 -Dsurefire.forkCount=1 '-Dtest=…' test`, JDK 25, Lua 5.4 and
+`JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`. The temporary
+`TestS3kLoadInitializationDiagnostic` first-three-load prefix passed in focused
+v15 and v18 with release clocks 5529/6957/9097. This verifies those observations,
+not zero physics errors across all covered rows. Retaining the outer load
+wrapper's respawn bank through HOLD removes the new returned-AIZ row231 monitor
+collision (x11039/speed0 versus native and matched baseline x11040/speed1416).
+
+The canonical baseline on `c24e9fa6e57248ba7ae29c1836f04c6088720a2b`,
+`-Dtest=TestS3kMegaRunChain`, fails the Slots stage-exit boundary. Whole-movie
+external initialization input advances beyond that boundary. In v16 its first
+AIZ3 mismatch is row105 x, expected0x03D7/actual0x1050; restoring the saved
+runtime apparent act removes that clamp. In v17 the next movement frontier is
+row1686 x_speed, expected0x18/actual0x30, at water entry, followed by an
+unconsumed initialization observation before raw17796. The apparent-act water
+consumer correction is pending focused qualification.
+
+The independent Sonic-and-Tails 10,000-input prefix records one special-stage
+return. Its display-clear identity matches, but v1 exposed the parked raw7336
+versus physical8685 gap mapping. Physical mapping is now through the existing
+coordinator; v18 reaches raw8686 and rejects the still-unconsumed HOLD at8685.
+The results/fade boundary remains under investigation. The recording supplies
+no gameplay values and cannot manufacture the missing production request.
+
+Full guards v5 (`-Pguards test -B`) passed 834 tests with zero failures, errors
+or skips at 05:08:19Z; this predates the apparent-act/water/gap corrections and
+must be requalified. Broad smoke, final guards, canonical approval, integration,
+push and cleanup remain open. Exact live-play synchronous timing is unresolved.
+
+
+Readiness extension update: native producer `80218a069f11a6b5ae1a34d3d7a9932a53a9d3bb`
+adds a separate initialization queue-readiness companion. Old interstitial
+completed-frame fields remain provenance. On the same uncommitted candidate,
+focused v24 (`-Dtest=TestS3kLoadInitializationDiagnostic,TestS3kLoadInitializationFullDiagnostic`)
+completed at 09:34:49Z with two tests, zero assertion failures, one error and
+zero skips. First-three-load clock checks pass on external overlay v4. The
+apparent-act/water correction moves AIZ3's first movement mismatch from row 1686
+x_speed to row 6443 y (native 0x0782, engine 0x078D); the incomplete AIZ3 report
+contains 2589 error groups. Whole replay stops before physical raw 17906 because
+load 5's data-decode HOLD at 17905 is unconsumed. Cause attribution is pending;
+this is neither a campaign pass nor evidence that all 21 captured loads replay.
+
+The independent return now matches phase/queue admission and reaches actual
+title release; v23 fails automatic live-rewind installation while the physical
+run driver still owns the readiness row. The timing-port snapshot rejection is
+retained, and automatic live-rewind installation now declines run timelines.
+Its focused rerun and fresh full guards are queued. Existing gameplay payloads
+are unchanged; exact canonical companion approval and delivery remain open.
+
+
+Final canonical installation checkpoint (2026-11-04): candidate reconciled to
+`91151314217a8b2e51c471e93700b766da1e1b68`, still uncommitted, with native
+producer pin `c733354`. The user explicitly approved the exact two compressed
+initialization companions; both are installed unchanged and pinned by literal
+stored lengths and SHA-256 values. Existing gameplay payloads are unchanged.
+The earlier "approval open" statements above describe earlier checkpoints.
+
+Canonical focused v36 uses the command above with
+`-Dtest=TestS3kMegaRunChain,TestCommittedHardwareTimingFixtures#approvedInitializationCompanionsMatchLiteralNativePublication`.
+It completed at 11:24:54Z: four tests, three passes, one failure, no errors/skips.
+The source-tail witness, first-three-load seed/release/placement witness and exact
+publication-byte check pass. Whole replay fails at segment 8 source closure,
+raw 25811 (mode LEVEL, generation 11, AIZ act 1), and reports 2589 comparator
+error groups in segment 4, first movement mismatch row 6443 y (native 0x0782,
+engine 0x078D). This matches the preceding external-overlay v32 result. Matched
+baseline `911513142` with the same original inputs stops earlier at the Slots
+stage-exit boundary; later failure causality remains unattributed. No complete
+campaign or all-21-load qualification is claimed.
+
+The independent second-movie return qualifies the new Level load interval:
+129 ticks in native and engine, with the same incoming/outgoing absolute offset
+of +112. Read-only native frame-end sampling attributes the net missing 112
+services to SpecialStage startup: 113 zero-tick rows followed by one two-tick
+row, outside the implemented fresh Level phases. V35 passes one interval test,
+no skips; the earlier absolute-clock assertion remains red evidence. No fitted
+correction or gameplay/counter hydration was added. Temporary replay probes are
+removed; permanent tests retain the bounded canonical observations. See the
+[final qualification record](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md#final-bounded-qualification-and-remaining-frontiers).
+
+
+Broad smoke checkpoint on source `d827d5e9f28a` / uncommitted `911513142`:
+`python3 tools/testing/run_categories.py --base 32d4e9aae457b8aae00abd67d172a530a75d6c71 --workers 2 --headless-gl surfaceless-egl --run`
+completes 90/90 ordinary batches and 1/1 guards: 37733 tests, 135 failures,
+37 errors, 49 skips (25 allowed, 24 unclassified), no missing ROMs. All 834
+guards pass. This failed smoke selection blocks integration pending attribution
+and caused-regression repair; it does not qualify a full suite or campaign.
+
+Matched baseline `911513142` reproduces the public bonus-entry failures and
+fixed audio-reference manifest failure. It passes the fresh-boundary rewind and
+sanctuary-pedestal cases that the candidate regressed. The resumable production
+plan is now selected only after an explicit phase-admission client is installed;
+default synchronous loads retain their existing rewindable title boundary.
+No row/event/comparison value selects work. V40 focused lifecycle verification
+and the remaining matched baseline failure selection are queued. The exact
+approved companions are unchanged. TraceChaser producer `c733354` is pushed to
+its main branch with policy/history checks passing; engine commit, final affected
+guards, integration, push and cleanup remain open.
+
+
+Final qualification on uncommitted `5627fc64affb01002c31f60c6e4485c85a62baee`:
+V10 fresh guards pass 834/834, no skips; V46 both permanent Mega prefix tests
+pass; V47 S1/S2 return-prefix and ordinary boundary controls pass 12 cases;
+V48 independent Sonic-and-Tails Level return passes with interval 129 and
+unchanged incoming/outgoing +112 clock error. All use JDK 25, Lua 5.4, verified
+original ROMs and surfaceless EGL through the queued Maven wrapper. V46 selects
+`TestS3kMegaRunChain#bonusEntryRetainsRecordedTerrainReadiness+nativeLoadPhasesKeepTheirOwnReleaseClocks`
+under `-Ptrace-replay-r7`; V47 uses the short S1/S2 witnesses under
+`-Ptrace-replay`. The earlier independent temporary class is removed.
+
+The real native prefix now clears player slots and admits title initialization
+on its first actual object scan. This clears the newly compared source-tail
+player/queue errors without dropping rows or changing approved payloads. Final
+whole Mega V45 retains two later axes: ownership lost at raw 25811, and segment-4
+2589 error groups with first movement mismatch row 6443 y (0x0782/0x078D).
+Updated baseline `5627fc64a` stops at duplicate hardware service raw_frame 1124
+after its AIZ3 row-105 x mismatch, and reports 12 queue groups from returned-AIZ
+row 2025. Whole-campaign coverage remains incomplete.
+
+After narrow repairs, the remaining 32 ordinary failed cases match the same
+updated baseline by identity/type/assertion (only object hashes and set display
+order normalized). The original smoke verdict remains failed/incomplete with
+24 unclassified opt-in skips; no post-repair full smoke or release full suite
+is claimed. See the [final qualification record](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md#final-delivery-qualification-2026-11-04)
+for commands, counts, inherited classes and limits. No size budget is raised.
+
+Qualified executable source is committed as `aba50b4f7dab48ba13833a4449810db36a85b636`
+(`fix(s3k): retain native load phases and source timing ownership`). The follow-up
+qualification record changes prose only; the tested executable inputs are unchanged.

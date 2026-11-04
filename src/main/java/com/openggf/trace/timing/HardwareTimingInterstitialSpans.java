@@ -53,4 +53,37 @@ public final class HardwareTimingInterstitialSpans {
     public Map<HardwareWorkKind, RecordedOrdinalSpan> spansAfterSegment(int segmentIndex) {
         return spansByBoundary.getOrDefault(segmentIndex, Map.of());
     }
+
+    public record InitializationSlice(Map<HardwareWorkKind, RecordedOrdinalSpan> prefix,
+                                      Map<HardwareWorkKind, RecordedOrdinalSpan> remainder) { }
+
+    /** Splits ordinal receipts around dedicated input; provenance frame fields are never read. */
+    public static InitializationSlice splitInitializationReadiness(
+            Map<HardwareWorkKind, RecordedOrdinalSpan> remaining, HardwareTimingSchedule readiness) {
+        var prefix = new java.util.EnumMap<HardwareWorkKind, RecordedOrdinalSpan>(HardwareWorkKind.class);
+        var remainder = new java.util.EnumMap<HardwareWorkKind, RecordedOrdinalSpan>(HardwareWorkKind.class);
+        remainder.putAll(remaining);
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            var edges = readiness.edges().stream().filter(edge -> edge.kind() == kind).toList();
+            if (edges.isEmpty()) continue;
+            var span = remaining.get(kind);
+            long first = edges.getFirst().ordinal(), last = edges.getLast().ordinal();
+            if (span == null || span.submissionFingerprints().isEmpty() || first < span.firstOrdinal() || last > span.lastOrdinal()
+                    || last - first + 1 != edges.size())
+                throw new IllegalArgumentException("initialization readiness is outside the remaining ordinal span for " + kind);
+            int start = Math.toIntExact(first - span.firstOrdinal());
+            int end = Math.toIntExact(last - span.firstOrdinal() + 1);
+            for (int index = 0; index < edges.size(); index++) {
+                if (edges.get(index).ordinal() != first + index
+                        || !edges.get(index).submissionFingerprint().equals(span.submissionFingerprints().get(start + index)))
+                    throw new IllegalArgumentException("initialization readiness fingerprint/order differs from ordinal receipts");
+            }
+            if (start > 0) prefix.put(kind, new RecordedOrdinalSpan(span.firstOrdinal(), first - 1,
+                    span.submissionFingerprints().subList(0, start)));
+            remainder.remove(kind);
+            if (last < span.lastOrdinal()) remainder.put(kind, new RecordedOrdinalSpan(last + 1, span.lastOrdinal(),
+                    span.submissionFingerprints().subList(end, span.submissionFingerprints().size())));
+        }
+        return new InitializationSlice(Map.copyOf(prefix), Map.copyOf(remainder));
+    }
 }

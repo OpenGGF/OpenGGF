@@ -24,6 +24,19 @@ final class InitialProcessSpritesExecutor {
             ZoneFeatureProvider zoneFeatureProvider,
             AnimatedPatternManager animatedPatternManager,
             int frameCounter) {
+        executeObjectsOnly(gameModule, spriteManager, objectManager, camera,
+                zoneFeatureProvider, animatedPatternManager, frameCounter).finishImmediately();
+    }
+
+    /** Executes and closes the real initial object walk; its animation remains uncommitted. */
+    PresentationTail executeObjectsOnly(
+            GameModule gameModule,
+            SpriteManager spriteManager,
+            ObjectManager objectManager,
+            Camera camera,
+            ZoneFeatureProvider zoneFeatureProvider,
+            AnimatedPatternManager animatedPatternManager,
+            int frameCounter) {
         var original = ObjectManagerInternalAccess.captureInitialDispatch(objectManager);
         // Optional game/profile ownership: S3K Level/loc_6310 deforms the
         // initial scene before its loc_6468 player/object setup walk. This
@@ -45,11 +58,49 @@ final class InitialProcessSpritesExecutor {
                 new InitialProcessSpritesStages(dynamic, spriteManager, collision, fixed),
                 new ProcessSpritesEpoch(frameCounter, objectOrdinal, false)));
         original.requireCurrent();
-        // S3K loc_6468: Process_Sprites / Render_Sprites / Animate_Tiles precede
-        // LevelLoop. Optional semantic ownership excludes palette and frame clocks.
-        if (animatedPatternManager instanceof InitialLevelAnimationPass initialAnimation) {
-            initialAnimation.runInitialLevelAnimationPass();
-            original.requireCurrent();
+        return new PresentationTail(original::requireCurrent, () -> {
+            // S3K $648A: Animate_Tiles follows the CPU Render_Sprites pass.
+            // This semantic tail owns neither palette nor frame-clock service.
+            if (animatedPatternManager instanceof InitialLevelAnimationPass initialAnimation) {
+                initialAnimation.runInitialLevelAnimationPass();
+            }
+        });
+    }
+
+    /** No dispatch scope survives here; only its world/incarnation reservation is retained. */
+    static final class PresentationTail {
+        private enum State { NEW, PREPARING, PREPARED, CONSUMED }
+        private final Runnable requireCurrent;
+        private final Runnable animation;
+        private State state = State.NEW;
+
+        private PresentationTail(Runnable requireCurrent, Runnable animation) {
+            this.requireCurrent = requireCurrent;
+            this.animation = animation;
+        }
+
+        void prepare(Runnable cpuSpriteTable) {
+            if (state != State.NEW) throw new IllegalStateException("Initial presentation was already prepared");
+            requireCurrent.run();
+            // A failed preparation is terminal: partial presentation writes cannot retry.
+            state = State.PREPARING;
+            cpuSpriteTable.run();
+            requireCurrent.run();
+            state = State.PREPARED;
+        }
+
+        void finish() {
+            if (state != State.PREPARED) throw new IllegalStateException("Initial presentation is not prepared");
+            finishImmediately();
+        }
+
+        private void finishImmediately() {
+            if (state != State.NEW && state != State.PREPARED)
+                throw new IllegalStateException("Initial presentation tail was already consumed");
+            requireCurrent.run();
+            state = State.CONSUMED;
+            animation.run();
+            requireCurrent.run();
         }
     }
 

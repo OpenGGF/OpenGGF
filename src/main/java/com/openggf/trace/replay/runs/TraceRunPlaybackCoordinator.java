@@ -19,6 +19,7 @@ public final class TraceRunPlaybackCoordinator {
     public enum Phase {
         DESTINATION_READY,
         CURRENT_SEGMENT,
+        SOURCE_LOAD_TAIL,
         TRANSITION_GAP,
         TERMINAL_TAIL,
         COMPLETE,
@@ -28,6 +29,7 @@ public final class TraceRunPlaybackCoordinator {
     public sealed interface Action permits
             AdmitDestination,
             CloseSegment,
+            BeginSourceLoadTail,
             EnterTransitionGap,
             BeginTerminalTail,
             CompleteRun,
@@ -40,6 +42,7 @@ public final class TraceRunPlaybackCoordinator {
 
     public sealed interface PublishedIterationAction permits
             CloseSegment,
+            BeginSourceLoadTail,
             EnterTransitionGap,
             BeginTerminalTail,
             CompleteRun {
@@ -53,6 +56,11 @@ public final class TraceRunPlaybackCoordinator {
     }
 
     public record CloseSegment(int segmentIndex)
+            implements Action, PublishedIterationAction {
+    }
+
+    /** Comparison has ended; actual source rows still own queued load work. */
+    public record BeginSourceLoadTail(int sourceSegmentIndex, int destinationSegmentIndex)
             implements Action, PublishedIterationAction {
     }
 
@@ -181,6 +189,11 @@ public final class TraceRunPlaybackCoordinator {
 
     public int transitionStepCap() {
         return transitionStepCap;
+    }
+
+    /** A typed production request matched the next manifest bonus identity. */
+    public boolean hasMatchingBonusRequest() {
+        return observedBoundary instanceof RunBoundarySignal.BonusRequest;
     }
 
     /** True only for the exact production load retained for destination admission. */
@@ -324,9 +337,28 @@ public final class TraceRunPlaybackCoordinator {
     /** Closes a represented segment only after its final publication. */
     public List<Action> afterProduction(RunPlaybackObservation observation) {
         Objects.requireNonNull(observation, "observation");
+        if (phase == Phase.SOURCE_LOAD_TAIL) {
+            boolean released = destinationReady(nextSegment(), observation);
+            boolean coverageEnded = observation.sharedBk2Cursor()
+                    >= Math.addExact(currentSegment().bk2FrameOffset(),
+                            currentSegment().traceFrameCount());
+            if (!released && !coverageEnded) {
+                return List.of();
+            }
+            if (!released && !ownsCurrentSegment(observation)) {
+                return failSourceOwnership(observation);
+            }
+            phase = Phase.TRANSITION_GAP;
+            return List.of(new CloseSegment(currentSegmentIndex),
+                    new EnterTransitionGap(currentSegmentIndex, destinationIndex()));
+        }
         if (phase != Phase.CURRENT_SEGMENT
                 || !observation.currentSegmentExhausted()) {
             return List.of();
+        }
+        List<Action> retained = beginSourceLoadTail(observation);
+        if (!retained.isEmpty()) {
+            return retained;
         }
         if (!ownsCurrentSegment(observation)) {
             return failSourceOwnership(observation);
@@ -356,14 +388,42 @@ public final class TraceRunPlaybackCoordinator {
         return List.copyOf(actions);
     }
 
+    /**
+     * Retains physical source ownership only for a matching production bonus
+     * request after source gameplay comparison ended. Coverage bounds rows;
+     * it never commands production to remain in the load until the last row.
+     */
+    public List<Action> beginSourceLoadTail(RunPlaybackObservation observation) {
+        Objects.requireNonNull(observation, "observation");
+        if (phase != Phase.CURRENT_SEGMENT
+                || currentSegmentIndex >= run.segments().size() - 1
+                || !"level".equals(currentSegment().kind())
+                || !"bonus_stage".equals(nextSegment().kind())
+                || !(observedBoundary instanceof RunBoundarySignal.BonusRequest)
+                || !observation.currentSegmentExhausted()
+                || !pastRecordedLevelLoop(currentSegment(), observation)
+                || observation.sharedBk2Cursor()
+                        >= Math.addExact(currentSegment().bk2FrameOffset(),
+                                currentSegment().traceFrameCount())
+                || !ownsCurrentSegment(observation)) {
+            return List.of();
+        }
+        phase = Phase.SOURCE_LOAD_TAIL;
+        transitionStartStepOrdinal = observation.admittedStepOrdinal();
+        return List.of(new BeginSourceLoadTail(currentSegmentIndex, destinationIndex()));
+    }
+
     /** Applies the independent admitted-step timeout while playback is frozen. */
     public List<Action> afterStep(RunPlaybackObservation observation) {
         Objects.requireNonNull(observation, "observation");
-        if (phase == Phase.CURRENT_SEGMENT
+        if ((phase == Phase.CURRENT_SEGMENT || phase == Phase.SOURCE_LOAD_TAIL)
+                && !(phase == Phase.SOURCE_LOAD_TAIL
+                        && destinationReady(nextSegment(), observation))
                 && !ownsCurrentSegment(observation)) {
             return failSourceOwnership(observation);
         }
-        if (phase != Phase.TRANSITION_GAP || transitionStartStepOrdinal < 0) {
+        if ((phase != Phase.TRANSITION_GAP && phase != Phase.SOURCE_LOAD_TAIL)
+                || transitionStartStepOrdinal < 0) {
             return List.of();
         }
         long elapsed = observation.admittedStepOrdinal() - transitionStartStepOrdinal;

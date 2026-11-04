@@ -43,6 +43,26 @@ class TestGameLoopTitleCardLifecycle {
     }
 
     @Test
+    void resumedDisplayClearArmsTitleWaitBeforeAnyOrdinaryTitleService() {
+        var level = mock(LevelManager.class);
+        var frame = mock(PlcLifecycleFrame.class);
+        var title = mock(TitleCardProvider.class);
+        var gameplay = mock(GameplayModeContext.class);
+        var audio = mock(Runnable.class);
+        var lifecycle = new GameLoopTitleCardLifecycle(mock(GameLoopTitleCardLifecycle.Host.class));
+        try (var nativeLoad = org.mockito.Mockito.mockStatic(com.openggf.level.NativeLevelLoadAccess.class)) {
+            nativeLoad.when(() -> com.openggf.level.NativeLevelLoadAccess.beginTitleScan(level))
+                    .thenReturn(new com.openggf.level.NativeLevelLoadAccess.TitleScan(true, false, false));
+            org.junit.jupiter.api.Assertions.assertFalse(lifecycle.update(false, title, frame, gameplay,
+                    level, null, null, null, PostTitleCardDestination.LEVEL,
+                    audio, audio, phase -> org.junit.jupiter.api.Assertions.fail("title service before Wait_VSync"),
+                    (name, step) -> org.junit.jupiter.api.Assertions.fail("object pass before Wait_VSync")));
+            nativeLoad.verify(() -> com.openggf.level.NativeLevelLoadAccess.beginTitleScan(level));
+            org.mockito.Mockito.verifyNoInteractions(frame, title, gameplay, audio);
+        }
+    }
+
+    @Test
     void s1ReleasePreludeTransferBelongsToLoadTailAndSurvivesRewind() {
         // Level_Delay's four VBlanks plus PalFadeIn_Alt's twenty-two precede
         // Level_MainLoop (S1 sonic.asm:2956-2966), after Level_LoadObj stages art.

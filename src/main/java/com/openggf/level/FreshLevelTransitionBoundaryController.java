@@ -13,6 +13,7 @@ import java.util.List;
 final class FreshLevelTransitionBoundaryController {
     private Boundary pending;
     private boolean initialPublished;
+    private boolean nativeContinuationPending;
 
     void load(LevelManager level, int zone, int act) throws IOException {
         boolean completed = false;
@@ -25,7 +26,7 @@ final class FreshLevelTransitionBoundaryController {
     }
 
     private void loadBoundary(LevelManager level, int zone, int act) throws IOException {
-        if (pending != null) {
+        if (pending != null || nativeContinuationPending) {
             throw new IllegalStateException("a fresh title-card transition boundary is already pending");
         }
         short previousCameraX = level.camera.getX();
@@ -33,6 +34,12 @@ final class FreshLevelTransitionBoundaryController {
         int previousRings = level.levelGamestate != null ? level.levelGamestate.getRings() : 0;
 
         level.loadZoneAndActWithTitleCard(zone, act);
+        if (NativeLevelLoadAccess.isPending(level)) {
+            // The destination has not assembled players yet. Capturing their
+            // source states here would later overwrite the real native assembly.
+            nativeContinuationPending = true;
+            return;
+        }
         if (!level.getTransitions().isTitleCardRequested()) {
             // A game-owned continuation can bypass the title loop entirely.
             // Keep the destination assembly; there is no title owner to publish
@@ -83,6 +90,16 @@ final class FreshLevelTransitionBoundaryController {
         if (level.levelGamestate != null) {
             level.levelGamestate.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(level, previousRings));
         }
+        clearPlayableSlots(level);
+        var initialPass = level.capturePendingInitialProcessSpritesLifecycleForRewind();
+        level.discardPendingInitialProcessSpritesForStateRestoration();
+        pending = new Boundary(destinationCameraX, destinationCameraY, destinationRings,
+                playableStates, initialPass);
+        initialPublished = false;
+    }
+
+    /** loc_60DE clears native player slots before the locked title loop. */
+    static void clearPlayableSlots(LevelManager level) {
         AbstractPlayableSprite player = mainPlayable(level);
         if (player != null) {
             player.setRolling(false);
@@ -107,11 +124,6 @@ final class FreshLevelTransitionBoundaryController {
             sidekick.setAir(false);
             sidekick.setNativeSlotPresent(false);
         }
-        var initialPass = level.capturePendingInitialProcessSpritesLifecycleForRewind();
-        level.discardPendingInitialProcessSpritesForStateRestoration();
-        pending = new Boundary(destinationCameraX, destinationCameraY, destinationRings,
-                playableStates, initialPass);
-        initialPublished = false;
     }
 
     void complete(LevelManager level) {
@@ -120,6 +132,11 @@ final class FreshLevelTransitionBoundaryController {
 
     /** {@link #complete}, reporting whether loc_6468's initial pass ran. */
     boolean completeReportingInitialPass(LevelManager level) {
+        if (nativeContinuationPending) {
+            NativeLevelLoadAccess.requireComplete(level);
+            nativeContinuationPending = false;
+            return false;
+        }
         if (pending == null) {
             return false;
         }
@@ -179,14 +196,19 @@ final class FreshLevelTransitionBoundaryController {
     }
 
     boolean isPending() {
-        return pending != null;
+        return pending != null || nativeContinuationPending;
     }
 
+    void abortNativeContinuation() { nativeContinuationPending = false; }
+    void completeNativeContinuation() { nativeContinuationPending = false; }
+
     RewindState captureForRewind() {
+        if (nativeContinuationPending) throw new IllegalStateException("Active native Level load cannot be captured");
         return new RewindState(pending, initialPublished);
     }
 
     void restoreForRewind(RewindState state) {
+        if (nativeContinuationPending) throw new IllegalStateException("Active native Level load cannot be restored");
         java.util.Objects.requireNonNull(state, "state");
         pending = state.pending();
         initialPublished = state.initialPublished();

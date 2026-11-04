@@ -166,6 +166,25 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     @Override
+    public void beginInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+            HardwareTimingSchedule readiness,
+            java.util.Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+        hardwareTimingReplayPort.beginInitializationGapReplay(row, readiness, prefix);
+    }
+
+    @Override
+    public void beginInitializationGapFrame(int rawFrame) {
+        hardwareTimingReplayPort.beginRawFrame(rawFrame);
+    }
+
+    @Override
+    public void endInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+        hardwareTimingReplayPort.endInitializationGapReplay(row);
+    }
+
+    @Override
     public void beginTraceRow(int traceIndex, int rawFrame) {
         runner.beginTraceRow(traceIndex, rawFrame);
     }

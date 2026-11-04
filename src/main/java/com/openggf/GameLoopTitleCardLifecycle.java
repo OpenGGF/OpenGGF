@@ -70,26 +70,9 @@ final class GameLoopTitleCardLifecycle {
             Runnable advanceAudioFrame,
             Consumer<PlcLifecyclePhase> preparePhase,
             LevelFrameStep.StepWrapper wrapper) {
-        frame.claim(PlcLifecyclePhase.LEVEL_TITLE_CARD);
-        LevelFrameContext frameContext = LevelFrameContext.from(gameplayMode);
-        // The title-card loop owns a real VBlank even when it does not run the
-        // ordinary player/object body, and several of its branches never reach
-        // a LevelFrameStep edge. Dispatch the game-owned hook here so every
-        // branch services it exactly once; the token's guard makes the later
-        // LevelFrameStep dispatches on the physics branch no-ops. This adds no
-        // hardware service boundary -- VINT_SERVICE stays owned by
-        // LevelFrameStep alone.
-        LevelFrameStep.dispatchGameVBlank(frameContext, frame);
-        // This caller claimed the title token before querying its provider;
-        // the external scan only prepares a token it claimed itself.
-        // The world-bound operation is resolved inside the object scan, after its
-        // VBlank service, so callbacks can replace the world before dispatch.
-        // A failed scan or a phase owned by a fade cannot prepare a title tail.
-        // Ordinary providers still update without a hardware service boundary;
-        // only successful hardware scans suppress the caller's later preparation.
-        boolean preparedByFrameStep =
-                GameLoopPlcLifecycle.updateTitleCardProvider(
-                        frameContext, frame, titleCard, gameplayMode);
+        var loadScan = GameLoopPlcLifecycle.scanTitleLoad(titleCard, frame, gameplayMode, levelManager);
+        if (loadScan.parked()) return false;
+        boolean preparedByFrameStep = loadScan.preparedByFrameStep();
 
         // Publish while the provider still owns its fresh mode; completing
         // the title handoff below clears that mode and its terrain-ready gate.
@@ -101,16 +84,8 @@ final class GameLoopTitleCardLifecycle {
         }
 
         if (titleCard == null || titleCard.shouldCompleteFreshLevelTransitionBoundary()) {
-            if (preparedByFrameStep
-                    && titleCard instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication loadLoop
-                    && loadLoop.releaseScanServicesLoadLoopVBlank()) {
-                // This hardware-timed scan is the final loc_7870 iteration:
-                // Process_Kos_Queue, Wait_VSync, then Process_Kos_Module_Queue
-                // retires the last terrain module (sonic3k.asm:9772-9782). Its
-                // V-int has been serviced; count it like any locked iteration.
-                levelManager.advanceTitleCardVblankOnly();
-            }
-            int preludePasses = titleCard != null ? runReleasePrelude(titleCard, frameContext, gameplayMode, levelManager) : 0;
+            int preludePasses = titleCard != null
+                    ? runReleasePrelude(titleCard, loadScan, gameplayMode, levelManager) : 0;
             if (!preparedByFrameStep) {
                 preparePhase.accept(PlcLifecyclePhase.LEVEL_TITLE_CARD);
             }
@@ -147,7 +122,7 @@ final class GameLoopTitleCardLifecycle {
                 levelManager.updateObjectPositions();
                 camera.updatePosition(true);
             } else if (titleCard.shouldAdvanceVblankClockDuringLockedPhase()) {
-                levelManager.advanceTitleCardVblankOnly();
+                if (!loadScan.clockOwned()) levelManager.advanceTitleCardVblankOnly();
             } else {
                 camera.updatePosition(true);
             }
@@ -173,8 +148,15 @@ final class GameLoopTitleCardLifecycle {
      * Level/loc_64DC hands the surviving title owner to LevelLoop with a
      * rewritten wait timer after the title and terrain queues drain.
      */
-    private int runReleasePrelude(TitleCardProvider titleCard, LevelFrameContext frameContext,
+    private int runReleasePrelude(TitleCardProvider titleCard, GameLoopPlcLifecycle.TitleLoadScan scan,
             GameplayModeContext gameplayMode, LevelManager levelManager) {
+        if (scan.preparedByFrameStep() && !scan.clockOwned()
+                && titleCard instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication loadLoop
+                && loadLoop.releaseScanServicesLoadLoopVBlank()) {
+            // loc_7870's final Wait_VSync is already counted by a native load
+            // scan before its queue tail; legacy scans count that release here.
+            levelManager.advanceTitleCardVblankOnly();
+        }
         titleCard.completeFreshLevelRuntimeArtHandoff();
         int preludePasses = titleCard.levelObjectPreludePassesAtRelease();
         boolean ranPlayerPrelude = false;
@@ -187,7 +169,7 @@ final class GameLoopTitleCardLifecycle {
             levelManager.updateObjectPositionsWithoutTouches();
         }
         if (ranPlayerPrelude) {
-            LevelInitProfile initProfile = frameContext.gameModule().getLevelInitProfile();
+            LevelInitProfile initProfile = scan.frameContext().gameModule().getLevelInitProfile();
             DynamicArtLifecycleService artLifecycle = gameplayMode.dynamicArtLifecycle();
             int tailRows = initProfile != null
                     ? initProfile.preLevelMainLoopDelayFrames() : 0;
@@ -202,6 +184,7 @@ final class GameLoopTitleCardLifecycle {
         }
         return preludePasses;
     }
+
 
     void enterTitleCard(int zoneIndex, int actIndex) {
         if (host.currentMode() != GameMode.LEVEL) {

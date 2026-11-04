@@ -105,6 +105,11 @@ final class GameLoopBonusStageSession {
         BonusStageState savedState = capture.savedState();
         pendingBonusReturnStarPostMark = capture.pendingStarPostActivationMark();
 
+        beginBonusEntryFade(provider, type, savedState);
+    }
+
+    private void beginBonusEntryFade(BonusStageProvider provider, BonusStageType type,
+                                     BonusStageState savedState) {
         // Fade out music
         audioManager.fadeOutMusic();
 
@@ -172,7 +177,7 @@ final class GameLoopBonusStageSession {
         int zone = (zoneId >> 8) & 0xFF;
         int act = zoneId & 0xFF;
 
-        TitleSource source = captureTitleSource();
+        BonusStageTitleBoundary source = BonusStageTitleBoundary.capture(host);
         try {
             // Suppress auto-music: bonus music plays later in applyDeferredBonusStageSetup
             host.level().setSuppressNextMusicChange(true);
@@ -193,14 +198,20 @@ final class GameLoopBonusStageSession {
         }
         GameMode oldMode = host.enterBonusTitleCardAfterLevelLoadBoundary();
 
-        prepareBonusStageForTitleCard(type, savedState);
+        com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(host.level(),
+                () -> prepareBonusStageForTitleCard(type, savedState));
 
         // Defer bonus-stage-specific setup to exitTitleCard() when the title card completes
         deferredBonusProvider = provider;
 
+        com.openggf.level.NativeLevelLoadAccess.afterTitlePrefix(host.level(),
+                () -> initializeBonusTitle(provider, type, zoneId, oldMode, source));
+    }
+
+    private void initializeBonusTitle(BonusStageProvider provider, BonusStageType type, int zoneId, GameMode oldMode, BonusStageTitleBoundary source) {
         // Initialize the bonus title card
         TitleCardProvider tcp = host.titleCard();
-        holdDestinationPlayersForTitleCard(tcp, source);
+        source.holdDestinationPlayers(host, tcp);
         if (tcp != null) {
             tcp.initializeBonus();
         }
@@ -357,7 +368,7 @@ final class GameLoopBonusStageSession {
         // Restore previous zone
         int zone = (savedState.savedZoneAndAct() >> 8) & 0xFF;
         int act = savedState.savedZoneAndAct() & 0xFF;
-        TitleSource source = captureTitleSource();
+        BonusStageTitleBoundary source = BonusStageTitleBoundary.capture(host);
 
         try {
             // Arm Level_FromSavedGame and suppress auto-music before preparing the
@@ -365,46 +376,53 @@ final class GameLoopBonusStageSession {
             bonusStageTransitionCoordinator.prepareReturnLoad(host::level, savedState);
             // Publish the return cause immediately before the synchronous load.
             TraceSessionLauncher.markNextRunInteriorReturnLoad();
-            host.level().loadZoneAndAct(zone, act);
-            // Consume the auto-generated title card request — we initialize it ourselves below
-            host.level().consumeTitleCardRequest();
+            loadBonusReturn(zone, act, savedState);
         } catch (IOException e) {
             throw new RuntimeException("Failed to reload level after bonus stage", e);
         } finally {
-            host.level().clearBonusStageReturn();
+            // The return bank remains owned by the attempted assembly through
+            // Get_LevelSizeStart/ScreenInit, including a held display prefix.
+            var cleanupLevel = host.level();
+            com.openggf.level.NativeLevelLoadAccess.afterAttempt(cleanupLevel, cleanupLevel::clearBonusStageReturn);
         }
 
-        var sprite = host.sprites().getSprite(host.mainCharacterCode());
-        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
-                ? candidate
-                : null;
-        ShieldType shieldToRestore = playable != null
-                ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary())
-                : null;
-        if (playable != null) {
-            pendingBonusStageShieldRestore = shieldToRestore;
-        }
-        bonusStageTransitionCoordinator.restoreReturnState(
-                host.level(),
-                host.camera(),
-                host.water(),
-                playable,
-                host.module().getLevelEventProvider(),
-                savedState,
-                pendingBonusReturnStarPostMark,
-                interiorExitRingCount,
-                shieldToRestore,
-                rewards,
-                host.gameState()::addLife);
+        int returnStarPostMark = pendingBonusReturnStarPostMark;
         pendingBonusReturnStarPostMark = -1;
-
-        TitleCardProvider tcp = prepareReturnTitleCard(savedState, source);
+        com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(host.level(), () -> {
+            var sprite = host.sprites().getSprite(host.mainCharacterCode());
+            AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate ? candidate : null;
+            ShieldType shieldToRestore = playable != null
+                    ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary()) : null;
+            if (playable != null) pendingBonusStageShieldRestore = shieldToRestore;
+            bonusStageTransitionCoordinator.restoreReturnState(
+                    host.level(), host.camera(), host.water(), playable,
+                    host.module().getLevelEventProvider(), savedState,
+                    returnStarPostMark, interiorExitRingCount, shieldToRestore,
+                    rewards, host.gameState()::addLife);
+        });
 
         // Enter TITLE_CARD mode — exitTitleCard will transition to LEVEL
         host.titleDestination(PostTitleCardDestination.LEVEL);
         GameMode oldMode = host.changeMode(GameMode.TITLE_CARD);
         host.lockTitleControls(true);
 
+        com.openggf.level.NativeLevelLoadAccess.afterTitlePrefix(host.level(),
+                () -> initializeReturnTitle(savedState, source, oldMode));
+        LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
+    }
+
+    private void loadBonusReturn(int zone, int act, BonusStageState savedState) throws IOException {
+        host.level().loadZoneAndAct(zone, act);
+        // loc_6034 / loc_2D2C2 restore Saved2_apparent_zone_and_act
+        // (sonic3k.asm:7580-7582,61835-61838). The caller-owned title holds
+        // this load before ScreenInit; retain the saved apparent act there.
+        host.level().setApparentAct(savedState.savedApparentZoneAndAct() & 0xFF);
+        // The caller initializes the return title after its actual prefix is ready.
+        host.level().consumeTitleCardRequest();
+    }
+
+    private void initializeReturnTitle(BonusStageState savedState, BonusStageTitleBoundary source, GameMode oldMode) {
+        TitleCardProvider tcp = prepareReturnTitleCard(savedState, source);
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
         host.level().playCurrentLevelMusic();
 
@@ -412,42 +430,19 @@ final class GameLoopBonusStageSession {
         GameLoopPlcLifecycle.revealLevelRoutineEntry(host.resolvedGameplayContext(), host.fade(), tcp);
 
         host.notifyModeChanged(oldMode);
-        LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
     }
 
-    private TitleCardProvider prepareReturnTitleCard(BonusStageState savedState, TitleSource source) {
+    private TitleCardProvider prepareReturnTitleCard(BonusStageState savedState, BonusStageTitleBoundary source) {
         // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
         // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
         int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
         int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
         TitleCardProvider tcp = host.titleCard();
-        holdDestinationPlayersForTitleCard(tcp, source);
+        source.holdDestinationPlayers(host, tcp);
         if (tcp != null) {
             tcp.initialize(apparentZone, apparentAct);
         }
         return tcp;
-    }
-
-    /** Stack-local source presentation retained until the destination title loop hands over. */
-    private record TitleSource(short cameraX, short cameraY, int rings) { }
-
-    private TitleSource captureTitleSource() {
-        short cameraX = host.camera().getX();
-        short cameraY = host.camera().getY();
-        int rings = host.level().getLevelGamestate() != null
-                ? host.level().getLevelGamestate().getRings() : 0;
-        return new TitleSource(cameraX, cameraY, rings);
-    }
-
-    private void holdDestinationPlayersForTitleCard(TitleCardProvider titleCard, TitleSource source) {
-        if (titleCard instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication) {
-            // Entries and returns both re-enter Level: loc_60DE clears object RAM,
-            // loc_6310 places players after the title loop, and loc_6468 creates
-            // them (sonic3k.asm:7649-7651, 7789-7792, 7880-7915). Hold the
-            // caller's destination placement and preserve the source camera/HUD.
-            com.openggf.level.FreshLevelBoundaryAccess.beginAfterSetup(
-                    host.level(), source.cameraX(), source.cameraY(), source.rings());
-        }
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {

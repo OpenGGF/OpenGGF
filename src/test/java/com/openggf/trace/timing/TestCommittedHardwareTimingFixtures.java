@@ -237,6 +237,17 @@ class TestCommittedHardwareTimingFixtures {
                             "ICZ act/zone transition"));
 
     @Test
+    void approvedInitializationCompanionsMatchLiteralNativePublication() throws Exception {
+        // Native producer 80218a0; exact files approved on 2026-11-04.
+        // These literals pin captured bytes, independently of recorder execution.
+        Path run = FIXTURE_ROOT.resolve("runs/s3-knux-multibonus-ss");
+        assertFile(run.resolve("initialization_timing.jsonl.gz"),
+                "22081bbc0c403c4324d5c1bfda678f1c99871d352e335a503f9178684307b1a9", 6912);
+        assertFile(run.resolve("initialization_hardware_timing.jsonl.gz"),
+                "f331b54a3025395aeb4b0890b5b71885db0194d084b01f890d24c5e583c54b82", 1791);
+    }
+
+    @Test
     void approvedFleetMatchesFrozenPublicationEvidence() throws Exception {
         Set<String> observedDestinations = new HashSet<>();
         List<RunManifestExpectation> runManifests = new ArrayList<>();

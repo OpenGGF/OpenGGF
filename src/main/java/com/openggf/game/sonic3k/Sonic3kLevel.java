@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -111,6 +112,19 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
     private int bgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
     private final List<Integer> patternLoadCueSchedule;
     private final TerrainArtSources terrainArtSources;
+
+    private enum TerrainMaterializationState { COMPLETE, PENDING, MATERIALIZING, FAILED }
+    private TerrainMaterializationState terrainMaterializationState = TerrainMaterializationState.COMPLETE;
+    private DeferredTerrain deferredTerrain;
+
+    /** Already-resolved cartridge inputs; no live saved-entry flags are consulted at resume. */
+    private record DeferredTerrain(RomByteReader rom, LevelResourcePlan plan,
+            int primaryCollisionAddress, int secondaryCollisionAddress, boolean interleavedCollision,
+            int layoutAddress, byte[] retainedBlocks, ResidentChunkPatterns retainedChunks) {
+        private DeferredTerrain {
+            retainedBlocks = retainedBlocks.clone();
+        }
+    }
 
     /** ROM LoadLevelLoadBlock selection retained with the loaded level, including rewind. */
     record TerrainArtSources(int primary, int secondary) { }
@@ -283,6 +297,21 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
                 terrainArtSources, retainedPatterns, retainedBlocks, retainedChunks, CollisionProfile.lockedOn());
     }
 
+    /** Constructs only the native pre-terrain prefix when materialization is deferred. */
+    Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
+            ResidentChunkPatterns retainedChunks, boolean deferTerrainMaterialization) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                terrainArtSources, retainedPatterns, retainedBlocks, retainedChunks,
+                CollisionProfile.lockedOn(), deferTerrainMaterialization);
+    }
+
     private Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
             int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
             int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
@@ -290,6 +319,20 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
             List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
             TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
             ResidentChunkPatterns retainedChunks, CollisionProfile collisionProfile) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                terrainArtSources, retainedPatterns, retainedBlocks, retainedChunks, collisionProfile, false);
+    }
+
+    private Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
+            ResidentChunkPatterns retainedChunks, CollisionProfile collisionProfile,
+            boolean deferTerrainMaterialization) throws IOException {
         super(zoneIndex);
         collisionRomPrefix = rom.readBytes(0, 0x8000);
         collisionIndexEncoding = collisionProfile.indexEncoding();
@@ -306,13 +349,79 @@ public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.inte
         loadPalettes(rom, characterPaletteAddr, levelPaletteAddr);
         loadPatternsWithPlan(rom, resourcePlan, retainedPatterns);
         loadSolidTiles(rom, collisionProfile);
-        loadChunksWithCollision(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+        if (deferTerrainMaterialization) {
+            // Retain the immutable logical cartridge, never a file-owned Rom scope.
+            // Decoding (including cache lookups) remains behind the explicit resume.
+            deferredTerrain = new DeferredTerrain(RomByteReader.fromRom(rom), resourcePlan,
+                    primaryCollisionAddr, secondaryCollisionAddr, interleavedCollision,
+                    layoutAddr, retainedBlocks, Objects.requireNonNull(retainedChunks));
+            terrainMaterializationState = TerrainMaterializationState.PENDING;
+            chunks = new Chunk[0];
+            blocks = new Block[0];
+            loadBoundaries(rom, levelBoundariesAddr);
+        } else {
+            loadTerrain(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                    interleavedCollision, layoutAddr, retainedBlocks, retainedChunks);
+            loadBoundaries(rom, levelBoundariesAddr);
+            validateResourceReferences();
+        }
+    }
+
+    /** True until terrain was successfully decoded and validated, including a terminal failure. */
+    public synchronized boolean hasPendingTerrainMaterialization() {
+        return terrainMaterializationState != TerrainMaterializationState.COMPLETE;
+    }
+
+    /**
+     * Runs the selected terrain decode once, after the caller's native terrain-ready gate.
+     * Repeated successful calls are inert. A failed decode is terminal: discard this level.
+     */
+    public synchronized void materializeTerrain() throws IOException {
+        if (terrainMaterializationState == TerrainMaterializationState.COMPLETE) {
+            return;
+        }
+        if (terrainMaterializationState != TerrainMaterializationState.PENDING) {
+            throw new IllegalStateException("S3K terrain materialization cannot resume from "
+                    + terrainMaterializationState);
+        }
+        terrainMaterializationState = TerrainMaterializationState.MATERIALIZING;
+        DeferredTerrain input = deferredTerrain;
+        try (Rom terrainRom = Rom.fromReader(input.rom(), "Deferred S3K terrain")) {
+            loadTerrain(terrainRom, input.plan(), input.primaryCollisionAddress(),
+                    input.secondaryCollisionAddress(), input.interleavedCollision(),
+                    input.layoutAddress(), input.retainedBlocks(), input.retainedChunks());
+            validateResourceReferences();
+        } catch (IOException | RuntimeException | Error failure) {
+            // Do not expose a partly decoded terrain or let a retry reuse its writes.
+            chunks = new Chunk[0];
+            blocks = new Block[0];
+            chunkCount = 0;
+            blockCount = 0;
+            map = null;
+            collisionLayout = null;
+            primaryCollisionIndexTable = new byte[0];
+            secondaryCollisionIndexTable = new byte[0];
+            Arrays.fill(backgroundCollisionRows, false);
+            fgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
+            fgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
+            bgLayoutWidthBlocks = Sonic3kConstants.MAP_WIDTH;
+            bgLayoutHeightBlocks = Sonic3kConstants.MAP_HEIGHT;
+            terrainMaterializationState = TerrainMaterializationState.FAILED;
+            throw failure;
+        } finally {
+            deferredTerrain = null;
+        }
+        terrainMaterializationState = TerrainMaterializationState.COMPLETE;
+    }
+
+    private void loadTerrain(Rom rom, LevelResourcePlan plan, int primaryCollisionAddr,
+            int secondaryCollisionAddr, boolean interleavedCollision, int layoutAddr,
+            byte[] retainedBlocks, ResidentChunkPatterns retainedChunks) throws IOException {
+        loadChunksWithCollision(rom, plan, primaryCollisionAddr, secondaryCollisionAddr,
                 interleavedCollision);
         retainUnwrittenChunkPatterns(retainedChunks);
-        loadBlocksWithPlan(rom, resourcePlan, retainedBlocks);
+        loadBlocksWithPlan(rom, plan, retainedBlocks);
         loadMap(rom, layoutAddr);
-        loadBoundaries(rom, levelBoundariesAddr);
-        validateResourceReferences();
     }
 
     /** Starts construction from already bounded, validated S3K v2 export payloads. */

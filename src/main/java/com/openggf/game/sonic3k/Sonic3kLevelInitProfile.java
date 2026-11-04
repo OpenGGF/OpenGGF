@@ -26,9 +26,11 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         implements com.openggf.game.internal.LevelMotionPresentation, com.openggf.game.internal.QueuedPatternDmaPublication,
         com.openggf.game.internal.SpriteTablePublication,
-        com.openggf.game.internal.InitialLevelScrollPreparation {
+        com.openggf.game.internal.InitialLevelScrollPreparation,
+        com.openggf.game.internal.NativeFreshLevelLoadProfile {
     private final Sonic3kLevelEventManager levelEventManager;
     private final Sonic3kFreshTitleCardSst freshTitleCardSst = new Sonic3kFreshTitleCardSst();
+    private boolean nativeLoadScrollPrepared;
 
     private static final class FreshPhysicalClear implements Runnable {
         private final Sonic3kLevelInitProfile profile;
@@ -46,6 +48,168 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
         this.levelEventManager = levelEventManager;
+    }
+
+    @Override
+    public boolean continuesResultsLoadAfterFadeWait() {
+        // SpecialStage_Results returns to Level; loc_5FF6's Pal_FadeToBlack
+        // returns directly into loc_6000 (sonic3k.asm:7555-7568).
+        return true;
+    }
+
+    @Override
+    public com.openggf.game.internal.NativeLevelLoadPlan freshLevelLoadPlan(LevelLoadContext ctx) {
+        var manager = GameServices.level();
+        // Ordinary loads retain their synchronous assembly and rewindable title
+        // boundary. An explicitly installed production phase client selects the
+        // resumable execution of the same ROM work before any row is consulted.
+        if (!com.openggf.level.NativeLevelLoadAccess.hasPhaseAdmission(manager)) return null;
+        var bonus = GameServices.bonusStageOrNull();
+        boolean bonusActive = bonus != null && bonus.getActiveType() != null
+                && bonus.getActiveType() != com.openggf.game.BonusStageType.NONE;
+        boolean callerOwnedTitle = manager.isBonusStageReturn()
+                || manager.getTransitions().isResultsReturnCardOwnedByCaller() || bonusActive;
+        boolean nativeEntry = ctx.isQueueFreshLevelRuntimeArt() || callerOwnedTitle;
+        if (!ctx.permitsInitialProcessSpritesRequest() || !nativeEntry
+                || com.openggf.level.LevelContinuationCarry.bypassesInitialPresentation(manager)
+                || GameServices.module().getZoneRegistry().modZoneRuntimeContribution(ctx.getLevelIndex()) != null
+                || com.openggf.game.competition.NativeCompetitionRoster.from(manager.getWorldSession()) != null)
+            return null;
+        // Standalone headless loads omit the locked title loop. Keep their
+        // immediate path; production handoffs explicitly retain its owner.
+        if (!callerOwnedTitle && !com.openggf.level.NativeLevelLoadAccess.retainsTitlePresentation(manager, ctx))
+            return null;
+        // Eligible continuations retain the real title owner even when its
+        // pixels are omitted; standalone headless loads returned above.
+        ctx.setTitleCardRequiredInHeadlessMode(true);
+        nativeLoadScrollPrepared = false;
+        try {
+            var rom = manager.getWorldSession().getDataSource().rom().orElseThrow();
+            var selected = new Sonic3k(rom).selectFreshLevelLoad(ctx.getLevelIndex());
+            var selectedSst = freshTitleCardSst.select(ctx);
+            Runnable defaultTitleRequest = com.openggf.level.NativeLevelLoadAccess.selectTitleRequest(manager, ctx);
+            Runnable selectedTitleRequest = () -> {
+                defaultTitleRequest.run();
+                // The host already installed a bonus/results return card.
+                // Retain its native handoff, without queuing a second card.
+                if (callerOwnedTitle) manager.consumeTitleCardRequest();
+            };
+            var byName = new java.util.LinkedHashMap<String, InitStep>();
+            for (var step : levelLoadSteps(ctx)) byName.put(step.name(), step);
+            byName.put("PrepareFreshTitleCardSst", new InitStep("PrepareFreshTitleCardSst",
+                    "loc_62B6: original immutable title installation selection", () -> freshTitleCardSst.prepare(selectedSst)));
+            byName.put("RequestTitleCard", new InitStep("RequestTitleCard",
+                    "loc_62B6: original caller-owned presentation selection", selectedTitleRequest));
+            java.util.function.Function<String, InitStep> step = name -> java.util.Objects.requireNonNull(byName.get(name), name);
+            var sections = new java.util.ArrayList<com.openggf.game.internal.NativeLevelLoadPlan.Section>();
+            boolean[] waitsForTitle = {true};
+            sections.add(new com.openggf.game.internal.NativeLevelLoadPlan.Section(
+                    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.DISPLAY_CLEAR,
+                    selected::displayInputs, () -> true,
+                    List.of(step.apply("ClearFreshPhysicalDisplayRam")), List.of()));
+            sections.add(com.openggf.game.internal.NativeLevelLoadPlan.Section.steps(List.of(
+                    new InitStep("ClearNativeLevelFrameCounter", "loc_6000: clear Level_frame_counter after display unmask", () -> {
+                        manager.setFrameCounter(0); GameServices.sprites().setFrameCounter(0);
+                    }),
+                    step.apply("ClearFreshLevelRng"), step.apply("ResetFreshLevelDmaQueue"),
+                    step.apply("PrepareFreshTitleCardSst"), step.apply("InitGameModule"),
+                    step.apply("SubmitFreshLevelTitlePlcs"), step.apply("InitAudio"),
+                    ioStep("LoadNativeLevelPrefix", "Level prefix retains sources; terrain remains behind loc_7870", () -> {
+                        var level = ((Sonic3k) manager.getGame()).loadFreshLevelPrefix(ctx.getLevelIndex(), selected);
+                        ctx.setLevel(level);
+                        com.openggf.level.NativeLevelLoadAccess.installPrefix(manager, level);
+                    }),
+                    step.apply("InitAnimatedContent"),
+                    ioStep("InstallTitleOnlyObjectSystem", "loc_62B6 precedes Load_Sprites", () -> {
+                        freshTitleCardSst.beginPrefixOnly();
+                        manager.initObjectManager();
+                        manager.getObjectManager().reset(GameServices.camera().getX());
+                    }), new InitStep("PrepareNativeTitleArtAdmission", "Prepare the selected object-art lease before Obj_TitleCard binds it", () ->
+                            com.openggf.level.NativeLevelLoadAccess.initializeObjectArt(manager)),
+                    step.apply("InitWater"), step.apply("RequestTitleCard"),
+                    new InitStep("SelectNativeTitleLoop", "loc_62B6: retain actual title request or caller-owned bonus card", () -> {
+                        waitsForTitle[0] = manager.getTransitions().isTitleCardRequested()
+                                || callerOwnedTitle;
+                    }))));
+            sections.add(com.openggf.game.internal.NativeLevelLoadPlan.Section.waitFor(() ->
+                    !waitsForTitle[0] || title().nativeFreshTitleWaitComplete()));
+            var cameraAndTerrain = new java.util.ArrayList<InitStep>();
+            cameraAndTerrain.add(new InitStep("ClearNativePlayerBodyBeforeStart", "loc_60DE Object_RAM clear precedes Get_PlayerStart", () ->
+                    com.openggf.level.NativeLevelLoadAccess.preparePlayerStart(manager)));
+            cameraAndTerrain.add(step.apply("SpawnPlayer"));
+            cameraAndTerrain.add(step.apply("InitCamera"));
+            cameraAndTerrain.add(new InitStep("PrepareNativeInitialScroll", "loc_6310: Get_LevelSizeStart then DeformBgLayer", () -> {
+                prepareInitialLevelScroll(); nativeLoadScrollPrepared = true;
+            }));
+            if (byName.containsKey("RetainFreshWaterNemesisSchedule")) cameraAndTerrain.add(step.apply("RetainFreshWaterNemesisSchedule"));
+            cameraAndTerrain.add(ioStep("QueueNativeLevelTerrain", "LoadLevelLoadBlock before loc_7870", () -> {
+                if (waitsForTitle[0]) title().beginNativeFreshTerrainAfterQueueTail();
+                else manager.getGame().queueFreshLevelRuntimeArt(ctx.getLevelIndex());
+            }));
+            sections.add(com.openggf.game.internal.NativeLevelLoadPlan.Section.steps(cameraAndTerrain));
+            sections.add(com.openggf.game.internal.NativeLevelLoadPlan.Section.waitFor(() ->
+                    !S3kRuntimeArtCoordinator.current().freshLevelArtWaitsForModuleQueue()));
+            sections.add(new com.openggf.game.internal.NativeLevelLoadPlan.Section(
+                    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.LEVEL_DATA_DECODE,
+                    selected::dataInputs, () -> true,
+                    List.of(ioStep("MaterializeNativeTerrain", "loc_6310: LoadLevelLoadBlock2", () -> {
+                        ((Sonic3kLevel) ctx.getLevel()).materializeTerrain();
+                        com.openggf.level.NativeLevelLoadAccess.terrainMaterialized(manager);
+                    })), List.of()));
+            sections.add(new com.openggf.game.internal.NativeLevelLoadPlan.Section(
+                    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.LEVEL_SETUP,
+                    selected::setupInputs, () -> true,
+                    List.of(step.apply("InitZoneFeatures"), step.apply("InitLevelEvents"), step.apply("InitBackgroundRenderer")),
+                    List.of(new InitStep("InstallPostTitleFixedObjects", "loc_638E..63A4: fixed water/pollen before SpawnLevelMainSprites", () ->
+                            com.openggf.level.objects.ObjectManagerInternalAccess.installDeferredFixedLevelObjects(manager.getObjectManager())))));
+            var assembly = new java.util.ArrayList<InitStep>();
+            assembly.add(step.apply("InitGameplayState"));
+            assembly.add(new InitStep("PrepareNativePlayableArt", "SpawnLevelMainSprites owns player DPLC initialization", () ->
+                    com.openggf.level.NativeLevelLoadAccess.initializePlayableArt(manager)));
+            for (String name : List.of("InitPlayerAndCheckpoint", "PublishNativeCpuSavedEntryFlag",
+                    "RestoreCheckpoint", "ResetPlayerState", "SpawnSidekick", "InitZonePlayerState", "InitRings", "RequestInitialProcessSprites"))
+                assembly.add(step.apply(name));
+            assembly.add(new InitStep("PublishNativePlayerAssembly", "SpawnLevelMainSprites precedes Load_Sprites", () ->
+                    com.openggf.level.NativeLevelLoadAccess.playerAssemblyReady(manager)));
+            assembly.add(new InitStep("PrepareNativeInitialPlacement", "loc_6468: SpawnLevelMainSprites, Load_Sprites and Load_Rings before Process_Sprites", () ->
+                    com.openggf.level.NativeLevelLoadAccess.prepareInitialObjects(manager)));
+            sections.add(new com.openggf.game.internal.NativeLevelLoadPlan.Section(
+                    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.INITIAL_PLACEMENT,
+                    selected::initialObjectInputs, () -> true, assembly, List.of()));
+            var presentation = new com.openggf.level.NativeLevelLoadAccess.InitialPresentation[1];
+            sections.add(new com.openggf.game.internal.NativeLevelLoadPlan.Section(
+                    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.INITIAL_OBJECTS,
+                    selected::initialObjectInputs, () -> true,
+                    List.of(new InitStep("PrepareNativeInitialObjectState", "$647E Process_Sprites: Gumball seed precedes CreateChild1_Normal", () -> {
+                        // Placement's zero-routine services precede this real clock read.
+                        for (var machine : manager.getObjectManager().activeObjectsOfType(
+                                com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.class)) machine.prepareInitialMachineState();
+                    })),
+                    List.of(new InitStep("ProcessNativeInitialSprites", "loc_6468 initial Process_Sprites, before $6484 Render_Sprites", () ->
+                            presentation[0] = com.openggf.level.NativeLevelLoadAccess.completeInitialObjects(manager, ctx)))));
+            sections.add(new com.openggf.game.internal.NativeLevelLoadPlan.Section(
+                    com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.INITIAL_PRESENTATION,
+                    selected::initialObjectInputs, () -> true,
+                    List.of(new InitStep("PrepareNativeInitialSpriteTable", "$6484: CPU Render_Sprites before initial Animate_Tiles", () ->
+                            presentation[0].prepare())),
+                    List.of(new InitStep("AnimateNativeInitialTiles", "$648A: initial Animate_Tiles after Render_Sprites", () ->
+                            presentation[0].complete()), step.apply("FinishFreshTitleCardSstInstallation"))));
+            return new com.openggf.game.internal.NativeLevelLoadPlan(sections);
+        } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+    }
+
+    private com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager title() {
+        return (com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager) GameServices.module().getTitleCardProvider();
+    }
+
+    @Override
+    public void serviceLoadZeroRoutineVInt() {
+        // VInt_0's loading interrupt does not service Nemesis, Kos queues, DMA,
+        // title sprites or gameplay. The production clock owner alone advances.
+        var objects = GameServices.level().getObjectManager();
+        if (objects != null) objects.advanceVblaCounter();
+        else com.openggf.game.session.EngineTiming.vIntRunCounter(
+                com.openggf.game.session.EngineServices.current()).serviceRepresentedVBlank();
     }
 
     @Override
@@ -270,6 +434,8 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     // BEGIN HCZ1_DIRECT_FF_SELECTED_CANCEL: existing load-failure lifecycle revokes pending/committed authority.
     @Override
     public void cancelPendingLevelLoadWork() {
+        freshTitleCardSst.finishInstallation();
+        nativeLoadScrollPrepared = false;
         var manager = GameServices.levelOrNull();
         var world = manager != null ? manager.getWorldSession() : null;
         if (world != null && com.openggf.game.session.WorldPlcLifecycleAccess.owned(world)
@@ -346,6 +512,10 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     @Override
     public void prepareInitialLevelScroll() {
+        if (nativeLoadScrollPrepared) {
+            nativeLoadScrollPrepared = false;
+            return;
+        }
         var level = GameServices.level();
         // An authored host's logical index is not a native ROM script identity.
         // Only Level: fresh stock assembly admitted the owning setup token;

@@ -720,20 +720,20 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(ENGINE_PATH, "renderAdvancedFrame", 153),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
-            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 111),
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 86),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "enterTitleCard", 47),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "exitTitleCard", 65),
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "runInputNeutralTitleCardPlayerPrelude", 19),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 52),
             // 2026-10-27: native code mods remove the obsolete boot-notice dispatch.
             new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 256),
-            new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 105),
+            new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 90),
             new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "updateSpecialStageInput", 9),
             new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
-            new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 60),
-            new MethodBudget(BONUS_SESSION_PATH, "enterBonusStage", 33)
+            new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 8),
+            new MethodBudget(BONUS_SESSION_PATH, "enterBonusStage", 22)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(
             "com/openggf/graphics",

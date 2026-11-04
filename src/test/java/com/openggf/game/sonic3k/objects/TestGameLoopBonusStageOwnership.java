@@ -230,7 +230,9 @@ class TestGameLoopBonusStageOwnership {
         BonusStageSessionTestAccess.provider(loop, provider);
         BonusStageSessionTestAccess.pending(loop, true);
         set(loop, "audioUpdatedThisStep", true);
-        set(loop, "activePlcLifecycleFrame", mock(PlcLifecycleFrame.class));
+        var frame = mock(PlcLifecycleFrame.class);
+        when(frame.claimHeldVBlankService()).thenReturn(true);
+        set(loop, "activePlcLifecycleFrame", frame);
         return new Fixture(loop, config, input, levels, title, playback);
     }
 

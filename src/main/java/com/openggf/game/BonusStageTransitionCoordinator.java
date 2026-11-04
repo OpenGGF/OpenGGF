@@ -115,6 +115,9 @@ public final class BonusStageTransitionCoordinator {
      * the new object manager's reset, before initial placement materialization.
      */
     public void prepareReturnLoad(LevelManager levelManager, BonusStageState savedState) {
+        // loc_6034 restores Saved2_apparent_zone_and_act before CheckLevelForWater
+        // (sonic3k.asm:7580-7582). The zone wrapper must retain this saved bank.
+        levelManager.setApparentAct(savedState.savedApparentZoneAndAct() & 0xFF);
         // Get_LevelSizeStart restores the saved player before ScreenInit selects
         // the return arena. Restoring only after load makes setup see the fresh
         // start position (notably LRZ3_ScreenInit's $480 branch).
