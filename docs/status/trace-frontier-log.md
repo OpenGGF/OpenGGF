@@ -123836,3 +123836,7 @@ order normalized). The original smoke verdict remains failed/incomplete with
 24 unclassified opt-in skips; no post-repair full smoke or release full suite
 is claimed. See the [final qualification record](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md#final-delivery-qualification-2026-11-04)
 for commands, counts, inherited classes and limits. No size budget is raised.
+
+Qualified executable source is committed as `aba50b4f7dab48ba13833a4449810db36a85b636`
+(`fix(s3k): retain native load phases and source timing ownership`). The follow-up
+qualification record changes prose only; the tested executable inputs are unchanged.

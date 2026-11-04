@@ -1,5 +1,7 @@
 # Synchronous load and transition V-int accounting
 
+Implementation source: `aba50b4f7dab48ba13833a4449810db36a85b636`. See [final qualification and remaining limits](#final-delivery-qualification-2026-11-04); earlier checkpoints below are historical.
+
 Status: original ledger proposal rejected; bounded timing extension approved and under implementation.
 The earlier ROM-stated V-int trial is retained as history in
 [the load-time V-int trial](../audits/2026-11-03-load-vint-trial.md); its remaining
@@ -1026,6 +1028,6 @@ counter reseed nor an emulated hardware model is introduced.
 Both exact user-approved compressed companions remain unchanged. Producer
 `c73335417979e2cc4303d25d9fc948bba370badc` is pushed to TraceChaser main, with
 repository policy/history checks passing and its owned task checkout/branch
-cleaned. Engine commit/integration and accounted worktree/stash cleanup follow
-this qualification. Raw category diagnostics are acknowledged after recording
+cleaned. Engine source is committed as `aba50b4f7dab48ba13833a4449810db36a85b636`; destination
+integration and accounted worktree/stash cleanup follow this qualification. Raw category diagnostics are acknowledged after recording
 these outcomes; they are not archived as pass receipts.
