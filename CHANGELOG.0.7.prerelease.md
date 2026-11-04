@@ -53,7 +53,9 @@ Unreleased. The earlier development themes remain in
 - S3K bonus-stage entries and returns hold the destination players behind
   the title loop like any fresh level load: the slot is cleared first, the
   start position appears when the title loop exits, and the players are
-  created just before the stage begins.
+  created just before the stage begins. Returns restore the saved apparent
+  act, and Slots keeps its final bonus camera position until the destination
+  load replaces it.
 
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
