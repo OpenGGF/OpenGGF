@@ -243,3 +243,15 @@ guards, with the known LBZ replay failure and zero errors/skips. Its complete
 232-error profile matches the worker, including fields, values, spans and gate.
 The independent glide candidate passes273 controls with its two known replay
 failures; no unchanged broad suite or chain was repeated for Big Arm admission.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).

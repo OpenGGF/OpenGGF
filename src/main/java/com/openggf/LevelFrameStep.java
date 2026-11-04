@@ -495,9 +495,9 @@ public final class LevelFrameStep {
         // still reaches this loop tail on that row unless the transition's
         // provider already performed the ROM-owned oscillator dispatch. The
         // latter is the CNZ/LBZ-style transition contract; AIZ/HCZ/MGZ retain
-        // the ordinary loop tail. Outer frame-boundary reloads consume their
-        // own dispatch in LevelSeamlessTransitionExecutor before this method
-        // is entered.
+        // the ordinary loop tail. Outer frame-boundary reloads own their
+        // dispatch in LevelSeamlessTransitionExecutor and publish no markers
+        // into this level frame.
         boolean actTransitionExecutedDuringFrame =
                 levelManager.consumeActTransitionExecutedDuringFrame();
         boolean actTransitionOscillationAdvancedDuringFrame =

@@ -7,6 +7,10 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- Seamless reloads preserve runtime-art admission, title camera-release timing
+  and independent end-state flags. Frame-boundary reloads no longer leave a
+  second rewind-boundary marker or suppress the following gameplay oscillator tick.
+
 - S3K invisible solid and hurt blocks suppress edge balancing as their native status bit requires.
 
 - LRZ corkscrews retain the shipped two-player DPLC standing-bit quirk and hold the rider pose on skipped passes.

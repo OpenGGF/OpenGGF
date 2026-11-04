@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -130,6 +131,9 @@ class TestSeamlessTransitionResourceHandoffAcceptance {
         assertThrows(IllegalStateException.class,
                 () -> GameServices.level().applySeamlessTransition(request));
         assertEquals(0, handoff.transferCount.get());
+        assertFalse(GameServices.level().consumeActTransitionExecutedDuringFrame());
+        assertFalse(GameServices.level().consumeActTransitionRewindBoundaryDuringFrame());
+        assertFalse(GameServices.level().consumeActTransitionOscillationAdvancedDuringFrame());
 
         fixture.gameplayMode().getRewindRegistry().restore(failedTransfer);
         assertTrue(GameServices.seamlessTransitionResourceHandoffs()

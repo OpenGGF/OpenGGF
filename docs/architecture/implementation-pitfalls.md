@@ -56,6 +56,24 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Transition effects belong to the hosting frame.** Frame-top reloads return to a
+driver-owned transition-only row; they must not publish the in-frame markers that
+`LevelFrameStep` and `GameLoop` consume. Otherwise the next row can skip its loop
+tail or publish a second rewind boundary. `LevelActTransitionExecutor` returns
+completion effects; only the manager's in-frame entry publishes them. Synchronous
+screen events retain the in-frame path. See the
+[ownership rationale](designs/2026-11-03-seamless-request-retargeting.md).
+
+**Reload retargeting changes identity, not policy.** Use
+`SeamlessLevelTransitionRequest.retargetedForReload`; do not reconstruct a request
+with a builder at dispatch. Builder defaults and combined end-state setters once
+dropped runtime-art admission, camera-release timing and independent end flags,
+while an unused normalizer's tests stayed green. The request's private copy
+constructor and non-default field regression own preservation; executor and
+ROM-backed carry checks exercise the live path. See the
+[design rationale](designs/2026-11-03-seamless-request-retargeting.md).
+
+
 Offscreen desktop form pictures reuse an existing `ImGuiEditorChrome` when one is
 already alive in the capture. A nested host caused a missing-current-context
 assertion during teardown; restoring the previous handle alone then crashed at
