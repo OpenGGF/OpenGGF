@@ -32,6 +32,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SessionInvocationExtension;
 import com.openggf.tests.TestSessionOutputPaths;
+import com.openggf.tests.trace.TraceReplayRomCatalogueExtension;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
@@ -120,7 +121,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * state; every comparator and boundary assertion observes an engine that reached
  * its position by replaying the recorded BK2 inputs.
  */
-@ExtendWith(SessionInvocationExtension.class)
+@ExtendWith({SessionInvocationExtension.class, TraceReplayRomCatalogueExtension.class})
 abstract class AbstractRunChainTest {
 
     /**

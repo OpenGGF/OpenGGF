@@ -443,6 +443,15 @@ plugin goals, alternate POMs/reactor selections, custom `.mvn/maven.config`,
 A missing ROM never blocks a ROM-free test; its ROM-gated tests skip, which is not a
 ROM-backed pass. Discovery does not select a graphics backend.
 
+Trace replay fixtures also bind those available images into the runtime ROM
+catalogue after `@RequiresRom` resets configuration. The primary ROM test
+property alone does not make a donor ROM available to built-in patches. The
+standalone and chain replay bases use `TraceReplayRomCatalogueExtension` to
+restore the bindings after each invocation, including the directory of an
+explicit KiS2 lock-on image for tier-two assets. This supports isolated
+worktrees without ROM links; a local `config.yaml` alone cannot survive the
+fixture's configuration reset.
+
 Build-only commands bypass the shared test scheduler automatically, including its
 resource reservations, priority and serial override:
 

@@ -84,7 +84,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <p>Originally used JUnit 4 because the ROM fixture was exposed as a JUnit 4 rule.
  */
-@ExtendWith(SessionInvocationExtension.class)
+@ExtendWith({SessionInvocationExtension.class, TraceReplayRomCatalogueExtension.class})
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
     private static final boolean QUIET_TRACE_LOGS =
