@@ -741,6 +741,7 @@ public final class ObjectSolidContactController {
     private short preContactYSpeed;
     private int preContactYRadius;
     private boolean preContactRolling;
+    private boolean preContactAir;
     private int preContactAnimationId;
     // S3K loc_1E198 is a distinct no-contact return: when the broad solid
     // classifier selects the top branch but the narrower width_pixels landing
@@ -1345,9 +1346,17 @@ public final class ObjectSolidContactController {
     short getPreContactXSpeed() { return preContactXSpeed; }
     /** Player Y speed captured before any solid contact resolution modified it. */
     short getPreContactYSpeed() { return preContactYSpeed; }
-    int getPreContactYRadius() { return preContactYRadius; }
+    public int getPreContactYRadius() { return preContactYRadius; }
     /** Player rolling state captured before any solid contact resolution modified it. */
-    boolean getPreContactRolling() { return preContactRolling; }
+    public boolean getPreContactRolling() { return preContactRolling; }
+
+    /** In-air state captured before the currently executing solid checkpoint. */
+    public boolean getPreContactAir() { return preContactAir; }
+
+    /** Whether a solid checkpoint for {@code player} is executing, so the pre-contact getters describe it. */
+    public boolean isResolvingCheckpointFor(PlayableEntity player) {
+        return player != null && currentPlayer == player;
+    }
     /** Player animation ID captured before any solid contact resolution modified it. */
     int getPreContactAnimationId() { return preContactAnimationId; }
 
@@ -1438,10 +1447,11 @@ public final class ObjectSolidContactController {
         preContactYSpeed = player.getYSpeed();
         preContactYRadius = player.getYRadius();
         preContactRolling = player.getRolling();
+        preContactAir = player.getAir();
         preContactAnimationId = player.getAnimationId();
 
         PreContactState preContact = new PreContactState(
-                preContactXSpeed, preContactYSpeed, preContactRolling, player.getAir(),
+                preContactXSpeed, preContactYSpeed, preContactRolling, preContactAir,
                 preContactAnimationId, currentPushingState(player));
         PlayerStandingState previousStanding =
                 objectManager.services().solidExecutionRegistry().previousStanding(instance, player);
