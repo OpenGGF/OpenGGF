@@ -199,7 +199,11 @@ final class FreshLevelTransitionBoundaryController {
         for (PlayableState playableState : pending.playableStates()) {
             Sprite sprite = level.spriteManager.getSprite(playableState.code());
             if (sprite instanceof AbstractPlayableSprite playable) {
+                // This boundary republishes native player state; the live host
+                // owns its title lock, including a release before final assembly.
+                boolean controlLocked = playable.isControlLocked();
                 playable.restoreRewindState(playableState.state());
+                playable.setControlLocked(controlLocked);
                 playable.setObjectRoutineOverride(null);
                 playable.setNativeSlotPresent(true);
             }

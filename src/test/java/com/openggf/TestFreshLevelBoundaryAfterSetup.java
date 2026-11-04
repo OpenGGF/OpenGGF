@@ -32,7 +32,9 @@ class TestFreshLevelBoundaryAfterSetup {
     @Test
     void placedPlayersAreHeldThenPublishedThenCreated() {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
-        HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        // Isolate title ownership from the intro's legitimate control takeover
+        // during loc_6468's initial sprite pass.
+        HeadlessTestFixture.builder().withZoneAndAct(0, 0).withSkippedZoneIntro().build();
         var level = GameServices.level();
         var camera = GameServices.camera();
         AbstractPlayableSprite player =
@@ -52,7 +54,10 @@ class TestFreshLevelBoundaryAfterSetup {
         assertEquals(sourceX, camera.getX(), "the source camera stays until the title loop exits");
         assertEquals(sourceY, camera.getY());
 
+        // The title host locks after setup captured the destination player.
+        player.setControlLocked(true);
         level.publishFreshLevelTransitionInitialBoundary();
+        assertTrue(player.isControlLocked(), "publication must retain the live title lock");
         assertEquals(0x2778, player.getCentreX(), "Get_LevelSizeStart places the player");
         assertEquals(0x025C, player.getCentreY());
         assertEquals((short) 0x26D8, camera.getX(), "and hands the camera to the destination");
@@ -60,7 +65,10 @@ class TestFreshLevelBoundaryAfterSetup {
         assertTrue(level.hasPendingFreshLevelTransitionBoundary(),
                 "loc_6468 has not created the players yet");
 
+        // A LEVEL destination releases its host lock before final assembly.
+        player.setControlLocked(false);
         FreshLevelBoundaryAccess.completeAtRelease(level);
+        assertFalse(player.isControlLocked(), "assembly must retain the host's control release");
         assertFalse(level.hasPendingFreshLevelTransitionBoundary());
         assertEquals(0x2778, player.getCentreX());
         assertEquals(0x025C, player.getCentreY());
