@@ -391,7 +391,7 @@ class TestTraceRunSegmentDescriptorPlanning {
                 base.inputSource(), base.creditsDemoIndex(),
                 base.creditsDemoSlug(), base.specialStageIndex(), base.runId(),
                 base.segmentIndex(), base.bonusStageType(), base.freshLoad(),
-                base.vIntRunCount(), base.levelEntryPlacementSourceWire(), base.lastStarPostHit());
+                base.vIntRunCount(), base.levelEntryPlacementSourceWire(), base.lastStarPostHit(), base.levelEntryRam());
     }
 
     private static void replaceManifest(

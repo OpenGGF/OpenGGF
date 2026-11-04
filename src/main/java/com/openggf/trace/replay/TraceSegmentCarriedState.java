@@ -36,6 +36,16 @@ import java.util.List;
  * @param lastStarPostHit      {@code Last_star_post_hit} as recorded at the segment's
  *                             load ({@code metadata.last_star_post_hit}); bit 7 marks
  *                             a special-stage return
+ * @param restore              the {@code Load_Starpost_Settings} restore the ROM performs
+ *                             at this load, from the recorded {@code level_entry_ram}
+ *                             saved blocks; {@code null} for a start-table entry or when
+ *                             not recorded
+ * @param lifeCount            {@code Life_count} from {@code level_entry_ram}
+ * @param collectedSpecialRingArray {@code Collected_special_ring_array} from
+ *                             {@code level_entry_ram}; replaces the touch derivation
+ * @param recordedSpecialStageCursor {@code Current_special_stage} from {@code level_entry_ram}
+ * @param disagreements        where a recorded value differs from the value derived
+ *                             without it (one of the two is wrong)
  * @param unresolved           carried variables this recording cannot establish,
  *                             each with the reason
  */
@@ -50,12 +60,18 @@ public record TraceSegmentCarriedState(
         Integer specialStageCursor,
         Boolean superEmeraldStageSet,
         Integer lastStarPostHit,
+        LevelEntryRestore restore,
+        Integer lifeCount,
+        Integer collectedSpecialRingArray,
+        Integer recordedSpecialStageCursor,
+        List<String> disagreements,
         List<String> unresolved) {
 
     public TraceSegmentCarriedState {
         emeraldStates = emeraldStates == null ? null : List.copyOf(emeraldStates);
         consumedGiantRings = consumedGiantRings == null
                 ? List.of() : List.copyOf(consumedGiantRings);
+        disagreements = disagreements == null ? List.of() : List.copyOf(disagreements);
         unresolved = unresolved == null ? List.of() : List.copyOf(unresolved);
     }
 
@@ -63,7 +79,7 @@ public record TraceSegmentCarriedState(
     public static TraceSegmentCarriedState none(String reason) {
         return new TraceSegmentCarriedState(
                 null, null, null, null, null, List.of(), null, null, null, null,
-                List.of(reason));
+                null, null, null, null, List.of(), List.of(reason));
     }
 
     /**
@@ -75,5 +91,35 @@ public record TraceSegmentCarriedState(
      */
     public record ConsumedGiantRing(String segmentDir, int x, int y, int subtype,
                                     int touchFrame) {
+    }
+
+    /**
+     * What {@code Load_Starpost_Settings} restores at this load: the
+     * {@code Saved2_*} block when {@code Special_bonus_entry_flag} is set
+     * (loc_2D2C2), otherwise the {@code Saved_*} block, whose ring count and
+     * extra-life flags survive only with {@code Respawn_table_keep} set
+     * (sonic3k.asm:61800-61856).
+     *
+     * @param block          {@code "Saved"} or {@code "Saved2"}
+     * @param timerFrames    {@code Timer} after the restore's {@code Timer_frame = 59},
+     *                       {@code Timer_second - 1}, as engine frames
+     * @param checkpoint     the star-post checkpoint the {@code Saved_*} block holds
+     */
+    public record LevelEntryRestore(String block, int ringCount, int extraLifeFlags,
+                                    long timerFrames, int cameraMaxY,
+                                    int dynamicResizeRoutine, int meanWaterLevel,
+                                    boolean waterFullScreen, int topSolidBit, int lrbSolidBit,
+                                    Checkpoint checkpoint) {
+    }
+
+    /**
+     * The {@code Saved_*} star-post block a later death reload restores
+     * ({@code Last_star_post_hit} index, position, camera, rings, timer, bounds,
+     * path bits).
+     */
+    public record Checkpoint(int index, int x, int y, int cameraX, int cameraY,
+                             int rings, int extraLifeFlags, long timerFrames,
+                             int cameraMaxY, int dynamicResizeRoutine,
+                             int topSolidBit, int lrbSolidBit) {
     }
 }

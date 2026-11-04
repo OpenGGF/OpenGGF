@@ -1444,10 +1444,11 @@ later frontier and LBZ from 958. The second defect suspected here (the award
 publishing one frame early) did not reproduce: neither frontier row now
 diverges.
 
-Still not carried, because no recording holds them: `Saved2_mean_water_level`,
-`Saved2_camera_max_Y_pos`/`Saved2_dynamic_resize_routine`, rings spent for 50
-rings earlier in a segment, and `Extra_life_flags`/`Life_count`/`Timer`. The
-design note lists the TraceChaser export that would close them. Return-entry
+Since 2026-11-04 the recorder's `level_entry_ram` (the `Saved_*`/`Saved2_*`
+blocks and carried counters) supplies the water level, camera bounds, resize
+routine, timer, extra-life flags, lives and the full star-post checkpoint, and
+replaces the derived emerald and giant-ring state. Special-stage segments carry no
+`level_entry_ram`; their selection still uses the ledger. Return-entry
 provenance (zone intros skipped on a return) is the separate policy-B mechanism
 (`level_entry_placement_source`). The recorded `last_star_post_hit` byte is
 carried through the same import, so a star-post bonus return re-enters with its

@@ -68,7 +68,7 @@ public final class TraceFixtures {
                 base.preTraceOscFrames(), base.rngSeedHex(), base.traceType(),
                 base.inputSource(), base.creditsDemoIndex(), base.creditsDemoSlug(),
                 base.specialStageIndex(), base.runId(), base.segmentIndex(),
-                base.bonusStageType(), base.freshLoad(), base.vIntRunCount(), base.levelEntryPlacementSourceWire(), base.lastStarPostHit());
+                base.bonusStageType(), base.freshLoad(), base.vIntRunCount(), base.levelEntryPlacementSourceWire(), base.lastStarPostHit(), base.levelEntryRam());
     }
 
     public static TraceMetadata metadataWithDynamicArt(
@@ -89,7 +89,7 @@ public final class TraceFixtures {
                 base.inputSource(), base.creditsDemoIndex(),
                 base.creditsDemoSlug(), base.specialStageIndex(), base.runId(),
                 base.segmentIndex(), base.bonusStageType(), base.freshLoad(),
-                base.vIntRunCount(), base.levelEntryPlacementSourceWire(), base.lastStarPostHit());
+                base.vIntRunCount(), base.levelEntryPlacementSourceWire(), base.lastStarPostHit(), base.levelEntryRam());
     }
 
     private static TraceMetadata metadata(String gameId, int zoneId, int act, String rngSeedHex) {
@@ -130,6 +130,6 @@ public final class TraceFixtures {
                 null,
                 null,
                 null,
-                null, null, null);
+                null, null, null, null);
     }
 }
