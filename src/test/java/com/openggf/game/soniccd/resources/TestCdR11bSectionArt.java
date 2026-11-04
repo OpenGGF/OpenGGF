@@ -485,7 +485,8 @@ ART_PATA_BATA 87e0
     private static List<Consumer<State>> calls(CdR11bSectionArt a) {
         return List.of(a::clearPlcs, s -> a.initList(s, 3), s -> a.appendList(s, 3), s -> a.loadSection(s, 0),
                 s -> a.updateSection(s, 0), a::prepare, a::serviceFast, s -> a.serviceSlow(s, 0),
-                a::clearCurrentPatterns, s -> a.loadImmediateList(s, 3), s -> a.decodeBlocksToRam(s), s -> a.loadLifeIcon(s, 0x80));
+                a::clearCurrentPatterns, s -> a.loadImmediateList(s, 3), s -> a.decodeBlocksToRam(s), s -> a.loadLifeIcon(s, 0x80),
+                s -> a.withSectionWord(s, 0));
     }
     private static State fresh() { return owner.fromValues(dirtyTable(), CdR11bCameraArtResidency.unknown(), 0x005A); }
     private static CdAssetBytes dirtyTable() {
@@ -684,5 +685,74 @@ ART_PATA_BATA 87e0
         assertArrayEquals(table, before.codeTable().copy()); assertArrayEquals(queue, before.queue().bytes().copy());
         assertSame(decoder, before.decoder().orElseThrow()); assertEquals(70, before.remainingTilesWord());
         assertImage(Map.of(), before.residency()); assertFalse(before.stopped());
+    }
+
+    // Results/Main.asm:282 full-WORD section value only; queue and decoder remain unchanged.
+    @Test
+    void sectionWordValueChangesBothRawBytesWithoutResettingAnyPendingDescriptorOrCurrentKnowledge() {
+        var before = owner.initList(fresh(), 9); var image = imageOf(before.residency());
+        for (int word : new int[]{0, 1, 0x7F, 0x80, 0xFF, 0x100, 0x80FF, 0xFFFF}) {
+            var after = owner.withSectionWord(before, word); assertSectionWordOnly(before, after, word);
+            assertNotSame(before, after); assertImage(image, after.residency());
+            assertArrayEquals(before.queue().bytes().copy(), after.queue().bytes().copy());
+            assertEquals(0x005A, before.sectionWord()); assertTrue(before.decoder().isEmpty());
+        }
+    }
+
+    @Test
+    void sectionWordZeroRetainsAnActiveQueuedDecoderAndEverySavedContinuationReference() {
+        var before = owner.serviceSlow(owner.prepare(owner.initList(fresh(), 9)), 0);
+        assertEquals(67, before.remainingTilesWord()); assertEquals(3, knownTiles(before.residency()));
+        var decoder = before.decoder().orElseThrow(); var after = owner.withSectionWord(before, 0);
+        assertSectionWordOnly(before, after, 0); assertSame(decoder, after.decoder().orElseThrow());
+        assertSame(before.savedDecoder(), after.savedDecoder()); assertSame(before.residency(), after.residency());
+        assertEquals(3, knownTiles(after.residency())); assertEquals(67, before.remainingTilesWord());
+        assertImage(imageOf(before.residency()), after.residency());
+    }
+
+    @Test
+    void sectionWordTransformKeepsTheExactNextNativeQueuedContinuationAndDoesNotServiceItEarly() {
+        var before = owner.serviceSlow(owner.prepare(owner.initList(fresh(), 9)), 0);
+        var changed = owner.withSectionWord(before, 0xFEA5); var baseline = owner.serviceSlow(before, 0);
+        var expected = owner.withSectionWord(baseline, 0xFEA5); var actual = owner.serviceSlow(changed, 0);
+        assertEquals(expected, actual); assertEquals(expected.hashCode(), actual.hashCode());
+        assertEquals(67, before.remainingTilesWord()); assertEquals(67, changed.remainingTilesWord());
+        assertEquals(3, knownTiles(changed.residency())); assertEquals(6, knownTiles(actual.residency()));
+        assertSame(before.decoder().orElseThrow(), changed.decoder().orElseThrow()); assertSame(before.queue(), changed.queue());
+        assertImage(imageOf(expected.residency()), actual.residency()); assertEquals(0x005A, before.sectionWord());
+    }
+
+    @Test
+    void sameSectionWordReturnsTheIdenticalStateEvenWithActiveDecodeAndKnownSparseTiles() {
+        for (var before : List.of(fresh(), owner.initList(fresh(), 9), owner.prepare(owner.initList(fresh(), 9)),
+                owner.serviceSlow(owner.prepare(owner.initList(fresh(), 9)), 0))) {
+            assertSame(before, owner.withSectionWord(before, before.sectionWord()));
+            assertSectionWordOnly(before, owner.withSectionWord(before, before.sectionWord()), before.sectionWord());
+        }
+    }
+
+    @Test
+    void sectionWordValueChecksActualOwnerTerminalAndUnsignedWidthWithoutChangingAnyInput() {
+        var before = owner.serviceSlow(owner.prepare(owner.initList(fresh(), 9)), 0); var image = imageOf(before.residency());
+        for (int word : new int[]{Integer.MIN_VALUE, -1, 0x10000, Integer.MAX_VALUE})
+            assertThrows(IllegalArgumentException.class, () -> owner.withSectionWord(before, word));
+        assertThrows(NullPointerException.class, () -> owner.withSectionWord(null, -1));
+        var other = fromAssets(assets); var foreign = other.fromValues(before.codeTable(), before.residency(), before.sectionWord());
+        assertThrows(IllegalArgumentException.class, () -> owner.withSectionWord(foreign, 0));
+        var ownerError = assertThrows(IllegalArgumentException.class, () -> owner.withSectionWord(foreign, -1));
+        assertEquals("Foreign section/source/state owner", ownerError.getMessage());
+        var stopped = assertThrows(SectionArtException.class, () -> owner.initList(fresh(), 0xFFFF)).state();
+        assertThrows(IllegalStateException.class, () -> owner.withSectionWord(stopped, -1));
+        assertThrows(IllegalStateException.class, () -> owner.withSectionWord(stopped, stopped.sectionWord()));
+        assertEquals(67, before.remainingTilesWord()); assertEquals(3, knownTiles(before.residency())); assertImage(image, before.residency());
+        assertFalse(before.stopped()); assertTrue(stopped.stopped());
+    }
+
+    private static void assertSectionWordOnly(State before, State after, int word) {
+        assertEquals(word, after.sectionWord()); assertSame(before.queue(), after.queue());
+        assertSame(before.codeTable(), after.codeTable()); assertSame(before.decoder().orElse(null), after.decoder().orElse(null));
+        assertSame(before.savedDecoder(), after.savedDecoder()); assertSame(before.residency(), after.residency());
+        assertEquals(before.remainingTilesWord(), after.remainingTilesWord()); assertEquals(before.processBudgetWord(), after.processBudgetWord());
+        assertEquals(before.hintWord(), after.hintWord()); assertEquals(before.padWord(), after.padWord()); assertEquals(before.stopped(), after.stopped());
     }
 }

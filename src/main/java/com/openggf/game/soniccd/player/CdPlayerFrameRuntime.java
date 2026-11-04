@@ -3,11 +3,15 @@ package com.openggf.game.soniccd.player;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdBigRing;
+import com.openggf.game.soniccd.objects.CdResults;
 import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSignpost;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
@@ -1080,10 +1084,82 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         serviceLevelEntry(heldByte, publication, copyAndDraw, fastPlcService);
     }
 
+    /**
+     * One old-programme selector12 after Results changed the actual raw Gates to act1/present.
+     * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Level/Main.asm:85-115,894-907,971-995.
+     * This component value service checks the full actual pair and retained old R11A/R11B data.
+     * Root alone authenticates the completed physical walk, programme exit phase and call order.
+     * Equal values confer no World authority. Ordinary source admission remains unchanged.
+     */
+    public void serviceOldProgrammeExitPaletteFade(int heldByte, CdPlayerBody.State expectedState,
+                                                   CdPlayerBody.Environment expectedEnvironment,
+                                                   Runnable palettePublication, Runnable fastPlcService) {
+        if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        Objects.requireNonNull(palettePublication, "palette publication after ReadControllers");
+        Objects.requireNonNull(fastPlcService, "fast PLC service after palette publication");
+        serviceOldProgrammeExitEntry(heldByte, expectedState, expectedEnvironment, palettePublication, null, fastPlcService);
+    }
+
+    /**
+     * Old-programme selectorC publication/copy/DrawLevel/fast-PLC service before its native return.
+     * N Level/Main.asm:105-115,860-876,971-995. Uses the same controller/Finish/count kernel as
+     * existing load services; no Body, player art, level-frame tick, pause toggle, slow PLC,
+     * warp-direction clear, destination Frame or new capture/clock owner is admitted here.
+     */
+    public void serviceOldProgrammeExitLoad(int heldByte, CdPlayerBody.State expectedState,
+                                            CdPlayerBody.Environment expectedEnvironment,
+                                            Runnable publication, Runnable copyAndDraw, Runnable fastPlcService) {
+        if ((heldByte & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native held byte");
+        Objects.requireNonNull(publication, "palette/HScroll/SAT publication after ReadControllers");
+        Objects.requireNonNull(copyAndDraw, "camera/flag copies and DrawLevel after publication");
+        Objects.requireNonNull(fastPlcService, "fast PLC service after copy and draw");
+        serviceOldProgrammeExitEntry(heldByte, expectedState, expectedEnvironment, publication, copyAndDraw, fastPlcService);
+    }
+
+    private void serviceOldProgrammeExitEntry(int heldByte, CdPlayerBody.State expectedState,
+                                               CdPlayerBody.Environment expectedEnvironment,
+                                               Runnable publication, Runnable copyAndDraw, Runnable fastPlcService) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "old-programme actual State");
+        Objects.requireNonNull(expectedEnvironment, "old-programme actual Environment");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment))
+            throw new IllegalArgumentException("Stale old-programme exit State/Environment cut");
+        requireOldProgrammeExitSourceFamily();
+        serviceAdmittedLevelEntry(heldByte, publication, copyAndDraw, fastPlcService);
+    }
+
+    private void requireOldProgrammeExitSourceFamily() {
+        boolean boundOldSource;
+        if (pastSource == null) {
+            // Existing A component ingress can deliberately have no retail identity. Its typed
+            // profile/data binding is still R11A; Root's actual World separately authenticates media.
+            var profile = assets.profile(); var identity = assets.identity();
+            boundOldSource = profile != null && profile.stage().equals(CdStagePayload.R11A.stage())
+                    && profile.file() == CdNativeFile.R11A && profile.domain() == CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    && assets.player().sonic() == assets.sonic()
+                    && (identity == null || profile.stage().equals(identity.stage()) && identity.file() == profile.file()
+                        && identity.domain() == profile.domain() && identity.variant() == profile.variant());
+        } else {
+            // This retained immutable source was checked by the existing actual-Past factory.
+            boundOldSource = assets == null && pastSource.stage().equals(CdStagePayload.R11B.stage())
+                    && pastSource.ordinaryPeriod() == 0;
+        }
+        var gates = environment.movement().gates();
+        if (!boundOldSource || gates.zoneAct() != 1 || gates.timeZone() != 1)
+            throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY,
+                    "Old programme exit requires retained act0 R11A/R11B data and actual raw act1/present Gates");
+    }
+
     /** Shared controller/timer/failure kernel; selector12 has no camera-copy/DrawLevel cut. */
     private void serviceLevelEntry(int heldByte, Runnable palettePublication, Runnable copyAndDraw,
                                    Runnable fastPlcService) {
         requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        serviceAdmittedLevelEntry(heldByte, palettePublication, copyAndDraw, fastPlcService);
+    }
+
+    /** Single admitted service algorithm; both admission paths above finish before its first write. */
+    private void serviceAdmittedLevelEntry(int heldByte, Runnable palettePublication, Runnable copyAndDraw,
+                                          Runnable fastPlcService) {
         boolean advanced = false;
         inOperation = true;
         try {
@@ -2035,4 +2111,46 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 : new CdPlayerBody.Environment(actualEnvironment.movement(), nextControls, actualEnvironment.globals(), actualEnvironment.dynamicSlots());
         return new ObjectSolidPublication(actualState, actualEnvironment, nextState, nextEnvironment);
     }
+
+    /**
+     * Pure reached Results programme gate value, native pin1ecc5f3a Results/Main.asm:295,300,311.
+     * The actual private World producer owns operation admission and native order, including the
+     * period store before the zoneAct store. These complete-value CAS arguments grant no source
+     * family, programme transition, clock, Body or invocation authority. Preserve every actor bit,
+     * all other Gates/Environment values and actual references; adopt via the existing pair port.
+     */
+    public ObjectSolidPublication prepareObjectResultsProgrammeGates(CdPlayerBody.State expectedState,
+                                                                     CdPlayerBody.Environment expectedEnvironment,
+                                                                     CdResults.ProgrammeField field, int value) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Results player State");
+        Objects.requireNonNull(expectedEnvironment, "Results player Environment");
+        Objects.requireNonNull(field, "Results programme gate field");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment))
+            throw new IllegalArgumentException("Stale Results player State/Environment cut");
+        var actualState = state; var actualEnvironment = environment;
+        var movement = actualEnvironment.movement(); var gates = movement.gates();
+        int period = gates.timeZone(), zoneAct = gates.zoneAct();
+        switch (field) {
+            case TIME_ZONE_BYTE -> {
+                if (value != 1 && value != 2) throw new IllegalArgumentException("Results timeZone is native BYTE1 or2");
+                period = value;
+            }
+            case ZONE_ACT_WORD -> {
+                if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Results zoneAct requires an unsigned native WORD");
+                zoneAct = value;
+            }
+            default -> throw new IllegalArgumentException("Results programme field is not a Frame gate: " + field);
+        }
+        var nextEnvironment = actualEnvironment;
+        if (period != gates.timeZone() || zoneAct != gates.zoneAct()) {
+            var nextGates = new CdPlayerMovement.Gates(zoneAct, period, gates.miniSonic(), gates.waterSlide(),
+                    gates.windTunnel(), gates.speedShoes(), gates.timeWarpDirection());
+            var nextMovement = new CdPlayerMovement.Environment(movement.physics(), movement.bounds(), nextGates, movement.globals());
+            nextEnvironment = new CdPlayerBody.Environment(nextMovement, actualEnvironment.controls(),
+                    actualEnvironment.globals(), actualEnvironment.dynamicSlots());
+        }
+        return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
+    }
+
 }

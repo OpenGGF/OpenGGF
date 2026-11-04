@@ -68,12 +68,12 @@ class TestSonicCdPastAnimalWorld {
         assertEquals(0x80, p.frame().environment().movement().gates().timeZone());
         assertEquals(17, nested(SonicCdGameModule.class, "PastCarry").getRecordComponents().length);
         assertEquals(10, nested(SonicCdPastLoadingVisit.class, "LoadingGlobals").getRecordComponents().length);
-        assertEquals(17, nested(SonicCdPastLoadingVisit.class, "Values").getRecordComponents().length);
+        assertEquals(18, nested(SonicCdPastLoadingVisit.class, "Values").getRecordComponents().length);
         assertEquals(7L, Arrays.stream(nested(SonicCdPastLoadingVisit.class, "Snapshot").getDeclaredFields())
                 .filter(f -> !Modifier.isStatic(f.getModifiers())).count());
         assertEquals(11, SonicCdGameModule.PastLoadState.class.getRecordComponents().length);
         assertEquals(1, SonicCdPastLoadingVisit.class.getDeclaredConstructors().length);
-        assertEquals(15, SonicCdPastLoadingVisit.class.getDeclaredConstructors()[0].getParameterCount());
+        assertEquals(16, SonicCdPastLoadingVisit.class.getDeclaredConstructors()[0].getParameterCount());
         var carryFields = nested(SonicCdGameModule.class, "PastCarry").getRecordComponents();
         assertEquals("retainedDev", carryFields[16].getName());
         assertEquals(CdOpeningObjectRuntime.DevGlobals.class, carryFields[16].getType());

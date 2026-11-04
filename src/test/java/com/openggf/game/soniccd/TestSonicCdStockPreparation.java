@@ -281,4 +281,110 @@ class TestSonicCdStockPreparation {
         }
     }
 
+
+    // BEGIN detached original-USA Act2 data custody. no runtime/World admission.
+    @ParameterizedTest(name="{0}: detached Act2 pair after stock CUE close")
+    @EnumSource(CdReleaseVariant.class)
+    void preparedSourceRetainsActualAct2PairOnlyForUsaAfterTheCueOwnerHasClosed(CdReleaseVariant variant) throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(variant),CdStockLaunch.Request.r11a());
+        assertEquals(variant==CdReleaseVariant.USA,source.act2Assets().isPresent());assertTrue(source.rom().isEmpty());
+        if(variant!=CdReleaseVariant.USA)return;
+        var pair=source.act2Assets().orElseThrow();assertSame(pair,source.act2Assets().orElseThrow());
+        var terrain=pair.terrain();var player=pair.player();var id=terrain.identity();
+        assertEquals(id,player.identity());assertEquals(CdReleaseVariant.USA,id.variant());assertEquals(CdStagePayload.R12A.stage(),id.stage());
+        assertEquals(CdNativeFile.R12A,id.file());assertEquals(com.openggf.game.soniccd.media.CdMmdImage.Domain.ORIGINAL_WORD_RAM,id.domain());
+        assertEquals("6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7",id.mmdSha256());
+        assertEquals(source.release().normalizedSha256(),id.observedWholeDiscSha256());assertEquals(source.assets().identity().observedWholeDiscSha256(),id.observedWholeDiscSha256());
+        var borrowed=com.openggf.game.soniccd.level.CdStagePlayerSource.fromAct2(terrain,player);
+        assertTrue(borrowed.ownsAct2(terrain,player));assertSame(terrain.terrain(),borrowed.terrain());assertSame(player.player(),borrowed.player());assertSame(player.sonic(),borrowed.sonic());
+        assertEquals(com.openggf.game.soniccd.level.CdStageTerrain.Shape.PPZ2_PRESENT,terrain.terrain().shape());assertEquals(1,borrowed.ordinaryPeriod());
+        assertEquals(5824,terrain.blocksDecode().bytes().length());assertEquals(25952,terrain.levelTilesDecode().bytes().length());
+        assertEquals("822d967657cdbed50369b7102726344a861ebd194c65485781d7f93070a3d6ff",sha(terrain.blocksDecode().bytes().copy()));
+        assertEquals("8f4effe8f6355149077d0fcef7d6f933150a28f073ae7b08ac40148b9012cd97",sha(terrain.levelTilesDecode().bytes().copy()));
+        assertEquals("674d922d5583edfb5fba68eb6619dd121fe0387c3bbf2e0504d95420827b2f2f",sha(player.view(com.openggf.game.soniccd.level.CdR12aProfile.Asset.SPEC_CHUNKS).copy()));
+        byte[] mutable=player.view(com.openggf.game.soniccd.level.CdR12aProfile.Asset.ART_SONIC).copy();int first=mutable[0];mutable[0]^=0x7F;
+        assertEquals(first,player.view(com.openggf.game.soniccd.level.CdR12aProfile.Asset.ART_SONIC).copy()[0]);
+        assertThrows(ReadOnlyBufferException.class,()->terrain.view(com.openggf.game.soniccd.level.CdR12aProfile.Asset.LEVEL_CHUNKS).buffer().put(0,(byte)0));
+        assertThrows(ReadOnlyBufferException.class,()->player.view(com.openggf.game.soniccd.level.CdR12aProfile.Asset.ANI_SONIC).buffer().put(0,(byte)0));
+    }
+    @Test void retainedAct2MatchesBothExistingFactoriesAndSurvivesTheirExplicitOwnerClose() throws Exception {
+        var cue=suppliedCue(CdReleaseVariant.USA);var source=CdStockLaunch.prepare(cue,CdStockLaunch.Request.r11a());var retained=source.act2Assets().orElseThrow();
+        com.openggf.game.soniccd.level.CdR12aTerrainAssets terrain;com.openggf.game.soniccd.level.CdR12aPlayerAssets player;
+        try(var media=com.openggf.game.soniccd.media.CdProgramAssets.open(cue)) {
+            terrain=com.openggf.game.soniccd.level.CdR12aTerrainAssets.fromPrograms(media);
+            player=com.openggf.game.soniccd.level.CdR12aPlayerAssets.fromPrograms(media);
+            assertEquals(terrain.identity(),player.identity());assertEquals(source.release().normalizedSha256(),media.identity().normalizedSha256());
+        }
+        var independent=new CdGameDataSource.Act2Assets(terrain,player);
+        assertEquals(retained.terrain().identity(),independent.terrain().identity());assertEquals(retained.player().identity(),independent.player().identity());
+        for(var asset:com.openggf.game.soniccd.level.CdR12aProfile.Asset.values()) {
+            assertArrayEquals(retained.terrain().view(asset).copy(),terrain.view(asset).copy());
+            assertArrayEquals(retained.player().view(asset).copy(),player.view(asset).copy());
+        }
+        assertSame(terrain,independent.terrain());assertSame(player,independent.player());
+    }
+    @Test void legacyConstructorsOmitAct2AndFullRetentionDoesNotChangeIdentityOrExistingCustody() throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());var pair=source.act2Assets().orElseThrow();
+        var three=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets());
+        var four=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms());
+        var absent=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),Optional.empty());
+        var full=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),Optional.of(pair));
+        for(var candidate:java.util.List.of(three,four,absent,full)) {
+            assertEquals(source.identity(),candidate.identity());assertSame(source.assets(),candidate.assets());assertSame(source.release(),candidate.release());assertEquals(source.fmSoundAssets(),candidate.fmSoundAssets());
+        }
+        assertTrue(three.act2Assets().isEmpty());assertTrue(four.act2Assets().isEmpty());assertTrue(absent.act2Assets().isEmpty());assertSame(pair,full.act2Assets().orElseThrow());
+        assertSame(source.timeWarpPrograms().orElseThrow(),full.timeWarpPrograms().orElseThrow());
+        assertSame(source.timeWarpPrograms().orElseThrow().r1Pcm(),full.timeWarpPrograms().orElseThrow().r1Pcm());
+        var dataOnly=new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),Optional.empty(),Optional.of(pair));
+        assertTrue(dataOnly.timeWarpPrograms().isEmpty());assertSame(pair,dataOnly.act2Assets().orElseThrow());assertEquals(source.identity(),dataOnly.identity());
+        assertEquals(java.util.List.of(3,4,5),java.util.Arrays.stream(CdGameDataSource.class.getDeclaredConstructors()).map(c->c.getParameterCount()).sorted().toList());
+        assertEquals(2,CdGameDataSource.Act2Assets.class.getRecordComponents().length);
+    }
+    @Test void retainedAct2AddsNoAssetPathAndTheThreeExistingStreamsStayIndependent() throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());assertTrue(source.act2Assets().isPresent());
+        for(String path:new String[]{"R12A__.MMD;1","stage/R12A/blocks.bin","stage/R12A/tiles.bin","stage/R12A/palette.bin","stage/R12A/player.bin","program/R12A__.MMD;1","../R12A__.MMD;1"})
+            assertThrows(FileNotFoundException.class,()->source.openAsset(path),path);
+        for(String path:java.util.List.of(CdGameDataSource.DECODED_BLOCKS,CdGameDataSource.DECODED_TILES,CdGameDataSource.INITIAL_PALETTE))try(var a=source.openAsset(path);var b=source.openAsset(path)) {
+            byte[] one=a.readAllBytes(),two=b.readAllBytes();assertArrayEquals(one,two);one[0]^=0x55;
+            try(var again=source.openAsset(path)){assertArrayEquals(two,again.readAllBytes());}
+        }
+    }
+    @Test void act2PairNullAndMismatchedObservedSourceRejectWithoutPrivateOwnerForgery() throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());var pair=source.act2Assets().orElseThrow();
+        assertThrows(NullPointerException.class,()->new CdGameDataSource.Act2Assets(null,pair.player()));
+        assertThrows(NullPointerException.class,()->new CdGameDataSource.Act2Assets(pair.terrain(),null));
+        assertThrows(NullPointerException.class,()->new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),null));
+        // Negative metadata mocks only. No private source factory, usable positive owner or World is minted.
+        var wrong=org.mockito.Mockito.mock(com.openggf.game.soniccd.level.CdR12aPlayerAssets.class);
+        var id=pair.player().identity();var foreign=new com.openggf.game.soniccd.level.CdR12aTerrainAssets.Identity(id.variant(),id.stage(),id.file(),id.domain(),id.mmdSha256(),"0".repeat(64));
+        org.mockito.Mockito.when(wrong.identity()).thenReturn(foreign);org.mockito.Mockito.when(wrong.profile()).thenReturn(pair.player().profile());
+        assertThrows(IllegalArgumentException.class,()->new CdGameDataSource.Act2Assets(pair.terrain(),wrong));
+        org.mockito.Mockito.when(wrong.identity()).thenReturn(new com.openggf.game.soniccd.level.CdR12aTerrainAssets.Identity(id.variant(),id.stage(),id.file(),id.domain(),"0".repeat(64),id.observedWholeDiscSha256()));
+        assertThrows(IllegalArgumentException.class,()->new CdGameDataSource.Act2Assets(pair.terrain(),wrong));
+    }
+    @Test void fullSourceRejectsAct2FromAnotherObservedDiscEvenWhenThePairAgreesInternally() throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());var pair=source.act2Assets().orElseThrow();var id=pair.terrain().identity();
+        var foreign=new com.openggf.game.soniccd.level.CdR12aTerrainAssets.Identity(id.variant(),id.stage(),id.file(),id.domain(),id.mmdSha256(),"0".repeat(64));
+        // Both mocked projections describe invalid negative metadata only; the full source must reject them.
+        var terrain=org.mockito.Mockito.mock(com.openggf.game.soniccd.level.CdR12aTerrainAssets.class);var player=org.mockito.Mockito.mock(com.openggf.game.soniccd.level.CdR12aPlayerAssets.class);
+        org.mockito.Mockito.when(terrain.identity()).thenReturn(foreign);org.mockito.Mockito.when(terrain.profile()).thenReturn(pair.terrain().profile());org.mockito.Mockito.when(terrain.terrain()).thenReturn(pair.terrain().terrain());
+        org.mockito.Mockito.when(player.identity()).thenReturn(foreign);org.mockito.Mockito.when(player.profile()).thenReturn(pair.player().profile());org.mockito.Mockito.when(player.player()).thenReturn(pair.player().player());org.mockito.Mockito.when(player.sonic()).thenReturn(pair.player().sonic());
+        assertThrows(IllegalArgumentException.class,()->new CdGameDataSource(source.release(),source.assets(),source.fmSoundAssets(),source.timeWarpPrograms(),Optional.of(new CdGameDataSource.Act2Assets(terrain,player))));
+    }
+    @ParameterizedTest(name="{0}: regional static capability never admits USA Act2")
+    @EnumSource(value=CdReleaseVariant.class,names={"JAPAN","EUROPE"})
+    void regionalFullConstructorRejectsAUsaAct2PairAndRetainsExplicitAbsence(CdReleaseVariant variant) throws Exception {
+        var usa=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());var other=CdStockLaunch.prepare(suppliedCue(variant),CdStockLaunch.Request.r11a());
+        assertTrue(other.act2Assets().isEmpty());var absent=new CdGameDataSource(other.release(),other.assets(),other.fmSoundAssets(),other.timeWarpPrograms(),Optional.empty());assertTrue(absent.act2Assets().isEmpty());
+        assertThrows(IllegalArgumentException.class,()->new CdGameDataSource(other.release(),other.assets(),other.fmSoundAssets(),other.timeWarpPrograms(),usa.act2Assets()));
+    }
+    @Test void fullAct2RetentionRejectsConflictingPresentSourceProfileWithoutChangingLegacyPolicy() throws Exception {
+        var source=CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA),CdStockLaunch.Request.r11a());var a=source.assets();var id=a.identity();
+        var wrong=org.mockito.Mockito.mock(com.openggf.game.soniccd.level.CdR11aAssets.class);
+        org.mockito.Mockito.when(wrong.identity()).thenReturn(new com.openggf.game.soniccd.level.CdR11aAssets.Identity(id.variant(),id.stage(),id.file(),id.domain(),"0".repeat(64),id.observedWholeDiscSha256()));
+        org.mockito.Mockito.when(wrong.profile()).thenReturn(a.profile());org.mockito.Mockito.when(wrong.terrain()).thenReturn(a.terrain());
+        org.mockito.Mockito.when(wrong.player()).thenReturn(a.player());org.mockito.Mockito.when(wrong.sonic()).thenReturn(a.sonic());
+        assertThrows(IllegalArgumentException.class,()->new CdGameDataSource(source.release(),wrong,source.fmSoundAssets(),source.timeWarpPrograms(),source.act2Assets()));
+    }
+    // END detached Act2 data custody.
 }

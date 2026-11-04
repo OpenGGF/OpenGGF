@@ -3,6 +3,8 @@ package com.openggf.game.soniccd;
 import com.openggf.game.soniccd.audio.CdFmSoundAssets;
 import com.openggf.game.soniccd.level.CdR11aAssetLoader;
 import com.openggf.game.soniccd.level.CdR11aProfile;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
@@ -54,7 +56,12 @@ public final class CdStockLaunch {
             // This adds no stage admission, program execution, current-art decode or retained disc handle.
             Optional<CdTimeWarpPrograms> timeWarpPrograms = release.variant() == CdReleaseVariant.USA
                     ? Optional.of(CdTimeWarpPrograms.fromPrograms(media)) : Optional.empty();
-            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms);
+            // Detach Act2 through its existing authentic factories while THIS same CUE is open.
+            // Its later borrower needs no host read. R1PCM stays with the retained programmes above.
+            Optional<CdGameDataSource.Act2Assets> act2Assets = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(new CdGameDataSource.Act2Assets(CdR12aTerrainAssets.fromPrograms(media),
+                            CdR12aPlayerAssets.fromPrograms(media))) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets, timeWarpPrograms, act2Assets);
         }
     }
 

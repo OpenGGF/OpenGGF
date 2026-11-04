@@ -5,6 +5,9 @@ import com.openggf.game.GameDataSource;
 import com.openggf.game.soniccd.audio.CdFmSoundAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
+import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
 import com.openggf.game.soniccd.release.CdRetailRelease;
 
@@ -17,7 +20,7 @@ import java.util.Optional;
 /**
  * Detached stock-disc capability for the first static R11A consumer. Instances come from
  * {@link CdStockLaunch}, which authenticates actual user media before publishing these assets.
- * USA also retains its authenticated FM bank and finite WARP/R11B program images.
+ * USA also retains its authenticated FM bank, finite WARP/R11B program images and Act2 data pair.
  * JP/EU FM/program consumers remain explicitly unsupported.
  * No retained file handles, cartridge address space, creator root or runtime reference files.
  * This data identity is not a firmware, gameplay or execution-environment certificate.
@@ -27,10 +30,19 @@ public final class CdGameDataSource implements GameDataSource {
     public static final String DECODED_TILES = "stage/R11A/tiles.bin";
     public static final String INITIAL_PALETTE = "stage/R11A/palette.bin";
 
+    /** Detached original-USA Act2 data only; this record is not a load or programme capability. */
+    public record Act2Assets(CdR12aTerrainAssets terrain, CdR12aPlayerAssets player) {
+        public Act2Assets {
+            CdStagePlayerSource.fromAct2(Objects.requireNonNull(terrain, "Act2 terrain assets"),
+                    Objects.requireNonNull(player, "Act2 player assets"));
+        }
+    }
+
     private final CdRetailRelease release;
     private final CdR11aAssets assets;
     private final Optional<CdFmSoundAssets> fmSoundAssets;
     private final Optional<CdTimeWarpPrograms> timeWarpPrograms;
+    private final Optional<Act2Assets> act2Assets;
     private final String identity;
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets) {
@@ -39,10 +51,16 @@ public final class CdGameDataSource implements GameDataSource {
 
     CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
                      Optional<CdTimeWarpPrograms> timeWarpPrograms) {
+        this(release, assets, fmSoundAssets, timeWarpPrograms, Optional.empty());
+    }
+
+    CdGameDataSource(CdRetailRelease release, CdR11aAssets assets, Optional<CdFmSoundAssets> fmSoundAssets,
+                     Optional<CdTimeWarpPrograms> timeWarpPrograms, Optional<Act2Assets> act2Assets) {
         this.release = Objects.requireNonNull(release, "release");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.fmSoundAssets = Objects.requireNonNull(fmSoundAssets, "fmSoundAssets");
         this.timeWarpPrograms = Objects.requireNonNull(timeWarpPrograms, "timeWarpPrograms");
+        this.act2Assets = Objects.requireNonNull(act2Assets, "act2Assets");
         var binding = assets.identity();
         if (binding.variant() != release.variant()
                 || !binding.observedWholeDiscSha256().equals(release.normalizedSha256())) {
@@ -66,7 +84,21 @@ public final class CdGameDataSource implements GameDataSource {
                 throw new IllegalArgumentException("Detached programs, stage and observed retail content do not agree");
             }
         }
-        // Whole-disc content covers MDINIT/WARP/R11B. This identity does not certify retained capability presence.
+        if (act2Assets.isPresent()) {
+            var pair = act2Assets.orElseThrow();
+            // Reuse existing finite relation checks; neither operation reads media or mints runtime authority.
+            var next = CdStagePlayerSource.fromAct2(pair.terrain(), pair.player());
+            var current = CdStagePlayerSource.fromPresent(assets);
+            var nextBinding = pair.terrain().identity();
+            if (release.variant() != CdReleaseVariant.USA || next.variant() != binding.variant()
+                    || current.variant() != next.variant()
+                    || !binding.mmdSha256().equals(assets.profile().expectedMmdSha256())
+                    || !nextBinding.observedWholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                    || !nextBinding.observedWholeDiscSha256().equals(release.normalizedSha256())) {
+                throw new IllegalArgumentException("Detached Act2 pair, stage and observed retail content do not agree");
+            }
+        }
+        // Whole-disc content also covers retained Act2 bytes. Identity never certifies capability presence.
         identity = "scd:detached-stage-v1:" + release.key() + ":" + binding.stage().nativeId()
                 + ":" + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256();
     }
@@ -79,6 +111,9 @@ public final class CdGameDataSource implements GameDataSource {
 
     /** Explicit finite USA program data only; presence does not load or execute either program. */
     public Optional<CdTimeWarpPrograms> timeWarpPrograms() { return timeWarpPrograms; }
+
+    /** Detached USA Act2 source pair only; presence selects no stage and performs no load or execution. */
+    public Optional<Act2Assets> act2Assets() { return act2Assets; }
 
     @Override public Optional<Rom> rom() { return Optional.empty(); }
     @Override public String identity() { return identity; }

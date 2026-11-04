@@ -1544,8 +1544,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         scroll.resetProjection();
     }
 
-    /** Actual B identity and complete retained-image presence, without borrowing legacy A admission. */
-    private PastSource requirePastSource() {
+    /** Bound programme identity remains unchanged when Results writes the next act/period globals. */
+    private PastSource requirePastBoundSource() {
         var source = pastSource;
         if (!module.openingObjectsAdmission() || source == null || assets != null || frame != null
                 || actor != null || openingObjects != null || background != null || backgroundPlane != null
@@ -1556,6 +1556,12 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (source.frame().stageSource() != source.source() || !source.source().ownsPast(source.assets())) {
             throw new IllegalArgumentException("Past Frame and aggregate relation changed");
         }
+        return source;
+    }
+
+    /** Ordinary source admission is stricter than observing the old programme's retained images. */
+    private PastSource requirePastSource() {
+        var source = requirePastBoundSource();
         var gates = source.frame().environment().movement().gates();
         int period = gates.timeZone();
         if (gates.zoneAct() != 0 || (period != 0 && period != 0x80 && period != 0x81 && period != 0x82)) {
@@ -1708,10 +1714,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return drawn;
     }
 
-    CdR11aForegroundScroll.State pastForegroundImage() { requirePastSource(); return scrollState; }
-    CdR11aBackgroundScroll.State pastBackgroundImage() { requirePastSource(); return backgroundState; }
-    DrawCopies pastDrawCopies() { requirePastSource(); return drawCopies; }
-    CdR11aBackgroundPlane.State pastPlaneImage() { requirePastSource(); return planeState; }
+    CdR11aForegroundScroll.State pastForegroundImage() { requirePastBoundSource(); return scrollState; }
+    CdR11aBackgroundScroll.State pastBackgroundImage() { requirePastBoundSource(); return backgroundState; }
+    DrawCopies pastDrawCopies() { requirePastBoundSource(); return drawCopies; }
+    CdR11aBackgroundPlane.State pastPlaneImage() { requirePastBoundSource(); return planeState; }
 
     void consumePastForegroundFlags(int flagsWord) {
         requirePastSource();
@@ -1721,7 +1727,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     ScrollCapture capturePastScroll() {
         requirePastRenderIdle();
-        requirePastClosedSource();
+        requirePastBoundSource().frame().captureShared();
         return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
     }
     void validatePastScroll(ScrollCapture value) {
@@ -1729,7 +1735,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (value.owner() != scrollCaptureOwner) throw new IllegalArgumentException("Retired Past scroll capture");
     }
     boolean samePastScroll(ScrollCapture value) {
-        validatePastScroll(value);
+        // Observation only: restore/prepared adoption still use strict validatePastScroll/source admission.
+        requirePastBoundSource().frame().captureShared(); Objects.requireNonNull(value);
+        if (value.owner() != scrollCaptureOwner) throw new IllegalArgumentException("Retired Past scroll capture");
         // Immutable exact references: these checks authenticate the actual preimage,
         // never allow public values to mint a loading callback.
         return value.state() == scrollState && value.background() == backgroundState

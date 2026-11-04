@@ -122,7 +122,7 @@ public final class SonicCdGameModule implements GameModule {
         UPDATE_SECTION, PREPARE_PLCS, UPDATE_GLOBAL_ANIMATIONS, ORDINARY_MAIN_RETURN,
         FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY, TAMABBOH_BODY, COLLAPSE_PLATFORM_BODY, BOULDER_BODY, MOSQUI_BODY, SPIKES_BODY, ANTON_BODY, ROBOT_GENERATOR_BODY, EXPLOSION_BODY, GOAL_POST_BODY, SIGNPOST_BODY, BIG_RING_BODY, RESULTS_BODY
     }
-    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS }
+    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, LEVEL_END_PROGRAMME }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
         private final PastLoadBoundary boundary;
         private UnsupportedPastLoading(PastLoadBoundary boundary) {
@@ -260,7 +260,7 @@ public final class SonicCdGameModule implements GameModule {
         requirePastLoadingVisit(visit); playerFrame.captureShared();
         var p = levelProgram;
         levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
-                p.palFadeFlags(), p.gameMode() & 0x7F, 1, p.whiteFadeSteps(), p.phase());
+                p.palFadeFlags(), p.gameMode() & 0x7F, 1, p.whiteFadeSteps(), p.phase(), p.goodFutureFlags());
     }
     enum BigRingProgramBoundary { TIME_STONES_READ, SPECIAL_STAGE_STORE }
     static final class UnsupportedBigRingProgram extends UnsupportedOperationException {
@@ -298,7 +298,7 @@ public final class SonicCdGameModule implements GameModule {
         visit.requireBigRingProgramPublication(expected);
         var p = expected;
         var result = new LevelProgramState(p.demoMode(), p.timeStones(), 1, p.usePlayer2(), p.palFadeFlags(),
-                p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), p.phase());
+                p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), p.phase(), p.goodFutureFlags());
         return new BigRingProgramPublication(visit, frame, expected, result);
     }
     void validatePreparedPastBigRingSpecialStage(BigRingProgramPublication ready) {
@@ -311,6 +311,38 @@ public final class SonicCdGameModule implements GameModule {
         if (ready == null || pastLoading != ready.visit || playerFrame != ready.frame || levelProgram != ready.expected)
             throw new IllegalStateException("Stale Big Ring programme adoption");
         ready.visit.requireBigRingProgramPublication(ready.expected);
+        levelProgram = ready.result;
+    }
+
+    /** Prepared finite flag value; only the actual Results cursor can publish it. */
+    static final class ResultsProgramPublication {
+        private final SonicCdPastLoadingVisit visit;
+        private final CdPlayerFrameRuntime frame;
+        private final LevelProgramState expected, result;
+        private ResultsProgramPublication(SonicCdPastLoadingVisit visit, CdPlayerFrameRuntime frame,
+                                          LevelProgramState expected, LevelProgramState result) {
+            this.visit = visit; this.frame = frame; this.expected = expected; this.result = result;
+        }
+        LevelProgramState result() { return result; }
+    }
+    ResultsProgramPublication preparePastResultsGoodFutureFlags(SonicCdPastLoadingVisit visit,
+                                                               CdPlayerFrameRuntime frame,
+                                                               LevelProgramState expected, int value) {
+        requirePastLoadingVisit(visit);
+        if (playerFrame != frame || levelProgram != expected) throw new IllegalStateException("Stale Results programme preimage");
+        visit.requireResultsProgrammePublication(expected);
+        var p = expected;
+        var ready = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), p.phase(), OptionalInt.of(value));
+        return new ResultsProgramPublication(visit, frame, expected, ready);
+    }
+    void validatePreparedPastResultsGoodFutureFlags(ResultsProgramPublication ready) {
+        Objects.requireNonNull(ready); requirePastLoadingVisit(ready.visit);
+        if (playerFrame != ready.frame || levelProgram != ready.expected) throw new IllegalStateException("Stale Results programme publication");
+        ready.visit.requireResultsProgrammePublication(ready.expected);
+    }
+    void applyPreparedPastResultsGoodFutureFlags(ResultsProgramPublication ready) {
+        validatePreparedPastResultsGoodFutureFlags(ready);
         levelProgram = ready.result;
     }
 
@@ -390,6 +422,10 @@ public final class SonicCdGameModule implements GameModule {
         }
         if (CdProgramInitialization.selectStartBranch(programServices.initialization()) != CdProgramInitialization.Branch.GAME_INIT)
             throw pastLoadingBoundary(PastLoadBoundary.ENTRY);
+        // IPX.RunMMD1311-1319:3504*16 zero bytes over[FF2000,FFFB00).
+        // Current waterPalette[FFFA80,FFFB00) is fully covered; normal/target are outside.
+        // This projection belongs to this admitted programme entry, before Start/InitVDP.
+        var runMmdClearedWaterPalette = CdAssetBytes.copyOf(new byte[128]);
         var emptyArt = new CdPlayerArtRuntime.State(new byte[CdPlayerArtRuntime.CPU_BUFFER_BYTES],
                 new byte[CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES], 0, false);
         var video = playerPresentation.initializeProgramVideo(
@@ -428,10 +464,10 @@ public final class SonicCdGameModule implements GameModule {
         pastLevel = level; pastLoadGeneration = Math.incrementExact(c.generation());
         pastLoading = new SonicCdPastLoadingVisit(this, c.assets(), playerFrame, playerPresentation,
                 c.saved(), c.ring(), c.level(), c.sectionWord(), video, c.live(), c.contact(), c.score(),
-                c.displayedVScrollLongBits(), c.savedObjectFlags(), c.retainedDev());
+                c.displayedVScrollLongBits(), c.savedObjectFlags(), c.retainedDev(), runMmdClearedWaterPalette);
         var p = c.program();
         levelProgram = new LevelProgramState(0, p.timeStones(), 0, 0, p.palFadeFlags() | 1,
-                p.gameMode() | 0x80, 0, 0, LevelProgramPhase.PAST_LOADING);
+                p.gameMode() | 0x80, 0, 0, LevelProgramPhase.PAST_LOADING, p.goodFutureFlags());
     }
 
     void registerPastRestoreProjection() {
@@ -585,8 +621,11 @@ public final class SonicCdGameModule implements GameModule {
      */
     record LevelProgramState(int demoMode, int timeStones, int specialStage, int usePlayer2,
                              int palFadeFlags, int gameMode, int levelStarted, int whiteFadeSteps,
-                             LevelProgramPhase phase) {
+                             LevelProgramPhase phase, OptionalInt goodFutureFlags) {
         LevelProgramState {
+            Objects.requireNonNull(goodFutureFlags, "explicit good-future flag knowledge");
+            if (goodFutureFlags.isPresent() && (goodFutureFlags.getAsInt() & ~0xFF) != 0)
+                throw new IllegalArgumentException("goodFutureFlags must be a known BYTE or unknown");
             Objects.requireNonNull(phase, "native level programme phase");
             if ((demoMode & ~0xFFFF) != 0 || (timeStones & ~0xFF) != 0
                     || (specialStage & ~0xFF) != 0 || (usePlayer2 & ~0xFF) != 0
@@ -599,8 +638,16 @@ public final class SonicCdGameModule implements GameModule {
             }
         }
 
+        /** Compatibility/value ingress: an omitted flag byte is explicitly unknown, never zero. */
+        LevelProgramState(int demoMode, int timeStones, int specialStage, int usePlayer2,
+                          int palFadeFlags, int gameMode, int levelStarted, int whiteFadeSteps,
+                          LevelProgramPhase phase) {
+            this(demoMode, timeStones, specialStage, usePlayer2, palFadeFlags, gameMode,
+                    levelStarted, whiteFadeSteps, phase, OptionalInt.empty());
+        }
+
         private static LevelProgramState freshBeginLevel() {
-            return new LevelProgramState(0, 0, 0, 0, 1, 0, 1, 0, LevelProgramPhase.LEVEL);
+            return new LevelProgramState(0, 0, 0, 0, 1, 0, 1, 0, LevelProgramPhase.LEVEL, OptionalInt.empty());
         }
     }
 
@@ -853,11 +900,11 @@ public final class SonicCdGameModule implements GameModule {
         // Main:20,29,31,56. Borrow Frame's actual time attack and pause and Runtime's
         // actual goodFuture/plcLoadFlags; no parallel native-global bank is introduced.
         levelProgram = new LevelProgramState(0, program.timeStones(), program.specialStage(), 0,
-                program.palFadeFlags(), program.gameMode() | 0x80, 0, 0, LevelProgramPhase.LEVEL);
+                program.palFadeFlags(), program.gameMode() | 0x80, 0, 0, LevelProgramPhase.LEVEL, program.goodFutureFlags());
         openingObjects.beginWarpLevelStart(forceGoodFuture); // Main:35,37,57, including actual ClearPLCs.
         // Main:64 tests the OLD bit, proven set above, and preserves every other incoming bit.
         levelProgram = new LevelProgramState(0, program.timeStones(), program.specialStage(), 0,
-                program.palFadeFlags() | 1, program.gameMode() | 0x80, 0, 0, LevelProgramPhase.WHITE_FADE);
+                program.palFadeFlags() | 1, program.gameMode() | 0x80, 0, 0, LevelProgramPhase.WHITE_FADE, program.goodFutureFlags());
     }
 
     /** One admitted selector12 pulse. FadeToWhite's DBF21 owns exactly22 waits, never a route index. */
@@ -872,16 +919,16 @@ public final class SonicCdGameModule implements GameModule {
             int completed = program.whiteFadeSteps() + 1;
             levelProgram = new LevelProgramState(program.demoMode(), program.timeStones(), program.specialStage(),
                     program.usePlayer2(), program.palFadeFlags(), program.gameMode(), program.levelStarted(),
-                    completed, LevelProgramPhase.WHITE_FADE);
+                    completed, LevelProgramPhase.WHITE_FADE, program.goodFutureFlags());
             if (completed == 22) {
                 // Main:69 precedes direction clear:72, then complete restart WORD clear:75.
                 levelProgram = new LevelProgramState(program.demoMode(), program.timeStones(), program.specialStage(),
                         program.usePlayer2(), program.palFadeFlags() & ~1, program.gameMode(), program.levelStarted(),
-                        completed, LevelProgramPhase.WHITE_FADE);
+                        completed, LevelProgramPhase.WHITE_FADE, program.goodFutureFlags());
                 openingObjects.finishWarpLevelStart();
                 levelProgram = new LevelProgramState(program.demoMode(), program.timeStones(), program.specialStage(),
                         program.usePlayer2(), program.palFadeFlags() & ~1, program.gameMode(), program.levelStarted(),
-                        completed, LevelProgramPhase.RETURNED);
+                        completed, LevelProgramPhase.RETURNED, program.goodFutureFlags());
             }
         } catch (RuntimeException | Error failure) {
             closePlayerCycleAfterFailure(failure);
@@ -944,7 +991,7 @@ public final class SonicCdGameModule implements GameModule {
 
     private static LevelProgramState withProgramPhase(LevelProgramState p, LevelProgramPhase phase) {
         return new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
-                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), phase);
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), phase, p.goodFutureFlags());
     }
 
     private void validateWarpProgramCut(LevelProgramState program, CdWarpScene.State scene, List<ProgramSound> sounds) {

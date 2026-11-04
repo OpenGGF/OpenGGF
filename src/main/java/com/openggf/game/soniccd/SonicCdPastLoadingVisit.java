@@ -201,13 +201,17 @@ final class SonicCdPastLoadingVisit {
 
     /** All mutable loading values live here once; actor/shared/scroll remain in their existing owners. */
     private record Values(SonicCdGameModule.PastLoadPhase phase, CdR11bSectionArt.State section,
-                          CdAssetBytes cpuPalette, CdAssetBytes fadePalette,
+                          CdAssetBytes cpuPalette, CdAssetBytes fadePalette, CdAssetBytes waterPalette,
                           CdAssetBytes displayedPalette, CdAssetBytes cpuSat, CdAssetBytes displayedSat,
                           CdAssetBytes displayedHScroll, int displayedVScrollLongBits,
                           CdR11aBackgroundPlane.State foregroundPlane,
                           CdRingGlobals ring, CdLevelGlobals level, LoadingGlobals globals,
                           CdAssetBytes hudObjects, FadeProgress fadeProgress, List<SonicCdGameModule.PastLoadCall> calls, LoopGlobals loop) {
-        private Values { calls = List.copyOf(calls); }
+        private Values {
+            Objects.requireNonNull(waterPalette, "actual RunMMD-cleared current water palette");
+            if (waterPalette.length() != 128) throw new IllegalArgumentException("Current water palette requires all128 bytes");
+            calls = List.copyOf(calls);
+        }
     }
 
     static final class Snapshot {
@@ -231,7 +235,8 @@ final class SonicCdPastLoadingVisit {
                             CdRingGlobals ring, CdLevelGlobals level, int sectionWord,
                             SonicCdPlayerPresentation.PastVideoInit video, CdCheckpointLiveAux.State live,
                             CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
-                            int displayedVScrollLongBits, CdAssetBytes savedObjectFlags, CdOpeningObjectRuntime.DevGlobals retainedDev) {
+                            int displayedVScrollLongBits, CdAssetBytes savedObjectFlags, CdOpeningObjectRuntime.DevGlobals retainedDev,
+                            CdAssetBytes runMmdClearedWaterPalette) {
         this.module = Objects.requireNonNull(module); this.assets = Objects.requireNonNull(assets);
         this.frame = Objects.requireNonNull(frame); this.presentation = Objects.requireNonNull(presentation);
         this.saved = Objects.requireNonNull(saved);
@@ -256,7 +261,7 @@ final class SonicCdPastLoadingVisit {
         anton = CdAnton.fromPastAssets(placement, assets, sharedTerrain, this::commitAntonPrimaryAngle, this::drawAnton);
         results = new CdResults(placement, CdResults.Assets.fromPastAssets(assets), this::readResults,
                 this::storeResultsBonus, this::addResultsPoints, this::loadResultsPlc, this::soundResults, this::drawResults,
-                null, null); // Native NextLevel's first MOVE.W#2,levelRestart remains unowned, before its write.
+                this::storeResultsProgramme, this::actionResultsProgramme);
         bigRing = new CdBigRing(placement, CdBigRing.Assets.fromPastAssets(assets), this::readBigRing,
                 this::storeBigRingSpecialStage, this::storeBigRingPlayer, this::storeBigRingScrollLock, this::soundBigRing, this::drawBigRing);
         signpost = new CdSignpost(placement, CdSignpost.Assets.fromPastAssets(assets), this::readSignpost,
@@ -322,7 +327,7 @@ final class SonicCdPastLoadingVisit {
                 Optional.empty(), video.selection().displayedSat(), video.selection().displayedPalette(),
                 zero(CdR11aBackgroundScroll.HSCROLL_RAM_BYTES), displayedVScrollLongBits,
                 video.selection().displayEnabled(), null, null, null, null));
-        values = new Values(FIRST_PLC, section, CdAssetBytes.copyOf(white), zero(128),
+        values = new Values(FIRST_PLC, section, CdAssetBytes.copyOf(white), zero(128), runMmdClearedWaterPalette,
                 video.selection().displayedPalette(), zero(CdObjectDrawQueue.SAT_BYTE_SIZE),
                 video.selection().displayedSat(), zero(CdR11aBackgroundScroll.HSCROLL_RAM_BYTES),
                 displayedVScrollLongBits, null,
@@ -365,7 +370,7 @@ final class SonicCdPastLoadingVisit {
                          CdAssetBytes cpuSat, CdAssetBytes displayedSat, CdAssetBytes displayedHScroll,
                          CdR11aBackgroundPlane.State fg, CdRingGlobals ring, CdLevelGlobals level,
                          LoadingGlobals globals, CdAssetBytes hud, List<SonicCdGameModule.PastLoadCall> calls) {
-        values = new Values(phase, section, cpuPalette, fadePalette, displayedPalette, cpuSat,
+        values = new Values(phase, section, cpuPalette, fadePalette, values.waterPalette(), displayedPalette, cpuSat,
                 displayedSat, displayedHScroll, values.displayedVScrollLongBits(), fg, ring, level, globals, hud, values.fadeProgress(), calls, values.loop());
     }
     private void globals(UnaryOperator<LoadingGlobals> operation) {
@@ -437,7 +442,7 @@ final class SonicCdPastLoadingVisit {
         // VInterrupt's selected VScroll precedes the actual controller read. Root
         // has preflighted the real source/World and the already-claimed art bank.
         var bg = presentation.pastBackgroundImage();
-        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(),
+        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.waterPalette(),
                 values.displayedPalette(), values.cpuSat(), values.displayedSat(), values.displayedHScroll(), bg.vscroll(),
                 values.foregroundPlane(), values.ring(), values.level(), values.globals(), values.hudObjects(),
                 values.fadeProgress(), values.calls(), values.loop());
@@ -756,7 +761,7 @@ final class SonicCdPastLoadingVisit {
         var g = old.globals();
         var globals = new LoadingGlobals(g.live(), nextContact, nextScore, g.drownTimerWord(), g.tail(),
                 g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
-        var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(),
+        var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(),
                 old.foregroundPlane(), nextRing, nextLevel, globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
         var ledger = new ArrayList<SonicCdGameModule.PastSound>(invocation.originalSounds);
@@ -860,7 +865,7 @@ final class SonicCdPastLoadingVisit {
 
     private void loop(LoopGlobals next) {
         var v = values;
-        values = new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.displayedPalette(),
+        values = new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.waterPalette(), v.displayedPalette(),
                 v.cpuSat(), v.displayedSat(), v.displayedHScroll(), v.displayedVScrollLongBits(),
                 v.foregroundPlane(), v.ring(), v.level(), v.globals(), v.hudObjects(), v.fadeProgress(), v.calls(), next);
     }
@@ -897,8 +902,14 @@ final class SonicCdPastLoadingVisit {
             throw new IllegalStateException("No completed actual Past physical pass");
         int demo = values.loop().demoDataIndexWord().orElseThrow(
                 () -> module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_FLOW));
-        if (demo == 0x0800 || values.level().levelRestart() != 0)
-            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_RESTART);
+        if (demo == 0x0800) throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_RESTART);
+        if (values.level().levelRestart() != 0) {
+            // Main407-408: only the completed physical walk reaches the programme branch.
+            // Preserve the pending DrawObject pointers and prior CPU SAT; never drain/scroll here.
+            throw module.pastLoadingBoundary(values.level().levelRestart() == 2
+                    ? SonicCdGameModule.PastLoadBoundary.LEVEL_END_PROGRAMME
+                    : SonicCdGameModule.PastLoadBoundary.LEVEL_RESTART);
+        }
         call(POST_OBJECT_GUARDS);
         CdObjectDrawQueue.DrawCameras cameras;
         if (frame.environment().globals().debugMode() == 0 && frame.state().motion().routine() >= 6) {
@@ -1327,7 +1338,7 @@ final class SonicCdPastLoadingVisit {
         return Arrays.equals(left.copy(), right.copy());
     }
     private static Values reservedValues(Values v, CdAssetBytes image) {
-        return new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.displayedPalette(),
+        return new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.waterPalette(), v.displayedPalette(),
                 v.cpuSat(), v.displayedSat(), v.displayedHScroll(), v.displayedVScrollLongBits(),
                 v.foregroundPlane(), v.ring(), v.level(), v.globals(), image, v.fadeProgress(), v.calls(), v.loop());
     }
@@ -1553,7 +1564,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private static Values ringValues(Values v, CdRingGlobals ring) {
-        return new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.displayedPalette(),
+        return new Values(v.phase(), v.section(), v.cpuPalette(), v.fadePalette(), v.waterPalette(), v.displayedPalette(),
                 v.cpuSat(), v.displayedSat(), v.displayedHScroll(), v.displayedVScrollLongBits(),
                 v.foregroundPlane(), ring, v.level(), v.globals(), v.hudObjects(), v.fadeProgress(), v.calls(), v.loop());
     }
@@ -2275,7 +2286,7 @@ final class SonicCdPastLoadingVisit {
         }
         CdSignpost.StoreField field() { return field; }
     }
-    enum ResultsReadBoundary { BONUS_PREIMAGE }
+    enum ResultsReadBoundary { BONUS_PREIMAGE, GOOD_FUTURE_FLAGS, TAIL_PREIMAGE }
     static final class UnsupportedResultsRead extends UnsupportedOperationException {
         private static final long serialVersionUID = 1L;
         private final ResultsReadBoundary boundary;
@@ -2287,7 +2298,10 @@ final class SonicCdPastLoadingVisit {
     private enum ResultsCut {
         INVALID, PLC, HEAD, WAIT_ZONE, CAMERA, PLAYER_X, ROW_ZONE, ROW_GOOD, ROW_ACT,
         UPDATE, TIME, TIME_STORE, RING, RING_STORE, CHECK_TIME, CHECK_RING, SPECIAL,
-        TALLY, KACHING, WARP, POINTS, DRAW, RETURN, ALLOCATION_STOP, PROGRAMME
+        TALLY, KACHING, WARP, POINTS, DRAW, RETURN, ALLOCATION_STOP, PROGRAMME,
+        SPAWN, SECTION, FLOWERS, UNKNOWN_LEVEL, PROJ, CHECKPOINT, INITIAL_ATTACK, PLC_BIT0, PLC_BIT1,
+        PERIOD_PRESENT, ZONE_OPERAND, PERIOD_FUTURE, ZONE_STORE, RESET_SAVED, FADE_MUSIC,
+        TAIL_ACT, TAIL_ATTACK, TAIL_STONES, TAIL_GOOD, GOOD_CLEAR, FLAGS_SET, FLAGS_COMPARE, GOOD_SET, FLAGS_CLEAR
     }
     /** Private actual producer/order proof; descriptive public callbacks and Effects cannot mint it. */
     private final class ResultsInvocation {
@@ -2299,9 +2313,11 @@ final class SonicCdPastLoadingVisit {
         private final CdObjectDrawQueue queue = drawQueue;
         private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
         private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
-        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
         private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
-        private final SonicCdGameModule.LevelProgramState program = module.levelProgramState();
+        private SonicCdGameModule.LevelProgramState program = module.levelProgramState();
+        private CdObjectPlacementRuntime.Status expectedStatus = before.status();
+        private CdAssetBytes expectedSaved = before.savedFlags();
         private Values base = values;
         private List<SonicCdGameModule.PastSound> ledger = sounds;
         private final CdObjectDrawQueue.CameraWords camera;
@@ -2309,7 +2325,7 @@ final class SonicCdPastLoadingVisit {
         private final CdObjectState entry;
         private CdObjectPool.Snapshot expectedPool;
         private ResultsCut next;
-        private int row, selected, rowRoot, edge, time, rings, points;
+        private int row, selected, rowRoot, edge, time, rings, points, nextZoneAct, actBit;
         private boolean drawn, screenCleared;
         private CdObjectState drawSource;
         private ResultsInvocation(int whole) {
@@ -2365,7 +2381,7 @@ final class SonicCdPastLoadingVisit {
                 || i.base != values || i.ledger != sounds || i.program != module.levelProgramState()
                 || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
                 || !frame.state().equals(i.actor.state()) || !frame.environment().equals(i.shared.environment())
-                || !presentation.samePastScroll(i.scroll) || !placement.status().equals(i.before.status()))
+                || !presentation.samePastScroll(i.scroll) || !placement.status().equals(i.expectedStatus))
             throw new IllegalStateException("Results retained another World/Frame/queue/programme cut or changed a foreign owner");
         placement.validateRestore(i.before); i.pool.validateRestore(i.expectedPool);
     }
@@ -2376,8 +2392,8 @@ final class SonicCdPastLoadingVisit {
     }
     private void validateResultsImages(ResultsInvocation i) {
         var now = placement.capture();
-        if (!now.pool().slots().equals(i.expectedPool.slots()) || !now.status().equals(i.before.status())
-                || !sameBytes(now.savedFlags(), i.before.savedFlags()))
+        if (!now.pool().slots().equals(i.expectedPool.slots()) || !now.status().equals(i.expectedStatus)
+                || !sameBytes(now.savedFlags(), i.expectedSaved))
             throw new IllegalStateException("Results differs from its reached full96 dirty-row prefix or saved/cursor nonwrites");
     }
     private void validateResultsCut(ResultsInvocation i, CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) {
@@ -2389,9 +2405,19 @@ final class SonicCdPastLoadingVisit {
             throw new IllegalStateException("Results callback lacks its fresh complete actual placement/source");
     }
     private void requireResultsSite(ResultsInvocation i, ResultsCut site, CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) {
-        if (resultsPort || drawingResults || queuePort || i.drawn || i.next != site)
+        if (resultsPort || drawingResults || queuePort || (i.drawn && !resultsTailSite(site)) || i.next != site)
             throw new IllegalStateException("Results callback lacks its actual once-only reached native position");
         validateResultsCut(i, cut, source);
+    }
+    private static boolean resultsTailSite(ResultsCut site) {
+        return switch (site) {
+            case TAIL_ACT, TAIL_ATTACK, TAIL_STONES, TAIL_GOOD, GOOD_CLEAR, FLAGS_SET,
+                    FLAGS_COMPARE, GOOD_SET, FLAGS_CLEAR -> true;
+            default -> false;
+        };
+    }
+    private int resultsGoodFutureFlags(ResultsInvocation i) {
+        return i.program.goodFutureFlags().orElseThrow(() -> new UnsupportedResultsRead(ResultsReadBoundary.GOOD_FUTURE_FLAGS));
     }
     private void prepareResultsMove(ResultsInvocation i) {
         var s = resultsSource(i);
@@ -2450,15 +2476,17 @@ final class SonicCdPastLoadingVisit {
         var site = i.next;
         boolean reached = switch (call.field()) {
             case PLC_HEAD_LONG -> site == ResultsCut.HEAD;
-            case ZONE_ACT_WORD -> site == ResultsCut.WAIT_ZONE || site == ResultsCut.ROW_ZONE;
+            case ZONE_ACT_WORD -> site == ResultsCut.WAIT_ZONE || site == ResultsCut.ROW_ZONE || site == ResultsCut.ZONE_OPERAND;
             case CAMERA_X_WORD -> site == ResultsCut.CAMERA;
             case PLAYER_X_WORD -> site == ResultsCut.PLAYER_X;
-            case GOOD_FUTURE_BYTE -> site == ResultsCut.ROW_GOOD;
-            case ACT_BYTE -> site == ResultsCut.ROW_ACT;
+            case GOOD_FUTURE_BYTE -> site == ResultsCut.ROW_GOOD || site == ResultsCut.TAIL_GOOD;
+            case ACT_BYTE -> site == ResultsCut.ROW_ACT || site == ResultsCut.TAIL_ACT;
             case TIME_BONUS_WORD -> site == ResultsCut.TIME || site == ResultsCut.CHECK_TIME;
             case RING_BONUS_WORD -> site == ResultsCut.RING || site == ResultsCut.CHECK_RING;
             case SPECIAL_STAGE_BYTE -> site == ResultsCut.SPECIAL;
-            case TIME_ATTACK_MODE_BYTE, TIME_STONES_BYTE, GOOD_FUTURE_FLAGS_BYTE -> false; // Behind the absent programme store.
+            case TIME_ATTACK_MODE_BYTE -> site == ResultsCut.INITIAL_ATTACK || site == ResultsCut.TAIL_ATTACK;
+            case TIME_STONES_BYTE -> site == ResultsCut.TAIL_STONES;
+            case GOOD_FUTURE_FLAGS_BYTE -> site == ResultsCut.FLAGS_COMPARE;
         };
         if (!reached) throw new IllegalStateException("Results operand is not at its genuine source-conditional read");
         requireResultsSite(i, site, call.actualCut(), call.expectedSource());
@@ -2472,7 +2500,9 @@ final class SonicCdPastLoadingVisit {
             case TIME_BONUS_WORD -> resultsBonus().timeBonusWord();
             case RING_BONUS_WORD -> resultsBonus().ringBonusWord();
             case SPECIAL_STAGE_BYTE -> i.program.specialStage();
-            case TIME_ATTACK_MODE_BYTE, TIME_STONES_BYTE, GOOD_FUTURE_FLAGS_BYTE -> throw new IllegalStateException("Unreached programme operand");
+            case TIME_ATTACK_MODE_BYTE -> frame.environment().globals().timeAttackMode();
+            case TIME_STONES_BYTE -> i.program.timeStones();
+            case GOOD_FUTURE_FLAGS_BYTE -> resultsGoodFutureFlags(i);
         };
         resultsPort = true;
         try {
@@ -2502,6 +2532,18 @@ final class SonicCdPastLoadingVisit {
                 case CHECK_TIME -> { if (value != 0) prepareResultsHaveBonus(i); else i.next = ResultsCut.CHECK_RING; }
                 case CHECK_RING -> { if (value != 0) prepareResultsHaveBonus(i); else i.next = ResultsCut.KACHING; }
                 case SPECIAL -> i.next = value == 0 ? ResultsCut.DRAW : ResultsCut.WARP;
+                case INITIAL_ATTACK -> i.next = value == 0 ? ResultsCut.PLC_BIT1 : ResultsCut.PLC_BIT0;
+                case ZONE_OPERAND -> {
+                    int act = (value + 1) & 255;
+                    i.nextZoneAct = (value & 0xFF00) | act;
+                    if (act == 3) i.nextZoneAct = ((value & 0xFF00) + 0x100) & 0xFF00;
+                    i.next = act == 2 ? ResultsCut.PERIOD_FUTURE : ResultsCut.ZONE_STORE;
+                }
+                case TAIL_ACT -> { i.actBit = (value - 1) & 255; i.next = (byte) i.actBit < 0 ? ResultsCut.FLAGS_CLEAR : ResultsCut.TAIL_ATTACK; }
+                case TAIL_ATTACK -> i.next = value != 0 ? ResultsCut.RETURN : ResultsCut.TAIL_STONES;
+                case TAIL_STONES -> i.next = value == 0x7F ? ResultsCut.GOOD_SET : ResultsCut.TAIL_GOOD;
+                case TAIL_GOOD -> i.next = value == 0 ? ResultsCut.RETURN : ResultsCut.GOOD_CLEAR;
+                case FLAGS_COMPARE -> i.next = value == 3 ? ResultsCut.GOOD_SET : ResultsCut.RETURN;
                 default -> throw new IllegalStateException("No reached Results read transition");
             }
             verifyResults(i); return value;
@@ -2509,7 +2551,7 @@ final class SonicCdPastLoadingVisit {
     }
     private Values resultsValues(CdR11bSectionArt.State section, CdRingGlobals ring, LoadingGlobals globals) {
         var o = values;
-        return new Values(o.phase(), section, o.cpuPalette(), o.fadePalette(), o.displayedPalette(), o.cpuSat(), o.displayedSat(),
+        return new Values(o.phase(), section, o.cpuPalette(), o.fadePalette(), o.waterPalette(), o.displayedPalette(), o.cpuSat(), o.displayedSat(),
                 o.displayedHScroll(), o.displayedVScrollLongBits(), o.foregroundPlane(), ring, o.level(), globals, o.hudObjects(),
                 o.fadeProgress(), o.calls(), o.loop());
     }
@@ -2590,6 +2632,145 @@ final class SonicCdPastLoadingVisit {
             i.next = site == ResultsCut.WARP ? ResultsCut.DRAW : ResultsCut.POINTS; verifyResults(i);
         } finally { resultsPort = false; }
     }
+    /** Module's retained programme value never grants producer authority by itself. */
+    void requireResultsProgrammePublication(SonicCdGameModule.LevelProgramState expected) {
+        var i = activeResults;
+        if (i == null || i.program != expected || (i.next != ResultsCut.FLAGS_SET && i.next != ResultsCut.FLAGS_CLEAR))
+            throw new IllegalStateException("No actual Results good-future flag store");
+        verifyResults(i); validateResultsImages(i);
+    }
+    /** N1ecc5f3a Results/Main.asm:278-343, literal source stores and local-D0 arithmetic only. */
+    private void storeResultsProgramme(CdResults.ProgrammeStoreCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        var site = switch (call.field()) {
+            case LEVEL_RESTART_WORD -> ResultsCut.PROGRAMME;
+            case SPAWN_MODE_BYTE -> ResultsCut.SPAWN;
+            case SECTION_ID_WORD -> ResultsCut.SECTION;
+            case FLOWER_COUNT_LONG -> ResultsCut.FLOWERS;
+            case UNKNOWN_LEVEL_BYTE -> ResultsCut.UNKNOWN_LEVEL;
+            case PROJ_DESTROYED_BYTE -> ResultsCut.PROJ;
+            case CHECKPOINT_BYTE -> ResultsCut.CHECKPOINT;
+            case PLC_LOAD_FLAGS_CLEAR_BIT0 -> ResultsCut.PLC_BIT0;
+            case PLC_LOAD_FLAGS_CLEAR_BIT1 -> ResultsCut.PLC_BIT1;
+            case TIME_ZONE_BYTE -> i.next == ResultsCut.PERIOD_FUTURE ? ResultsCut.PERIOD_FUTURE : ResultsCut.PERIOD_PRESENT;
+            case ZONE_ACT_WORD -> ResultsCut.ZONE_STORE;
+            case GOOD_FUTURE_BYTE -> i.next == ResultsCut.GOOD_CLEAR ? ResultsCut.GOOD_CLEAR : ResultsCut.GOOD_SET;
+            case GOOD_FUTURE_FLAGS_CLEAR_BYTE -> ResultsCut.FLAGS_CLEAR;
+            case GOOD_FUTURE_FLAGS_SET_BIT -> ResultsCut.FLAGS_SET;
+        };
+        requireResultsSite(i, site, call.actualCut(), call.expectedSource());
+        int operand = switch (site) {
+            case PROGRAMME -> 2;
+            case PLC_BIT1, PERIOD_PRESENT, GOOD_SET -> 1;
+            case PERIOD_FUTURE -> 2;
+            case ZONE_STORE -> i.nextZoneAct;
+            case FLAGS_SET -> i.actBit & 7;
+            default -> 0;
+        };
+        if (call.value() != operand) throw new IllegalStateException("Results programme store differs from its actual native operand");
+        var old = values; var l = old.level(); var g = old.globals();
+        var section = old.section(); var level = l; var globals = g;
+        CdPlayerFrameRuntime.ObjectSolidPublication player = null;
+        CdPlayerFrameRuntime.SharedState readyShared = i.shared;
+        SonicCdGameModule.ResultsProgramPublication program = null;
+        switch (call.field()) {
+            case LEVEL_RESTART_WORD -> level = new CdLevelGlobals(2, l.updateHudTime(), l.checkpoint(), l.spawnMode(), l.plcLoadFlags(),
+                    l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            case SPAWN_MODE_BYTE -> level = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(), 0, l.plcLoadFlags(),
+                    l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            case SECTION_ID_WORD -> section = art.withSectionWord(section, 0); // Never reconstruct via queue-clearing fromValues.
+            case FLOWER_COUNT_LONG -> level = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(), l.spawnMode(), l.plcLoadFlags(),
+                    0, 0, l.powerup(), l.timeOver()); // CLR.L also writes adjacent fadeEnableDisplay.
+            case UNKNOWN_LEVEL_BYTE -> {
+                var tail = g.tail().orElseThrow(() -> new UnsupportedResultsRead(ResultsReadBoundary.TAIL_PREIMAGE));
+                globals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
+                        Optional.of(new TailValues(tail.player2ControlsWord(), tail.player2BoredWord(), 0, tail.demoS1IndexWord(), tail.paletteFadeInfoWord())),
+                        g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
+            }
+            case PROJ_DESTROYED_BYTE -> globals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(), g.tail(), g.bonus(),
+                    g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), new CdOpeningObjectRuntime.DevGlobals(g.retainedDev().goodFuture(), 0));
+            case CHECKPOINT_BYTE -> level = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), 0, l.spawnMode(), l.plcLoadFlags(),
+                    l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            case PLC_LOAD_FLAGS_CLEAR_BIT0, PLC_LOAD_FLAGS_CLEAR_BIT1 -> level = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(),
+                    l.spawnMode(), l.plcLoadFlags() & ~(1 << operand), l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+            case TIME_ZONE_BYTE, ZONE_ACT_WORD -> {
+                player = frame.prepareObjectResultsProgrammeGates(i.actor.state(), i.shared.environment(), call.field(), operand);
+                readyShared = new CdPlayerFrameRuntime.SharedState(i.shared.owner(), player.finalEnvironment(), i.shared.artState(), i.shared.paused(), i.shared.vIntClock());
+            }
+            case GOOD_FUTURE_BYTE -> globals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(), g.tail(), g.bonus(),
+                    g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), new CdOpeningObjectRuntime.DevGlobals(operand, g.retainedDev().projDestroyed()));
+            case GOOD_FUTURE_FLAGS_CLEAR_BYTE, GOOD_FUTURE_FLAGS_SET_BIT -> {
+                // A literal clear establishes a known BYTE. BSET must first own the complete prior BYTE.
+                int flags = call.field() == CdResults.ProgrammeField.GOOD_FUTURE_FLAGS_CLEAR_BYTE ? 0 : resultsGoodFutureFlags(i) | (1 << operand);
+                program = module.preparePastResultsGoodFutureFlags(this, frame, i.program, flags);
+            }
+        }
+        var ready = new Values(old.phase(), section, old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(), old.cpuSat(), old.displayedSat(),
+                old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(), level, globals,
+                old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
+        resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+            if (player != null) frame.validatePreparedObjectSolidPublication(player);
+            if (program != null) module.validatePreparedPastResultsGoodFutureFlags(program);
+            // Each native instruction writes one existing owner. Every replacement was prepared above.
+            values = ready; i.base = ready;
+            if (player != null) { frame.applyPreparedObjectSolidPublication(player); i.shared = readyShared; }
+            if (program != null) { module.applyPreparedPastResultsGoodFutureFlags(program); i.program = program.result(); }
+            i.next = switch (site) {
+                case PROGRAMME -> ResultsCut.SPAWN;
+                case SPAWN -> ResultsCut.SECTION;
+                case SECTION -> ResultsCut.FLOWERS;
+                case FLOWERS -> ResultsCut.UNKNOWN_LEVEL;
+                case UNKNOWN_LEVEL -> ResultsCut.PROJ;
+                case PROJ -> ResultsCut.CHECKPOINT;
+                case CHECKPOINT -> ResultsCut.INITIAL_ATTACK;
+                case PLC_BIT0 -> ResultsCut.PLC_BIT1;
+                case PLC_BIT1 -> ResultsCut.PERIOD_PRESENT;
+                case PERIOD_PRESENT -> ResultsCut.ZONE_OPERAND;
+                case PERIOD_FUTURE -> ResultsCut.ZONE_STORE;
+                case ZONE_STORE -> ResultsCut.RESET_SAVED;
+                case GOOD_CLEAR -> ResultsCut.FLAGS_SET;
+                case FLAGS_SET -> ResultsCut.FLAGS_COMPARE;
+                case GOOD_SET, FLAGS_CLEAR -> ResultsCut.RETURN;
+                default -> throw new IllegalStateException("Unowned Results programme store transition");
+            };
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+        } catch (RuntimeException | Error original) {
+            try { verifyResults(i); validateResultsImages(i); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { resultsPort = false; }
+    }
+    private void actionResultsProgramme(CdResults.ProgrammeActionCall call) {
+        Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
+        var site = call.action() == CdResults.ProgrammeAction.RESET_SAVED_OBJECT_FLAGS ? ResultsCut.RESET_SAVED : ResultsCut.FADE_MUSIC;
+        requireResultsSite(i, site, call.actualCut(), call.expectedSource());
+        CdAssetBytes readySaved = i.expectedSaved; var readyStatus = i.expectedStatus;
+        List<SonicCdGameModule.PastSound> readySounds = sounds;
+        if (site == ResultsCut.RESET_SAVED) {
+            byte[] bytes = new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]; bytes[0] = bytes[1] = 1;
+            readySaved = CdAssetBytes.copyOf(bytes); var status = i.expectedStatus;
+            readyStatus = new CdObjectPlacementRuntime.Status(status.routine(), status.previousChunkWord(), status.rightRecordIndex(), status.leftRecordIndex(),
+                    1, 1, status.nullRightByteOffset(), status.nullLeftByteOffset());
+        } else {
+            var ledger = new ArrayList<>(sounds);
+            ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA)));
+            readySounds = List.copyOf(ledger);
+        }
+        resultsPort = true;
+        try {
+            verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource());
+            if (site == ResultsCut.RESET_SAVED) {
+                placement.resetSavedObjectFlags(); i.expectedSaved = readySaved; i.expectedStatus = readyStatus; i.next = ResultsCut.FADE_MUSIC;
+            } else { sounds = readySounds; i.ledger = readySounds; i.next = ResultsCut.DRAW; }
+            verifyResults(i); validateResultsImages(i);
+        } catch (RuntimeException | Error original) {
+            try { verifyResults(i); validateResultsImages(i); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { resultsPort = false; }
+    }
     private void drawResults(CdResults.DrawCall call) {
         Objects.requireNonNull(call); var i = requireResults(call.expectedSource().identity().wholeIndex());
         requireResultsSite(i, ResultsCut.DRAW, call.actualCut(), call.expectedSource());
@@ -2602,7 +2783,7 @@ final class SonicCdPastLoadingVisit {
                     source.unsignedByte(CdObjectState.ByteField.WIDTH), source.unsignedByte(CdObjectState.ByteField.PRIORITY)), i.camera);
             verifyResults(i); validateResultsImages(i);
             if (!i.screenCleared) throw new IllegalStateException("Results Draw omitted its native source BCLR7");
-            i.next = ResultsCut.RETURN;
+            i.next = i.entry.routine() == 8 ? ResultsCut.TAIL_ACT : ResultsCut.RETURN;
         } finally { drawingResults = false; }
     }
     private CdObjectDrawQueue.LiveDrawSlot readResultsDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
@@ -2633,12 +2814,20 @@ final class SonicCdPastLoadingVisit {
     private void verifyResultsFailure(ResultsInvocation i, Throwable original) {
         try {
             verifyResults(i); validateResultsImages(i);
+            if (original instanceof UnsupportedResultsRead read) {
+                boolean reached = switch (read.boundary()) {
+                    case GOOD_FUTURE_FLAGS -> i.next == ResultsCut.FLAGS_SET || i.next == ResultsCut.FLAGS_COMPARE;
+                    case TAIL_PREIMAGE -> i.next == ResultsCut.UNKNOWN_LEVEL;
+                    case BONUS_PREIMAGE -> i.next == ResultsCut.UPDATE || i.next == ResultsCut.TIME || i.next == ResultsCut.RING
+                            || i.next == ResultsCut.CHECK_TIME || i.next == ResultsCut.CHECK_RING || i.next == ResultsCut.TIME_STORE || i.next == ResultsCut.RING_STORE;
+                };
+                if (!reached) throw new IllegalStateException("Results missing value is not its reached actual read/store");
+            }
             if (original instanceof CdResults.UnsupportedResults stop) {
                 if (stop.wholeIndex() != i.whole) throw new IllegalStateException("Results stopped at another actual source");
                 boolean exact = switch (stop.boundary()) {
                     case ROUTINE_DISPATCH -> i.next == ResultsCut.INVALID && stop.value() == i.entry.routine();
                     case ALLOCATION_ADDRESS -> i.next == ResultsCut.ALLOCATION_STOP && stop.value() == CdObjectPool.END_WHOLE_INDEX;
-                    case PROGRAMME_STORE_OWNER -> i.next == ResultsCut.PROGRAMME && stop.value() == CdResults.ProgrammeField.LEVEL_RESTART_WORD.ordinal();
                     default -> false; // Actual authenticated133 views/owned callbacks cannot produce another component boundary.
                 };
                 if (!exact) throw new IllegalStateException("Results failed at a different unowned instruction than its private actual site");
@@ -3258,7 +3447,7 @@ final class SonicCdPastLoadingVisit {
     }
     private Values signpostValues(CdLevelGlobals level, LoadingGlobals globals) {
         var old = values;
-        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(), old.cpuSat(), old.displayedSat(),
+        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(), old.cpuSat(), old.displayedSat(),
                 old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(), level, globals, old.hudObjects(),
                 old.fadeProgress(), old.calls(), old.loop());
     }
@@ -3544,7 +3733,7 @@ final class SonicCdPastLoadingVisit {
     }
     private Values goalValues(CdR11bSectionArt.State section, LoadingGlobals globals) {
         var old = values;
-        return new Values(old.phase(), section, old.cpuPalette(), old.fadePalette(), old.displayedPalette(), old.cpuSat(),
+        return new Values(old.phase(), section, old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(), old.cpuSat(),
                 old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(),
                 old.level(), globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
     }
@@ -3855,7 +4044,7 @@ final class SonicCdPastLoadingVisit {
     }
     private Values machineValues(CdRingGlobals ring, LoadingGlobals globals) {
         var old = values;
-        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(),
+        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(),
                 ring, old.level(), globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
     }
@@ -4814,7 +5003,7 @@ final class SonicCdPastLoadingVisit {
         var nextGlobals = new LoadingGlobals(g.live(), nextContact, g.score(), g.drownTimerWord(), g.tail(),
                 g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
         // Direct Hurt's world result is required identical above. Ring/score ownership is retained, never defaulted.
-        var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(),
+        var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(),
                 old.ring(), old.level(), nextGlobals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
         var ledger = new ArrayList<>(sounds);
@@ -6146,7 +6335,7 @@ final class SonicCdPastLoadingVisit {
 
     private Values preparedFloatValues(SonicCdGameModule.PastLoadCall call) {
         var old = values; var calls = new ArrayList<>(old.calls()); calls.add(call);
-        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(), old.cpuSat(),
+        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(), old.cpuSat(),
                 old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(),
                 old.level(), old.globals(), old.hudObjects(), old.fadeProgress(), List.copyOf(calls), old.loop());
     }
@@ -7231,7 +7420,7 @@ final class SonicCdPastLoadingVisit {
         var calls = new ArrayList<>(priorValues.calls());
         calls.add(primary ? TUNNEL_DOOR_PRIMARY_SOLID : TUNNEL_DOOR_SECONDARY_SOLID);
         var readyValues = new Values(priorValues.phase(), priorValues.section(), priorValues.cpuPalette(),
-                priorValues.fadePalette(), priorValues.displayedPalette(), priorValues.cpuSat(), priorValues.displayedSat(),
+                priorValues.fadePalette(), priorValues.waterPalette(), priorValues.displayedPalette(), priorValues.cpuSat(), priorValues.displayedSat(),
                 priorValues.displayedHScroll(), priorValues.displayedVScrollLongBits(), priorValues.foregroundPlane(),
                 priorValues.ring(), priorValues.level(), priorValues.globals(), priorValues.hudObjects(),
                 priorValues.fadeProgress(), List.copyOf(calls), priorValues.loop());
@@ -8064,7 +8253,7 @@ final class SonicCdPastLoadingVisit {
     }
     private Values preparedMonitorValues(SonicCdGameModule.PastLoadCall call) {
         var old = values; var calls = new ArrayList<>(old.calls()); calls.add(call);
-        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.displayedPalette(), old.cpuSat(),
+        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(), old.cpuSat(),
                 old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(),
                 old.level(), old.globals(), old.hudObjects(), old.fadeProgress(), List.copyOf(calls), old.loop());
     }
@@ -8324,7 +8513,7 @@ final class SonicCdPastLoadingVisit {
         System.arraycopy(background.hscrollRam().copy(), 0, selectedHScroll, 0, 0x380);
         // Common VInterrupt selects the CPU LONG; C then publishes only 0x380 HScroll
         // bytes. Preserve the InitVDP-cleared selected tail and actual native VScroll.
-        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(),
+        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.waterPalette(),
                 values.cpuPalette(), values.cpuSat(), values.cpuSat(), CdAssetBytes.copyOf(selectedHScroll),
                 background.vscroll(), values.foregroundPlane(), values.ring(), values.level(), values.globals(),
                 values.hudObjects(), values.fadeProgress(), values.calls(), values.loop());
@@ -8535,7 +8724,7 @@ final class SonicCdPastLoadingVisit {
                         l.flowerCount(), fade, powerup, l.timeOver()), values.globals(), values.hudObjects(), values.calls());
     }
     private void fadeProgress(FadeProgress progress) {
-        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(),
+        values = new Values(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.waterPalette(),
                 values.displayedPalette(), values.cpuSat(), values.displayedSat(), values.displayedHScroll(),
                 values.displayedVScrollLongBits(), values.foregroundPlane(), values.ring(), values.level(),
                 values.globals(), values.hudObjects(), progress, values.calls(), values.loop());

@@ -198,6 +198,18 @@ public final class CdR11bSectionArt {
                 CLEARED, 0, 0, 0, 0, resident, false);
     }
 
+    /**
+     * Pure full-WORD source value, Results/Main.asm:282 at pin1ecc5f3a. The caller owns the
+     * actual programme producer/order/adoption. Retain all queued continuation, table and
+     * current-pattern values exactly; do not clear/reprepare/service PLCs or infer residency.
+     */
+    public State withSectionWord(State state, int rawSectionWord) {
+        checked(state); word(rawSectionWord);
+        if (state.sectionWord == rawSectionWord) return state;
+        return new State(this, rawSectionWord, state.queue, state.codeTable, state.decoder, state.savedDecoder,
+                state.remainingTilesWord, state.processBudgetWord, state.hintWord, state.padWord, state.residency, state.stopped);
+    }
+
     public State clearPlcs(State state) { return kernel.clearPlcs(state); }
     public State initList(State state, int id) { return kernel.initList(state, id); }
     public State appendList(State state, int id) { return kernel.appendList(state, id); }

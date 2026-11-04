@@ -1,5 +1,37 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — Results next-programme prefix and detached Act2 custody
+
+The actual Results NextLevel path now publishes its ordered scalar writes,
+section reset, whole saved-bank reset, CDA fade request, Draw and conditional
+future flag tail. The old physical walk completes before the programme fence;
+Main scroll, collector drain and global animations do not run on that branch.
+Unknown future-flag BSET remains a reached boundary after its preceding clear.
+The existing programme value represents unknown or known flag bytes explicitly.
+
+Retained water palette128 comes from the real RunMMD clear, independently of
+normal and target colours. Old-programme selector12/C Frame services share the
+ordinary service kernel with full-pair preflight; they grant no Body or World
+invocation authority. Passive retained-image reads permit the genuine new gates
+while all mutating and ordinary-source guards stay strict. Independent static
+review found no actionable P1/P2 in these ports. Black fade and programme return
+remain pending; the permanent returned route is still10394.
+
+Qualification: source-bound857 had855passes, one value-comparison fixture failure
+and one intentional programme-frontier observer error,0skips. Two narrow fixture
+reconciliations corrected immutable art comparison and pre-tail ring animation;
+the fresh50-case/three-class selection then passed with0failures/errors/skips.
+Source was d0bfa6aa773c0082e976e1dae82bc9da9b8eea60c6f4e787cac84a495fd4a493,
+execution19:49:44.452768–19:50:17.018394Z. Its8prefix,32stock and10test-helper cases
+are separate from the earlier796Frame/6water positives, not a single green857.
+
+USA stock preparation now detaches the checked R12A terrain/player pair inside
+its existing open-CUE scope. Source identity and the original three asset paths
+stay unchanged; no new PCM, current art, preload or runtime source fallback is
+added. JP/EU retain absence. Data retention does not admit an Act2 Frame/World.
+A small test-only captured-value assertion keeps byte/record comparisons separate
+from opaque owner identity and runtime CAS authority.
+
 ## 4 November 2026 — native goal, Signpost, Results and Act2 prerequisites
 
 Private `98280f733` plus the owned engine delta qualifies the controller route

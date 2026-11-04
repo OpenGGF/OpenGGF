@@ -150,16 +150,20 @@ Unreleased. The earlier development themes remain in
   An input-only run-up, mature spindash and Spring-avoidance jump now clear that
   terrain and reach the native Goal Post, Signpost and low-ring Big Ring path.
   Complete full/course replay is checked through9856 and the genuine Results
-  tally10394, before its first next-level programme-store boundary. Goal9598 and
-  Results10394 have real selected-pixel and resource-retirement checks; the next-act
-  programme handoff remains separate work.
+  tally10394. Goal9598 and Results10394 have real selected-pixel and resource-retirement
+  checks. Results now publishes its native next-level scalar, saved-bank, sound and
+  draw prefix before the programme boundary, after the complete physical walk.
+  Retained water colours and dedicated old-programme Frame services prepare the
+  pending exit; next-act execution remains separate work.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
   goal-bound and warp clears. Live Signpost and Results bindings preserve native
   physical child order, BYTE/WORD timers, screen coordinates, score, PLC and sound
   requests through existing owners. Original Projector metadata reuses existing art.
   Original-USA Act2 terrain and player factories now retain their own source bytes
-  and immutable binding, without widening playable stage admission.
+  and immutable binding. Stock USA preparation detaches both products before closing
+  its existing CUE owner; JP/EU retain explicit absence. Playable stage admission is
+  unchanged.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

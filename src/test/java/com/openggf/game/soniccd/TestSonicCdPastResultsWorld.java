@@ -26,7 +26,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Actual-World object-only checks; bounded execution is recorded in the implementation plan.
+ * Authored source checks only: ALL JAVA UNRUN, including compilation/discovery.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Results/Main.asm:61-343;
  * Functions (General).asm slow PLC; Object Functions.asm:137-196,275-346.
  * Fixed object-only ingress at the genuine healthy8278 cut. No actor, ring/global, terrain,
@@ -113,16 +113,19 @@ class TestSonicCdPastResultsWorld {
         assertEquals(List.of(CdResults.Sound.FM_TALLY),resultsSounds(p).stream().map(SonicCdGameModule.PastResultsSound::sound).toList());control.assertFrameAndScroll(p);
     }
 
-    @Test void firstNextLevelProgrammeStoreFencesBeforeRestartAndPreservesTheEntireLiveProgramme() throws Exception {
-        var p=ordinary();var entry=fixed(p,127).moveByte(ROUTINE,8);var control=control(p);seed(p,entry);
+    @Test void nextLevelProgrammePrefixFencesAfterTheCompletePhysicalWalkBeforeOrdinaryDraw() throws Exception {
+        var p=ordinary();var entry=fixed(p,127).moveByte(ROUTINE,8);seed(p,entry);
         var program=p.harness().module().levelProgramState();
-        var failure=assertThrows(CdResults.UnsupportedResults.class,()->step(p.harness(),neutral()));
-        assertEquals(CdResults.UnsupportedBoundary.PROGRAMME_STORE_OWNER,failure.boundary());
-        assertEquals(CdResults.ProgrammeField.LEVEL_RESTART_WORD.ordinal(),failure.value());assertEquals(127,failure.wholeIndex());
-        assertSame(program,p.harness().module().levelProgramState());assertEquals(control.level(),actualField(actualField(p.visit(),"values"),"level"));
-        assertEquals(entry,p.placement().pool().state(127));assertEquals(0,failure.getSuppressed().length);assertTrue(p.frame().closed());retired(p);
+        var dev=(CdOpeningObjectRuntime.DevGlobals)actualField(globals(p),"retainedDev");assertEquals(0,dev.goodFuture());
+        var failure=assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,()->step(p.harness(),neutral()));
+        assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_END_PROGRAMME,failure.boundary());
+        assertSame(program,p.harness().module().levelProgramState());assertEquals(2,((CdLevelGlobals)actualField(actualField(p.visit(),"values"),"level")).levelRestart());
+        assertEquals(1,p.frame().environment().movement().gates().zoneAct());assertEquals(1,p.frame().environment().movement().gates().timeZone());
+        assertEquals(entry.moveByte(SPRITE_FLAGS,entry.spriteFlags()&0x7F),p.placement().pool().state(127));
+        assertEquals(0,failure.getSuppressed().length);assertTrue(p.frame().closed());retired(p);
         var calls=(List<?>)actualField(actualField(p.visit(),"values"),"calls");
-        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.RESULTS_BODY));assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.ORDINARY_MAIN_RETURN));
+        assertTrue(calls.contains(SonicCdGameModule.PastLoadCall.RESULTS_BODY));assertEquals(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS,calls.getLast());
+        assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.DRAW_OBJECTS));assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.ORDINARY_MAIN_RETURN));
         assertEquals(CdObjectDrawQueue.Phase.CLOSED,((CdObjectDrawQueue)actualField(p.visit(),"drawQueue")).phase());
         // A failed Frame is terminal; do not restore it to claim replay or a new visit.
     }

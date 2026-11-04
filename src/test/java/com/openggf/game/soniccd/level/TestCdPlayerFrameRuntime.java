@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import com.openggf.game.soniccd.objects.CdBigRing;
+import com.openggf.game.soniccd.objects.CdResults;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdSignpost;
@@ -5556,7 +5557,7 @@ class TestCdPlayerFrameRuntime {
     }
     // END Signpost's five Frame-owned stores.
 
-    // BEGIN Big Ring's five Frame-owned stores. Constructed component vectors; ALL appended Java UNRUN.
+    // BEGIN Big Ring's five Frame-owned stores. Constructed component vectors; no World invocation authority.
     @Test void bigRingPlayerStoresPrebuildOnlyTheirNativeFieldsAndRetainAllOtherPartitions() throws IOException {
         for (int kind = 0; kind < 5; kind++) {
             var fixture = new Fixture();
@@ -5784,4 +5785,319 @@ class TestCdPlayerFrameRuntime {
     }
     // END Big Ring's five Frame-owned stores.
 
+    // BEGIN Results programme gate values. Constructed component vectors; no World invocation authority.
+    @Test void resultsGatePreparationChangesOnlyReachedFieldAndRetainsAllOtherActualValues() throws IOException {
+        for (var field : List.of(CdResults.ProgrammeField.TIME_ZONE_BYTE, CdResults.ProgrammeField.ZONE_ACT_WORD)) {
+            var fixture = new Fixture();
+            try (var f = spinTunnelDirtyFrame(fixture)) {
+                var old = f.captureShared(); var e = old.environment(); var m = e.movement();
+                var gates = new CdPlayerMovement.Gates(0xBEEF, 0xFE, 0x81, 0x82, 0x83, 0x84, 0xFF);
+                var dirty = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), gates, m.globals()),
+                        e.controls(), e.globals(), e.dynamicSlots());
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(old.owner(), dirty, old.artState(), true, old.vIntClock()));
+                var actor = f.captureActor(); var shared = f.captureShared(); var before = observe(f); int uploads = fixture.dmas.size();
+                f.bindArtPublication((dma, image) -> fail("A Results gate value cannot publish art"));
+                int value = field == CdResults.ProgrammeField.TIME_ZONE_BYTE ? 1 : 0xFFFF;
+                var expectedGates = new CdPlayerMovement.Gates(field == CdResults.ProgrammeField.ZONE_ACT_WORD ? value : 0xBEEF,
+                        field == CdResults.ProgrammeField.TIME_ZONE_BYTE ? value : 0xFE, 0x81, 0x82, 0x83, 0x84, 0xFF);
+                var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), expectedGates, m.globals()),
+                        dirty.controls(), dirty.globals(), dirty.dynamicSlots());
+                var ready = f.prepareObjectResultsProgrammeGates(actor.state(), dirty, field, value);
+                assertSame(actor.state(), ready.expectedState()); assertSame(actor.state(), ready.finalState()); assertSame(dirty, ready.expectedEnvironment());
+                assertEquals(expected, ready.finalEnvironment()); assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+                assertEquals(before, observe(f)); f.validatePreparedObjectSolidPublication(ready); assertEquals(before, observe(f));
+                f.applyPreparedObjectSolidPublication(ready); assertSame(actor.state(), f.state()); assertSame(ready.finalEnvironment(), f.environment());
+                assertEquals(expected, f.environment()); assertSame(m.physics(), f.environment().movement().physics());
+                assertSame(m.bounds(), f.environment().movement().bounds()); assertSame(m.globals(), f.environment().movement().globals());
+                assertSame(dirty.controls(), f.environment().controls()); assertSame(dirty.globals(), f.environment().globals());
+                assertSame(dirty.dynamicSlots(), f.environment().dynamicSlots()); assertEquals(Set.of("gates"), differences(before, observe(f)));
+                assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+                assertTrue(f.paused()); assertEquals(uploads, fixture.dmas.size());
+            }
+        }
+    }
+
+    @Test void resultsZoneActAcceptsFullRawWordAfterPeriodPublicationWithoutOrdinaryFamilyAdmission() throws IOException {
+        for (int zoneAct : new int[]{0, 1, 2, 0xFF, 0x100, 0x7FFF, 0x8000, 0xFFFF}) {
+            try (var f = spinTunnelDirtyFrame(new Fixture())) {
+                var state = f.state(); var before = f.environment(); var oldGates = before.movement().gates();
+                var period = f.prepareObjectResultsProgrammeGates(state, before, CdResults.ProgrammeField.TIME_ZONE_BYTE, 2);
+                f.applyPreparedObjectSolidPublication(period); assertEquals(2, f.environment().movement().gates().timeZone());
+                var actual = f.environment();
+                var next = f.prepareObjectResultsProgrammeGates(state, actual, CdResults.ProgrammeField.ZONE_ACT_WORD, zoneAct);
+                f.applyPreparedObjectSolidPublication(next); var gates = f.environment().movement().gates();
+                assertSame(state, f.state()); assertEquals(zoneAct, gates.zoneAct()); assertEquals(2, gates.timeZone());
+                assertEquals(oldGates.miniSonic(), gates.miniSonic()); assertEquals(oldGates.waterSlide(), gates.waterSlide());
+                assertEquals(oldGates.windTunnel(), gates.windTunnel()); assertEquals(oldGates.speedShoes(), gates.speedShoes());
+                assertEquals(oldGates.timeWarpDirection(), gates.timeWarpDirection());
+                var present = f.prepareObjectResultsProgrammeGates(state, f.environment(), CdResults.ProgrammeField.TIME_ZONE_BYTE, 1);
+                f.applyPreparedObjectSolidPublication(present); assertEquals(zoneAct, f.environment().movement().gates().zoneAct());
+                assertEquals(1, f.environment().movement().gates().timeZone());
+                assertThrows(IllegalStateException.class, () -> f.runBody(1), "Value adoption does not grant a player dispatch");
+            }
+        }
+    }
+
+    @Test void resultsGateSameValueUsesActualReferencesWithoutBuildingAnotherEnvironmentOrAdvancingOwners() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            for (var field : List.of(CdResults.ProgrammeField.TIME_ZONE_BYTE, CdResults.ProgrammeField.ZONE_ACT_WORD)) {
+                var first = f.prepareObjectResultsProgrammeGates(f.state(), f.environment(), field, resultsGateValue(field));
+                f.applyPreparedObjectSolidPublication(first); var actor = f.captureActor(); var shared = f.captureShared(); var before = observe(f);
+                var same = f.prepareObjectResultsProgrammeGates(actor.state(), shared.environment(), field, resultsGateValue(field));
+                assertSame(actor.state(), same.expectedState()); assertSame(actor.state(), same.finalState());
+                assertSame(shared.environment(), same.expectedEnvironment()); assertSame(shared.environment(), same.finalEnvironment());
+                f.validatePreparedObjectSolidPublication(same); f.applyPreparedObjectSolidPublication(same); f.applyPreparedObjectSolidPublication(same);
+                assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(before, observe(f));
+            }
+        }
+    }
+
+    @Test void resultsGateEqualForeignExpectedPairRetainsThisFramesCanonicalActualReferences() throws IOException {
+        try (var a = spinTunnelDirtyFrame(new Fixture()); var b = spinTunnelDirtyFrame(new Fixture())) {
+            var state = a.state(); var environment = a.environment(); assertEquals(state, b.state()); assertNotSame(state, b.state());
+            assertEquals(environment, b.environment()); assertNotSame(environment, b.environment());
+            for (var field : List.of(CdResults.ProgrammeField.TIME_ZONE_BYTE, CdResults.ProgrammeField.ZONE_ACT_WORD)) {
+                var ready = a.prepareObjectResultsProgrammeGates(b.state(), b.environment(), field, resultsGateValue(field));
+                assertSame(state, ready.expectedState()); assertSame(state, ready.finalState()); assertSame(environment, ready.expectedEnvironment());
+                assertSame(environment.controls(), ready.finalEnvironment().controls()); assertSame(environment.globals(), ready.finalEnvironment().globals());
+                assertSame(environment.movement().physics(), ready.finalEnvironment().movement().physics());
+                assertSame(environment.movement().bounds(), ready.finalEnvironment().movement().bounds());
+                assertSame(environment.movement().globals(), ready.finalEnvironment().movement().globals());
+            }
+            assertSame(state, a.state()); assertSame(environment, a.environment());
+        }
+    }
+
+    @Test void resultsGatePreparationCasRejectsEveryRepresentedStateMutationBeforeAnyOwnerWrite() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            for (var field : List.of(CdResults.ProgrammeField.TIME_ZONE_BYTE, CdResults.ProgrammeField.ZONE_ACT_WORD))
+                for (String part : new String[]{"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "SCRIPT_INDEX", "ANIMATION_TIMER", "MAP_FRAME", "SLOT_ID", "MAPPING_ADDRESS", "TILE", "PRIORITY", "WIDTH", "HURT", "INVINCIBILITY", "SPEED_SHOES", "RESET", "HISTORY_INDEX", "ROTATION_DISTANCE", "PUSH_OBJECT", "STAND_OBJECT", "ROTATION_ANGLE", "HISTORY_BYTES"}) {
+                    var stale = framePortChangedState(state, part); assertNotEquals(state, stale, part);
+                    assertThrows(IllegalArgumentException.class, () -> f.prepareObjectResultsProgrammeGates(stale, environment, field, resultsGateValue(field)));
+                }
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void resultsGatePreparationCasRejectsEveryRepresentedEnvironmentMutationIncludingBothReachedGates() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            for (var field : List.of(CdResults.ProgrammeField.TIME_ZONE_BYTE, CdResults.ProgrammeField.ZONE_ACT_WORD))
+                for (String part : new String[]{"TOP_SPEED", "ACCELERATION", "DECELERATION", "BOUND_LEFT", "BOUND_RIGHT", "BOUND_BOTTOM", "BOUND_BOSS_FIGHT", "GATE_ZONE_ACT", "GATE_TIME_ZONE", "GATE_MINI_SONIC", "GATE_WATER_SLIDE", "GATE_WIND_TUNNEL", "GATE_SPEED_SHOES", "GATE_TIME_WARP_DIRECTION", "MOVEMENT_LOOK_MODE", "MOVEMENT_CAMERA_Y_CENTRE", "MOVEMENT_PRIMARY_ANGLE", "MOVEMENT_SECONDARY_ANGLE", "MOVEMENT_BORED_TIMER", "MOVEMENT_SCORE_CHAIN", "MOVEMENT_DEBUG_ANGLE", "MOVEMENT_DEBUG_ANGLE_SHIFT", "MOVEMENT_DEBUG_QUADRANT", "MOVEMENT_DEBUG_FLOOR_DISTANCE", "RAW_HELD", "RAW_TAP", "LOGICAL_HELD", "LOGICAL_TAP", "CONTROL_LOCKED", "BODY_LEVEL_FRAMES", "BODY_CAMERA_X_CENTRE", "BODY_TIME_ATTACK_MODE", "BODY_DEBUG_MODE", "BODY_DEBUG_CHEAT", "BODY_TIME_WARP_TIMER", "BODY_INVINCIBLE", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS"}) {
+                    var stale = framePortChangedEnvironment(environment, part); assertNotEquals(environment, stale, part);
+                    assertThrows(IllegalArgumentException.class, () -> f.prepareObjectResultsProgrammeGates(state, stale, field, resultsGateValue(field)));
+                }
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void resultsGatePreparedPairChecksInterveningChangesAndReplaysOnlyViaExistingValueAdoption() throws IOException {
+        for (var field : List.of(CdResults.ProgrammeField.TIME_ZONE_BYTE, CdResults.ProgrammeField.ZONE_ACT_WORD)) {
+            try (var f = spinTunnelDirtyFrame(new Fixture())) {
+                var actor = f.captureActor(); var shared = f.captureShared();
+                var ready = f.prepareObjectResultsProgrammeGates(actor.state(), shared.environment(), field, resultsGateValue(field));
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), framePortChangedState(actor.state(), "Y_FRACTION"), actor.display()));
+                framePortPreparedRejected(f, ready, IllegalArgumentException.class); f.restoreActor(actor);
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), framePortChangedEnvironment(shared.environment(), "RAW_TAP"), shared.artState(), shared.paused(), shared.vIntClock()));
+                framePortPreparedRejected(f, ready, IllegalArgumentException.class); f.restoreShared(shared);
+                f.applyPreparedObjectSolidPublication(ready); var after = f.captureShared(); framePortPreparedRejected(f, ready, IllegalArgumentException.class);
+                f.restoreShared(shared); f.applyPreparedObjectSolidPublication(ready); assertEquals(after, f.captureShared()); assertEquals(actor, f.captureActor());
+            }
+        }
+    }
+
+    @Test void resultsGateTypedArgumentsWidthsAndUnsupportedProgrammeFieldsRejectWithoutWrites() throws Exception {
+        var signature = CdPlayerFrameRuntime.class.getDeclaredMethod("prepareObjectResultsProgrammeGates", CdPlayerBody.State.class,
+                CdPlayerBody.Environment.class, CdResults.ProgrammeField.class, int.class);
+        assertEquals(CdPlayerFrameRuntime.ObjectSolidPublication.class, signature.getReturnType());
+        assertEquals(1, Arrays.stream(CdPlayerFrameRuntime.class.getDeclaredMethods()).filter(m -> m.getName().equals("prepareObjectResultsProgrammeGates")).count());
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var s = f.state(); var e = f.environment(); var before = observe(f);
+            assertThrows(NullPointerException.class, () -> f.prepareObjectResultsProgrammeGates(null, e, CdResults.ProgrammeField.TIME_ZONE_BYTE, 1));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectResultsProgrammeGates(s, null, CdResults.ProgrammeField.TIME_ZONE_BYTE, 1));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectResultsProgrammeGates(s, e, null, 1));
+            for (var field : CdResults.ProgrammeField.values()) if (field != CdResults.ProgrammeField.TIME_ZONE_BYTE && field != CdResults.ProgrammeField.ZONE_ACT_WORD)
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectResultsProgrammeGates(s, e, field, 0));
+            for (int value : new int[]{Integer.MIN_VALUE, -1, 0, 3, 0x7F, 0x80, 0xFF, 0x100, Integer.MAX_VALUE})
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectResultsProgrammeGates(s, e, CdResults.ProgrammeField.TIME_ZONE_BYTE, value));
+            for (int value : new int[]{Integer.MIN_VALUE, -1, 0x10000, Integer.MAX_VALUE})
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectResultsProgrammeGates(s, e, CdResults.ProgrammeField.ZONE_ACT_WORD, value));
+            assertSame(s, f.state()); assertSame(e, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void resultsGateUsesExistingPendingActiveEntitledAndClosedGuardsBeforeArgumentChecks() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var selection = f.prepareInput(0);
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectResultsProgrammeGates(null, null, null, -1));
+            f.serviceVBlank(selection.phase(), () -> assertThrows(IllegalStateException.class, () -> f.prepareObjectResultsProgrammeGates(null, null, null, -1)));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectResultsProgrammeGates(null, null, null, -1));
+            f.runBody(1); assertDoesNotThrow(() -> f.prepareObjectResultsProgrammeGates(f.state(), f.environment(), CdResults.ProgrammeField.TIME_ZONE_BYTE, 1));
+            var s = f.state(); var e = f.environment(); var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+            f.close(); assertThrows(IllegalStateException.class, () -> f.prepareObjectResultsProgrammeGates(null, null, null, -1));
+            assertSame(s, f.state()); assertSame(e, f.environment()); assertSame(art, f.artState()); assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+        }
+    }
+
+    @Test void resultsGateCarrierRemainsReusableDataWithoutFrameCaptureOrBodyAuthority() throws IOException {
+        try (var a = new Fixture().runtime(); var b = new Fixture().runtime()) {
+            var actorA = a.captureActor(); var actorB = b.captureActor(); var sharedA = a.captureShared(); var sharedB = b.captureShared();
+            var ready = a.prepareObjectResultsProgrammeGates(actorB.state(), sharedB.environment(), CdResults.ProgrammeField.ZONE_ACT_WORD, 1);
+            assertSame(actorA.state(), ready.expectedState()); assertSame(sharedA.environment(), ready.expectedEnvironment());
+            b.validatePreparedObjectSolidPublication(ready); b.applyPreparedObjectSolidPublication(ready);
+            assertSame(actorA.state(), b.state()); assertSame(ready.finalEnvironment(), b.environment()); assertSame(actorB.owner(), b.captureActor().owner());
+            assertThrows(IllegalArgumentException.class, () -> b.restoreActor(actorA)); assertThrows(IllegalStateException.class, () -> b.runBody(1));
+            assertEquals(actorA, a.captureActor()); assertEquals(sharedA, a.captureShared());
+        }
+    }
+    private static int resultsGateValue(CdResults.ProgrammeField field) { return field == CdResults.ProgrammeField.TIME_ZONE_BYTE ? 2 : 0xFFFF; }
+    // END Results programme gate values.
+
+
+    // BEGIN old-programme exit selector12/C. Declared component values, never World entitlement.
+    @Test void oldProgrammeExitPaletteFadeReadsThenPublishesThenFastPlcAndFinishesExactlyOnce() throws IOException {
+        var fixture=new Fixture();try(var f=oldExitPortFrame(fixture)) {
+            var actor=f.captureActor();var shared=f.captureShared();var e=shared.environment();var order=new ArrayList<String>();int uploads=fixture.dmas.size();
+            f.bindArtPublication((dma,image)->fail("Old exit has no Sonic DPLC/DMA authority"));
+            oldExitInvoke(f,false,0xF5,actor.state(),e,order,()->oldExitAssertSourceCut(f,actor,shared));
+            assertEquals(List.of("PUBLICATION","FAST_PLC"),order);oldExitAssertFinished(f,actor,shared,0xF5,0xD1,0x2346,0x5679);
+            assertEquals(uploads,fixture.dmas.size());assertEquals(0xFF,f.environment().movement().gates().timeWarpDirection());
+            assertThrows(IllegalStateException.class,()->f.runBody(1));assertThrows(IllegalStateException.class,f::advanceLevelMainFrame);
+        }
+    }
+    @Test void oldProgrammeExitLoadUsesTheSameKernelWithCopyDrawBetweenPublicationAndFastPlc() throws IOException {
+        var fixture=new Fixture();try(var f=oldExitPortFrame(fixture)) {
+            var actor=f.captureActor();var shared=f.captureShared();var order=new ArrayList<String>();int uploads=fixture.dmas.size();
+            f.bindArtPublication((dma,image)->fail("Old exit selectorC has no player art call"));
+            oldExitInvoke(f,true,0xF5,actor.state(),shared.environment(),order,()->oldExitAssertSourceCut(f,actor,shared));
+            assertEquals(List.of("PUBLICATION","COPY_DRAW","FAST_PLC"),order);oldExitAssertFinished(f,actor,shared,0xF5,0xD1,0x2346,0x5679);
+            assertEquals(uploads,fixture.dmas.size());assertThrows(IllegalStateException.class,()->f.runBody(1));assertThrows(IllegalStateException.class,f::advanceLevelMainFrame);
+        }
+    }
+    @Test void oldProgrammeExitLeavesEveryOrdinarySourceFamilyGateStrict() throws IOException {
+        try(var f=oldExitPortFrame(new Fixture())) {
+            var actor=f.captureActor();var shared=f.captureShared();
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class,()->f.serviceLevelPaletteFade(8,()->fail("unreached"),()->fail("unreached"))).boundary());
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class,()->f.serviceLevelLoad(8,()->fail("unreached"),()->fail("unreached"),()->fail("unreached"))).boundary());
+            f.prepareInput(8);assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class,()->f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL)).boundary());
+            assertEquals(actor,f.captureActor());assertEquals(shared,f.captureShared());assertFalse(f.closed());
+            oldExitInvoke(f,false,0,f.state(),f.environment(),new ArrayList<>(),()->{});
+            assertThrows(IllegalStateException.class,()->f.runBody(1));assertThrows(IllegalStateException.class,f::advanceLevelMainFrame);
+        }
+    }
+    @Test void oldProgrammeExitCasChecksEveryFullStateAndEnvironmentMemberBeforeReadingControllers() throws IOException {
+        for(boolean load:new boolean[]{false,true})try(var f=oldExitPortFrame(new Fixture())) {
+            var state=f.state();var e=f.environment();var before=observe(f);
+            for(String part:new String[]{"CENTRE_X","X_FRACTION","CENTRE_Y","Y_FRACTION","X_VELOCITY","Y_VELOCITY","GROUND_VELOCITY","ROUTINE","ANGLE","FLAGS","SPRITE_FLAGS","X_RADIUS","Y_RADIUS","ANIMATION","PREVIOUS_ANIMATION","PLAYER_JUMP","CHARGE","MOVE_LOCK","STICK","PLAYER_CONTROL","PREVIOUS_PRIMARY_ANGLE","PREVIOUS_SECONDARY_ANGLE","SCRIPT_INDEX","ANIMATION_TIMER","MAP_FRAME","SLOT_ID","MAPPING_ADDRESS","TILE","PRIORITY","WIDTH","HURT","INVINCIBILITY","SPEED_SHOES","RESET","HISTORY_INDEX","ROTATION_DISTANCE","PUSH_OBJECT","STAND_OBJECT","ROTATION_ANGLE","HISTORY_BYTES"}) {
+                var stale=framePortChangedState(state,part);assertThrows(IllegalArgumentException.class,()->oldExitInvoke(f,load,0,stale,e,new ArrayList<>(),()->fail("unreached")),part);
+            }
+            for(String part:new String[]{"TOP_SPEED","ACCELERATION","DECELERATION","BOUND_LEFT","BOUND_RIGHT","BOUND_BOTTOM","BOUND_BOSS_FIGHT","GATE_ZONE_ACT","GATE_TIME_ZONE","GATE_MINI_SONIC","GATE_WATER_SLIDE","GATE_WIND_TUNNEL","GATE_SPEED_SHOES","GATE_TIME_WARP_DIRECTION","MOVEMENT_LOOK_MODE","MOVEMENT_CAMERA_Y_CENTRE","MOVEMENT_PRIMARY_ANGLE","MOVEMENT_SECONDARY_ANGLE","MOVEMENT_BORED_TIMER","MOVEMENT_SCORE_CHAIN","MOVEMENT_DEBUG_ANGLE","MOVEMENT_DEBUG_ANGLE_SHIFT","MOVEMENT_DEBUG_QUADRANT","MOVEMENT_DEBUG_FLOOR_DISTANCE","RAW_HELD","RAW_TAP","LOGICAL_HELD","LOGICAL_TAP","CONTROL_LOCKED","BODY_LEVEL_FRAMES","BODY_CAMERA_X_CENTRE","BODY_TIME_ATTACK_MODE","BODY_DEBUG_MODE","BODY_DEBUG_CHEAT","BODY_TIME_WARP_TIMER","BODY_INVINCIBLE","BODY_BOSS_MUSIC","DYNAMIC_SLOTS"}) {
+                var stale=framePortChangedEnvironment(e,part);assertThrows(IllegalArgumentException.class,()->oldExitInvoke(f,load,0,state,stale,new ArrayList<>(),()->fail("unreached")),part);
+            }
+            assertEquals(before,observe(f));assertSame(state,f.state());assertSame(e,f.environment());assertFalse(f.closed());
+        }
+    }
+    @Test void oldProgrammeExitRejectsWrongRawGatesAndForeignDeclaredSourceBeforePublication() throws IOException {
+        for(boolean load:new boolean[]{false,true})for(int[] pair:new int[][]{{0,1},{2,1},{0x100,1},{0xFFFF,1},{1,0},{1,2},{1,0x80},{1,0x81},{1,0xFF}})try(var f=oldExitPortFrame(new Fixture())) {
+            var old=f.captureShared();var e=old.environment();var m=e.movement();var g=m.gates();
+            var wrong=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),m.bounds(),new CdPlayerMovement.Gates(pair[0],pair[1],g.miniSonic(),g.waterSlide(),g.windTunnel(),g.speedShoes(),g.timeWarpDirection()),m.globals()),e.controls(),e.globals(),e.dynamicSlots());
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(old.owner(),wrong,old.artState(),old.paused(),old.vIntClock()));var before=observe(f);
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class,()->oldExitInvoke(f,load,8,f.state(),wrong,new ArrayList<>(),()->fail("unreached"))).boundary());assertEquals(before,observe(f));assertFalse(f.closed());
+        }
+        var a=new Fixture().assets();var foreign=new CdR11aAssets.Identity(CdReleaseVariant.USA,CdStagePayload.R12A.stage(),com.openggf.game.soniccd.CdNativeFile.R12A,CdMmdImage.Domain.ORIGINAL_WORD_RAM,"constructed","constructed");
+        var malformed=new CdR11aAssets(a.profile(),foreign,null,null,null,a.terrain(),a.loadPlan(),null,a.sonic(),a.player(),null);
+        try(var f=CdPlayerFrameRuntime.terrainOnlyDevelopment(malformed,(dma,image)->fail("unreached art"))) {
+            oldExitAdoptGates(f);var before=observe(f);
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY,assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class,()->oldExitInvoke(f,false,8,f.state(),f.environment(),new ArrayList<>(),()->fail("unreached"))).boundary());assertEquals(before,observe(f));
+        }
+    }
+    @Test void oldProgrammeExitRetainsOrdinaryShapeNullAndLifecycleGuardPrecedence() throws IOException {
+        for(boolean load:new boolean[]{false,true})try(var f=oldExitPortFrame(new Fixture())) {
+            var before=observe(f);var state=f.state();var e=f.environment();
+            for(int held:new int[]{-1,256,Integer.MIN_VALUE})assertThrows(IllegalArgumentException.class,()->oldExitInvoke(f,load,held,null,null,new ArrayList<>(),()->fail("unreached")));
+            assertThrows(NullPointerException.class,()->oldExitInvoke(f,load,0,null,e,new ArrayList<>(),()->fail("unreached")));
+            assertThrows(NullPointerException.class,()->oldExitInvoke(f,load,0,state,null,new ArrayList<>(),()->fail("unreached")));
+            if(load) {assertThrows(NullPointerException.class,()->f.serviceOldProgrammeExitLoad(0,state,e,null,()->{},()->{}));assertThrows(NullPointerException.class,()->f.serviceOldProgrammeExitLoad(0,state,e,()->{},null,()->{}));assertThrows(NullPointerException.class,()->f.serviceOldProgrammeExitLoad(0,state,e,()->{},()->{},null));}
+            else {assertThrows(NullPointerException.class,()->f.serviceOldProgrammeExitPaletteFade(0,state,e,null,()->{}));assertThrows(NullPointerException.class,()->f.serviceOldProgrammeExitPaletteFade(0,state,e,()->{},null));}
+            assertEquals(before,observe(f));f.prepareInput(8);
+            assertThrows(IllegalStateException.class,()->oldExitInvoke(f,load,0,null,null,new ArrayList<>(),()->fail("unreached")));f.clearPendingInput();
+            f.close();assertThrows(IllegalStateException.class,()->oldExitInvoke(f,load,0,null,null,new ArrayList<>(),()->fail("unreached")));
+            assertThrows(IllegalArgumentException.class,()->oldExitInvoke(f,load,-1,null,null,new ArrayList<>(),()->fail("unreached")));
+        }
+        try(var f=new Fixture().runtime()) {var selection=f.prepareInput(8);f.serviceVBlank(selection.phase());
+            assertThrows(IllegalStateException.class,()->oldExitInvoke(f,false,0,null,null,new ArrayList<>(),()->fail("unreached")));f.runBody(1);}
+    }
+    @Test void oldProgrammeExitCallbackFailuresPreserveOriginalThrowableRawPrefixAndCompletedCallbacksOnly() throws IOException {
+        for(boolean load:new boolean[]{false,true})for(int stop=0;stop<(load?3:2);stop++)for(boolean error:new boolean[]{false,true}) {
+            var fixture=new Fixture();try(var f=oldExitPortFrame(fixture)) {
+                var actor=f.captureActor();var shared=f.captureShared();var e=shared.environment();var order=new ArrayList<String>();int stopAt=stop;int[] index={0};
+                Throwable fault=error?new AssertionError("old-exit source callback"):new PublicationFailure();
+                Runnable atCut=()->{oldExitAssertSourceCut(f,actor,shared);if(index[0]++==stopAt){if(fault instanceof Error fatal)throw fatal;throw (RuntimeException)fault;}};
+                assertSame(fault,assertThrows(Throwable.class,()->oldExitInvoke(f,load,0xF5,actor.state(),e,order,atCut)));
+                assertEquals((load?List.of("PUBLICATION","COPY_DRAW","FAST_PLC"):List.of("PUBLICATION","FAST_PLC")).subList(0,stop+1),order);
+                assertEquals(new CdPlayerBody.Environment(e.movement(),new CdPlayerBody.Controls(0xF5,0xD1,8,0x10,0x81),e.globals(),e.dynamicSlots()),f.environment());
+                assertSame(actor.state(),f.state());assertSame(actor.display(),f.display());assertSame(shared.artState(),f.artState());assertSame(shared.vIntClock(),f.vIntClock());assertTrue(f.closed());assertEquals(0,fault.getSuppressed().length);
+                assertThrows(IllegalStateException.class,()->oldExitInvoke(f,load,0,f.state(),f.environment(),new ArrayList<>(),()->fail("unreached")));assertThrows(IllegalStateException.class,()->f.runBody(1));
+            }
+        }
+    }
+    @Test void oldProgrammeExitCaughtAndUncaughtReentryNeverAddsASecondServiceOrFinish() throws IOException {
+        for(boolean load:new boolean[]{false,true})try(var f=oldExitPortFrame(new Fixture())) {
+            var actor=f.captureActor();var shared=f.captureShared();var order=new ArrayList<String>();
+            oldExitInvoke(f,load,0xF5,actor.state(),shared.environment(),order,()->assertThrows(IllegalStateException.class,()->oldExitInvoke(f,load,0,null,null,new ArrayList<>(),()->fail("unreached"))));
+            oldExitAssertFinished(f,actor,shared,0xF5,0xD1,0x2346,0x5679);assertFalse(f.closed());
+        }
+        try(var f=oldExitPortFrame(new Fixture())) {var state=f.state();var clock=f.vIntClock();
+            assertThrows(IllegalStateException.class,()->f.serviceOldProgrammeExitPaletteFade(0xF5,state,f.environment(),f::beginLevelStart,()->fail("unreached fast PLC")));
+            assertTrue(f.closed());assertSame(clock,f.vIntClock());assertSame(state,f.state());assertEquals(0xF5,f.environment().controls().rawHeld());}
+    }
+    @Test void oldProgrammeExitUsesOnlyExistingPauseChargeWordTimerAndLongClockRules() throws IOException {
+        for(boolean load:new boolean[]{false,true})for(int[] v:new int[][]{{0,0,0,0,0,0},{1,1,0,0,2,2},{65535,65535,0,0,0,0},{1,1,1,0,2,1},{1,1,0,1,1,1}})try(var f=oldExitPortFrame(new Fixture())) {
+            var actor=new Actor(f);actor.charge=v[2];actor.install(f);var env=new Env(f);env.bored=v[0];env.warp=v[1];env.install(f);
+            var shared=f.captureShared();f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(),shared.environment(),shared.artState(),v[3]!=0,new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(1),0xFFFFFFFFL)));
+            var state=f.state();var e=f.environment();oldExitInvoke(f,load,0x80,state,e,new ArrayList<>(),()->{});
+            assertEquals(v[4],f.environment().movement().globals().boredTimer());assertEquals(v[5],f.environment().globals().timeWarpTimer());assertEquals(v[3]!=0,f.paused());assertEquals(state,f.state());
+            assertEquals(new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(1),0),f.vIntClock());assertEquals(e.globals().levelFrames(),f.environment().globals().levelFrames());
+            assertEquals(e.movement().gates(),f.environment().movement().gates());assertThrows(IllegalStateException.class,f::advanceLevelMainFrame);
+        }
+    }
+    @Test void oldProgrammeExitPublicValuesReplayAndEqualForeignPairsConferNoWorldOrNewCaptureAuthority() throws Exception {
+        var fade=CdPlayerFrameRuntime.class.getDeclaredMethod("serviceOldProgrammeExitPaletteFade",int.class,CdPlayerBody.State.class,CdPlayerBody.Environment.class,Runnable.class,Runnable.class);
+        var load=CdPlayerFrameRuntime.class.getDeclaredMethod("serviceOldProgrammeExitLoad",int.class,CdPlayerBody.State.class,CdPlayerBody.Environment.class,Runnable.class,Runnable.class,Runnable.class);
+        assertEquals(void.class,fade.getReturnType());assertEquals(void.class,load.getReturnType());
+        assertTrue(java.lang.reflect.Modifier.isPublic(fade.getModifiers()));assertTrue(java.lang.reflect.Modifier.isPublic(load.getModifiers()));
+        assertEquals(1,Arrays.stream(CdPlayerFrameRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals("serviceOldProgrammeExitPaletteFade")).count());
+        assertEquals(1,Arrays.stream(CdPlayerFrameRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals("serviceOldProgrammeExitLoad")).count());
+        try(var a=oldExitPortFrame(new Fixture());var b=oldExitPortFrame(new Fixture())) {
+            var actor=a.captureActor();var shared=a.captureShared();var otherActor=b.captureActor();var otherShared=b.captureShared();assertEquals(a.state(),b.state());assertEquals(a.environment(),b.environment());
+            oldExitInvoke(a,false,0xF5,b.state(),b.environment(),new ArrayList<>(),()->{});var afterActor=a.captureActor();var afterShared=a.captureShared();
+            a.restoreActor(actor);a.restoreShared(shared);oldExitInvoke(a,false,0xF5,actor.state(),shared.environment(),new ArrayList<>(),()->{});
+            assertEquals(afterActor,a.captureActor());assertEquals(afterShared,a.captureShared());assertEquals(otherActor,b.captureActor());assertEquals(otherShared,b.captureShared());
+            assertEquals(3,CdPlayerFrameRuntime.ActorState.class.getRecordComponents().length);assertEquals(5,CdPlayerFrameRuntime.SharedState.class.getRecordComponents().length);
+            var stale=shared.environment();assertThrows(IllegalArgumentException.class,()->oldExitInvoke(a,false,0,actor.state(),stale,new ArrayList<>(),()->fail("unreached")));
+            assertThrows(IllegalStateException.class,()->a.runBody(1));
+        }
+    }
+    private static CdPlayerFrameRuntime oldExitPortFrame(Fixture fixture)throws IOException {var f=levelStartPortFrame(fixture);oldExitAdoptGates(f);return f;}
+    private static void oldExitAdoptGates(CdPlayerFrameRuntime f){
+        // Constructed component ingress through actual finite Results value writers; no World invocation claim.
+        f.applyPreparedObjectSolidPublication(f.prepareObjectResultsProgrammeGates(f.state(),f.environment(),CdResults.ProgrammeField.TIME_ZONE_BYTE,1));
+        f.applyPreparedObjectSolidPublication(f.prepareObjectResultsProgrammeGates(f.state(),f.environment(),CdResults.ProgrammeField.ZONE_ACT_WORD,1));
+    }
+    private static void oldExitInvoke(CdPlayerFrameRuntime f,boolean load,int held,CdPlayerBody.State state,CdPlayerBody.Environment environment,List<String> order,Runnable atCut){
+        Runnable publication=()->{order.add("PUBLICATION");atCut.run();};Runnable fast=()->{order.add("FAST_PLC");atCut.run();};
+        if(load)f.serviceOldProgrammeExitLoad(held,state,environment,publication,()->{order.add("COPY_DRAW");atCut.run();},fast);
+        else f.serviceOldProgrammeExitPaletteFade(held,state,environment,publication,fast);
+    }
+    private static void oldExitAssertSourceCut(CdPlayerFrameRuntime f,CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared){
+        var e=shared.environment();assertEquals(new CdPlayerBody.Controls(0xF5,0xD1,8,0x10,0x81),f.environment().controls());
+        assertSame(actor.state(),f.state());assertSame(actor.display(),f.display());assertSame(e.movement(),f.environment().movement());assertSame(e.globals(),f.environment().globals());assertSame(e.dynamicSlots(),f.environment().dynamicSlots());assertSame(shared.artState(),f.artState());assertSame(shared.vIntClock(),f.vIntClock());
+    }
+    private static void oldExitAssertFinished(CdPlayerFrameRuntime f,CdPlayerFrameRuntime.ActorState actor,CdPlayerFrameRuntime.SharedState shared,int held,int tap,int bored,int warp){
+        var e=shared.environment();var m=e.movement();var g=m.globals();var b=e.globals();
+        var expected=new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),m.bounds(),m.gates(),new CdPlayerMovement.Globals(g.lookMode(),g.cameraYCentre(),g.primaryAngle(),g.secondaryAngle(),bored,g.scoreChain(),g.debugAngle(),g.debugAngleShift(),g.debugQuadrant(),g.debugFloorDistance())),new CdPlayerBody.Controls(held,tap,e.controls().logicalHeld(),e.controls().logicalTap(),e.controls().controlLocked()),new CdPlayerBody.Globals(b.levelFrames(),b.cameraXCentre(),b.timeAttackMode(),b.debugMode(),b.debugCheat(),warp,b.invincible(),b.bossMusic()),e.dynamicSlots());
+        assertEquals(actor,f.captureActor());assertEquals(new CdPlayerFrameRuntime.SharedState(shared.owner(),expected,shared.artState(),shared.paused(),new CdPlayerFrameRuntime.VIntClock(shared.vIntClock().absoluteSeed(),(shared.vIntClock().deltaSinceAdmittedCut()+1)&0xFFFFFFFFL)),f.captureShared());assertSame(actor.state(),f.state());assertSame(actor.display(),f.display());assertSame(shared.artState(),f.artState());
+    }
+    // END old-programme exit services.
 }
