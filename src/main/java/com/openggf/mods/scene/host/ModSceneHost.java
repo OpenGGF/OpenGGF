@@ -410,6 +410,8 @@ public final class ModSceneHost {
         private MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
         private int pressedButtons;
+        // Set once the scene reads player 1's Start key itself (keyDown/keyPressed).
+        private boolean startKeyOwned;
         private int repeatedButtons;
         private boolean musicTempoOwned;
         private boolean previousLeft;
@@ -569,6 +571,7 @@ public final class ModSceneHost {
             input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
             typed = "";
             heldButtons = pressedButtons = repeatedButtons = 0;
+            startKeyOwned = false;
             repeat = new MenuRepeat(); mouse = SceneMouse.none();
         }
 
@@ -589,6 +592,13 @@ public final class ModSceneHost {
             LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
             heldButtons = buttons(raw.player1(), true);
             pressedButtons = buttons(raw.player1(), false);
+            if (startKeyOwned && handler != null) {
+                // The scene reads the keyboard Start key itself, so that key is only a key: Start
+                // comes from pads (or recorded input) alone, and one press never means two things.
+                PlayerInputState pads = com.openggf.control.InputHandlerInternalAccess.player1WithoutKeyboard(handler);
+                heldButtons = (heldButtons & ~SceneButtons.START) | (pads.startHeld() ? SceneButtons.START : 0);
+                pressedButtons = (pressedButtons & ~SceneButtons.START) | (pads.startPressed() ? SceneButtons.START : 0);
+            }
             repeatedButtons = 0;
             for (int bit = 1; bit <= SceneButtons.START; bit <<= 1) {
                 if (repeat.pulse(bit, ticks, (heldButtons & bit) != 0, (pressedButtons & bit) != 0)) {
@@ -764,6 +774,7 @@ public final class ModSceneHost {
         @Override
         public boolean keyDown(int key) {
             if (input == null) return false;
+            noteKeyRead(key);
             // The scene owns any claim it made, so its own reads see claimed keys.
             return input.isKeyboardTextCaptured() ? input.isCapturedKeyDown(key) : input.isKeyDown(key);
         }
@@ -771,7 +782,14 @@ public final class ModSceneHost {
         @Override
         public boolean keyPressed(int key) {
             if (input == null) return false;
+            noteKeyRead(key);
             return input.isKeyboardTextCaptured() ? input.isCapturedKeyPressed(key) : input.isKeyPressed(key);
+        }
+
+        private void noteKeyRead(int key) {
+            if (!startKeyOwned && key >= 0 && key == com.openggf.control.InputHandlerInternalAccess.player1StartKey(input)) {
+                startKeyOwned = true;
+            }
         }
 
         @Override

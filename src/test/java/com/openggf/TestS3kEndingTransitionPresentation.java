@@ -66,21 +66,29 @@ class TestS3kEndingTransitionPresentation {
             assertEquals(0x0D,GameServices.level().getCurrentZone());assertEquals(1,GameServices.level().getCurrentAct());
             assertEquals(FadeManager.FadeState.FADING_FROM_WHITE,context.getFadeManager().getState(),
                     "the generic immediate title-palette policy must not erase the white ending boundary");
-            assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
-                    "$0D01 has no title owner to hold destination assembly");
-            loop.step();
+            // Obj_TitleCardInit deletes at $D01 (sonic3k.asm:62148-62160), but Level:
+            // still runs loc_62CC and LoadLevelLoadBlock's loc_7870 terrain wait
+            // (sonic3k.asm:7769-7781, 9737-9780) before LevelSetup's director runs.
+            assertTrue(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
+                    "$0D01 holds destination assembly through the Level routine's waits");
             var rescue=GameServices.level().getObjectManager()
                     .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).getFirst();
+            loop.step();
+            assertEquals(FadeManager.FadeState.FADING_FROM_WHITE,context.getFadeManager().getState(),
+                    "entering the deleted title owner keeps the white ending boundary");
+            for(int i=0;i<240&&rescue.routine()==0;i++)loop.step();
             assertEquals(2,rescue.routine());
             var ram=((EndingZoneRuntimeState)GameServices.zoneRuntimeState()).screen();
-            assertEquals(0,ram.scrollYFixed,"initial Process_Sprites initializes without a second ordinary pass");
+            // The release row runs loc_6468's Process_Sprites, then the first LevelLoop
+            // iteration, as every fresh Level: entry does: one routine-2 tick, not two.
+            assertEquals(0x8000,ram.scrollYFixed,"initial Process_Sprites precedes exactly one LevelLoop pass");
             assertFalse(GameServices.level().hasPendingInitialProcessSpritesPass());
             assertEquals(2,GameServices.level().getObjectManager()
                     .activeObjectsOfType(EndingRescueDirectorObjectInstance.Actor.class).size());
             for(int i=0;i<64&&context.getFadeManager().isActive();i++)context.getFadeManager().update();
             assertFalse(context.getFadeManager().isActive());
             loop.step();
-            assertEquals(0x8000,ram.scrollYFixed,"the following LevelLoop alone advances native scroll");
+            assertEquals(0x10000,ram.scrollYFixed,"the following LevelLoop alone advances native scroll");
             for(int i=0;i<78;i++){context.getFadeManager().update();loop.step();}
             assertFalse(GameServices.level().isTitleCardRequested());
             var title=(Sonic3kTitleCardManager)GameServices.module().getTitleCardProvider();

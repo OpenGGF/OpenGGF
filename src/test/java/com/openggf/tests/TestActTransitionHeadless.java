@@ -184,6 +184,22 @@ public class TestActTransitionHeadless {
     }
 
     @Test
+    public void sameLevelReloadPreservesActiveEndOwnerWithoutPreservingResultsFlag() {
+        GameServices.gameState().setEndOfLevelActive(true);
+        GameServices.gameState().setEndOfLevelFlag(true);
+
+        GameServices.level().applySeamlessTransition(SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_SAME_LEVEL)
+                .preserveEndOfLevelActive(true)
+                .build());
+
+        assertTrue(GameServices.gameState().isEndOfLevelActive(),
+                "the carried owner must survive same-level retargeting");
+        assertFalse(GameServices.gameState().isEndOfLevelFlag(),
+                "preserving the active owner must not preserve the separate results flag");
+    }
+
+    @Test
     public void executeActTransitionSpawnListIsNotStaleReference() throws Exception {
         LevelManager lm = GameServices.level();
 
@@ -294,6 +310,7 @@ public class TestActTransitionHeadless {
                 .lockPlayerControlForInLevelTitleCard(true)
                 .inLevelTitleCardExitAdditionalDispatches(10)
                 .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(8)
                 .build();
 
         lm.applySeamlessTransition(request);
@@ -301,7 +318,7 @@ public class TestActTransitionHeadless {
         assertTrue(carried.offsetCalled,
                 "the semantic carry hook must run even without a geometric offset");
         assertEquals(new CarriedTitlePublicationTiming(
-                        true, true, true, 12, 6, true, 10, 5, -1),
+                        true, true, true, 12, 6, true, 10, 5, 8),
                 carried.titleTiming,
                 "the carried object must receive timing from the exact transition request");
     }
@@ -377,6 +394,19 @@ public class TestActTransitionHeadless {
                 "a direct in-frame act reload must publish a rewind boundary");
         assertFalse(lm.consumeActTransitionRewindBoundaryDuringFrame(),
                 "the in-frame rewind boundary signal must be one-shot");
+    }
+
+    @Test
+    public void frameBoundaryReloadDoesNotPublishMarkersIntoTheNextGameplayFrame() {
+        LevelManager lm = GameServices.level();
+        lm.applySeamlessTransition(SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_SAME_LEVEL).build());
+
+        assertFalse(lm.consumeActTransitionExecutedDuringFrame(),
+                "the frame-boundary driver already owns the transition-only row");
+        assertFalse(lm.consumeActTransitionRewindBoundaryDuringFrame(),
+                "the next gameplay row must not root rewind history a second time");
+        assertFalse(lm.consumeActTransitionOscillationAdvancedDuringFrame());
     }
 
     @Test

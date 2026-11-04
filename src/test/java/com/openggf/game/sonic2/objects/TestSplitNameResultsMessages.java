@@ -56,7 +56,11 @@ class TestSplitNameResultsMessages {
             assertFalse(messages.complete());
             messages.tick();
         }
-        assertFalse(messages.complete(), "TimedDisplay advances routine before DisplayOnly ends level");
+        // TimedDisplay's expiry pass hands the message to DisplayOnly, which sets
+        // Level_Inactive_flag on the next pass; completion is published on the
+        // expiry pass, as for the ordinary $78 wait.
+        assertEquals(SplitNameResultsMessages.Phase.DISPLAY_ONLY, messages.capture().phase());
+        assertTrue(messages.complete());
         messages.tick();
         assertTrue(messages.complete());
     }

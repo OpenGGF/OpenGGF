@@ -280,6 +280,7 @@ public final class TraceCaptureTool {
                         dimensions.logicalWidth(), dimensions.logicalHeight(),
                         SCREEN_WIDTH, SCREEN_HEIGHT))) {
             HeadlessGameBoot boot = scope.boot();
+            boot.setEntryProvenance(TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             GameLoop loop = boot.boot(
                     romPath,
                     entry.zone(),

@@ -620,6 +620,55 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void collapsingLedgeDelayExpiryTestsSonicAfterExitPlatform() throws Exception {
+        // .delayCollapse runs Ledge_WalkOff -> ExitPlatform before btst #3
+        // (_incObj/1A, 53 Collapsing Ledges and Floors.asm:94-110): a Sonic who
+        // jumped this frame is released there and gets no obPrevAni restart,
+        // while a Sonic still standing gets the forced release.
+        assertEquals(-1, delayExpiryPreviousAnimation(true),
+                "airborne Sonic leaves through ExitPlatform; obPrevAni is not rewritten");
+        assertEquals(1, delayExpiryPreviousAnimation(false),
+                "standing Sonic takes the timer-zero release that writes Run to obPrevAni");
+    }
+
+    private int delayExpiryPreviousAnimation(boolean airborne) throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x1A, 0, 1, false, 0);
+        Sonic1CollapsingLedgeObjectInstance ledge = new Sonic1CollapsingLedgeObjectInstance(spawn);
+        ObjectManager manager = buildManager(ledge);
+        ledge.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        });
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.applyCustomRadii(9, 19);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 34);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(5,
+                List.of(0x08, 0x09, 0x0A), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(0);
+        player.getAnimationManager().update(0);
+        player.getAnimationManager().resetLastAnimationId();
+        manager.forceRidingObjectForBootstrap(player, ledge);
+        player.setAir(airborne);
+        setPrivateInt(ledge, "routine", 6);
+        setPrivateBoolean(ledge, "collapseFlag", true);
+        setPrivateInt(ledge, "collapseDelay", 1);
+
+        ledge.update(0, player);
+
+        assertFalse(ledge.isSolidFor(player), ".startCollapse clears the collapse flag either way");
+        return player.getAnimationManager().captureRewindState().lastAnimationId();
+    }
+
+    @Test
     public void testNearTopSideContactDoesNotSetPushingFlag() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);

@@ -120,6 +120,36 @@ class TestMonitorObjectInstance {
     }
 
     @Test
+    void rollingBreakerCarriedByAnotherPlatformKeepsThatSupport() {
+        ObjectManager objectManager = mockObjectManager();
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x0D10, 0x0671, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+        monitor.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        // Sonic rolls into the monitor's side while an ObjD5 elevator carries him:
+        // the monitor's own standing/pushing bits never name him.
+        DummyPlayer sonic = new DummyPlayer();
+        sonic.setRolling(true);
+        sonic.setAnimationId(Sonic2AnimationIds.ROLL);
+        sonic.setOnObject(true);
+        sonic.setAir(false);
+        sonic.setYSpeed((short) 0);
+
+        monitor.onTouchResponse(sonic, TOUCH_RESULT, 1);
+
+        assertTrue(isBroken(monitor));
+        verify(objectManager, never()).clearRidingObject(sonic);
+        assertTrue(sonic.isOnObject(), "Obj26_Break leaves another object's rider alone");
+        assertFalse(sonic.getAir());
+    }
+
+    @Test
     void touchFromAboveSpawnsMonitorContentsBeforeExplosion() {
         ObjectManager objectManager = mockObjectManager();
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);

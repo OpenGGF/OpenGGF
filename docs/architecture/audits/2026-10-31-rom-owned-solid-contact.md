@@ -625,3 +625,27 @@ pin regenerated at every code commit (net -13 lines).
   0 failures.
 - No broad `run_categories.py` smoke was run in this lane (the lead runs one
   combined smoke).
+
+## Follow-up: S1 collapsing-ledge `.delayCollapse` order (2026-11-03)
+
+`TestS1CompleteEmeraldVisualRun` (both pins) went red at `df93f7c13` (step 3):
+GHZ1 frame 1816 `player_mapping_frame` `$2F` expected, `$2E` actual, and
+`TestS1CompleteEmeraldRunChain` went from 5 to 26 axes, the extra 21 being
+`run_gap.edge[0].edge_ordinal` short by 2 at every later gap (one missing Sonic
+DPLC transfer). At frame 1814 Sonic jumps on the frame Obj1A slot `$38`'s
+`.delayCollapse` timer reaches zero. The ROM calls `Ledge_WalkOff` first, whose
+`ExitPlatform` sees Sonic airborne and clears his `Status_OnObj`, so the
+following `btst #3` branches to `.startCollapse` without the `obPrevAni`
+restart (_incObj/1A, 53 Collapsing Ledges and Floors.asm:94-110; sub
+ExitPlatform.asm:9-36). The engine tested its ride record before its solid
+pass released the rider, and restarted the roll animation. Point checks:
+`140ff90d9` green, `df93f7c13` red. Before step 3 the ordering was most likely
+hidden by the cross-object airborne-rider unseat that step deleted (an earlier
+slot's checkpoint released the ride before the ledge ran); that was not
+instrumented.
+`Sonic1CollapsingLedgeObjectInstance` now applies `ExitPlatform`'s release test
+for v_player before testing Sonic's live `Status_OnObj`, as `64e49c0f5` does for
+Obj53. An instrumented run showed the 1814 expiry with `riding=true air=true`
+(old branch restarts, ROM branch does not) and the two grounded expiries in the
+run unchanged. Both visual pins are green and the chain is back to its 5 axes.
+The ledge is still an AUTO routine; converting it to MANUAL like Obj53 is open.
