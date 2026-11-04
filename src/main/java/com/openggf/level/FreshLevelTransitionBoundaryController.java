@@ -39,7 +39,24 @@ final class FreshLevelTransitionBoundaryController {
             // or release a deferred player boundary.
             return;
         }
+        hold(level, previousCameraX, previousCameraY, previousRings, true);
+    }
 
+    /**
+     * Opens the same boundary for a load whose caller positions the destination
+     * players itself after the load (a bonus-stage return restoring its saved
+     * position). The destination camera is the one that setup established.
+     */
+    void beginAfterSetup(LevelManager level, short previousCameraX,
+                         short previousCameraY, int previousRings) {
+        if (pending != null) {
+            throw new IllegalStateException("a fresh title-card transition boundary is already pending");
+        }
+        hold(level, previousCameraX, previousCameraY, previousRings, false);
+    }
+
+    private void hold(LevelManager level, short previousCameraX, short previousCameraY,
+                      int previousRings, boolean focusDestinationCamera) {
         // The profile has already performed the destination's counter setup.
         // Rings live in LevelState, not in the playable snapshots below. Keep
         // that value while the pre-title boundary borrows the source HUD count.
@@ -53,7 +70,7 @@ final class FreshLevelTransitionBoundaryController {
             }
         }
         AbstractPlayableSprite destinationPlayer = mainPlayable(level);
-        if (destinationPlayer != null
+        if (focusDestinationCamera && destinationPlayer != null
                 && !(level.getZoneFeatureProvider() instanceof LevelStartCameraPosition)) {
             level.camera.setFocusedSprite(destinationPlayer);
             level.camera.updatePosition(true);
@@ -98,8 +115,13 @@ final class FreshLevelTransitionBoundaryController {
     }
 
     void complete(LevelManager level) {
+        completeReportingInitialPass(level);
+    }
+
+    /** {@link #complete}, reporting whether loc_6468's initial pass ran. */
+    boolean completeReportingInitialPass(LevelManager level) {
         if (pending == null) {
-            return;
+            return false;
         }
         // S3K loc_63B4 (sonic3k.asm:7826-7834) resets the destination
         // counters after the locked title loop, not when its first player
@@ -112,9 +134,10 @@ final class FreshLevelTransitionBoundaryController {
         // after destination players are assembled, before LevelLoop admission,
         // rather than inserting another setup-only ordinary iteration.
         level.restorePendingInitialProcessSpritesLifecycleForRewind(pending.initialPass());
-        level.consumePendingInitialProcessSpritesPass();
+        boolean ranInitialPass = level.consumePendingInitialProcessSpritesPass();
         pending = null;
         initialPublished = false;
+        return ranInitialPass;
     }
 
     void publishInitial(LevelManager level) {

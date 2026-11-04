@@ -29,6 +29,12 @@ enum PostTitleCardDestination {
         if (this == LEVEL) {
             levelManager.completeInitialTitleCardPresentation();
         }
+        if (this == BONUS_STAGE && levelManager.hasPendingFreshLevelTransitionBoundary()) {
+            // A bonus stage has no LevelLoop-side fresh-boundary owner: its
+            // players are created by loc_6468 at this release
+            // (sonic3k.asm:7880-7915), with that pass's own setup-only result.
+            setupOnly |= com.openggf.level.FreshLevelBoundaryAccess.completeAtRelease(levelManager);
+        }
         // S3K loc_6468 runs the initial Process_Sprites before LevelLoop
         // for bonus zones too. Leaving it pending consumes their first input
         // row as setup-only instead of executing the first gameplay tick.
