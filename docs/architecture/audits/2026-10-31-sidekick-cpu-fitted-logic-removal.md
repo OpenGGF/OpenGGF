@@ -215,6 +215,18 @@ and is still above the surface at frame 447. It is not `Obj02_Dead`
 needs a native write-watch on `Sidekick+status` at frame 447; the replacement
 must come from that owner, not from a screen-window rule in the CPU controller.
 
+**Resolved 2026-11-03.** The writer is the OOZ collapsing platform, not a
+`SolidObject` release. Sonic stood on `Obj1F` slot `$12` from frame 412, which
+set its `collapsing_platform_stood_on_flag`; the parent fragment's delay reaches
+zero at frame 447 (its `Obj1F_FragmentFall` motion first moves `y_pos` at 451).
+That frame runs `sub_10B36` for MainCharacter and then Sidekick
+(`Obj1F_Fragment`, s2.asm:23832-23855), which tests each character's own
+`Status_OnObj` and clears it, with `Status_Push`, whatever object set it.
+`CollapsingPlatformObjectInstance` had scoped that release to the platform's own
+riders; it now releases MainCharacter and the native P2 as the ROM does, and
+`TestS2OozLevelSelectTraceReplay` is green. Bisect points: `1f37638cc` green,
+`e97436afa` red at f447.
+
 ## Deleted tests
 
 Tests that asserted only the removed behaviour:

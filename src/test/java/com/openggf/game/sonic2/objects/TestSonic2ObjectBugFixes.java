@@ -974,6 +974,33 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void collapsingPlatformDelayExpiryReleasesBothCharactersOnAnyObject() throws Exception {
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0330, (short) 0x058C);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x029D, (short) 0x06FF);
+        TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0x0200, (short) 0x0600);
+        tails.setAir(true);
+        tails.setOnObject(true);
+        extraSidekick.setOnObject(true);
+        StubObjectServices services = new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> sonic, () -> List.of(tails, extraSidekick)));
+        CollapsingPlatformObjectInstance platform = ObjectConstructionContext.construct(services,
+                () -> new CollapsingPlatformObjectInstance(
+                        new ObjectSpawn(0x0340, 0x06D0, Sonic2ObjectIds.COLLAPSING_PLATFORM, 0x00, 0, false, 0),
+                        "CollapsPform"));
+        platform.setServices(services);
+        setBooleanField(platform, "inFragmentPhase", true);
+        setIntField(platform, "fragmentPhaseDelay", 1);
+
+        platform.update(448, sonic);
+
+        assertFalse(tails.isOnObject(),
+                "sub_10B36 clears Sidekick's Status_OnObj whatever object set it");
+        assertFalse(sonic.isOnObject());
+        assertTrue(extraSidekick.isOnObject(),
+                "sub_10B36 runs for MainCharacter and Sidekick only");
+    }
+
+    @Test
     void collapsingPlatformFragmentsReuseParentAsFragmentZero() throws Exception {
         ObjectManager objectManager = mock(ObjectManager.class);
         StubObjectServices services = new StubObjectServices() {
