@@ -653,7 +653,7 @@ class TestArchitecturalSourceGuard {
             // seamless-transition surface plus develop's bootstrap, VBlank and
             // transient oscillation/respawn handoff wiring.
             // 2026-10-09: 3145 -> 3144; the time-attack gate became a generic host-return request.
-            "com/openggf/level/LevelManager.java", 3142,
+            "com/openggf/level/LevelManager.java", 3139,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time

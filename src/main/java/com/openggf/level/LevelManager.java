@@ -3115,12 +3115,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // Package-private entry used by LevelCameraInitialization for explicit
     // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
     void initCameraForLevel(boolean initializeLoadRegisters) {
-        initCameraForLevel(initializeLoadRegisters, null);
-    }
-
-    void initCameraForLevel(boolean initializeLoadRegisters,
-                            com.openggf.game.session.LevelEntryProvenance entryProvenance) {
-        initCameraForLevel(initializeLoadRegisters, entryProvenance, null);
+        initCameraForLevel(initializeLoadRegisters, null, null);
     }
 
     void initCameraForLevel(boolean initializeLoadRegisters,
