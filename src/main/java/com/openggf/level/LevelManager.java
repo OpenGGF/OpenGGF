@@ -3120,6 +3120,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     void initCameraForLevel(boolean initializeLoadRegisters,
                             com.openggf.game.session.LevelEntryProvenance entryProvenance) {
+        initCameraForLevel(initializeLoadRegisters, entryProvenance, null);
+    }
+
+    void initCameraForLevel(boolean initializeLoadRegisters,
+                            com.openggf.game.session.LevelEntryProvenance entryProvenance,
+                            Integer restoredCameraMaxY) {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3135,10 +3141,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // before either camera update below; applying it only in the later
         // title-card handoff leaves the return one camera step behind.
         var checkpoint = checkpointCoordinator.state();
-        Integer savedCameraMaxY = null;
-        if (bigRingReturn != null) {
+        Integer savedCameraMaxY = restoredCameraMaxY;
+        if (savedCameraMaxY == null && bigRingReturn != null) {
             savedCameraMaxY = bigRingReturn.cameraMaxY();
-        } else if (checkpoint instanceof CheckpointState state && state.isActive() && state.hasS3kRuntimeState()) {
+        } else if (savedCameraMaxY == null && checkpoint instanceof CheckpointState state
+                && state.isActive() && state.hasS3kRuntimeState()) {
             savedCameraMaxY = state.getSavedCameraMaxY();
         }
         if (savedCameraMaxY != null) {

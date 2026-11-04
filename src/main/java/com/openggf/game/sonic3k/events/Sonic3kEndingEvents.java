@@ -17,6 +17,8 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
         var ram=state().screen();if(ram.initialized)return;ram.initialized=true;
         var services=objectServices();services.objectManager().createDynamicObject(EndingRescueDirectorObjectInstance::new);
         camera().setScrollLocked(true);camera().setX((short)0x200);camera().setY((short)0x200);
+        // loc_5AAB0 writes the whole $2000000 long: the inherited low word is cleared.
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera(),0);
         camera().setXCopy((short)0x200);camera().setYCopy((short)0x200);
         ram.foregroundX=0x200;ram.foregroundY=0x200;
         // Ending_ScreenInit and Ending_BackgroundInit refresh the resident ROM planes.

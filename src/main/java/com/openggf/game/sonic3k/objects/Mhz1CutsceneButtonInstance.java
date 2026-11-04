@@ -114,8 +114,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     @Override
     public void onUnload() {
         if (spawnedDoor != null) {
-            spawnedDoor.setDestroyed(true);
-            spawnedDoor = null;
+            spawnedDoor.retireWithParent();
         }
     }
 

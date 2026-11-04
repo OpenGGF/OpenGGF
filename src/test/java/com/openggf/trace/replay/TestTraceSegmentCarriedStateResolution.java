@@ -106,25 +106,25 @@ class TestTraceSegmentCarriedStateResolution {
     }
 
     @Test
-    void everyGiantRingTouchOfTheZoneVisitIsACandidate() throws Exception {
-        // Whole-segment scan: the ring and its flash share a position in two
-        // SST slots on one frame after a touch. Other objects can share a
-        // position too; importAtSegmentEntry keeps only candidates standing on
-        // a giant-ring placement with the same subtype.
+    void recordedSpecialRingArrayReplacesTheTouchDerivation() throws Exception {
+        // S+T aiz_4 follows three giant-ring-ended AIZ segments. The recorded
+        // Collected_special_ring_array is imported as is; every touch the
+        // whole-segment signature finds (ring and flash in two slots on one
+        // frame) sets a bit the recording also holds.
         TraceSegmentCarriedState aiz4 = resolve(SONIC_TAILS, "aiz_4");
-        List<String> touches = aiz4.consumedGiantRings().stream()
-                .map(r -> r.segmentDir() + ":" + r.x() + ":" + r.y() + ":" + r.subtype())
-                .toList();
-        assertTrue(touches.containsAll(List.of(
-                "aiz_3:6584:1104:4", "aiz_2:576:976:3", "aiz:7112:1216:1")), touches.toString());
-        // MHZ3 follows a shrine excursion: the MHZ2 ring that led there is carried.
-        TraceSegmentCarriedState mhz3 = resolve(SONIC_TAILS, "mhz_3");
-        assertTrue(mhz3.consumedGiantRings().stream()
-                .anyMatch(r -> r.segmentDir().equals("mhz_2")
-                        && r.x() == 0x2240 && r.y() == 0x0440 && r.subtype() == 3));
-        TraceSegmentCarriedState mgz = resolve(SONIC_TAILS, "mgz");
-        assertTrue(mgz.consumedGiantRings().isEmpty(), "a new zone starts with a cleared array");
+        assertTrue(aiz4.consumedGiantRings().isEmpty(), "derivation unused when recorded");
+        int recorded = aiz4.collectedSpecialRingArray();
+        for (String dir : List.of("aiz", "aiz_2", "aiz_3")) {
+            Path segment = TraceFixtureRoot.resolve(RUNS.resolve(SONIC_TAILS).resolve(dir));
+            List<TraceSegmentCarriedState.ConsumedGiantRing> touches =
+                    TraceSegmentCarriedStateImport.recordedGiantRingTouches(segment, dir);
+            assertTrue(touches.stream().anyMatch(t -> (recorded & (1 << (t.subtype() & 0x1F))) != 0),
+                    dir + " touch not in recorded array " + Integer.toBinaryString(recorded));
+        }
+        assertEquals(0, resolve(SONIC_TAILS, "mgz").collectedSpecialRingArray(),
+                "a new zone starts with a cleared array");
     }
+
     @Test
     void starPostBonusReturnCarriesTheRecordedStarPostByte() throws Exception {
         // Recorded at the segment's load (metadata.last_star_post_hit): the
@@ -132,5 +132,53 @@ class TestTraceSegmentCarriedStateResolution {
         assertEquals(6, resolve(TAILS, "lrz_3").lastStarPostHit());
         assertEquals(6, resolve(KNUCKLES, "lbz_2").lastStarPostHit());
         assertEquals(0, resolve(SONIC_TAILS, "mgz").lastStarPostHit(), "start-table entry");
+    }
+    @Test
+    void recordedEntryRamAgreesWithEveryDerivedValue() throws Exception {
+        // Each derived value the recorder now samples directly must match it:
+        // a disagreement means the derivation or the recording is wrong.
+        List<String> all = new java.util.ArrayList<>();
+        int checked = 0;
+        for (String run : List.of(SONIC_TAILS, TAILS, KNUCKLES,
+                "s3k-multibonus", "s3-knux-multibonus-ss")) {
+            Path runDir = TraceFixtureRoot.resolve(RUNS.resolve(run));
+            if (!Files.isDirectory(runDir)) {
+                continue;
+            }
+            try (var dirs = Files.list(runDir)) {
+                for (Path dir : dirs.filter(Files::isDirectory).sorted().toList()) {
+                    Path metadata = dir.resolve("metadata.json");
+                    if (!Files.exists(metadata)) {
+                        continue;
+                    }
+                    TraceMetadata meta = TraceMetadata.load(metadata);
+                    if (meta.levelEntryRam() == null) {
+                        continue;
+                    }
+                    checked++;
+                    TraceSegmentCarriedState state = TraceSegmentCarriedStateImport.resolve(dir, meta);
+                    state.disagreements().forEach(d -> all.add(run + "/" + dir.getFileName() + ": " + d));
+                }
+            }
+        }
+        assumeTrue(checked > 0, "no fixture records level_entry_ram");
+        assertEquals(List.of(), all);
+    }
+
+    @Test
+    void starPostRestoreUsesTheRecordedSavedBlock() throws Exception {
+        TraceSegmentCarriedState lrz3 = resolve(TAILS, "lrz_3");
+        assertEquals("Saved", lrz3.restore().block());
+        assertEquals(304, lrz3.ringCount());
+        assertEquals(6, lrz3.restore().checkpoint().index());
+        assertEquals(10814, lrz3.restore().checkpoint().x());
+        assertEquals(10644, lrz3.restore().checkpoint().cameraX());
+        // Saved_timer $00032815: 3:40, restored with Timer_frame 59 one second back.
+        assertEquals((3 * 60 + 40) * 60 - 1, lrz3.restore().timerFrames());
+        TraceSegmentCarriedState hcz4 = resolve(SONIC_TAILS, "hcz_4");
+        assertEquals("Saved2", hcz4.restore().block(), "special-stage return");
+        assertEquals(180, hcz4.ringCount());
+        TraceSegmentCarriedState mgz = resolve(SONIC_TAILS, "mgz");
+        assertNull(mgz.restore(), "start-table entry restores nothing");
     }
 }

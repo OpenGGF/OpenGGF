@@ -17,13 +17,10 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     private final DezFinalPlaneState arenaPlane = new DezFinalPlaneState();
     public DezFinalPlaneState arenaPlane() { return arenaPlane; }
     private final S3kScreenShake screenShake = new S3kScreenShake();
-    /** _unkFA84 and Camera_X_pos low word, retained across the escape phases. */
+    /** _unkFA84, retained across the escape phases; the Camera_X_pos low word is the camera's. */
     private int escapeCameraSpeed;
-    private int escapeCameraFraction;
     public int escapeCameraSpeed() { return escapeCameraSpeed; }
     public void escapeCameraSpeed(int value) { escapeCameraSpeed=value; }
-    public int escapeCameraFraction() { return escapeCameraFraction; }
-    public void escapeCameraFraction(int value) { escapeCameraFraction=value&0xFFFF; }
     private boolean screenInitApplied;
     public boolean screenInitApplied() { return screenInitApplied; }
     public void markScreenInitApplied() { screenInitApplied = true; }
@@ -107,9 +104,9 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(1 + 19 * Short.BYTES + 2 * Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + 2 * DezFinalPlaneState.SNAPSHOT_BYTES);
+        var buffer = ByteBuffer.allocate(1 + 19 * Short.BYTES + Integer.BYTES + art.snapshotBytes() + S3kEmeraldPaletteState.SNAPSHOT_BYTES + S3kScreenShake.captureBytes() + 2 * DezFinalPlaneState.SNAPSHOT_BYTES);
         buffer.put((byte) (screenInitApplied ? 1 : 0));
-        buffer.putInt(escapeCameraSpeed).putInt(escapeCameraFraction);
+        buffer.putInt(escapeCameraSpeed);
         art.captureTo(buffer);
         emeraldPalette.captureTo(buffer);
         screenShake.captureTo(buffer);
@@ -126,7 +123,7 @@ public final class DezFinalBossZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public void restoreBytes(byte[] bytes) {
         var buffer = ByteBuffer.wrap(bytes);
         screenInitApplied = buffer.get() != 0;
-        escapeCameraSpeed=buffer.getInt(); escapeCameraFraction=buffer.getInt();
+        escapeCameraSpeed=buffer.getInt();
         art.restoreFrom(buffer);
         emeraldPalette.restoreFrom(buffer);
         screenShake.restoreFrom(buffer);

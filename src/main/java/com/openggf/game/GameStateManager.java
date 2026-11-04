@@ -646,6 +646,10 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         return collectedSpecialRings;
     }
 
+    void restoreLives(int lives) {
+        this.lives = Math.max(0, lives);
+    }
+
     void restoreSpecialStageSaveProgress(int rings, int stageIndex) {
         collectedSpecialRings = rings & 0xFFFF;
         currentSpecialStageIndex = stageIndex;

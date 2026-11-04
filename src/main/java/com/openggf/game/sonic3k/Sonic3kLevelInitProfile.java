@@ -237,6 +237,12 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));
             steps.add(initCameraStep(ctx));
+            steps.add(new InitStep("PlaceEndingScreenInit",
+                    "Level/loc_6310: an in-run Level entry runs LevelSetup after the loc_7870 wait",
+                    () -> {
+                        if (GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager events)
+                            events.deferEndingScreenInitToLevelSetup(ctx.isQueueFreshLevelRuntimeArt());
+                    }));
             steps.add(initLevelEventsStep());
             // BEGIN HCZ1_DIRECT_FF_FRESH: Level $6310 water producer after camera/ScreenInit.
             if (ctx.permitsInitialProcessSpritesRequest()) {

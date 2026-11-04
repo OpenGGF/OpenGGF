@@ -55,14 +55,14 @@ class TestDezFinalEscapeShip {
             ship.writeX(f.camera().getX()&0xFFFF); ship.update(pass,null);
             fixed+=Math.min(pass,65)*0x1000;
             assertEquals(fixed>>>16,f.camera().getX()&0xFFFF);
-            assertEquals(fixed&0xFFFF,state().escapeCameraFraction());
+            assertEquals(fixed&0xFFFF,com.openggf.camera.CameraSubpixelAccess.xFraction(f.camera()));
             assertEquals(Math.min(pass,64)*0x1000,state().escapeCameraSpeed());
             assertEquals(f.camera().getX(),f.camera().getMinX()); assertEquals(f.camera().getX(),f.camera().getMaxX());
         }
         var registry=TestEnvironment.activeGameplayMode().getRewindRegistry(); var saved=registry.capture();
-        ship.update(67,null); int x=f.camera().getX(),fraction=state().escapeCameraFraction(),y=ship.posY;
+        ship.update(67,null); int x=f.camera().getX(),fraction=com.openggf.camera.CameraSubpixelAccess.xFraction(f.camera()),y=ship.posY;
         registry.restore(saved); var restored=GameServices.level().getObjectManager().activeObjectsOfType(DezFinalEscapeShip.class).getFirst();
-        restored.update(67,null); assertEquals(x,f.camera().getX()); assertEquals(fraction,state().escapeCameraFraction()); assertEquals(y,restored.posY);
+        restored.update(67,null); assertEquals(x,f.camera().getX()); assertEquals(fraction,com.openggf.camera.CameraSubpixelAccess.xFraction(f.camera())); assertEquals(y,restored.posY);
     }
     @Test void shippedFlashRowsAndCreditedPlayerBrakeArePreserved() {
         for(boolean p2Hit:new boolean[]{false,true}) {

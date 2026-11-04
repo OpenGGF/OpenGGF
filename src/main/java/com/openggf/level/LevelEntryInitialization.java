@@ -8,9 +8,15 @@ public final class LevelEntryInitialization {
     private LevelEntryInitialization() { }
 
     public static void initializeCamera(LevelManager level, LevelEntryProvenance provenance) {
+        initializeCamera(level, provenance, null);
+    }
+
+    /** The current restore's bound can differ from the saved death checkpoint. */
+    public static void initializeCamera(LevelManager level, LevelEntryProvenance provenance,
+                                        Integer restoredCameraMaxY) {
         Objects.requireNonNull(provenance, "provenance");
         if (provenance.isPositioned()) {
-            level.initCameraForLevel(true, provenance);
+            level.initCameraForLevel(true, provenance, restoredCameraMaxY);
         }
     }
 

@@ -1294,7 +1294,8 @@ public final class TraceReplaySessionBootstrap {
         // The one segment-entry import of carried run state (rings, emeralds,
         // giant-ring memory, shield, path bits). It runs here, once, on the
         // cold declared-position entry only; nothing re-reads the trace later.
-        TraceSegmentCarriedStateImport.importAtSegmentEntry(trace, sprite);
+        TraceSegmentCarriedState carried =
+                TraceSegmentCarriedStateImport.importAtSegmentEntry(trace, sprite);
         var level = GameServices.levelOrNull();
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
@@ -1310,7 +1311,7 @@ public final class TraceReplaySessionBootstrap {
             }
             GroundSensor.setLevelManager(level);
             if (!preserveProductionLoadCamera) {
-                com.openggf.level.LevelEntryInitialization.initializeCamera(level,
+                TraceSegmentCarriedStateImport.initializeCameraAtEntry(carried, level,
                         TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             }
             level.initLevelEventsForLevel();
@@ -1330,6 +1331,10 @@ public final class TraceReplaySessionBootstrap {
                     s3kLem.applyZonePlayerState();
                 }
             }
+            // Second half of the same entry import: the saved bounds, resize
+            // routine and water the ROM restore writes over the level-size and
+            // event initialisation that just ran.
+            TraceSegmentCarriedStateImport.importAfterLevelInit(carried);
             refreshSidekickCpuBoundsFromCamera();
         }
         // Ground snap: 14 subpixel threshold matches the fixture. S3K

@@ -11,7 +11,7 @@
   "start_y": "0x0290",
   "level_entry_placement_source": "start_table",
   "last_star_post_hit": 0,
-  "level_entry_ram": {"saved_last_star_pole_hit": 0, "saved_x_pos": 0, "saved_y_pos": 0, "saved_ring_count": 0, "saved_timer": 0, "saved_art_tile": 0, "saved_solid_bits": 0, "saved_camera_x_pos": 0, "saved_camera_y_pos": 0, "saved_camera_bg_x_pos": 0, "saved_camera_bg_y_pos": 0, "saved_camera_bg2_x_pos": 0, "saved_camera_bg2_y_pos": 0, "saved_camera_bg3_x_pos": 0, "saved_camera_bg3_y_pos": 0, "saved_water_level": 0, "saved_water_routine": 0, "saved_water_move": 0, "saved_extra_life_flags": 0, "saved_camera_max_y_pos": 0, "saved_dynamic_resize_routine": 0, "life_count": 3, "extra_life_flags": 0, "ring_count": 0, "timer": 0},
+  "level_entry_ram": {"saved_last_star_pole_hit": 0, "saved_x_pos": 0, "saved_y_pos": 0, "saved_ring_count": 0, "saved_timer": 0, "saved_art_tile": 0, "saved_solid_bits": 0, "saved_camera_x_pos": 0, "saved_camera_y_pos": 0, "saved_camera_bg_x_pos": 0, "saved_camera_bg_y_pos": 0, "saved_camera_bg2_x_pos": 0, "saved_camera_bg2_y_pos": 0, "saved_camera_bg3_x_pos": 0, "saved_camera_bg3_y_pos": 0, "saved_water_level": 0, "saved_water_routine": 0, "saved_water_move": 0, "saved_extra_life_flags": 0, "saved_camera_max_y_pos": 0, "saved_dynamic_resize_routine": 0, "life_count": 3, "extra_life_flags": 0, "ring_count": 0, "timer": 0, "camera_x_pos": 4257153024, "camera_y_pos": 0, "camera_x_pos_p2": 0, "camera_y_pos_p2": 0},
   "characters": ["sonic", "tails"],
   "main_character": "sonic",
   "sidekicks": ["tails"],

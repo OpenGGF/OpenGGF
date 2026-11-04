@@ -71,13 +71,22 @@ class TestS3kEndingTransitionPresentation {
             // (sonic3k.asm:7769-7781, 9737-9780) before LevelSetup's director runs.
             assertTrue(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
                     "$0D01 holds destination assembly through the Level routine's waits");
-            var rescue=GameServices.level().getObjectManager()
-                    .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).getFirst();
+            // Ending_ScreenInit is LevelSetup's: no director and no $200 camera during the wait.
+            assertTrue(GameServices.level().getObjectManager()
+                    .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).isEmpty());
             loop.step();
             assertEquals(FadeManager.FadeState.FADING_FROM_WHITE,context.getFadeManager().getState(),
                     "entering the deleted title owner keeps the white ending boundary");
-            for(int i=0;i<240&&rescue.routine()==0;i++)loop.step();
+            for(int i=0;i<240&&GameServices.level().getObjectManager()
+                    .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).isEmpty();i++){
+                assertFalse(GameServices.camera().getX()==0x200&&GameServices.camera().getY()==0x200,
+                        "Get_LevelSizeStart's camera holds until LevelSetup");
+                loop.step();
+            }
+            var rescue=GameServices.level().getObjectManager()
+                    .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).getFirst();
             assertEquals(2,rescue.routine());
+            assertEquals(0x200,GameServices.camera().getX()&0xFFFF);
             var ram=((EndingZoneRuntimeState)GameServices.zoneRuntimeState()).screen();
             // The release row runs loc_6468's Process_Sprites, then the first LevelLoop
             // iteration, as every fresh Level: entry does: one routine-2 tick, not two.

@@ -57,7 +57,8 @@ public record TraceMetadata(
     @JsonProperty("fresh_load") Boolean freshLoad,
     @JsonProperty("v_int_run_count") Integer vIntRunCount,
     @JsonProperty("level_entry_placement_source") String levelEntryPlacementSourceWire,
-    @JsonProperty("last_star_post_hit") Integer lastStarPostHit
+    @JsonProperty("last_star_post_hit") Integer lastStarPostHit,
+    @JsonProperty("level_entry_ram") java.util.Map<String, Integer> levelEntryRam
 ) {
     private static final List<String> REMOVED_VERSION_FIELDS = List.of(
             "lua_script_version", "csv_version", "ss_csv_version",
@@ -68,6 +69,7 @@ public record TraceMetadata(
                 ? null : List.copyOf(auxSchemaExtras);
         characters = characters == null ? null : List.copyOf(characters);
         sidekicks = sidekicks == null ? null : List.copyOf(sidekicks);
+        levelEntryRam = levelEntryRam == null ? null : java.util.Map.copyOf(levelEntryRam);
     }
 
     /**
@@ -100,6 +102,18 @@ public record TraceMetadata(
      */
     public Integer lastStarPostHit() {
         return lastStarPostHit;
+    }
+
+    /**
+     * RAM the recorder latched at the first PreLevel frame of this segment's
+     * load ({@code level_entry_ram}): the {@code Saved_*} and {@code Saved2_*}
+     * restore blocks and the carried run counters, keyed by their wire names.
+     * {@code null} when not recorded. The live counters are sampled before the
+     * level's own initialisation runs; only the segment-entry import reads this.
+     * Signed or unsigned 32-bit wire integers retain their bits in Java ints.
+     */
+    public java.util.Map<String, Integer> levelEntryRam() {
+        return levelEntryRam;
     }
 
     /** Whether the fixture includes frame-zero native-prelude evidence. */
@@ -517,6 +531,25 @@ public record TraceMetadata(
             if (traceSchema == null || !traceSchema.isInt() || traceSchema.intValue() != 5) {
                 throw new IllegalArgumentException(metadataFile.getFileName()
                         + ": trace_schema must be integer 5");
+            }
+            JsonNode entryRam = root.get("level_entry_ram");
+            if (entryRam != null) {
+                if (!entryRam.isObject()) {
+                    throw new IllegalArgumentException(metadataFile.getFileName()
+                            + ": level_entry_ram must be an object");
+                }
+                for (var field : (Iterable<java.util.Map.Entry<String, JsonNode>>) entryRam::fields) {
+                    JsonNode value = field.getValue();
+                    if (!value.isIntegralNumber() || !value.canConvertToLong()
+                            || value.longValue() < Integer.MIN_VALUE || value.longValue() > 0xFFFFFFFFL) {
+                        throw new IllegalArgumentException(metadataFile.getFileName()
+                                + ": level_entry_ram." + field.getKey() + " must be a 32-bit integer");
+                    }
+                    // The recorder exports RAM longs unsigned. Normalize the
+                    // bit pattern before Jackson binds Map<String, Integer>.
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) entryRam)
+                            .put(field.getKey(), (int) value.longValue());
+                }
             }
             JsonNode starPost = root.get("last_star_post_hit");
             if (starPost != null && (!starPost.isInt()

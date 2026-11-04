@@ -48,9 +48,11 @@ final class LrzBossAutoscroll {
                 return;
             }
         }
-        int fullX = (x << 16 | state.cameraFractionX()) + dx;
+        // loc_59F3C add.l into both camera longs; the X low word is the camera's own.
+        int fullX = (x << 16 | com.openggf.camera.CameraSubpixelAccess.xFraction(camera)) + dx;
         int fullY = (y << 16 | state.cameraFractionY()) + dy;
-        state.setCameraFractions(fullX, fullY);
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera, fullX);
+        state.setCameraFractionY(fullY);
         short nextX = (short) (fullX >> 16), nextY = (short) (fullY >> 16);
         camera.setX(nextX); camera.setMinX(nextX); camera.setMaxX(nextX);
         camera.setY(nextY); camera.setMinY(nextY); camera.setMaxY(nextY); camera.setMaxYTarget(nextY);

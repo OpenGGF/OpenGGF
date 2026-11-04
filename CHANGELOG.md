@@ -7,7 +7,7 @@ readable and historical versions can be referenced directly.
 
 - S3K bonus-stage entries and returns hold the destination players behind the title loop, as in the ROM.
 
-- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress and shield, and special stages pick their stage and layout set as the ROM does.
+- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress, shield, checkpoint, camera bounds, water level, timer and lives, and special stages pick their stage and layout set as the ROM does.
 
 - MGZ swinging platforms use native fractional chain arithmetic instead of fitted slot/angle carry tables; spring solid reactions precede native animation.
 
@@ -33,6 +33,8 @@ readable and historical versions can be referenced directly.
 - Doomsday queues its misc and boss Master Emerald art through the native module queue, and the S3K ending load queues its terrain art and waits for it before the ending scene starts.
 
 - The Doomsday Super transformation starts its animation and releases Sonic on the shipped frames.
+
+- S3K keeps one sub-pixel camera X position across level loads, shared by every scrolling sequence that uses it; the ending keeps its start camera until its art has loaded.
 
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 

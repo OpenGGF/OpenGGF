@@ -38,6 +38,13 @@ implementation reviewed historically; current campaign act certification pending
 | ROUTE | Prior component sequence reaches results and MHZ2. | Current representative real entry → mandatory mechanics → boss → next playable act; component transitions are insufficient. |
 | ORACLE | `mhz-analysis.md`, completion audit and focused correction records identify owning ROM routines and rejection evidence. | Current bounded regression evidence; respect stopped trace scope. |
 
+The carried-checkpoint follow-up (2026-11-04) adds
+`TestMhz1CutsceneReferenceClosure.parentRemovalDetachesDoorBeforeItsPendingDeletionIsProcessed`:
+parent removal must leave no captured door-to-button reference while child
+deletion is pending, and later child cleanup must be idempotent. This is a
+bounded lifetime/closure check; the wider restore/forward and configuration
+obligations in the table remain inherited.
+
 Historical follow-ups:
 [Miniboss lifetime](../2026-09-12-mhz1-boss-lifetime.md),
 [miniboss defeat](../2026-09-12-mhz1-boss-defeat.md),

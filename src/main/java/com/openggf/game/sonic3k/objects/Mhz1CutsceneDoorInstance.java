@@ -91,6 +91,14 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
         }
     }
 
+    void retireWithParent() {
+        // Child_Draw_Sprite (sonic3k.asm:178137-178142) deletes this child
+        // when its parent retires. Its execution slot may already have passed,
+        // so detach now: the pending deletion must not capture a retired parent.
+        setDestroyed(true);
+        onUnload();
+    }
+
     @Override
     public boolean isHighPriority() {
         return false;
@@ -120,6 +128,12 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (parent == null || parent.isDestroyed()) {
+            // A later slot can still dispatch after the parent retired it.
+            // Child_Draw_Sprite's deletion path must not read the old parent.
+            retireWithParent();
+            return;
+        }
         if (state == State.IDLE) {
             if (parent.isDoorSwitchActive()) {
                 parent.clearDoorSwitchActive();
