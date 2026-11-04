@@ -79,11 +79,18 @@ class TestGameLoopFreshLevelHandoff {
         }
         assertTrue(loaded.get());
         assertTrue(context.getLevelManager().hasPendingFreshLevelTransitionBoundary());
-        assertEquals(FadeManager.FadeState.NONE, fade.getState(),
-                "LoadPalette_Immediate must clear HOLD_BLACK before deferred title init");
+        // Level has no Wait_VSync between Pal_FadeToBlack and the Obj_TitleCard
+        // install (docs/skdisasm/sonic3k.asm:7556-7767), and a non-water lag
+        // VInt sends no palette (VInt_0_NoWater, 633-670), so LoadPalette_Immediate's
+        // line 0 (7698) first reaches CRAM on loc_62CC's first Wait_VSync
+        // (7769-7772), with the title card already installed.
+        assertEquals(FadeManager.FadeState.HOLD_BLACK, fade.getState(),
+                "destination setup stays black until the title card is entered");
         assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
         loop.step();
         assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
+        assertEquals(FadeManager.FadeState.NONE, fade.getState(),
+                "the entered title card shows LoadPalette_Immediate's line 0");
         assertEquals(parentsBefore + 4, moduleParents(), "Obj_TitleCardInit owns four ROM archives");
     }
 
