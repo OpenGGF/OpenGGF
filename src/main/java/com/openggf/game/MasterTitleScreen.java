@@ -199,6 +199,11 @@ public class MasterTitleScreen {
     private final SonicConfigurationService configService;
     private final LaunchProfileStore launchProfileStore;
     private final HubProgressStore hubProgress;
+    private com.openggf.game.launch.GameSupportNotices supportNotices;
+    /** Please-note dialog asked before starting a game whose support is unfinished, and its game. */
+    private GameSupportNoticeDialog supportNotice;
+    private MasterTitleEntry.Stock supportNoticeEntry;
+    private com.openggf.util.ExternalBrowser.Launcher supportLinkLauncher = com.openggf.util.ExternalBrowser.SYSTEM;
     private boolean helpShortcutHeld;
     private final AudioSink audioSink;
     private LaunchConfigPanel launchConfigPanel;
@@ -313,6 +318,7 @@ public class MasterTitleScreen {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.launchProfileStore = Objects.requireNonNull(launchProfileStore, "launchProfileStore");
         this.hubProgress = new HubProgressStore(configService);
+        this.supportNotices = new com.openggf.game.launch.GameSupportNotices(configService);
         this.entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
         this.audioSink = Objects.requireNonNull(audioSink, "audioSink");
         this.selectedIndex = rememberedSelectionIndex(this.entries);
@@ -394,7 +400,8 @@ public class MasterTitleScreen {
         pointer = readPointer(inputHandler);
         frameCounter++;
         if (hubMusic != null) hubMusic.update(getSelectedGameId(), settingsScreen != null || helpOpen || toolsOpen
-                || romLocator != null || onboarding != null || quitPrompt || endPrompt || state != State.ACTIVE);
+                || romLocator != null || onboarding != null || quitPrompt || endPrompt || supportNotice != null
+                || state != State.ACTIVE);
         advancePreviewAnimationFrame();
         advanceHubAnimation();
         if (resumeZooming) {
@@ -480,6 +487,7 @@ public class MasterTitleScreen {
         }
         if (quitPrompt) { updateQuitPrompt(); return; }
         if (endPrompt) { updateEndPrompt(); return; }
+        if (supportNotice != null) { updateSupportNotice(inputHandler); return; }
         if (settingsScreen != null) {
             settingsScreen.update(inputHandler);
             if (settingsScreen.consumeApplied()) refreshRomPreviews();
@@ -737,6 +745,16 @@ public class MasterTitleScreen {
 
     boolean isQuitPromptOpenForTest() {
         return quitPrompt;
+    }
+
+    GameSupportNoticeDialog supportNoticeForTest() { return supportNotice; }
+
+    void setSupportNoticesForTest(com.openggf.game.launch.GameSupportNotices notices) {
+        supportNotices = Objects.requireNonNull(notices, "notices");
+    }
+
+    void setSupportLinkLauncherForTest(com.openggf.util.ExternalBrowser.Launcher launcher) {
+        supportLinkLauncher = Objects.requireNonNull(launcher, "launcher");
     }
 
     boolean isEndPromptOpenForTest() {
@@ -1128,6 +1146,8 @@ public class MasterTitleScreen {
         MasterTitleEntry entry = selectedEntry();
         if (entry == null) { showActionError(UiMessages.text("hub.ui.start_game")); return; }
         if (entry instanceof MasterTitleEntry.Suspended) { requestResume(); return; }
+        // The notice comes before ending a suspended game, so backing out of it loses nothing.
+        if (isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock && openSupportNotice(stock)) return;
         if (isEntryAvailable(entry) && askToEndSuspended(UiMessages.text("hub.starting_ends_game", java.util.Map.of("game", entry.menuLabel())),
                 this::startSelectedEntry)) return;
         if (!isEntryAvailable(entry) && entry instanceof MasterTitleEntry.Stock stock) {
@@ -1143,6 +1163,42 @@ public class MasterTitleScreen {
             standaloneActionIndex = 0;
             playConfirmSound();
         } else confirmLaunch(new MasterTitleEntry.Launch(entry, MasterTitleEntry.Action.NEW_GAME), false);
+    }
+
+    /** Asks before starting a game whose support is unfinished, unless the player hid that notice. */
+    private boolean openSupportNotice(MasterTitleEntry.Stock stock) {
+        var stage = supportNotices.pendingNotice(stock.gameId());
+        if (stage.isEmpty()) return false;
+        supportNotice = new GameSupportNoticeDialog(stock.displayName(), stage.get());
+        supportNoticeEntry = stock;
+        childInputPending = true;
+        playConfirmSound();
+        return true;
+    }
+
+    private void updateSupportNotice(InputHandler input) {
+        supportNotice.setViewportWidth(viewportWidth);
+        supportNotice.update(input, pointer);
+        switch (supportNotice.consumeResult()) {
+            case BACK -> { supportNotice = null; supportNoticeEntry = null; childInputPending = true; }
+            case CONTINUE -> {
+                MasterTitleEntry.Stock stock = supportNoticeEntry;
+                if (supportNotice.dontShowAgain()) supportNotices.dismiss(stock.gameId(), supportNotice.stage());
+                supportNotice = null;
+                supportNoticeEntry = null;
+                var launch = new MasterTitleEntry.Launch(stock, MasterTitleEntry.Action.NEW_GAME);
+                if (!askToEndSuspended(UiMessages.text("hub.starting_ends_game", java.util.Map.of("game", stock.menuLabel())),
+                        () -> confirmLaunch(launch, false))) {
+                    confirmLaunch(launch, false);
+                }
+            }
+            // The address stays on screen, so a failed opener still leaves the player a way there.
+            case OPEN_LINK -> supportNotice.focusedLink().ifPresent(link -> {
+                if (com.openggf.util.ExternalBrowser.open(link, supportLinkLauncher)) playConfirmSound();
+                else playErrorSound();
+            });
+            case NONE -> { }
+        }
     }
 
     private void showUnavailableAction(String detail) {
@@ -1278,6 +1334,11 @@ public class MasterTitleScreen {
         drawHub();
         if (quitPrompt) {
             drawQuitPrompt();
+            return;
+        }
+        if (supportNotice != null) {
+            supportNotice.setViewportWidth(viewportWidth);
+            supportNotice.render(font, menuInput);
             return;
         }
         if (endPrompt) {
@@ -2818,13 +2879,14 @@ public class MasterTitleScreen {
     /** Menu ownership is intentionally separate from the exported title-screen API. */
     boolean blocksGlobalShortcuts() {
         return state != State.ACTIVE || navigation.zone() != TitleHubNavigation.Zone.CARD || quitPrompt || childInputPending
+                || supportNotice != null
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
                 || playbackBrowser != null || standaloneActionOpen || extrasOpen
                 || toolsOpen || helpOpen || romLocator != null || onboarding != null || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 
     boolean acceptsContentDrop() {
-        return state == State.ACTIVE && !quitPrompt && !childInputPending
+        return state == State.ACTIVE && !quitPrompt && supportNotice == null && !childInputPending
                 && romLocator == null && onboarding == null && settingsScreen == null && launchConfigPanel == null && modManagerScreen == null
                 && playbackBrowser == null && catalogLoad == null;
     }

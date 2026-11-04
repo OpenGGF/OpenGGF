@@ -23444,5 +23444,61 @@
       "sourceHash": "61e59188141b054fbbb017d64baa7dac887c62b806ecc34d385520e1ea44ba0b",
       "reviewed": false
     }
+  },
+  "hub.notice.title_caps": "BITTE BEACHTEN",
+  "@hub.notice.title_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "6dc1cabab2e217eb8d561080302828e4d93bf44d179357318e533f8ac851e657",
+      "reviewed": false
+    }
+  },
+  "hub.notice.stage_caps": "{stage, select, alpha {ALPHA} beta {BETA} other {VORSCHAU}}",
+  "@hub.notice.stage_caps": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "53fb360e5c3b315dd868f857673ae7c2b4cfb4b1bb1b1b8cdda41eee7ebe13ab",
+      "reviewed": false
+    }
+  },
+  "hub.notice.body": "Die Unterstützung für {game} befindet sich derzeit in der {stage, select, alpha {Alpha-Phase} beta {Beta-Phase} other {Entwicklung}}. Rechne bitte mit Fehlern.\nMelde gefundene Fehler bitte auf unserem Discord oder auf GitHub.",
+  "@hub.notice.body": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "e9f12e18cac10857b5a40181f1fe814738ca6158eff39fa3f28721dc8b3252cd",
+      "reviewed": false
+    }
+  },
+  "hub.notice.dont_show_again": "Nicht mehr anzeigen",
+  "@hub.notice.dont_show_again": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "60a64a66ee7e3d1fe5b801f76f1f49da74c893fe2047e69ccec4e57f094b7db8",
+      "reviewed": false
+    }
+  },
+  "hub.notice.continue": "Weiter",
+  "@hub.notice.continue": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "c8605f64948ecaf1f26cefdc87c524245cf9d591fb0f8dd0370decfbc2604d4a",
+      "reviewed": false
+    }
+  },
+  "settings.key.hub_dismissed_notices.label": "Ausgeblendete Hinweise",
+  "@settings.key.hub_dismissed_notices.label": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "a377b3e358c81e35398dc3340be907fcc50d38d93ff8363847537df91924e187",
+      "reviewed": false
+    }
+  },
+  "settings.key.hub_dismissed_notices.help": "Mit „Nicht mehr anzeigen“ ausgeblendete Hinweise zur Spielunterstützung",
+  "@settings.key.hub_dismissed_notices.help": {
+    "x-openggf": {
+      "origin": "claude-opus-5-5",
+      "sourceHash": "ffdf4762e94320b9d8a0faaabaef9ae1b70cdf647fb0c7d58a4ef29cd7f8b740",
+      "reviewed": false
+    }
   }
 }

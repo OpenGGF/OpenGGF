@@ -39,6 +39,10 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TestSonic3kLevelEventRewindSnapshot {
 
+    // Bootstrap + five state bytes, two CNZ ints, size-active byte and four bounds ints.
+    // Pin the wire layout independently of the production framing validator.
+    private static final int MANAGER_BYTES = 31;
+
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();
@@ -1297,9 +1301,9 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     private static LevelEventSnapshot snapshotWithCorruptHczLength(LevelEventSnapshot source, int length) {
         byte[] extra = source.extra().clone();
-        int hczLengthOffset = 30 + 1 + 1;
-        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
-        assertEquals(1, extra[31], "test helper expects present HCZ sidecar");
+        int hczLengthOffset = MANAGER_BYTES + 1 + 1;
+        assertEquals(0, extra[MANAGER_BYTES], "test helper expects absent AIZ sidecar");
+        assertEquals(1, extra[MANAGER_BYTES + 1], "test helper expects present HCZ sidecar");
         ByteBuffer.wrap(extra).putInt(hczLengthOffset, length);
         return new LevelEventSnapshot(
                 source.currentZone(),
@@ -1316,10 +1320,10 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     private static LevelEventSnapshot snapshotWithCorruptCnzLength(LevelEventSnapshot source, int length) {
         byte[] extra = source.extra().clone();
-        int cnzLengthOffset = 30 + 1 + 1 + 1;
-        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
-        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
-        assertEquals(1, extra[32], "test helper expects present CNZ sidecar");
+        int cnzLengthOffset = MANAGER_BYTES + 1 + 1 + 1;
+        assertEquals(0, extra[MANAGER_BYTES], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 1], "test helper expects absent HCZ sidecar");
+        assertEquals(1, extra[MANAGER_BYTES + 2], "test helper expects present CNZ sidecar");
         ByteBuffer.wrap(extra).putInt(cnzLengthOffset, length);
         return new LevelEventSnapshot(
                 source.currentZone(),
@@ -1350,11 +1354,11 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     private static LevelEventSnapshot snapshotWithCorruptMgzLength(LevelEventSnapshot source, int length) {
         byte[] extra = source.extra().clone();
-        int mgzLengthOffset = 30 + 1 + 1 + 1 + 1;
-        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
-        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
-        assertEquals(0, extra[32], "test helper expects absent CNZ sidecar");
-        assertEquals(1, extra[33], "test helper expects present MGZ sidecar");
+        int mgzLengthOffset = MANAGER_BYTES + 1 + 1 + 1 + 1;
+        assertEquals(0, extra[MANAGER_BYTES], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 1], "test helper expects absent HCZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 2], "test helper expects absent CNZ sidecar");
+        assertEquals(1, extra[MANAGER_BYTES + 3], "test helper expects present MGZ sidecar");
         ByteBuffer.wrap(extra).putInt(mgzLengthOffset, length);
         return new LevelEventSnapshot(
                 source.currentZone(),
@@ -1385,12 +1389,12 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     private static LevelEventSnapshot snapshotWithCorruptMhzLength(LevelEventSnapshot source, int length) {
         byte[] extra = source.extra().clone();
-        int mhzLengthOffset = 30 + 1 + 1 + 1 + 1 + 1;
-        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
-        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
-        assertEquals(0, extra[32], "test helper expects absent CNZ sidecar");
-        assertEquals(0, extra[33], "test helper expects absent MGZ sidecar");
-        assertEquals(1, extra[34], "test helper expects present MHZ sidecar");
+        int mhzLengthOffset = MANAGER_BYTES + 1 + 1 + 1 + 1 + 1;
+        assertEquals(0, extra[MANAGER_BYTES], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 1], "test helper expects absent HCZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 2], "test helper expects absent CNZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 3], "test helper expects absent MGZ sidecar");
+        assertEquals(1, extra[MANAGER_BYTES + 4], "test helper expects present MHZ sidecar");
         ByteBuffer.wrap(extra).putInt(mhzLengthOffset, length);
         return new LevelEventSnapshot(
                 source.currentZone(),
@@ -1421,13 +1425,13 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     private static LevelEventSnapshot snapshotWithCorruptIczLength(LevelEventSnapshot source, int length) {
         byte[] extra = source.extra().clone();
-        int iczLengthOffset = 30 + 1 + 1 + 1 + 1 + 1 + 1;
-        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
-        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
-        assertEquals(0, extra[32], "test helper expects absent CNZ sidecar");
-        assertEquals(0, extra[33], "test helper expects absent MGZ sidecar");
-        assertEquals(0, extra[34], "test helper expects absent MHZ sidecar");
-        assertEquals(1, extra[35], "test helper expects present ICZ sidecar");
+        int iczLengthOffset = MANAGER_BYTES + 1 + 1 + 1 + 1 + 1 + 1;
+        assertEquals(0, extra[MANAGER_BYTES], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 1], "test helper expects absent HCZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 2], "test helper expects absent CNZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 3], "test helper expects absent MGZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 4], "test helper expects absent MHZ sidecar");
+        assertEquals(1, extra[MANAGER_BYTES + 5], "test helper expects present ICZ sidecar");
         ByteBuffer.wrap(extra).putInt(iczLengthOffset, length);
         return new LevelEventSnapshot(
                 source.currentZone(),
@@ -1661,7 +1665,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     private static byte[] insertAizPayload(byte[] hczExtra, byte[] aizPayload) {
-        int managerBytes = 30;
+        int managerBytes = MANAGER_BYTES;
         int originalAizAbsentFlagBytes = 1;
         ByteBuffer buf = ByteBuffer.allocate(managerBytes + 1 + Integer.BYTES + aizPayload.length
                 + hczExtra.length - managerBytes - originalAizAbsentFlagBytes);
@@ -1675,7 +1679,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     private static byte[] insertHczPayload(byte[] cnzExtra, byte[] hczPayload) {
-        int managerBytes = 30;
+        int managerBytes = MANAGER_BYTES;
         int originalAizAbsentFlagBytes = 1;
         int originalHczAbsentFlagBytes = 1;
         int prefixBytes = managerBytes + originalAizAbsentFlagBytes;
@@ -1691,7 +1695,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     private static byte[] insertCnzPayload(byte[] mgzExtra, byte[] cnzPayload) {
-        int managerBytes = 30;
+        int managerBytes = MANAGER_BYTES;
         int originalAizAbsentFlagBytes = 1;
         int originalHczAbsentFlagBytes = 1;
         int originalCnzAbsentFlagBytes = 1;
@@ -1708,7 +1712,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     private static byte[] insertMgzPayload(byte[] mhzExtra, byte[] mgzPayload) {
-        int managerBytes = 30;
+        int managerBytes = MANAGER_BYTES;
         int originalAizAbsentFlagBytes = 1;
         int originalHczAbsentFlagBytes = 1;
         int originalCnzAbsentFlagBytes = 1;
@@ -1729,7 +1733,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     private static byte[] insertMhzPayload(byte[] iczExtra, byte[] mhzPayload) {
-        int managerBytes = 30;
+        int managerBytes = MANAGER_BYTES;
         int originalAizAbsentFlagBytes = 1;
         int originalHczAbsentFlagBytes = 1;
         int originalCnzAbsentFlagBytes = 1;
@@ -1752,7 +1756,7 @@ class TestSonic3kLevelEventRewindSnapshot {
     }
 
     private static byte[] insertIczPayload(byte[] extra, byte[] iczPayload) {
-        int managerBytes = 30;
+        int managerBytes = MANAGER_BYTES;
         int originalAizAbsentFlagBytes = 1;
         int originalHczAbsentFlagBytes = 1;
         int originalCnzAbsentFlagBytes = 1;
@@ -1765,12 +1769,12 @@ class TestSonic3kLevelEventRewindSnapshot {
                 + originalCnzAbsentFlagBytes
                 + originalMgzAbsentFlagBytes
                 + originalMhzAbsentFlagBytes;
-        assertEquals(0, extra[30], "test helper expects absent AIZ sidecar");
-        assertEquals(0, extra[31], "test helper expects absent HCZ sidecar");
-        assertEquals(0, extra[32], "test helper expects absent CNZ sidecar");
-        assertEquals(0, extra[33], "test helper expects absent MGZ sidecar");
-        assertEquals(0, extra[34], "test helper expects absent MHZ sidecar");
-        assertEquals(0, extra[35], "test helper expects absent ICZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES], "test helper expects absent AIZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 1], "test helper expects absent HCZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 2], "test helper expects absent CNZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 3], "test helper expects absent MGZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 4], "test helper expects absent MHZ sidecar");
+        assertEquals(0, extra[MANAGER_BYTES + 5], "test helper expects absent ICZ sidecar");
         ByteBuffer buf = ByteBuffer.allocate(prefixBytes + 1 + Integer.BYTES + iczPayload.length
                 + extra.length - prefixBytes - originalIczAbsentFlagBytes);
         buf.put(extra, 0, prefixBytes);

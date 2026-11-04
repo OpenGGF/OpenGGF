@@ -4,11 +4,13 @@ import com.openggf.game.preview.TitlePreviewProvider.Image;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.launch.GameSupportNotices;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.game.TestMasterTitleHub.press;
@@ -28,6 +30,8 @@ class TestMasterTitleSuspendedGame {
         var config = SonicConfigurationService.createStandalone(directory);
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         var screen = new MasterTitleScreen(config);
+        // Support notices have their own coverage; here every stock game starts directly.
+        screen.setSupportNoticesForTest(new GameSupportNotices(config, Map.of()));
         screen.setStateForTest(MasterTitleScreen.State.ACTIVE);
         for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
             screen.setRomAvailableForTest(game, true);

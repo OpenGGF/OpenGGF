@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.specialstage.S3kRunEmeraldLedger;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageSelection;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -268,15 +269,6 @@ public final class TraceSegmentCarriedStateImport {
     static TraceRunManifest.Transition inboundTransition(TraceRunManifest manifest, int target) {
         for (TraceRunManifest.Transition t : manifest.transitions()) {
             if (t.toSegment() == target) {
-                return t;
-            }
-        }
-        return null;
-    }
-
-    static TraceRunManifest.Transition outboundTransition(TraceRunManifest manifest, int source) {
-        for (TraceRunManifest.Transition t : manifest.transitions()) {
-            if (t.fromSegment() == source) {
                 return t;
             }
         }

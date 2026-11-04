@@ -582,7 +582,10 @@ class TestGameLoopSuspensionOwnership {
         press(screen, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // default Return keeps the visit
         assertTrue(screen.hasSuspendedGame());
         assertFalse(SuspensionTestAccess.<Boolean>get(screen, "quitRequested"));
-        press(screen, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT);
+        press(screen, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+        // An ungated game, so Start goes straight to the end-game prompt rather than a support notice.
+        assertFalse(com.openggf.game.launch.GameSupportNotices.DEFAULT_STAGES.containsKey(screen.getSelectedGameId()),
+                screen.getSelectedGameId());
         press(screen, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         press(screen, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         assertSame(failure, assertThrows(IllegalStateException.class, () -> press(screen, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)));

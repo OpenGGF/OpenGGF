@@ -84,7 +84,8 @@ public final class ModApiVersion {
      * act controllers can reset native positions and provide rewindable top-solid decks.
      * Camera framing can cap the visible right edge independently of native player walls.
      * Hub preferences include optional title music, its volume, last focused game,
-     * and per-game last-act/leader history for zone-start Continue.
+     * dismissed game support notices, and per-game last-act/leader history for
+     * zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
      * Full/Quick/Off communication with semantic quick content, a local English

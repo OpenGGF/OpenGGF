@@ -124,7 +124,8 @@ preserve an English sentinel in a translated label to make parsing work.
 
 The initial set combines the reported 2026 top ten total-speaker languages with
 SEGA's Sonic language coverage, regional Spanish/Portuguese, and both Chinese
-scripts. Initial translations are Haiku 5.5 drafts. Opus 5.5 and GPT-6.1 Sol each
+scripts. Initial translations are Haiku 5.5 drafts; later machine drafts record
+their model in `origin` (`claude-haiku-5-5` or `claude-opus-5-5`). Opus 5.5 and GPT-6.1 Sol each
 reviewed the initial catalog inventory; their corrections remain machine drafts
 and do not certify native fluency or legal equivalence.
 See the [architecture and evidence](../../architecture/designs/2026-10-29-internationalisation.md).
