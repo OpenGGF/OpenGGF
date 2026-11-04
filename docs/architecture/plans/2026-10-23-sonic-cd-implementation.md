@@ -1,5 +1,34 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — live Act2 Monitor/Post and qualified ordinary10763
+
+The cached shared Monitor/TimePost components now borrow actual R12A mappings,
+animation and existing current art. Private World callbacks validate actual
+Frame/source/generation, full96 images and ordered helper/read/store/FM cuts;
+prepared pool/Frame/ledger values precede publication. The two natural posts at
+physical38/39 initialize raw subtypes8/9 and continue on the same original World.
+No gameplay seed or new art/capture owner is added. MonitorItem1A and Explosion18
+children are genuinely allocated but remain honest later unbound dispatches.
+
+The corrected56-case selection passes0failures/errors/skips: Monitor14,
+controller3 and metadata39. Exact source fingerprint is
+`bb58b461f5466db2fe79b854adad91829e70ed43835329a5df44314ba426e5c3`,
+23:41:06.110015–23:43:24.295948Z; shared queue wait1813s is separate from execution.
+All56 literal identities/properties/XML hashes were inspected in the automatic
+external run receipt, and ten owned reports consumed under the build lock.
+The earlier32 selection remains29pass/two fixture failures/one diagnostic error;
+its two expected ledgers omitted genuine earlier primary FM_CHARGESTOP. Root
+corrected those two assertions only after checking the native writer.
+
+Permanent positive10763 now checks full/course10718→10719 and10762→10763,
+including actual post Init/Main. A separate observer retains first10764 Boulder1B
+physical43/X03CE/Y0222/subtype0/saved0 as the next unbound frontier; its failure is
+not part of a green qualification and no later capture was taken. Profile96
+appends Boulder map, Platform map/width/range views after the old92 without new
+art readers, preload or algorithm changes. Existing shared Assets factories are
+qualified; live Boulder/Platform wiring remains a separate pending packet.
+Actual Act2 completion, audible/native-image and regional parity remain open.
+
 ## 4 November 2026 — prepared Breakable Wall component and Frame store
 
 R12A now retains92 raw descriptors: the old88 prefix plus live Wall mappings

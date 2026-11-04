@@ -119,6 +119,10 @@ MAP_SPR_BREAKABLE_WALL eed8 312 c561a76556cc21a46155e135205ab7c39cc8b007b9730c66
 BREAKABLE_WALL_PIECE_FRAMES f010 64 9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f
 BREAKABLE_WALL_PIECE_DELTAS f050 24 86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94
 BREAKABLE_WALL_PIECE_SPEEDS f068 48 7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31
+MAP_SPR_BOULDER 947c 14 f1613b80dc72cd1d153d190f3a660e3990f92648d54e65c989aed93bc9189652
+MAP_SPR_PLATFORM c9f2 132 a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7
+PLATFORM_WIDTHS c66a 4 87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3
+PLATFORM_RANGES c66e 4 ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -188,9 +192,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete92RowManifestPreservesTheOriginal88AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete96RowManifestPreservesTheOriginal92AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(92, CdR12aProfile.Asset.values().length); assertEquals(92, rows.size());
+        assertEquals(96, CdR12aProfile.Asset.values().length); assertEquals(96, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -377,6 +381,77 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         var data=com.openggf.game.soniccd.objects.CdBreakableWall.Assets.fromObjectAssets(o);
         assertEquals(0x20EED8,data.mappingsAddress());assertSame(o.view(BREAKABLE_WALL_PIECE_FRAMES),data.pieceFrames());
         assertThrows(IllegalArgumentException.class,()->new com.openggf.game.soniccd.objects.CdBreakableWall(placement,data,shared,null,null,null,null));
+    }
+
+    @Test void boulderAndPlatformMetadataAreSelectedByActualActTwoDispatchAndCompleteInitOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(92,MAP_SPR_BOULDER.ordinal());assertEquals(95,PLATFORM_RANGES.ordinal());
+        assertEquals(0x209412,o.view(OBJECT_INDEX).unsignedLong((0x1B-1)*4));
+        assertEquals(0x20C574,o.view(OBJECT_INDEX).unsignedLong((0x21-1)*4));
+        assertEquals("217c0020947c0004",hex.formatHex(file.readFile(0x9440,8)));
+        assertEquals("700b4eb90020cc50",hex.formatHex(file.readFile(0x945A,8)));
+        for(int operand:new int[]{0xC5C4,0xC5D4,0xC5E4})
+            assertEquals("203c0020c9f2",hex.formatHex(file.readFile(operand,6)));
+        assertEquals("117b006c0019",hex.formatHex(file.readFile(0xC5FC,6)));
+        assertEquals("117b105e002d",hex.formatHex(file.readFile(0xC60E,6)));
+        // PC base is its extension address; the low displacement is signed BYTE, not an old label suffix.
+        assertEquals(PLATFORM_WIDTHS.fileOffset(),0xC5FE+(byte)file.readFile(0xC5FF,1)[0]);
+        assertEquals(PLATFORM_RANGES.fileOffset(),0xC610+(byte)file.readFile(0xC611,1)[0]);
+        assertEquals(0x20947C,o.profile().range(MAP_SPR_BOULDER).nativeAddress());
+        assertEquals(0x20C9F2,o.profile().range(MAP_SPR_PLATFORM).nativeAddress());
+        assertFalse(Arrays.equals(file.readFile(0xCA76,132),o.view(MAP_SPR_PLATFORM).copy()),"unused second include is not the selected primary table");
+    }
+
+    @Test void bothCompleteStaticVisualsRetainEveryCountedPieceRootAndNativePaddingWithinExistingArtBounds() throws Exception {
+        var o=retail().terrain().objects();var hex=java.util.HexFormat.of();
+        var boulder=o.boulder();assertSame(boulder,o.boulder());assertTrue(boulder.animations().isEmpty());
+        assertEquals(List.of(2),boulder.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(2,boulder.mappingFrames().getFirst().pieces().size());
+        assertArrayEquals(hex.parseHex("000202f8020000ecf00f0003f400"),boulder.mappings().copy());
+        assertEquals(0,boulder.mappings().unsignedByte(13),"parent EVEN byte belongs to the complete original table span");
+        assertArrayEquals(o.view(MAP_SPR_BOULDER).copy(),boulder.mappings().copy());
+        var platform=o.platform();assertSame(platform,o.platform());assertTrue(platform.animations().isEmpty());
+        assertEquals(List.of(6,28,70),platform.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(4,8,12),platform.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertArrayEquals(o.view(MAP_SPR_PLATFORM).copy(),platform.mappings().copy());
+        assertEquals("a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7",CdR11aProfile.sha256(platform.mappings().copy()));
+        for(int padding:new int[]{27,69,131})assertEquals(0,platform.mappings().unsignedByte(padding));
+        for(var frame:boulder.mappingFrames())for(var piece:frame.pieces())assertTrue(piece.tileOffset()+piece.tileCount()<=19);
+        for(var frame:platform.mappingFrames())for(var piece:frame.pieces())assertTrue(piece.tileOffset()+piece.tileCount()<=57);
+        assertEquals(3,platform.mappingFrames().size(),"the fourth raw width entry does not invent a fourth map root");
+        assertArrayEquals(hex.parseHex("10203000"),o.view(PLATFORM_WIDTHS).copy());
+        assertArrayEquals(hex.parseHex("02030406"),o.view(PLATFORM_RANGES).copy());
+    }
+
+    @Test void actTwoFactoriesBorrowOnlyTheExistingAuthenticatedRawViewsAndCachedVisuals() throws Exception {
+        var o=retail().terrain().objects();var before=o.readerProfiles();
+        var boulder=com.openggf.game.soniccd.objects.CdBoulder.Assets.fromAct2Assets(o);
+        assertSame(o.boulder(),boulder.visual());assertSame(o.view(OBJECT_TILE_IDS),boulder.objectTileIds());
+        assertEquals(0x20947C,boulder.mappingsAddress());assertEquals(74,boulder.objectTileIds().length());
+        assertEquals(0x36C,CdR11aObjectAssets.decodeTileWord(boulder.objectTileIds().copy(),0xB,0));
+        assertThrows(UnsupportedOperationException.class,()->CdR11aObjectAssets.decodeTileWord(boulder.objectTileIds().copy(),0xB,1));
+        var platform=com.openggf.game.soniccd.objects.CdPlatform.Assets.fromAct2Assets(o);
+        assertSame(o.platform(),platform.visual());assertSame(o.view(PLATFORM_WIDTHS),platform.widths());
+        assertSame(o.view(PLATFORM_RANGES),platform.ranges());assertEquals(0x20C9F2,platform.mappingsAddress());
+        assertSame(before,o.readerProfiles());assertEquals(35,before.size());
+        assertEquals(19*32,o.readerProfile(ART_BOULDER).outputBytes());assertEquals(57*32,o.readerProfile(ART_PLATFORM).outputBytes());
+        assertEquals(3,com.openggf.game.soniccd.objects.CdBoulder.Assets.class.getRecordComponents().length);
+        assertEquals(4,com.openggf.game.soniccd.objects.CdPlatform.Assets.class.getRecordComponents().length);
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdBoulder.Assets.fromAct2Assets(null));
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdPlatform.Assets.fromAct2Assets(null));
+    }
+
+    @Test void eachNewRawSpanStaysDetachedOriginalSourceAndCannotBeReclassifiedAsAnArtReader() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();
+        for(var raw:new CdR12aProfile.Asset[]{MAP_SPR_BOULDER,MAP_SPR_PLATFORM,PLATFORM_WIDTHS,PLATFORM_RANGES}) {
+            var bytes=o.view(raw);var original=bytes.copy();var changed=bytes.copy();changed[0]^=1;
+            assertArrayEquals(original,o.view(raw).copy());assertSame(bytes,o.view(raw));
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(raw));
+            byte[] corrupt=file.readFile(0,262144);corrupt[raw.fileOffset()]^=1;
+            assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        assertThrows(UnsupportedOperationException.class,()->CdR12aProfile.forStage(CdReleaseVariant.USA,com.openggf.game.soniccd.CdStagePayload.R11A.stage()));
+        assertThrows(UnsupportedOperationException.class,()->CdR12aProfile.forStage(CdReleaseVariant.EUROPE,a.identity().stage()));
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }

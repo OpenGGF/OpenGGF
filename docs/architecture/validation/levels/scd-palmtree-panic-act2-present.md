@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,92 raw descriptors,35 finite art readers,
+The retained terrain/player pair,96 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -23,14 +23,14 @@ The retained terrain/player pair,92 raw descriptors,35 finite art readers,
 
 | ID | Observed contract and setup | Tests / limits |
 | --- | --- | --- |
-| ENTRY | Actual controller-only old Results→black fade→FF/IPX→same-World FULL1; genuine normal-load selectors, stage3/std1,22 FromBlack services, Title release and ordinary Right through10718. No actor/global/camera/art/clock/queue seed. | `TestSonicCdAct2ControllerRoute`; fresh World fixtures separately use a labelled Results-object-only trigger. Alternate entries and sustained traversal remain open. |
+| ENTRY | Actual controller-only old Results→black fade→FF/IPX→same-World FULL1; genuine normal-load selectors, stage3/std1,22 FromBlack services, Title release and ordinary Right through10763. No actor/global/camera/art/clock/queue seed. | `TestSonicCdAct2ControllerRoute`; fresh World fixtures separately use a labelled Results-object-only trigger. Alternate entries and sustained traversal remain open. |
 | LOAD | New Frame/source and production generation at actual profile admission; missing optional next pair leaves the old returned Frame/captures healthy. | `TestSonicCdAct2LoadingWorld` four cases. Actual legacy four-argument source exercises absence; no broad after-admission failure exemption. |
-| OBJECT | Six actual Present placements; reserved Title4 allocates fresh children38..45 before placed bodies. Later physical children execute the same pass. Ring/Spring/Animal and HUD use actual source bindings. | Ordinary Right through10718, Title children retire naturally. First10719 unbound ID19 is a TimePost; broader families remain open. Separate body/source components do not prove later World interactions. |
+| OBJECT | Six actual Present placements; reserved Title4 allocates fresh children38..45 before placed bodies. Later physical children execute the same pass. Ring/Spring/Animal/Monitor/TimePost and HUD use actual source bindings. | Ordinary Right through10763 includes natural subtype8/9 post Init/Main; Title children retire naturally. First10764 unbound ID1B is Boulder; broader families remain open. Separate body/source components do not prove later World interactions. |
 | EVENT | Native palette/section/scroll/animation tail completes after the actual128-object walk. Title PLC2 requests eleven descriptors/294 tiles at parent129, drains in22 source-ordered services, then clears locks/deletes at parent151; player0 sees unlocked controls next call. | Actual Title/queued-art/control-release and64 following Right calls checked. No duration proxy, preload or extra service substitutes for source order. Later section events remain unqualified. |
 | CAMERA | Actual centre WORD80/389 and native viewport, PPZ2 foreground event selection, three-cloud BG deformation and physical planes. | Data/scroll/plane components plus initial World. Width sweep, scrolling edges, locks/release and long traversal remain open. |
 | BOSS | No Act2 boss route reached. | Unassessed. |
 | LIFE | Original MAINVARS score/lives/bank carry follows actual writers; normal load clears its own fields. | Initial handoff only. Death, checkpoint capture/respawn, repeated restart and persistence breadth remain open. |
-| REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement and10717→10718. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
+| REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719 and10762→10763. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
 | DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
 | CLEANUP | Reject queued capture/restore/direct scroll/service/recursive overlay without closing the healthy producer. Rejected active-atlas close retains its ledger; cleanup retry retires all488 actually selected uploads and preserves another producer. | Actual EGL case.488 is selected uploads, not the1597-tile sparse current window or a whole-act completion metric. |
 | EXIT | No Act2 completion or outgoing programme reached. | Open. |
@@ -61,6 +61,19 @@ three literal identities/properties/XML hashes were inspected; two owned reports
 were consumed. The earlier two-case Title pass is a separate source-bound run.
 The one-error temporary10719 observer is diagnostic evidence, not a green scope.
 
+The subsequent56-case selection passes with zero failures/errors/skips at source
+`bb58b461f5466db2fe79b854adad91829e70ed43835329a5df44314ba426e5c3`,
+23:41:06.110015–23:43:24.295948Z on4November2026, after1813s shared queue wait.
+It contains Monitor/TimePost14, controller3 and source metadata39 cases. All56
+literal identities, configured properties and XML hashes were inspected and ten
+owned reports consumed under the build lock. Full/course crossing10718→10719
+observes both natural post initializers;10762→10763 retains the latest positive
+cut. The earlier32-case run had29passes/two omitted-primary-sound expectations/
+one observer error; correcting only the two ordered test ledgers gives this56
+qualification. The diagnostic10764 Boulder stop remains separate, not a pass.
+Boulder/Platform raw views and same-source Assets factories are qualified; their
+World bindings remain external and unrun at this checkpoint.
+
 Earlier scopes remain separate. The883-case run had882passes and one selected-Y
 projection failure; its796 legacy Frame and six new Frame-port cases passed.
 The next82-case run had81passes and one private draw-admission error, with40
@@ -72,8 +85,8 @@ parity or region certificate.
 
 ## Next concrete route
 
-Bind the measured TimePost19 World path using its existing native components and
-authenticated R12A views, then continue ordinary controls to the next real stop.
+Bind the measured Boulder1B World path and existing Platform family using their
+qualified R12A views, then continue ordinary controls to the next real stop.
 Source inventory identifies Breakable Wall36 as the first new algorithm family;
 existing-but-unbound families occur earlier. Its source location is not a measured
 route frontier. Extend lifecycle/configuration and rewind obligations as their

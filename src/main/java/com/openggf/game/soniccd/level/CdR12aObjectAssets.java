@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -232,6 +232,16 @@ public final class CdR12aObjectAssets {
     public synchronized CdObjectVisualAssets breakableWall() {
         if (breakableWall == null) breakableWall = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_BREAKABLE_WALL).copy(), 14, 57);
         return breakableWall;
+    }
+    /** One complete counted root and its parent EVEN byte; existing nineteen-tile Boulder source. */
+    public synchronized CdObjectVisualAssets boulder() {
+        if (boulder == null) boulder = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_BOULDER).copy(), 1, 19);
+        return boulder;
+    }
+    /** All three native Init branches select this same three-root table; no animation or art decode. */
+    public synchronized CdObjectVisualAssets platform() {
+        if (platform == null) platform = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_PLATFORM).copy(), 3, 57);
+        return platform;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

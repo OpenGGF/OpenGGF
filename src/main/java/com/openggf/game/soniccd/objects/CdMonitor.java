@@ -4,6 +4,8 @@ import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -114,6 +116,17 @@ public final class CdMonitor {
             Objects.requireNonNull(owner);
             return new Assets(owner.monitorTime(),
                     owner.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS).range().nativeAddress());
+        }
+
+        /** Actual original-USA R12A raw visual relation; no art decode, current pixels or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "original Act2 object assets");
+            var identity=Objects.requireNonNull(owner.identity(), "Act2 identity");
+            if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12A
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("Monitor Act2 assets require authenticated original USA R12A Word RAM");
+            return new Assets(owner.monitorTime(), owner.profile().range(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME).nativeAddress());
         }
 
         /** Authenticated original USA B metadata only; art remains with the existing section owner. */
@@ -241,7 +254,11 @@ public final class CdMonitor {
         this.drawObject = Objects.requireNonNull(drawObject); this.playFm = Objects.requireNonNull(playFm);
     }
 
-    /** Named bounded Past ingress; no additional Solid, floor, Frame, bank or visual lifetime. */
+    /**
+     * Named prefix-owner ingress, retained under its existing Past API name. The same raw native
+     * branches are reused by the actual Act2 binding; assets/inputs confer no World admission.
+     * No additional Solid, floor, Frame, bank or visual lifetime is created.
+     */
     public static CdMonitor withPastOwner(CdObjectPlacementRuntime runtime, Assets assets,
                                           CdSolidObject solid, CdPlayerTerrain terrain,
                                           PrefixSolidOwner owner, PrimaryAngleCommit primaryAngleCommit,

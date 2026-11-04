@@ -170,8 +170,11 @@ Unreleased. The earlier development themes remain in
   three following returns with complete full/course replay. Real selected Sonic
   pixels, renderer-only omission, queued reentry rejection and owned upload
   retirement are checked in EGL. The real Title slide-out queues and services its
-  art before releasing controls; ordinary Right now returns through10718 with
-  complete full/course replay. Later Act2 object binding and traversal remain open.
+  art before releasing controls. Cached Monitor/Time Post bodies now use genuine
+  shared Solid, floor-angle, direction and ordered voice publications; ordinary
+  Right returns through10763 with full/course replay across both natural posts.
+  Boulder/Platform metadata reuses existing art; their World bindings and later
+  Act2 traversal remain open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
   goal-bound and warp clears. Live Signpost and Results bindings preserve native

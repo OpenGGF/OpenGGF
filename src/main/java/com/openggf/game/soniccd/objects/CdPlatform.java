@@ -7,6 +7,8 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
@@ -120,6 +122,18 @@ public final class CdPlatform {
             return new Assets(owner.platform(), owner.view(CdR11aObjectAssets.Table.PLATFORM_MAPPINGS).range().nativeAddress(),
                     owner.view(CdR11aObjectAssets.Table.PLATFORM_WIDTHS).bytes(),
                     owner.view(CdR11aObjectAssets.Table.PLATFORM_RANGES).bytes());
+        }
+
+        /** Original-USA Act2 raw metadata only; no body, current patterns or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("Platform Act2 assets require authenticated original USA R12A Word RAM");
+            return new Assets(owner.platform(), owner.profile().range(CdR12aProfile.Asset.MAP_SPR_PLATFORM).nativeAddress(),
+                    owner.view(CdR12aProfile.Asset.PLATFORM_WIDTHS), owner.view(CdR12aProfile.Asset.PLATFORM_RANGES));
         }
 
         /**

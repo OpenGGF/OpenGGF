@@ -221,15 +221,17 @@ remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
 The resumed private controller route now completes Act1's Past Results and old
 programme exit, then admits actual Act2 Main10445, completes Title's queued art
-and control release, and returns ordinary Right through10718.
+and control release, and returns ordinary Right through10763.
 The [Act2 partial matrix](../architecture/validation/levels/scd-palmtree-panic-act2-present.md)
 records same-World FULL loading, native normal-load/fade/first-walk ownership,
 full/course replay, actual selected Sonic pixels and488-selected-upload retirement.
 The final15-case World/render selection passes without skips; earlier component,
 Frame and integration scopes remain separately attributed. Three later controller
-checks pass without skips, including Title/PLC2 release and full/course10717→10718.
-The next measured10719 stop is existing-but-unbound TimePost19; broader object
-binding, sustained Act2 traversal, later acts and JP/EU parity are unfinished.
+checks pass without skips, including Title/PLC2 release. The later56-case selection
+qualifies Monitor/TimePost14, controller3 and metadata39 with zero skips; full/course
+10718→10719 and10762→10763 retain the natural post Init/Main cuts. The next measured
+10764 stop is existing-but-unbound Boulder1B. Broader object binding, sustained
+Act2 traversal, later acts and JP/EU parity are unfinished.
 The first-act matrix remains partial as well.
 
 ### Historical26October pause checkpoint

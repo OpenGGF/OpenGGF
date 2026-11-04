@@ -214,8 +214,18 @@ class TestSonicCdAct2ControllerRoute {
     @Test void actualUnlockedAct2RightRouteReturnsThroughTheLastMeasuredClosedCutWithFullAndCourseReplay() throws Exception {
         var old = ready(); var h = old.harness(); var module = h.module();
         var right = controller(10419);
-        for (int call = old.returned() + 1; call <= 10717; call++)
+        for (int call = old.returned() + 1; call <= 10762; call++) {
             step(h, call <= 10419 ? controller(call) : right);
+            if (call == 10718) replayNextRight(h, right); // Actual fresh TimePost8/9 Init at10719, no net extra frame.
+            if (call == 10719) {
+                assertEquals(2, module.act2LoadState().calls().stream().filter(c -> c == SonicCdGameModule.Act2LoadCall.TIME_POST_BODY).count());
+                for (int whole = 38; whole <= 39; whole++) {
+                    var post = module.act2LoadState().placement().pool().slots().get(whole - 32);
+                    assertEquals(0x19, post.id()); assertEquals(2, post.routine());
+                    assertEquals(8 + whole - 38, post.subtype());
+                }
+            }
+        }
         var frame = module.requirePlayerFrame(); var source = frame.stageSource();
         assertTrue(old.frame().closed()); assertFalse(frame.closed());
         assertEquals(CdStageKey.parse("R12A"), source.stage());
@@ -224,7 +234,7 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(0, module.act2LoadState().section().queue().headSource());
         assertTrue(frame.state().motion().centreX16_16() > (80 << 16), "Ordinary native Right moved beyond its native entry");
         replayNextRight(h, right);
-        step(h, right); // Positive endpoint10718; later unowned dispatch is not a permanent success condition.
+        step(h, right); // Positive endpoint10763; later unowned dispatch is not a permanent success condition.
         assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
         assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
         assertInstanceOf(SonicCdPastDisplay.Ready.class, module.act2SelectedDisplay().projection());
@@ -232,7 +242,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right returned10718; source-bound full/course10717->10718 replay, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right returned10763; source-bound full/course10718->10719 and10762->10763 replay, natural TimePosts8/9, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 

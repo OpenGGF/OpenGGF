@@ -1,9 +1,15 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,6 +115,18 @@ public final class CdBoulder {
             Objects.requireNonNull(objects, "objects");
             return new Assets(objects.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(), objects.boulder(),
                     objects.view(CdR11aObjectAssets.Table.BOULDER_MAPPINGS).range().nativeAddress());
+        }
+
+        /** Original-USA Act2 raw metadata only; no body, current patterns or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("Boulder Act2 assets require authenticated original USA R12A Word RAM");
+            return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.boulder(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_BOULDER).nativeAddress());
         }
     }
 

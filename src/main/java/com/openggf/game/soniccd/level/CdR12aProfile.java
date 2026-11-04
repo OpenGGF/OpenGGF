@@ -103,7 +103,10 @@ public final class CdR12aProfile {
         MAP_SPR_BREAKABLE_WALL(0xEED8, 312),
         BREAKABLE_WALL_PIECE_FRAMES(0xF010, 64),
         BREAKABLE_WALL_PIECE_DELTAS(0xF050, 24),
-        BREAKABLE_WALL_PIECE_SPEEDS(0xF068, 48);
+        BREAKABLE_WALL_PIECE_SPEEDS(0xF068, 48),
+        // Boulder/Main.asm:30 and Platform/Main.asm:37-55: actual original R12A operands.
+        MAP_SPR_BOULDER(0x947C, 14), MAP_SPR_PLATFORM(0xC9F2, 132),
+        PLATFORM_WIDTHS(0xC66A, 4), PLATFORM_RANGES(0xC66E, 4);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }
