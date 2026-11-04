@@ -145,6 +145,12 @@ ANI_MOSQUI_NORMAL b522 14 24b00d5597a3482b4bf9f5e692be5ea38534c1f5265408b8c7273d
 ANI_MOSQUI_DAMAGED b530 13 6718cb74ab9b1ce59a3a122b0dee40b38ece57b7fdacd1f4baf7b76bc38c1a6e
 MAP_SPR_MOSQUI_NORMAL b53e 60 5a10487e5e92e1c60e5885d832b90239c22d45f3c84bb49cd8886c590d8aba2e
 MAP_SPR_MOSQUI_DAMAGED b57a 66 23f8799c277fc89e4f94ccf75e0b488de9fca30a05a658cde5eaf0be8fec7313
+ANI_ROBOT_GENERATOR e80e 8 cd243d872bccdc1c849dab79119738c4f44de8739f702aea6fd401e5cd2d119e
+MAP_SPR_ROBOT_GENERATOR e816 574 69588f2f53733d8a90cf9c1cd3d06f6c5158a507839be0b5eee13d9a957d8e59
+ROBOT_GENERATOR_BASE_TILES ea94 22 3948236aa2a83a827ef6a7fb0f0e863b4a1ffc2b743355f954aed558420992b4
+ROBOT_GENERATOR_EXPLOSION_SCHEDULE ea54 64 1827c7470bb98b70240de9237aeb30aec8841ae3cc1f2e7f51332b3b18155123
+ANI_EXPLOSION 1d700 20 9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649
+MAP_SPR_EXPLOSION 1d714 146 0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -229,7 +235,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(114, rows.size()); assertEquals(114, CdR11bAssets.Asset.values().length);
+        assertEquals(120, rows.size()); assertEquals(120, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());
@@ -570,7 +576,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
         var keys = new CdR11bAssets.Asset[]{ANI_FLOAT_BLOCK, MAP_SPR_FLOAT_BLOCK};
         String[] labels = {"Ani_FloatBlock", "MapSpr_FloatBlock"};
         int[] offsets = {0xA234, 0xA252}; int[] lengths = {30, 76};
-        assertEquals(114, CdR11bAssets.Asset.values().length);
+        assertEquals(120, CdR11bAssets.Asset.values().length);
         assertEquals(89, ANI_MONITOR.ordinal());
         for (int i = 0; i < keys.length; i++) {
             var key = keys[i]; var view = a.view(key);

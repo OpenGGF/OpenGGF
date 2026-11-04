@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
@@ -92,6 +93,36 @@ public final class CdPlayerTouchResponse {
         public WorldGlobals {
             wordValue(rings); byteValue(lives); byteValue(updateHudLives); byteValue(updateHudScore);
         }
+    }
+
+    /** Complete pure AddPoints output; the optional native command is an observation, never execution. */
+    public record PointsResult(WorldGlobals world, Optional<SubCpuCommand> command) {
+        public PointsResult {
+            Objects.requireNonNull(world); Objects.requireNonNull(command);
+        }
+    }
+
+    /**
+     * Selected AddPoints entry (HUD and Points/Main.asm:157-180, scddisasm
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff). rawPoints is the complete d0.l:
+     * ADD.L wraps before the unsigned cap and the one unsigned extra-life test. The caller owns
+     * reaching this entry, publication and its optional SubCPUCmd; no player or pool is involved.
+     */
+    public static PointsResult addPoints(WorldGlobals before, int rawPoints) {
+        Objects.requireNonNull(before, "world globals");
+        int score = before.score() + rawPoints;
+        if (Integer.compareUnsigned(999999, score) <= 0) score = 999999;
+        boolean extraLife = Integer.compareUnsigned(score, before.nextLifeScore()) >= 0;
+        int nextLifeScore = before.nextLifeScore();
+        int lives = before.lives();
+        int updateHudLives = before.updateHudLives();
+        if (extraLife) {
+            nextLifeScore += 5000;
+            lives = (lives + 1) & 0xFF;
+            updateHudLives = (updateHudLives + 1) & 0xFF;
+        }
+        return new PointsResult(new WorldGlobals(before.rings(), lives, updateHudLives, score, nextLifeScore, 1),
+                extraLife ? Optional.of(SubCpuCommand.SCMD_YESSFX) : Optional.empty());
     }
 
     /** USA IDs: FM_HURT $93, FM_DESTROY $96, FM_CHARGESTOP $AB. */
@@ -335,16 +366,13 @@ public final class CdPlayerTouchResponse {
 
     /** AddPoints (HUD and Points/Main.asm:157-180): ADD.L wraps, then the unsigned cap, then at most one 1-up. */
     private static void addPoints(Cursor c, int points) {
-        c.updateHudScore = 1;
-        c.score += points;
-        if (Integer.compareUnsigned(999999, c.score) <= 0) c.score = 999999; // BHI skips only when 999999 >u score.
-        boolean extraLife = Integer.compareUnsigned(c.score, c.nextLifeScore) >= 0;
-        c.calls.add(new AddPoints(points, extraLife));
-        if (!extraLife) return;
-        c.nextLifeScore += 5000;
-        c.lives = (c.lives + 1) & 0xFF;
-        c.updateHudLives = (c.updateHudLives + 1) & 0xFF;
-        c.calls.add(new SubCpu(SubCpuCommand.SCMD_YESSFX)); // Tail JMP SubCPUCmd.
+        var result = addPoints(new WorldGlobals(c.rings, c.lives, c.updateHudLives, c.score,
+                c.nextLifeScore, c.updateHudScore), points);
+        var world = result.world();
+        c.rings = world.rings(); c.lives = world.lives(); c.updateHudLives = world.updateHudLives();
+        c.score = world.score(); c.nextLifeScore = world.nextLifeScore(); c.updateHudScore = world.updateHudScore();
+        c.calls.add(new AddPoints(points, result.command().isPresent()));
+        result.command().ifPresent(command -> c.calls.add(new SubCpu(command))); // Tail JMP SubCPUCmd.
     }
 
     /** Player_TouchHazard/.ChkHurt (:211-227). The post-Display hurt WORD gates. */

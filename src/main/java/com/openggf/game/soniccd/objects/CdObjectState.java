@@ -52,7 +52,9 @@ public final class CdObjectState {
         COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F),
         // ID07 oTunnelSteps/oTunnelVar32/oTunnelIndex/oTunnelEnd (Tunnel Path/Main.asm:109-115,257-270).
         // SUBQ.B addresses the HIGH byte of the big-endian steps WORD; these are storage aliases only.
-        TUNNEL_PATH_STEPS_HIGH(0x2E), TUNNEL_PATH_SCRATCH(0x32), TUNNEL_PATH_INDEX(0x3A), TUNNEL_PATH_END(0x3B);
+        TUNNEL_PATH_STEPS_HIGH(0x2E), TUNNEL_PATH_SCRATCH(0x32), TUNNEL_PATH_INDEX(0x3A), TUNNEL_PATH_END(0x3B),
+        // Robot Generator/Main.asm:133,159,166: BYTE operations address the HIGH byte of its timer WORD.
+        ROBOT_GENERATOR_TIMER_HIGH(0x2A);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -95,7 +97,9 @@ public final class CdObjectState {
         // ID07 Tunnel Path/Main.asm:193-196,261-277,294-299,343,369: overlapping native WORD storage.
         // Release MOVE.W #2 at routine writes bytes $24/$25=00/02, rather than routine BYTE02.
         TUNNEL_PATH_STEPS(0x2E), TUNNEL_PATH_TARGET_X(0x36), TUNNEL_PATH_TARGET_Y(0x38),
-        TUNNEL_PATH_INDEX_END(0x3A), TUNNEL_PATH_ROUTINE_WORD(0x24);
+        TUNNEL_PATH_INDEX_END(0x3A), TUNNEL_PATH_ROUTINE_WORD(0x24),
+        // Robot Generator/Main.asm:65-67,98,169,182-193: overlapping native WORD fields only.
+        ROBOT_GENERATOR_TIMER(0x2A), ROBOT_GENERATOR_BASE_Y(0x30), ROBOT_GENERATOR_FLOAT_STEP(0x32);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -118,7 +122,9 @@ public final class CdObjectState {
         // Collapsing Platform/Main.asm:115-117,184,282: overlapping signed 16.16 fall delta only.
         COLLAPSE_FALL_DELTA(0x2C),
         // ID07 oTunnelData (Tunnel Path/Main.asm:115,194,274): retain the complete raw32 pointer bits.
-        TUNNEL_PATH_DATA(0x3C);
+        TUNNEL_PATH_DATA(0x3C),
+        // Robot Generator/Main.asm:64,130,138: full raw schedule pointer bits, not a retained Java index.
+        ROBOT_GENERATOR_SCHEDULE(0x2C);
         private final int offset;
         LongField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

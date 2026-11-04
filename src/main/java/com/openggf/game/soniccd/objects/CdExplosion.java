@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +83,19 @@ public final class CdExplosion {
             return new Assets(assets.explosion(),
                     assets.view(CdR11aObjectAssets.Table.EXPLOSION_MAPPINGS).range().nativeAddress());
         }
+
+        /**
+         * Original USA B sources selected by ObjExplosion_Init/Main's own operands at $205EA0/$205ECE.
+         * The native mapping is $21D714; Art_Explosions remains the existing 70-tile PLC source at $D000.
+         * No art decode, upload, residency or new media owner is introduced.
+         */
+        public static Assets fromPastAssets(CdR11bAssets assets) {
+            Objects.requireNonNull(assets, "assets");
+            var mappings = assets.view(CdR11bAssets.Asset.MAP_SPR_EXPLOSION);
+            return new Assets(CdObjectVisualAssets.decode(mappings.bytes().copy(), 7,
+                    assets.view(CdR11bAssets.Asset.ANI_EXPLOSION).bytes().copy(), 2, 70),
+                    mappings.range().nativeAddress());
+        }
     }
 
     /**
@@ -107,10 +121,12 @@ public final class CdExplosion {
 
     public enum UnsupportedBoundary {
         /** oRoutine outside {0,2,4} misaligns into or indexes past the three-entry .Index (Explosion/Main.asm:53-56). */
-        ROUTINE_DISPATCH
+        ROUTINE_DISPATCH,
+        /** A reached raw animation directory/frame read exceeds its finite authenticated B view. */
+        ANIMATION_DIRECTORY_READ, ANIMATION_FRAME_READ
     }
 
-    /** Thrown before any write; the pool holds the last committed source state. */
+    /** The pool holds the completed source prefix; routine dispatch itself fails before any write. */
     public static final class UnsupportedExplosion extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
         private final int wholeIndex;
@@ -127,18 +143,44 @@ public final class CdExplosion {
     private final CdObjectPlacementRuntime runtime;
     private final Assets assets;
     private final DrawObjectCall drawObject;
+    private final boolean pastBinding;
+    private boolean dispatching;
 
     /** The runtime supplies the single live pool; no admitted branch touches its saved bank. */
     public CdExplosion(CdObjectPlacementRuntime runtime, Assets assets, DrawObjectCall drawObject) {
+        this(runtime, assets, drawObject, false);
+    }
+
+    private CdExplosion(CdObjectPlacementRuntime runtime, Assets assets, DrawObjectCall drawObject,
+                        boolean pastBinding) {
         this.runtime = Objects.requireNonNull(runtime, "runtime");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+        this.pastBinding = pastBinding;
+    }
+
+    /** Named B binding; the existing public A constructor and two-field Assets value keep their contract. */
+    public static CdExplosion fromPastAssets(CdObjectPlacementRuntime runtime, CdR11bAssets assets,
+                                            DrawObjectCall drawObject) {
+        return new CdExplosion(runtime, Assets.fromPastAssets(assets), drawObject, true);
     }
 
     public Assets assets() { return assets; }
 
     /** One ObjExplosion dispatch for the whole-pool dynamic slot currently holding ID $18. */
     public Result run(int wholeIndex) {
+        if (pastBinding && dispatching) {
+            throw new IllegalStateException("Past Explosion dispatch is not reentrant");
+        }
+        dispatching = true;
+        try {
+            return runSelected(wholeIndex);
+        } finally {
+            dispatching = false;
+        }
+    }
+
+    private Result runSelected(int wholeIndex) {
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) {
@@ -223,11 +265,18 @@ public final class CdExplosion {
     private CdObjectState animate(CdObjectState state) {
         var visual = assets.explosion();
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
-        var out = CdObjectAnimation.step(new CdObjectAnimation.State(
-                state.unsignedByte(ANIMATION), state.unsignedByte(PREVIOUS_ANIMATION),
-                state.unsignedByte(ANIMATION_FRAME), state.unsignedByte(ANIMATION_TIME),
-                state.unsignedByte(MAP_FRAME), state.spriteFlags(), state.flags(),
-                state.routine(), state.unsignedByte(ROUTINE_2)), table);
+        CdObjectAnimation.State out;
+        try {
+            out = CdObjectAnimation.step(new CdObjectAnimation.State(
+                    state.unsignedByte(ANIMATION), state.unsignedByte(PREVIOUS_ANIMATION),
+                    state.unsignedByte(ANIMATION_FRAME), state.unsignedByte(ANIMATION_TIME),
+                    state.unsignedByte(MAP_FRAME), state.spriteFlags(), state.flags(),
+                    state.routine(), state.unsignedByte(ROUTINE_2)), table);
+        } catch (UnsupportedOperationException selectedRead) {
+            if (!pastBinding) { throw selectedRead; }
+            animationFailurePrefix(state, table, selectedRead);
+            throw new IllegalStateException("Shared animation failure did not match a reached B read", selectedRead);
+        }
         return state.moveByte(ANIMATION, out.animationId())
                 .moveByte(PREVIOUS_ANIMATION, out.previousId())
                 .moveByte(ANIMATION_FRAME, out.scriptIndex())
@@ -237,6 +286,41 @@ public final class CdExplosion {
                 .moveByte(FLAGS, out.statusFlags())
                 .moveByte(ROUTINE, out.routine())
                 .moveByte(ROUTINE_2, out.routine2());
+    }
+
+    /**
+     * Only reached-read failure stores from AnimateObject (Object Animate.asm:14-34).
+     * Successful transitions stay in the shared algorithm above. The immutable actual B table has
+     * only frame bytes and FC, so its sole read frontiers are the directory and selected frame.
+     */
+    private void animationFailurePrefix(CdObjectState state, CdObjectAnimation.AnimationTable table,
+                                        RuntimeException cause) {
+        if (state.unsignedByte(ANIMATION) != state.unsignedByte(PREVIOUS_ANIMATION)) {
+            state = state.moveByte(PREVIOUS_ANIMATION, state.unsignedByte(ANIMATION))
+                    .moveByte(ANIMATION_FRAME, 0).moveByte(ANIMATION_TIME, 0);
+            runtime.pool().write(state);
+        }
+        state = state.addByte(ANIMATION_TIME, -1);
+        runtime.pool().write(state);
+        int animation = state.unsignedByte(ANIMATION);
+        if (animation >= table.scriptCount()) {
+            throw animationMissing(state, UnsupportedBoundary.ANIMATION_DIRECTORY_READ, 2 * animation, cause);
+        }
+        int script = table.tableOffset() + (short) table.bytes().unsignedWord(table.tableOffset() + 2 * animation);
+        state = state.moveByte(ANIMATION_TIME, table.bytes().unsignedByte(script));
+        runtime.pool().write(state);
+        int frameAddress = script + 1 + state.unsignedByte(ANIMATION_FRAME);
+        if (frameAddress >= table.bytes().length()) {
+            throw animationMissing(state, UnsupportedBoundary.ANIMATION_FRAME_READ, frameAddress, cause);
+        }
+    }
+
+    private static UnsupportedExplosion animationMissing(CdObjectState state, UnsupportedBoundary boundary,
+                                                          int at, RuntimeException cause) {
+        var failure = new UnsupportedExplosion(boundary, state.identity().wholeIndex(),
+                "reached animation byte " + at);
+        failure.initCause(cause);
+        return failure;
     }
 
     /** ObjExplosion_Done (Explosion/Main.asm:98-106). */

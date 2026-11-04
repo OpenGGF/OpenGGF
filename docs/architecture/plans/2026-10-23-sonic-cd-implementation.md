@@ -47,6 +47,41 @@ Natural full/course7807→7808 restoration compares complete represented native
 state before forwarding the unchanged controller input. Selected Past GPU presentation now retains the actual prior SAT with current
 service output; whole acts and regional parity remain unfinished.
 
+## Robot Generator / Explosion components — 4 November 2026
+
+Six original-USA B operand-authenticated raw views extend114→120: Robot animation,
+mapping, base tile list and64-byte explosion schedule, plus both Explosion scripts
+and mapping. All114 old descriptors,36PLC/37readers, art/decoders/current regions
+remain unchanged. A named B Explosion factory preserves the A constructor and
+asset contract. New Robot Generator translates all four routines, shared genuine
+Solid/GetOff prefixes, immediate goodFuture→AddPoints→Solid ordering, schedule
+consumption on failed allocation, high-byte timer overlap and live signed-routine
+despawn. It installs no Frame, global bank, clock, art or audio owner.
+
+Public pure selected AddPoints(WorldGlobals,int) reuses the existing algorithm:
+raw LONG addition/wrap, unsigned cap and threshold, at most one life and byte
+wraps, optional existing YESSFX. Legacy touch calls delegate and keep their exact
+AddPoints→optional SubCpu ordering. Root observed13 missing-entry baseline REDs
+before importing the implementation. An initial component attempt compiled
+production but launched no tests because one new expected byte C5 lacked a Java
+cast; Root corrected only that test. A complete source-bound397/20-class retry
+then passes0failures/errors/skips, including Robot29, B Explosion11, legacy
+Explosion24, AddPoints13, legacy TouchResponse191, metadata113 and API/teardown16.
+
+Run24185: normal compilation36.11s, queue95s, admitted execution19.05s at
+15:36:02.767679–15:36:21.818731Z. Full source fingerprints match before/after:
+9eddd7ee6074aa097a94337dc9b51561d10505fcc411bc351c63af5d832c62e1.
+All397 fresh unique case identities/counts/Java25.0.5.0.3/private cwd/original
+media/EGL properties checked;40 owned reports consumed. A separate static review
+found no P1/P2 in the five production and four new test files, with nine unchanged
+input hashes; it inspected no pending execution. Bounded enum migration audit
+reports stable selected level-test inventory; it is not complete consumer proof.
+
+These are selected components, still unbound in the live Past World at this
+checkpoint. Actual route remains8276/first8277 Robot Generator. No returned8277,
+new pixels/GPU/audio, complete act or regional parity is claimed. The independent
+World bridge is external source work and retains its own execution obligations.
+
 ## Past Mosqui/Spikes/Anton and actual8276 — 4 November 2026
 
 Seven original-disc raw metadata entries extend B107→114 without changing any

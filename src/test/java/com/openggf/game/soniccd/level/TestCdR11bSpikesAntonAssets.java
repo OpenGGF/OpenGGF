@@ -36,7 +36,7 @@ class TestCdR11bSpikesAntonAssets {
     @Test void threeRawViewsAppendAfterAllOldHundredSevenWithoutReadersOrPlcs() throws Exception {
         var f = retail(); int[] offsets = {0xC048, 0xB1F6, 0xB202}, lengths = {24, 12, 112};
         String[] labels = {"MapSpr_Spikes", "Ani_Anton", "MapSpr_Anton"};
-        assertEquals(114, CdR11bAssets.Asset.values().length);
+        assertEquals(120, CdR11bAssets.Asset.values().length);
         assertEquals(KEYS, Arrays.asList(CdR11bAssets.Asset.values()).subList(107, 110));
         assertEquals(100, MAP_SPR_COLLAPSE_PLATFORM_1.ordinal()); assertEquals(106, MAP_SPR_BOULDER.ordinal());
         for (int i = 0; i < KEYS.size(); i++) {

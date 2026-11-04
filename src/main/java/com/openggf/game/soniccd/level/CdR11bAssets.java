@@ -208,7 +208,18 @@ public final class CdR11bAssets {
         ANI_MOSQUI_NORMAL("Ani_Mosqui1", 0xB522, 14, 0, 0, 0, 0, false),
         ANI_MOSQUI_DAMAGED("Ani_Mosqui2", 0xB530, 13, 0, 0, 0, 0, false),
         MAP_SPR_MOSQUI_NORMAL("MapSpr_Mosqui1", 0xB53E, 60, 0, 0, 0, 0, false),
-        MAP_SPR_MOSQUI_DAMAGED("MapSpr_Mosqui2", 0xB57A, 66, 0, 0, 0, 0, false);
+        MAP_SPR_MOSQUI_DAMAGED("MapSpr_Mosqui2", 0xB57A, 66, 0, 0, 0, 0, false),
+
+        // Actual original USA B operands: E690/E6AC/E6B4/E762; _Objects/Robot Generator/Main.asm:54-67,120-121,200-229.
+        // The base list belongs to Palmtree Panic/Objects/Robot Generator/Tile IDs.asm:7-10.
+        ANI_ROBOT_GENERATOR("Ani_RobotGenerator", 0xE80E, 8, 0, 0, 0, 0, false),
+        MAP_SPR_ROBOT_GENERATOR("MapSpr_RobotGenerator", 0xE816, 574, 0, 0, 0, 0, false),
+        ROBOT_GENERATOR_BASE_TILES("ObjRobotGenerator_BaseTileList", 0xEA94, 22, 0, 0, 0, 0, false),
+        ROBOT_GENERATOR_EXPLOSION_SCHEDULE("ObjRobotGenerator_ExplosionLocs", 0xEA54, 64, 0, 0, 0, 0, false),
+
+        // _Objects/Explosion/Main.asm:73,89-92; actual original B mapping/animation operands at5EA0/5ECE.
+        ANI_EXPLOSION("Ani_Explosion", 0x1D700, 20, 0, 0, 0, 0, false),
+        MAP_SPR_EXPLOSION("MapSpr_Explosion", 0x1D714, 146, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

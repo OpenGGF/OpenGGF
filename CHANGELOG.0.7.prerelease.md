@@ -142,6 +142,10 @@ Unreleased. The earlier development themes remain in
   Robot Generator fence, with complete full/course state replay. Fixed Spikes
   support/protection bypass and Anton Init/Place are checked; live direct Hurt and
   grounded Anton patrol remain separate World coverage gaps.
+  Selected Robot Generator and Past Explosion components now share the existing
+  Solid, animation and current-art owners. A pure selected AddPoints entry reuses
+  the original score arithmetic and ordered one-up request, preserving existing
+  touch-response behavior; their live World join is still separate work.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual
