@@ -226,6 +226,9 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             formlessReleaseTimer = FORMLESS_RELEASE_FRAMES;
         } else {
             flags |= 1 << 7;
+            // loc_8160A (sonic3k.asm:173393) writes the anim byte directly, after
+            // Player_1's own pass; Animate_Sonic sees it change on the next pass.
+            player.setAnimationId(0x1F);
         }
         player.setInvincibleFrames(0);
     }

@@ -100,6 +100,10 @@ Unreleased. The earlier development themes remain in
   queue to drain before the ending scene starts, as the shipped game does. The
   ending previously started at once with its terrain art unqueued.
 
+- The Doomsday Super transformation shows its sparkle animation and releases
+  Sonic on the shipped frames: the animation starts when the flight controller
+  triggers it, and Sonic moves again on the frame his palette fade finishes.
+
 - S3K fresh level loads count the terrain wait's final VBlank in the live game
   loop, as the recording driver already did. The remaining load-time lag
   frames are documented, not estimated.
