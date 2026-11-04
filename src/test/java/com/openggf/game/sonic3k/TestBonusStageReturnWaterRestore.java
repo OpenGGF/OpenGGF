@@ -102,7 +102,9 @@ public class TestBonusStageReturnWaterRestore {
             BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, saved);
             finishEntryTitle(loop);
             BonusStageSessionTestAccess.exited(loop, provider, saved);
-            finishNativeLoad(loop, GameMode.LEVEL);
+            finishTitleBeforeGameplay(loop, GameMode.LEVEL);
+            assertTrue(level.hasPendingFreshLevelTransitionBoundary(),
+                    "LevelLoop must still own assembly before the first water/gameplay tick");
 
             assertEquals(0, level.getApparentAct());
             assertTrue(water.hasWater(0, 1), "CheckLevelForWater must see saved apparent AIZ1");
@@ -117,11 +119,16 @@ public class TestBonusStageReturnWaterRestore {
 
     private static void finishEntryTitle(GameLoop loop) {
         assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
-        assertTrue(NativeLevelLoadAccess.isPending(GameServices.level()),
-                "the entry title must retain its unfinished native load");
-        // doEnter skips the source fade only. The real title loop must finish
-        // the resumable load and release entry before a second Level: return.
-        finishNativeLoad(loop, GameMode.BONUS_STAGE);
+        // This ordinary fixture installs no phase-admission client. Its
+        // synchronous load retains the rewindable fresh title boundary.
+        assertFalse(NativeLevelLoadAccess.isPending(GameServices.level()));
+        assertTrue(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
+                "the entry title must retain its prepared fresh boundary");
+        // doEnter skips the source fade only. The real title loop must release
+        // the entry boundary before a second Level: return.
+        finishTitleBeforeGameplay(loop, GameMode.BONUS_STAGE);
+        assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
+                "bonus entry assembly completes at title release");
     }
 
     @Test
@@ -182,7 +189,9 @@ public class TestBonusStageReturnWaterRestore {
         BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
         finishEntryTitle(loop);
         BonusStageSessionTestAccess.exited(loop, provider, savedState);
-        finishNativeLoad(loop, GameMode.LEVEL);
+        finishTitleBeforeGameplay(loop, GameMode.LEVEL);
+        assertTrue(levelManager.hasPendingFreshLevelTransitionBoundary(),
+                "LevelLoop must still own assembly before the first water/gameplay tick");
 
         assertEquals(HCZ1_LATE_WATER_LEVEL, waterSystem.getWaterLevelY(ZONE_HCZ, ACT_1),
                 "Bonus-stage return restores saved water before returned gameplay");
@@ -190,7 +199,7 @@ public class TestBonusStageReturnWaterRestore {
                 "the saved mean must not overwrite the freshly initialized target");
     }
 
-    private static void finishNativeLoad(GameLoop loop, GameMode destination) {
+    private static void finishTitleBeforeGameplay(GameLoop loop, GameMode destination) {
         for (int frame = 0; frame < 2_000
                 && (NativeLevelLoadAccess.isPending(GameServices.level())
                         || loop.getCurrentGameMode() == GameMode.TITLE_CARD); frame++) {
@@ -198,8 +207,9 @@ public class TestBonusStageReturnWaterRestore {
         }
         assertFalse(NativeLevelLoadAccess.isPending(GameServices.level()), "native title load did not finish");
         assertEquals(destination, loop.getCurrentGameMode(), "the actual title loop must release to its destination");
-        assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
-                "the title release must complete before destination gameplay");
+        // PostTitleCardDestination completes BONUS_STAGE assembly at release;
+        // LEVEL deliberately retains it for its first LevelLoop iteration.
+        // Do not execute that gameplay tick before observing the saved water.
     }
 
 }

@@ -6,7 +6,9 @@
     "s2_bk2": "-Ds2.request.bk2.path Sonic 2 BizHawk recording (optional measurement input)",
     "s3k_observations": "S3K request observations sidecar property (optional measurement input)",
     "s1_bizhawk_reference": "local deterministic Sonic 1 BizHawk reference capture (optional measurement input)",
-    "audio_reference_files": "AudioReferenceGenerator output for AudioRegressionTest (optional measurement input)"
+    "audio_reference_files": "AudioReferenceGenerator output for AudioRegressionTest (optional measurement input)",
+    "s3k_gumball_roundtrip": "Recorded three-segment S3K AIZ gumball round-trip fixture at src/test/resources/traces/s3k/runs/s3k-aiz-gumball-roundtrip; explicitly declare absent only after checking the directory is absent.",
+    "s3k_pachinko_roundtrip": "Recorded three-segment S3K AIZ pachinko round-trip fixture at src/test/resources/traces/s3k/runs/s3k-aiz-pachinko-roundtrip; explicitly declare absent only after checking the directory is absent."
   },
   "rules": [
     {
@@ -580,6 +582,55 @@
       "evidence": "src/test/java/com/openggf/tools/TestWestMgzBossNativeArena.java:36",
       "allowed_when_absent": null,
       "note": "Explicit opt-in selector secondstrike.mgz.packaged.arena; @EnabledIfSystemProperty(named = \"secondstrike.mgz.packaged.arena\", matches = \"true\")"
+    },
+    {
+      "match": "com.openggf.tests.trace.TestTraceBaselineRegression#knownRedTraceFrontiersDoNotRegress",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/tests/trace/TestTraceBaselineRegression.java:39",
+      "allowed_when_absent": null,
+      "note": "Explicit report-backed trace baseline audit; run the trace sweep then set -Dtrace.baseline.enabled=true."
+    },
+    {
+      "match": "com.openggf.tests.trace.TestTraceDataAuxSchemaPerformance#measuresPostLoadMissingSchemaQueriesOnLargestFixture",
+      "category": "opt-in-benchmark",
+      "evidence": "src/test/java/com/openggf/tests/trace/TestTraceDataAuxSchemaPerformance.java:27",
+      "allowed_when_absent": null,
+      "note": "Explicit aux-schema performance benchmark; -Dopenggf.trace.auxSchemaBenchmark=true."
+    },
+    {
+      "match": "com.openggf.tests.trace.runs.TestS3kBonusRoundTripChain#gumballRoundTrip",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/tests/trace/runs/TestS3kBonusRoundTripChain.java:36",
+      "allowed_when_absent": "s3k_gumball_roundtrip",
+      "note": "Not-yet-recorded three-segment fixture documented in class Javadoc (:20-24); requires explicit s3k_gumball_roundtrip=false after verifying src/test/resources/traces/s3k/runs/s3k-aiz-gumball-roundtrip is absent. Declare true when supplied."
+    },
+    {
+      "match": "com.openggf.tests.trace.runs.TestS3kBonusRoundTripChain#pachinkoRoundTrip",
+      "category": "optional-fixture",
+      "evidence": "src/test/java/com/openggf/tests/trace/runs/TestS3kBonusRoundTripChain.java:43",
+      "allowed_when_absent": "s3k_pachinko_roundtrip",
+      "note": "Not-yet-recorded three-segment fixture documented in class Javadoc (:20-24); requires explicit s3k_pachinko_roundtrip=false after verifying src/test/resources/traces/s3k/runs/s3k-aiz-pachinko-roundtrip is absent. Declare true when supplied."
+    },
+    {
+      "match": "com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance#allSegmentsStayWithinFixedDescriptorAndInstalledCaps",
+      "category": "opt-in-benchmark",
+      "evidence": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadPerformance.java:51",
+      "allowed_when_absent": null,
+      "note": "Explicit active-payload ownership benchmark; -Dopenggf.trace.activePayloadBenchmark=true."
+    },
+    {
+      "match": "com.openggf.tests.trace.runs.TestTraceRunActivePayloadPerformance#installedRootModelIncludesTheRealPreparedLaunchGraph",
+      "category": "opt-in-benchmark",
+      "evidence": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadPerformance.java:51",
+      "allowed_when_absent": null,
+      "note": "Explicit active-payload ownership benchmark; -Dopenggf.trace.activePayloadBenchmark=true."
+    },
+    {
+      "match": "com.openggf.tests.trace.runs.TestTraceRunDescriptorPlanningPerformance#compactDescriptorsRetainLessHeapWithoutOwningEagerPayloads",
+      "category": "opt-in-benchmark",
+      "evidence": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java:30",
+      "allowed_when_absent": null,
+      "note": "Explicit retained-heap benchmark; -Dopenggf.trace.segmentDescriptorBenchmark=true."
     }
   ]
 }
