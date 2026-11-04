@@ -139,24 +139,55 @@ was added.
 | `seedSegmentEntrySolidBits` (row-0 path bits) | **Moved** under the import. These are carried `Saved_solid_bits`/`Saved2_solid_bits`. |
 | `seedSegmentEntryVelocity` (row-0 angle, `anim`, `prev_anim`, `mapping_frame`) | **Removed.** These are not carried state. `Level` clears `Object_RAM` on every load (loc_60DE, sonic3k.asm:7649-7651), so row 0 holds what `SpawnLevelMainSprites` and frame 0 compute. The method's comment claimed they "survive the load"; the clear contradicts it. Measured: with the seed removed, the full `-Ptrace-replay-r7` and `-Ptrace-segments` profiles were identical in every class (status, error count, first error) to the same tree with the seed kept. The engine already computes these values. |
 
-## Not recorded: TraceChaser export needed
+## Recorded entry RAM (`level_entry_ram`, 2026-11-04)
 
-These carried words are not in any recorder output. The export would add them to
-each manifest transition at the mode change (`run_state`), or to each segment's
-metadata at arm time:
+TraceChaser a9f8b94 (branch `bugfix/ai-trace-saved-block-export`, `d89e30b8d`)
+adds `level_entry_ram` to every S3K level and bonus segment's metadata. It is
+sampled on the same first PreLevel frame as `last_star_post_hit` and holds the
+full `Saved_*` and `Saved2_*` blocks plus the carried counters. Special-stage
+segments do not carry it.
 
-- `Saved2_mean_water_level` / `Saved_mean_water_level`,
-  `Saved2_water_full_screen_flag`. These are the water-start fixtures
-  (`aiz_5`, `hcz_2`).
-- `Saved2_camera_max_Y_pos` and `Saved2_dynamic_resize_routine` (the AIZ1 return
-  below the default max Y).
-- `Collected_special_ring_array` (`$FF92`, long) at each boundary. This would
-  replace the touch-signature read, and it would also cover rings spent for 50
-  rings with seven emeralds (loc_61794) earlier in the segment.
-- `Extra_life_flags`, `Life_count` and `Timer` (not compared today).
-- Optionally `Collected_emeralds_array` (`$FFB2-$FFB8`), `Super_emerald_count`
-  (`$FFB1`) and `SK_special_stage_flag` (`$FFBB`), to cross-check the ledger. The
-  ledger is exact for recorded gameplay and needs none of them.
+The live counters are sampled before the level's own initialisation. On a
+fresh, start-table entry, `Ring_count` and `Timer` still hold the previous
+zone's values, which loc_63B4 then clears, so they are not imported. Only
+what the ROM itself carries is used:
+
+| ROM variable | Engine owner | Source |
+|---|---|---|
+| `Ring_count`, `Extra_life_flags`, `Timer` on a restore entry | `LevelGamestate` | `Load_Starpost_Settings`: the `Saved2_*` block when `special_bonus_entry_flag` is set (loc_2D2C2), otherwise `Saved_*`. The `Saved_*` rings and extra-life flags are zeroed without `respawn_table_keep`; the timer is reloaded with `Timer_frame` 59 and the second stepped back one |
+| `Ring_count` in a bonus stage | `LevelGamestate` | live `ring_count` (the bonus reload keeps it) |
+| path bits on a restore entry | Player 1 | the restore block's `solid_bits` |
+| `Camera_max_Y_pos` / `Camera_target_max_Y_pos` | `Camera.setMaxY` / `setMaxYTarget` | restore block |
+| `Dynamic_resize_routine` | `restoreEventRoutineState` (the big-ring return's owner) | restore block |
+| `Mean_water_level`, `Water_full_screen_flag` (water levels only) | `WaterSystem` | restore block |
+| `Last_star_post_hit` checkpoint | `CheckpointState.restoreFromSaved` (index, `Saved_X/Y_pos`, `Saved_camera_X/Y_pos`), activation mark, saved rings/timer/bounds/path bits | `last_star_post_hit` & `$7F`; `Saved_*` block |
+| `Life_count` | `GameStateManager` (via `NativeGameStateOps`) | live `life_count` |
+| `Collected_emeralds_array`, `Chaos_emerald_count`, `Super_emerald_count` | `GameStateManager` | live counters (replace the ledger) |
+| `Collected_special_ring_array`, `Current_special_stage` | `GameStateManager` | live counters (replace the touch derivation) |
+
+Bounds, resize routine and water are written after the engine's camera and
+level-event initialisation, as `Load_Starpost_Settings` follows
+`Get_LevelSizeStart`. Everything else is written at the existing entry point.
+Both writes are in the one declared-position entry step, before row 0.
+
+Not imported: `Saved*_camera_X/Y_pos` for the entry camera itself (owned by the
+policy-B placement), `Saved*_art_tile` (priority bit) and the zone/act words.
+
+### Derived versus recorded
+
+- **Emerald array and counts, and ring counts:** every recorded S3K level and
+  bonus segment agrees with the ledger and the manifest
+  (`recordedEntryRamAgreesWithEveryDerivedValue`).
+- **`Collected_special_ring_array`:** the touch derivation never set a bit the
+  ROM didn't. It agrees on 117 of 146 recorded level segments and misses bits
+  on 29, for two reasons:
+  - the zone-visit boundary was wrong for excursions. The array survives into
+    the Hidden Palace shrine (`dez23*`) and the LRZ boss act (`hpz22*`, zone
+    $16), because no full `SaveGame` runs on those transitions.
+  - rings spent for 50 rings (loc_61794) set bits without a flash: S+T `icz_2`,
+    `soz_2`; Knuckles `lbz_2`; Tails `mgz_3`, `lrz_3`.
+  The recorded value is now imported. The derivation remains only for fixtures
+  without `level_entry_ram`.
 
 ## `Last_star_post_hit`
 
@@ -186,27 +217,16 @@ is a failure with no abort, 1152 errors from row 73. `lbz_2` has 6 errors
 `LbzFinalBoss1Instance$MuzzleLaserChild#head` rewind reference to an
 unregistered `LaserHeadChild`. The replay now reaches that boss state.
 
-### Open: the engine's `Last_star_post_hit` itself (`lastCheckpointIndex`)
+### The engine's `Last_star_post_hit` (`lastCheckpointIndex`)
 
-The import sets only the activation mark, which is what loc_2D008 compares.
-Other ROM readers test the byte directly. SSZ1/SSZ2 ScreenInit (`tst.b
-(Last_star_post_hit).w`) is the measured case; the engine models it as
-`CheckpointState.lastCheckpointIndex`, which the import does not set. Before the
-mark was carried, a star-post bonus return into SSZ re-touched its un-hit post at
-frame 0. That set `lastCheckpointIndex` by accident and kept ScreenInit off the
-fresh-arrival path. With the post correctly hit, ScreenInit spawns
-`SszArrivalControllerObjectInstance`, which lifts Sonic to the arrival start.
-Measured: S+T `hpz_3` (SSZ1) goes from 292 errors at row 332 (without the
-mark) to 383 at row 0; S+T `hpz_2` from 1114 at 119 to 1019 at row 0. Develop
-also fails both at row 0 (283 rings / 1103 rings), so neither is earlier than
-develop. Disabling only the mark restores 292@332. A probe traced Sonic's Y write
-to `SszArrivalControllerObjectInstance.applyInit`.
-
-Carrying the byte into `lastCheckpointIndex` as well would fix ScreenInit. It
-also arms the death-respawn path, which needs `Saved_X_pos`/`Saved_Y_pos` (the
-manifest records them as `saved_x_pos`/`saved_y_pos`) and
-`Saved_camera_X_pos`/`Saved_camera_Y_pos` (not recorded). That follow-up needs
-the camera pair exported, or a ruling on respawn without it.
+Other ROM readers test the byte directly. SSZ ScreenInit (`tst.b
+(Last_star_post_hit).w`) is the measured case, modelled in the engine as
+`CheckpointState.lastCheckpointIndex`. When only the activation mark was
+carried, SSZ1 star-post returns took the fresh-arrival path
+(`SszArrivalControllerObjectInstance`), and S+T `hpz_2`/`hpz_3` fell to row-0
+first errors. With `level_entry_ram` the import restores the full checkpoint:
+the index, the `Saved_*` position and camera pair, and the saved rings, timer,
+bounds and path bits. A death reload then restores the ROM's saved state.
 
 ## Entry provenance (policy B)
 
