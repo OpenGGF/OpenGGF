@@ -620,7 +620,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         invulnerabilityTimer = 0;
         // The remaining (bottom) segment detaches.
         flags |= 1 << detachCount;
-        spawnChild(() -> new ExplosionShowerChild(this, getCentreX(), getCentreY(), 4));
+        spawnChild(() -> new ExplosionShowerChild(getCentreX(), getCentreY(), 4));
         if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
             finalePhase = FinalePhase.KNUCKLES_HANDOFF;
         } else {
@@ -1609,7 +1609,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 spawnCurrentChild(
                         () -> new DebrisChild(boss, debrisX, debrisY, debrisXVel, debrisYVel, frame));
             }
-            spawnCurrentChild(() -> new ExplosionShowerChild(boss, x, y, 0));
+            spawnCurrentChild(() -> new ExplosionShowerChild(x, y, 0));
         }
 
         public int getDyForTest() {
@@ -2158,21 +2158,36 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     /** Child6_CreateBossExplosion wrapper (subtype 0/4/$C parameter sets). */
-    public static final class ExplosionShowerChild extends BossChild {
+    public static final class ExplosionShowerChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
 
         private ExplosionShowerChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1ExplosionShower"); }
+
+        @Override
+        public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+            return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+        }
         private transient S3kBossExplosionController controller;
         private final com.openggf.game.rewind.RewindStateful<?> controllerRewind =
                 com.openggf.game.sonic3k.objects.S3kBossExplosionInternalAccess.rewindState(
                         () -> controller, value -> controller = value, () -> services().rng());
 
-        private ExplosionShowerChild(LbzFinalBoss1Instance boss, int x, int y, int subtype) {
-            super(boss, "LBZFinalBoss1ExplosionShower", 0, 0);
-            this.x = x & 0xFFFF;
-            this.y = y & 0xFFFF;
-            this.visible = false;
-            this.controller = new S3kBossExplosionController(this.x, this.y, subtype, boss.services().rng());
+        private ExplosionShowerChild(int x, int y, int subtype) {
+            // The native explosion controller owns copied coordinates and continues
+            // after the phase-one boss deletes itself during the Knuckles handoff.
+            // It therefore has no structural boss reference to retain across rewind.
+            super(new ObjectSpawn(x & 0xFFFF, y & 0xFFFF, OBJECT_ID, 0, 0, false, 0),
+                    "LBZFinalBoss1ExplosionShower");
+            this.controller = new S3kBossExplosionController(x & 0xFFFF, y & 0xFFFF, subtype, services().rng());
         }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
+
+        @Override
+        public boolean isHighPriority() { return false; }
+
+        @Override
+        public int getPriorityBucket() { return 4; }
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
@@ -2183,9 +2198,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             controller.tick();
             for (S3kBossExplosionController.PendingExplosion pending : controller.drainPendingExplosions()) {
                 if (pending.playSfx()) {
-                    boss.services().playSfx(Sonic3kSfx.EXPLODE.id);
+                    services().playSfx(Sonic3kSfx.EXPLODE.id);
                 }
-                spawnCurrentChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
+                spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
             }
         }
     }
@@ -2405,7 +2420,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             // ROM loc_72D92 creates this controller with CreateChild1_Normal
             // from the flame that just finished its stream.
             spawnCurrentChild(
-                    () -> new ExplosionShowerChild(boss, EXPLOSION_X, EXPLOSION_Y, 0x0C));
+                    () -> new ExplosionShowerChild(EXPLOSION_X, EXPLOSION_Y, 0x0C));
             if (subtype == 0) {
                 boss.spawnFreeChild(() -> new ExplosionSequencerChild(boss));
             }

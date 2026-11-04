@@ -72,6 +72,12 @@ A fix must hold for another BK2: no fixture-fitted constants, tolerances,
 zone/route/frame exceptions, or trace-to-engine state hydration. Bootstrap
 snapshots are comparison data too. A local reseeding probe must be removed before
 committing. Do not force a green result when the causal evidence is incomplete.
+The one sanctioned entry import is a run segment's carried run state (rings,
+emerald progress, used giant rings, shield, path bits) through
+`TraceSegmentCarriedStateImport`. It runs once at segment entry, from recorder
+observations. Extend that mechanism with a recorder-observed source; never add a
+second import or write anything after entry. See the
+[carried-state design](../../../docs/architecture/designs/2026-11-03-segment-carried-run-state.md).
 
 ## Hardware timing boundary
 

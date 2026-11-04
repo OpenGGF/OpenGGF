@@ -243,3 +243,33 @@ guards, with the known LBZ replay failure and zero errors/skips. Its complete
 232-error profile matches the worker, including fields, values, spans and gate.
 The independent glide candidate passes273 controls with its two known replay
 failures; no unchanged broad suite or chain was repeated for Big Arm admission.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).
+
+
+### Independent phase-one explosion lifetime — 2026-11-03
+
+Wave-5 carried entry reaches boss retirement at traceIndex1454 and exposes the
+explosion shower's invalid reference to the deleted phase-one boss. The shower
+now owns only its copied position/controller and injected services. A short
+witness captures after boss deletion, reconstructs fresh shells and compares
+forward snapshots. Existing graph and required S3K checks pass. The full replay
+now reaches its6,444-row gate with6,309 gameplay comparisons and263 divergence
+records, first rings56/55 at76; parity remains red. The initial diagnostic abort
+was `ExplosionShowerChild#boss`, not the earlier lane's muzzle/head attribution.
+Inherited route/roster/team/donor/viewport/presentation obligations remain open.
+
+Final fixture-only verification passes all28 boss cases, zero skips/errors.
+Together with the combined graph/loading run,102 functional controls pass on
+the unchanged production patch; the standalone replay reaches its gate and
+remains a normal divergence assertion. This does not certify full-act parity.

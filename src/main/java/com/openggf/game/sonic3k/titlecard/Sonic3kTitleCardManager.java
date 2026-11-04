@@ -1113,6 +1113,13 @@ public class Sonic3kTitleCardManager
     }
 
     @Override
+    public boolean releaseScanServicesLoadLoopVBlank() {
+        // Only a Level-routine owner waits in LoadLevelLoadBlock's loc_7870
+        // loop; its release is observed after that loop's last Wait_VSync.
+        return freshLevelTransitionMode && freshLevelTerrainStarted;
+    }
+
+    @Override
     public boolean shouldCompleteFreshLevelTransitionBoundary() {
         return freshLevelTransitionMode
                 ? freshLevelTerrainStarted && !com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.current()

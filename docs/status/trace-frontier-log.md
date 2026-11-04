@@ -123433,3 +123433,116 @@ validation adds the lifecycle coordinator to the preceding focused selection:
 123 pass,0 failures/errors/skips; with23 bonus tests this is146 current-base
 focused passes. Exact commands, timing limits and the4438-class smoke-plan
 rationale are in the audit. No broader campaign qualification is claimed.
+
+## 2026-11-03 — Wave 5 of the trace survey: carried segment-entry state, recorded entry provenance, gap lag census
+
+User rulings (2026-11-03): run state may be carried from the previous segment at entry, never invented mid-run
+(policy A; special-stage identity folds into it); entry provenance and campaign re-recording proceed (B, D);
+load-time V-int pricing is permitted as a branch trial. Integrated as `bugfix/ai-trace-wave1-integrate` on develop
+`32d4e9aae`; merged tree vs develop, all three profiles (forkCount=1, alphabetical, JDK 25, original ROMs, surfaceless
+EGL, per-testcase comparison including run-chain messages): no newly red class, no earlier first error. Focused rewind,
+keep-green, gitlink-guard and touched-class checks: 1942 pass, 0 skips.
+
+- `bugfix/ai-trace-entry-provenance` (`cda6cf730`, `36bde6fc3`, `08c63d83c`; TraceChaser `d98a2aa`): the recorder
+  publishes `level_entry_placement_source` and the raw `last_star_post_hit`, latched at each load's first `$8C` frame
+  (`loc_1BE46`, `Load_Starpost_Settings`, `LevelSizeLoad`). Segment boots take the ROM's fresh or return branch;
+  LRZ3 boss `$1600` gets its falling intro (`loc_6896`). The three S3K campaign chains and KiS2 EHZ1 were re-recorded
+  with byte-identical payloads and record `expected_movie_end_mode`; the chains now run instead of refusing.
+  **KiS2 EHZ1 38 → green**; Tails full-chain AIZ, Gumball2, Gumball3 and MGZ green.
+- `bugfix/ai-trace-carried-segment-state` (`68435275a`..`8088d8728`): one segment-entry import
+  (`TraceSegmentCarriedStateImport`) of carried rings, emerald progress (`S3kRunEmeraldLedger`), used giant rings
+  (exact ring-plus-flash signature), shield, path bits and the star-post byte (loc_2D008); special stages select
+  through `sub_85B0` (`S3kSpecialStageSelection`). `seedSegmentEntryVelocity` removed (frame-0 output, not carried
+  state). **Green: S+T Ss8/9/10/12/13/14, Tails Ss8–14, Tails HCZ4.** Later first errors, e.g. S+T HCZ4 0 → 570,
+  ICZ 2337 → 3836, ICZ2 0 → 483, LBZ 959 → 1171, MHZ8 0 → 1672, SOZ2 0 → 9349, Dez23 77 → 939; S+T MGZ 3411 → 762
+  errors (first still 13848). Tails LRZ3 re-enters with its post hit and no longer aborts.
+- `bugfix/ai-trace-gap-lag-census` (`dfd7716ae`, `da4970e73`/`3c4d3d5e1` withheld, `86d173323`): the live loop counts
+  the final `loc_7870` terrain-wait V-int; special-stage returns hold player art until the census row ending the
+  synchronous load (the `InitPlayers` call). S2 chain return axes 36–40 rows → 1; KiS2 chain 10 → 5 axes; Mega
+  Slots 7891@268 → 7505@300. The remaining Mega deficit (50 V-ints) is CPU-bound lag: a proven boundary for ROM
+  pricing (`docs/architecture/audits/2026-11-03-load-vint-trial.md`, `…-gap-lag-census.md`).
+- Integration repairs: the carried-state branch's develop merge had reverted the TraceChaser gitlink to `703bd92`
+  while its guards expect `d98a2aa`; restored. A `loc_9D02` citation was reworded so the checker reads its label.
+- Attributed changes: S+T CNZ, DEZ238, HPZ3, MHZ2 and Tails AIZ5 gain errors with the first error unchanged.
+  Knuckles LBZ2 Big Arm failure → error: it now tracks the ROM into the boss and hits a pre-existing rewind-closure
+  defect (`ExplosionShowerChild` → retired `LbzFinalBoss1Instance`; the other fleet owns the fix). S+T `ssz`
+  failure → error at the existing KosM stall (16449). S+T Hpz2/Hpz3 stay at row 0: Sky Sanctuary's level start
+  reads `lastCheckpointIndex`, which needs the saved-block recorder export (queued).
+
+
+## 2026-11-03 — LBZ independent explosion-shower rewind lifetime
+
+At wave-5 candidate `35d097848` (published as develop `7c82cc1b4` with only
+an additional frontier entry), the exact standalone LBZ replay aborts at
+traceIndex1454/romFrame1454. Full closure diagnostics identify `BossChild#boss`
+on `ExplosionShowerChild` dynamic272, slot7, pointing to deleted
+`LbzFinalBoss1Instance`. This differs from the earlier lane's muzzle/head
+report at1086;1454 and the captured field path are the measured boundary here.
+The diagnostic run completes one test with one error and zero skips.
+
+The independent explosion controller now extends `AbstractObjectInstance` with
+its own spawn coordinates, controller rewind state and injected services. It
+retains neither the boss nor its lifetime. It continues issuing the same
+controller explosions/sounds after boss deletion. Spawn allocation, priority
+and presentation role are preserved. No shared rewind code, queue timing,
+carried-state import or trace assertion is changed.
+
+A focused boss-deletion witness first fails on exactly the same dangling
+reference. The corrected witness isolates combat children, captures the live
+shower after boss retirement, destructively restores it and compares forward
+snapshots. The earlier synthetic muzzle-on-head-retirement probe did not
+reproduce closure and was removed. The first fixed test run exposed unrelated
+debris in the artificial retirement setup and an obsolete reflective fixture
+constructor; these fixtures were corrected. A remaining direct-fixture services
+binding was then corrected without another production edit.
+
+Combined validation on `7c82cc1b4` plus the production patch runs103 cases:
+101 pass, the LBZ comparison assertion fails normally, and the direct-fixture
+services error requires the final selective rerun recorded below. Zero skips.
+The shower's destructive restore/forward replay and all required S3K controls
+pass. The LBZ runtime no longer aborts: gate reached,6,444 planned rows /6,309
+gameplay comparisons,263 divergence records (199 physics/64 animation), zero
+warnings; first frame76 rings56/55. Counts after the old abort are newly measured,
+not comparable to the232-error pre-wave-5 bootstrap. Trace parity remains open.
+
+All runs use queued Maven, Java25, unset DISPLAY/WAYLAND_DISPLAY, surfaceless
+EGL, `-Dmse=off`; the wrapper finds all six verified ROM properties, none missing.
+The exact diagnostic command adds `-Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Dtest=TestS3kKnucklesLbz2BigArmTraceReplay test -B`.
+The focused red selector is
+`TestLbzFinalBoss1GraphRewind#explosionShowerOutlivesBossAndRestoresWithoutRetiredOwner`.
+Combined fixed selectors, with the same replay profile/order/fork flags:
+
+```text
+TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1Instance,TestS3kKnucklesLbz2BigArmTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Focused red queue wait1,657s / Maven37.949s; first fixed wait2,330s /119s;
+corrected combined wait879s /106s. These are invocation measurements, not summed
+delivery elapsed time. Final fixture-only selection is `TestLbzFinalBoss1Instance`
+without the trace profile; all28 cases pass, zero failures/errors/skips
+(Maven33.354s, queue1,497s). The previously passing graph, loading and replay
+results remain applicable because this final edit only binds the synthetic
+fixture service handle. In total102 functional controls pass across these
+completed checks; the full replay retains its normal263-record assertion. No duplicate unchanged replay
+is submitted for that fixture-only correction.
+
+The change plan selects3,578 smoke classes because the file owns a zone boss.
+Focused checks replace that broad selection: the change removes an unused
+structural reference from a stationary, invisible component, preserves its
+controller/algorithm/dispatch, and covers graph reconstruction, controller RNG,
+boss transitions, the actual full replay and required S3K consumers. No shared
+algorithm changes, release-only full suite or complete trace green claim.
+
+### Correction to the wave-5 entry — Mega Slots first error moved earlier (attributed)
+
+The wave-5 comparison truncated run-chain messages, so it missed one segment-level change. `TestS3kMegaRunChain`
+segment 3 (Slots) moves from 7891 errors @268 `y_speed` to 7947 @232 `rings`. Measured by the bonus-entry tail lane
+(`bugfix/ai-trace-s3k-bonus-entry-tail`, audit `docs/architecture/audits/2026-11-03-s3k-bonus-entry-tail.md`). The
+release V-int (`dfd7716ae`) composes with develop's `69ec429fc` (one V-int per bonus entry), and together they bring
+the Mega admission clocks closer to native at every boundary: Gumball 5519 → 5520, AIZ return 6925 → 6927, Slots
+9046 → 9049, against native 5529 / 6957 / 9097. Slots seeds its reels from that clock, so any inexact clock yields a
+different wrong payout. Deficits of 51, 50, 48, 30, 23 and 3 V-ints gave first errors at rows 268, 300, 232, 236,
+220 and 252. Slots can therefore validate only an exact clock. The move is kept and attributed rather than reverted.
+The last three V-ints are the unrecorded segment-switch frames, and their recorder census is in progress. The lead's
+comparator now diffs full chain messages.
