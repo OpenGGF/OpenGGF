@@ -841,4 +841,202 @@ class ConciseRunTests(RunFixture):
             run.run_handoff(self.root, self.spec, maven_progress='brief')
 
 
+class RunEvidenceTests(RunFixture):
+    """Durable original observations; a queue double prevents Maven execution."""
+    def setUp(self):
+        super().setUp()
+        self.evidence = self.base/'run-evidence.json'
+
+    def cli(self, *, action=None, code=0, extra=(), queued=None):
+        from contextlib import redirect_stderr, redirect_stdout
+        run = self.runner()
+        if queued is None:
+            def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
+                self.assertEqual(args, ['--normal', '-Dmse=off', '-Dtest=example.TestMain',
+                    '-Dsoniccd.opening.egl=true', 'test', '-B'])
+                before_run(); (action or self.reports)(); after_run(code)
+                return code
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with mock.patch.object(run.queue, 'main', queued), redirect_stdout(stdout), redirect_stderr(stderr):
+            try:
+                status = packet.main(['run', '--worktree', str(self.root), '--spec', str(self.spec),
+                    '--execute', '--evidence', str(self.evidence), *extra])
+            except SystemExit as error:
+                status = error.code
+        return status, stdout.getvalue(), stderr.getvalue()
+
+    def full(self):
+        return json.loads(self.evidence.read_text())['run']
+
+    def test_cli_receipt_preserves_full_cases_before_compaction_and_has_safe_metadata(self):
+        self.value['tests']['expected_tests']['example.TestMain'] = 80; self.save()
+        def action():
+            import xml.etree.ElementTree as ET
+            self.reports(tests=80)
+            path = self.root/'target/surefire-reports/TEST-example.TestMain.xml'
+            tree = ET.parse(path)
+            ET.SubElement(tree.getroot().find('properties'), 'property', name='API_TOKEN', value='DO-NOT-PRINT-SECRET')
+            ET.SubElement(tree.getroot(), 'system-out').text = 'DO-NOT-PRINT-LOG'
+            tree.write(path)
+        status, stdout, stderr = self.cli(action=action, extra=('--compact-output', '--maven-progress', 'concise'))
+        self.assertEqual(status, 0, stderr)
+        result = json.loads(stdout); payload = self.evidence.read_bytes()
+        self.assertEqual(result['junit']['classes'][0]['cases'], [])
+        self.assertEqual(result['evidence']['path'], str(self.evidence))
+        self.assertEqual(result['evidence']['sha256'], packet.digest(payload))
+        self.assertEqual(result['evidence']['bytes'], len(payload))
+        document = json.loads(payload)
+        self.assertEqual((document['version'], document['kind']), (1, 'source-bound-run-observations'))
+        full = document['run']
+        self.assertNotIn('output', full); self.assertNotIn('evidence', full)
+        self.assertEqual(full['source_before'], full['source_after'])
+        self.assertEqual((full['maven_returncode'], full['status'], full['clean']), (0, 'passed', True))
+        cases = full['junit']['classes'][0]['cases']
+        self.assertEqual(len(cases), 80)
+        self.assertEqual(cases[-1]['identity'], 'example.TestMain#case79')
+        self.assertEqual(cases[-1]['status'], 'passed')
+        self.assertIn('xml_sha256', full['junit']['classes'][0])
+        self.assertIn('terminal', document['attribution']); self.assertIn('native', document['attribution'])
+        self.assertNotIn('DO-NOT-PRINT', payload.decode()+stdout+stderr)
+        self.assertEqual(self.evidence.stat().st_mode & 0o777, 0o600)
+
+    def test_disabled_flag_preserves_original_result_without_export_preflight(self):
+        import integration_junit_evidence as export
+        with mock.patch.object(export, '_destination', side_effect=AssertionError('no export preflight')):
+            result = self.invoke()
+        self.assertEqual(result['status'], 'passed')
+        self.assertNotIn('evidence', result)
+        self.assertNotIn('xml_sha256', result['junit']['classes'][0])
+        self.assertFalse(self.evidence.exists())
+
+    def test_invalid_destinations_and_plan_only_reject_before_queue(self):
+        run = self.runner()
+        existing = self.base/'existing.json'; existing.write_text('preserve')
+        alias = self.base/'alias.json'; alias.symlink_to(existing)
+        parent = self.base/'linked'; parent.symlink_to(self.base, target_is_directory=True)
+        values = ['', 'relative.json', str(existing), str(alias), str(parent/'new.json'),
+            str(self.root/'new.json'), str(self.root/'.git'/'new.json'), str(packet.ROOT/'new.json'),
+            str(self.base/'missing'/'new.json'), str(self.base)+'/./new.json', str(self.base/'target'/'new.json')]
+        with mock.patch.object(run.queue, 'main', side_effect=AssertionError('invalid output launched Maven')):
+            for value in values:
+                with self.subTest(value=value), self.assertRaises((ValueError, OSError)):
+                    run.run_handoff(self.root, self.spec, execute=True, evidence=value)
+            with self.assertRaises(packet.PacketError):
+                run.run_handoff(self.root, self.spec, evidence=str(self.evidence))
+        self.assertEqual(existing.read_text(), 'preserve')
+        self.assertFalse(self.evidence.exists()); self.assertFalse((self.root/'target').exists())
+
+    def test_failure_skip_nonzero_environment_receipts_retain_verdict_and_cases(self):
+        import xml.etree.ElementTree as ET
+        for mode in ('failure', 'skipped', 'nonzero', 'environment'):
+            with self.subTest(mode=mode):
+                def action():
+                    self.reports(skipped=mode=='skipped', java='24.0.1' if mode=='environment' else '25.0.1')
+                    path = self.root/'target/surefire-reports/TEST-example.TestMain.xml'
+                    tree = ET.parse(path)
+                    if mode == 'failure':
+                        tree.getroot().set('failures', '1')
+                        ET.SubElement(tree.getroot().find('testcase'), 'failure', type='ExactType', message=' exact\n text ')
+                    if mode == 'environment':
+                        tree.getroot().find("./properties/property[@name='soniccd.opening.egl']").set('value', 'false')
+                    tree.write(path)
+                status, stdout, stderr = self.cli(action=action, code=7 if mode=='nonzero' else 0, extra=('--compact-output',))
+                self.assertEqual(status, 1, stderr)
+                full = self.full(); self.assertEqual(full['status'], 'failed'); self.assertFalse(full['clean'])
+                cases = full['junit']['classes'][0]['cases']; self.assertEqual(len(cases), 1)
+                if mode == 'failure': self.assertEqual((cases[0]['message'], cases[0]['type']), (' exact\n text ', 'ExactType'))
+                if mode == 'environment':
+                    self.assertTrue(full['junit']['issues'])
+                    self.assertEqual(full['issues'], ['Java major mismatch: example.TestMain'])
+                if mode == 'nonzero': self.assertEqual(full['maven_returncode'], 7)
+                self.evidence.unlink()  # Only this test's owned receipt.
+
+    def test_method_identities_survive_compaction_and_mismatch_stays_incomplete(self):
+        self.value['tests']['methods'] = {'example.TestMain': ['case0']}
+        self.value['tests']['expected_cases'] = {'example.TestMain': ['example.TestMain#case0']}
+        self.save()
+        # The ordinary exact selector contract is preserved by the queue double.
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
+            self.assertIn('-Dtest=example.TestMain#case0', args)
+            before_run(); self.reports(); after_run(0); return 0
+        status, stdout, stderr = self.cli(queued=queued, extra=('--compact-output',))
+        self.assertEqual(status, 0, stderr)
+        self.assertNotIn('expected_cases', json.loads(stdout))
+        self.assertEqual(self.full()['expected_cases'], {'example.TestMain': ['example.TestMain#case0']})
+        self.evidence.unlink()
+        self.value['tests']['expected_cases'] = {'example.TestMain': ['example.TestMain#different']}
+        self.save()
+        status, stdout, stderr = self.cli(queued=queued, extra=('--compact-output',))
+        self.assertEqual(status, 2, stderr)
+        full = self.full()
+        self.assertEqual(full['status'], 'incomplete')
+        self.assertEqual(full['junit']['classes'][0]['cases'][0]['identity'], 'example.TestMain#case0')
+        self.assertEqual(full['case_identity_issues'], [{'class': 'example.TestMain',
+            'missing': ['example.TestMain#different'], 'unexpected': ['example.TestMain#case0']}])
+
+    def test_compile_failure_without_xml_exports_terminal_incomplete_result(self):
+        status, stdout, stderr = self.cli(action=lambda: None, code=1, extra=('--compact-output',))
+        self.assertEqual(status, 2, stderr); full = self.full()
+        self.assertEqual((full['status'], full['maven_returncode'], full['clean']), ('incomplete', 1, False))
+        self.assertNotIn('junit', full); self.assertIn('Requested XML was not rewritten', full['evidence_error'])
+        self.assertIn('evidence', json.loads(stdout))
+
+    def test_source_change_during_command_exports_incomplete_observations(self):
+        other = self.root/'src/Other.java'; other.write_text('class Other {}\n')
+        def action():
+            self.reports(); other.write_text('class Changed {}\n')
+        status, stdout, stderr = self.cli(action=action)
+        self.assertEqual(status, 2, stderr); full = self.full()
+        self.assertEqual(full['status'], 'incomplete')
+        self.assertNotEqual(full['source_before'], full['source_after'])
+        self.assertIn('Source changed', full['evidence_error'])
+
+    def test_launch_wait_cleanup_fault_without_terminal_callback_creates_nothing(self):
+        run = self.runner()
+        for failure in (OSError('launch fault'), RuntimeError('wait fault'), KeyboardInterrupt()):
+            def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
+                before_run(); raise failure
+            with self.subTest(failure=type(failure).__name__), mock.patch.object(run.queue, 'main', queued):
+                with self.assertRaises(type(failure)):
+                    run.run_handoff(self.root, self.spec, execute=True, evidence=str(self.evidence))
+            self.assertFalse(self.evidence.exists())
+
+    def test_exclusive_creation_collision_preserves_other_writer(self):
+        def action(): self.reports(); self.evidence.write_bytes(b'other writer')
+        status, stdout, stderr = self.cli(action=action)
+        self.assertEqual(status, 2, stderr); self.assertEqual(stdout, '')
+        self.assertEqual(self.evidence.read_bytes(), b'other writer')
+
+    def test_changed_xml_after_terminal_observation_rejects_before_creation(self):
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
+            before_run(); self.reports(); after_run(0)
+            path = self.root/'target/surefire-reports/TEST-example.TestMain.xml'
+            path.write_bytes(path.read_bytes()+b'\n'); return 0
+        status, stdout, stderr = self.cli(queued=queued)
+        self.assertEqual(status, 2, stderr); self.assertEqual(stdout, ''); self.assertFalse(self.evidence.exists())
+
+    def test_output_bound_rejects_before_creation(self):
+        import integration_junit_evidence as export
+        with mock.patch.object(export, 'MAX_OUTPUT_BYTES', 32): status, stdout, stderr = self.cli()
+        self.assertEqual(status, 2, stderr); self.assertEqual(stdout, ''); self.assertFalse(self.evidence.exists())
+
+    def test_write_failure_retains_partial_file_without_success_stdout(self):
+        import integration_junit_evidence as export
+        with mock.patch.object(export.os, 'fsync', side_effect=OSError('synthetic disk failure')):
+            status, stdout, stderr = self.cli()
+        self.assertEqual(status, 3, stderr); self.assertEqual(stdout, '')
+        self.assertTrue(json.loads(stderr)['partial']); self.assertTrue(self.evidence.exists())
+        self.assertTrue((self.root/'target/surefire-reports/TEST-example.TestMain.xml').is_file())
+
+    def test_xml_change_during_write_is_partial_and_not_positive(self):
+        import integration_junit_evidence as export
+        original = export.os.fsync
+        def change(fd):
+            path = self.root/'target/surefire-reports/TEST-example.TestMain.xml'
+            path.write_bytes(path.read_bytes()+b'\n'); original(fd)
+        with mock.patch.object(export.os, 'fsync', side_effect=change): status, stdout, stderr = self.cli()
+        self.assertEqual(status, 3, stderr); self.assertEqual(stdout, '')
+        self.assertTrue(json.loads(stderr)['partial']); self.assertTrue(self.evidence.exists())
+
+
 if __name__=='__main__': unittest.main()

@@ -12,8 +12,9 @@ the destination worktree explicitly. Read-only modes do not stage, commit, fetch
 push, launch Maven, inspect foreign jobs or execute supplied source. Only the
 explicit `run --execute` mode launches a focused Maven test through the existing queue.
 `compile --execute` launches compilation through the existing build-only wrapper.
-Only explicit `junit --evidence` creates a new external JSON observations file;
-selected reports and source remain read-only.
+`junit --evidence` saves XML observations; `run --execute --evidence` saves the
+original terminal source-bound result to a new external JSON file. Selected reports
+and source remain read-only.
 
 Keep the full USA then JP/EU integration goal in the owning task. A validated
 source packet is an integration aid, not evidence that a region or feature works.
@@ -308,6 +309,42 @@ plan succeeded or the executed focused run passed;1 means observed test/count/Ja
 failure or skips;2 means invalid/incomplete evidence;130 means cancellation. Check
 `executed` before interpreting exit0. Runtime proof is limited to that run.
 
+To persist the original full terminal result while keeping compact stdout, add
+an explicit new external destination to the same run:
+
+```bash
+python3 -B tools/soniccd/integration_packet.py run \
+  --worktree "$DESTINATION_WORKTREE" --spec "$FINAL_HANDOFF_JSON" --execute \
+  --compact-output --evidence "$ABSOLUTE_NEW_EXTERNAL_JSON"
+```
+
+Run-only `--evidence` requires `--execute`. Invalid, empty, existing, aliased,
+symlinked, missing-parent or inside-checkout destinations reject before queue
+submission. It reuses the [JUnit export path protections and bounds](#attribute-focused-test-evidence)
+below: POSIX exclusive no-follow creation, mode0600, bounded complete JSON and
+no report deletion/overwrite. Without this flag the runner's output is unchanged.
+
+The artifact has `version:1`, `kind:source-bound-run-observations`, an attribution,
+limits and `run`: the original structured result before compact presentation.
+It retains full literal expected/actual case inventories, diagnostics, source
+identities, requested arguments, terminal return code and observation times.
+It exports failed/skipped/nonzero and incomplete terminal results too, including
+compilation failure with no JUnit; inspect `run.status`, `run.clean` and issues.
+Environment mismatches retain the runner's failed verdict and cases; standalone
+`junit --evidence`/comparison retain their strict environment rejection.
+
+Terminal source/dependency/XML observations occur under the existing queue leases.
+Publication follows normal queue/process/output cleanup; cancellation or missing
+terminal callback creates no receipt. Selected XML hashes/identities are rechecked
+before and after writing. Stdout retains the chosen run presentation plus an
+`evidence` object with path, artifact kind/version, SHA256 and byte count; its own
+metadata is excluded from the saved result. It copies no logs, raw XML, Base64 or
+arbitrary environment properties. Export failure prints no success stdout; a
+failure after exclusive creation returns3 with `partial=true` and leaves the new
+artifact for inspection. Never treat a partial artifact as completed evidence.
+The receipt records captured observations, not native/API authenticity, uncaptured
+environment facts, an atomic snapshot or a future pass cache. No runner reads it.
+
 Optional `--compact-output` changes only structured result presentation, for plans
 and executed runs. It omits passing case records and the repeated `expected_cases`
 identity lists, with exact per-class declared-identity omission counts in
@@ -328,7 +365,7 @@ even when the displayed case record is omitted or shortened. These integrity det
 are not capped, so compact JSON has no absolute byte bound. The default JSON shape
 and full case expansion remain unchanged without the option. This flag does not
 filter progress; default `--maven-progress full` keeps its existing complete streams.
-It creates no full-result file, log archive, receipt or cache and changes no selection,
+By itself it creates no full-result file, log archive, receipt or cache and changes no selection,
 callback, source check, queue lane, exit code or execution authority.
 
 Optional run-only `--maven-progress concise` is a separate presentation choice,
@@ -634,7 +671,8 @@ uncommitted source, invocation cutoff, classes, environment, identities and skip
 `head_at_inspection` is not a claimed execution SHA. Never combine older narrow
 passes into an invented fresh total. Without `--evidence`, output remains on
 stdout/stderr unless the caller explicitly redirects it. Do not create pass
-caches, execution receipts or raw-log archives.
+caches or raw-log archives, or infer execution receipts from this XML-only mode.
+Use the separate optional source-bound run export for terminal run observations.
 
 To replace repeated ad hoc XML snippets with a complete self-contained inventory,
 add one explicit **new external** JSON destination to the same selection:

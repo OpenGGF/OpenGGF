@@ -389,10 +389,21 @@ def _compact_result(result):
 
 
 def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output=False,
-                maven_progress='full'):
+                maven_progress='full', evidence=None):
     packet.require(lane in ('auto','normal','lean'), 'Unknown Maven lane')
     packet.require(maven_progress in ('full', 'concise'), 'Unknown Maven progress mode')
     root, _ = packet.worktree(root)
+    destination = None
+    if evidence is not None:
+        # Validate all output-path/platform conditions before source hashing or queue launch.
+        # An explicit empty path is invalid; it never silently disables the export.
+        packet.require(execute, '--evidence requires --execute and a terminal queued run')
+        from integration_junit_evidence import _protected, _destination
+        packet.require(os.name == 'posix' and hasattr(os, 'O_NOFOLLOW') and hasattr(os, 'O_DIRECTORY'),
+                       'Evidence export requires POSIX no-follow directory descriptors')
+        protected = _protected(root)
+        path, parents = _destination(evidence, protected)
+        destination = (path, parents, protected)
     candidate = packet.canonical(Path(spec_path))
     packet.require(not candidate.is_relative_to(root), 'Handoff spec must be external')
     spec = packet.snapshot(candidate)
@@ -454,7 +465,16 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
                 packet.require(filename in current and
                                current[filename] != state['reports'].get(filename),
                                'Requested XML was not rewritten by this invocation: '+name)
-            summary = packet.junit_summary(root, tests['classes'], state['since'], tests['properties'])
+            if destination is None:
+                summary = packet.junit_summary(root, tests['classes'], state['since'], tests['properties'])
+            else:
+                # The same authoritative parser, with the existing bounded/no-alias reader.
+                # Environment issues remain the runner's failed result rather than disappearing.
+                from integration_junit_compare import _Evidence
+                observed = _Evidence(root, tests['classes'], state['since'], tests['properties'],
+                                     require_environment=False)
+                state['evidence'] = observed
+                summary = observed.summary
             result['junit'] = summary
             case_identity_issues = []
             for suite in summary['classes']:
@@ -491,4 +511,23 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
         packet.require('maven_returncode' in result, 'Queue returned without a terminal Maven observation')
     finally:
         os.chdir(previous)
+    if destination is not None:
+        # Queue completion and output cleanup must return normally; exceptions/cancellation
+        # produce no receipt. Save the original full result before stdout compaction.
+        from integration_junit_evidence import (_encode, _write_evidence, MAX_OUTPUT_BYTES,
+            MAX_CLASSES, MAX_DIRECTORY_ENTRIES, MAX_SELECTED_BYTES, MAX_CASES, MAX_XML_DEPTH)
+        document = dict(version=1, kind='source-bound-run-observations', run=result,
+            attribution='Original terminal run result: the existing queue observed process completion '
+                'and cleanup before its terminal callback. Source/dependency and fresh-XML '
+                'checks retain their recorded failures or incomplete evidence. Non-atomic '
+                'observations and XML hashes do not authenticate native behavior, API provenance '
+                'or environment facts beyond the captured fields; this is not a pass cache.',
+            limits=dict(max_classes=MAX_CLASSES, max_directory_entries=MAX_DIRECTORY_ENTRIES,
+                max_xml_bytes_per_file=packet.MAX_FILE, max_selected_xml_bytes=MAX_SELECTED_BYTES,
+                max_testcases=MAX_CASES, max_xml_depth=MAX_XML_DEPTH, max_output_bytes=MAX_OUTPUT_BYTES))
+        payload = _encode(document)
+        observed = state.get('evidence')
+        saved = _write_evidence(*destination, payload,
+                               recheck=observed.recheck if observed is not None else None)
+        result['evidence'] = dict(version=1, kind=document['kind'], path=saved.pop('evidence'), **saved)
     return _compact_result(result) if compact_output else result

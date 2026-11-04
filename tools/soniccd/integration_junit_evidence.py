@@ -72,6 +72,44 @@ def _encode(value):
     return bytes(output)
 
 
+def _write_evidence(path, parents, protected, payload, *, recheck=None):
+    """Write preflighted bounded JSON exclusively; optional input checks bracket creation.
+
+    A failed check after creation retains the artifact as explicitly partial.
+    Callers own the observation schema, input bounds and preflight timing.
+    """
+    if recheck is not None:
+        recheck()
+    created = False
+    try:
+        # Existing descriptor traversal pins the actual output parent without following any links.
+        with packet.parent_fd(Path('/'), path) as parent:
+            packet.require(_parents(path, protected) == parents, 'Evidence parent identities changed before creation')
+            fd = os.open(path.name, os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
+            created = True
+            with os.fdopen(fd, 'w+b') as stream:
+                os.fchmod(stream.fileno(), 0o600)
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+                stream.seek(0)
+                actual = stream.read(MAX_OUTPUT_BYTES + 1)
+                info = os.fstat(stream.fileno())
+                named = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
+                packet.require(actual == payload and stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                        and packet.signature(info) == packet.signature(named), 'Evidence file changed during creation')
+                packet.require(_parents(path, protected) == parents, 'Evidence parent identities changed during creation')
+                if recheck is not None:
+                    recheck()
+    except (OSError, ValueError) as error:
+        if created:
+            # Never delete reports or unlink an output name that another writer may now own.
+            raise packet.PacketError('Evidence export incomplete after exclusive creation; retain and inspect the artifact',
+                    dict(evidence=str(path), partial=True)) from error
+        raise
+    return dict(evidence=str(path), sha256=packet.digest(payload), bytes=len(payload))
+
+
 def save_junit_evidence(root, classes, since, properties, output):
     """Observe XML and exclusively save an inventory, never a pass cache or run receipt."""
     packet.require(os.name == 'posix' and hasattr(os, 'O_NOFOLLOW') and hasattr(os, 'O_DIRECTORY'),
@@ -92,31 +130,6 @@ def save_junit_evidence(root, classes, since, properties, output):
                 max_testcases=MAX_CASES, max_xml_depth=MAX_XML_DEPTH, max_output_bytes=MAX_OUTPUT_BYTES))
     payload = _encode(document)
     observed.recheck()
-    created = False
-    try:
-        # Existing descriptor traversal pins the actual output parent without following any links.
-        with packet.parent_fd(Path('/'), path) as parent:
-            packet.require(_parents(path, protected) == parents, 'Evidence parent identities changed before creation')
-            fd = os.open(path.name, os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
-            created = True
-            with os.fdopen(fd, 'w+b') as stream:
-                os.fchmod(stream.fileno(), 0o600)
-                stream.write(payload)
-                stream.flush()
-                os.fsync(stream.fileno())
-                stream.seek(0)
-                actual = stream.read(MAX_OUTPUT_BYTES + 1)
-                info = os.fstat(stream.fileno())
-                named = os.stat(path.name, dir_fd=parent, follow_symlinks=False)
-                packet.require(actual == payload and stat.S_ISREG(info.st_mode) and info.st_nlink == 1
-                        and packet.signature(info) == packet.signature(named), 'Evidence file changed during creation')
-                packet.require(_parents(path, protected) == parents, 'Evidence parent identities changed during creation')
-    except (OSError, ValueError) as error:
-        if created:
-            # Never delete reports or unlink an output name that another writer may now own.
-            raise packet.PacketError('Evidence export incomplete after exclusive creation; retain and inspect the artifact',
-                    dict(evidence=str(path), partial=True)) from error
-        raise
-    return dict(evidence=str(path), sha256=packet.digest(payload), bytes=len(payload),
-            classes=len(report['classes']), **{key: report[key] for key in
+    saved = _write_evidence(path, parents, protected, payload)
+    return dict(**saved, classes=len(report['classes']), **{key: report[key] for key in
                 ('tests', 'failures', 'errors', 'skipped', 'clean', 'attribution')})

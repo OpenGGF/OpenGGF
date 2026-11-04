@@ -1,5 +1,28 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — automatic terminal run receipts
+
+`integration_packet.py run --execute --evidence /absolute/new/external.json`
+now retains the complete original source-bound run result before compact stdout
+presentation. It validates output paths before queue admission, reuses the bounded
+XML reader/exclusive0600 writer and preserves failed/incomplete verdicts. Exact
+cases, timestamps, source fingerprints, declared arguments and XML hashes remain
+observations, not native authenticity or a pass cache. No reports are deleted.
+The no-flag path remains unchanged; standalone JUnit export/comparison retains
+its strict environment default. The optional run path retains environment issues
+and their cases in the original failed result.
+
+Root's103 Python checks pass without skips, alongside syntax/help/mirrors and
+both skill validators. An actual required component run exercised the new path:
+all863 exact identities were retained despite compact stdout, with860passes,
+two failures and one error correctly remaining failed. Both deliberate Wall
+adversaries reproduced and one additional stopped-Solid fixture did not reach
+its intended missing terrain. The receipt does not turn those into a pass.
+Queue wait was0s; source`ffed9c0aea94263dfa9b375f4dd440e5c38eb89185b2ed329d65cd6b1bd97cf9`,
+22:44:17.278002–22:46:09.187425Z. Root inspected all identities/properties/hashes
+and consumed fourteen owned reports under the existing lock. Subsequent gameplay
+corrections and their focused checks are separate from this tooling qualification.
+
 ## 4 November 2026 — native Title release and ordinary Act2 control
 
 The same original-USA controller now completes Title's slide-out, real PLC2

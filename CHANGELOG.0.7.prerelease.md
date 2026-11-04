@@ -14,6 +14,10 @@ Unreleased. The earlier development themes remain in
   Explicit JUnit evidence export saves complete bounded case identities, outcomes,
   environment and report hashes to a new external artifact, with XML observation
   kept separate from command completion and tested-source attribution.
+  Optional terminal run receipts retain the full source-bound result and exact
+  cases before compact output, including failed or incomplete checks. They use
+  the same bounded exclusive external writer and never delete reports or act
+  as a reusable pass cache.
   Focused lean checks compile with normal Maven memory before bounded execution,
   rechecking source and external packet inputs after admission so preparation
   reports cannot stand in for tests.

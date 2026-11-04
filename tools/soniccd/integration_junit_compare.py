@@ -68,7 +68,7 @@ def _directories(root):
 
 
 class _Evidence:
-    def __init__(self, root, classes, since, properties):
+    def __init__(self, root, classes, since, properties, *, require_environment=True):
         self.root, self.head = packet.worktree(root)
         self.directories = _directories(self.root)
         self.inventory = _inventory(self.root)
@@ -79,7 +79,10 @@ class _Evidence:
         packet.require(sum(info[2] for info in selected) <= MAX_SELECTED_BYTES,
                        'Selected XML exceeds per-side byte limit')
         self.summary = packet.junit_summary(self.root, classes, since, properties, _read_report=self.read)
-        packet.require(not self.summary['issues'], 'Environment evidence rejected: ' + '; '.join(self.summary['issues']))
+        # Run receipts retain the runner's existing failed environment verdict and cases.
+        # Standalone JUnit exports/comparisons keep their strict rejection default.
+        if require_environment:
+            packet.require(not self.summary['issues'], 'Environment evidence rejected: ' + '; '.join(self.summary['issues']))
         # Report byte identities, never source/execution identities or arbitrary properties.
         for group, saved in zip(self.summary['classes'], self.saved):
             group['xml_sha256'] = packet.digest(saved.data)

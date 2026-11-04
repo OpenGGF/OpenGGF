@@ -9,7 +9,8 @@ launches build-only test-compile through that wrapper. Other read-only modes nev
 execute supplied code.
 Origin: 2026-10-26 private Sonic CD packet preservation tooling task. Workflow:
 .agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr unless
-junit --evidence explicitly creates a new external JSON observations file.
+junit --evidence or run --execute --evidence explicitly creates a new external
+JSON observations file.
 """
 from __future__ import annotations
 
@@ -641,6 +642,8 @@ def main(argv=None):
                      help="compact structured JSON only; verification and queue/Maven stderr unchanged")
     run.add_argument("--maven-progress", choices=("full", "concise"), default="full",
                      help="child Maven stdout display only; concise is incomplete, queue notices stay complete")
+    run.add_argument("--evidence", metavar="ABSOLUTE_EXTERNAL_JSON",
+                     help="exclusively save the terminal full source-bound result before compaction; requires --execute")
     compilation = commands.add_parser("compile", help="plan or execute source-bound compilation only; no tests or reports",
                                       allow_abbrev=False)
     compilation.add_argument("--worktree", required=True)
@@ -707,8 +710,18 @@ def main(argv=None):
                 return 0
         elif args.command == "run":
             from integration_run import run_handoff
-            result = run_handoff(args.worktree, args.spec, lane=args.lane, execute=args.execute,
-                                 compact_output=args.compact_output, maven_progress=args.maven_progress)
+            options = dict(lane=args.lane, execute=args.execute,
+                           compact_output=args.compact_output, maven_progress=args.maven_progress)
+            if args.evidence is not None:
+                options['evidence'] = args.evidence
+            try:
+                result = run_handoff(args.worktree, args.spec, **options)
+            except (ValueError, OSError) as error:
+                # Script/imported helpers may have distinct PacketError module instances.
+                # Retain partial-artifact attribution without changing no-flag error output.
+                if args.evidence is None:
+                    raise
+                raise PacketError(str(error), getattr(error, "report", None)) from error
         elif args.command == "compile":
             from integration_compile import compile_handoff
             result = compile_handoff(args.worktree, args.spec, execute=args.execute)
