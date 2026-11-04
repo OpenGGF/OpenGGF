@@ -1,5 +1,34 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — native Title release and ordinary Act2 control
+
+The same original-USA controller now completes Title's slide-out, real PLC2
+queue service and control release, then returns ordinary Right through10718.
+The parent requests eleven descriptors/294 tiles on its129th invocation. Native
+scroll-lock selects the18-tile service budget; a descriptor pop ends that service,
+so the queue needs22 ordinary services, not `ceil(294/18)`. Parent151 observes
+the final head zero, clears both locks and deletes. Player0 has already run that
+pass: the first unlocked logical copy/MODE is the next call. This closure follows
+the native source, not a fitted duration or extra object-free wait loop.
+
+Fresh3 controller cases pass with zero failures/errors/skips at source
+`c58c1ba47b1f216c5fc35acff1a6627f61f887b3e1cf035b326180457454cd7e`,
+22:29:16.053367–22:30:06.210630Z,0s queue. They retain the earlier actual-EGL
+entry proof and add full/course next-step comparisons at slide-out, queued art,
+release, movement and10717→10718. At the completed endpoint selected display is
+Ready; its later image was not separately captured. All exact identities,
+properties and XML hashes were inspected; two owned report files were consumed.
+The initial Title attempt was compilation-only (LONG head stored in int local);
+the corrected two-case pass precedes this three-case qualification.
+
+A separate temporary ordinary-input observer returned10718 then failed10719 at
+the first unbound TimePost ID19/physical38, raw subtype08/saved04. Physical39 has
+subtype09/saved05. These existing components and authenticated R12A views need
+World binding; no new algorithm or art bank is inferred. The failure is retained
+as a one-error diagnostic, not a passing test, and the temporary source is removed
+from the repository. The permanent route asserts only its positive endpoint,
+so future object admission does not require preserving an obsolete stop.
+
 ## 4 November 2026 — actual Act2 programme entry and selected Sonic pixels
 
 The original controller recipe now reaches real Act2 Main10445 and three further

@@ -158,6 +158,93 @@ class TestSonicCdAct2ControllerRoute {
         writeOptionalCapture(imageForExport);
     }
 
+    @Test void actualTitleSlideOutServicesItsQueuedArtThenReleasesTheSamePlayerToOrdinaryRightMovement() throws Exception {
+        var old = ready(); var h = old.harness(); var module = h.module();
+        for (int call = old.returned() + 1; call <= 10419; call++) step(h, controller(call));
+        var right = controller(10419);
+        for (int load = 0; load < 256; load++) {
+            step(h, right);
+            if (module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN)) break;
+        }
+        var frame = module.requirePlayerFrame(); var source = frame.stageSource();
+        assertEquals(1, frame.environment().globals().levelFrames());
+        assertEquals(1, frame.environment().controls().controlLocked());
+        int lockedX = frame.state().motion().centreX16_16();
+        boolean sawSlideOut = false, sawQueuedPlc = false, replayedPlc = false, released = false;
+        int callsAfterMain = 0;
+        for (; callsAfterMain < 512; callsAfterMain++) {
+            var before = module.act2LoadState();
+            int oldRoutine = before.reservedObjects().unsignedByte(3 * 64 + 0x24);
+            long oldHead = before.section().queue().headSource();
+            try { step(h, right); }
+            catch (Exception | Error failure) {
+                System.err.printf("Act2 Title stopped after %d completed ordinary calls; last closed parent routine=%d timer=%d Y=%d PLChead=%08X remaining=%d lock=%d actor=%s; retained actor=%s env=%s%n",
+                        callsAfterMain + 1, oldRoutine, before.reservedObjects().unsignedByte(3 * 64 + 0x1E),
+                        before.reservedObjects().unsignedWord(3 * 64 + 0xA), oldHead, before.section().remainingTilesWord(),
+                        before.shared().environment().controls().controlLocked(), before.actor(), frame.state(), frame.environment());
+                throw failure;
+            }
+            var now = module.act2LoadState();
+            int routine = now.reservedObjects().unsignedByte(3 * 64 + 0x24);
+            assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
+            assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, now.calls().getLast());
+            if (routine == 6 && !sawSlideOut) { sawSlideOut = true; replayNextRight(h, right); }
+            if (routine == 10) {
+                sawQueuedPlc |= now.section().queue().headSource() != 0;
+                if (!replayedPlc && oldHead != 0) { replayedPlc = true; replayNextRight(h, right); }
+            }
+            if (frame.environment().controls().controlLocked() == 0) {
+                assertEquals(0, now.reservedObjects().unsignedByte(3 * 64));
+                assertEquals(0, now.section().queue().headSource());
+                replayNextRight(h, right); released = true; break;
+            }
+            assertEquals(lockedX, frame.state().motion().centreX16_16(), "Held Right cannot move Sonic before the native Title lock clear");
+        }
+        assertTrue(sawSlideOut); assertTrue(sawQueuedPlc); assertTrue(replayedPlc);
+        assertTrue(released, "The finite Title/PLC2 source must release controls within 512 ordinary calls");
+        int releaseX = frame.state().motion().centreX16_16();
+        for (int walk = 0; walk < 64; walk++) step(h, right);
+        assertTrue(frame.state().motion().centreX16_16() > releaseX, "Actual unlocked Right must move the native player");
+        assertEquals(0, frame.environment().controls().controlLocked());
+        replayNextRight(h, right);
+        System.out.printf("Controller-only Act2 Title: queued PLC observed, same Frame controls released after %d ordinary calls; 64 Right calls and full/course replay returned; X=%d.%n",
+                callsAfterMain + 1, frame.state().motion().centreX16_16() >>> 16);
+    }
+
+    @Test void actualUnlockedAct2RightRouteReturnsThroughTheLastMeasuredClosedCutWithFullAndCourseReplay() throws Exception {
+        var old = ready(); var h = old.harness(); var module = h.module();
+        var right = controller(10419);
+        for (int call = old.returned() + 1; call <= 10717; call++)
+            step(h, call <= 10419 ? controller(call) : right);
+        var frame = module.requirePlayerFrame(); var source = frame.stageSource();
+        assertTrue(old.frame().closed()); assertFalse(frame.closed());
+        assertEquals(CdStageKey.parse("R12A"), source.stage());
+        assertEquals(0, frame.environment().controls().controlLocked());
+        assertEquals(0, module.act2LoadState().reservedObjects().unsignedByte(3 * 64));
+        assertEquals(0, module.act2LoadState().section().queue().headSource());
+        assertTrue(frame.state().motion().centreX16_16() > (80 << 16), "Ordinary native Right moved beyond its native entry");
+        replayNextRight(h, right);
+        step(h, right); // Positive endpoint10718; later unowned dispatch is not a permanent success condition.
+        assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
+        assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
+        assertInstanceOf(SonicCdPastDisplay.Ready.class, module.act2SelectedDisplay().projection());
+        var before = captureNative(h); var registry = h.mode().getRewindRegistry();
+        var full = registry.capture(); var course = registry.captureCourse();
+        registry.restore(full); assertNativeCapture(before, h);
+        registry.restoreCourse(course); assertNativeCapture(before, h);
+        System.out.printf("Controller-only Act2 Right returned10718; source-bound full/course10717->10718 replay, controls clear and selected picture Ready; X=%d.%n",
+                frame.state().motion().centreX16_16() >>> 16);
+    }
+
+    private static void replayNextRight(Harness h, LogicalInputSnapshot right) throws Exception {
+        var registry = h.mode().getRewindRegistry(); var before = captureNative(h);
+        var full = registry.capture(); var course = registry.captureCourse();
+        step(h, right); var after = captureNative(h);
+        registry.restore(full); assertNativeCapture(before, h); step(h, right); assertNativeCapture(after, h);
+        registry.restoreCourse(course); assertNativeCapture(before, h); step(h, right); assertNativeCapture(after, h);
+        registry.restore(full); assertNativeCapture(before, h);
+    }
+
     private static byte[] draw(Harness h) { clearPixels(); h.module().gameplayFrameController().drawOverlay(); return pixels(); }
     private static void clearPixels() {
         glViewport(0, 0, 320, 224); glClearColor(1, 0, 1, 1); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
