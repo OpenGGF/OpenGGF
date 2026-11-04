@@ -318,7 +318,11 @@ public final class MenuChrome {
         PUZZLE("0C", "0C", "7F", "61", "3F", "21", "3F"),
         INFO("1C", "08", "00", "18", "08", "08", "1C"),
         DOWNLOAD("08", "08", "2A", "1C", "08", "41", "7F"),
-        GEAR("14", "3E", "63", "22", "63", "3E", "14");
+        GEAR("14", "3E", "63", "22", "63", "3E", "14"),
+        /** A speech bubble: a community chat link. */
+        CHAT("3E", "41", "55", "41", "3E", "20", "40"),
+        /** A beetle: a bug-report link. */
+        BUG("22", "1C", "5D", "3E", "5D", "1C", "22");
 
         private final int[] rows;
 

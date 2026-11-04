@@ -440,6 +440,14 @@
   "@settings.key.hub_last_game.help": {
     "description": "Settings help for stable configuration key HUB_LAST_GAME. Technical YAML documentation remains separate."
   },
+  "settings.key.hub_dismissed_notices.label": "Dismissed notices",
+  "@settings.key.hub_dismissed_notices.label": {
+    "description": "Settings label for stable configuration key HUB_DISMISSED_NOTICES (hub.dismissedNotices)."
+  },
+  "settings.key.hub_dismissed_notices.help": "Game support notices hidden with Don't show again",
+  "@settings.key.hub_dismissed_notices.help": {
+    "description": "Settings help for stable configuration key HUB_DISMISSED_NOTICES. Technical YAML documentation remains separate."
+  },
   "settings.key.hub_continue_s1_character.label": "Continue s1 character",
   "@settings.key.hub_continue_s1_character.label": {
     "description": "Settings label for stable configuration key HUB_CONTINUE_S1_CHARACTER (hub.continueS1Character)."

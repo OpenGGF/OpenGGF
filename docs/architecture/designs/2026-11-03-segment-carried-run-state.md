@@ -66,7 +66,8 @@ are taken.
 
 ### `Collected_emeralds_array` ledger
 
-`S3kRunEmeraldLedger.fold` applies only ROM rules to recorder observations, in
+`S3kRunEmeraldLedger.fold`, owned by `game.sonic3k.specialstage` alongside the
+S3K special-stage trace reader, applies only ROM rules to recorder observations, in
 manifest order:
 
 1. **Layout set.** A giant ring writes `SK_special_stage_flag` 0 (loc_61892), and

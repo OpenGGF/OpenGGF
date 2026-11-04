@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROOT = REPO_ROOT / 'src/main/resources/i18n'
 MESSAGE_ID = re.compile(r'[A-Za-z][A-Za-z0-9_.-]*\Z')
 HASH = re.compile(r'[0-9a-f]{64}\Z')
-ORIGINS = {'human', 'claude-haiku-5-5'}
+ORIGINS = {'human', 'claude-haiku-5-5', 'claude-opus-5-5'}
 PLACEHOLDER_TYPES = {'String', 'string', 'int', 'long', 'double', 'num', 'number', 'Number'}
 
 
@@ -148,7 +148,7 @@ def validate_document(path: Path, document: dict, *, source: bool):
                     if name in stamp and (not isinstance(stamp[name], str) or not HASH.fullmatch(stamp[name])):
                         raise CatalogError(f'{where}: {name} must be lowercase SHA-256')
                 if 'origin' in stamp and (not isinstance(stamp['origin'], str) or stamp['origin'] not in ORIGINS):
-                    raise CatalogError(f'{where}: origin must be human or claude-haiku-5-5')
+                    raise CatalogError(f'{where}: origin must be one of {sorted(ORIGINS)}')
                 if 'reviewed' in stamp and not isinstance(stamp['reviewed'], bool):
                     raise CatalogError(f'{where}: reviewed must be boolean')
                 if 'reviewer' in stamp:
@@ -326,7 +326,7 @@ def stamp(root: Path, tag: str, ids, *, reviewer=None, origin=None):
         if origin is not None and existing is not None and origin != existing:
             raise CatalogError(f'{message}: preserve its existing {existing} origin; review does not replace provenance')
         if existing is None and origin is None:
-            raise CatalogError(f'{message}: choose --origin human or claude-haiku-5-5')
+            raise CatalogError(f'{message}: choose an explicit --origin from {sorted(ORIGINS)}')
         provenance['origin'] = existing or origin
         provenance['sourceHash'] = source[message].fingerprint
         provenance['reviewed'] = reviewer is not None

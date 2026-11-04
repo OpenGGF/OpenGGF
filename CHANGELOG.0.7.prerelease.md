@@ -848,6 +848,13 @@ Unreleased. The earlier development themes remain in
   follows each texture's own row capacity when sidekick banks are reclaimed or
   independent graphics hosts retain different texture sizes.
 
+- **Support notices:** Starting Sonic 3 & Knuckles from the hub first shows a
+  translated Please note dialog saying its support is in alpha and asking for bug
+  reports on Discord or GitHub, with both links selectable to open in the browser.
+  Back returns to the shelf; Continue starts the game, and Don't show again hides
+  that game's notice until its stage changes. Any stock game can be gated or
+  released by editing one table.
+
 - **Main menu:** Compact and bold lettering now share one proportional
   pixel-font family, with narrower lowercase, steady digits for counters and
   clear navy lettering on gold launch buttons; long names, paths and text fields
@@ -1911,7 +1918,9 @@ its original drawing priority.
   Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
   the segment's recorded entry row; nothing is written after entry. Standalone
   special stages select their stage and Chaos or Super layout set through the
-  ROM's own search instead of defaulting to the Chaos set.
+  ROM's own search instead of defaulting to the Chaos set. The S3K emerald
+  ledger lives with the game's special-stage trace support, keeping shared
+  replay packages free of game-specific classes.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow

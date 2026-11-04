@@ -567,6 +567,39 @@
       }
     }
   },
+  "hub.notice.title_caps": "PLEASE NOTE",
+  "@hub.notice.title_caps": {
+    "description": "Title of the dialog shown before starting a game whose OpenGGF support is unfinished (for example Sonic 3 & Knuckles in alpha). Capitals: page title."
+  },
+  "hub.notice.stage_caps": "{stage, select, alpha {ALPHA} beta {BETA} other {PREVIEW}}",
+  "@hub.notice.stage_caps": {
+    "description": "Amber status tag beside PLEASE NOTE naming the game's support stage. Short capitals; alpha and beta are software-release stages.",
+    "placeholders": {
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.notice.body": "{game} support is currently in {stage, select, alpha {alpha} beta {beta} other {development}}. Please expect bugs.\nPlease report any you find on our Discord or GitHub.",
+  "@hub.notice.body": {
+    "description": "Body of the support notice before starting a game. game is a game title such as Sonic 3 & Knuckles; stage is the software-release stage (alpha: early and incomplete; beta: nearly complete). Discord and GitHub are service names. The newline starts a second paragraph.",
+    "placeholders": {
+      "game": {
+        "type": "String"
+      },
+      "stage": {
+        "type": "String"
+      }
+    }
+  },
+  "hub.notice.dont_show_again": "Don't show again",
+  "@hub.notice.dont_show_again": {
+    "description": "Toggle in the support notice: hide this notice for this game and stage on later starts."
+  },
+  "hub.notice.continue": "Continue",
+  "@hub.notice.continue": {
+    "description": "Button in the support notice that starts the game."
+  },
   "hub.end_game_question": "End {game} game?",
   "@hub.end_game_question": {
     "description": "OpenGGF host UI: hub.end_game_question. Translate the complete message; preserve named arguments.",

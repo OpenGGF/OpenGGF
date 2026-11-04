@@ -1,6 +1,5 @@
-package com.openggf.trace.replay;
+package com.openggf.game.sonic3k.specialstage;
 
-import com.openggf.game.sonic3k.specialstage.S3kSpecialStageSelection;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceRunManifest;
 
@@ -43,9 +42,9 @@ import java.util.List;
  *       inconsistent rather than silently chosen.</li>
  * </ol>
  */
-final class S3kRunEmeraldLedger {
+public final class S3kRunEmeraldLedger {
 
-    record Result(boolean consistent, String note, List<Integer> states,
+    public record Result(boolean consistent, String note, List<Integer> states,
                   int chaosEmeraldCount, int superEmeraldCount,
                   Boolean targetSuperEmeraldSet) {
     }
@@ -53,7 +52,7 @@ final class S3kRunEmeraldLedger {
     private S3kRunEmeraldLedger() {
     }
 
-    static Result fold(TraceRunManifest manifest, Path runDir, int target) {
+    public static Result fold(TraceRunManifest manifest, Path runDir, int target) {
         int[] states = new int[7];
         int chaos = 0;
         int superCount = 0;
@@ -64,7 +63,9 @@ final class S3kRunEmeraldLedger {
             if (!"special_stage".equals(segment.kind())) {
                 continue;
             }
-            TraceRunManifest.Transition in = TraceSegmentCarriedStateImport.inboundTransition(manifest, i);
+            int segmentIndex = i;
+            TraceRunManifest.Transition in = manifest.transitions().stream()
+                    .filter(t -> t.toSegment() == segmentIndex).findFirst().orElse(null);
             if (in == null || in.emeraldsBefore() == null || segment.specialStageIndex() == null) {
                 return inconsistent("special stage " + segment.dir() + " has no recorded arm state");
             }
@@ -92,7 +93,8 @@ final class S3kRunEmeraldLedger {
             }
             boolean cleared = clearRoutine != 0;
             if (!superSet) {
-                TraceRunManifest.Transition out = TraceSegmentCarriedStateImport.outboundTransition(manifest, i);
+                TraceRunManifest.Transition out = manifest.transitions().stream()
+                        .filter(t -> t.fromSegment() == segmentIndex).findFirst().orElse(null);
                 if (out == null || out.emeraldsAfter() == null) {
                     return inconsistent("special stage " + segment.dir() + " has no recorded exit count");
                 }
