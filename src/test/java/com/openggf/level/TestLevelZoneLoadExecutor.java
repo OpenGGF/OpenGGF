@@ -29,6 +29,7 @@ class TestLevelZoneLoadExecutor {
         doAnswer(call -> {
             assertEquals(2, level.getCurrentZone());
             assertEquals(1, level.getCurrentAct());
+            assertEquals(1, level.getApparentAct());
             assertTrue(LevelContinuationCarry.bypassInitialPresentation(transitions));
             return null;
         }).when(level).loadCurrentLevel(true, LevelLoadMode.FULL, false, true, true);
@@ -38,6 +39,23 @@ class TestLevelZoneLoadExecutor {
         assertEquals(LevelContinuationCarry.Phase.LOADED, transitions.continuationCarry.phase());
         verify(level).loadCurrentLevel(true, LevelLoadMode.FULL, false, true, true);
         verify(level, never()).revokeNativePlcTargetAdmission();
+    }
+
+    @Test
+    void bonusReturnPreservesSavedApparentActBeforeTheProfileLoads() throws Exception {
+        var saved = new com.openggf.game.BonusStageState(1, 0, 0, 0, 0, 0,
+                0, 0, 0x400, 0x500, 0x360, 0x480, (byte) 0x0C, (byte) 0x0D,
+                0x590, 0);
+        new com.openggf.game.BonusStageTransitionCoordinator()
+                .prepareReturnLoad(() -> level, saved);
+        doAnswer(call -> {
+            assertEquals(1, level.getCurrentAct());
+            assertEquals(0, level.getApparentAct(),
+                    "loc_6034 restores apparent act before CheckLevelForWater and ScreenInit");
+            return null;
+        }).when(level).loadCurrentLevel(true, LevelLoadMode.FULL, false, false, true);
+
+        executor.execute(0, 1, LevelLoadMode.FULL, false, true);
     }
 
     @Test
