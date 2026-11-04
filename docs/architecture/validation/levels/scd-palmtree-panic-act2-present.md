@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,88 raw descriptors,35 finite art readers,
+The retained terrain/player pair,92 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -34,6 +34,14 @@ The retained terrain/player pair,88 raw descriptors,35 finite art readers,
 | DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
 | CLEANUP | Reject queued capture/restore/direct scroll/service/recursive overlay without closing the healthy producer. Rejected active-atlas close retains its ledger; cleanup retry retires all488 actually selected uploads and preserves another producer. | Actual EGL case.488 is selected uploads, not the1597-tile sparse current window or a whole-act completion metric. |
 | EXIT | No Act2 completion or outgoing programme reached. | Open. |
+
+Detached Wall preparation adds four raw views after the original88, a14-root
+static visual and the native0/2/4 component over existing Solid/Platform owners.
+Its21 focused cases pass after raw-address/callback guards and one terrain-fixture
+correction; nine Act2 Frame-port and796 legacy Frame cases passed in the earlier
+863 scope, alongside35 asset cases and controller3. These are separate scopes;
+the original863 run was nonpassing. Actual Wall World dispatch, pixels and a
+measured wall contact are unqualified. Its source inventory is preparatory.
 
 ## Exact qualification
 

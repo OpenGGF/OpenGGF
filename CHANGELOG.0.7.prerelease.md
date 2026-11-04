@@ -193,6 +193,10 @@ Unreleased. The earlier development themes remain in
   bank and layout without changing their algorithms. A typed Act2 HUD facade
   shares the existing digit, time and failure-prefix kernel; selected-range black
   fade uses native whole-WORD arithmetic without assuming a clear or owning waits.
+  A source-bound Breakable Wall component now reuses shared Solid and Platform art,
+  preserving parent-plus-five fragmentation, failed allocations and native gravity.
+  Its fixed player X-velocity halve prepares only the existing Frame value pair;
+  actual wall World dispatch and route coverage remain separate.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

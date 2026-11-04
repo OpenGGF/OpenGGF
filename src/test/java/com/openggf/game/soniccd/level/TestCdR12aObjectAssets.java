@@ -115,6 +115,10 @@ ART_INV_STARS 34968 1152 486c2b711a084aad4b784fc4530b3f2ebf36e8c455091e145666268
 ART_TIME_STARS 34de8 992 1c71ded6bf1df0fd59db83dfd03541dcbc70335344bddf87b6f18f63fb0903fa
 TITLE_CARD_DATA e1ce 64 5633d1c528434db1c370012bc40f8ce07b8833517b42fa4adc1a994b4f04e1b2
 TITLE_CARD_MAPPINGS e20e 276 a1ecc1fe6282052137b611db71bd39b055b0255eba937de1259ae8c5b7f08c11
+MAP_SPR_BREAKABLE_WALL eed8 312 c561a76556cc21a46155e135205ab7c39cc8b007b9730c66e0a34a707d671226
+BREAKABLE_WALL_PIECE_FRAMES f010 64 9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f
+BREAKABLE_WALL_PIECE_DELTAS f050 24 86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94
+BREAKABLE_WALL_PIECE_SPEEDS f068 48 7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -184,9 +188,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete88RowManifestPreservesTheOriginal28AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete92RowManifestPreservesTheOriginal88AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(88, CdR12aProfile.Asset.values().length); assertEquals(88, rows.size());
+        assertEquals(92, CdR12aProfile.Asset.values().length); assertEquals(92, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -335,13 +339,53 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertTrue(java.util.HexFormat.of().formatHex(retail().original().readFile(0xDB1C,96)).contains("217c0020e20e0004"));
     }
 
-    private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original) { }
+    @Test void wallUsesActualLiveOperandsFullTablesAndSharedPlatformArtWithoutAnotherReader() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();
+        assertEquals(88,MAP_SPR_BREAKABLE_WALL.ordinal());assertEquals(91,BREAKABLE_WALL_PIECE_SPEEDS.ordinal());
+        assertEquals("217c0020eed80004",java.util.HexFormat.of().formatHex(file.readFile(0xEDC0,8)));
+        assertEquals("4bfa01f8",java.util.HexFormat.of().formatHex(file.readFile(0xEE16,4)));
+        assertEquals("49fa022a",java.util.HexFormat.of().formatHex(file.readFile(0xEE24,4)));
+        assertEquals("47fa023e",java.util.HexFormat.of().formatHex(file.readFile(0xEE28,4)));
+        assertArrayEquals(file.readFile(0xF9F0,312),o.view(MAP_SPR_BREAKABLE_WALL).copy(),"equal padding bytes do not change the selected live root");
+        assertEquals(0x20EED8,o.profile().range(MAP_SPR_BREAKABLE_WALL).nativeAddress());
+        var visual=o.breakableWall();assertSame(visual,o.breakableWall());assertEquals(14,visual.mappingFrames().size());
+        assertEquals(List.of(28,59,90,121,152,183,214,245,276,282,288,294,300,306),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(6,6,6,6,6,6,6,6,1,1,1,1,1,1),visual.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertTrue(visual.animations().isEmpty());assertArrayEquals(o.view(MAP_SPR_BREAKABLE_WALL).copy(),visual.mappings().copy());
+        for(var frame:visual.mappingFrames())for(var piece:frame.pieces()){
+            assertEquals(4,piece.tileCount());assertTrue(piece.tileOffset()>=0x29);assertTrue(piece.tileOffset()+piece.tileCount()<=57);
+        }
+        var hex=java.util.HexFormat.of();
+        assertArrayEquals(hex.parseHex("0809080c0d0c00000809080a0b0a00000a0b0a0a0b0a00000a0b0a0c0d0c00000908090d0c0d00000908090b0a0b00000b0a0b0b0a0b00000b0a0b0d0c0d0000"),o.view(BREAKABLE_WALL_PIECE_FRAMES).copy());
+        assertArrayEquals(hex.parseHex("fff8fff00000001000000020001000000010001000100020"),o.view(BREAKABLE_WALL_PIECE_DELTAS).copy());
+        assertArrayEquals(hex.parseHex("fffd097cfffeb750fffc25ee00000000fffd097c000148b0fffd097cfffe4445fffc97b500000000fffd097c0001bbbb"),o.view(BREAKABLE_WALL_PIECE_SPEEDS).copy());
+        assertEquals(35,o.readerProfiles().size());assertEquals(57*32,o.readerProfile(ART_PLATFORM).outputBytes());
+        for(var raw:new CdR12aProfile.Asset[]{MAP_SPR_BREAKABLE_WALL,BREAKABLE_WALL_PIECE_FRAMES,BREAKABLE_WALL_PIECE_DELTAS,BREAKABLE_WALL_PIECE_SPEEDS}){
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(raw));
+            byte[] changed=file.readFile(0,262144);changed[raw.fileOffset()]^=1;
+            assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(changed)));
+        }
+    }
+
+    @Test void wallFactoryBorrowsOnlyTheSameAuthenticatedRetainedPlacementAndRejectsConstructedIngress() throws Exception {
+        var a=retail().terrain();var o=a.objects();
+        var placement=com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.fromAssets(a,CdAssetBytes.copyOf(new byte[766]));
+        var shared=new com.openggf.game.soniccd.objects.CdSolidObject(com.openggf.game.soniccd.player.CdPlayerMovement.fromStageSource(CdStagePlayerSource.fromAct2(a,retail().player())));
+        assertNotNull(com.openggf.game.soniccd.objects.CdBreakableWall.fromAssets(placement,o,shared,null,null,null,null));
+        var constructed=new com.openggf.game.soniccd.objects.CdObjectPlacementRuntime(o.placements());
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdBreakableWall.fromAssets(constructed,o,shared,null,null,null,null));
+        var data=com.openggf.game.soniccd.objects.CdBreakableWall.Assets.fromObjectAssets(o);
+        assertEquals(0x20EED8,data.mappingsAddress());assertSame(o.view(BREAKABLE_WALL_PIECE_FRAMES),data.pieceFrames());
+        assertThrows(IllegalArgumentException.class,()->new com.openggf.game.soniccd.objects.CdBreakableWall(placement,data,shared,null,null,null,null));
+    }
+
+    private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }
     private Retail retained;
     private Retail retail() throws Exception {
         if (retained != null) return retained;
         String root = System.getProperty("soniccd.media.root"); assertNotNull(root, "Configure original CD media root"); assertFalse(root.isBlank()); Path cue;
         try (var entries = Files.list(Path.of(root).resolve("USA"))) { var cues = entries.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList(); assertEquals(1, cues.size()); cue = cues.getFirst(); }
-        try (var source = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) { retained = new Retail(CdR12aTerrainAssets.fromPrograms(source), source.mmd(CdNativeFile.R12A)); }
+        try (var source = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) { retained = new Retail(CdR12aTerrainAssets.fromPrograms(source), source.mmd(CdNativeFile.R12A), CdR12aPlayerAssets.fromPrograms(source)); }
         return retained;
     }
 }

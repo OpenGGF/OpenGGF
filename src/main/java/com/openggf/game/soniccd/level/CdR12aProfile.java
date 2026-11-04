@@ -98,7 +98,12 @@ public final class CdR12aProfile {
         ART_INV_STARS(0x34968, 1152),
         ART_TIME_STARS(0x34DE8, 992),
         TITLE_CARD_DATA(0xE1CE, 64),
-        TITLE_CARD_MAPPINGS(0xE20E, 276);
+        TITLE_CARD_MAPPINGS(0xE20E, 276),
+        // Breakable Wall/Main.asm:128-159. Actual live operands select these, not equal legacy padding.
+        MAP_SPR_BREAKABLE_WALL(0xEED8, 312),
+        BREAKABLE_WALL_PIECE_FRAMES(0xF010, 64),
+        BREAKABLE_WALL_PIECE_DELTAS(0xF050, 24),
+        BREAKABLE_WALL_PIECE_SPEEDS(0xF068, 48);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

@@ -119,6 +119,71 @@ class TestCdAct2WorldFramePorts {
         assertEquals(new CdPlayerBody.State(expected,before.animation(),before.header(),before.timers(),before.history(),before.rotationDistance(),before.objectLinks(),before.rotationAngle()),f.state());
         assertEquals(shared,f.captureShared()); assertTrue(f.display().isEmpty());
     }
+    @Test void breakableWallAsrPreparesOnlyTheNativeSignedXVelocityStoreWithoutPublishing() throws Exception {
+        requireActual(); var f=frame(1,1); var actor=f.captureActor(); var shared=f.captureShared();
+        var method=assertDoesNotThrow(()->CdPlayerFrameRuntime.class.getMethod("prepareObjectBreakableWallXVelocity",
+                CdPlayerBody.State.class,CdPlayerBody.Environment.class));
+        var ready=assertInstanceOf(CdPlayerFrameRuntime.ObjectSolidPublication.class,method.invoke(f,f.state(),f.environment()));
+        assertEquals(-0x92,ready.finalState().motion().xVelocity(),"Native ASR.W -$123 rounds toward negative infinity");
+        assertEquals(actor,f.captureActor()); assertEquals(shared,f.captureShared());
+        assertSame(f.state(),ready.expectedState()); assertSame(f.environment(),ready.expectedEnvironment());
+        assertSame(f.environment(),ready.finalEnvironment());
+    }
+
+    @Test void breakableWallLiteralWordShiftsPreserveEveryOtherStateAndEnvironmentComponent() {
+        requireActual();
+        int[][] words={{32767,16383},{-32768,-16384},{-1,-1},{0,0},{1,0},{3,1},{-3,-2},{-513,-257},{514,257}};
+        for(var word:words) {
+            var start=withXVelocity(state(),word[0]); var e=environment(1,1,1,1);
+            var f=CdPlayerFrameRuntime.fromAct2Entry(terrain,player,start,e,art(),clock());
+            var actor=f.captureActor(); var shared=f.captureShared();
+            var ready=f.prepareObjectBreakableWallXVelocity(start,e);
+            assertEquals(withXVelocity(start,word[1]),ready.finalState());
+            assertSame(start.animation(),ready.finalState().animation()); assertSame(start.header(),ready.finalState().header());
+            assertSame(start.timers(),ready.finalState().timers()); assertSame(start.history(),ready.finalState().history());
+            assertSame(start.objectLinks(),ready.finalState().objectLinks()); assertSame(e,ready.finalEnvironment());
+            assertEquals(actor,f.captureActor()); assertEquals(shared,f.captureShared());
+            f.validatePreparedObjectSolidPublication(ready); f.applyPreparedObjectSolidPublication(ready);
+            assertSame(ready.finalState(),f.state()); assertSame(e,f.environment());
+            assertSame(shared.artState(),f.artState()); assertSame(shared.vIntClock(),f.vIntClock()); assertEquals(actor.display(),f.display());
+            if(word[0]==word[1]) {
+                assertSame(start,f.state());
+                f.applyPreparedObjectSolidPublication(ready); // Equal-value CAS is observational, never exactly-once authority.
+                assertSame(start,f.state());
+            }
+        }
+    }
+
+    @Test void breakableWallPrepareUsesFullPairCasAndKeepsNullPendingClosedAndInterveningWritesAtomic() {
+        requireActual(); var f=frame(1,1); var s=f.state(); var e=f.environment(); var actor=f.captureActor(); var shared=f.captureShared();
+        assertThrows(NullPointerException.class,()->f.prepareObjectBreakableWallXVelocity(null,e));
+        assertThrows(NullPointerException.class,()->f.prepareObjectBreakableWallXVelocity(s,null));
+        var wrong=new CdPlayerBody.State(s.motion(),s.animation(),new CdPlayerBody.Header(2,3,4,5,6),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle());
+        var wrongEnvironment=new CdPlayerBody.Environment(e.movement(),new CdPlayerBody.Controls(1,2,3,4,5),e.globals(),e.dynamicSlots());
+        assertThrows(IllegalArgumentException.class,()->f.prepareObjectBreakableWallXVelocity(wrong,e));
+        assertThrows(IllegalArgumentException.class,()->f.prepareObjectBreakableWallXVelocity(s,wrongEnvironment));
+        var equal=new CdPlayerBody.State(s.motion(),s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle());
+        var equalEnvironment=new CdPlayerBody.Environment(e.movement(),e.controls(),e.globals(),e.dynamicSlots());
+        var ready=f.prepareObjectBreakableWallXVelocity(equal,equalEnvironment);
+        assertSame(s,ready.expectedState()); assertSame(e,ready.expectedEnvironment()); assertSame(e,ready.finalEnvironment());
+        assertEquals(actor,f.captureActor()); assertEquals(shared,f.captureShared());
+        var intervening=f.prepareObjectTitleCardGlobal(s,e,CdTitleCard.StoreField.CONTROL_LOCK_BYTE,0);
+        f.applyPreparedObjectSolidPublication(intervening);
+        assertThrows(IllegalArgumentException.class,()->f.applyPreparedObjectSolidPublication(ready));
+        assertSame(s,f.state()); assertSame(intervening.finalEnvironment(),f.environment());
+        var current=f.environment(); f.prepareInput(8);
+        assertThrows(IllegalStateException.class,()->f.prepareObjectBreakableWallXVelocity(s,current));
+        f.clearPendingInput(); assertSame(s,f.state()); assertSame(current,f.environment());
+        f.close(); assertThrows(IllegalStateException.class,()->f.prepareObjectBreakableWallXVelocity(s,current));
+    }
+
+    private static CdPlayerBody.State withXVelocity(CdPlayerBody.State s,int value) {
+        var m=s.motion(); var motion=new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),value,m.yVelocity(),m.groundVelocity(),
+                m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),m.playerJump(),
+                m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        return new CdPlayerBody.State(motion,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(),s.rotationAngle());
+    }
+
     private static void requireActual() { assumeTrue(terrain != null && player != null && past != null, "Set soniccd.media.root to original USA media"); }
     private static CdPlayerFrameRuntime frame(int act, int period) {
         return CdPlayerFrameRuntime.fromAct2Entry(terrain, player, state(), environment(act, period, 1, 1), art(), clock());

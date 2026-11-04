@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -227,6 +227,11 @@ public final class CdR12aObjectAssets {
     public synchronized CdObjectVisualAssets titleCard() {
         if (titleCard == null) titleCard = CdObjectVisualAssets.decodeStatic(view(TITLE_CARD_MAPPINGS).copy(), 9, 164);
         return titleCard;
+    }
+    /** Fourteen counted wall roots use the existing57-tile Platform source; no new art/reader/current value. */
+    public synchronized CdObjectVisualAssets breakableWall() {
+        if (breakableWall == null) breakableWall = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_BREAKABLE_WALL).copy(), 14, 57);
+        return breakableWall;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

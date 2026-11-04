@@ -1,5 +1,39 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — prepared Breakable Wall component and Frame store
+
+R12A now retains92 raw descriptors: the old88 prefix plus live Wall mappings
+and complete64/24/48-byte frame/delta/speed tables. Native immediate and PC joins
+select the live roots, not equal padding bytes. Existing35 art-reader contracts,
+PLCs, current-pattern owners and Platform art are unchanged. The cached static
+visual has14 roots/57 tiles; no animation, bank, renderer or capture owner is added.
+
+The detached ID36 component preserves Init→Main, genuine plain shared Solid,
+Draw-before-despawn, native collision-word clear, sound-before-ASR, parent-plus-five
+fragments, dirty first-free images and allocation-failure fall-through. Falling
+pieces use wrapping LONG motion and direct deletion without saved-bank unload.
+The Frame port prebuilds only signed ASR.W X velocity under complete State/Env
+CAS; prepared references carry no World/phase/invocation/exact-once authority.
+This prepares a future World binding; no live Wall dispatch or route is claimed.
+
+Root's missing-port RED had six old passes/one expected failure. The integrated
+863-case run then had860passes/two failures/one error: Frame9 and legacy796,
+asset13/player12/terrain10 and controller3 all passed; Wall17/20 passed. Two Root
+adversaries exposed the eager raw-period restriction and a throwing Solid callback
+escaping validation of its declared output. Root now accepts native byte widths,
+preserves the exact reached linear saved address through the existing bank owner,
+and checks source-or-ready full96 images on callback failure. Invalid reached bank
+addresses stop after Draw without deletion. The authored stopped-Solid fixture
+needed its actual bit6 terrain-selector arm; production collision was unchanged.
+
+Focused21 Wall checks pass0failures/errors/skips at source
+`74cbabefd38008a4141eda214612a35682719c8e8c4055107a07a16399788cc8`,
+22:50:49.755086–22:52:31.962384Z after8s queue. Both run receipts retain complete
+literal inventories/source/arguments/timestamps/XML hashes externally. All cases
+were inspected and own14 then2 reports consumed under lock. No single green863
+or full-suite claim follows. Independent source review found no additional P1/P2
+beyond the acknowledged corrections; its work remains static, not execution.
+
 ## 4 November 2026 — automatic terminal run receipts
 
 `integration_packet.py run --execute --evidence /absolute/new/external.json`

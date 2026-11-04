@@ -1986,6 +1986,35 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
 
 
     /**
+     * Prepare only ObjBreakableWall_Main.BreakUp's ASR.W player X-velocity store
+     * (Breakable Wall/Main.asm:56-60, native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff).
+     * Complete-value CAS and the existing closed-cut guards precede construction. No actor,
+     * environment, display, art, clock or callback is published. The private caller owns the
+     * actual break/FM/source sequence and must prepare every owner before adopting any output;
+     * this reusable value carrier supplies no invocation or exactly-once authority.
+     */
+    public ObjectSolidPublication prepareObjectBreakableWallXVelocity(CdPlayerBody.State expectedState,
+                                                                      CdPlayerBody.Environment expectedEnvironment) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Breakable Wall player State");
+        Objects.requireNonNull(expectedEnvironment, "Breakable Wall player Environment");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Breakable Wall player State/Environment cut");
+        }
+        var actual = state; var m = actual.motion(); int velocity = m.xVelocity() >> 1;
+        var next = actual;
+        if (velocity != m.xVelocity()) {
+            var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), velocity, m.yVelocity(),
+                    m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                    m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
+                    m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+            next = new CdPlayerBody.State(motion, actual.animation(), actual.header(), actual.timers(),
+                    actual.history(), actual.rotationDistance(), actual.objectLinks(), actual.rotationAngle());
+        }
+        return new ObjectSolidPublication(actual, environment, next, environment);
+    }
+
+    /**
      * Prepare an ID07 player value pair at the existing closed object cut without publishing it.
      * The complete current State/Environment pair and the tunnel owner's pure finite store predicate
      * are checked before allocating the existing carrier. These values supply no native invocation,
