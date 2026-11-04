@@ -172,12 +172,7 @@ final class GameLoopBonusStageSession {
         int zone = (zoneId >> 8) & 0xFF;
         int act = zoneId & 0xFF;
 
-        // The source level's camera and HUD rings stay on screen until the
-        // bonus title loop hands over (see the boundary below).
-        short sourceCameraX = host.camera().getX();
-        short sourceCameraY = host.camera().getY();
-        int sourceRings = host.level().getLevelGamestate() != null
-                ? host.level().getLevelGamestate().getRings() : 0;
+        TitleSource source = captureTitleSource();
         try {
             // Suppress auto-music: bonus music plays later in applyDeferredBonusStageSetup
             host.level().setSuppressNextMusicChange(true);
@@ -205,14 +200,7 @@ final class GameLoopBonusStageSession {
 
         // Initialize the bonus title card
         TitleCardProvider tcp = host.titleCard();
-        if (tcp instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication) {
-            // A bonus stage is entered through the same Level: routine
-            // (loc_60DE clearRAM, loc_6310 Get_LevelSizeStart, loc_6468 player
-            // creation; sonic3k.asm:7649-7651, 7789-7792, 7880-7915). Hold the
-            // loaded bonus players behind its title loop.
-            com.openggf.level.FreshLevelBoundaryAccess.beginAfterSetup(
-                    host.level(), sourceCameraX, sourceCameraY, sourceRings);
-        }
+        holdDestinationPlayersForTitleCard(tcp, source);
         if (tcp != null) {
             tcp.initializeBonus();
         }
@@ -369,12 +357,7 @@ final class GameLoopBonusStageSession {
         // Restore previous zone
         int zone = (savedState.savedZoneAndAct() >> 8) & 0xFF;
         int act = savedState.savedZoneAndAct() & 0xFF;
-        // The interior's camera and HUD rings stay on screen until the
-        // destination's title loop hands over (see the boundary below).
-        short sourceCameraX = host.camera().getX();
-        short sourceCameraY = host.camera().getY();
-        int sourceRings = host.level().getLevelGamestate() != null
-                ? host.level().getLevelGamestate().getRings() : 0;
+        TitleSource source = captureTitleSource();
 
         try {
             // Arm Level_FromSavedGame and suppress auto-music before preparing the
@@ -415,23 +398,7 @@ final class GameLoopBonusStageSession {
                 host.gameState()::addLife);
         pendingBonusReturnStarPostMark = -1;
 
-        // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
-        // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
-        int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
-        int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
-        TitleCardProvider tcp = host.titleCard();
-        if (tcp instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication) {
-            // The return re-enters Level: like any fresh load. loc_60DE clears
-            // object RAM before the title loop, loc_6310's Get_LevelSizeStart
-            // places the players once it exits, and loc_6468 creates them
-            // (sonic3k.asm:7649-7651, 7789-7792, 7880-7915). Hold the restored
-            // destination players behind that loop, as a zone request does.
-            com.openggf.level.FreshLevelBoundaryAccess.beginAfterSetup(
-                    host.level(), sourceCameraX, sourceCameraY, sourceRings);
-        }
-        if (tcp != null) {
-            tcp.initialize(apparentZone, apparentAct);
-        }
+        TitleCardProvider tcp = prepareReturnTitleCard(savedState, source);
 
         // Enter TITLE_CARD mode — exitTitleCard will transition to LEVEL
         host.titleDestination(PostTitleCardDestination.LEVEL);
@@ -446,6 +413,41 @@ final class GameLoopBonusStageSession {
 
         host.notifyModeChanged(oldMode);
         LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
+    }
+
+    private TitleCardProvider prepareReturnTitleCard(BonusStageState savedState, TitleSource source) {
+        // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
+        // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
+        int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
+        int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
+        TitleCardProvider tcp = host.titleCard();
+        holdDestinationPlayersForTitleCard(tcp, source);
+        if (tcp != null) {
+            tcp.initialize(apparentZone, apparentAct);
+        }
+        return tcp;
+    }
+
+    /** Stack-local source presentation retained until the destination title loop hands over. */
+    private record TitleSource(short cameraX, short cameraY, int rings) { }
+
+    private TitleSource captureTitleSource() {
+        short cameraX = host.camera().getX();
+        short cameraY = host.camera().getY();
+        int rings = host.level().getLevelGamestate() != null
+                ? host.level().getLevelGamestate().getRings() : 0;
+        return new TitleSource(cameraX, cameraY, rings);
+    }
+
+    private void holdDestinationPlayersForTitleCard(TitleCardProvider titleCard, TitleSource source) {
+        if (titleCard instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication) {
+            // Entries and returns both re-enter Level: loc_60DE clears object RAM,
+            // loc_6310 places players after the title loop, and loc_6468 creates
+            // them (sonic3k.asm:7649-7651, 7789-7792, 7880-7915). Hold the
+            // caller's destination placement and preserve the source camera/HUD.
+            com.openggf.level.FreshLevelBoundaryAccess.beginAfterSetup(
+                    host.level(), source.cameraX(), source.cameraY(), source.rings());
+        }
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
