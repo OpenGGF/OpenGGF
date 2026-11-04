@@ -717,7 +717,7 @@ public final class TraceSegmentCarriedStateImport {
             applyConsumedGiantRings(carried);
         }
         if (restore != null && restore.checkpoint() != null) {
-            applyRecordedCheckpoint(restore.checkpoint());
+            applyRecordedCheckpoint(restore.checkpoint(), restore);
         } else {
             applyLastStarPostHit(carried);
         }
@@ -744,7 +744,8 @@ public final class TraceSegmentCarriedStateImport {
      * saved block is what a death reload restores through
      * {@code Load_Starpost_Settings} (sonic3k.asm:61800-61834).
      */
-    private static void applyRecordedCheckpoint(TraceSegmentCarriedState.Checkpoint saved) {
+    private static void applyRecordedCheckpoint(TraceSegmentCarriedState.Checkpoint saved,
+                                                TraceSegmentCarriedState.LevelEntryRestore restore) {
         var level = GameServices.levelOrNull();
         var checkpoint = level == null ? null : level.getCheckpointState();
         if (checkpoint == null || saved.index() == 0) {
@@ -757,7 +758,13 @@ public final class TraceSegmentCarriedStateImport {
         if (checkpoint instanceof com.openggf.game.CheckpointState cs) {
             cs.saveRingState(saved.rings(), saved.extraLifeFlags());
             cs.saveActTimer(saved.timerFrames());
-            cs.saveS3kRuntimeState(saved.cameraMaxY(), saved.dynamicResizeRoutine());
+            // The engine's entry camera clamps to an active checkpoint's saved
+            // bounds, which models loc_1BE46 (sonic3k.asm:38187-38193) calling
+            // Load_Starpost_Settings before the camera is placed. Publish
+            // the bounds this restore loads (Saved2_* on a special-stage return)
+            // for that calculation; importAfterLevelInit then records the
+            // Saved_* star-post bounds a death reload uses.
+            cs.saveS3kRuntimeState(restore.cameraMaxY(), restore.dynamicResizeRoutine());
             if (isLegalPathPair(saved.topSolidBit(), saved.lrbSolidBit())) {
                 cs.saveSolidBits((byte) saved.topSolidBit(), (byte) saved.lrbSolidBit());
             }
@@ -790,6 +797,15 @@ public final class TraceSegmentCarriedStateImport {
             eventManager.restoreEventRoutineState(restore.dynamicResizeRoutine(), 0);
         }
         var level = GameServices.levelOrNull();
+        TraceSegmentCarriedState.Checkpoint saved = restore.checkpoint();
+        if (saved != null && saved.index() != 0 && level != null
+                && level.getCheckpointState() instanceof com.openggf.game.CheckpointState cs) {
+            // Saved_camera_max_Y_pos / Saved_dynamic_resize_routine, which a
+            // death reload restores. A special-stage return entered with the
+            // Saved2_* bounds above, so they cannot be published before the
+            // entry camera.
+            cs.saveS3kRuntimeState(saved.cameraMaxY(), saved.dynamicResizeRoutine());
+        }
         var water = GameServices.waterOrNull();
         if (water != null && level != null) {
             int zone = level.getFeatureZoneId();
