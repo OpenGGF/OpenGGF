@@ -4881,6 +4881,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#isLevelInactiveForTransition() */
     public boolean isLevelInactiveForTransition() { return transitions.isLevelInactiveForTransition(); }
 
+    /** @see LevelTransitionHostAccess#freezesHostIteration(LevelManager) */
+    boolean isLevelInactiveBeforeObjectPass() { return transitions.isLevelInactiveBeforeObjectPass(); }
+
     /** @see LevelTransitionCoordinator#setLevelInactiveForTransition(boolean) */
     public void setLevelInactiveForTransition(boolean inactive) {
         transitions.setLevelInactiveForTransition(inactive);

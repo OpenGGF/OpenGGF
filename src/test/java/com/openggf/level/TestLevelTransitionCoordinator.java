@@ -26,6 +26,18 @@ class TestLevelTransitionCoordinator {
 
 
     @Test
+    void pendingBonusRequestDoesNotFreezeTheHostIterationThatConsumesIt() {
+        LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+        transitions.requestBonusStageEntry(com.openggf.game.BonusStageType.GLOWING_SPHERE);
+        assertTrue(transitions.isLevelInactiveForTransition());
+        assertFalse(transitions.isLevelInactiveBeforeObjectPass(),
+                "the object pass that consumes the request must still run");
+        transitions.setLevelInactiveForTransition(true);
+        assertTrue(transitions.isLevelInactiveBeforeObjectPass(),
+                "an independent level exit still freezes the host iteration");
+    }
+
+    @Test
     void inLevelTitleCardCarriesDisplayResetIntentAndDispatchOffset() {
         LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
 
