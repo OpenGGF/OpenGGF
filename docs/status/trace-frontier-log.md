@@ -123559,3 +123559,32 @@ Between develop `b4e2ac27c` and `32d4e9aae` three classes went newly red under `
   `.delayCollapse` now tests Sonic after `Ledge_WalkOff`'s ExitPlatform (Collapsing Ledges and Floors.asm:94-110).
 - `TestTraceAnimationRecorderContract`: S3K fixture count raised to 22 for the SSZ1 cold-route fixture (`2a66d5cf0`).
 Focused check on the merged tree: the reds green; the S1/S2/KiS2 chains at 5/15/5 axes (the develop set).
+
+## 2026-11-04 — Wave 6 of the trace survey: fresh-entry camera, Tails fly-in, DDZ ending art queue, S2 CNZ1 slot machine and elevator, saved-block recorder export
+
+Integrated on develop `aa26247c0`. Merged tree vs develop, all three profiles (forkCount=1, alphabetical, JDK 25, original
+ROMs, surfaceless EGL), per-testcase comparison of full messages with worktree paths normalised: no newly red class, no
+earlier first error. Focused ordinary set (1750 tests; includes `TestCommittedHardwareTimingFixtures`, the gitlink
+guards and `TestArchitecturalSourceGuard`): only `TestGameLoopFreshLevelHandoff` and `TestS3kTitleCardHoldRoutes` fail,
+and both fail identically on develop (attribution lane assigned). Census-reading chains are unchanged after the saved-block re-record.
+
+- `bugfix/ai-trace-entry-camera-start-table` (`c8d0e2612`, `4838bebce`, `6266b8413`): a fresh S3K entry builds its
+  camera from the start-location table (`Get_LevelSizeStart`, `loc_1BE5E`/`loc_1BE7A`); the Tails-alone fly-in
+  (`Tails_CPU_routine $20`, `loc_68C2`/`loc_68FC`, `loc_1425C`/`loc_14286`) is implemented; capture and benchmark boots
+  declare the entry kind. **Tails FullChain CNZ 3089@0 → 1264@12940; MHZ 164@0 → 11@1389.**
+- `bugfix/ai-trace-ddz-ending-kosm` (`f904eb03e`, `4fbf5f9c5`): Doomsday queues DDZMisc (`loc_815F2`) and
+  BossMasterEmerald (`loc_819CE`) through the module queue; the `$D01` load runs the self-deleting title owner
+  (`Obj_TitleCardInit` `loc_2D6C2`) with the `loc_62CC`/`loc_7870` wait and keeps the white entry (`loc_5FC4`).
+  S+T Zone0c error (KosM FIFO full) → failure 680@5 `x`, comparison gate reached at the `$0D01` handover (row 10056).
+  `TestS3kEndingTransitionPresentation` corrected: the old assertion contradicted the ROM.
+- `bugfix/ai-trace-s2-cnz1-title-order` (`029da13f7`) and `bugfix/ai-trace-s2-cnz1-elevator` (`5c39590a8`): the missing
+  `Level_TtlCard` post-loop VBlank (s2.asm:4914-4927); `DeformBgLayer` only on `Obj34_BackgroundOutInit`
+  (s2.asm:27587-27596); the chain clock anchored before the gap walk; ObjD6 same-invocation payout; Obj6F completion on
+  the expiry pass; ObjD5 keeps `y_sub` at its trip ends (`loc_2BAB6`/`loc_2BB08`) with the ROM crossing test; a monitor
+  break keeps a rider unless `Obj26_Break`'s bits name that player. CNZ1 reels seed native `$53`.
+  **S2 chain 15 → 8 axes; CNZ1 166318@1876 (incomplete) → 191680@5447 `sidekick_y`.** Halfpipe 65 → 64.
+- `bugfix/ai-trace-saved-block-export` (`1b20d891f`, `d89e30b8d`; TraceChaser `a9f8b94`): each segment's metadata
+  carries `level_entry_ram` (S3K `Saved_*`/`Saved2_*`/carried counters; S2 star-pole block), and S3K manifest
+  transitions carry a `gap_admission_runs` census (shared `GapAdmissionCensus`). Each Mega bonus boundary is exactly one
+  lag row. The three S3K campaign chains, Mega and KiS2 EHZ1 were re-recorded with byte-identical payloads.
+  `TestCommittedHardwareTimingFixtures` had been red on develop since the wave-5 re-record; it is re-frozen and green.

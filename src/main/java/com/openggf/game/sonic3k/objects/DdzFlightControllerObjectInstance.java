@@ -4,6 +4,7 @@ import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
@@ -193,6 +194,10 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         com.openggf.sprites.managers.SpriteManagerInternalAccess
                 .retireAllSidekicksForRewind(services().spriteManager());
         spawnFreeChild(DdzMusicTempoObjectInstance::new);
+        // loc_815F2 (sonic3k.asm:173370-173373): Queue_Kos_Module ArtKosM_DDZMisc at
+        // ArtTile_DDZMisc. The module FIFO owns the job after this sprite's init.
+        DdzObjectSupport.queueGlobalModule(services(),
+                Sonic3kConstants.ART_KOSM_DDZ_MISC_ADDR, Sonic3kConstants.ARTTILE_DDZ_MISC, "DDZ misc");
     }
 
     /** {@code loc_8160A}. */

@@ -9,6 +9,16 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
+  platform's last stood-on piece gives way, Sonic and Tails each lose their
+  "standing on an object" status if it is set, whatever they are standing on,
+  as the shipped game does. A Tails who died on the oil and is still falling
+  therefore drops the stale status at that moment instead of keeping it.
+
+- Seamless reloads preserve runtime-art admission, title camera-release timing
+  and independent end-state flags. Frame-boundary reloads no longer leave a
+  second rewind-boundary marker or suppress the following gameplay oscillator tick.
+
 - **Sonic 2 elevators and monitors:** Casino Night elevators keep their
   fractional position between trips and accelerate the shipped way when they
   pass exactly through their centre, so a second ride starts moving on the
@@ -27,16 +37,6 @@ Unreleased. The earlier development themes remain in
   Knuckles in Sonic 2 results return to the level on the same frame as ordinary
   results. Hill Top and Mystic Cave events read the level frame counter the
   shipped game reads.
-
-- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
-  platform's last stood-on piece gives way, Sonic and Tails each lose their
-  "standing on an object" status if it is set, whatever they are standing on,
-  as the shipped game does. A Tails who died on the oil and is still falling
-  therefore drops the stale status at that moment instead of keeping it.
-
-- Seamless reloads preserve runtime-art admission, title camera-release timing
-  and independent end-state flags. Frame-boundary reloads no longer leave a
-  second rewind-boundary marker or suppress the following gameplay oscillator tick.
 
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
@@ -70,6 +70,18 @@ Unreleased. The earlier development themes remain in
 
 - The Lava Reef boss act (`$1600`) starts with the native falling intro on a
   fresh entry, for every character.
+
+- Fresh S3K trace segments derive the entry camera from the ROM start-location
+  entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
+  objects (the DDZ fly-in, the shrine) have already moved.
+
+- Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
+  fly-in: CPU-held flight to the right until landing.
+
+- Doomsday queues its misc and boss Master Emerald art through the native
+  module queue, and the S3K ending load queues its terrain art and waits for the
+  queue to drain before the ending scene starts, as the shipped game does. The
+  ending previously started at once with its terrain art unqueued.
 
 - S3K fresh level loads count the terrain wait's final VBlank in the live game
   loop, as the recording driver already did. The remaining load-time lag
