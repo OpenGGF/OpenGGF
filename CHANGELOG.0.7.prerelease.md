@@ -1952,6 +1952,8 @@ its original drawing priority.
   cleanup, keeping rewind references valid on carried checkpoint entries.
   Special-stage returns use their own saved camera bound for the first snap
   while retaining the distinct star-post bound for a later death.
+  Recorded standalone water entries restore the saved height while retaining
+  the freshly initialized movement target, as the ROM's saved-block load does.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow

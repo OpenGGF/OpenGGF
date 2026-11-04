@@ -628,7 +628,7 @@ public final class TraceSegmentCarriedStateImport {
                 base.provenance(), base.ringCount(), base.chaosEmeraldCount(),
                 base.emeraldStates(), base.superEmeraldCount(), base.consumedGiantRings(),
                 shield, base.specialStageCursor(), base.superEmeraldStageSet(),
-                base.lastStarPostHit(), base.restore(), base.lifeCount(),
+                base.lastStarPostHit(), base.entryRestore(), base.lifeCount(),
                 base.collectedSpecialRingArray(), base.recordedSpecialStageCursor(),
                 base.disagreements(), base.unresolved());
     }
@@ -705,7 +705,7 @@ public final class TraceSegmentCarriedStateImport {
         if (carried.ringCount() != null && level != null) {
             level.getLevelGamestate().setRings(carried.ringCount());
         }
-        TraceSegmentCarriedState.LevelEntryRestore restore = carried.restore();
+        TraceSegmentCarriedState.LevelEntryRestore restore = carried.entryRestore();
         if (restore != null && level != null) {
             level.getLevelGamestate().setRingExtraLifeFlags(restore.extraLifeFlags());
             level.getLevelGamestate().setTimerFrames(restore.timerFrames());
@@ -785,7 +785,7 @@ public final class TraceSegmentCarriedStateImport {
     public static void initializeCameraAtEntry(TraceSegmentCarriedState carried,
             com.openggf.level.LevelManager level,
             com.openggf.game.session.LevelEntryProvenance provenance) {
-        var restore = carried == null ? null : carried.restore();
+        var restore = carried == null ? null : carried.entryRestore();
         com.openggf.level.LevelEntryInitialization.initializeCamera(level, provenance,
                 restore == null ? null : restore.cameraMaxY());
     }
@@ -802,10 +802,10 @@ public final class TraceSegmentCarriedStateImport {
      * entry calls this once, after both and before the first row.
      */
     public static void importAfterLevelInit(TraceSegmentCarriedState carried) {
-        if (carried == null || carried.restore() == null) {
+        if (carried == null || carried.entryRestore() == null) {
             return;
         }
-        TraceSegmentCarriedState.LevelEntryRestore restore = carried.restore();
+        TraceSegmentCarriedState.LevelEntryRestore restore = carried.entryRestore();
         var camera = GameServices.cameraOrNull();
         if (camera != null) {
             camera.setMaxY((short) restore.cameraMaxY());
@@ -821,8 +821,9 @@ public final class TraceSegmentCarriedStateImport {
             int zone = level.getFeatureZoneId();
             int act = level.getFeatureActId();
             if (water.hasWater(zone, act)) {
+                // Load_Starpost_Settings (sonic3k.asm:61800-61856) restores the mean,
+                // not Target_water_level or Water_speed. Keep the loaded movement state.
                 water.setWaterLevelDirect(zone, act, restore.meanWaterLevel());
-                water.setWaterLevelTarget(zone, act, restore.meanWaterLevel());
                 water.setFullScreenFlag(zone, act, restore.waterFullScreen());
             }
         }

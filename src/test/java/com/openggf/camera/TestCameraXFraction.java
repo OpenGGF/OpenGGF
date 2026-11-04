@@ -92,12 +92,12 @@ class TestCameraXFraction {
         var carried = TraceSegmentCarriedStateImport.importAtSegmentEntry(trace, player);
         var checkpoint = (com.openggf.game.CheckpointState) GameServices.level().getCheckpointState();
         int deathBound = checkpoint.getSavedCameraMaxY();
-        assertTrue(deathBound < carried.restore().cameraMaxY(), "the recording has distinct saved blocks");
+        assertTrue(deathBound < carried.entryRestore().cameraMaxY(), "the recording has distinct saved blocks");
 
         TraceSegmentCarriedStateImport.initializeCameraAtEntry(carried, GameServices.level(),
                 com.openggf.game.session.LevelEntryProvenance.POSITIONED_RETURN_SPAWN);
 
-        assertEquals(carried.restore().cameraMaxY(), GameServices.camera().getMaxY());
+        assertEquals(carried.entryRestore().cameraMaxY(), GameServices.camera().getMaxY());
         assertTrue(GameServices.camera().getY() > deathBound,
                 "the current return must not clamp to its unrelated death checkpoint");
         assertEquals(deathBound, checkpoint.getSavedCameraMaxY(), "later death retains Saved_*");

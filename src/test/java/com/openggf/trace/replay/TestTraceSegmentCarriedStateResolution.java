@@ -168,17 +168,17 @@ class TestTraceSegmentCarriedStateResolution {
     @Test
     void starPostRestoreUsesTheRecordedSavedBlock() throws Exception {
         TraceSegmentCarriedState lrz3 = resolve(TAILS, "lrz_3");
-        assertEquals("Saved", lrz3.restore().block());
+        assertEquals("Saved", lrz3.entryRestore().block());
         assertEquals(304, lrz3.ringCount());
-        assertEquals(6, lrz3.restore().checkpoint().index());
-        assertEquals(10814, lrz3.restore().checkpoint().x());
-        assertEquals(10644, lrz3.restore().checkpoint().cameraX());
+        assertEquals(6, lrz3.entryRestore().checkpoint().index());
+        assertEquals(10814, lrz3.entryRestore().checkpoint().x());
+        assertEquals(10644, lrz3.entryRestore().checkpoint().cameraX());
         // Saved_timer $00032815: 3:40, restored with Timer_frame 59 one second back.
-        assertEquals((3 * 60 + 40) * 60 - 1, lrz3.restore().timerFrames());
+        assertEquals((3 * 60 + 40) * 60 - 1, lrz3.entryRestore().timerFrames());
         TraceSegmentCarriedState hcz4 = resolve(SONIC_TAILS, "hcz_4");
-        assertEquals("Saved2", hcz4.restore().block(), "special-stage return");
+        assertEquals("Saved2", hcz4.entryRestore().block(), "special-stage return");
         assertEquals(180, hcz4.ringCount());
         TraceSegmentCarriedState mgz = resolve(SONIC_TAILS, "mgz");
-        assertNull(mgz.restore(), "start-table entry restores nothing");
+        assertNull(mgz.entryRestore(), "start-table entry restores nothing");
     }
 }

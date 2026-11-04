@@ -7,7 +7,7 @@ readable and historical versions can be referenced directly.
 
 - S3K bonus-stage entries and returns hold the destination players behind the title loop, as in the ROM.
 
-- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress, shield, checkpoint, camera bounds, water level, timer and lives, and special stages pick their stage and layout set as the ROM does.
+- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress, shield, checkpoint, camera bounds, water level, timer and lives, retain native water movement targets, and special stages pick their stage and layout set as the ROM does.
 
 - MGZ swinging platforms use native fractional chain arithmetic instead of fitted slot/angle carry tables; spring solid reactions precede native animation.
 

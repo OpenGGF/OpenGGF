@@ -95,7 +95,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
         // Child_Draw_Sprite (sonic3k.asm:178137-178142) deletes this child
         // when its parent retires. Its execution slot may already have passed,
         // so detach now: the pending deletion must not capture a retired parent.
-        setDestroyed(true);
+        com.openggf.level.objects.ObjectLifetimeOps.destroyLatched(this);
         onUnload();
     }
 

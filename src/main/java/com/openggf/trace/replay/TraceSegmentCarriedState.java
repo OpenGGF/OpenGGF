@@ -36,7 +36,7 @@ import java.util.List;
  * @param lastStarPostHit      {@code Last_star_post_hit} as recorded at the segment's
  *                             load ({@code metadata.last_star_post_hit}); bit 7 marks
  *                             a special-stage return
- * @param restore              the {@code Load_Starpost_Settings} restore the ROM performs
+ * @param entryRestore         the {@code Load_Starpost_Settings} restore the ROM performs
  *                             at this load, from the recorded {@code level_entry_ram}
  *                             saved blocks; {@code null} for a start-table entry or when
  *                             not recorded
@@ -60,7 +60,7 @@ public record TraceSegmentCarriedState(
         Integer specialStageCursor,
         Boolean superEmeraldStageSet,
         Integer lastStarPostHit,
-        LevelEntryRestore restore,
+        @com.fasterxml.jackson.annotation.JsonProperty("restore") LevelEntryRestore entryRestore,
         Integer lifeCount,
         Integer collectedSpecialRingArray,
         Integer recordedSpecialStageCursor,

@@ -58,10 +58,10 @@ final class RootTitleCardPilot {
             }
             assertTrue(loaded, "destination loaded"); assertTrue(titleSeen[0], "native title was presented"); assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
             assertSame(nativeTitle, loop.getTitleCardProvider());
-            // Current S2 locked physics uses LevelFrameStep (26 RunObjects passes);
-            // the release resets the sprite clock alone. S1 has one uncounted prelude.
-            int titleCounter = game == SonicGame.SONIC_1 ? 0 : 26;
-            assertEquals(titleCounter, level.getFrameCounter(), "existing locked-pass counter ownership");
+            // S2 still advances the LevelManager word during its 26 locked scans;
+            // release clears both mirrors before gameplay. S1 has one uncounted prelude.
+            int titleCounter = 0;
+            assertEquals(titleCounter, level.getFrameCounter(), "release clears the gameplay clock after locked passes");
             assertEquals(0, context.getSpriteManager().getFrameCounter(), "release resets the player clock after locked passes");
             assertEquals(LevelFrameResult.SETUP_ONLY, TitleCardLifecycleTestAccess.result(loop));
             assertFalse(passes.isEmpty(), "native title/prelude executes real object scans");
