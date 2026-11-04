@@ -267,15 +267,15 @@ class TestCommittedHardwareTimingFixtures {
         assertEquals(Set.of(
                         new RunManifestExpectation(
                                 "runs/s3-knux-multibonus-ss/run_manifest.json",
-                                "v637-knuckles-b", "3.0", 8804,
-                                "149c879ccb3e31cbe806b492dbe40cb060c5e4414e7666a0ab5199f0c7228302",
+                                "v637-knuckles-b", "3.0", 9504,
+                                "ff26c28c6a65eee3d096e2b079175ab938c502cabba4dfabe4a3b6123dd0306c",
                                 25, 22),
                         new RunManifestExpectation(
                                 "runs/s3k-knuckles-complete-superemeralds/"
                                         + "run_manifest.json",
                                 "v638-knuckles-superemeralds",
-                                "3.0", 20804,
-                                "b3581067db368a857137b16b41f90cff452782b0cc98188e9982de9c704c3474",
+                                "3.0", 22395,
+                                "bbada99406b511c528629a943b3904e5710f3633e7b131f4769d8bdb31c07693",
                                 67, 48)),
                 new HashSet<>(runManifests));
         for (RunManifestExpectation runManifest : runManifests) {
