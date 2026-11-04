@@ -516,11 +516,17 @@ class TestS3kSlotBonusStageRuntime {
         assertTrue(GameServices.sprites().getSprite("tails") instanceof S3kSlotBonusPlayer);
         assertNotSame(originalPlayer, GameServices.sprites().getSprite("tails"));
         assertSame(GameServices.sprites().getSprite("tails"), GameServices.camera().getFocusedSprite());
+        GameServices.camera().setX((short) 0x04D2);
+        GameServices.camera().setY((short) 0x02C8);
 
         runtime.shutdown();
 
         assertSame(originalPlayer, GameServices.sprites().getSprite("tails"));
         assertSame(originalPlayer, GameServices.camera().getFocusedSprite());
+        // The stage's last tracked camera stays held; refocus must not snap
+        // it to the parked original player.
+        assertEquals(0x04D2, GameServices.camera().getX());
+        assertEquals(0x02C8, GameServices.camera().getY());
         assertNull(runtime.activeSlotCageForTest());
         assertTrue(runtime.activeSlotRingRewardsForTest().isEmpty());
         assertTrue(runtime.activeSlotSpikeRewardsForTest().isEmpty());

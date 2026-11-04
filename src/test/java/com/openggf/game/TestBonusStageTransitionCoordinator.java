@@ -117,6 +117,8 @@ class TestBonusStageTransitionCoordinator {
         coordinator.restoreReturnState(level, camera, water, playable, events,
                 state, 7, 69, ShieldType.LIGHTNING, rewards, lives::incrementAndGet);
 
+        // loc_6034: the saved apparent act (AIZ1 over loaded act 2) is restored.
+        verify(level).setApparentAct(0);
         verify(checkpoint).restoreFromSaved(0x3456, 0x789, 0x111, 0x222, 0);
         verify(checkpoint).restoreStarPostActivationMark(7);
         verify(events).restoreEventRoutineState(8, 12);
