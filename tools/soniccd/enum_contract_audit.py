@@ -40,6 +40,7 @@ LIMITATIONS = [
     'Direct values().length, immediate enhanced-for sources, array indexes, Arrays.asList(values()).subList literals and Arrays.stream(values()) chains are inventoried; aliases, reflection, method references and static values imports are unsupported.',
     'Index expressions are bounded token text, not evaluated ranges or loop contracts; literal subList bounds describe only the immediate half-open subset, not its semantic sufficiency.',
     'Only whole decimal/hex/binary/octal integer arguments in lexical assertEquals calls are compared; symbolic counts and arithmetic are not evaluated.',
+    'When the selected enum count changes, every recognized direct assertEquals total literal unequal to the current count is a review candidate, including intermediate totals; no bare numbers or other enum owners are inferred.',
     'A syntactic limit anywhere in the same direct stream chain marks a bounded slice; its runtime value and semantic sufficiency are not proved.',
     'Selected Java paths and HEAD are read twice, non-atomically. Unselected files/index are not hashed; edits restored between observations can escape detection.',
     'Zero findings proves neither complete consumer coverage nor compilation, tests, ordinal compatibility semantics or runtime behavior.',
@@ -665,7 +666,9 @@ def inspect_consumers(java, path, saved, qualified, local, source, old_count, ne
             continue
         if end + 1 < len(ts) and ts[end].value == '.' and ts[end+1].value == 'length':
             literal, assertion = assertion_count(java, start, end+2, old_count, new_count, limits)
-            stale = assertion == 'old_total' and old_count != new_count
+            # A consumer can have migrated to an intermediate count since --base.
+            # Keep its lexical classification; compare every recognized total to NOW.
+            stale = assertion in ('old_total', 'other_literal') and old_count != new_count
             if assertion == 'unsupported_assertion_expression':
                 unsupported(start, 'unsupported_assertion_expression', qualifier,
                             'Count is not a whole supported assertEquals argument')

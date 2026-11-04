@@ -1377,7 +1377,8 @@ its original drawing priority.
   comparisons, reference-checkout/resource-link custody checks, static native span/address
   recipe checks (including a bounded original-CUE/named-MMD front door without
   extraction), and bounded Java enum/declaration audits have matching reusable
-  agent skills.
+  agent skills. Enum total checks also flag stale intermediate literals when
+  several append-only migrations occurred after the selected baseline.
   These tools report evidence and limits rather than certifying
   native parity or whole-game completion.
 

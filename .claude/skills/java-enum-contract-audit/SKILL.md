@@ -33,11 +33,21 @@ old constant kept its ordinal; it does not prove semantic compatibility.
 
 Resolve each finding against the actual owner and intended consumer contract:
 
-- `stale_total_assertion`: a lexical `assertEquals(oldCount, Type.values().length)`
-  candidate after the total changed, including reversed arguments, whitespace,
-  parentheses and an optional third message argument. Correct new totals and
-  symbolic/arithmetic expected counts are inventoried without evaluation. Only
-  whole integer literals are compared; no JUnit overload resolution is claimed.
+- `stale_total_assertion`: when the selected enum count changes, REVIEW every
+  recognized direct `assertEquals(integer, Type.values().length)` total whose
+  whole integer literal differs from the current count. This includes an
+  intermediate total: base125/current133 with asserted131 is a review candidate,
+  as is asserted125; asserted133 remains inventory. Reversed arguments,
+  whitespace, parentheses and an optional third message argument are supported.
+  The existing JSON `assertion` classification remains `old_total` for a base
+  match, `current_total` for a current match, or `other_literal` for another
+  recognized integer; both `old_total` and `other_literal` can therefore have
+  review severity after a count change. Unchanged enum counts remain inventory.
+  Symbolic/arithmetic expected counts are inventoried without evaluation.
+  Other enum owners, bare numbers, negative-constructor assertions and fixed
+  historical subList bounds are not inferred to be direct total assertions.
+  This is a bounded lexical candidate, not a resolved JUnit overload or proof
+  that the consumer should be rewritten. No Java symbol resolution is claimed.
 - `values_length`: direct total-count inventory, including non-assertion uses.
 - `unbounded_stream_skip`: REVIEW a direct `Arrays.stream(Type.values()).skip(N)`
   chain without an explicit `limit`. A prefix, tail or full manifest may be

@@ -190,6 +190,100 @@ class TemporaryRepo(unittest.TestCase):
         self.assertEqual(report['exit_code'], 0)
         self.assertEqual(report['findings'][0]['assertion'], 'current_total')
 
+    def asset_counts(self, old_count=125, new_count=133):
+        """A fresh committed125 source and current133 source, not mocked report counts."""
+        source = SOURCE.replace('Owner.java', 'CdR11bAssets.java')
+        self.write(source, declaration([f'ASSET_{i}' for i in range(old_count)], 'CdR11bAssets', 'Asset'))
+        self.base = self.commit()
+        self.write(source, declaration([f'ASSET_{i}' for i in range(new_count)], 'CdR11bAssets', 'Asset'))
+        return dict(source=source, enum='Asset', type='p.CdR11bAssets.Asset')
+
+    def test_direct_intermediate_total_after_125_to_133_is_review(self):
+        selected = self.asset_counts()
+        self.consumer('assertEquals(131, CdR11bAssets.Asset.values().length);')
+        report = self.run_audit(**selected)
+        self.assertEqual((report['enum']['old_count'], report['enum']['new_count']), (125, 133))
+        self.assertTrue(report['enum']['append_only_prefix'])
+        self.assertEqual((report['version'], report['status'], report['exit_code']), (1, 'needs_review', 1))
+        stale = self.findings(report, 'stale_total_assertion')
+        self.assertEqual(len(stale), 1, report)
+        self.assertEqual((stale[0]['literal'], stale[0]['assertion'], stale[0]['severity']),
+                         (131, 'other_literal', 'review'))
+        self.assertEqual(report['issues'], [])
+        self.assertTrue(report['coverage']['stable_bounded_read'])
+        self.assertFalse(report['coverage']['complete_consumer_proof'])
+
+    def test_direct_125_to_133_whole_literal_shapes_old_intermediate_and_current(self):
+        selected = self.asset_counts()
+        cases = [
+            ('assertEquals(125, CdR11bAssets.Asset.values().length);', 125, 'old_total', True),
+            ('assertEquals(131, CdR11bAssets.Asset.values().length);', 131, 'other_literal', True),
+            ('assertEquals(133, CdR11bAssets.Asset.values().length);', 133, 'current_total', False),
+            ('assertEquals(CdR11bAssets.Asset.values().length, 131);', 131, 'other_literal', True),
+            ('assertEquals(131, CdR11bAssets.Asset.values().length, "complete manifest");', 131, 'other_literal', True),
+            ('assertEquals(CdR11bAssets.Asset.values().length, 133, () -> "current count");', 133, 'current_total', False),
+            ('assertEquals (\r\n ((CdR11bAssets . Asset . values ( ) . length)),\r\n ((+131)), "message");', 131, 'other_literal', True),
+            ('assertEquals(0x83L, CdR11bAssets.Asset.values().length);', 131, 'other_literal', True),
+            ('assertEquals(CdR11bAssets.Asset.values().length, 0b1000_0011);', 131, 'other_literal', True),
+            ('assertEquals(0203, CdR11bAssets.Asset.values().length);', 131, 'other_literal', True),
+        ]
+        for body, literal, assertion, stale in cases:
+            with self.subTest(body=body):
+                self.consumer(body)
+                report = self.run_audit(**selected)
+                self.assertEqual(report['exit_code'], 1 if stale else 0, report)
+                self.assertEqual(len(report['findings']), 1, report)
+                row = report['findings'][0]
+                self.assertEqual((row['literal'], row['assertion'], row['kind'], row['severity']),
+                                 (literal, assertion, 'stale_total_assertion' if stale else 'values_length',
+                                  'review' if stale else 'inventory'))
+
+    def test_direct_125_to_133_other_enums_negative_constructors_and_fixed_subsets_stay_inventory(self):
+        selected = self.asset_counts()
+        self.consumer('''assertEquals(131, OtherAssets.Asset.values().length);
+            assertEquals(125, OtherAssets.Asset.values().length);
+            assertEquals(131, new Counted(131).count());
+            assertThrows(IllegalArgumentException.class,
+                () -> new Counted(131, CdR11bAssets.Asset.values().length));
+            assertEquals(EXPECTED, CdR11bAssets.Asset.values().length);
+            assertEquals(131 + 0, CdR11bAssets.Asset.values().length);
+            assertEquals(OLD_PREFIX, Arrays.asList(CdR11bAssets.Asset.values()).subList(0, 125));
+            // assertEquals(131, CdR11bAssets.Asset.values().length);
+            String example = "assertEquals(131, CdR11bAssets.Asset.values().length)";''', 'import java.util.Arrays;')
+        report = self.run_audit(**selected)
+        self.assertEqual(report['exit_code'], 0, report)
+        self.assertEqual([f['kind'] for f in report['findings']],
+                         ['values_length', 'values_length', 'values_length', 'bounded_list_sublist'])
+        self.assertEqual([f.get('assertion') for f in report['findings']],
+                         ['none', 'symbolic_or_expression', 'symbolic_or_expression', None])
+        subset = self.findings(report, 'bounded_list_sublist')[0]
+        self.assertEqual((subset['start_inclusive'], subset['end_exclusive']), (0, 125))
+        self.assertEqual(report['issues'], [])
+
+    def test_intermediate_total_in_nonwhole_assertion_remains_incomplete(self):
+        selected = self.asset_counts()
+        self.consumer('assertEquals(131, CdR11bAssets.Asset.values().length + other);')
+        report = self.run_audit(**selected)
+        self.assertEqual((report['status'], report['exit_code']), ('incomplete', 3), report)
+        self.assertEqual([f['kind'] for f in report['findings']], ['unsupported_assertion_expression'])
+        self.assertFalse(self.findings(report, 'stale_total_assertion'))
+
+    def test_noncurrent_direct_literal_without_count_change_stays_inventory(self):
+        selected = self.asset_counts(133, 133)
+        self.consumer('assertEquals(131, CdR11bAssets.Asset.values().length);')
+        report = self.run_audit(**selected)
+        self.assertEqual(report['exit_code'], 0, report)
+        self.assertEqual((report['findings'][0]['kind'], report['findings'][0]['assertion']),
+                         ('values_length', 'other_literal'))
+
+    def test_noncurrent_direct_literal_after_count_shrink_is_also_review(self):
+        selected = self.asset_counts(133, 125)
+        self.consumer('assertEquals(131, CdR11bAssets.Asset.values().length);')
+        report = self.run_audit(**selected)
+        self.assertEqual((report['enum']['old_count'], report['enum']['new_count']), (133, 125))
+        self.assertEqual(report['exit_code'], 1, report)
+        self.assertEqual(len(self.findings(report, 'stale_total_assertion')), 1, report)
+
     def test_stream_slices_bounded_and_unbounded_review(self):
         self.consumer('var a = Arrays.stream(Owner.Table.values()).skip(54).limit(5).toList();\n'
                       'var b = java.util.Arrays.stream(Owner.Table.values()).skip(54)\n'
