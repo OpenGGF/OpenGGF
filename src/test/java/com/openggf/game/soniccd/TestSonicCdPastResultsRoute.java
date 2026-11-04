@@ -95,12 +95,8 @@ class TestSonicCdPastResultsRoute {
         assertArrayEquals(new byte[128],h.module().pastLoadState().displayedPalette().copy());
         var sound=assertInstanceOf(SonicCdGameModule.PastProgrammeSound.class,h.module().pastLoadState().sounds().getLast());
         assertEquals(SonicCdGameModule.ProgramSound.STOP_FM,sound.sound());
-        var beforeNext=captureNative(h);var clock=p.frame().vIntClock();
-        var boundary=assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,()->step(h,input));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.NEXT_ACT_PROGRAMME_ADMISSION,boundary.boundary());
-        assertEquals(0,boundary.getSuppressed().length);assertOldExitOwners(p,owners,SonicCdGameModule.PastLoadPhase.OLD_IPX_RETURNED);
-        assertSame(clock,p.frame().vIntClock());assertNativeCapture(beforeNext,h);
-        System.out.println("Past controller returned10419: Results NextLevel,22 black services,clear-C,FF return and IPX blank;10420 awaits Act2 admission.");
+        assertOldExitOwners(p,owners,SonicCdGameModule.PastLoadPhase.OLD_IPX_RETURNED);
+        System.out.println("Past controller returned10419: Results NextLevel,22 black services,clear-C,FF return and IPX blank; next admission is covered by the Act2 controller case.");
     }
 
     private static void assertOldExitOwners(Prepared p,Owners owners,SonicCdGameModule.PastLoadPhase phase)throws Exception {
@@ -268,7 +264,7 @@ class TestSonicCdPastResultsRoute {
         byte[] result = new byte[buffer.capacity()]; buffer.get(result); return result;
     }
     /** Existing pure selected-display omission algorithm, parameterized by actual physical provenance. */
-    private static RetainedPlaneSceneRenderer.Scene omitWhole(RetainedPlaneSceneRenderer.Scene scene, CdObjectDrawQueue.CpuSat cpu, int whole) {
+    static RetainedPlaneSceneRenderer.Scene omitWhole(RetainedPlaneSceneRenderer.Scene scene, CdObjectDrawQueue.CpuSat cpu, int whole) {
         byte[] raw = cpu.bytes(); var tiles = new ArrayList<SpritePresentation.Tile>(); int at = 0;
         for (int index = cpu.spriteCount() - 1; index >= 0; index--) {
             int size = raw[index * 8 + 2] & 15, count = (((size >>> 2) & 3) + 1) * ((size & 3) + 1);
@@ -298,7 +294,7 @@ class TestSonicCdPastResultsRoute {
             throw new java.io.IOException("PNG writer unavailable");
     }
 
-    private static final class Egl implements AutoCloseable {
+    static final class Egl implements AutoCloseable {
         private final PresentationOffscreenTestContext context; private final GraphicsManager graphics;
         private Egl(PresentationOffscreenTestContext context, GraphicsManager graphics) { this.context = context; this.graphics = graphics; }
         static Egl open() throws Exception {

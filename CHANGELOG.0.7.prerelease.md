@@ -159,7 +159,13 @@ Unreleased. The earlier development themes remain in
   Retained independent water colours and guarded old-programme Frame services now
   carry the controller route through all22 black waits, the final clear, programme
   return and IPX blank. Complete full/course replay reaches10419 on the same retained
-  World; Act2 programme admission remains separate work.
+  World. Actual programme return now admits the retained original-USA Act2 pair
+  through a new same-World FULL load. Native stage/standard art loading, black
+  fade, reserved Title Card and the complete first physical walk return without
+  a synthetic actor or queue seed. The controller reaches Act2 Main10445 and
+  three following returns with complete full/course replay. Real selected Sonic
+  pixels, renderer-only omission, queued reentry rejection and owned upload
+  retirement are checked in EGL; sustained Act2 traversal remains open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
   goal-bound and warp clears. Live Signpost and Results bindings preserve native
@@ -174,8 +180,9 @@ Unreleased. The earlier development themes remain in
   uses the shared queued PLC kernel. Reserved Title Card parent and fresh dynamic
   children retain native routines, allocation, timed slides, locks and deferred
   PLC2 request. Cold start now records the authenticated MAINVARS palette-clear
-  bit writer before PCM rather than inferring a default. These are qualified
-  components; live Act2 World admission remains separate work.
+  bit writer before PCM rather than inferring a default. Native signed-piece Y
+  WORDs remain exact in CPU SAT; normal sprite projection uses their nine-bit
+  position without discarding offscreen Title Card pieces.
   Authenticated Act2 placement and Ring bindings retain the actual carried saved
   bank and layout without changing their algorithms. A typed Act2 HUD facade
   shares the existing digit, time and failure-prefix kernel; selected-range black

@@ -1,5 +1,8 @@
 package com.openggf.game.soniccd;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
+import com.openggf.game.soniccd.resources.CdR12aCameraArtResidency;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdTimeWarpLoadData;
 import com.openggf.game.soniccd.scroll.CdR11bBackgroundScroll;
@@ -640,6 +643,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     void unbind() {
         requirePastRenderIdle();
         try {
+            if (act2RenderBinding != null) {
+                act2RenderBinding.renderer().close(); act2RenderBinding = null;
+            }
             if (pastRenderBinding != null) {
                 // Resource retirement uses only its bound GL/atlas identities, never a healthy
                 // native getter: module teardown has already closed the actual Frame.
@@ -653,7 +659,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 }
             }
         } finally {
-            pastSource = null;
+            pastSource = null; act2Source = null;
             frame = null; actor = null; openingObjects = null; assets = null; scrollState = null; heldPhase = null;
             background = null; backgroundState = null; loadScrollPending = false; checkpointSetupPending = false;
             backgroundPlane = null; planeState = null; drawCopies = null; publishedPlane = null;
@@ -665,6 +671,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     void afterRestore() {
         try {
+            if (module.act2LoadingSelected()) {
+                module.validateAct2LoadingCut();
+                projectAct2Camera(GameServices.camera());
+                GameServices.parallax().update(0, 0, GameServices.camera(), GameServices.level().getFrameCounter());
+                heldPhase = null;
+                return;
+            }
             if (module.pastLoadingSelected()) {
                 module.validatePastLoadingCut();
                 projectPastCamera(GameServices.camera());
@@ -801,6 +814,17 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        if (module.act2LoadingSelected()) {
+            if (input != null && input.debugModeTogglePressed())
+                throw new UnsupportedOperationException("Act2 loading has no debug movement");
+            if (input != null && !input.player2().equals(com.openggf.control.PlayerInputState.neutral()))
+                throw new UnsupportedOperationException("Act2 source services currently require neutral controller2");
+            module.validateAct2LoadingCut();
+            int held = nativeHeldByte(input, SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+            heldPhase = null;
+            module.serviceAct2Loading(held);
+            return GameplayFrameDisposition.HOLD;
+        }
         if (module.pastLoadingSelected()) {
             if (input != null && input.debugModeTogglePressed())
                 throw new UnsupportedOperationException("Past loading has no debug movement");
@@ -885,6 +909,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public PlcLifecyclePhase heldVBlankPhase() { return heldPhase; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
         try {
+            if (module.act2LoadingSelected()) {
+                module.validateAct2LoadingCut();
+                if (advanced || heldPhase != null) throw new IllegalStateException("Act2 load advanced ordinary gameplay");
+                return;
+            }
             if (module.pastLoadingSelected()) {
                 module.validatePastLoadingCut();
                 if (advanced || heldPhase != null) throw new IllegalStateException("Past load advanced ordinary gameplay");
@@ -958,6 +987,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     private void drawCompletedOverlay() {
+        if (module.act2LoadingSelected()) { drawAct2SelectedDisplay(); return; }
         if (module.pastLoadingSelected()) {
             drawPastSelectedDisplay();
             return;
@@ -1060,7 +1090,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     /** Native service/capture/restore may not reenter from an old queued graphics command. */
     void requirePastRenderIdle() {
-        if (drawingPast) throw new IllegalStateException("Past selected draw is active");
+        if (drawingPast || drawingAct2) throw new IllegalStateException("Past selected draw is active");
     }
 
     /** Pure selected-scene projection inside the existing controller draw; no native work occurs here. */
@@ -1238,7 +1268,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         }
         @Override public boolean advanceCameraForFrame(Camera camera, int actId) {
             try {
-                if (pastSource != null) throw new IllegalStateException("Past loading has no ordinary camera tick");
+                if (pastSource != null || act2Source != null) throw new IllegalStateException("CD loading has no ordinary camera tick");
                 requireBound();
                 if (actId != 0) throw new UnsupportedOperationException("Only R11A foreground is admitted");
                 if (openingObjects != null && openingObjects.endCycleAtLevelRestart()) {
@@ -1302,12 +1332,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         @Override public int getMaxScrollOffset() { return projection.getMaxScrollOffset(); }
         @Override public int getBgCameraX() { return (short) requireBackground().cameraBgXWord(); }
         @Override public int getBgPeriodWidth() {
-            if (assets == null && pastSource == null) throw new IllegalStateException("CD background has no bound assets");
+            if (assets == null && pastSource == null && act2Source == null) throw new IllegalStateException("CD background has no bound assets");
             return 512; // Physical64x32 Plane B, Main.asm:227-231; never the source layout extent.
         }
         @Override public Object captureRewindState() {
             requirePastRenderIdle();
             if (scrollState == null) return null;
+            if (act2Source != null) return captureAct2Scroll();
             if (pastSource != null) return capturePastScroll();
             requireBound();
             return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
@@ -1315,6 +1346,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         @Override public void restoreRewindState(Object snapshot) {
             requirePastRenderIdle();
             if (snapshot == null) return;
+            if (act2Source != null) {
+                if (!(snapshot instanceof ScrollCapture value)) throw new IllegalArgumentException("Not an Act2 scroll capture");
+                restoreAct2Scroll(value); return;
+            }
             if (pastSource != null) {
                 if (!(snapshot instanceof ScrollCapture value)) throw new IllegalArgumentException("Not a Past scroll capture");
                 if (module.pastOldProgrammeExitSelected()) restorePastProgrammeScroll(value);
@@ -1431,10 +1466,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
     /** Prepared scalar update of the existing foreground image; no rewind restore or execution authority. */
     static final class GoalPostBoundPublication {
-        private final PastSource source;
+        private final Object source;
         private final ScrollCapture expected;
         private final ScrollCapture result;
-        private GoalPostBoundPublication(PastSource source, ScrollCapture expected, ScrollCapture result) {
+        private GoalPostBoundPublication(Object source, ScrollCapture expected, ScrollCapture result) {
             this.source = source; this.expected = expected; this.result = result;
         }
         ScrollCapture result() { return result; }
@@ -1548,7 +1583,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     /** Bound programme identity remains unchanged when Results writes the next act/period globals. */
     private PastSource requirePastBoundSource() {
         var source = pastSource;
-        if (!module.openingObjectsAdmission() || source == null || assets != null || frame != null
+        if (act2Source != null || !module.openingObjectsAdmission() || source == null || assets != null || frame != null
                 || actor != null || openingObjects != null || background != null || backgroundPlane != null
                 || scrollState == null || backgroundState == null || planeState == null || drawCopies == null
                 || source.frame().closed()) {
@@ -1857,5 +1892,430 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         camera.setShakeOffsets(0, 0);
     }
     // END explicit R11B loading source ports.
+
+    private record Act2Source(CdR12aTerrainAssets assets, CdStagePlayerSource source,
+                              CdPlayerFrameRuntime frame, CdR12aPlayerAssets player, CdR11aBackgroundPlane plane) { }
+    private Act2Source act2Source;
+    // Derived render resources only: existing native snapshots retain the selected immutable data.
+    private record Act2RenderBinding(Act2Source source, com.openggf.game.session.GameplayModeContext mode,
+            com.openggf.game.session.WorldSession world, com.openggf.game.GameDataSource data,
+            LevelManager levels, com.openggf.level.Level level, long generation, Camera camera,
+            com.openggf.graphics.GraphicsManager graphics, PatternAtlas atlas,
+            org.lwjgl.opengl.GLCapabilities capabilities, Thread thread, String backend,
+            com.openggf.graphics.RetainedPlaneSceneRenderer renderer) { }
+    private Act2RenderBinding act2RenderBinding;
+    private boolean drawingAct2;
+
+    /**
+     * Borrows the actual B aggregate and the existing complete mutable images at this source cut.
+     * No clear, saved read, SetupCamera, service, draw or gameplay admission occurs here.
+     * The caller owns retiring the old visit and the actual Module/program order.
+     */
+    void bindAct2Source(CdR12aTerrainAssets sourceAssets, CdR12aPlayerAssets playerAssets, CdPlayerFrameRuntime sourceFrame,
+                        CdR11aForegroundScroll.State foreground,
+                        CdR11aBackgroundScroll.State backgroundImage,
+                        CdR11aBackgroundPlane.State plane, DrawCopies copies) {
+        requirePastRenderIdle();
+        Objects.requireNonNull(sourceAssets, "actual Act2 aggregate");
+        Objects.requireNonNull(sourceFrame, "actual Act2 Frame");
+        Objects.requireNonNull(foreground, "current foreground");
+        Objects.requireNonNull(backgroundImage, "current background");
+        Objects.requireNonNull(plane, "current Plane B");
+        Objects.requireNonNull(copies, "current draw copies");
+        if (pastSource != null || !module.openingObjectsAdmission() || assets != null || frame != null || actor != null
+                || openingObjects != null || background != null || backgroundPlane != null
+                || (act2Source != null && scrollState != null && !act2Source.frame().closed())) {
+            throw new IllegalStateException("Act2 source bind requires the named unbound visit");
+        }
+        if (sourceFrame.closed()) throw new IllegalStateException("Closed Act2 Frame");
+        sourceFrame.captureShared(); // Existing actual open/idle/closed-cut guard; no new capture owner.
+        var source = sourceFrame.stageSource();
+        if (!source.ownsAct2(sourceAssets, playerAssets)) {
+            throw new IllegalArgumentException("Act2 source aggregate and actual Frame differ");
+        }
+        var next = new Act2Source(sourceAssets, source, sourceFrame, playerAssets, CdR11aBackgroundPlane.bindAct2(sourceAssets));
+        var nextOwner = new Object();
+        act2Source = next;
+        scrollState = foreground;
+        backgroundState = backgroundImage;
+        planeState = plane;
+        drawCopies = copies;
+        publishedPlane = plane;
+        loadScrollPending = true;
+        checkpointSetupPending = true;
+        scrollCaptureOwner = nextOwner;
+        preparedScroll = null;
+        publishedScroll = null;
+        heldPhase = null;
+        scroll.resetProjection();
+    }
+
+    /** Bound programme identity remains unchanged when Results writes the next act/period globals. */
+    private Act2Source requireAct2BoundSource() {
+        var source = act2Source;
+        if (pastSource != null || !module.openingObjectsAdmission() || source == null || assets != null || frame != null
+                || actor != null || openingObjects != null || background != null || backgroundPlane != null
+                || scrollState == null || backgroundState == null || planeState == null || drawCopies == null
+                || source.frame().closed()) {
+            throw new IllegalStateException("Act2 loading source is absent, retired or mixed with Present");
+        }
+        if (source.frame().stageSource() != source.source() || !source.source().ownsAct2(source.assets(), source.player())) {
+            throw new IllegalArgumentException("Act2 Frame and aggregate relation changed");
+        }
+        return source;
+    }
+
+    /** Ordinary source admission is stricter than observing the old programme's retained images. */
+    private Act2Source requireAct2Source() {
+        var source = requireAct2BoundSource();
+        var gates = source.frame().environment().movement().gates();
+        int period = gates.timeZone();
+        if (gates.zoneAct() != 1 || period != 1) {
+            throw new IllegalArgumentException("Act2 loading source family differs");
+        }
+        return source;
+    }
+
+    private Act2Source requireAct2ClosedSource() {
+        var source = requireAct2Source();
+        source.frame().captureShared();
+        return source;
+    }
+
+    /** Retained rendering/restoration only; ordinary mutation continues to requireAct2Source. */
+    /** LoadTimeWarpData:19-27 addressed destination observations; no saved bytes are sampled. */
+
+    /**
+     * One complete WORD value-CAS. Public scalar equality is not phase, invocation or exact-once
+     * authority. The real Module's LoadTimeWarpData port owns those obligations and saved42.
+     */
+
+    /**
+     * Act2 Scroll:63-177 then Main:245-247, after every actual reached saved store.
+     * This is SetupCamera plus one period-aware FG/Act2 BG pass, never an entry/default reset.
+     * Restored flags, velocities, GV, links, fractions and raw marked period remain actual values.
+     * SpecChunks/RAM/layout/palette installation and initial plane draw remain separate owners/cuts.
+     */
+    void completeAct2LoadScroll(CdPlayerFrameRuntime sourceFrame, int sourceHudTime) {
+        var source = requireAct2ClosedSource();
+        if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Act2 setup Frame");
+        if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
+        if (!loadScrollPending || !checkpointSetupPending) {
+            throw new IllegalStateException("Act2 load scroll requires its pre-SetupCamera data cut");
+        }
+        var m = sourceFrame.state().motion();
+        var setup = CdR11aForegroundScroll.checkpointSetupCamera(scrollState, m.centreX16_16() >>> 16,
+                m.centreY16_16() >>> 16, sourceFrame.environment().movement().bounds());
+        var initialized = CdR11aBackgroundScroll.initAct2Present(backgroundState,
+                new CdR11aBackgroundScroll.InitRegisters(setup.cameraYWord(), setup.cameraX(), m.centreX16_16() >>> 16));
+        var next = CdR11aForegroundScroll.stepForPeriodBackground(setup,
+                act2ForegroundInput(sourceFrame, sourceHudTime),
+                sourceFrame.environment().movement().gates().timeZone(), CdR11aForegroundScroll.EventRoutine.PPZ2);
+        var f = next.state();
+        var nextBackground = CdR11aBackgroundScroll.stepAct2Present(initialized,
+                backgroundInput(f, sourceFrame.state().motion()), (short) f.scrollYDiff()).state();
+        var nextForeground = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(),
+                f.horizontalCrossed(), f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags() | 0x0400,
+                f.destBottomBound(), f.destLeftBound(), f.bottomBoundShift(), f.scrollLock());
+        // All pure values are ready before the existing full Frame feedback validation/adoption.
+        sourceFrame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
+        scrollState = nextForeground;
+        backgroundState = nextBackground;
+        checkpointSetupPending = false;
+    }
+
+    private CdR11aForegroundScroll.Input act2ForegroundInput(CdPlayerFrameRuntime sourceFrame, int sourceHudTime) {
+        var m = sourceFrame.state().motion(); var shared = sourceFrame.environment().movement();
+        return new CdR11aForegroundScroll.Input(new CdR11aForegroundScroll.Actor(m.centreX16_16() >>> 16,
+                m.centreY16_16() >>> 16, m.flags(), m.groundVelocity(), m.animation(), m.playerControl()),
+                shared.bounds(), act2Source.assets().loadPlan().bounds().top(),
+                sourceFrame.environment().globals().cameraXCentre(), shared.globals().cameraYCentre(),
+                act2Source.source().variant(), sourceHudTime, 320, 224);
+    }
+
+    /** Main:249's B plane result only; actual preceding RAM/layout and FG draw remain Root-owned. */
+    void initializeAct2PlaneAtLoad() {
+        var source = requireAct2ClosedSource();
+        if (!loadScrollPending || checkpointSetupPending) {
+            throw new IllegalStateException("Initial Act2 Plane B follows completed setup/load scroll");
+        }
+        var initialized = source.plane().initialize(planeState, liveCameras(backgroundState), liveFlags(backgroundState));
+        planeState = initialized.state();
+        publishedPlane = initialized.state();
+        loadScrollPending = false;
+    }
+
+    /** Prospective actual closed-cut check; carries no deferred service, token or invocation authority. */
+    void validateAct2LevelLoadPlane() { requireAct2ClosedSource(); }
+
+    /**
+     * Main:860-876 selectorC copy/draw cut, called synchronously inside the actual Frame service.
+     * captureShared is deliberately unavailable inside that service. The real Module preflights
+     * the closed cut and authenticates phase/exact-once/reentry; this method verifies source data.
+     * No BG step, FG arithmetic, Body, DPLC, PLC, input or counter service is performed here.
+     */
+    CdR11aBackgroundPlane.Result serviceAct2PlaneAtLevelLoad() {
+        return serviceAct2PlaneAtLevelLoad(requireAct2Source());
+    }
+    /** Both private admissions borrow this one actual copy/DrawLevel algorithm. */
+    private CdR11aBackgroundPlane.Result serviceAct2PlaneAtLevelLoad(Act2Source source) {
+        var live = liveCameras(backgroundState);
+        var copied = new DrawCopies(scrollState.cameraX() << 16, scrollState.cameraY16_16(),
+                new CdR11aBackgroundPlane.CopiedCameras(live.bg1(), live.bg2(), live.bg3()),
+                scrollState.scrollFlags(), liveFlags(backgroundState));
+        var drawn = source.plane().incremental(planeState, live, copied.bg(), copied.bgFlags());
+        var consumed = new DrawCopies(copied.fgX16_16(), copied.fgY16_16(),
+                copied.bg(), copied.fgFlags(), drawn.flags());
+        planeState = drawn.state();
+        publishedPlane = drawn.state();
+        drawCopies = consumed;
+        return drawn;
+    }
+
+    CdR11aForegroundScroll.State act2ForegroundImage() { requireAct2BoundSource(); return scrollState; }
+    CdR11aBackgroundScroll.State act2BackgroundImage() { requireAct2BoundSource(); return backgroundState; }
+    DrawCopies act2DrawCopies() { requireAct2BoundSource(); return drawCopies; }
+    CdR11aBackgroundPlane.State act2PlaneImage() { requireAct2BoundSource(); return planeState; }
+
+    void consumeAct2ForegroundFlags(int flagsWord) {
+        requireAct2Source(); consumeAct2ForegroundFlagValue(flagsWord);
+    }
+    private void consumeAct2ForegroundFlagValue(int flagsWord) {
+        drawCopies = new DrawCopies(drawCopies.fgX16_16(), drawCopies.fgY16_16(),
+                drawCopies.bg(), flagsWord, drawCopies.bgFlags());
+    }
+
+    ScrollCapture captureAct2Scroll() {
+        requirePastRenderIdle();
+        requireAct2BoundSource().frame().captureShared();
+        return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
+    }
+    void validateAct2Scroll(ScrollCapture value) {
+        requireAct2ClosedSource(); validateAct2ScrollOwner(value);
+    }
+    private void validateAct2ScrollOwner(ScrollCapture value) {
+        Objects.requireNonNull(value);
+        if (value.owner() != scrollCaptureOwner) throw new IllegalArgumentException("Retired Act2 scroll capture");
+    }
+    boolean sameAct2Scroll(ScrollCapture value) {
+        // Observation only: restore/prepared adoption still use strict validateAct2Scroll/source admission.
+        requireAct2BoundSource().frame().captureShared(); Objects.requireNonNull(value);
+        if (value.owner() != scrollCaptureOwner) throw new IllegalArgumentException("Retired Act2 scroll capture");
+        // Immutable exact references: these checks authenticate the actual preimage,
+        // never allow public values to mint a loading callback.
+        return value.state() == scrollState && value.background() == backgroundState
+                && value.plane() == planeState && value.copies() == drawCopies;
+    }
+    void restoreAct2Scroll(ScrollCapture value) {
+        requirePastRenderIdle();
+        validateAct2Scroll(value); adoptAct2Scroll(value);
+    }
+    private void adoptAct2Scroll(ScrollCapture value) {
+        scrollState = value.state(); backgroundState = value.background();
+        planeState = value.plane(); publishedPlane = value.plane(); drawCopies = value.copies();
+        // The module's typed B payload restores the exact setup flags separately;
+        // neither partition reconstructs them by replaying SetupCamera.
+    }
+    record Act2LoadFlags(boolean load, boolean setup) { }
+    Act2LoadFlags captureAct2LoadFlags() {
+        requireAct2ClosedSource(); return new Act2LoadFlags(loadScrollPending, checkpointSetupPending);
+    }
+    void restoreAct2LoadFlags(Act2LoadFlags flags) {
+        requireAct2ClosedSource(); Objects.requireNonNull(flags);
+        loadScrollPending = flags.load(); checkpointSetupPending = flags.setup();
+    }
+
+    /** Main178 clears cloud/camera-copy storage; RunMMD already cleared A800/CC00. */
+    void clearAct2FlowersImages() {
+        requireAct2ClosedSource();
+        var b = backgroundState;
+        backgroundState = new CdR11aBackgroundScroll.State(b.cameraBgX(), b.cameraBgY(), b.cameraBg2X(),
+                b.cameraBg2Y(), b.cameraBg3X(), b.cameraBg3Y(), b.crossingRam(), b.scrollFlagsBg(),
+                b.scrollFlagsBg2(), b.scrollFlagsBg3(), CdAssetBytes.copyOf(new byte[512]),
+                b.deformationRam(), b.hscrollRam(), b.vscroll());
+        var camera = new CdR11aBackgroundPlane.Camera(0, 0);
+        drawCopies = new DrawCopies(0, 0, new CdR11aBackgroundPlane.CopiedCameras(camera, camera, camera),
+                0, new CdR11aBackgroundPlane.FlagWords(0, 0, 0));
+    }
+    /** Main210's exact camera/crossing/flag image, before bounds and saved stores. */
+    void clearAct2CameraImages() {
+        requireAct2ClosedSource();
+        scrollState = new CdR11aForegroundScroll.State(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        var b = backgroundState;
+        backgroundState = new CdR11aBackgroundScroll.State(0, 0, 0, 0, 0, 0,
+                CdAssetBytes.copyOf(new byte[8]), 0, 0, 0, b.cloudRam(), b.deformationRam(), b.hscrollRam(), b.vscroll());
+    }
+    /** Main225 clears selected plane and HScroll CPU image through their existing owners. */
+    void clearAct2ScreenImages() {
+        requireAct2ClosedSource();
+        planeState = new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[4096])); publishedPlane = planeState;
+        var b = backgroundState;
+        backgroundState = new CdR11aBackgroundScroll.State(b.cameraBgX(), b.cameraBgY(), b.cameraBg2X(),
+                b.cameraBg2Y(), b.cameraBg3X(), b.cameraBg3Y(), b.crossingRam(), b.scrollFlagsBg(),
+                b.scrollFlagsBg2(), b.scrollFlagsBg3(), b.cloudRam(), b.deformationRam(),
+                CdAssetBytes.copyOf(new byte[1024]), 0);
+    }
+    void initializeAct2LevelSizeImages() {
+        var source = requireAct2ClosedSource(); var bounds = source.assets().loadPlan().bounds(); var f = scrollState;
+        scrollState = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), 16, 16,
+                f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), bounds.bottom(), bounds.left(),
+                f.bottomBoundShift(), f.scrollLock());
+    }
+    void projectAct2Loading() {
+        module.validateAct2LoadingCut();
+        projectAct2Camera(GameServices.camera());
+        GameServices.parallax().update(0, 0, GameServices.camera(), GameServices.level().getFrameCounter());
+    }
+    private void projectAct2Camera(Camera camera) {
+        var source = requireAct2ClosedSource(); var bounds = source.frame().environment().movement().bounds();
+        camera.setMinX((short) bounds.left()); camera.setMaxX((short) bounds.right());
+        camera.setMinY((short) source.assets().loadPlan().bounds().top()); camera.setMaxY((short) bounds.bottom());
+        camera.setVerticalWrapEnabled(false);
+        camera.setX((short) scrollState.cameraX()); camera.setY((short) scrollState.cameraYWord());
+        camera.setShakeOffsets(0, 0);
+    }
+    // END explicit R11B loading source ports.
+
+    CdObjectDrawQueue.DrawCameras continueAct2CameraAfterObjects(CdPlayerFrameRuntime sourceFrame,
+                                                                int sourceHudTime) {
+        var source = requireAct2ClosedSource();
+        if (sourceFrame != source.frame()) throw new IllegalArgumentException("Foreign Act2 ordinary camera Frame");
+        if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
+        if (loadScrollPending || checkpointSetupPending) {
+            throw new IllegalStateException("Act2 ordinary camera follows completed load scroll and initial plane");
+        }
+        var actorBefore = sourceFrame.captureActor();
+        var sharedBefore = sourceFrame.captureShared();
+        var before = captureAct2Scroll();
+        var environment = sharedBefore.environment();
+        if (environment.globals().debugMode() == 0 && actorBefore.state().motion().routine() >= 6) {
+            throw new IllegalStateException("Actual dead Act2 primary takes the separate camera freeze cut");
+        }
+        var next = CdR11aForegroundScroll.stepForPeriodBackground(before.state(),
+                act2ForegroundInput(sourceFrame, sourceHudTime), environment.movement().gates().timeZone(), CdR11aForegroundScroll.EventRoutine.PPZ2);
+        var foreground = next.state();
+        var nextBackground = CdR11aBackgroundScroll.stepAct2Present(before.background(),
+                backgroundInput(foreground, sourceFrame.state().motion()), (short) foreground.scrollYDiff()).state();
+        var cameras = new CdObjectDrawQueue.DrawCameras(
+                new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord()),
+                new CdObjectDrawQueue.CameraWords(nextBackground.cameraBgXWord(), nextBackground.cameraBgYWord()),
+                new CdObjectDrawQueue.CameraWords(nextBackground.cameraBg3XWord(), nextBackground.cameraBg3YWord()));
+        // Every pure value/allocation is ready. Authenticate the existing source/capture and complete
+        // actual Frame preimage before its typed feedback port can publish any shared value.
+        if (!sameAct2Scroll(before) || !actorBefore.equals(sourceFrame.captureActor())
+                || !sharedBefore.equals(sourceFrame.captureShared())) {
+            throw new IllegalStateException("Act2 camera preimage changed before feedback");
+        }
+        if (next.boundary() == CdR11aForegroundScroll.Boundary.SCROLL_LOCKED) return cameras;
+        sourceFrame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
+        // The existing Frame port allocates its complete Environment before its sole assignment.
+        // Nothing after that publication allocates, calls another owner or can partially fail.
+        scrollState = foreground;
+        backgroundState = nextBackground;
+        return cameras;
+    }
+
+    GoalPostBoundPublication prepareAct2TitleScrollLock(CdPlayerFrameRuntime sourceFrame, ScrollCapture expected, int value) {
+        var source = requireAct2ClosedSource();
+        if (sourceFrame != source.frame() || !sameAct2Scroll(Objects.requireNonNull(expected)))
+            throw new IllegalArgumentException("Stale actual Title scroll source/full preimage");
+        if (value != 0 && value != 1) throw new IllegalArgumentException("Native Title scrollLock BYTE0/1");
+        var f = expected.state();
+        var next = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), f.horizontalCrossed(),
+                f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), f.destBottomBound(),
+                f.destLeftBound(), f.bottomBoundShift(), (value << 8) | (f.scrollLock() & 0xFF));
+        return new GoalPostBoundPublication(source, expected, new ScrollCapture(expected.owner(), next,
+                expected.background(), expected.plane(), expected.copies()));
+    }
+    void validatePreparedAct2TitleScrollLock(GoalPostBoundPublication ready) {
+        if (Objects.requireNonNull(ready).source != requireAct2ClosedSource() || !sameAct2Scroll(ready.expected))
+            throw new IllegalArgumentException("Stale prepared Title scroll preimage");
+    }
+    void applyPreparedAct2TitleScrollLock(GoalPostBoundPublication ready) {
+        requirePastRenderIdle();
+        if (Objects.requireNonNull(ready).source != requireAct2Source() || ready.expected.owner() != scrollCaptureOwner
+                || ready.expected.state() != scrollState || ready.expected.background() != backgroundState
+                || ready.expected.plane() != planeState || ready.expected.copies() != drawCopies)
+            throw new IllegalArgumentException("Stale prepared Title scroll adoption");
+        scrollState = ready.result.state();
+    }
+
+    record Act2VideoInit(CdR12aCameraArtResidency.State currentPatterns, CdPlayerArtRuntime.State playerArt,
+                            ProgramVideoSelection selection) {
+        Act2VideoInit {
+            Objects.requireNonNull(currentPatterns, "Present current patterns");
+            Objects.requireNonNull(playerArt, "Present player art");
+            Objects.requireNonNull(selection, "selected native video");
+        }
+        @Override public boolean equals(Object other) {
+            return this == other || other instanceof Act2VideoInit value
+                    && currentPatterns.equals(value.currentPatterns)
+                    && sameProgramPlayerArt(playerArt, value.playerArt) && selection.equals(value.selection);
+        }
+        @Override public int hashCode() {
+            return Objects.hash(currentPatterns, programPlayerArtHash(playerArt), selection);
+        }
+    }
+
+    Act2VideoInit initializeProgramVideo(CdR12aCameraArtResidency.State currentPatterns,
+                                            CdPlayerArtRuntime.State playerArt) {
+        requireProgramVideoInitializationCut();
+        Objects.requireNonNull(currentPatterns, "Present current patterns");
+        Objects.requireNonNull(playerArt, "player art at actual program initialization");
+        var result = new Act2VideoInit(CdR12aCameraArtResidency.clear(currentPatterns),
+                clearProgramPlayerResident(playerArt), programVideoSelection());
+        // The existing Background owner alone adopts its ready selected image here.
+        // CPU camera copies, live arithmetic and all shared capture ownership survive.
+        planeState = result.selection().backgroundPlane();
+        publishedPlane = result.selection().backgroundPlane();
+        return result;
+    }
+
+    private void drawAct2SelectedDisplay() {
+        requirePastRenderIdle();
+        var selected = module.act2SelectedDisplay();
+        if (selected.projection() instanceof SonicCdPastDisplay.Blocked blocked)
+            throw new UnsupportedOperationException("Actual Act2 selected display is blocked: " + blocked.failure());
+        var scene = selected.projection() instanceof SonicCdPastDisplay.Ready ready ? ready.scene()
+                : ((SonicCdPastDisplay.Disabled) selected.projection()).scene();
+        drawingAct2 = true;
+        try {
+            if (act2RenderBinding == null) {
+                var actualSource = requireAct2ClosedSource();
+                var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+                var world = mode.getWorldSession(); var levels = mode.getLevelManager();
+                var graphics = GameServices.graphics(); var camera = mode.getCamera();
+                var renderer = new com.openggf.graphics.RetainedPlaneSceneRenderer(graphics, PatternAtlasRange.OBJECTS);
+                act2RenderBinding = new Act2RenderBinding(actualSource, mode, world, world.getDataSource(), levels,
+                        levels.getCurrentLevel(), levels.getCompletedProductionLoadGeneration(), camera, graphics,
+                        graphics.getPatternAtlas(), org.lwjgl.opengl.GL.getCapabilities(), Thread.currentThread(),
+                        System.getProperty("openggf.headless.gl"), renderer);
+            }
+            requireAct2RenderBinding(selected);
+            var binding = act2RenderBinding;
+            binding.renderer().draw(scene, binding.camera().getX(), binding.camera().getY(),
+                    () -> requireAct2RenderBinding(selected));
+        } finally { drawingAct2 = false; }
+    }
+
+    private void requireAct2RenderBinding(SonicCdAct2Display.Selection selected) {
+        var binding = act2RenderBinding;
+        var actualSource = requireAct2ClosedSource();
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (binding == null || module.act2SelectedDisplay() != selected || actualSource != binding.source()
+                || mode != binding.mode() || mode.getWorldSession() != binding.world()
+                || binding.world().getDataSource() != binding.data()
+                || mode.getLevelManager() != binding.levels() || GameServices.level() != binding.levels()
+                || binding.levels().getCurrentLevel() != binding.level()
+                || binding.levels().getCompletedProductionLoadGeneration() != binding.generation()
+                || mode.getCamera() != binding.camera() || GameServices.camera() != binding.camera()
+                || binding.camera().getWidth() != 320 || binding.camera().getHeight() != 224
+                || GameServices.graphics() != binding.graphics() || !binding.graphics().isGlInitialized()
+                || binding.graphics().isHeadlessMode() || binding.graphics().getPatternAtlas() != binding.atlas()
+                || Thread.currentThread() != binding.thread()
+                || !Objects.equals(System.getProperty("openggf.headless.gl"), binding.backend())
+                || org.lwjgl.opengl.GL.getCapabilities() != binding.capabilities())
+            throw new IllegalStateException("Act2 retained draw source/World/load/Frame/graphics lifetime changed");
+    }
 
 }

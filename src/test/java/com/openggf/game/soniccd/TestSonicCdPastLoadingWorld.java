@@ -271,6 +271,7 @@ class TestSonicCdPastLoadingWorld {
                 assertNativeValue(accessor.invoke(expected), accessor.invoke(actual), field + "." + component.getName());
             }
         } else if (Set.of("com.openggf.game.soniccd.SonicCdPastLoadingVisit$Snapshot",
+                "com.openggf.game.soniccd.SonicCdAct2LoadingVisit$Snapshot",
                 "com.openggf.game.soniccd.objects.CdObjectPlacementRuntime$Snapshot",
                 "com.openggf.game.soniccd.objects.CdObjectPool$Snapshot").contains(expected.getClass().getName())) {
             assertEquals(expected.getClass(), actual.getClass(), field);
@@ -310,10 +311,11 @@ class TestSonicCdPastLoadingWorld {
     }
 
     record Harness(SonicCdGameModule module, GameplayModeContext mode, GameLoop loop) { }
-    static Harness opening() throws Exception {
+    static Harness opening() throws Exception { return opening(source()); }
+    static Harness opening(CdGameDataSource selectedSource) throws Exception {
         var m = SonicCdGameModule.openingObjectsDevelopmentPlayerFromColdProgramStart(new CdProgramInitialization.ExecutionEnvironment(
                 Optional.of(new CdProgramInitialization.ExecutionRegion(0x80))));
-        var mode = SessionManager.openGameplaySession(m, m, source(), null); GameplaySessionFactory.attachManagers(mode, EngineServices.current());
+        var mode = SessionManager.openGameplaySession(m, m, selectedSource, null); GameplaySessionFactory.attachManagers(mode, EngineServices.current());
         GameModuleRegistry.setCurrent(m); var loop = new GameLoop(EngineServices.current()); loop.setGameplayMode(mode); loop.setInputHandler(new InputHandler()); loop.setGameMode(GameMode.LEVEL);
         mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext()); return new Harness(m,mode,loop);
     }
@@ -323,7 +325,7 @@ class TestSonicCdPastLoadingWorld {
         return LogicalInputSnapshot.ofPlayers(PlayerInputState.of(8,0,actions,0,false,false),PlayerInputState.neutral());
     }
     static void step(Harness h, LogicalInputSnapshot input) { h.loop().getInputHandler().setLogicalOverride(input); h.loop().step(); }
-    private static CdGameDataSource source() throws Exception {
+    static CdGameDataSource source() throws Exception {
         if(source!=null)return source; var root=System.getProperty("soniccd.media.root");assertNotNull(root);
         try(var paths=Files.list(Path.of(root).resolve("USA"))) {var cues=paths.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList(); assertEquals(1,cues.size());
             source=CdStockLaunch.prepare(cues.getFirst(),CdStockLaunch.Request.r11a());return source;}

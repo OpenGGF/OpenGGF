@@ -1,5 +1,53 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — actual Act2 programme entry and selected Sonic pixels
+
+The original controller recipe now reaches real Act2 Main10445 and three further
+ordinary returns through10448. Old Results/black fade/FF/IPX return supplies the
+only next-programme authority. FULL1 retains the World/data source, creates a new
+load generation and retires the old Frame only at actual profile admission.
+Missing optional next data keeps the returned old source healthy and capturable.
+The native normal loader executes stage3→std1 immediate art, two genuine selectorC
+waits, source clock/scalar clears,22 selected-range FromBlack services and the
+complete first128-object walk. Title parent4 allocates eight fresh dynamic
+children before the six placed bodies; later physical children execute that pass.
+Title's later PLC2/unlock binding exists but has not yet been reached by this route.
+
+One shared selected-SAT/plane/current projection serves typed Past and Act2
+facades. Native DrawSprite stores signed-piece Y ADD.W results unmasked; Title's
+offscreen pieces exposed the old projector's artificial Y<=511 restriction.
+Normal non-interlaced sprite geometry now uses the low nine Y bits, preserving
+every stored CPU byte, X mask/size checks and selected-image authority. It adds
+no bus/register, scanline, interlace or sprite-mask emulation.
+
+Fresh15/3classes pass0failures/errors/skips at source
+`3146efdd77fd3188006ede291266c1116ef0c88d065794209ad009900e806250`,
+22:04:49.004878–22:06:52.298158Z,0s queue. Natural controller/full-course checks
+draw actual selected Sonic, prove its pixel contribution by omission, reject
+queued capture/restore/service/recursive-overlay entry without closing the healthy
+Frame, retain the renderer ledger after an active-atlas rejected close, then
+retire all488 actually selected uploads while preserving another producer.
+The320×224 engine PNG is retained externally after all cleanup; this is OpenGGF
+output, not a native comparison or regional parity claim.
+
+Keep prior outcomes separate: initial882 selection stopped at production compile;
+after the exact draw-cut correction,883 ran882pass/one selected-picture failure.
+A diagnostic case identified raw SAT Y at byte504. The following82 ran81pass/
+one internal draw-admission error; all40 object-presentation and25 Past-display
+component cases passed, including raw-Y preservation. Root split private
+read-only selected-image revalidation from guarded capture/service entry, retaining
+the latter render-idle gates. The final15 covers that correction and old selected
+World regressions. No single green883/82 or full-suite claim follows. Independent
+lifecycle/display reviews identified two P2s, narrowly corrected and source-read;
+no additional actionable findings remained within their bounded scope.
+
+The new [Act2 partial matrix](../validation/levels/scd-palmtree-panic-act2-present.md)
+records breadth and remaining work: actual Title/PLC completion, restored player
+control, sustained traversal and newly reached object families, death/checkpoint,
+act completion and later programmes. Full-USA and subsequent JP/EU certification,
+matched native imagery and audible synthesis remain open. Main is unchanged;
+all implementation stays on the private local branch.
+
 ## 4 November 2026 — exact JUnit evidence export
 
 The existing integration helper now offers `junit --evidence` for an explicit

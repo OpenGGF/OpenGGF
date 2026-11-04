@@ -217,7 +217,19 @@ the local graph, identities, timers and collision width. Player riding/contact,
 native rendered output, the full SBZ2 route and viewport/donor/team breadth
 remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
-## Sonic CD development — paused after Sonic Hole
+## Sonic CD development — original-USA Act2 entry
+
+The resumed private controller route now completes Act1's Past Results and old
+programme exit, then admits actual Act2 Main10445 and three following returns.
+The [Act2 partial matrix](../architecture/validation/levels/scd-palmtree-panic-act2-present.md)
+records same-World FULL loading, native normal-load/fade/first-walk ownership,
+full/course replay, actual selected Sonic pixels and488-selected-upload retirement.
+The final15-case World/render selection passes without skips; earlier component,
+Frame and integration scopes remain separately attributed. Actual Title/PLC2
+completion, player-control release, sustained Act2 traversal, later acts and
+JP/EU parity are unfinished. The first-act matrix remains partial as well.
+
+### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)
 records the next-based delivery, exact tested sources and remaining work.

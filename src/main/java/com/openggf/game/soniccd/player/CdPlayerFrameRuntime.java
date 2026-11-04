@@ -879,6 +879,30 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 before.rotationDistance(), before.objectLinks(), before.rotationAngle());
     }
 
+    /** Native LoadPlayer/Main:438-447 spawn0 branch: ID1 only; hurt timer is a nonwrite. */
+    public void applyLevelStartNormalPlayer() {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        var before = state; var h = before.header();
+        var next = new CdPlayerBody.Header(1, h.mappingAddress(), h.tile(), h.priority(), h.width());
+        state = new CdPlayerBody.State(before.motion(), before.animation(), next, before.timers(), before.history(),
+                before.rotationDistance(), before.objectLinks(), before.rotationAngle());
+    }
+
+    /** PPZ2 LevelSizeLoad_DefaultStart: actual source WORD centres, retaining both fractions. */
+    public void initializeLevelSizeCentrePlayerValues(int centreXWord, int centreYWord) {
+        requireOpenIdle(); requireClosedFrame(); requireSourceFamily();
+        if ((centreXWord & ~0xFFFF) != 0 || (centreYWord & ~0xFFFF) != 0)
+            throw new IllegalArgumentException("LevelSize centres require unsigned native WORDs");
+        var before = state; var m = before.motion();
+        var next = new CdPlayerMotionState((centreXWord << 16) | (m.centreX16_16() & 0xFFFF),
+                (centreYWord << 16) | (m.centreY16_16() & 0xFFFF), m.xVelocity(), m.yVelocity(), m.groundVelocity(),
+                m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(),
+                m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        state = new CdPlayerBody.State(next, before.animation(), before.header(), before.timers(), before.history(),
+                before.rotationDistance(), before.objectLinks(), before.rotationAngle());
+    }
+
     /**
      * Main.SkipTitleCard (Level/Main.asm:278-283 at the same native pin): represented
      * playerCtrl/p1CtrlData WORDs and primary boredTimer WORD only. P2 and unkLevelFlag
@@ -2012,6 +2036,33 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var nextEnvironment = new CdPlayerBody.Environment(nextMovement, actualEnvironment.controls(),
                 new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
                         body.debugCheat(), 0, body.invincible(), body.bossMusic()), actualEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
+    }
+
+    /**
+     * Pure TitleCard/Main.asm:184 literal ctrlLocked BYTE clear, and Main:274's
+     * literal BYTE1 setup. The actual programme/walk producer admits native order.
+     * ScrollLock belongs to the scroll owner and is deliberately rejected here.
+     * This full-pair CAS prepares values only; it executes no service or callback.
+     */
+    public ObjectSolidPublication prepareObjectTitleCardGlobal(CdPlayerBody.State expectedState,
+                                                                CdPlayerBody.Environment expectedEnvironment,
+                                                                com.openggf.game.soniccd.objects.CdTitleCard.StoreField field,
+                                                                int value) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Title player State");
+        Objects.requireNonNull(expectedEnvironment, "Title player Environment");
+        Objects.requireNonNull(field, "Title store field");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment))
+            throw new IllegalArgumentException("Stale Title player State/Environment cut");
+        if (field != com.openggf.game.soniccd.objects.CdTitleCard.StoreField.CONTROL_LOCK_BYTE
+                || (value != 0 && value != 1))
+            throw new IllegalArgumentException("Frame owns only the Title control-lock BYTE0/1");
+        var actualState = state; var actualEnvironment = environment;
+        var controls = actualEnvironment.controls();
+        var nextEnvironment = controls.controlLocked() == value ? actualEnvironment
+                : withControls(actualEnvironment, new CdPlayerBody.Controls(controls.rawHeld(), controls.rawTap(),
+                        controls.logicalHeld(), controls.logicalTap(), value));
         return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
     }
 

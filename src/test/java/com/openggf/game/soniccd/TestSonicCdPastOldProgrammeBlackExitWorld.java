@@ -109,16 +109,18 @@ class TestSonicCdPastOldProgrammeBlackExitWorld {
         assertFalse((boolean) actualField(actualField(values(p), "fadeProgress"), "displayEnabled"));
     }
 
-    @Test void nextProgrammeAdmissionBoundaryHasNoReplayEffectsAndDoesNotRetireTheReturnedFrameOrCaptures() throws Exception {
+    @Test void returnedProgrammeCapturesStayHealthyUntilActualAct2HandoffRetiresTheirOwner() throws Exception {
         var p = entered(); blackWaits(p); step(p.harness(), neutral()); step(p.harness(), neutral());
         healthyExit(p, SonicCdGameModule.PastLoadPhase.OLD_IPX_RETURNED); var before = captureNative(p.harness());
-        for (int attempt = 0; attempt < 2; attempt++) {
-            var failure = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(p.harness(), neutral()));
-            assertEquals(SonicCdGameModule.PastLoadBoundary.NEXT_ACT_PROGRAMME_ADMISSION, failure.boundary());
-            assertEquals(0, failure.getSuppressed().length); assertFalse(p.frame().closed()); assertNativeCapture(before, p.harness());
-        }
         var registry = p.harness().mode().getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, p.harness()); registry.restoreCourse(course); assertNativeCapture(before, p.harness());
+        assertFalse(p.frame().closed()); var world = p.harness().mode().getWorldSession();
+        long generation = p.harness().mode().getLevelManager().getCompletedProductionLoadGeneration();
+        step(p.harness(), neutral());
+        assertTrue(p.harness().module().act2LoadingSelected()); assertTrue(p.frame().closed());
+        assertNotSame(p.frame(), p.harness().module().requirePlayerFrame()); assertFalse(p.harness().module().requirePlayerFrame().closed());
+        assertSame(world, p.harness().mode().getWorldSession());
+        assertEquals(generation + 1, p.harness().mode().getLevelManager().getCompletedProductionLoadGeneration());
     }
 
     @Test void equalPhaseValuesCannotMintPreludeOrScalarCallbacksAndOrdinaryPresentationMutationRemainsStrict() throws Exception {

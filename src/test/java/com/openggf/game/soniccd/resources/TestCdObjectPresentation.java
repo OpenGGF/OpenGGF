@@ -139,7 +139,7 @@ class TestCdObjectPresentation {
         assertEquals((byte) 0xA5, sat.bytes()[4]);
     }
 
-    @Test void normalCoordinateDomainKeepsAllEntriesWithoutASecondViewportCullAndRejectsUnownedYWrap() {
+    @Test void normalCoordinateDomainKeepsAllEntriesAndProjectsTheStoredYWordThroughItsNineBitCoordinate() {
         for (int[] xy : List.of(new int[]{1, 0}, new int[]{511, 511}, new int[]{448, 352})) {
             var f = new Fixture(); f.add(32, 0, 0, xy[0], xy[1], 0, List.of(new RawPiece(0, 0, 0, 0)));
             var frame = CdObjectPresentation.convert(f.build(32), id -> new CdObjectPresentation.TilePattern(id, solid(1)));
@@ -148,9 +148,22 @@ class TestCdObjectPresentation {
         }
         for (int y : List.of(512, 0x8000, 0xFFFF)) {
             var f = new Fixture(); f.add(32, 0, 0, 128, y, 0, List.of(new RawPiece(0, 0, 0, 0)));
-            assertThrows(UnsupportedOperationException.class, () -> CdObjectPresentation.convert(f.build(32),
-                    id -> new CdObjectPresentation.TilePattern(id, solid(1))));
+            var sat = f.build(32); var before = sat.bytes();
+            assertEquals(y, word(before, 0), "Native DrawSprite retains the complete Y word");
+            var frame = CdObjectPresentation.convert(sat, id -> new CdObjectPresentation.TilePattern(id, solid(1)));
+            assertEquals((y & 0x1FF) - 128, frame.tiles().getFirst().y());
+            assertArrayEquals(before, sat.bytes());
         }
+    }
+
+    @Test void negativeSignedMappingOffsetRetainsItsNativeWordAndUsesNormalSpriteYWithoutASecondCull() {
+        var f = new Fixture();
+        f.add(32, 0, 0, 128, 0x30, 0, List.of(new RawPiece(-0x60, 0, 0, 0)));
+        var sat = f.build(32); var before = sat.bytes();
+        assertEquals(0xFFD0, word(before, 0));
+        var frame = CdObjectPresentation.convert(sat, id -> new CdObjectPresentation.TilePattern(id, solid(1)));
+        assertEquals(1, frame.tiles().size()); assertEquals(0x150, frame.tiles().getFirst().y());
+        assertArrayEquals(before, sat.bytes());
     }
 
     @Test void rawNibblePackingAgreesWithEnginePatternVersionsAndPixelOrientation() {

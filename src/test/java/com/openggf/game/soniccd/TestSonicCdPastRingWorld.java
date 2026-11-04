@@ -114,8 +114,9 @@ class TestSonicCdPastRingWorld {
                           Object ringBody, Object springBody, Object platformBody, Object tunnelDoorBody,
                           Object monitorBody, Object timePostBody, PlanePrelude planes) { }
 
-    static Prepared ready() throws Exception {
-        var h = opening(); var m = h.module();
+    static Prepared ready() throws Exception { return ready(opening()); }
+    static Prepared ready(Harness h) throws Exception {
+        var m = h.module();
         var old = assertInstanceOf(CdOpeningObjectRuntime.class, m.getGameService(NativeDynamicObjectPass.class));
         for (int call = 1; call <= 7728; call++) step(h, route(call));
         assertEquals(SonicCdGameModule.LevelProgramPhase.PAST_PENDING, m.levelProgramState().phase());

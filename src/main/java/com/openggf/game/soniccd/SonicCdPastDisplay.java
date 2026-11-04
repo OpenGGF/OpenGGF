@@ -2,17 +2,12 @@ package com.openggf.game.soniccd;
 
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
-import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import com.openggf.game.soniccd.resources.CdR11bCameraArtResidency;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
-import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.RetainedPlaneSceneRenderer;
-import com.openggf.graphics.SpritePresentation;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -55,7 +50,7 @@ final class SonicCdPastDisplay {
     record Inputs(Optional<CdObjectDrawQueue.CpuSat> selectedCpu, CdAssetBytes selectedSat,
                   CdAssetBytes palette, CdAssetBytes hscroll, int vscrollLongBits, boolean displayEnabled,
                   CdR11aBackgroundPlane.State foreground, CdR11aBackgroundPlane.State background,
-                  CdR11bCameraArtResidency.State current, CdPlayerArtRuntime.State player) {
+                  CdR11bCameraArtResidency.State current, CdPlayerArtRuntime.State player) implements SonicCdCurrentDisplay.Inputs {
         Inputs {
             Objects.requireNonNull(selectedCpu, "selected CPU optional");
             Objects.requireNonNull(selectedSat, "selected SAT");
@@ -137,33 +132,17 @@ final class SonicCdPastDisplay {
 
     static Selection project(Inputs inputs) {
         Objects.requireNonNull(inputs, "selected display inputs");
-        if (!inputs.displayEnabled()) {
-            return new Selection(inputs, new Disabled(new RetainedPlaneSceneRenderer.Scene(
-                    null, null, hscrollWords(inputs.hscroll()), inputs.vscrollLongBits(), inputs.palette().copy(),
-                    false, SpritePresentation.Frame.empty(), Map.of())));
-        }
-        DisplayFailure cpuFailure = selectedCpuFailure(inputs);
-        if (cpuFailure != null) return new Selection(inputs, new Blocked(cpuFailure));
-        var samples = new HashMap<Integer, SpritePresentation.PatternVersion>();
-        CdObjectPresentation.PatternSource resolver = patterns(inputs.current(), inputs.player(),
-                PatternAtlasRange.OBJECTS.base());
-        CdObjectPresentation.PatternSource selected = id -> {
-            var sample = resolver.resolve(id);
-            samples.put(id, sample.version());
-            return sample;
-        };
-        try {
-            var foreground = plane(inputs.foreground(), selected);
-            var background = plane(inputs.background(), selected);
-            SpritePresentation.Frame sprites = inputs.selectedCpu().isPresent()
-                    ? CdObjectPresentation.convert(inputs.selectedCpu().orElseThrow(), selected)
-                    : SpritePresentation.Frame.empty();
-            return new Selection(inputs, new Ready(new RetainedPlaneSceneRenderer.Scene(
-                    foreground, background, hscrollWords(inputs.hscroll()), inputs.vscrollLongBits(),
-                    inputs.palette().copy(), true, sprites, samples)));
-        } catch (ReadStopped stopped) {
-            return new Selection(inputs, new Blocked(stopped.failure));
-        }
+        return new Selection(inputs, SonicCdCurrentDisplay.project(inputs, id -> {
+            try { return CdR11bCameraArtResidency.readTile(inputs.current(), id); }
+            catch (CdR11bCameraArtResidency.OwnershipBoundary fault) {
+                Boundary kind = switch (fault.boundary()) {
+                    case UNKNOWN_PATTERN -> Boundary.UNKNOWN_PATTERN;
+                    case OUTSIDE_OWNED_WINDOW -> Boundary.OUTSIDE_OWNED_WINDOW;
+                };
+                throw new SonicCdCurrentDisplay.ReadStopped(new DisplayFailure(kind, -1,
+                        fault.nativePatternId(), fault.destinationWord()));
+            }
+        }));
     }
 
     /**
@@ -176,83 +155,6 @@ final class SonicCdPastDisplay {
         if (!selected.inputs().equals(expected)) {
             throw new IllegalArgumentException("Retained selection differs from the expected selected inputs");
         }
-    }
-
-    private static CdObjectPresentation.PatternSource patterns(CdR11bCameraArtResidency.State current,
-                                                               CdPlayerArtRuntime.State player, int logicalBase) {
-        var cache = new HashMap<Integer, CdObjectPresentation.TilePattern>();
-        return id -> {
-            Objects.checkIndex(id, 2048);
-            var sample = cache.get(id);
-            if (sample != null) return sample;
-            CdAssetBytes raw;
-            if (id >= 0x780 && id < 0x798) {
-                // Include the exact last resident tile, beyond the ordinary $2E0-byte DMA.
-                raw = player.residentBank().slice((id - 0x780) * 32, 32);
-            } else {
-                try {
-                    raw = CdR11bCameraArtResidency.readTile(current, id);
-                } catch (CdR11bCameraArtResidency.OwnershipBoundary fault) {
-                    Boundary boundary = switch (fault.boundary()) {
-                        case UNKNOWN_PATTERN -> Boundary.UNKNOWN_PATTERN;
-                        case OUTSIDE_OWNED_WINDOW -> Boundary.OUTSIDE_OWNED_WINDOW;
-                    };
-                    throw new ReadStopped(new DisplayFailure(boundary, -1,
-                            fault.nativePatternId(), fault.destinationWord()));
-                }
-            }
-            sample = new CdObjectPresentation.TilePattern(logicalBase + id,
-                    CdObjectPresentation.patternVersion(raw));
-            cache.put(id, sample);
-            return sample;
-        };
-    }
-
-    private static RetainedPlaneSceneRenderer.PlaneImage plane(CdR11aBackgroundPlane.State state,
-                                                                CdObjectPresentation.PatternSource source) {
-        int[] words = new int[64 * 32];
-        for (int y = 0; y < 32; y++) {
-            for (int x = 0; x < 64; x++) {
-                int descriptor = state.word(x, y);
-                words[y * 64 + x] = descriptor;
-                source.resolve(descriptor & 0x7FF);
-            }
-        }
-        return new RetainedPlaneSceneRenderer.PlaneImage(words);
-    }
-
-    /** Mirror only the existing converter's bounded geometry checks, before any art lookup. */
-    private static DisplayFailure selectedCpuFailure(Inputs inputs) {
-        byte[] raw = inputs.selectedSat().copy();
-        if (inputs.selectedCpu().isEmpty()) {
-            for (int i = 0; i < raw.length; i++) {
-                if (raw[i] != 0) return new DisplayFailure(Boundary.MISSING_CPU_AUTHORITY, i, -1, -1);
-            }
-            return null;
-        }
-        var cpu = inputs.selectedCpu().orElseThrow();
-        byte[] genuine = cpu.bytes();
-        for (int i = 0; i < raw.length; i++) {
-            if (raw[i] != genuine[i]) return new DisplayFailure(Boundary.SAT_MISMATCH, i, -1, -1);
-        }
-        for (int index = cpu.spriteCount() - 1; index >= 0; index--) {
-            int at = index * 8;
-            int x = word(genuine, at + 6), y = word(genuine, at);
-            if (x < 1 || x > 511) return new DisplayFailure(Boundary.SAT_COORDINATES, at + 6, -1, -1);
-            if (y > 511) return new DisplayFailure(Boundary.SAT_COORDINATES, at, -1, -1);
-            if ((genuine[at + 2] & 255) > 15) return new DisplayFailure(Boundary.SAT_SIZE, at + 2, -1, -1);
-        }
-        return null;
-    }
-
-    private static int[] hscrollWords(CdAssetBytes bytes) {
-        int[] packed = new int[256];
-        for (int i = 0; i < packed.length; i++) packed[i] = (int) bytes.unsignedLong(i * 4);
-        return packed;
-    }
-
-    private static int word(byte[] bytes, int at) {
-        return ((bytes[at] & 255) << 8) | (bytes[at + 1] & 255);
     }
 
     private static boolean cpuEquals(Optional<CdObjectDrawQueue.CpuSat> first,
@@ -270,12 +172,4 @@ final class SonicCdPastDisplay {
         return Objects.hash(Arrays.hashCode(cpu.bytes()), cpu.spriteCount(), cpu.provenance());
     }
 
-    /** Invocation-local short circuit, never retained in Inputs, Selection or DisplayFailure. */
-    private static final class ReadStopped extends RuntimeException {
-        private final DisplayFailure failure;
-        private ReadStopped(DisplayFailure failure) {
-            super(null, null, false, false);
-            this.failure = failure;
-        }
-    }
 }

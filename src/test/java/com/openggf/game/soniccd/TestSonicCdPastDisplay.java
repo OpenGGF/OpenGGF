@@ -343,15 +343,25 @@ class TestSonicCdPastDisplay {
     }
 
     @Test
-    void genuineOutOfPolicyYIsBlockedBeforeAnyUnknownPlaneOrArtRead() {
+    void genuineHighYWordDoesNotSuppressTheReachedUnknownPatternBoundary() {
         var cpu = cpu(one(0), 32, 128, 512, new byte[640]);
         assertEquals(1, cpu.spriteCount());
         assertEquals(2, cpu.bytes()[0] & 255);
-        var input = inputs(Optional.of(cpu), cpu.bytes(), uniform(0x300), uniform(0),
+        var input = inputs(Optional.of(cpu), cpu.bytes(), uniform(0), uniform(0),
                 CdR11bCameraArtResidency.unknown(), player(0, 0, 0, false));
-        failure(SonicCdPastDisplay.project(input), SonicCdPastDisplay.Boundary.SAT_COORDINATES, 0, -1, -1);
+        failure(SonicCdPastDisplay.project(input), SonicCdPastDisplay.Boundary.UNKNOWN_PATTERN, -1, 0, 0);
         assertArrayEquals(cpu.bytes(), input.selectedSat().copy());
         // X=0/high size cannot be minted through the current genuine queue's finite RawPiece API.
+    }
+
+    @Test
+    void genuineStoredYHighBitsProjectWithoutChangingSelectedSatAuthorityOrBytes() {
+        var cpu = cpu(one(0), 32, 128, 0xFFD0, new byte[640]);
+        var before = cpu.bytes();
+        var input = inputs(Optional.of(cpu), before, uniform(0), uniform(0), current(0, 0x11), player(0, 0, 0, false));
+        var picture = scene(SonicCdPastDisplay.project(input)).sprites();
+        assertEquals(1, picture.tiles().size()); assertEquals(0x150, picture.tiles().getFirst().y());
+        assertArrayEquals(before, cpu.bytes()); assertArrayEquals(before, input.selectedSat().copy());
     }
 
     @Test

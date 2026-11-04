@@ -22,9 +22,11 @@ import java.util.Objects;
  * (VInt_Level, scddisasm 1ecc5f3af, Level/Main.asm:821-834); NORMAL_PAUSE also publishes,
  * PP selector-zero lag retains. This converter neither selects nor performs those transitions.
  *
- * <p>Coordinate policy is bounded normal non-interlaced geometry: SAT X 1..511, Y word 0..511,
- * each minus 128. Every active entry is retained, including outside the viewport. Other Y words
- * reject instead of inventing wrap. This is not general VDP Y/interlace/scanline emulation.</p>
+ * <p>Normal non-interlaced sprite geometry uses X1..511 and the low nine bits of the stored
+ * Y WORD, each minus128. DrawSprite retains signed-piece ADD.W Y results unmasked
+ * (Object Functions.asm:394-424 at N1ecc5f3a), including normal offscreen Title Card pieces.
+ * Raw selected bytes stay exact; this is semantic picture projection, not interlace,
+ * scanline timing, sprite masking or a video/register protocol.</p>
  */
 public final class CdObjectPresentation {
     private CdObjectPresentation() { }
@@ -482,7 +484,7 @@ public final class CdObjectPresentation {
             int at = index * 8;
             int yWord = word(bytes, at), xWord = word(bytes, at + 6);
             int size = bytes[at + 2] & 255, tileWord = word(bytes, at + 4);
-            if (xWord < 1 || xWord > 511 || yWord > 511) {
+            if (xWord < 1 || xWord > 511) {
                 throw new UnsupportedOperationException("SAT entry " + index
                         + " is outside normal coordinate policy: X=" + xWord + " Y=" + yWord);
             }
@@ -490,7 +492,7 @@ public final class CdObjectPresentation {
             int width = ((size >>> 2) & 3) + 1, height = (size & 3) + 1;
             // Tile word is ALREADY the complete native ADD.W then object-flip XOR result.
             // PreparedPiece avoids preparePiece's separate base/palette combination semantics.
-            var piece = new SpritePieceRenderer.PreparedPiece(xWord - 128, yWord - 128, width, height,
+            var piece = new SpritePieceRenderer.PreparedPiece(xWord - 128, (yWord & 0x1FF) - 128, width, height,
                     tileWord & 0x7FF, tileWord & 0x7FF, (tileWord >>> 13) & 3,
                     (tileWord & 0x800) != 0, (tileWord & 0x1000) != 0,
                     (tileWord & 0x8000) != 0, false, 0, height);
