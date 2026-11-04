@@ -32,7 +32,9 @@ final class LevelWaterCoordinator {
     }
 
     void initialize() throws IOException {
-        initialize(false);
+        // CheckLevelForWater (sonic3k.asm:9790-9795) uses the apparent act
+        // restored by loc_6034, including returns into a seamless act.
+        initialize(levelManager.getCurrentAct() != levelManager.getApparentAct());
     }
 
     /**

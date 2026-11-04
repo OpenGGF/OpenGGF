@@ -141,3 +141,48 @@ act is restored too late for water selection. ROM also restores saved mean
 without replacing the initialized water target. Continuation stopped at a
 duplicate pending title-boundary error in the excluded GameLoop owner;
 water patch and all required profile gates remain unvalidated."
+
+
+## Second continuation: fixture lifecycle proved, water extension applied
+
+The T3-prepared `aiz3-camera-water-restore` checkout merged `5f53a4a7e`, then
+`f7d158c49`, as `bc025bcc7`. The executable TraceChaser checkout and gitlink both
+match `10f1e09`. No other checkout was created or modified.
+
+The prior pending-boundary stop was a test-fixture omission. Both direct
+`entered`/`exited` fixtures now run the real `GameLoop.step()` entry title until
+`BONUS_STAGE`, asserting that the pending fresh boundary has completed before
+calling the direct return. Production boundary admission remains strict.
+With production still at the saved WIP, `lifecycle-red` executes **7 tests,
+2 failures, 0 errors, 0 skips**: the old HCZ test passes; the new apparent-act
+load observation fails 0/1, and the new Knuckles seamless AIZ2 return reaches
+its water-enabled assertion and fails true/false. These are executed
+mechanisms, not inferred explanations of the previous exception.
+
+The saved `water.patch` was then applied. Saved apparent identity is restored
+in `prepareReturnLoad` before loading and retained by `LevelZoneLoadExecutor`
+for a bonus return. `LevelWaterCoordinator` selects its existing seamless
+water predicate from current/apparent inequality. The coordinator restores
+saved water mean without replacing the new target: the existing HCZ assertion
+also checks the fresh target; the AIZ case checks saved mean `$510` with target
+`$528`. ROM ownership remains `loc_6034` (sonic3k.asm:7580-7582),
+`CheckLevelForWater` (sonic3k.asm:9790-9795), `loc_7932`
+(sonic3k.asm:9833-9846), and `loc_2D2C2` (sonic3k.asm:61833-61856).
+
+`water-green` stopped at test compilation because the widened Mockito target
+assertion lacked an `anyInt` import; no tests executed. After adding the import,
+`water-green2` passes **428 tests, 0 failures/errors/skips**, including the
+saved-act/Slots units, both water return tests, water providers/dynamics,
+water/bonus/Slots rewind, the four S3K keep-greens, source/timing/gitlink guards
+and fresh-boundary controls. Exact commands, source diffs, logs, timing and XML
+are retained under `/tmp/aiz3-resume-20261104/` for each named run. This is a
+focused pass, not the required three-profile gate.
+
+The lead separately corrected live title control ownership as `afdf37b29`;
+it is to be merged after this focused checkpoint. That fix preserves the
+host's current control lock during native snapshot restoration, rather than
+capturing a locked snapshot that would re-lock a released return. This lane
+has not changed `GameLoopBonusStageSession` or any camera-fraction, CNZ2,
+MHZ rewind, frontier-log, SURVEY, or other fleet owner. The lead's frozen
+`afdf37b29` profiles will supply the matched integration baseline; the original
+historical profiles above are still only historical evidence.

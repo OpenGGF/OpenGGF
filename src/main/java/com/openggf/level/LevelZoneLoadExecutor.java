@@ -22,7 +22,11 @@ final class LevelZoneLoadExecutor {
         boolean succeeded = false;
         try {
             levelManager.writeCurrentAct(act);
-            levelManager.writeApparentAct(act);
+            // loc_6034 (sonic3k.asm:7580-7582): bonus returns already restored
+            // their saved apparent act. Fresh loads present the loaded act.
+            if (!transitions.isBonusStageReturn()) {
+                levelManager.writeApparentAct(act);
+            }
             levelManager.writeCurrentZone(zone);
             // Manual changes discard checkpoints. A bonus return has already
             // prepared its saved position for the load profile, before ScreenInit.

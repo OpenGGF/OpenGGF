@@ -15,6 +15,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -137,7 +138,7 @@ class TestBonusStageTransitionCoordinator {
         verify(camera, never()).setMaxY(anyShort());
         verify(camera, never()).updatePosition(anyBoolean());
         verify(water).setWaterLevelDirect(1, 0, 0x6A0);
-        verify(water).setWaterLevelTarget(1, 0, 0x6A0);
+        verify(water, never()).setWaterLevelTarget(anyInt(), anyInt(), anyInt());
         verify(levelState).setRings(69);
         verify(levelState).setTimerFrames(9_876L);
         verify(levelState).resumeTimer();

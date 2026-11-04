@@ -11,6 +11,7 @@ import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameMode;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GraphicsManager;
@@ -75,6 +76,57 @@ public class TestBonusStageReturnWaterRestore {
     }
 
     @Test
+    public void seamlessAiz2BonusReturnKeepsWaterAndItsFreshTarget() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        Object oldCharacter = config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE);
+        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        try {
+            GraphicsManager.getInstance().initHeadless();
+            var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+            var level = GameServices.level();
+            level.executeActTransition(com.openggf.level.SeamlessLevelTransitionRequest.builder(
+                    com.openggf.level.SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                    .targetZoneAct(0, 1).preserveLevelGamestate(true).build());
+            assertEquals(1, level.getCurrentAct());
+            assertEquals(0, level.getApparentAct());
+            var water = GameServices.water();
+            assertTrue(water.hasWater(0, 1));
+            // A saved mean may differ from the new level's target during motion.
+            water.setWaterLevelDirect(0, 1, 0x510);
+            var saved = new com.openggf.game.BonusStageTransitionCoordinator().captureEntry(
+                    level, fixture.camera(), water, fixture.sprite(),
+                    GameModuleRegistry.getCurrent().getLevelEventProvider(), 0).savedState();
+            var loop = new GameLoop(new InputHandler());
+            var provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
+            BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, saved);
+            finishEntryTitle(loop);
+            BonusStageSessionTestAccess.exited(loop, provider, saved);
+
+            assertEquals(0, level.getApparentAct());
+            assertTrue(water.hasWater(0, 1), "CheckLevelForWater must see saved apparent AIZ1");
+            assertEquals(saved.meanWaterLevel(), water.getWaterLevelY(0, 1));
+            assertEquals(0x528, water.getWaterLevelTarget(0, 1),
+                    "loc_2D2C2 restores mean only; loc_7932 owns the new target");
+        } finally {
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
+                    oldCharacter != null ? oldCharacter : "sonic");
+        }
+    }
+
+    private static void finishEntryTitle(GameLoop loop) {
+        assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
+        assertTrue(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+        // doEnter skips the source fade only. The real title loop must publish
+        // and release the entry boundary before a second Level: return load.
+        for (int frame = 0; frame < 600 && loop.getCurrentGameMode() == GameMode.TITLE_CARD; frame++) {
+            loop.step();
+        }
+        assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
+        assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary(),
+                "the entry title release must complete before the return starts");
+    }
+
+    @Test
     public void bonusStageReturn_restoresSavedWaterLevelImmediately() throws Exception {
         GraphicsManager.getInstance().initHeadless();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
@@ -89,6 +141,7 @@ public class TestBonusStageReturnWaterRestore {
         Camera camera = fixture.camera();
         AbstractPlayableSprite player = fixture.sprite();
 
+        int initialTarget = waterSystem.getWaterLevelTarget(ZONE_HCZ, ACT_1);
         camera.setX((short) LATE_HCZ1_CAMERA_X);
 
         waterSystem.updateDynamic(ZONE_HCZ, ACT_1, camera.getX(), camera.getY());
@@ -130,9 +183,12 @@ public class TestBonusStageReturnWaterRestore {
 
         BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
 
+        finishEntryTitle(loop);
         BonusStageSessionTestAccess.exited(loop, provider, savedState);
 
         assertEquals(HCZ1_LATE_WATER_LEVEL, waterSystem.getWaterLevelY(ZONE_HCZ, ACT_1),
                 "Bonus-stage return should restore the saved water level immediately");
+        assertEquals(initialTarget, waterSystem.getWaterLevelTarget(ZONE_HCZ, ACT_1),
+                "the saved mean must not overwrite the freshly initialized target");
     }
 }

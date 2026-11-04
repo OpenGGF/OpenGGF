@@ -115,6 +115,9 @@ public final class BonusStageTransitionCoordinator {
      * the new object manager's reset, before initial placement materialization.
      */
     public void prepareReturnLoad(LevelManager levelManager, BonusStageState savedState) {
+        // loc_6034 (sonic3k.asm:7580-7582) restores the apparent act before
+        // CheckLevelForWater and ScreenInit, not just after the level reload.
+        levelManager.setApparentAct(savedState.savedApparentZoneAndAct() & 0xFF);
         // Get_LevelSizeStart restores the saved player before ScreenInit selects
         // the return arena. Restoring only after load makes setup see the fresh
         // start position (notably LRZ3_ScreenInit's $480 branch).
@@ -223,6 +226,8 @@ public final class BonusStageTransitionCoordinator {
             return;
         }
         waterSystem.setWaterLevelDirect(zone, act, meanWaterLevel);
-        waterSystem.setWaterLevelTarget(zone, act, meanWaterLevel);
+        // loc_2D2C2 (sonic3k.asm:61833-61856) restores Mean_water_level only.
+        // The target and speed remain those selected by loc_7932
+        // (sonic3k.asm:9833-9846); DynamicWaterHeight owns subsequent changes.
     }
 }
