@@ -3903,6 +3903,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         freshLevelTransitionBoundary.load(this, zone, act);
     }
 
+    /** Engine-internal: see {@link FreshLevelBoundaryAccess#completeAtRelease}. */
+    boolean completeFreshLevelTransitionBoundaryReportingInitialPass() {
+        return freshLevelTransitionBoundary.completeReportingInitialPass(this);
+    }
+
+    /** Engine-internal: see {@link FreshLevelBoundaryAccess#beginAfterSetup}. */
+    void beginFreshLevelTransitionBoundaryAfterSetup(
+            short previousCameraX, short previousCameraY, int previousRings) {
+        freshLevelTransitionBoundary.beginAfterSetup(
+                this, previousCameraX, previousCameraY, previousRings);
+    }
+
     /** Completes the destination-player assembly after its title-card loop. */
     public void completeFreshLevelTransitionBoundary() {
         freshLevelTransitionBoundary.complete(this);

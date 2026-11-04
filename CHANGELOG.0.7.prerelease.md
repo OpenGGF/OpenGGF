@@ -9,6 +9,11 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- S3K bonus-stage entries and returns hold the destination players behind
+  the title loop like any fresh level load: the slot is cleared first, the
+  start position appears when the title loop exits, and the players are
+  created just before the stage begins.
+
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
   descends to its pacing height. It previously stayed on layer 3, which is the
