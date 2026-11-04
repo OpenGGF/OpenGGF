@@ -87,6 +87,28 @@ class TestMhz1CutsceneReferenceClosure {
         assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
     }
 
+    @Test
+    void parentRemovalDetachesDoorBeforeItsPendingDeletionIsProcessed() {
+        ObjectManager objectManager = Harness.create().objectManager();
+        Mhz1CutsceneButtonInstance button = objectManager.createDynamicObject(
+                () -> new Mhz1CutsceneButtonInstance(BUTTON_SPAWN));
+        Mhz1CutsceneDoorInstance door = objectManager.createDynamicObject(
+                () -> new Mhz1CutsceneDoorInstance(button));
+        setObjectField(button, "spawnedDoor", door);
+
+        // The door can execute before its parent is unloaded later in the pass.
+        // Keep the retired child registered until its own cleanup to exercise
+        // the exact closure boundary, rather than relying on next-frame cleanup.
+        objectManager.removeDynamicObject(button);
+
+        assertTrue(objectManager.getActiveObjects().contains(door));
+        assertTrue(door.isDestroyed());
+        assertNull(readObjectField(door, "parent"));
+        assertNull(readObjectField(button, "spawnedDoor"));
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+        assertDoesNotThrow(door::onUnload, "later child cleanup is idempotent");
+    }
+
     private record Harness(ObjectManager objectManager, TestCamera camera) {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];

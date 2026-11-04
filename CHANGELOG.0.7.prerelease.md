@@ -1923,6 +1923,8 @@ its original drawing priority.
   the segment's recorded entry row; nothing is written after entry. Standalone
   special stages select their stage and Chaos or Super layout set through the
   ROM's own search instead of defaulting to the Chaos set.
+  MHZ switch doors detach from their retired buttons before pending child
+  cleanup, keeping rewind references valid on carried checkpoint entries.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow

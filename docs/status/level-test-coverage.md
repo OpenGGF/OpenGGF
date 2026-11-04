@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+MHZ carried-checkpoint closure (2026-11-04): the
+[MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md) records the
+switch-door parent-removal/pending-child-deletion regression. Broader route,
+restore/forward and configuration obligations remain inherited.
+
 Shared reload frame ownership (2026-11-03): the CNZ, LBZ and MHZ act matrices
 record positioned cross-act reloads and twice-restored next-row oscillator and
 owner comparisons. In-frame controls retain AIZ/HCZ/CNZ/LBZ marker semantics.
