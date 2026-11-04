@@ -761,6 +761,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void updatePrePhysics() {
         updateTailsSoloFlyIn();
+        // LevelLoop's Animate_Palette -> AnPal_Load precedes Process_Sprites.
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null && sprites.getMainPlayable() instanceof com.openggf.sprites.playable.AbstractPlayableSprite main
+                && main.getSuperStateController() instanceof Sonic3kSuperStateController powered) {
+            powered.advanceDoomsdayTransformationAtAnPal();
+        }
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
         // ordinary animator's post-object tail retains only its late resolution.
         if(endingEvents!=null && currentZone==0x0D && currentAct==1)
