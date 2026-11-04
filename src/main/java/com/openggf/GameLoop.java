@@ -879,7 +879,7 @@ public class GameLoop {
         return modSceneActBridge.isTransitioning() || specialStageLifecycle.transitionPending()
                 || bonusSession.isTransitionPending()
                 || endingSession.isTransitionPending()
-                || (levelManager != null && levelManager.isLevelInactiveForTransition());
+                || com.openggf.level.LevelTransitionHostAccess.freezesHostIteration(levelManager);
     }
 
     /**
