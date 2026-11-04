@@ -123546,3 +123546,16 @@ different wrong payout. Deficits of 51, 50, 48, 30, 23 and 3 V-ints gave first e
 220 and 252. Slots can therefore validate only an exact clock. The move is kept and attributed rather than reverted.
 The last three V-ints are the unrecorded segment-switch frames, and their recorder census is in progress. The lead's
 comparator now diffs full chain messages.
+
+## 2026-11-04 — Develop regressions from 2026-11-03 repaired
+
+Between develop `b4e2ac27c` and `32d4e9aae` three classes went newly red under `-Ptrace-replay`; attributed and fixed on
+`bugfix/ai-trace-develop-reds-20261103` (`d4e1de459`, `7da40b136`, `43a18948e`), merged to develop as `f9196a277`.
+- `TestS2OozLevelSelectTraceReplay` 1 error (f447 `tails_status_byte` $02/$0A) → green. Introduced by `e97436afa`, which
+  removed a screen-window heuristic that masked the real writer: Obj1F `sub_10B36` (s2.asm:23832-23855) clears both
+  characters' Status_OnObj when the parent fragment's delay expires.
+- `TestS1CompleteEmeraldVisualRun` ×2 (GHZ1 f1816 `player_mapping_frame` $2F/$2E) → green, and
+  `TestS1CompleteEmeraldRunChain` 26 axes → 5 (the pre-regression set). Introduced by `df93f7c13`; the Obj1A
+  `.delayCollapse` now tests Sonic after `Ledge_WalkOff`'s ExitPlatform (Collapsing Ledges and Floors.asm:94-110).
+- `TestTraceAnimationRecorderContract`: S3K fixture count raised to 22 for the SSZ1 cold-route fixture (`2a66d5cf0`).
+Focused check on the merged tree: the reds green; the S1/S2/KiS2 chains at 5/15/5 axes (the develop set).
