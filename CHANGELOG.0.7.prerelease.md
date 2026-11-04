@@ -1918,7 +1918,9 @@ its original drawing priority.
   Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
   the segment's recorded entry row; nothing is written after entry. Standalone
   special stages select their stage and Chaos or Super layout set through the
-  ROM's own search instead of defaulting to the Chaos set.
+  ROM's own search instead of defaulting to the Chaos set. The S3K emerald
+  ledger lives with the game's special-stage trace support, keeping shared
+  replay packages free of game-specific classes.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
