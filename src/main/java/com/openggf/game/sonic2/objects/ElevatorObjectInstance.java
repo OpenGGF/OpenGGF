@@ -221,29 +221,22 @@ public class ElevatorObjectInstance extends BoxObjectInstance
      *   - x_flip=1: End at spawn - offset (ABOVE spawn)
      */
     private void updateMoveUpAcceleration() {
-        // Accelerate toward spawn (baseY)
-        if (y < baseY) {
-            yVel += VELOCITY_INCREMENT;  // Below spawn, accelerate down
-        } else if (y > baseY) {
-            yVel -= VELOCITY_INCREMENT;  // Above spawn, accelerate up
-        }
+        accelerateTowardSpawn();
 
         // ROM: bne.s + - transition only when velocity == 0
         if (yVel == 0) {
-            // Snap to spawn
+            // Snap to spawn, then apply the State 2 end position (opposite of
+            // the initial position): x_flip=0 ends BELOW spawn, x_flip=1 ABOVE.
+            // loc_2BAB6 (s2.asm:59058-59079) rewrites only the y_pos word, so
+            // the y_sub fraction ObjectMove accumulated carries into the next
+            // trip.
             y = baseY;
-            ySub = baseY << 8;
-
-            // Apply State 2 end position (opposite of initial position)
-            // ROM (s2.asm lines 58447-58457):
-            // x_flip=0: y_pos = spawn + offset (BELOW spawn)
-            // x_flip=1: y_pos = spawn - offset (ABOVE spawn)
             if (inverted) {
                 y -= yOffset;  // x_flip=1: end ABOVE spawn
             } else {
                 y += yOffset;  // x_flip=0: end BELOW spawn
             }
-            ySub = y << 8;
+            snapIntegerY();
 
             state = STATE_PLAYER_DEPARTS;
         }
@@ -271,32 +264,38 @@ public class ElevatorObjectInstance extends BoxObjectInstance
      *   - x_flip=1: End at spawn + offset (BELOW spawn)
      */
     private void updateReturnAcceleration() {
-        // Accelerate toward spawn (baseY)
-        if (y < baseY) {
-            yVel += VELOCITY_INCREMENT;  // Below spawn, accelerate down
-        } else if (y > baseY) {
-            yVel -= VELOCITY_INCREMENT;  // Above spawn, accelerate up
-        }
+        accelerateTowardSpawn();
 
         // Transition only when velocity == 0
         if (yVel == 0) {
-            // Snap to spawn
+            // Snap to spawn, then back to the initial position: x_flip=0 ends
+            // ABOVE spawn, x_flip=1 BELOW. loc_2BB08 (s2.asm:59092-59114)
+            // likewise keeps y_sub.
             y = baseY;
-            ySub = baseY << 8;
-
-            // Apply State 6 end position (same as initial position)
-            // ROM (s2.asm lines 58481-58491):
-            // x_flip=0: y_pos = spawn - offset (ABOVE spawn) - back to start
-            // x_flip=1: y_pos = spawn + offset (BELOW spawn) - back to start
             if (inverted) {
                 y += yOffset;  // x_flip=1: end BELOW spawn (initial position)
             } else {
                 y -= yOffset;  // x_flip=0: end ABOVE spawn (initial position)
             }
-            ySub = y << 8;
+            snapIntegerY();
 
             state = STATE_WAIT_FOR_CONTACT;
         }
+    }
+
+    /**
+     * {@code moveq #8,d1 / cmp.w y_pos(a0),d0 / bhs.s + / neg.w d1} with
+     * {@code d0 = objoff_32} (loc_2BAB6, s2.asm:59058-59064): the unsigned
+     * {@code bhs} keeps +8 when the platform is at or above spawn, including
+     * exactly on it.
+     */
+    private void accelerateTowardSpawn() {
+        yVel += (y & 0xFFFF) <= (baseY & 0xFFFF) ? VELOCITY_INCREMENT : -VELOCITY_INCREMENT;
+    }
+
+    /** {@code move.w d0,y_pos(a0)}: replace the integer word, keep the fraction. */
+    private void snapIntegerY() {
+        ySub = (y << 8) | (ySub & 0xFF);
     }
 
     private void playElevatorSound() {

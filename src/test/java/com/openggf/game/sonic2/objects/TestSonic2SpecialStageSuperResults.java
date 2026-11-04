@@ -74,16 +74,20 @@ class TestSonic2SpecialStageSuperResults {
     }
 
     @Test
-    void nativeMotionArrivalHoldAndDisplayOnlyTake210FollowingPasses() {
+    void nativeMotionArrivalAndHoldPublishCompletionOnTheTimedDisplayExpiryPass() {
         var screen = exhaustedTally(true, 7);
         // $146A6: 9 leave passes + init; $14736: 18 return passes + timer latch;
-        // $14572: 180 predecrements, then Obj6F_DisplayOnly on its following pass.
-        for (int pass = 1; pass < 210; pass++) {
+        // $14572: 180 predecrements, then Obj6F_DisplayOnly on its following pass
+        // (pass 210). Completion is published on the expiry pass (209), the same
+        // point of the shared $20 -> $22 tail as the ordinary $78 wait's
+        // updateWait, so both exits reach the returning level's Level: on the
+        // same frame.
+        for (int pass = 1; pass < 209; pass++) {
             screen.update(pass, null);
             assertFalse(screen.isComplete(), "premature completion on results pass " + pass);
         }
-        screen.update(210, null);
-        assertTrue(screen.isComplete(), "native motion and hold finish on pass 210");
+        screen.update(209, null);
+        assertTrue(screen.isComplete(), "native motion and hold finish on pass 209");
     }
 
     @Test
