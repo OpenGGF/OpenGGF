@@ -83,11 +83,42 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         // loc_1BEC6 (sonic3k.asm:38202-38231) bypasses the generic focus for
         // fresh ICZ1 Tails. Its absolute entry camera is separate bring-up work.
         if (tails && zone == Sonic3kZoneIds.ZONE_ICZ && act == 0 && !provenance.isReturn()) return;
+        int focusX = player.getCentreX();
         int focusY = player.getCentreY();
-        if (tails) focusY -= 4;
-        Sonic3kLevelStartCamera.initialize(camera, player.getCentreX(), focusY,
+        if (provenance.isReturn()) {
+            // Load_Starpost_Settings restores Saved_X/Y_pos into Player_1 and
+            // loc_1BE46 focuses on that body (sonic3k.asm:38187-38194); only
+            // Tails-alone's later SpawnPlayers +4 has to be undone.
+            if (tails) focusY -= 4;
+        } else {
+            // Fresh entry: loc_1BE5E/loc_1BE7A (sonic3k.asm:38196-38227) focus on
+            // the Sonic/Knux start-location entry (with the AIZ1 intro override),
+            // before SpawnPlayers or any load-time object such as the DDZ
+            // fly-in moves the body.
+            int[] start = romStartLocation(zone, act);
+            focusX = start[0];
+            focusY = start[1];
+        }
+        Sonic3kLevelStartCamera.initialize(camera, focusX, focusY,
                 com.openggf.game.CharacterKey.KNUCKLES.equals(player.characterKey()),
                 zone, act, provenance.isReturn(), Sonic3kCartridgePolicy.isStandaloneSk());
+    }
+
+    private static int[] romStartLocation(int zone, int act) {
+        if (!(GameServices.level().getGame()
+                instanceof com.openggf.game.DynamicStartPositionProvider provider)) {
+            throw new IllegalStateException("S3K level has no ROM start-location table");
+        }
+        try {
+            int[] start = provider.getStartPosition(zone, act);
+            if (start == null || start.length < 2) {
+                throw new IllegalStateException(
+                        "No ROM start location for zone " + zone + " act " + act);
+            }
+            return start;
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
     }
 
     @Override

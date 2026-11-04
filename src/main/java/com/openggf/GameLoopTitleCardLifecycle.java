@@ -110,36 +110,7 @@ final class GameLoopTitleCardLifecycle {
                 // V-int has been serviced; count it like any locked iteration.
                 levelManager.advanceTitleCardVblankOnly();
             }
-            int preludePasses = 0;
-            boolean ranPlayerPrelude = false;
-            if (titleCard != null) {
-                // Level/loc_64DC hands the surviving title owner to LevelLoop
-                // with a rewritten wait timer after the title and terrain queues drain.
-                titleCard.completeFreshLevelRuntimeArtHandoff();
-                preludePasses = titleCard.levelObjectPreludePassesAtRelease();
-                for (int i = 0; i < preludePasses; i++) {
-                    OscillationManager.suppressNextFrames(1);
-                    if (titleCard.shouldRunPlayerPreludeAtRelease()) {
-                        runInputNeutralTitleCardPlayerPrelude();
-                        ranPlayerPrelude = true;
-                    }
-                    levelManager.updateObjectPositionsWithoutTouches();
-                }
-            }
-            if (ranPlayerPrelude) {
-                LevelInitProfile initProfile = frameContext.gameModule().getLevelInitProfile();
-                DynamicArtLifecycleService artLifecycle = gameplayMode.dynamicArtLifecycle();
-                int tailRows = initProfile != null
-                        ? initProfile.preLevelMainLoopDelayFrames() : 0;
-                if (tailRows > 0 && artLifecycle != null && artLifecycle.isRunActive()) {
-                    // S1 Level_LoadObj stages Sonic's DPLC only after the title
-                    // wait drains. Its next V-int belongs to Level_Delay / the
-                    // palette fade, before Level_MainLoop (sonic.asm:2895-2966).
-                    // Hold the real release preparation for that counted tail;
-                    // ordinary zero-tail owners keep their next VBlank service.
-                    artLifecycle.holdPendingPlayerPreparationForPreMainLoopTail(tailRows);
-                }
-            }
+            int preludePasses = titleCard != null ? runReleasePrelude(titleCard, frameContext, gameplayMode, levelManager) : 0;
             if (!preparedByFrameStep) {
                 preparePhase.accept(PlcLifecyclePhase.LEVEL_TITLE_CARD);
             }
@@ -195,6 +166,41 @@ final class GameLoopTitleCardLifecycle {
             }
         }
         return false;
+    }
+
+    /**
+     * Runs the title owner's release prelude and returns its object-pass count.
+     * Level/loc_64DC hands the surviving title owner to LevelLoop with a
+     * rewritten wait timer after the title and terrain queues drain.
+     */
+    private int runReleasePrelude(TitleCardProvider titleCard, LevelFrameContext frameContext,
+            GameplayModeContext gameplayMode, LevelManager levelManager) {
+        titleCard.completeFreshLevelRuntimeArtHandoff();
+        int preludePasses = titleCard.levelObjectPreludePassesAtRelease();
+        boolean ranPlayerPrelude = false;
+        for (int i = 0; i < preludePasses; i++) {
+            OscillationManager.suppressNextFrames(1);
+            if (titleCard.shouldRunPlayerPreludeAtRelease()) {
+                runInputNeutralTitleCardPlayerPrelude();
+                ranPlayerPrelude = true;
+            }
+            levelManager.updateObjectPositionsWithoutTouches();
+        }
+        if (ranPlayerPrelude) {
+            LevelInitProfile initProfile = frameContext.gameModule().getLevelInitProfile();
+            DynamicArtLifecycleService artLifecycle = gameplayMode.dynamicArtLifecycle();
+            int tailRows = initProfile != null
+                    ? initProfile.preLevelMainLoopDelayFrames() : 0;
+            if (tailRows > 0 && artLifecycle != null && artLifecycle.isRunActive()) {
+                // S1 Level_LoadObj stages Sonic's DPLC only after the title
+                // wait drains. Its next V-int belongs to Level_Delay / the
+                // palette fade, before Level_MainLoop (sonic.asm:2895-2966).
+                // Hold the real release preparation for that counted tail;
+                // ordinary zero-tail owners keep their next VBlank service.
+                artLifecycle.holdPendingPlayerPreparationForPreMainLoopTail(tailRows);
+            }
+        }
+        return preludePasses;
     }
 
     void enterTitleCard(int zoneIndex, int actIndex) {

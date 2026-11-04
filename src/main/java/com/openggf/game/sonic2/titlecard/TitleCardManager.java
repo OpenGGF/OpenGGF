@@ -47,6 +47,7 @@ import java.util.logging.Logger;
  * </pre>
  */
 public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
+        com.openggf.game.internal.LockedTitleCardLevelStepGate,
         RewindSnapshottable<TitleCardManager.Snapshot> {
     private static final Logger LOGGER = Logger.getLogger(TitleCardManager.class.getName());
     public static final String REWIND_KEY = "s2-title-card";
@@ -91,6 +92,18 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
             LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES + LEAVE_BACKGROUND_PASSES;
     private static final int LEAVE_PLAYABLE_PASSES =
             LEAVE_PRELOOP_PASSES + LEAVE_LOOP_PASSES;
+    /**
+     * Leave-loop iteration on which the background piece runs
+     * {@code Obj34_BackgroundOutInit}. {@code Obj34_BottomPartOut} writes its
+     * routine $12 on the bottom piece's eleventh pass (s2.asm:27542-27547), and
+     * {@code TitleCard_Background} sits in an earlier slot than
+     * {@code TitleCard_Bottom} (s2.constants.asm:1116-1118), so the write is
+     * first executed on the following iteration.
+     */
+    private static final int LEAVE_BACKGROUND_OUT_INIT_PASS =
+            LEAVE_LEFT_PASSES + LEAVE_BOTTOM_PASSES + 1;
+    /** The title-card VBlank {@code Level_TtlCard} waits once more after its loop (s2.asm:4914-4926). */
+    private static final int POST_ARRIVAL_VBLANKS = 1;
 
     /**
      * Text wait duration in frames before sliding out.
@@ -846,19 +859,25 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     }
 
     /**
-     * Leaves {@code Level_TtlCard} the way the ROM does: straight into
-     * {@code bsr.w LoadZoneTiles} (docs/s2disasm/s2.asm:4938), ahead of any of
-     * the leave sequence.
+     * Leaves {@code Level_TtlCard} the way the ROM does. Once the re-loop test
+     * passes, the routine waits for one more title-card VBlank and draws the
+     * HUD base ({@code Level_TtlCard}, docs/s2disasm/s2.asm:4914-4927) before
+     * the level-size, scroll and zone-tile loads that follow (s2.asm:4929-4938).
+     * That wait is a VBlank of its own, ahead of the upload's chunk VBlanks, so
+     * the hold counts it first.
+     *
+     * <p>Without it the whole leave sequence ran one VBlank early: in the
+     * complete-emerald run's admission census every level entry records one
+     * more admitted arrival row than the engine's slide-in plus PLC-drain
+     * iterations (EHZ 53, CPZ 62, ARZ 46, CNZ 61), while the upload span after
+     * the decompression lag matches {@link #zoneTileUploadVBlanks()} exactly.
      */
     private void enterZoneTileUpload() {
         state = TitleCardState.ZONE_TILE_UPLOAD;
         stateTimer = 0;
-        zoneTileUploadFramesLeft = zoneTileUploadVBlanks();
+        zoneTileUploadFramesLeft = POST_ARRIVAL_VBLANKS + zoneTileUploadVBlanks();
         LOGGER.fine("Title card entered ZONE_TILE_UPLOAD state at frame " + frameCounter
                 + " for " + zoneTileUploadFramesLeft + " VBlank(s)");
-        if (zoneTileUploadFramesLeft <= 0) {
-            enterLeftSwooshExit();
-        }
     }
 
     /**
@@ -893,7 +912,10 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         return (byteSize / ZONE_TILE_DMA_CHUNK_BYTES) + 1;
     }
 
-    /** LoadZoneTiles' zone-art upload hold, one VBlank per DMA chunk. */
+    /**
+     * The post-arrival VBlank, then LoadZoneTiles' zone-art upload hold, one
+     * VBlank per DMA chunk.
+     */
     private void updateZoneTileUpload() {
         if (zoneTileUploadFramesLeft > 0) {
             zoneTileUploadFramesLeft--;
@@ -1535,6 +1557,34 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     @Override
     public boolean shouldRunLevelObjectsDuringLockedPhase() {
         return leavePass > 0;
+    }
+
+    /**
+     * The leave sequence's object passes skip the level's scroll/event step
+     * except on the iteration whose object pass reaches
+     * {@code Obj34_BackgroundOutInit} (docs/s2disasm/s2.asm:27587-27596), which
+     * calls {@code DeformBgLayer}. The pass after the load and the other leave
+     * iterations only run objects, sprites and the pattern load queue
+     * (s2.asm:5003-5007, 5060-5066). The scroll call before the load
+     * (s2.asm:4932) belongs to the level-load camera setup, and the slot-machine
+     * routine it reaches is cleared again by {@code Level_FromCheckpoint}
+     * (s2.asm:4980-4983).
+     *
+     * <p>{@code DeformBgLayer} is where CNZ's slot machine runs: its event
+     * dispatch at {@code loc_C4D0} (s2.asm:15174-15175) reaches
+     * {@code LevEvents_CNZ} (s2.asm:21511-21512). {@code SlotMachine_Routine1}
+     * (s2.asm:59438-59460) seeds the reels from the low byte of
+     * {@code Vint_runcount}, so the iteration chosen here decides the first
+     * reels a CNZ act shows.
+     *
+     * <p>Within that iteration the ROM calls {@code DeformBgLayer} from the
+     * background piece's slot, after the players and before the dynamic level
+     * objects; the shared level step runs it after the object pass, so this
+     * iteration's level objects read the camera from before its scroll.
+     */
+    @Override
+    public boolean runsLevelScrollAndEventsThisLockedPass() {
+        return leavePass > 0 && leaveLoopPass() == LEAVE_BACKGROUND_OUT_INIT_PASS;
     }
 
     /**

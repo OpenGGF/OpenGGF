@@ -201,6 +201,7 @@ public final class TraceBenchmarkTool {
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
+        boot.setEntryProvenance(TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
         HardwareReadinessAdmissionPolicy admissionPolicy =
                 admissionPolicyFor(trace);
         boot.boot(romPath, entry.zone(), entry.act(), admissionPolicy);
