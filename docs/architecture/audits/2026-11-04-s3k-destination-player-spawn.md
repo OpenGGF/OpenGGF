@@ -90,3 +90,35 @@ complete, and no reopening), the bonus-session, title and PLC owners, and the
 S3K keep-green classes. That is 138 tests with one failure.
 `TestGameLoopFreshLevelHandoff.realFadeCallbackKeepsItsOwnerAndDefersTheFourTitleArchives`
 fails identically on develop `c24e9fa6e` and is pre-existing.
+
+
+## Combined-wave title-control follow-up
+
+The combined wave7 and pending-bonus freeze repair reaches an ordinary route
+that was previously stuck before entry. `TestS3kTitleCardHoldRoutes` then
+finds the player unlocked during the bonus title terrain wait (entry step124).
+The after-setup boundary captured its player before the title host locked it;
+`publishInitial` restored that older engine control flag with the native
+position. The boundary's snapshot restoration must retain the live control
+lock, whose current owner may also release it before final assembly.
+
+An attempted call-order correction captured a locked destination instead.
+It fixed entry, but the later LEVEL return assembly restored that lock after
+the title host released it (hold counter1). That experiment was discarded.
+The accepted correction preserves `isControlLocked()` across this boundary's
+`restoreRewindState` call only. Full rewind restoration and native player
+values remain unchanged. The existing title owner still acquires/releases its
+lock; an initial object pass may independently acquire a zone cutscene lock.
+
+The boundary test now exercises a lock acquired after capture, retained at
+initial publication, and released before final assembly. Its first strengthened
+version encountered AIZ's legitimate plane-intro lock at the initial sprite
+pass; the fixture now skips that independent intro owner to isolate the title
+boundary. The actual bonus-entry/return route passes with the production
+correction. Across the focused owner/guard/rewind/keep-green run and the final
+two-case fixture-only rerun,1566 unique cases pass with no skips. The final
+fixture run uses queued Maven `-Dmse=off -B
+-Dtest=TestFreshLevelBoundaryAfterSetup test`, Java25, surfaceless EGL and the
+six original ROM properties. The unchanged broader focused results come from
+that same production correction. Combined three-profile validation is pending;
+this is not a claim of trace parity or completed delivery.
