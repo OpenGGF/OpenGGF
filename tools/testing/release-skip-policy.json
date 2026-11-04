@@ -412,6 +412,174 @@
       "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1SpringRecovery.java:22",
       "allowed_when_absent": null,
       "note": "class-level openggf.aiz1.recovery=true; explicit AIZ1 spring-recovery run (docs/architecture/validation/levels/s3k-aiz1-sonic.md)"
+    },
+    {
+      "match": "com.openggf.audio.presentation.TestOpenAlIsolatedContext#isolatedOwnerOpenPumpAndClosePreserveTheGameplayContext",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/audio/presentation/TestOpenAlIsolatedContext.java:20",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in through ALSOFT_DRIVERS=null."
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestSozAct1VictoryCapture#captureVictoryAndHandoff",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestSozAct1VictoryCapture.java:16",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.act1.victory.capture; @EnabledIfSystemProperty(named=\"soz.act1.victory.capture\",matches=\".+\")"
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestSozColdAct1Capture#fixedControllerRouteReachesVisiblePlayableAct2FromColdAct1",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestSozColdAct1Capture.java:32",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.cold.act1.capture; @EnabledIfSystemProperty(named = \"soz.cold.act1.capture\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestSozColdAct2Capture#fixedControllerRouteReachesVisibleLavaReefFromColdAct2",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestSozColdAct2Capture.java:31",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.cold.act2.capture; @EnabledIfSystemProperty(named = \"soz.cold.act2.capture\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestSozEndBossVictoryCapture#captureBattleAndLrz",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestSozEndBossVictoryCapture.java:17",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.endboss.victory.capture; @EnabledIfSystemProperty(named=\"soz.endboss.victory.capture\",matches=\".+\")"
+    },
+    {
+      "match": "com.openggf.game.sonic3k.objects.TestSozMinibossCapture#positionedAwakening",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/game/sonic3k/objects/TestSozMinibossCapture.java:15",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.miniboss.capture; @EnabledIfSystemProperty(named=\"soz.miniboss.capture\",matches=\".+\")"
+    },
+    {
+      "match": "com.openggf.graphics.TestScrollBufferUploadNative#arraysAndViewsUploadExactValuesAcrossResourceAndContextRecreation",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/graphics/TestScrollBufferUploadNative.java:14",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector openggf.scrollNative; @EnabledIfSystemProperty(named = \"openggf.scrollNative\", matches = \"true\")"
+    },
+    {
+      "match": "com.openggf.graphics.TestSlotWindowGpuPassNative#pixelsAndDrawStateSurviveResizeCleanupAndContextRecreation(boolean)",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/graphics/TestSlotWindowGpuPassNative.java:30",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector openggf.slotNative; @EnabledIfSystemProperty(named = \"openggf.slotNative\", matches = \"true\")"
+    },
+    {
+      "match": "com.openggf.graphics.TestTilemapUniformLifetimeNative#uniformWritesSurviveRepeatedCachingAndProgramReplacement",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/graphics/TestTilemapUniformLifetimeNative.java:14",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector openggf.shaderNative; @EnabledIfSystemProperty(named = \"openggf.shaderNative\", matches = \"true\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeCheckpointGameplay#nativePost476EarnedInvitationDeathReloadAndForwardEscape",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeCheckpointGameplay.java:58",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.checkpoint.jar; @EnabledIfSystemProperty(named = \"secondstrike.checkpoint.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeCheckpointGameplay#nativePost476MatchedStockPostDeathReloadControl",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeCheckpointGameplay.java:58",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.checkpoint.jar; @EnabledIfSystemProperty(named = \"secondstrike.checkpoint.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeCheckpointGameplay#nativePost697DeathReloadStartsStoppedAtZeroRingsAndEscapesForward",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeCheckpointGameplay.java:58",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.checkpoint.jar; @EnabledIfSystemProperty(named = \"secondstrike.checkpoint.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeCheckpointGameplay#nativeRemainingPostsDeathReloadAndForwardEscape(int)",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeCheckpointGameplay.java:58",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.checkpoint.jar; @EnabledIfSystemProperty(named = \"secondstrike.checkpoint.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeGiantGameplay#nativeSlotPersistsPlayedGiantEmeraldAcrossFreshMenuSession",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeGiantGameplay.java:41",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.giant.jar; @EnabledIfSystemProperty(named = \"secondstrike.giant.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeGiantGameplay#originalGiantPlaysModifiedBlueSphereAndReturnsWithOneEmerald",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeGiantGameplay.java:41",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.giant.jar; @EnabledIfSystemProperty(named = \"secondstrike.giant.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeInvitationGameplay#zeroRingActTwoInvitationPlaysNativeGlowingSpheresAndReturnsExactlyOnce",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeInvitationGameplay.java:39",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.invitation.jar; @EnabledIfSystemProperty(named = \"secondstrike.invitation.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSecondStrikeInvitationGameplay#zeroRingInvitationPlaysNativeGumballAndReturnsExactlyOnce",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSecondStrikeInvitationGameplay.java:39",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.invitation.jar; @EnabledIfSystemProperty(named = \"secondstrike.invitation.jar\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.mods.code.TestSonicSurvivors#balanceProbe",
+      "category": "opt-in-diagnostic",
+      "evidence": "src/test/java/com/openggf/mods/code/TestSonicSurvivors.java:2568",
+      "allowed_when_absent": null,
+      "note": "Explicit balance-probe diagnostic; @Test void balanceProbe() throws Exception {         String spec = System.getProperty(\"sonic-survivors.balance\");         Assumptions.assumeTrue(spec != null && !spec.isBlank(), \"opt-in diagnostic\");"
+    },
+    {
+      "match": "com.openggf.tests.TestSozAct1ArenaCapture#naturalArenaAdmission",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/tests/TestSozAct1ArenaCapture.java:16",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.act1.capture; @EnabledIfSystemProperty(named=\"soz.act1.capture\",matches=\".+\")"
+    },
+    {
+      "match": "com.openggf.tests.TestSozConnectedMechanismCapture#capture(Scene)",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/tests/TestSozConnectedMechanismCapture.java:16",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.connected.capture; @EnabledIfSystemProperty(named = \"soz.connected.capture\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.tests.TestSozPostBossRedrawCapture#capture(int)",
+      "category": "opt-in-capture",
+      "evidence": "src/test/java/com/openggf/tests/TestSozPostBossRedrawCapture.java:17",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector soz.postboss.redraw.capture; @EnabledIfSystemProperty(named=\"soz.postboss.redraw.capture\", matches=\".+\")"
+    },
+    {
+      "match": "com.openggf.tools.TestS3kSlotsGlassNative#glassOccludesPlayerAfterRealBonusFrame(String, int)",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/tools/TestS3kSlotsGlassNative.java:23",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector openggf.test.gl.native; @EnabledIfSystemProperty(named = \"openggf.test.gl.native\", matches = \"true\")"
+    },
+    {
+      "match": "com.openggf.tools.TestSecondStrikeHczAirRecovery#zeroRingNativeBubbleRefillsReturnsAndRecreatesForWholeWorldReplay",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/tools/TestSecondStrikeHczAirRecovery.java:64",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.hcz.air.mod; @EnabledIfSystemProperty(named = \"secondstrike.hcz.air.mod\", matches = \".+\")"
+    },
+    {
+      "match": "com.openggf.tools.TestWestMgzBossNativeArena#packagedCreatorKnucklesHasAnOrdinaryDamageFreeSideResponse",
+      "category": "opt-in-gate",
+      "evidence": "src/test/java/com/openggf/tools/TestWestMgzBossNativeArena.java:36",
+      "allowed_when_absent": null,
+      "note": "Explicit opt-in selector secondstrike.mgz.packaged.arena; @EnabledIfSystemProperty(named = \"secondstrike.mgz.packaged.arena\", matches = \"true\")"
     }
   ]
 }
