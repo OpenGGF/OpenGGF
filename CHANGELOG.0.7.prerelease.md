@@ -36,7 +36,9 @@ Unreleased. The earlier development themes remain in
   spin pays out on the frame the cage sees it, and the seventh-emerald and
   Knuckles in Sonic 2 results return to the level on the same frame as ordinary
   results. Hill Top and Mystic Cave events read the level frame counter the
-  shipped game reads.
+  shipped game reads. Sonic 2 and Knuckles in Sonic 2 reset that counter when
+  control returns, so Crawl shield bounces use the original angles and Aquatic
+  Ruin’s rising boss pillars begin colliding on the original frame.
 
 - S3K bonus-stage entries and returns hold the destination players behind
   the title loop like any fresh level load: the slot is cleared first, the

@@ -120,7 +120,7 @@ final class GameLoopTitleCardLifecycle {
             // own addq at s2.asm:5092. The counter lives in CrossResetRAM, so
             // Level_ClrRam does not clear it; this store is the sole reset and it
             // runs for a special-stage return exactly as for a fresh entry.
-            spriteManager.setFrameCounter(0);
+            TitleCardLevelClock.resetAtRelease(titleCard, spriteManager, levelManager);
             destination.completeRelease(
                     levelManager, this::exitTitleCard, preludePasses > 0);
             titleReleaseResult = LevelFrameResult.SETUP_ONLY;
@@ -159,7 +159,7 @@ final class GameLoopTitleCardLifecycle {
         if (titleCard instanceof TitleCardLoopTail loopTail) {
             loopTail.completeLockedIteration();
             if (titleCard.shouldReleaseControl()) {
-                spriteManager.setFrameCounter(0);
+                TitleCardLevelClock.resetAtRelease(titleCard, spriteManager, levelManager);
                 destination.completeRelease(levelManager, this::exitTitleCard, true);
                 titleReleaseResult = LevelFrameResult.SETUP_ONLY;
                 return true;

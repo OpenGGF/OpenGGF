@@ -82,6 +82,63 @@ class TestGameLoopTitleCardLifecycle {
                         .map(edge -> edge.phase()).toList());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"true, true", "true, false", "false, true", "false, false"})
+    void releaseResetsNativeLevelClockWithoutRewindingVblank(boolean nativeLevelClock, boolean freshRelease) {
+        // Level (s2.asm:4772-4773) clears the word before the title.
+        // Level_MainLoop (s2.asm:5088-5095) increments it before the object pass.
+        // Exercise both release edges with nonzero locked-pass debt and a
+        // provider outside that policy.
+        TitleCardProvider title = nativeLevelClock
+                ? mock(TitleCardProvider.class, org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.internal.LockedTitleCardLevelStepGate.class,
+                        com.openggf.game.titlecard.TitleCardLoopTail.class))
+                : mock(TitleCardProvider.class, org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.titlecard.TitleCardLoopTail.class));
+        when(title.shouldCompleteFreshLevelTransitionBoundary()).thenReturn(freshRelease);
+        when(title.shouldReleaseControl()).thenReturn(true);
+
+        LevelManager level = mock(LevelManager.class);
+        SpriteManager sprites = mock(SpriteManager.class);
+        org.mockito.Mockito.doCallRealMethod().when(level).setFrameCounter(org.mockito.ArgumentMatchers.anyInt());
+        org.mockito.Mockito.doCallRealMethod().when(level).getFrameCounter();
+        org.mockito.Mockito.doCallRealMethod().when(level).advanceLevelFrameCounter();
+        org.mockito.Mockito.doCallRealMethod().when(sprites).setFrameCounter(org.mockito.ArgumentMatchers.anyInt());
+        org.mockito.Mockito.doCallRealMethod().when(sprites).getFrameCounter();
+        level.setFrameCounter(23);
+        sprites.setFrameCounter(23);
+        var objects = mock(com.openggf.level.objects.ObjectManager.class);
+        when(level.getObjectManager()).thenReturn(objects);
+        when(objects.getVblaCounter()).thenReturn(0xABCD);
+        GameModule module = mock(GameModule.class);
+        WorldSession world = mock(WorldSession.class);
+        when(world.getGameModule()).thenReturn(module);
+        GameplayModeContext gameplay = mock(GameplayModeContext.class);
+        when(gameplay.getWorldSession()).thenReturn(world);
+        when(gameplay.hardwareTiming()).thenReturn(mock(HardwareTimingService.class));
+        var host = mock(GameLoopTitleCardLifecycle.Host.class);
+        when(host.currentMode()).thenReturn(GameMode.TITLE_CARD);
+        when(host.level()).thenReturn(level);
+        when(host.sprites()).thenReturn(sprites);
+        when(host.module()).thenReturn(module);
+        when(sprites.getAllSprites()).thenReturn(List.of());
+        var lifecycle = new GameLoopTitleCardLifecycle(host);
+        assertTrue(lifecycle.update(false, title, mock(PlcLifecycleFrame.class), gameplay,
+                level, sprites, mock(com.openggf.camera.Camera.class), null,
+                PostTitleCardDestination.LEVEL, () -> {}, () -> {}, phase -> {},
+                (name, step) -> step.run()));
+
+        assertEquals(LevelFrameResult.SETUP_ONLY, lifecycle.releaseResult());
+        assertEquals(0, sprites.getFrameCounter());
+        assertEquals(nativeLevelClock ? 0 : 23, level.getFrameCounter());
+        level.advanceLevelFrameCounter();
+        assertEquals(nativeLevelClock ? 1 : 24, level.getFrameCounter(),
+                "the next main-loop body must read the first increment, without title debt");
+        assertEquals(0xABCD, objects.getVblaCounter());
+        org.mockito.Mockito.verify(objects, org.mockito.Mockito.never())
+                .initVblaCounter(org.mockito.ArgumentMatchers.anyInt());
+    }
+
     private static DynamicArtLifecycleService releasePrelude(int tailRows) {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService(
                 new com.openggf.game.sonic1.Sonic1GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
