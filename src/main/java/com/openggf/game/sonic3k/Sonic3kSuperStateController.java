@@ -99,6 +99,8 @@ public class Sonic3kSuperStateController extends SuperStateController implements
      * snapshot's transformation word as {@link #DOOMSDAY_FORM_SNAPSHOT_BIT}.
      */
     private boolean doomsdayForm;
+    /** Transient call-site marker for the AnPal_Load pass; never spans a frame. */
+    private boolean doomsdayAnPalPass;
     private static final int DOOMSDAY_FORM_SNAPSHOT_BIT = 0x100;
     /** Native ending-script ownership, distinct from gameplay and Doomsday. */
     private boolean endingSceneForm;
@@ -224,6 +226,26 @@ public class Sonic3kSuperStateController extends SuperStateController implements
      * done and {@code Palette_timer} 0, then install {@code Obj_HyperSonic_Stars} and the after-image
      * trail.
      */
+    /**
+     * {@code SuperHyper_PalCycle} for the {@code loc_8160A} form, at its native
+     * {@code AnPal_Load} position before {@code Process_Sprites} (LevelLoop,
+     * sonic3k.asm:7923-7926; AnPal_Load, sonic3k.asm:3137-3138). That object writes
+     * {@code Palette_timer} after Player_1's pass, so the player-tick pass below
+     * would release {@code object_control} after the player's movement instead of
+     * before it. Ordinary transformations keep the player-tick pass.
+     */
+    public void advanceDoomsdayTransformationAtAnPal() {
+        if (!doomsdayForm || getState() != SuperState.TRANSFORMING) return;
+        doomsdayAnPalPass = true;
+        try {
+            if (updateTransformationAnimation()) {
+                com.openggf.sprites.playable.SuperStateInternalAccess.finishNativeTransformationAfterPalette(this);
+            }
+        } finally {
+            doomsdayAnPalPass = false;
+        }
+    }
+
     public void upgradeDoomsdayFormToHyper() {
         if (!isSuper() || player instanceof Tails || player instanceof Knuckles) {
             return;
@@ -966,12 +988,16 @@ public class Sonic3kSuperStateController extends SuperStateController implements
      * {@code object_control}. {@code Palette_timer} counts down from {@code $F}; each expiry reloads
      * it with 1. Tails and Knuckles (Player_mode 2 and 3) finish on the first expiry. Sonic applies
      * one {@code PalCycle_SuperSonic} fade frame per expiry and finishes on the one that brings
-     * {@code Palette_frame} to {@code $24}. The engine runs this pass in the player's tick, which
-     * precedes the object pass; the ROM runs it after {@code Process_Sprites}. Either way the
-     * release is first visible to the next object and player updates.
+     * {@code Palette_frame} to {@code $24}. The ROM runs it from {@code AnPal_Load}
+     * (sonic3k.asm:3137-3138), before the next frame's {@code Process_Sprites}; the engine runs it
+     * at the end of the preceding player tick. Either way the release is first visible to the
+     * next player update. The {@code loc_8160A} form, whose object writes {@code Palette_timer}
+     * after that tick, runs the pass at the AnPal position instead.
      */
     @Override
     protected boolean updateTransformationAnimation() {
+        // The loc_8160A form owns its AnPal_Load pass (advanceDoomsdayTransformationAtAnPal).
+        if (doomsdayForm && !doomsdayAnPalPass) return false;
         // SuperHyper_PalCycle is a separate ROM routine from
         // SonicKnux_SuperHyper. This method owns its one palette pass for the
         // transformation tick; updateSuperPalette must not run it again after

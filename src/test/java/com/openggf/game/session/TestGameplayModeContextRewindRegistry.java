@@ -84,7 +84,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the sixteen always-available atomic adapters are
+ * <p>Tests verify that the seventeen always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -191,6 +191,7 @@ class TestGameplayModeContextRewindRegistry {
 
         Set<String> expectedKeys = Set.of(
                 "camera",
+                com.openggf.camera.CameraSubpixelAccess.REWIND_KEY,
                 "directed-player-lease",
                 "gamestate",
                 com.openggf.game.internal.NativePauseRewindAccess.KEY,
@@ -211,12 +212,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlySixteenAtomicKeysAfterAttach() {
+    void exactlySeventeenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(16, snapshot.entries().keySet().size(),
-                "Expected exactly 16 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(17, snapshot.entries().keySet().size(),
+                "Expected exactly 17 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -469,7 +470,7 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(16, second.capture().entries().keySet().size());
+        assertEquals(17, second.capture().entries().keySet().size());
         var running = second.capture();
         previousState.setGamePaused(true);
         gameState2.setGamePaused(true);

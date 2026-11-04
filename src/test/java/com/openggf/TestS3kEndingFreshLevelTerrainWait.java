@@ -61,6 +61,9 @@ class TestS3kEndingFreshLevelTerrainWait {
                 terrainQueued |= endingTerrainJobs() > terrainBefore;
                 assertTrue(director() == null || director().routine() == 0,
                         "Ending_ScreenInit's director runs only after LoadLevelLoadBlock");
+                var camera = GameServices.camera();
+                assertTrue(camera.getX() != 0x200 || camera.getY() != 0x200,
+                        "the wait shows Get_LevelSizeStart's camera; Ending_ScreenInit's $200 follows it");
             }
             if (terrainWait && !after.freshLevelTransitionMode()) {
                 released = true;
@@ -71,6 +74,10 @@ class TestS3kEndingFreshLevelTerrainWait {
         assertTrue(terrainQueued, "LoadLevelLoadBlock never queued the ending terrain (terrain wait seen: "
                 + terrainStarted + ", released: " + released + ")");
         assertTrue(released, "ending terrain wait never released");
+        for (int i = 0; i < 8 && (director() == null || director().routine() == 0); i++) step.run();
+        assertEquals(2, director().routine(), "the director's first dispatch follows LevelSetup");
+        assertEquals(0x200, GameServices.camera().getX() & 0xFFFF, "Ending_ScreenInit's camera");
+        assertEquals(0x200, GameServices.camera().getY() & 0xFFFF, "Ending_ScreenInit's camera");
     }
 
     private static long endingTerrainJobs() {

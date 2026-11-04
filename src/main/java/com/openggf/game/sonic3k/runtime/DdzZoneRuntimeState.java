@@ -29,7 +29,7 @@ import java.util.Objects;
  * camera holds only the integer word.
  */
 public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 4 * Integer.BYTES + 22 * Short.BYTES + 2 + S3kEmeraldPaletteState.SNAPSHOT_BYTES;
+    private static final int CAPTURE_BYTES = 4 * Integer.BYTES + 21 * Short.BYTES + 2 + S3kEmeraldPaletteState.SNAPSHOT_BYTES;
 
     private final S3kEmeraldPaletteState emeraldPalette = new S3kEmeraldPaletteState();
     public S3kEmeraldPaletteState emeraldPalette() { return emeraldPalette; }
@@ -40,7 +40,6 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private int scrollSpeed;
     private int scrollAcceleration;
     private int lockedCameraX;
-    private short cameraXFraction;
     private short cameraDelta;
     private short wrapOffset;
     private boolean initialPlaneBlank;
@@ -88,10 +87,6 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     /** {@code _unkFA86}. */
     public int lockedCameraX() { return lockedCameraX; }
     public void setLockedCameraX(int value) { lockedCameraX = value; }
-
-    /** Low word of the longword {@code Camera_X_pos}. */
-    public int cameraXFraction() { return cameraXFraction & 0xFFFF; }
-    public void setCameraXFraction(int value) { cameraXFraction = (short) value; }
 
     /** {@code _unkFA90}. */
     public int cameraDelta() { return cameraDelta; }
@@ -213,7 +208,6 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putInt(scrollAcceleration);
         buffer.putInt(lockedCameraX);
         buffer.putInt(phaseFlags);
-        buffer.putShort(cameraXFraction);
         buffer.putShort(cameraDelta);
         buffer.putShort(wrapOffset);
         buffer.putShort(cameraXCoarseBack);
@@ -251,7 +245,6 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         scrollAcceleration = buffer.getInt();
         lockedCameraX = buffer.getInt();
         phaseFlags = buffer.getInt();
-        cameraXFraction = buffer.getShort();
         cameraDelta = buffer.getShort();
         wrapOffset = buffer.getShort();
         cameraXCoarseBack = buffer.getShort();

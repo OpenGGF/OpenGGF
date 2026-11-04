@@ -131,6 +131,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private com.openggf.game.sonic3k.events.Sonic3kSSZEvents sszEvents;
     private com.openggf.game.sonic3k.events.Sonic3kDEZEvents dezEvents;
     private com.openggf.game.sonic3k.events.Sonic3kEndingEvents endingEvents;
+    // Load-scoped placement of Ending_ScreenInit; set by the init profile per load.
+    private boolean deferEndingScreenInit;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -516,7 +518,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new com.openggf.game.sonic3k.runtime.SszZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_INTRO_ENDING && act == 1) {
             registry.install(new com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState(playerCharacter));
-            if (endingEvents != null) endingEvents.initializeScreen();
+            // Ending_ScreenInit runs in LevelSetup, which loc_6310 (sonic3k.asm:7788-7796)
+            // calls after the level-size and terrain-wait calls. A load that
+            // holds behind that wait runs it from prepareInitialScreenObjects instead.
+            if (endingEvents != null && !deferEndingScreenInit) endingEvents.initializeScreen();
         } else if (zone == Sonic3kZoneIds.ZONE_DEZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
                     act, playerCharacter));
@@ -744,9 +749,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * Knuckles detaches from the empty spawn terrain and the crane's InAir gate
      * opens during the teleporter rise instead of his later jump.
      */
+    /** Whether this load's LevelSetup follows a held loc_7870 terrain wait. */
+    void deferEndingScreenInitToLevelSetup(boolean defer) {
+        deferEndingScreenInit = defer;
+    }
+
     void prepareInitialScreenObjects() {
         if (sszEvents != null && currentZone == Sonic3kZoneIds.ZONE_SSZ) {
             sszEvents.applyScreenInitAtLoad(currentAct);
+        }
+        // Ending_ScreenInit (sonic3k.asm:120904-120916) allocates the rescue director
+        // and moves the camera to $200 before loc_6468's first Process_Sprites, not at
+        // load: until then the camera is Get_LevelSizeStart's. Idempotent.
+        if (endingEvents != null && currentZone == Sonic3kZoneIds.ZONE_INTRO_ENDING && currentAct == 1) {
+            endingEvents.initializeScreen();
         }
     }
 
@@ -761,6 +777,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void updatePrePhysics() {
         updateTailsSoloFlyIn();
+        // LevelLoop's Animate_Palette -> AnPal_Load precedes Process_Sprites.
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null && sprites.getMainPlayable() instanceof com.openggf.sprites.playable.AbstractPlayableSprite main
+                && main.getSuperStateController() instanceof Sonic3kSuperStateController powered) {
+            powered.advanceDoomsdayTransformationAtAnPal();
+        }
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
         // ordinary animator's post-object tail retains only its late resolution.
         if(endingEvents!=null && currentZone==0x0D && currentAct==1)

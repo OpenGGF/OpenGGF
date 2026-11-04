@@ -2,6 +2,7 @@ package com.openggf.trace.replay;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.NativeGameStateOps;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageSelection;
@@ -86,9 +87,29 @@ public final class TraceSegmentCarriedStateImport {
         // sonic3k.asm:61815/61847; S2 Obj79_LoadData s2.asm:44827) put the star
         // post's path pair back on Player 1 at the reload.
         applyRecordedSolidBits(trace, player);
+        applyRecordedCameraXFraction(trace);
         TraceSegmentCarriedState carried = resolve(trace);
         applyRunState(carried, player);
         return carried;
+    }
+
+    /**
+     * The {@code Camera_X_pos} low word the load inherited ({@code level_entry_ram}
+     * {@code camera_x_pos}, sampled at the first PreLevel frame). No level load clears
+     * it ({@code Get_LevelSizeStart} writes the word only, sonic3k.asm:38241), so 16.16
+     * producers such as Doomsday's {@code sub_82920} accumulate onto it. The boot's
+     * camera started from zero, as after {@code Title_Screen}, so any adds its own load
+     * already made are kept on top. Absent: the zero start stands.
+     */
+    private static void applyRecordedCameraXFraction(TraceData trace) {
+        var ram = trace.metadata().levelEntryRam();
+        Integer recorded = ram == null ? null : ram.get("camera_x_pos");
+        var camera = GameServices.cameraOrNull();
+        if (recorded == null || camera == null) {
+            return;
+        }
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera,
+                com.openggf.camera.CameraSubpixelAccess.xFraction(camera) + recorded);
     }
 
     /**
@@ -145,7 +166,8 @@ public final class TraceSegmentCarriedStateImport {
         if (located.isEmpty()) {
             return new TraceSegmentCarriedState(
                     null, null, null, null, null, List.of(), null, null, null,
-                    meta.lastStarPostHit(), List.of("no run manifest names this segment"));
+                    meta.lastStarPostHit(), null, null, null, null, List.of(),
+                    List.of("no run manifest names this segment"));
         }
         RunContext run = located.get();
         List<String> unresolved = new ArrayList<>();
@@ -204,15 +226,152 @@ public final class TraceSegmentCarriedStateImport {
                         ? consumedGiantRingsThisZoneVisit(run, target, unresolved)
                         : List.of();
 
-        unresolved.add("Mean_water_level / Camera_max_Y_pos / Dynamic_resize_routine:"
-                + " Saved2_* words are not recorded");
-        unresolved.add("Extra_life_flags / Life_count / Timer: not recorded (not compared)");
+        // level_entry_ram: the recorder's PreLevel sample of the saved blocks and
+        // carried counters. Recorded values replace the derived ones; any
+        // difference is reported, because one of the two is then wrong.
+        java.util.Map<String, Integer> ram = meta.levelEntryRam();
+        List<String> disagreements = new ArrayList<>();
+        TraceSegmentCarriedState.LevelEntryRestore restore = null;
+        Integer lives = null;
+        Integer ringArray = null;
+        Integer recordedCursor = null;
+        if (ram != null && "s3k".equals(run.manifest().game())) {
+            lives = ram.get("life_count");
+            ringArray = ram.get("collected_special_ring_array");
+            recordedCursor = ram.get("current_special_stage");
+            List<Integer> recordedEmeralds = recordedEmeraldStates(ram);
+            if (recordedEmeralds != null) {
+                if (emeraldStates != null && !emeraldStates.equals(recordedEmeralds)) {
+                    disagreements.add("Collected_emeralds_array: derived " + emeraldStates
+                            + " recorded " + recordedEmeralds);
+                }
+                emeraldStates = recordedEmeralds;
+                Integer recordedChaos = ram.get("chaos_emerald_count");
+                Integer recordedSuper = ram.get("super_emerald_count");
+                if (recordedChaos != null && chaos != null && !recordedChaos.equals(chaos)) {
+                    disagreements.add("Chaos_emerald_count: manifest " + chaos
+                            + " recorded " + recordedChaos);
+                }
+                if (recordedSuper != null && superCount != null && !recordedSuper.equals(superCount)) {
+                    disagreements.add("Super_emerald_count: derived " + superCount
+                            + " recorded " + recordedSuper);
+                }
+                if (recordedChaos != null) {
+                    chaos = recordedChaos;
+                }
+                if (recordedSuper != null) {
+                    superCount = recordedSuper;
+                }
+            }
+            Integer starPost = meta.lastStarPostHit();
+            if ("level".equals(segment.kind()) && starPost != null && starPost != 0) {
+                restore = recordedRestore(ram, starPost);
+                if (restore != null) {
+                    if (rings != null && rings != restore.ringCount()) {
+                        disagreements.add("Ring_count: manifest " + rings + " restored "
+                                + restore.ringCount() + " (" + restore.block() + ")");
+                    }
+                    rings = restore.ringCount();
+                }
+            } else if ("bonus_stage".equals(segment.kind()) && ram.get("ring_count") != null) {
+                // A bonus stage keeps the live Ring_count across its reload.
+                int live = ram.get("ring_count");
+                if (rings != null && rings != live) {
+                    disagreements.add("Ring_count: manifest " + rings + " recorded " + live);
+                }
+                rings = live;
+            }
+            unresolved.removeIf(note -> note.startsWith("Collected_special_ring_array"));
+        } else {
+            unresolved.add("level_entry_ram not recorded: Saved_*/Saved2_* restore blocks,"
+                    + " Life_count and the carried counters are absent");
+        }
 
         String provenance = run.manifest().runId() + " segment " + target
                 + " (" + segment.dir() + ")";
         return new TraceSegmentCarriedState(
-                provenance, rings, chaos, emeraldStates, superCount, giantRings,
-                null, cursor, superSet, meta.lastStarPostHit(), unresolved);
+                provenance, rings, chaos, emeraldStates, superCount,
+                ringArray != null ? List.of() : giantRings,
+                null, cursor, superSet, meta.lastStarPostHit(), restore, lives,
+                ringArray, recordedCursor, disagreements, unresolved);
+    }
+
+    private static List<Integer> recordedEmeraldStates(java.util.Map<String, Integer> ram) {
+        List<Integer> states = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            Integer state = ram.get("collected_emerald_" + i);
+            if (state == null) {
+                return null;
+            }
+            states.add(state);
+        }
+        return List.copyOf(states);
+    }
+
+    /**
+     * {@code Load_Starpost_Settings} (sonic3k.asm:61800-61856) from the recorded
+     * blocks. {@code Special_bonus_entry_flag} selects {@code Saved2_*}
+     * (loc_2D2C2); otherwise {@code Saved_*}, whose rings and extra-life flags
+     * are cleared unless {@code Respawn_table_keep} is set. Either way the
+     * timer is reloaded with {@code Timer_frame = 59} and {@code Timer_second}
+     * stepped back one. The star-post checkpoint is the {@code Saved_*} block.
+     */
+    private static TraceSegmentCarriedState.LevelEntryRestore recordedRestore(
+            java.util.Map<String, Integer> ram, int lastStarPostHit) {
+        Integer flag = ram.get("special_bonus_entry_flag");
+        if (flag == null) {
+            return null;
+        }
+        String block = flag != 0 ? "saved2" : "saved";
+        Integer[] w = {ram.get(block + "_ring_count"), ram.get(block + "_extra_life_flags"),
+                ram.get(block + "_timer"), ram.get(block + "_camera_max_y_pos"),
+                ram.get(block + "_dynamic_resize_routine"), ram.get(block + "_mean_water_level"),
+                ram.get(block + "_water_full_screen_flag"), ram.get(block + "_solid_bits")};
+        for (Integer word : w) {
+            if (word == null) {
+                return null;
+            }
+        }
+        boolean ringsKept = flag != 0 || ram.getOrDefault("respawn_table_keep", 0) != 0;
+        TraceSegmentCarriedState.Checkpoint checkpoint = recordedCheckpoint(ram, lastStarPostHit);
+        return new TraceSegmentCarriedState.LevelEntryRestore(
+                flag != 0 ? "Saved2" : "Saved",
+                ringsKept ? w[0] : 0, ringsKept ? w[1] : 0,
+                restoredTimerFrames(w[2]), w[3], w[4], w[5], w[6] != 0,
+                (w[7] >> 8) & 0xFF, w[7] & 0xFF, checkpoint);
+    }
+
+    private static TraceSegmentCarriedState.Checkpoint recordedCheckpoint(
+            java.util.Map<String, Integer> ram, int lastStarPostHit) {
+        String[] keys = {"saved_x_pos", "saved_y_pos", "saved_camera_x_pos", "saved_camera_y_pos",
+                "saved_ring_count", "saved_extra_life_flags", "saved_timer",
+                "saved_camera_max_y_pos", "saved_dynamic_resize_routine", "saved_solid_bits"};
+        int[] v = new int[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            Integer word = ram.get(keys[i]);
+            if (word == null) {
+                return null;
+            }
+            v[i] = word;
+        }
+        return new TraceSegmentCarriedState.Checkpoint(lastStarPostHit & 0x7F,
+                v[0], v[1], v[2], v[3], v[4], v[5], timerFrames(v[6]), v[7], v[8],
+                (v[9] >> 8) & 0xFF, v[9] & 0xFF);
+    }
+
+    /** {@code Timer} longword (minute word, second, frame) as engine frames. */
+    private static long timerFrames(int timer) {
+        int minute = (timer >> 16) & 0xFF;
+        int second = (timer >> 8) & 0xFF;
+        int frame = timer & 0xFF;
+        return ((long) minute * 60 + second) * 60 + frame;
+    }
+
+    /** The restore forces {@code Timer_frame = 59} and steps the second back one. */
+    private static long restoredTimerFrames(int timer) {
+        int minute = (timer >> 16) & 0xFF;
+        int second = (timer >> 8) & 0xFF;
+        return Math.max(0L, ((long) minute * 60 + second) * 60 - 1);
     }
 
     private record RunContext(TraceRunManifest manifest, Path runDir, int segmentIndex) {
@@ -477,7 +636,9 @@ public final class TraceSegmentCarriedStateImport {
                 base.provenance(), base.ringCount(), base.chaosEmeraldCount(),
                 base.emeraldStates(), base.superEmeraldCount(), base.consumedGiantRings(),
                 shield, base.specialStageCursor(), base.superEmeraldStageSet(),
-                base.lastStarPostHit(), base.unresolved());
+                base.lastStarPostHit(), base.restore(), base.lifeCount(),
+                base.collectedSpecialRingArray(), base.recordedSpecialStageCursor(),
+                base.disagreements(), base.unresolved());
     }
 
     // -------------------------------------------------------------------- apply
@@ -552,9 +713,34 @@ public final class TraceSegmentCarriedStateImport {
         if (carried.ringCount() != null && level != null) {
             level.getLevelGamestate().setRings(carried.ringCount());
         }
+        TraceSegmentCarriedState.LevelEntryRestore restore = carried.restore();
+        if (restore != null && level != null) {
+            level.getLevelGamestate().setRingExtraLifeFlags(restore.extraLifeFlags());
+            level.getLevelGamestate().setTimerFrames(restore.timerFrames());
+            if (player != null && isLegalPathPair(restore.topSolidBit(), restore.lrbSolidBit())) {
+                player.setTopSolidBit((byte) restore.topSolidBit());
+                player.setLrbSolidBit((byte) restore.lrbSolidBit());
+            }
+        }
+        GameStateManager gameState = GameServices.gameStateOrNull();
+        if (gameState != null && carried.lifeCount() != null) {
+            NativeGameStateOps.restoreLives(gameState, carried.lifeCount());
+        }
         applyEmeraldState(carried);
-        applyConsumedGiantRings(carried);
-        applyLastStarPostHit(carried);
+        if (gameState != null && carried.collectedSpecialRingArray() != null) {
+            NativeGameStateOps.restoreSpecialStageSaveProgress(gameState,
+                    carried.collectedSpecialRingArray(),
+                    carried.recordedSpecialStageCursor() != null
+                            ? carried.recordedSpecialStageCursor()
+                            : gameState.getCurrentSpecialStageIndex());
+        } else {
+            applyConsumedGiantRings(carried);
+        }
+        if (restore != null && restore.checkpoint() != null) {
+            applyRecordedCheckpoint(restore.checkpoint());
+        } else {
+            applyLastStarPostHit(carried);
+        }
         Integer shield = carried.player1ShieldStatus();
         if (player != null && shield != null && shield != 0) {
             // loc_6A02 (sonic3k.asm:8326-8355) tests fire, then lightning,
@@ -563,6 +749,76 @@ public final class TraceSegmentCarriedStateImport {
                     : (shield & LIGHTNING_SHIELD) != 0 ? ShieldType.LIGHTNING
                     : ShieldType.BUBBLE;
             player.giveShield(type);
+        }
+    }
+
+    private static boolean isLegalPathPair(int top, int lrb) {
+        return (top == 0x0C && lrb == 0x0D) || (top == 0x0E && lrb == 0x0F);
+    }
+
+    /**
+     * The star-post checkpoint as {@code Last_star_post_hit} and the recorded
+     * {@code Saved_*} block hold it at this load. The index is the engine's
+     * {@code Last_star_post_hit} (read by {@code tst.b} gates such as
+     * SSZ ScreenInit), the activation mark is the loc_2D008 comparison, and the
+     * saved block is what a death reload restores through
+     * {@code Load_Starpost_Settings} (sonic3k.asm:61800-61834).
+     */
+    private static void applyRecordedCheckpoint(TraceSegmentCarriedState.Checkpoint saved) {
+        var level = GameServices.levelOrNull();
+        var checkpoint = level == null ? null : level.getCheckpointState();
+        if (checkpoint == null || saved.index() == 0) {
+            return;
+        }
+        checkpoint.restoreFromSaved(saved.x(), saved.y(), saved.cameraX(), saved.cameraY(),
+                saved.index());
+        checkpoint.restoreStarPostActivationMark(
+                Math.max(checkpoint.getStarPostActivationMark(), saved.index()));
+        if (checkpoint instanceof com.openggf.game.CheckpointState cs) {
+            cs.saveRingState(saved.rings(), saved.extraLifeFlags());
+            cs.saveActTimer(saved.timerFrames());
+            cs.saveS3kRuntimeState(saved.cameraMaxY(), saved.dynamicResizeRoutine());
+            if (isLegalPathPair(saved.topSolidBit(), saved.lrbSolidBit())) {
+                cs.saveSolidBits((byte) saved.topSolidBit(), (byte) saved.lrbSolidBit());
+            }
+        }
+    }
+
+    /**
+     * The part of the entry restore that lands after the level-size and event
+     * initialisation it overrides. In the ROM {@code Load_Starpost_Settings}
+     * runs after {@code Get_LevelSizeStart} has set the bounds, and replaces
+     * {@code Camera_max_Y_pos}, {@code Camera_target_max_Y_pos},
+     * {@code Dynamic_resize_routine} and, when the level has water,
+     * {@code Mean_water_level} and {@code Water_full_screen_flag}
+     * (sonic3k.asm:61822-61833, 61848-61856). The engine's equivalents are set
+     * by its camera and level-event initialisation, so the declared-position
+     * entry calls this once, after both and before the first row.
+     */
+    public static void importAfterLevelInit(TraceSegmentCarriedState carried) {
+        if (carried == null || carried.restore() == null) {
+            return;
+        }
+        TraceSegmentCarriedState.LevelEntryRestore restore = carried.restore();
+        var camera = GameServices.cameraOrNull();
+        if (camera != null) {
+            camera.setMaxY((short) restore.cameraMaxY());
+            camera.setMaxYTarget((short) restore.cameraMaxY());
+        }
+        var events = GameServices.module().getLevelEventProvider();
+        if (events instanceof com.openggf.game.AbstractLevelEventManager eventManager) {
+            eventManager.restoreEventRoutineState(restore.dynamicResizeRoutine(), 0);
+        }
+        var level = GameServices.levelOrNull();
+        var water = GameServices.waterOrNull();
+        if (water != null && level != null) {
+            int zone = level.getFeatureZoneId();
+            int act = level.getFeatureActId();
+            if (water.hasWater(zone, act)) {
+                water.setWaterLevelDirect(zone, act, restore.meanWaterLevel());
+                water.setWaterLevelTarget(zone, act, restore.meanWaterLevel());
+                water.setFullScreenFlag(zone, act, restore.waterFullScreen());
+            }
         }
     }
 

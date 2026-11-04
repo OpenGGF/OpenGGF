@@ -79,6 +79,16 @@ Unreleased. The earlier development themes remain in
   queue to drain before the ending scene starts, as the shipped game does. The
   ending previously started at once with its terrain art unqueued.
 
+- The Doomsday Super transformation shows its sparkle animation and releases
+  Sonic on the shipped frames: the animation starts when the flight controller
+  triggers it, and Sonic moves again on the frame his palette fade finishes.
+
+- S3K keeps one sub-pixel camera X position across level loads, as the shipped
+  game does, so Doomsday's autoscroll, the Death Egg escape, the Lava Reef boss
+  scroll and the Hidden Palace emerald theft share it instead of each starting
+  from zero. The ending keeps its start camera until its art has loaded, and
+  trace segments take the recorded sub-pixel position from their level-entry RAM.
+
 - S3K fresh level loads count the terrain wait's final VBlank in the live game
   loop, as the recording driver already did. The remaining load-time lag
   frames are documented, not estimated.
@@ -1908,7 +1918,8 @@ its original drawing priority.
 
 - Standalone S3K run segments enter with the run state the ROM carried in:
   rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
-  Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
+  Player 1's shield and path bits, and, from the recorded saved blocks, the
+  star-post checkpoint, camera bounds, water level, timer and lives. One segment-entry import reads them from the run manifest and
   the segment's recorded entry row; nothing is written after entry. Standalone
   special stages select their stage and Chaos or Super layout set through the
   ROM's own search instead of defaulting to the Chaos set.
