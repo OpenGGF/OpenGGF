@@ -91,7 +91,7 @@ import java.util.function.Predicate;
  * use SK Set 1 as the canonical source; S3-only remappings share the
  * same underlying object names in most cases.
  */
-public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider, com.openggf.level.metadata.ObjectTableNameProvider {
+public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider, com.openggf.level.metadata.ObjectTableNameProvider, com.openggf.game.internal.DeferredLevelFixedObjectInstallation {
     @Override public boolean isPaletteCellEditable(int line, int color) {
         return com.openggf.game.sonic3k.Sonic3kEditorPalettePolicy.isEditable(line, color);
     }
@@ -160,6 +160,15 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
             int act,
             FixedSstSlotSink slots) {
         if (freshTitleCardSst!=null) freshTitleCardSst.install(romZoneId,act,slots);
+        if (!defersFixedLevelObjects()) installDeferredFixedLevelObjects(romZoneId, act, slots);
+    }
+
+    @Override public boolean defersFixedLevelObjects() {
+        return freshTitleCardSst != null && freshTitleCardSst.isPrefixOnly();
+    }
+
+    @Override public void installDeferredFixedLevelObjects(int romZoneId, int act, FixedSstSlotSink slots) {
+        if (freshTitleCardSst != null) freshTitleCardSst.completePrefixOnly();
         if (romZoneId == Sonic3kZoneIds.ZONE_HCZ) {
             // SpawnLevelMainSprites installs Obj_HCZWaterSplash subtype 1 at
             // Dynamic_object_RAM+2 (absolute SST slot 5). The player-facing

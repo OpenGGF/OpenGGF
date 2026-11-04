@@ -746,6 +746,62 @@ class TestTraceRunPlaybackCoordinator {
         return coordinator;
     }
 
+    @Test
+    void bonusLoadTailReleasesAtProductionBoundaryWithSourceRowsLeft() {
+        var coordinator = bonusLoadTailCoordinator();
+        var tail = levelObservationAt(2, 1, 0, 0, 2, true, 0);
+        assertTrue(coordinator.beginSourceLoadTail(tail).isEmpty(),
+                "manifest destination alone cannot authorize a load tail");
+        coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(2, BonusStageType.GUMBALL));
+        assertEquals(List.of(new TraceRunPlaybackCoordinator.BeginSourceLoadTail(0, 1)),
+                coordinator.beginSourceLoadTail(tail));
+        assertTrue(coordinator.afterProduction(freshTailObservation(GameMode.TITLE_CARD, 3, true)).isEmpty());
+        var released = bonusObservation(4, 4, BonusStageType.GUMBALL, 0);
+        assertTrue(coordinator.afterStep(released).isEmpty());
+        assertEquals(List.of(new CloseSegment(0), new EnterTransitionGap(0, 1)),
+                coordinator.afterProduction(released));
+        var admission = assertInstanceOf(AdmitDestination.class,
+                coordinator.beforeAdmission(released).getFirst());
+        assertEquals(0, admission.receipt().rowsConsumed());
+        assertEquals(6, admission.receipt().absoluteBk2Row());
+    }
+
+    @Test
+    void bonusLoadTailCoverageEndOpensGapWithoutAdmittingUnreleasedDestination() {
+        var coordinator = bonusLoadTailCoordinator();
+        coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(2, BonusStageType.GUMBALL));
+        coordinator.beginSourceLoadTail(levelObservationAt(2, 1, 0, 0, 2, true, 0));
+        var loading = freshTailObservation(GameMode.TITLE_CARD, 5, true);
+        assertEquals(List.of(new CloseSegment(0), new EnterTransitionGap(0, 1)),
+                coordinator.afterProduction(loading));
+        assertTrue(coordinator.beforeAdmission(loading).isEmpty());
+    }
+
+    @Test
+    void bonusLoadTailRejectsUnrelatedBonusRelease() {
+        var coordinator = bonusLoadTailCoordinator();
+        coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(2, BonusStageType.GUMBALL));
+        coordinator.beginSourceLoadTail(levelObservationAt(2, 1, 0, 0, 2, true, 0));
+        assertInstanceOf(FailRun.class, coordinator.afterStep(
+                bonusObservation(4, 4, BonusStageType.SLOT_MACHINE, 0)).getFirst());
+    }
+
+    private static TraceRunPlaybackCoordinator bonusLoadTailCoordinator() {
+        var source = level("source", 0, 1, 0, 5);
+        var destination = bonus("gumball", 19, 1, 6, 3, "gumball");
+        var boundary = transition(0, "starpost_bonus", 2);
+        var coordinator = TraceRunPlaybackCoordinator.fromDescriptors(
+                run(List.of(source, destination), List.of(boundary),
+                        TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED),
+                TracePlaybackProfile.DISABLED, 20, List.of(
+                        syntheticDescriptor(source, null, boundary, 5, 2,
+                                TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY),
+                        syntheticDescriptor(destination, boundary, null, 3, 3,
+                                TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY)));
+        coordinator.activateInitialLevel(levelObservation(1, 0, 0, 0, false, 0));
+        return coordinator;
+    }
+
     private static RunPlaybackObservation freshTailObservation(GameMode mode, int cursor, boolean exhausted) {
         return new RunPlaybackObservation(mode, cursor, cursor,
                 new RunPlaybackObservation.LevelIdentity(2, 1, 1, 0),

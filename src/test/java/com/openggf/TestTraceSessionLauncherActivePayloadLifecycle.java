@@ -97,6 +97,61 @@ class TestTraceSessionLauncherActivePayloadLifecycle {
     }
 
     @Test
+    void sourceLoadTailRetainsFrozenRowChecksUntilActualSourceClosure(
+            @TempDir Path root) throws Exception {
+        Fixture fixture = fixture(root, false);
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        RecordingFactory factory = new RecordingFactory();
+        ActiveSegmentPayload initial = factory.open(fixture.descriptors().getFirst(), 0);
+        TraceSessionLauncher session = session(fixture.descriptors(), initial, factory);
+        var trace = com.openggf.trace.TraceFixtures.trace(
+                com.openggf.trace.TraceFixtures.metadataWithDynamicArt("s3k", 0, 0, 2),
+                List.of(com.openggf.trace.TraceFrame.executionTestFrame(0, 20, 0, 0),
+                        com.openggf.trace.TraceFrame.executionTestFrame(1, 21, 0, 0)),
+                java.util.Map.of(1, List.of(new TraceEvent.DynamicArtTransferState(
+                        1, List.of(), List.of(42L)))));
+        var comparisons = new ArrayList<com.openggf.trace.FrameComparison>();
+        var comparator = new LiveTraceComparator(trace, ToleranceConfig.DEFAULT, 1,
+                () -> null, null, comparisons::add);
+        var probe = new TraceRunReplayWalker.BoundaryProbe(new TraceRunReplayWalker.EngineHooks() {
+            @Override public int currentBk2Frame() { return 1; }
+            @Override public BonusStageType peekBonusRequest() { return null; }
+            @Override public boolean isSpecialStageRequested() { return false; }
+            @Override public GameMode currentMode() { return GameMode.TITLE_CARD; }
+        });
+        probe.setDelegate(comparator);
+        setField(session, "comparator", comparator);
+        setField(session, "runBoundaryProbe", probe);
+        var coordinator = mock(TraceRunPlaybackCoordinator.class);
+        org.mockito.Mockito.when(coordinator.phase())
+                .thenReturn(TraceRunPlaybackCoordinator.Phase.SOURCE_LOAD_TAIL);
+        setField(session, "runCoordinator", coordinator);
+
+        invoke(session, "applyRunCoordinatorActions", new Class<?>[] {List.class},
+                List.of(new TraceRunPlaybackCoordinator.BeginSourceLoadTail(0, 1)));
+        session.beforeProductionIteration();
+        assertSame(comparator, field(session, "productionIterationComparator"),
+                "loading rows must still drain their applicable post-production comparisons");
+        var input = new Bk2FrameInput(1, 0, 0, false, "frozen loading row");
+        probe.prepareFrame(input);
+        probe.afterFrameAdvanced(input, false);
+        session.afterProductionIteration();
+
+        assertEquals(2, comparator.cursor(), "the frozen physical source row remains observed");
+        assertTrue(comparator.hasDeferredTerminalDynamicArt(),
+                "logical gameplay completion must not finalize terminal art early");
+        assertTrue(comparisons.isEmpty(), "terminal art remains owned until source closure");
+        closeSegment(session, 0);
+        assertFalse(comparator.hasDeferredTerminalDynamicArt());
+        assertEquals(1, comparisons.size(), "actual closure compares terminal art exactly once");
+        assertTrue(comparisons.getFirst().fields().keySet().stream()
+                .anyMatch(name -> name.startsWith("dynamic_art.")),
+                "the missing recorded transfer remains a comparison rather than disappearing");
+        assertTrue(initial.isClosed());
+    }
+
+    @Test
     void destinationOpenFailureLeavesTheGapUnowned(@TempDir Path root)
             throws Exception {
         Fixture fixture = fixture(root, false);

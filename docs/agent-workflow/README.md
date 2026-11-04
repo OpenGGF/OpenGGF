@@ -44,6 +44,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Native S3K initialization timing](../../tools/tracechaser/docs/capture-s3k.md): `--initialization-timing` observes load-phase service and completion, with rejection diagnostics for unsupported interrupted routines and later callbacks; it exports no CPU/slot state. Origin: [2026-11-03 synchronous loading](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md).
+
 - [Shared-checkout integration](../../tools/git/INTEGRATION.md): `integrate.py`
   holds a machine-local checkout lease across fail-fast delivery and preserves
   conflicts/staged work through explicit recovery and handoff (issue #256).

@@ -435,6 +435,22 @@ at the correct service points. Queue order, ROM archive identity, module
 count, prepared payload, readiness polling, and the consumer's downstream
 mutation remain native-owned and rewind-safe.
 
+Fresh native initialization now separates display clear, deferred terrain
+decoding, level setup, placement, object execution and initial presentation.
+The approved dedicated run-root input can schedule those real prepared phases;
+it cannot supply decoder output, clock values or gameplay state. This does not
+establish exact synchronous live-play loading duration. Active continuations
+reject rewind capture/restore, and unsupported native interrupt placements fail
+capture rather than being moved across clock/RNG reads. Qualification is tracked
+in the [synchronous-load design and evidence](architecture/designs/2026-11-03-synchronous-load-vint-accounting.md);
+its current implementation checkpoints are not a full-route certification.
+
+Special-stage startup is outside this Level-load phase contract. Its masked
+initialization can leave an earlier global-clock error even when the following
+Level load preserves its own native interval. The independent-movie observation
+and exact remaining offset are recorded in the same design artifact; absolute
+clock continuity through that startup is not certified.
+
 ### Verification
 
 `TestS3kKosModuleQueue`, `TestSonic3kTitleCardKosQueue`,

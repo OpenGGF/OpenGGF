@@ -20,6 +20,34 @@ public interface TraceReplayFixture {
     /** Registers the replay port and its stateless production-boundary observer. */
     void installHardwareTimingReplay(HardwareTimingReplayPort replayPort);
 
+    /** Installs a separate, value-free initialization schedule after bootstrap has completed. */
+    default void installInitializationTimingReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort port) {
+        var level = gameplayMode().getLevelManager();
+        com.openggf.level.NativeLevelLoadAccess.beginRepresentedTimingRun(level, port::next);
+    }
+
+    /** Restores live semantic completion when the replay is detached. */
+    default void clearInitializationTimingReplay() {
+        com.openggf.level.NativeLevelLoadAccess.setAdmission(gameplayMode().getLevelManager(),
+                com.openggf.game.internal.NativeLevelLoadPhaseAdmission.IMMEDIATE);
+    }
+
+    /** Activates only the dedicated queue input of a currently matched production load. */
+    default void beginInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+            HardwareTimingSchedule readiness,
+            java.util.Map<com.openggf.game.timing.HardwareWorkKind,
+                    com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+        throw new UnsupportedOperationException("fixture has no initialization readiness adapter");
+    }
+
+    /** Leaves readiness input only with a current completed-load receipt. */
+    default void endInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+        throw new UnsupportedOperationException("fixture has no initialization readiness adapter");
+    }
+
     /**
      * Removes and returns recorded completion edges that had no engine-pending
      * counterpart, so the driving comparison can record them as errors on the
@@ -51,6 +79,11 @@ public interface TraceReplayFixture {
 
     /** Latches the trace row's physical raw frame before any row work or retry. */
     void beginTraceRow(int traceIndex, int rawFrame);
+
+    /** Maps a physical load-readiness row without assigning a comparison row. */
+    default void beginInitializationGapFrame(int rawFrame) {
+        throw new UnsupportedOperationException("fixture has no initialization readiness row adapter");
+    }
 
     /** Deactivates recorded edge authority while no trace row is represented. */
     void enterHardwareTimingGap();

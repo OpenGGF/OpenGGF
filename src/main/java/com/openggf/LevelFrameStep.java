@@ -195,10 +195,11 @@ public final class LevelFrameStep {
 
     /**
      * Services one caller-requested held VBlank, then advances its clock.
-     * No gameplay body or playback row is consumed here. Only game VBlank
-     * publication is token-idempotent: bonus lag can request multiple service
-     * and clock steps under the same token. Pause has a separate claim policy
-     * in {@link #serviceVBlankOnly}.
+     * No gameplay body or playback row is consumed here. A frozen fade's
+     * service is token-idempotent so its pre-callback and held-body paths share
+     * one tick. Other held loops may request multiple service and clock steps
+     * under the same token. Pause has a separate claim policy in
+     * {@link #serviceVBlankOnly}.
      *
      * <p>The supplied clock preserves the caller's captured or live binding.
      * A failed service never spends its clock tick.
@@ -206,6 +207,7 @@ public final class LevelFrameStep {
     static void serviceHeldVBlank(
             LevelFrameContext context, PlcLifecycleFrame frame, Runnable advanceClock) {
         Objects.requireNonNull(advanceClock, "advanceClock");
+        if (!frame.claimHeldVBlankService()) return;
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         advanceClock.run();

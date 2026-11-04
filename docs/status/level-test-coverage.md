@@ -5,6 +5,14 @@ MHZ carried-checkpoint closure (2026-11-04): the
 switch-door parent-removal/pending-child-deletion regression. Broader route,
 restore/forward and configuration obligations remain inherited.
 
+S3K resumable fresh loads (2026-11-04): common load-boundary checks cover prepared
+phase identity, terrain ownership, completion publication and rejection of rewind
+during transient work. GameLoop and recording ending checks distinguish the
+original terrain batch from later scene art. The [load-phase evidence](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md)
+records bounded Knuckles and Sonic+Tails observations, including the separate
+special-stage startup clock gap. These checks do not certify cold campaigns,
+viewport/team breadth or the inherited act-matrix route and restore obligations.
+
 Shared reload frame ownership (2026-11-03): the CNZ, LBZ and MHZ act matrices
 record positioned cross-act reloads and twice-restored next-row oscillator and
 owner comparisons. In-frame controls retain AIZ/HCZ/CNZ/LBZ marker semantics.

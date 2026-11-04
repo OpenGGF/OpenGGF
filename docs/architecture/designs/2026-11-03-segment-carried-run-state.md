@@ -179,6 +179,15 @@ level-event initialisation, as `Load_Starpost_Settings` follows
 `Get_LevelSizeStart`. Everything else is written at the existing entry point.
 Both writes are in the one declared-position entry step, before row 0.
 
+Water restoration writes the saved mean and full-screen flag only.
+`Load_Starpost_Settings` (sonic3k.asm:61800-61856) leaves
+`Target_water_level` and `Water_speed` as initialized by the destination.
+The imported mean must not become a synthetic target. The ROM-backed
+`TestTraceSegmentCarriedWaterRestore` uses the recorded HCZ Saved2 entry:
+its mean is 1664 while the fresh target is 1280. It fails on the old target
+write and passes when only the mean is restored. Continuous bonus returns
+use the same mean-only rule through their production owner.
+
 Not imported: `Saved*_camera_X/Y_pos` for the entry camera itself (owned by the
 policy-B placement), `Saved*_art_tile` (priority bit) and the zone/act words.
 

@@ -71,6 +71,19 @@ class TestLiveRewindOwnerLifetime {
     }
 
     @Test
+    void physicalRunDriverDefersInstallationUntilItDetaches() {
+        GameplayModeContext owner = privateOwner();
+        registerStage(owner, 0);
+        var driver = new com.openggf.trace.replay.runs.TraceRunFrameDriver();
+        owner.installTraceRunFrameDriver(driver);
+        bind(owner);
+        assertNull(owner.getRewindController(), "the physical run driver owns this transient timeline");
+        owner.clearTraceRunFrameDriver(driver);
+        bind(owner);
+        assertNotNull(owner.getRewindController(), "ordinary live rewind remains available after the driver detaches");
+    }
+
+    @Test
     void installedOwnerReplaysItsRegisteredProviderWhileAnotherSessionIsAmbient() {
         GameplayModeContext ambient = TestEnvironment.activeGameplayMode();
         CountingStage ambientStage = registerStage(ambient, 40);

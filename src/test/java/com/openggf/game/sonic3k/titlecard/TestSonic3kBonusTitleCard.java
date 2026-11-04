@@ -46,6 +46,18 @@ public class TestSonic3kBonusTitleCard {
     }
 
     @Test
+    void bonusEntryReplacesThePreviousExternalInLevelChildOwner() {
+        manager.initializeInLevel(0, 1);
+        manager.useNativeInLevelSstChildren();
+        assertTrue(manager.capture().inLevelGameplayOwnedExternally());
+        manager.initializeBonus();
+        assertFalse(manager.capture().inLevelGameplayOwnedExternally(),
+                "the fresh bonus owner must receive its own child updates");
+        for (int i = 0; i < 150; i++) dispatch();
+        assertTrue(manager.isComplete(), "a bonus card after an in-level title must progress through its animation");
+    }
+
+    @Test
     public void bonusModeReleasesControlOnExit() {
         manager.initializeBonus();
 

@@ -77,7 +77,7 @@ extensions; their field/behavior evidence is not native character-route parity.
 | LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | Native Sonic, all five production presets | `TestS3kDdzLifecycleProduction#ringOutEndsTheFormFallsAndReloadsDoomsday` | implemented | 5/0/0/0 below | Actual ring-out/fall/reload and live-history isolation; donor/main extensions and remaining death causes remain separate |
 | LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop and recording driver | `TestS3kDdzColdRoutes` | recording driver now honors the shared inactive-transition flag | focused route check passes | Exit fade freezes source gameplay while palette work continues |
 | LOAD / HISTORY: ending `$D01` | `loc_81CA4` progression-save request, real load and outgoing timeline reset | Native Sonic, all five production presets; declared post-white-fade boss state | `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` | implemented | 5/0/0/0 below | Declared boundary fixture; no on-disk save or ending-scene claim |
-| ORACLE: strict segment replay | `TestS3kSonicTailsZone0cSegmentTraceReplay` | — | `-Ptrace-segments` | — | red: bootstrap camera Y and missing clock seeds (plan evidence) | Replay harness bootstrap |
+| ORACLE: recorded standalone entry | `TestS3kSonicTailsZone0cSegmentTraceReplay`; native PreLevel camera long and declared carried entry | native 320, Sonic+Tails | `-Ptrace-segments` | implemented | green on `822b4ddc1`: 10059 compared frames, 10126 planned rows with lag admission, zero errors | One recorded route; broader team/viewport and ending obligations remain open |
 | LOAD: DEZ → `$C00` incoming | `loc_803D6` and source camera-policy retirement | solo320/800 direct final-DEZ routes | `TestDezFinalScreenEntry`, capture115 | connected | corrected load/initial flight;30-case destination selection passes without skips (2026-09-23) | Full cold native320 team incoming continuity is now recorded below; remaining roster/width breadth stays open |
 
 ## Execution evidence
@@ -820,3 +820,18 @@ The combined local invocation remains72/1F/0E/0S for the separate ICZ16 blocker;
 these three DDZ cases are qualified individually, not a green overall suite.
 [Command, baseline provenance and limits](../../plans/2026-10-13-s3k-playable-completion.md#r9-green-lrzddz-split-and-r10-icz-evidence-boundary--2026-10-17).
 No new cold route, viewport/team, native pixel or ending breadth is certified.
+
+
+## Recorded standalone camera entry — 2026-11-04
+
+The strict Sonic+Tails Zone0c replay now passes from committed recorder data
+alone. The native PreLevel camera long `$15662700` supplies low word `$2700`
+through the sanctioned segment-entry import; no manual clock or camera
+injection is added. The camera fraction persists across native word writes
+and participates in rewind. On `822b4ddc1`, full r7 and segment profiles each
+remove this replay's previous 676 errors, first row 5 `x`.
+
+This is the recorded route's comparison result, not new cold-start, viewport,
+team, native-pixel or ending certification. The older seeded cold-route rows
+above retain their original scope. See the [wave 8 frontier](../../../status/trace-frontier-log.md)
+for composition source, commands and final validation limits.

@@ -3845,3 +3845,14 @@ Check both original revisions, include a pointer-derived negative control, and
 exercise the actual consumer rather than only comparing resolver output. The
 [retail revision plan](../../../docs/architecture/plans/2026-10-28-retail-rom-revisions.md)
 records original hashes, inspected disassembly versions and validation scope.
+
+
+## Release-time clock repair has a bounded scope (2026-11-04)
+
+`Level` clears the level word before title execution (s2.asm:4772-4773).
+`Level_MainLoop` (s2.asm:5088-5095) increments it after the V-int wait. Clearing both engine counter
+mirrors at title release repairs post-release consumers, including shake and
+cached object visibility. It does not undo an object's earlier clock reads in
+locked passes. The inherited Cog `$F` gate can still see the advancing
+LevelManager counter there; retain this limitation instead of claiming complete
+title-clock parity. Test release separately from actual locked object scans.

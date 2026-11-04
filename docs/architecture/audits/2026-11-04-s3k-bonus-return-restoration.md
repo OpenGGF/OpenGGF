@@ -338,3 +338,39 @@ segments match baseline. 428 focused controls and102 composed title/water
 controls pass without skips. Remaining frontier is standing-object Y at6443
 and a later starpost-entry step cap; exact added-tuple qualification is limited
 by the baseline's first/recent-only retention and abort at1124."
+
+
+## Lead composition follow-up — 2026-11-04
+
+The earlier stopped-lane record above is retained. The lead composed this lane
+with the camera/carried-entry and S2 title-release lanes on published wave 7
+`5627fc64a` as `822b4ddc1`. All three complete profiles finished: r6 889 cases,
+9 failures, no errors, 7 inherited skips; r7 119 cases, 80 failures, 2 errors,
+no skips; segments 70 cases, 45 failures, 2 errors, no skips. Changed full
+assertions and complete JSONs match the intended lane witnesses. These are
+executions of that source, before the later upstream load-phase reconciliation.
+
+A matched focused Mega observer on unchanged wave 7 closes the **Slots**
+added-tuple limitation: 14 baseline errors, 12 candidate errors, twelve common,
+zero added. Only row 1052 `camera_x` (ROM `$04D2`, engine `$0456`) and `camera_y`
+(ROM `$02C8`, engine `$033D`) disappear. All six complete baseline Mega JSONs
+reproduce the published wave 7 witness. The observer is comparison-only and
+was removed; its result is preserved in
+`/tmp/trace-survey-20261102/wave8-slots-tuple-comparison.json`.
+
+This does **not** certify baseline agreement in Angel Island's newly reached
+suffix beyond its old abort at row 1124. The row-6443 Y mismatch and later
+starpost-entry frontier remain open. `aiz_3` denotes the third recording
+segment in Angel Island, not a third game act.
+
+Composition also found the standalone saved-block importer assigning the
+recorded mean to the water target. Both native saved-block loads restore mean
+and full-screen flag only (`Load_Starpost_Settings`, sonic3k.asm:61800-61856).
+Correction `c0e8cacd0` removes that target write and leaves the freshly loaded
+movement state intact. The real HCZ Saved2 fixture distinguishes mean 1664
+from target 1280: one discriminating target assertion fails before the fix;
+123 focused water, rewind, camera, entry and guard checks pass after it with
+zero skips. No recorded gameplay values are imported after segment entry.
+
+Final composition with upstream load phases, its exact source and validation
+remain recorded in the [frontier log](../../status/trace-frontier-log.md).

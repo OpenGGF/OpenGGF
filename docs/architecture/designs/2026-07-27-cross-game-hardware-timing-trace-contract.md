@@ -63,6 +63,128 @@ frame, the existing lag-row contract is sufficient. A new completion event is
 reserved for work that remains pending while the main loop continues and the
 ROM explicitly polls a hardware-owned readiness gate.
 
+### 2026-11-03 approved extension: synchronous initialization phases
+
+The implemented S3K phases cover fresh `Level:` entry. They do not cover the
+separate `SpecialStage` startup masking block and do not repair clock error
+inherited from an earlier unsupported interval. Qualification reports that
+absolute error separately from the clock interval contributed by a matched
+production load. A captured complete stream is not proof that a replay reached
+all of its loads.
+
+The user approved extending this dedicated timing-input boundary to actual
+production initialization continuations. This is scheduling authority, not
+gameplay-state synchronization. It does not authorize instruction/cycle, beam,
+VDP or system-bus simulation, or exact live-load timing claims.
+
+Queued readiness remains unchanged. Direct level-data decoding, layout copy,
+masked setup and initial assembly do not acquire fabricated queue handles.
+Instead, an engine-owned continuation independently selects and prepares its
+real ROM-backed operation. The initialization timing port may hold or resume
+that existing phase and select an observed zero-routine interrupt service only
+after load ordinal, phase ordinal, phase kind and stable ROM-backed operation
+fingerprint match. It cannot create/select work, choose gameplay branches or
+call gameplay owners. The production owner executes its own continuation and
+services the selected native interrupt semantics; ordinary VBlank queue service
+is not a substitute for `VInt_0`.
+
+The V5 companion stream is `initialization_timing.jsonl` (or its gzip form).
+Complete-run captures place it at the run root. Its `raw_frame` is the absolute,
+zero-based BK2 physical row, including gaps between comparison segments; it is
+not a segment-local physics row. The existing coordinator supplies this mapping.
+The run manifest must pass V5 validation and every event must lie within the
+movie input. The seeded initial bootstrap is outside this represented run:
+production explicitly starts its initialization ordinal namespace at installation,
+and the recorder numbers its first represented native fresh load one. Neither
+side infers an offset from expected clocks or the other side's first event.
+Each compact LF-terminated event has exactly:
+
+```json
+{"event":"load_phase_timing","raw_frame":0,"sequence":0,"load_ordinal":1,"phase_ordinal":1,"phase":"display_clear","submission_fingerprint":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","operation":"hold"}
+```
+
+The fingerprint above is an illustrative placeholder. Actual producers hash the
+independently resolved ROM operation and selected inputs, with a shared canonical
+encoding; a zone/act name, host duration, arbitrary row or whole-load counter is
+not an operation identity. The initial phase vocabulary is `display_clear`,
+`level_data_decode`, `level_setup`, `initial_placement`, `initial_objects`,
+`initial_presentation`. Placement completes real player, parent, ring and object
+placement before object-clock/RNG reads.
+The last phase owns the real CPU sprite-table construction and initial-animation
+tail after object execution; it is not a fabricated wait. Operations are:
+
+- `hold`: the phase remains active at this physical row's end.
+- `vint_0`: one observed zero-routine interrupt occurred at this point.
+- `resume`: the existing operation may finish and its native successor proceed.
+
+`sequence` starts at zero and is contiguous within each physical row, with at
+most 64 events. `hold` must end its row; every `vint_0` must be followed within
+that row by `hold` or `resume`. These are framing and safety bounds, not timing
+budgets. Several
+services and phase resumptions may share one row; retain their order rather
+than collapsing them to a Boolean or counter delta. A row with `hold` and no
+service event observes no service within that phase's represented interval; it
+does not by itself prove an interrupt-mask cause. The recorder must observe
+actual interrupt entry and reject unsupported handlers inside these phases,
+never derive services from end-of-frame counters or emulator lag alone.
+
+No clock values, CPU/register state, decoder progress, object slots, positions,
+rings or physics/aux comparison fields are accepted. Phase identity/fingerprint
+is stable until `resume`; the next independently produced operation has a later
+phase ordinal or load ordinal. Missing streams provide no authority, and an
+unfinished represented prefix provides no invented completion. Physical row
+mapping stays with the existing `HardwareTimingCoordinator`; neither a phase
+lease nor the continuation may reconstruct a second raw-frame mapping.
+
+A matched prepared `display_clear` phase identifies an already-started load;
+it does not, by itself, provide queue readiness. A load outside structural
+segments can carry a second dedicated run-root companion,
+`initialization_hardware_timing.jsonl.gz`. Each event has exactly seven fields:
+
+```json
+{"event":"hardware_work_completed","raw_frame":0,"load_ordinal":1,"boundary":"post_objects","kind":"kos_module_queue","ordinal":0,"submission_fingerprint":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+```
+
+This uses the existing three-kind readiness protocol, without a new work kind
+or gameplay authority. It is activated only for the current matched production
+load. Every queue edge must lie within that load's recorded phase interval;
+its kind, ordinal, fingerprint and service boundary must match already-prepared
+production work. An unmatched phase, stale token, unknown job, missing edge or
+unconsumed edge cannot create work or silently complete it. Structural-segment
+queue events stay in their existing stream and are not duplicated here.
+
+The existing coordinator maps these absolute zero-based physical rows, including
+ordinary title/terrain waits between the phase events. The recorder emits actual
+completion observations only while a represented load owns an interstitial
+completion, retaining that load through reconciliation of its final physical
+row. Cold bootstrap is excluded. Both initialization companions are compressed
+by the producer when compression is enabled.
+
+`hardware_timing_interstitial.jsonl` remains ordinal/fingerprint evidence only.
+Its `bk2_frame` is completed-frame provenance, not this input namespace. Before
+activating dedicated readiness, already-claimed prefix work must satisfy its
+existing ordinal/fingerprint receipts. Captured queue identities split those
+receipts into prefix, explicitly serviced work and remaining suffix; no identity
+is consumed twice. The remaining suffix is reconciled at the next structural
+handoff. Its provenance frame never selects readiness.
+
+This authorizes the bounded extension; it is not an implementation or fixture
+coverage claim. Production, parser, recorder and replay wiring are under implementation.
+Ordinary synchronous loads retain their existing rewindable title boundary.
+The production continuation is selected by explicitly installing its phase-admission
+interface before loading, independently of any row, event, or comparison value.
+It executes the ROM-selected load operations through that interface; the timing
+client cannot select their content. This does not establish exact live-play
+loading time or replace ordinary title-boundary snapshots.
+Production must genuinely defer work, preserve failure/commit boundaries and
+transfer the advanced live clock when managers change. A facade around atomic
+`LevelLoadAttempt`, holding open its scoped resources across frames, or moving
+interrupts across a clock/RNG read is insufficient. Initial-object samples need
+a proven semantic cut before they can be supported. Run replay does not support
+rewind; fail closed on restoring an in-flight continuation rather than inventing
+a second snapshot framework. Existing edge matching, strict comparisons and
+delivery gates remain in force.
+
 ### 2026-08-20 coverage status: contract, implementation, fixtures
 
 Three questions have three different answers, and conflating them has already

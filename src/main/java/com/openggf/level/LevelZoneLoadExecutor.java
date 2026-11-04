@@ -41,20 +41,31 @@ final class LevelZoneLoadExecutor {
                     queueFreshLevelRuntimeArt);
             succeeded = true;
         } finally {
-            // BEGIN HCZ1_DIRECT_FF_OUTER_ZONE_FINISH: an enclosing carry/cleanup failure revokes, never admits.
-            boolean plcZoneCleanupCompleted = false;
-            try {
-                LevelContinuationCarry.finishLoad(transitions, succeeded);
-                // A load that fails before initCameraBounds must not leak a stage-return
-                // respawn table into a later, potentially different, level.
-                levelManager.checkpointCoordinator.clearPendingPersistentRespawn();
-                plcZoneCleanupCompleted = true;
-            } finally {
-                if (!succeeded || !plcZoneCleanupCompleted)
-                    levelManager.revokeNativePlcTargetAdmission();
+            var pending = levelManager.nativeLoads.pending;
+            if (succeeded && pending != null) {
+                // HOLD returned to the host, not from Level. Retain its bank
+                // and LOADING carry until the actual attempt terminates.
+                pending.zoneLoadFinished = this::finish;
+            } else {
+                finish(succeeded);
             }
-            // END HCZ1_DIRECT_FF_OUTER_ZONE_FINISH
         }
+    }
+
+    private void finish(boolean succeeded) {
+        // BEGIN HCZ1_DIRECT_FF_OUTER_ZONE_FINISH: an enclosing carry/cleanup failure revokes, never admits.
+        boolean plcZoneCleanupCompleted = false;
+        try {
+            LevelContinuationCarry.finishLoad(transitions, succeeded);
+            // A load that fails before initCameraBounds must not leak a stage-return
+            // respawn table into a later, potentially different, level.
+            levelManager.checkpointCoordinator.clearPendingPersistentRespawn();
+            plcZoneCleanupCompleted = true;
+        } finally {
+            if (!succeeded || !plcZoneCleanupCompleted)
+                levelManager.revokeNativePlcTargetAdmission();
+        }
+        // END HCZ1_DIRECT_FF_OUTER_ZONE_FINISH
     }
 
 }

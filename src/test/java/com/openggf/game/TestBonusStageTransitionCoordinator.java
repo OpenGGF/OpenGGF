@@ -192,6 +192,7 @@ class TestBonusStageTransitionCoordinator {
         var order = org.mockito.Mockito.inOrder(first, second, third);
         order.verify(first).setBonusStageReturnCheckpointIndex(saved.savedLastStarPostHit());
         order.verify(second).setSuppressNextMusicChange(true);
+        order.verify(third).setApparentAct(saved.savedApparentZoneAndAct() & 0xFF);
         order.verify(third).getCheckpointState();
         order.verify(third).restorePersistentRespawnOnNextObjectReset(null);
         verify(first, never()).getCheckpointState();
