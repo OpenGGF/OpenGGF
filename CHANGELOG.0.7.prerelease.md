@@ -52,6 +52,18 @@ Unreleased. The earlier development themes remain in
 - The Lava Reef boss act (`$1600`) starts with the native falling intro on a
   fresh entry, for every character.
 
+- Fresh S3K trace segments derive the entry camera from the ROM start-location
+  entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
+  objects (the DDZ fly-in, the shrine) have already moved.
+
+- Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
+  fly-in: CPU-held flight to the right until landing.
+
+- Doomsday queues its misc and boss Master Emerald art through the native
+  module queue, and the S3K ending load queues its terrain art and waits for the
+  queue to drain before the ending scene starts, as the shipped game does. The
+  ending previously started at once with its terrain art unqueued.
+
 - S3K fresh level loads count the terrain wait's final VBlank in the live game
   loop, as the recording driver already did. The remaining load-time lag
   frames are documented, not estimated.

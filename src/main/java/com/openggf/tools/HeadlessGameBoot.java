@@ -160,6 +160,13 @@ public final class HeadlessGameBoot implements AutoCloseable {
     /** Capture the real title/launch flow before the first level assembly (Mutator Lab, 2026-10-07). */
     public void setBootToTitle(boolean enabled) { bootToTitle = enabled; }
 
+    private com.openggf.game.session.LevelEntryProvenance entryProvenance;
+
+    /** Declares the recorded entry kind for this boot's level load, as trace replay does. */
+    public void setEntryProvenance(com.openggf.game.session.LevelEntryProvenance provenance) {
+        entryProvenance = java.util.Objects.requireNonNull(provenance, "provenance");
+    }
+
     public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
         java.util.Objects.requireNonNull(decorator, "decorator");
         this.moduleDecorator = (module, request) -> decorator.apply(module);
@@ -589,6 +596,10 @@ public final class HeadlessGameBoot implements AutoCloseable {
             GameServices.camera().setFocusedSprite(team.mainSprite());
             loop.initializeTitleScreenMode();
             return loop;
+        }
+        if (entryProvenance != null) {
+            com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                    GameServices.level(), entryProvenance);
         }
         GameServices.level().loadZoneAndAct(zone, act);
 
