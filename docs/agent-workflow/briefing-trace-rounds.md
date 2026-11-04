@@ -97,6 +97,16 @@ its cause. Preserve full assertions, input hashes and actual row fields. The
 added tuples and unmatched coverage, but does not turn grouped summaries,
 missing suffixes or identical observed controls into a universal parity proof.
 
+An aborted replay may never construct a final report containing every row
+(2026-11-04, AIZ2). Capture each already-completed `FrameComparison` before the
+frontier stopper, using the repository's existing serializer; close the stream
+on abort. Reproduce the unmodified full-profile report on each source, then
+require the observed control to reproduce it before interpreting raw tuples.
+The paired AIZ2 capture has 996 common rows and reduces raw ERRORs despite more
+grouped spans. Preserve missing/suffix scope, actual expected values and the
+number of baseline clean rows; zero additions on zero clean rows is not a
+universal parity claim. Restore all instrumentation before integration.
+
 Editing a running shell driver can produce a trailing parse error after every
 Maven run has completed (2026-11-03, Mega segment2). Bash had already parsed the
 profile loop, executed all three invocations and copied their reports, then read

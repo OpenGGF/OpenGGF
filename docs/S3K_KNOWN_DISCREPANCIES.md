@@ -2120,3 +2120,12 @@ capture. Spring solid reactions precede animation, preserving the fractional
 input on timer-only passes. See the [current discrepancy record](status/s3k-known-bugs.md#mgz-swinging-platform-endpoint-fractional-input-ownership)
 and [MGZ1 coverage](architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03).
 The independent carried-emerald bootstrap remains policy A.
+
+
+DDZ recorded-entry bootstrap (2026-11-04): the strict Sonic+Tails Zone0c replay
+now passes from committed native entry data, including the camera long's
+persistent low word. This closes the recorded oracle's entry-state gap, not
+expanded native-pixel/team/viewport or ending coverage. The
+[current discrepancy record](status/s3k-known-bugs.md#doomsday-presentation-gaps-and-unseeded-entry)
+and [DDZ matrix](architecture/validation/levels/s3k-ddz.md) distinguish it from
+the older seeded cold-route witnesses and remaining breadth obligations.

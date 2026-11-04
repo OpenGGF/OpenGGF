@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+DDZ recorded entry (2026-11-04): the [DDZ matrix](../architecture/validation/levels/s3k-ddz.md)
+now records a green strict Sonic+Tails Zone0c replay from the native entry camera
+long. This closes that recorded oracle's bootstrap gap; seeded cold-route,
+team/viewport, native-pixel and ending obligations retain their separate scope.
+
 MHZ carried-checkpoint closure (2026-11-04): the
 [MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md) records the
 switch-door parent-removal/pending-child-deletion regression. Broader route,

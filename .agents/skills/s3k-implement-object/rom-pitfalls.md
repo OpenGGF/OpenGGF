@@ -6917,3 +6917,11 @@ camera long. Keep the fraction through ordinary loads and word writes, reset it
 only for the native full clear, and capture it for rewind. Recorded PreLevel
 camera longs supply standalone entry state; hand-injecting a fraction proves a
 hypothesis, not a recorded-data replay result.
+
+
+Restoration tests must also name their observation boundary. Bonus entry
+completes assembly at title release; LEVEL retains it for the first LevelLoop
+iteration. Observe saved water after title release and before that gameplay
+water update. Draining the LEVEL boundary first can legitimately move the mean
+or select a new dynamic height, concealing the restore that the test intended
+to inspect. Check both destination mode and the correct pending-boundary owner.

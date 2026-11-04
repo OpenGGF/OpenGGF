@@ -123982,3 +123982,109 @@ limit. No release full-suite or universal trace-green claim is made.
 
 Final merged-source smoke, current-develop profile comparison, post-integration
 checks, queue/execution accounting and develop push remain pending here.
+
+
+### Final composition qualification
+
+The final runtime composition is `a98857cdb`, including current develop
+`663b86216` and published recorder merge `c17f4b269`. Full profiles on that
+exact source, compared with complete current-develop XML/JSON, are:
+
+| Profile | Current develop cases / failures / errors / skips | Composition |
+| --- | --- | --- |
+| r6 | 895 / 10 / 0 / 7 | 895 / 9 / 0 / 7 |
+| r7 | 121 / 81 / 2 / 0 | 121 / 80 / 2 / 0 |
+| Segments | 70 / 46 / 2 / 0 | 70 / 45 / 2 / 0 |
+
+No new red identity or earlier observed frontier appears. The six additional
+r6 coordinator cases and two r7 prefix cases are upstream and pass on both
+arms. KiS2 EHZ1's donor-catalogue prerequisite failure becomes a zero-error
+1817-row replay. DDZ Zone0c is green in both profiles. Complete S1 assertions
+are compared without truncation. ICZ2 is **1035 groups on both current arms**,
+with identical complete JSON, first 483 `y`, and 6282 rows. Historical 1724
+reports remain context-qualified; no new ICZ2 improvement or cause is claimed.
+
+Upstream initialization has already cleared Mega's segment-0/1/2 queue tails.
+Against that parent, this composition removes only the remaining camera pairs
+in Slots segments 3 and 5, each **2 errors to zero**: row 1052 X `$04D2/$0456`,
+Y `$02C8/$033D`; row 1128 X `$0517/$0456`, Y `$04B3/$033D` (ROM/old engine).
+The complete Mega assertion and Angel Island report match current develop:
+2589 groups, first 6443 `y`, then segment-8 ownership failure at movie cursor
+25811. The older 2604-group/starpost-cap result belongs to `822`, before
+upstream phases. Neither the later upstream advance nor a complete campaign
+pass is attributed to the camera lane.
+
+The aborted Sonic+Tails `aiz_2` recording has 191 to 260 grouped errors and the
+same row-996 rewind-reference closure. Fresh paired observations close this
+prefix's raw-row gate. Unmodified controls reproduce both complete reports;
+temporary comparison-only Jackson observers reproduce those controls. Both
+streams contain exactly rows 0–995, 45816 field observations, identical ROM
+expected values, and no row/field gaps. Raw ERROR tuples decrease 22924 to
+21803: 6545 added, 7666 removed, 15258 common. There are **zero additions on
+baseline-error-free or all-MATCH rows**; the baseline has zero such rows, while
+the candidate has 84 error-free rows. This is a qualified prefix observation,
+not a universal parity certificate.
+
+The first added tuple is row 256 camera Y: ROM `$042C`, baseline `$0390`,
+candidate `$0430`. Both engines are already wrong in X (`$1CAD`, ROM `$1F10`),
+Y (`$04BC`, ROM `$0471`), X speed (zero, ROM `$03B5`) and camera X (`$1C0D`,
+ROM `$1E70`). P2 is `$1CBC/$04C0`, ROM `$1EE8/$04A7`; its X speed is `-$0080`,
+ROM `$0380`, and both engine Y speeds are zero versus ROM `-$0171`.
+Complete P1/P2/camera/subpixel snapshots and actual tuples are retained in
+`/tmp/wave8-aiz2-exact-row-gate-20261104/lead-exact-row-comparison.json`.
+Row 996 and the suffix were not compared; the unregistered Knuckles reference
+remains unresolved. All instrumentation is restored and its worktree is clean.
+The initial unavailable-Gson compile attempt executed no tests; its failure is
+preserved. The corrected capture used existing Jackson, with no gameplay writes.
+
+Final ordinary source `c2575e4d2` changes only the ordinary water fixture and
+skip policy from `a988`; production, selected trace tests, trace payloads and
+Maven configuration are identical Git objects. The fixture now observes saved
+water after title release but before the first LevelLoop water update: bonus
+entry assembly is complete, while the LEVEL return's fresh boundary remains
+pending. All three water cases pass. The earlier attempts that demanded a
+resumable owner or drained the first gameplay tick remain failed evidence;
+no water assertion or production tolerance was removed.
+
+`python3 tools/testing/run_categories.py --base 663b86216442b450e11e133a522abf9de8d93d54 --workers 2 --headless-gl surfaceless-egl --run`
+finishes all 4463 selected classes, 90 ordinary batches and guards on `c257`:
+**37775 cases, 32 failures, 1 error, 49 skips; raw VERDICT FAILED.** All 834
+guards pass. Every negative outcome reproduces on unchanged current develop
+in 226 selected baseline cases: 30 identities/types/messages match literally,
+and three MHZ landmark assertions differ only in Set display order with
+identical expected/actual members and identical test source. The additional
+physical-display nested-attempt failure also reproduces the exact exception
+and cause. No new or worsened failure is found; no unrelated assertion is
+relaxed. Original failed verdicts remain unchanged.
+
+All 49 smoke skips are classified, with no missing ROMs or unexplained skips.
+The seven inherited r6 skips are separately classified by the final 89-rule
+policy: five explicit opt-ins and two documented unrecorded bonus fixtures.
+The latter require explicit verified-absent capability declarations; declaring
+them present or omitting declarations fails closed. The runner does not infer
+these inputs. Policy checks pass 33 cases; one separate historical Python
+report-fixture test is skipped. The isolated OpenAL null-driver case passes.
+
+TraceChaser `c17f4b269` is pushed to main and contains both producer histories.
+Both recorder policy/history checks pass. Its full native tests and matched
+`c733354` baseline each report 923 cases: 856 pass, 60 fail, 7 explicit skips.
+All statuses and 922 full messages match; the remaining executable-seal failure
+expects each freshly built binary's verified digest against the same stale
+receipt. No receipt or test is relaxed. BizHawk uses the user-supplied explicit
+2.11 directory; no new native capture is published in this integration.
+
+Candidate trace queue/Maven seconds: r6 1381/720, r7 314/421, segments 155/285.
+Owning baseline queue/slot seconds are 0/786.4, 376/425.1, 905.6/283.4.
+Final smoke telemetry records 857.4 seconds queued and
+1850.2 seconds holding its 91 batch/guard slots; preparation is
+37.32 seconds. Command wall time is 2753.667 seconds.
+Slot hold includes launch/teardown, not pure CPU. Rounded telemetry, planning,
+archival and off-job investigation are not silently assigned to execution.
+User wait in these validation stages is zero; other overhead remains unknown.
+These concurrent lane intervals are not summed as delivery wall time.
+
+These are bounded smoke and trace comparisons, not a public-release full-suite
+pass or whole-campaign certification. Remaining frontiers include CNZ2 row
+2390, Angel Island row 6443, the later Mega ownership closure, and the separate
+AIZ2 rewind-reference closure. Validation artifacts and the lead's integration,
+push and cleanup receipts remain in `/tmp/trace-survey-20261102/SURVEY.md`.

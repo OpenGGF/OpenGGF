@@ -374,3 +374,30 @@ zero skips. No recorded gameplay values are imported after segment entry.
 
 Final composition with upstream load phases, its exact source and validation
 remain recorded in the [frontier log](../../status/trace-frontier-log.md).
+
+
+### Final current-develop composition
+
+On `a98857cdb`, both remaining Slots camera-only segments become green versus
+owning `663b86216`: segment 3 removes the two row-1052 errors above; segment 5
+removes row-1128 camera X `$0517/$0456` and Y `$04B3/$033D`. Both complete reports
+have zero errors. The full Mega assertion and Angel Island's 2589-group report
+are identical to current develop: first row 6443 Y and later segment-8 source
+ownership failure at movie cursor 25811. Upstream initialization owns the
+advance beyond the historical starpost cap, and the older 2604 total is not the
+owning-parent delta. Newly reached suffixes remain qualified.
+
+The ordinary fixture installs no phase-admission client and retains the
+synchronous fresh title boundary. Bonus entry completes assembly at release;
+LEVEL deliberately retains assembly for the first LevelLoop iteration. Water
+restoration must be checked between title release and that first gameplay
+water update. Requiring a pending resumable owner failed before assertions;
+draining the LEVEL boundary instead advanced HCZ's dynamic selection and AIZ's
+water movement before observing the saved mean. Those failed attempts are
+retained. Corrected `c2575e4d2` checks the real title loop, exact destination
+ownership, saved mean, fresh target and Knuckles apparent act: three cases pass,
+zero failures/errors/skips. No production water assertion or tolerance is lost.
+
+The final smoke runs 37775 cases; all 834 guards pass, all 49 skips classify,
+and its 32 failures/one error reproduce on current develop. The raw failed
+verdict and exact source qualifications remain in the frontier record.

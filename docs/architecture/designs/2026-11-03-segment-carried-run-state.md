@@ -1,6 +1,6 @@
 # Segment carried run state (2026-11-03)
 
-**Status:** implemented on `bugfix/ai-trace-carried-segment-state`.
+**Status:** implemented and qualified in wave 8; final composition is recorded below.
 **Owner:** `com.openggf.trace.replay.TraceSegmentCarriedStateImport`.
 **Supersedes:** the "Run-Level Progression Is Absent" consequence and
 known-discrepancies §30 (Super Emerald special-stage identity).
@@ -252,3 +252,36 @@ The entry hook takes no position on whether a segment is a fresh start or a
 return. Policy B can establish the engine's return state before
 `importAtSegmentEntry` runs. The import then writes the same values the engine's
 return path would otherwise restore from its saved block.
+
+
+## Wave 8 final qualification — 2026-11-04
+
+Runtime `a98857cdb` composes the carried camera/saved-block implementation with
+current develop `663b86216`. DDZ's strict recorded-entry oracle is green;
+HCZ2 advances from 3422 errors at row 0 to 26 at row 6640. These are fixture
+comparisons, not whole-zone or expanded-route certificates.
+
+The still-aborted Sonic+Tails `aiz_2` trace changes 191 to 260 groups but reduces
+actual ERROR tuples 22924 to 21803. Fresh baseline/candidate controls reproduce
+the complete reports and row-996 closure. Identical observers capture all 996
+common rows and 45816 fields per arm, with no expected-value or coverage changes.
+There are 6545 added and 7666 removed tuples, with zero additions on a baseline
+error-free/all-MATCH row. The baseline already has an ERROR on every captured
+row; the candidate has 84 error-free rows. First added row 256 camera Y is ROM
+`$042C`, baseline `$0390`, candidate `$0430`, after the candidate's row-84
+frontier. Full P1/P2/camera snapshots and raw tuples are preserved outside Git.
+No observation of row 996 or its suffix is invented, and the unregistered
+Knuckles reference is not repaired by this entry-state work.
+
+The temporary observer uses the existing Jackson serializer on completed
+`FrameComparison` records and closes each gzip member before returning.
+Unmodified and observed report/body controls match, allowing only separately
+evidenced Java identity-hash/source-line differences. All instrumentation is
+restored. One earlier unavailable-Gson compilation failed before tests; it is
+preserved, not counted as engine evidence. Exact sources, commands, patches,
+raw gzip streams and gate results are under
+`/tmp/wave8-aiz2-exact-row-gate-20261104/`.
+
+Full current-base trace profiles, inherited ordinary failures, source-qualified
+skip accounting and remaining limits are in the
+[wave 8 frontier record](../../status/trace-frontier-log.md).
