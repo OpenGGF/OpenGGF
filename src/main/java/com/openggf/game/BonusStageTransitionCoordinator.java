@@ -148,10 +148,9 @@ public final class BonusStageTransitionCoordinator {
                                    ShieldType shieldToRestore,
                                    BonusStageProvider.BonusStageRewards rewards,
                                    Runnable lifeAward) {
-        // loc_6034 (sonic3k.asm:7580-7582) restores Apparent_zone_and_act from
-        // Saved2_apparent_zone_and_act before the reload, so a return into a
-        // seamless act (AIZ2 data still presenting as AIZ1) keeps the apparent
-        // act it was entered from, not the loaded act.
+        // Load_Starpost_Settings repeats the saved apparent identity at player
+        // assembly: loc_2D2C2 (sonic3k.asm:61833-61837). prepareReturnLoad has
+        // already restored it for the earlier water and ScreenInit selection.
         levelManager.setApparentAct(savedState.savedApparentZoneAndAct() & 0xFF);
         if (savedState.savedLastStarPostHit() >= 0) {
             RespawnState checkpoint = levelManager.getCheckpointState();

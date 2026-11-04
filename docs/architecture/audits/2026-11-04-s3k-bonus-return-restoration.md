@@ -1,6 +1,9 @@
 # Bonus-return saved apparent act and Slots source camera
 
-## Scope and stopped state
+The final continuation and handoff below supersede the original stopped state.
+The original evidence and its limits are retained for provenance.
+
+## Scope and original stopped state
 
 Implementation lane `aiz3-act-camera-restore`, using the T3-prepared checkout.
 Merged wave7 `2c27b9cb7`, then stopped WIP `a9c7e48f4`. The resulting merge
@@ -8,7 +11,7 @@ was first `064314b1b`; adding the required documentation trailers changed its
 identity to `d045ff8b4` without changing its tree. No push or integration into
 develop was performed. TraceChaser remains pinned and checked out at `10f1e09`.
 
-**Validation stopped at an unrelated title-boundary error**, under the lane's
+**The first continuation stopped at a title-boundary error**, under the lane's
 explicit stop rule. This is not a completed delivery or a three-profile gate.
 The original WIP is retained; the proposed water/order extension is not applied.
 No camera-fraction, entry-import, MHZ rewind, GameLoopBonusStageSession,
@@ -186,3 +189,152 @@ has not changed `GameLoopBonusStageSession` or any camera-fraction, CNZ2,
 MHZ rewind, frontier-log, SURVEY, or other fleet owner. The lead's frozen
 `afdf37b29` profiles will supply the matched integration baseline; the original
 historical profiles above are still only historical evidence.
+
+
+## Final continuation gate and local handoff
+
+The water/fixture correction is `d2b6dddbd`; merging the lead's live-control
+correction `afdf37b2967e92eb58d0de096e63a5bf970a0a2e` produced
+`e6aeb7f03`. Its only merge conflict was the shared prerelease item; both
+control-lock and water/Slots changes were retained. After this merge,
+`root-composed-focus` passes **102 tests, 0 failures/errors/skips**, including
+both real bonus title routes, the corrected water returns, fresh-boundary
+controls, fresh handoff and the source guard. No production
+`GameLoopBonusStageSession` edit was made by this lane; it still matches `5f`.
+
+All three complete candidate trace profiles ran as separate queued jobs on
+`e6aeb7f03` plus the archived, temporary comparison-only observer patch.
+The observer records complete ERROR-row `FrameComparison` fields and never
+writes gameplay state, severity, input, timing admission or comparator results.
+It is removed from the final tree. The final source edit only corrects the
+post-load restoration comment to cite the second native apparent-identity
+write at `loc_2D2C2`; executable implementation is unchanged from the tested tree.
+
+Matched baseline: the lead's frozen `afdf37b29` archives
+`/tmp/trace-survey-20261102/wave7-sol-final-{r6,r7,seg}-reports`, each with full
+Maven footer and raw XML/JSON. Baseline provenance was supplied by the lead;
+these are not runs performed by this lane. No duplicate baseline sweep was
+submitted. Current ROM SHA-1s were separately recorded and S1/S2/S3&K match the
+canonical identities. Trace fixture blobs, TraceChaser gitlink and replay-test
+sources match `afdf` exactly. Both sides use Java25, one alphabetical Surefire
+fork, surfaceless EGL and all original absolute ROM properties.
+
+| Profile | Candidate cases / failures / errors / skips | Matched comparison |
+| --- | --- | --- |
+| r6 | 889 / 9 / 0 / 7 | All testcase identities, statuses, untruncated messages and error JSONs identical. |
+| r7 | 119 / 81 / 2 / 0 | Only Mega changes; the other 118 cases and error reports are identical. |
+| segments | 70 / 46 / 2 / 0 | All testcase identities, statuses, untruncated messages and error JSONs identical. |
+
+All three Maven invocations exit1 for those explicit existing red selections;
+their forks complete normally and the reports are archived. This is not a
+full-suite pass, nor a green trace claim. The seven r6 skips are unchanged:
+five explicit opt-in audit/performance cases and the absent optional Gumball
+and Pachinko round-trip recordings. No required ROM input is missing; neither
+r7 nor segments skips any case. No category-runner `VERDICT` is emitted because
+these are focused/profile wrapper runs, not category runs.
+
+| Mega segment | Frozen afdf baseline | Candidate e6aeb7f03 |
+| --- | --- | --- |
+| 0, AIZ | 12 errors, first4568 queue busy | Identical JSON |
+| 1, Gumball | 12 errors, first1300 queue busy | Identical JSON |
+| 2, returned AIZ | 12 errors, first2025 queue busy | Identical JSON |
+| 3, Slots | 14 errors, first1052 queue busy | 12 errors, same first field/row |
+| 4, AIZ3 | 11194 errors, first105 x, incomplete | 2604 errors, first6443 y, complete |
+
+The candidate AIZ3 dump contains exactly **2604** error tuples on990 error
+rows, reconciling with the report:2555 physics and49 animation errors,
+bootstrap0. Its first error of any group is6443, so there is no candidate error
+within the baseline's compared prefix through1124. At6443, ROM/engine X is
+`$1D40`, both velocities and ground speed are zero, angle/ground mode and
+camera X `$1CA0` agree, and no sidekick exists. Y is `$0782/$078D`; camera Y is
+`$0751/$074D`. ROM context reports standing-object slot`$0B`. These are observed
+comparison fields, not a diagnosis of the later object frontier. No such owner
+was changed or pursued.
+
+The complete chain messages preserve all axes. Baseline has the duplicate or
+reordered hardware-service boundary at raw1124 plus segment2's12 queue errors.
+Candidate has the unchanged segment2 axis, AIZ3's2604-error axis, and:
+`transition step cap 12534 exceeded for starpost_bonus from segment 4 at BK2
+cursor 17912`. The dynamic-art gap report remains failureCount0. The later
+starpost entry and row6443 are the stopping frontier, outside this bounded
+saved-block/camera/water continuation.
+
+**Gate and limits:** no class newly turns red and no observed first error moves
+earlier. Counts decrease in both changed segments. No errors are added within
+AIZ3's common compared prefix; the first known differing row105 is removed.
+The candidate's complete error list is preserved, but the baseline retained
+only first/recent live mismatches and aborts at1124. An exact baseline/candidate
+added-tuple diff for Slots or the newly reached AIZ3 suffix therefore cannot be
+certified from the supplied archive. Candidate rows6443–7536 are new comparison
+coverage after the baseline had already diverged at105 and aborted, not proof
+of baseline agreement at those rows. No grouped span is expanded into invented
+observations. The lead must retain this limit in any integration/frontier claim;
+this lane does not claim an unrestricted exact-added-error certificate.
+
+### Exact commands and timing
+
+All commands use the unchanged saved `run.sh` driver in
+`/tmp/aiz3-resume-20261104/`; each archive includes `command.txt` (fully expanded
+wrapper and six ROM arguments plus generic S1 property), tested HEAD,
+`source.diff`, submodule identities, raw Maven log, timing, XML and JSON.
+The focused selectors are recorded there without abbreviation. The executions
+were:
+
+```bash
+/tmp/aiz3-resume-20261104/run.sh lifecycle-red none -Dtest=TestLevelZoneLoadExecutor,TestBonusStageReturnWaterRestore
+/tmp/aiz3-resume-20261104/run.sh water-green2 none -Dtest=TestBonusStageTransitionCoordinator,TestS3kSlotBonusStageRuntime,TestLevelZoneLoadExecutor,TestBonusStageReturnWaterRestore,TestSonic3kWaterDataProvider,TestSonic3kDynamicWaterHandlers,TestWaterSystemRewindSnapshot,TestBonusStageCoordinatorRewindAdapter,TestS3kSlotBonusGraphRewind,TestBonusStageRewindCapability,TestLiveRewindManagerBonusStageMode,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestArchitecturalSourceGuard,TestCommittedHardwareTimingFixtures,TestBuildToolingGuard,TestTraceChaserBoundaryGuard,TestHardwareTimingAuthorityGuard,TestFreshLevelBoundaryAfterSetup
+/tmp/aiz3-resume-20261104/run.sh root-composed-focus none -Dtest=TestBonusStageReturnWaterRestore,TestFreshLevelBoundaryAfterSetup,TestS3kTitleCardHoldRoutes,TestGameLoopFreshLevelHandoff,TestArchitecturalSourceGuard
+/tmp/aiz3-resume-20261104/run.sh candidate-r7 trace-replay-r7 -Dopenggf.aiz3.dumpErrors=true
+/tmp/aiz3-resume-20261104/run.sh candidate-r6 trace-replay -Dopenggf.aiz3.dumpErrors=true
+/tmp/aiz3-resume-20261104/run.sh candidate-seg trace-segments -Dopenggf.aiz3.dumpErrors=true
+```
+
+`water-green` used the same selector as `water-green2` and failed at compilation
+before tests, as recorded above. It is preserved, not relabelled as a pass.
+
+| Run | Queue wait, seconds | Maven-reported execution |
+| --- | --- | --- |
+| lifecycle-red | 311 | 1m30s |
+| water-green, missing import | 596 | 1m25s |
+| water-green2 | 190 | 1m20s |
+| root-composed-focus | 1375 | 1m34s |
+| candidate-r7 | 688 | 7m42s |
+| candidate-r6 | 1155 | 11m42s |
+| candidate-seg | 1290 | 4m55s |
+
+Queue total:5605s (93m25s); Maven-reported execution total:1808s (30m08s).
+Maven minute values are reported precision, not independently measured phase
+timing. Exact UTC job intervals and counts are in `resume-job-timings.json`.
+User wait is zero; non-job investigation, editing, inspection and reporting
+were not independently timed and are not disguised as queue or execution.
+
+The full candidate error rows, derived complete tuple list and first-error
+fields, full baseline Mega log context, matched profile diffs, ROM hashes,
+fixture blob inventory, temporary observer patch and comparison scripts remain
+under the same `/tmp` evidence directory. No raw/regenerable report is committed.
+The complete-error observation method already exists in the prior Mega
+segment2 audit; this continuation reuses it, without adding a runtime API.
+
+Final checks include diff whitespace, byte-identical AGENTS/CLAUDE, coherent
+TraceChaser checkout/gitlink and citation checking. The citation checker finds
+one inherited stale `loc_1578E` reference in an untouched water-coordinator
+branch (old24518–24533, label now29303); it is already present at `afdf`, not a
+new restoration citation or an unrelated cleanup target. The final checker
+summary is near1 / ok14 / stale1 / unverifiable7; unverifiable citations are
+not claimed as verified.
+
+This remains local on `aiz3-camera-water-restore`. No develop integration,
+branch push, frontier-log/SURVEY edit, other-owner change, or artifact/worktree
+cleanup was performed. The task checkout and all prior lane/worktree/tmp
+artifacts are preserved. No live jobs remain. The lead owns integration and
+any follow-up decision on the limited added-tuple gate.
+
+Proposed frontier text, for lead reconciliation rather than direct publication:
+"Saved apparent act is restored before bonus-return water selection; ROM
+mean-only restoration preserves the fresh target, and Slots holds its source
+camera. Against frozen afdf, Mega Slots14→12 at unchanged first1052;
+AIZ3 11194/incomplete at105x→2604/complete at6443y. All other r7 cases, r6 and
+segments match baseline. 428 focused controls and102 composed title/water
+controls pass without skips. Remaining frontier is standing-object Y at6443
+and a later starpost-entry step cap; exact added-tuple qualification is limited
+by the baseline's first/recent-only retention and abort at1124."
