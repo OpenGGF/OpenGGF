@@ -19,7 +19,6 @@ Unreleased. The earlier development themes remain in
   and independent end-state flags. Frame-boundary reloads no longer leave a
   second rewind-boundary marker or suppress the following gameplay oscillator tick.
 
-
 - **Sonic 2 elevators and monitors:** Casino Night elevators keep their
   fractional position between trips and accelerate the shipped way when they
   pass exactly through their centre, so a second ride starts moving on the
@@ -38,17 +37,6 @@ Unreleased. The earlier development themes remain in
   Knuckles in Sonic 2 results return to the level on the same frame as ordinary
   results. Hill Top and Mystic Cave events read the level frame counter the
   shipped game reads.
-
-
-- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
-  platform's last stood-on piece gives way, Sonic and Tails each lose their
-  "standing on an object" status if it is set, whatever they are standing on,
-  as the shipped game does. A Tails who died on the oil and is still falling
-  therefore drops the stale status at that moment instead of keeping it.
-
-- Seamless reloads preserve runtime-art admission, title camera-release timing
-  and independent end-state flags. Frame-boundary reloads no longer leave a
-  second rewind-boundary marker or suppress the following gameplay oscillator tick.
 
 - S3K bonus-stage entries and returns hold the destination players behind
   the title loop like any fresh level load: the slot is cleared first, the

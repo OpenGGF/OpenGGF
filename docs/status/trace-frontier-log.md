@@ -123588,3 +123588,116 @@ and both fail identically on develop (attribution lane assigned). Census-reading
   transitions carry a `gap_admission_runs` census (shared `GapAdmissionCensus`). Each Mega bonus boundary is exactly one
   lag row. The three S3K campaign chains, Mega and KiS2 EHZ1 were re-recorded with byte-identical payloads.
   `TestCommittedHardwareTimingFixtures` had been red on develop since the wave-5 re-record; it is re-frozen and green.
+
+## 2026-11-04 — Wave 7: S2 plunger seat, bonus player publication and exact Mega clocks
+
+Source candidate `afdf37b29` over develop `911513142`; upstream develop
+`97a6f51a7` is composed as `612853ddc`. The original wave 7 candidate was
+`2c27b9cb7`. No fixture tolerances, runtime state hydration, fitted constants
+or CPU/cycle pricing are added. S1 hardware-timing payloads remain withheld.
+
+- S2 Obj85 uses `SolidObject_Landed` and ResetOnFloor_Part2's radius change
+  for its vertical seat, replacing fitted lifts; the plunger roll handoff
+  ends on landing. ObjD8 remains touchable during its final hit animation
+  (`ab61a29e0`, including `6b0c29f41`). **CNZ1 is green**: 191680 errors,
+  first 5447 `sidekick_y`, to zero. The S2 chain reaches CNZ2 (346602 errors,
+  first 1781 `x_speed`). Its axes increase 8 to 9 through new coverage. The
+  additional CNZ2 art-gap axis carries the existing ARZ2 deficit of 154 edge
+  ordinals/77 transfers; earlier compared segments retain their debt.
+- Bonus entries/returns use the native fresh-load player boundary
+  (`fcea23818`): clear slots, publish destination positions at the title-loop
+  exit, then run the initial sprite pass. Four Gumball-return position/camera
+  errors disappear; the existing 12 queue errors remain. See the
+  [destination-player audit](../architecture/audits/2026-11-04-s3k-destination-player-spawn.md).
+- Recorder `0b380c382` pins TraceChaser `10f1e09` and republishes the S1 gap
+  census and corrected S2 halfpipe capture. **The halfpipe round-trip chain
+  is green.** The S1 complete-emerald chain retains its five existing axes.
+- DDZ writes its transformation animation at the native object pass and runs
+  SuperHyper_PalCycle at its AnPal position (`8b934e769`). S+T Zone0c drops
+  680 to 676 errors, first 5 `x` unchanged; camera fractions remain for the
+  next lane.
+- Mega walks the recorded bonus-boundary admission census (`b378fbf9b`),
+  reaching native clocks 5529/6957/9097/10295. **Slots drops 7947 errors at
+ 232 `rings` to 14 at 1052 queue/camera; its gameplay fields match.** Its
+  stage-exit boundary is reached. Newly compared entry tails expose the same
+  existing 12-error two-row queue pattern in segments 0 and 2. The newly
+  reached `aiz_3` has 11194 errors, first 105 `x`; the walk then fails on a
+  duplicate/reordered service boundary at raw 1124. These remain open, not
+  certified green. See the [exact-clock audit](../architecture/audits/2026-11-04-mega-exact-clock.md)
+  for tail and added-coverage attribution.
+
+Integration repairs:
+
+- `f825b21d5`/`a8e18d4bf`, merged as `6628b95c3`, repair the pending bonus
+  request that froze the host before its consuming object pass and align the
+  fresh-load test with the deliberately held-black title handoff. The lane's
+ 370 focused controls pass; its r7/segments match the current base. Historical
+  pbefore provenance was incomplete, so its older differences were checked
+  against the surviving `911513142` baseline rather than assigned to the fix.
+- The ordinary set exposed `doExitBonusStage` at 126 lines against 111.
+  `fdd9aea08` extracts shared title-source/hold preparation and return title
+  initialization, retaining read/call order and lowering the ratchet to 105.
+- The repaired real bonus route then exposed an unlocked player during the
+  title terrain wait. `afdf37b29` retains the live host lock across boundary
+  player-state publication. Capturing a locked destination instead was
+  rejected: it re-locked a LEVEL return after release. Full rewind restore
+  and snapshot schema remain unchanged. The unit checks acquisition after
+  capture and release before assembly, with the independent AIZ intro owner
+  excluded.1566 focused controls pass across the completed owner/guard/rewind/
+  keep-green run and the two-case fixture-only correction; zero skips.
+- `4353caee3`'s S1 census/S2 title-loop audit is retained. Upstream PR 260's
+  support notice and game-owned emerald-ledger package move merge without
+  conflicts; the ledger's first-transition lookup remains equivalent.
+
+Validation uses Java 25, surfaceless EGL, all six original ROM properties,
+`-Dmse=off`, and `tools/testing/maven_queue.py`. Each complete profile is a
+separate queued invocation with `-B -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical test`, selecting `-Ptrace-replay`,
+`-Ptrace-replay-r7`, or `-Ptrace-segments`. The initial 1959-case ordinary set
+ran all 36 selected classes, including changed tests, the architecture budget,
+committed hardware-timing fixtures, gitlink guards, rewind set and four S3K
+keep-greens; its three failures are covered by the corrections above.
+
+On frozen `afdf37b29`, final profile results are:
+
+- r6: 889 cases,9 failures,0 errors,7 inherited skips. All nine complete failure
+  messages match the initial wave 7 run; two new recorded-tail unit cases pass.
+  Against develop, halfpipe is newly green and CNZ1 advances as above.
+- r7: 119 cases,81 failures,2 errors,0 skips. All non-Mega identities/statuses/
+  full messages match initial wave 7. All six complete Mega JSONs exactly match
+  the combined-tree focused witness (12/12/12/14/11194 errors).
+- Segments: 70 cases,46 failures,2 errors,0 skips. All identities/statuses and
+ 69/70 messages match initial wave 7. The one higher ICZ2 result is attributed
+  below; the other68 complete report summaries match.
+
+S+T ICZ2 retains first 483 `y` (ROM 0948/engine 094 B), but the full sweep reports
+1724 grouped errors instead of 1035. Identical comparison-only observers were
+applied temporarily to unchanged baseline `911513142` and candidate
+`afdf37b29` for matched isolated ICZ2 runs. Both produce 1724 grouped errors,
+6282 comparison rows and identical compared fields on every row: zero added
+or removed error tuples, including zero additions on a baseline-clean row.
+This reproduces the higher variant on unchanged source and establishes
+pre-existing run-context sensitivity. It does not explain why the historical
+full sweep selected the 1035 variant; no isolation or new ICZ2 parity claim is
+made. Grouped spans were not expanded into invented per-row observations.
+Both observers were removed and source restored before upstream integration.
+
+The seven r6 skips are unchanged: five explicit opt-in benchmark/audit cases
+and two absent optional bonus-run directories. These are bounded regression
+checks, not a full-suite or universal trace-green claim. Full S1 chain messages
+were read beyond the survey extractor's 20000-character cap; paths were
+normalised, not assertions or data.
+
+Queue/Maven execution: r6 812 s/715 s; r7 361 s/392 s; segments 1322 s/272 s.
+These overlap lane work and are not summed delivery time. User wait was zero;
+other investigation/observer overhead was not completely measured. A terminated
+outer r7 shell left its queued child alive; the same job was observed to a
+complete Maven footer and 119 XML cases, never duplicated.
+
+On composed `612853ddc`, the 56-selector ordinary set runs 2185 cases:
+zero failures, errors or skips. It includes the original changed/owner/guard/
+rewind/keep-green coverage and upstream UI, ledger and event-header owners.
+The focused r7 Mega still fails only on its known two axes; all six complete
+JSONs exactly match the pre-upstream witness. The updated base therefore
+receives focused integration coverage; the three complete trace profiles
+above were run on `afdf37b29`, not relabelled as runs of the later merge.

@@ -120,5 +120,12 @@ two-case fixture-only rerun,1566 unique cases pass with no skips. The final
 fixture run uses queued Maven `-Dmse=off -B
 -Dtest=TestFreshLevelBoundaryAfterSetup test`, Java25, surfaceless EGL and the
 six original ROM properties. The unchanged broader focused results come from
-that same production correction. Combined three-profile validation is pending;
-this is not a claim of trace parity or completed delivery.
+that same production correction. The full three-profile gate on `afdf37b29` retains the existing r6/r7/segment
+failure identities. The higher ICZ2 variant is reproduced on unchanged
+`911513142`: all 6282 matched isolated comparison rows have identical fields,
+with no added/removed error tuples. After composing upstream `97a6f51a7`
+as `612853ddc`, 2185 ordinary checks pass with zero failures/errors/skips,
+and all six Mega report JSONs exactly match the pre-merge witness. The
+[wave7 frontier entry](../../status/trace-frontier-log.md) records the
+coverage, inherited parity debt and run-context qualification. No full-suite
+or universal trace-green result is claimed.
