@@ -36,6 +36,7 @@ import com.openggf.trace.SpecialStageRunObjectsPassBinder;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceRunManifest;
@@ -1676,6 +1677,13 @@ abstract class AbstractRunChainTest {
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
                 assertReturnBoundary(descriptors, i, runDir);
+                // Read before the payload closes: the interior's recorded rows
+                // after the engine's release, as main-loop admission bits only.
+                List<RecordedTailRow> unadmittedInteriorTail =
+                        uncomparedInterior || activeComparator == null
+                                ? null
+                                : unadmittedRecordedTail(
+                                        activeTrace(seg), activeComparator.cursor());
                 closeHeadlessPayloadOrThrow();
                 activeComparator = null;
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
@@ -1787,6 +1795,15 @@ abstract class AbstractRunChainTest {
                     // Wait_VSync/object dispatch is still pending. Re-anchor BEFORE
                     // row zero: skipping it also skips a real Obj_TitleCardWait2
                     // dispatch, submitting LoadEnemyArt after its completion edge.
+                    //
+                    // CONTRACT 1 (main-loop admission) for the recorded rows the
+                    // interior still holds after that release: when every one is a
+                    // row the main loop never ran on, each services only its
+                    // V-int, exactly as a census lag row does.
+                    driveUnadmittedRecordedTail(
+                            unadmittedInteriorTail, fixture, gameplayMode, loop, playback);
+                    driveLagOnlyGapCensus(exit, returnOffset, fixture,
+                            gameplayMode, loop, playback);
                     playback.startSession(movie, returnOffset);
                     runCoordinator.admitLevel(
                             exit, obs.observedBk2Frame(),
@@ -1987,6 +2004,16 @@ abstract class AbstractRunChainTest {
                 completeSourceTailReportingOnFailure(
                         run.runId(), i, loop, activeComparator, seg, stepCap,
                         activeSegmentInitialCursor, levelAtSegmentStart);
+                // The source's recorded rows after its reload are the ROM's own
+                // Level: entry for the interior. Drive them as represented rows,
+                // so the recorded readiness of the work the load submits stays
+                // authoritative, then admit whatever recorded tail is left after
+                // the engine's title release as lag rows (CONTRACT 1).
+                List<RecordedTailRow> entryLagTail =
+                        TraceRunReplayWalker.isUncomparedInterior(interior.segment())
+                                ? null
+                                : driveRepresentedEntryTail(
+                                        loop, activeComparator, seg, interior, stepCap);
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
                 // cause of a missed entry boundary, and this is the only report
@@ -2016,6 +2043,10 @@ abstract class AbstractRunChainTest {
                 closeHeadlessPayloadOrThrow();
                 activeComparator = null;
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
+                driveUnadmittedRecordedTail(
+                        entryLagTail, fixture, gameplayMode, loop, playback);
+                driveLagOnlyGapCensus(exit, interior.segment().bk2FrameOffset(),
+                        fixture, gameplayMode, loop, playback);
                 int rowsConsumed = prepareIntoInterior(
                         loop, playback, probe, movie, interior, stepCap);
                 runCoordinator.admitInterior(
@@ -5193,6 +5224,129 @@ abstract class AbstractRunChainTest {
      * (docs/s2disasm/s2.asm:4946): every span after it waits on V-int per pass
      * (the leave loop, :5060-5066) and so admits the main loop.
      */
+    /** One recorded row the main loop never ran on: a lag V-int, or no V-int at all. */
+    record RecordedTailRow(int row, boolean vintServiced) {
+    }
+
+    /**
+     * The recorded rows from {@code firstRow} to the segment's end, when the
+     * main loop was admitted on none of them; otherwise {@code null}.
+     *
+     * <p>Only main-loop admission is read, as the per-row lag outcome of
+     * CONTRACT 1. A row whose {@code Lag_frame_count} advanced took the lag
+     * V-int path (S3K {@code VInt_0}, sonic3k.asm:588-592). A row whose
+     * V-int counter did not advance had no V-int at all, as under the
+     * {@code move #$2700,sr} around j_LevelSetup in loc_6310
+     * (sonic3k.asm:7789-7797).
+     * Any other row waited in a loop's {@code Wait_VSync}, which the engine
+     * has already left; such a tail is not expressible as lag admission, so
+     * the caller keeps its re-anchor. No position, speed or object value is
+     * read, and nothing keys on a frame, zone, route or game.
+     */
+    static List<RecordedTailRow> unadmittedRecordedTail(TraceData trace, int firstRow) {
+        if (trace == null || firstRow <= 0 || firstRow >= trace.frameCount()) {
+            return null;
+        }
+        List<RecordedTailRow> rows = new ArrayList<>();
+        for (int row = firstRow; row < trace.frameCount(); row++) {
+            TraceFrame previous = trace.getFrame(row - 1);
+            TraceFrame current = trace.getFrame(row);
+            if (previous.lagCounter() < 0 || current.lagCounter() < 0
+                    || previous.vblankCounter() < 0 || current.vblankCounter() < 0) {
+                return null;
+            }
+            boolean vint = current.vblankCounter() != previous.vblankCounter();
+            boolean lag = current.lagCounter() > previous.lagCounter();
+            if (vint && !lag) {
+                return null;
+            }
+            rows.add(new RecordedTailRow(row, vint));
+        }
+        return List.copyOf(rows);
+    }
+
+    /**
+     * Drives a level segment's recorded rows after its reload while production
+     * is still inside the interior's {@code Level:} entry, one represented row
+     * per engine iteration, and returns the recorded rows left after the
+     * engine's title release when every one of them is non-admitted.
+     *
+     * <p>Represented rows keep the source segment's recorded completion edges
+     * authoritative for the work the entry submits (hardware-timing contract,
+     * "membership is fixed at submission"). Nothing is read into engine state.
+     * A remaining tail containing a row that waited in a loop is not expressible
+     * as lag admission; the caller then keeps its existing parked admission.
+     */
+    private List<RecordedTailRow> driveRepresentedEntryTail(
+            GameLoop loop, LiveTraceComparator comparator,
+            TraceRunSegmentDescriptor source, TraceRunSegmentDescriptor interior,
+            int stepCap) {
+        if (comparator == null || !"level".equals(source.segment().kind())) {
+            return null;
+        }
+        GameMode interiorMode = TraceRunReplayWalker.expectedMode(interior.segment());
+        int steps = 0;
+        while (comparator.cursor() < source.rowCount()
+                && loop.getCurrentGameMode() != interiorMode) {
+            if (steps++ >= stepCap) {
+                throw new AssertionError("represented entry tail of "
+                        + source.segment().dir() + " did not finish within "
+                        + stepCap + " steps (cursor " + comparator.cursor()
+                        + " of " + source.rowCount() + ")");
+            }
+            stepEngineFrame(loop);
+        }
+        if (comparator.cursor() >= source.rowCount()) {
+            return null;
+        }
+        return unadmittedRecordedTail(activeTrace(source), comparator.cursor());
+    }
+
+    /**
+     * CONTRACT 1 across a gap the recorder covers only by its admission census:
+     * when the walk stands on the gap's first row and every census row is
+     * non-admitted, each services only its V-int. A census with an admitted row
+     * names a main-loop iteration whose owning loop is not identified here, so
+     * it is left to the caller's existing re-anchor.
+     */
+    private void driveLagOnlyGapCensus(
+            TraceRunManifest.Transition exit, int destinationOffset,
+            LiveEngineFixture fixture, GameplayModeContext gameplayMode,
+            GameLoop loop, PlaybackDebugManager playback) {
+        boolean[] gap = expandGapAdmissionCensus(exit);
+        if (gap.length == 0
+                || playback.getCursorFrame() != destinationOffset - gap.length) {
+            return;
+        }
+        for (boolean lag : gap) {
+            if (!lag) {
+                return;
+            }
+        }
+        fixture.enterHardwareTimingGap();
+        for (int row = 0; row < gap.length; row++) {
+            stepEngineFrameInTransitionGap(
+                    gameplayMode, loop, playback, playback.getCursorFrame(), true);
+        }
+    }
+
+    private void driveUnadmittedRecordedTail(
+            List<RecordedTailRow> rows, LiveEngineFixture fixture,
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        // The interior's recorded timing has no edge left after the release;
+        // these rows are walked as gap rows, one physical movie row each.
+        fixture.enterHardwareTimingGap();
+        for (RecordedTailRow row : rows) {
+            stepEngineFrameInTransitionGap(
+                    gameplayMode, loop, playback, playback.getCursorFrame(),
+                    true, false, row.vintServiced());
+        }
+    }
+
     /**
      * Index of the last row of the gap's synchronous level load, or {@code -1}.
      * The load holds the main loop across consecutive V-ints, so it is a
@@ -5248,6 +5402,19 @@ abstract class AbstractRunChainTest {
             GameplayModeContext gameplayMode, GameLoop loop,
             PlaybackDebugManager playback, int movieRow, boolean lag,
             boolean levelEntryLoadCompletes) {
+        stepEngineFrameInTransitionGap(gameplayMode, loop, playback, movieRow,
+                lag, levelEntryLoadCompletes, true);
+    }
+
+    /**
+     * {@code lagVint} is false only for a non-admitted row on which no V-int
+     * ran at all (interrupts masked across its whole V-blank): it services
+     * nothing and only consumes its physical movie row.
+     */
+    private void stepEngineFrameInTransitionGap(
+            GameplayModeContext gameplayMode, GameLoop loop,
+            PlaybackDebugManager playback, int movieRow, boolean lag,
+            boolean levelEntryLoadCompletes, boolean lagVint) {
         TraceRunFrameDriver gapRows = new TraceRunFrameDriver();
         gameplayMode.installTraceRunFrameDriver(gapRows);
         try {
@@ -5273,7 +5440,9 @@ abstract class AbstractRunChainTest {
                         @Override
                         public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
                             if (lag) {
-                                serviceLagRowVint();
+                                if (lagVint) {
+                                    serviceLagRowVint();
+                                }
                                 if (levelEntryLoadCompletes) {
                                     // The ROM's level-entry load finishes on
                                     // this row, at InitPlayers
