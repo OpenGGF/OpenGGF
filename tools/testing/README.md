@@ -521,8 +521,8 @@ classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
 profiles, custom properties/JVM settings and expensive fixture annotations keep
 normal admission. Prepared category batches also use the separately reviewed
 `BATCH_ONLY_CLASSES` pool; those registrations do not extend automatic focused
-lifecycle admission, because full-project test compilation can exceed a 1 GiB
-Maven heap. The wrapper prints when it selects the smaller budget. Use
+admission, which needs separate evidence for its standalone execution. The
+wrapper prints when it selects the smaller budget. Use
 `--normal` before Maven arguments to retain the larger heap.
 
 To qualify a frequently used small class permanently, review its source and
@@ -537,14 +537,29 @@ For other focused tests with known bounded memory needs, explicitly use the lean
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test
 ```
 
-It caps both Maven and the reused test JVM at **1 GiB heap each**, preserving the
-Mockito agent, CDS setting and macOS first-thread flag, and reserves **4 GiB RAM / 4
-cores** rather than the normal 7 GiB / 8 cores. The same headroom, three-run ceiling,
-worktree exclusion and waiting order apply. An out-of-memory result is a failed run;
-rerun that test with `--normal` and report the lean failure. Full suites, wildcard
-selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launch
-settings are rejected by `--lean`. Explicit lean remains a development option; it
-does not qualify an unknown class for the aged-head backfill allowance below.
+Automatic and explicit lean runs have two stages. First the caller's command, with
+`test` replaced by `test-compile` (including any `clean`), compiles under the normal
+Maven environment like a build: it holds this worktree's lock and the build activity
+lease, but no test admission. The wrapper then releases the activity lease, keeps
+the worktree lock, and queues once for test admission. Execution runs the caller's
+selectors, properties and discovered ROMs with `surefire:test` in place of `test`,
+so it never recompiles or cleans. It caps both Maven and the reused test JVM at
+**1 GiB heap each**, preserving the Mockito agent, CDS setting and macOS
+first-thread flag, and reserves **4 GiB RAM / 4 cores** rather than the normal
+7 GiB / 8 cores. The same headroom, three-run ceiling and waiting order apply;
+queue wait/hold telemetry covers only the test stage.
+
+A failed compilation returns its exit status and launches no tests. A tracked or
+untracked source edit during compilation or the admission wait stops the run
+before tests launch. A POM that `test-compile` plus `surefire:test` could not
+reproduce (the category runner's preparation contract) keeps an automatic
+command on the normal lane and rejects explicit `--lean`. An out-of-memory test
+run is a failed run; rerun that test with `--normal` and report the lean failure.
+Nothing is retried automatically. Full suites, wildcard selectors, goals other
+than `[clean] test`, explicit profiles, custom build/JVM overrides and custom
+`.mvn` launch settings are rejected by `--lean`. Explicit lean remains a
+development option; it does not qualify an unknown class for the aged-head
+backfill allowance below.
 Required broad, trace, native and release checks keep their coverage and lanes.
 Ordinary category batches use bounded heaps only when every candidate qualifies. Qualified classes are grouped into separate batches of at
 most 50, preserving their order within that pool and preserving the complete

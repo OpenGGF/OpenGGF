@@ -1,6 +1,9 @@
 # Synchronous load and transition V-int accounting
 
-Status: proposed, implementation deferred for lead/user decision. Follow-up to
+Status: steps 2-3 trialled under the 2026-11-03 ruling; see
+[the load-time V-int trial](../audits/2026-11-03-load-vint-trial.md). Two
+ROM-stated V-ints are implemented; the rest is a proven cycle-cost boundary.
+Original status: proposed, implementation deferred for lead/user decision. Follow-up to
 [the Mega Slots audit](../audits/2026-11-03-s3k-mega-slots-clock.md), measured on
 `347b695dc` with temporary read-only probes. No runtime change is included.
 
@@ -182,3 +185,10 @@ not establish correct phase ownership. Mega reaches an earlier ownership failure
 and the independent cold-start control does not reach its bonus. Both adapters,
 title-gate ordering and a valid continuous second movie remain qualification
 obligations. This proposal remains deferred; no runtime load price is introduced.
+
+The subsequent [blocking-fade correction](../audits/2026-11-03-s3k-load-clock-causal-accounting.md#bonus-entry-blocking-fade-correction)
+uses the existing production owner at bonus entry. It restores the measured
+locked-title spans to native 70/80/83 without the rejected readiness handoff.
+The current residual is51 ticks:33 measured synchronous interrupts and18
+shorter terrain waits. This closes the bounded title-loop discrepancy, not
+the synchronous-load design or another campaign's qualification.

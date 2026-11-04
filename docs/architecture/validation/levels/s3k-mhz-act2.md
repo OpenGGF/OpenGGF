@@ -1592,3 +1592,15 @@ bursts twice, and checks pending retirement without an extra RNG read. Retiremen
 uses `ObjectLifetimeOps`; no transient/lifetime guard baseline was increased.
 The graph declaration also supplies global inventory membership. This bounded
 repair does not close the inherited cold-route and presentation obligations above.
+
+## Shared reload frame ownership (2026-11-03)
+
+`TestS3kActTransitionFrameOwnership` adds a positioned Act 1 → Act 2 reload,
+then steps the next production gameplay row and repeats it after two restores.
+It checks oscillator advancement and the captured object, sprite and level owners;
+the frame-boundary reload must not publish a second in-frame rewind marker.
+CNZ/LBZ also retain direct in-frame transition-owned oscillator marker controls.
+The seven shared cases passed in the focused run; this does not qualify cold
+reachability, live rewind-floor recording, other configurations or complete routes.
+Those inherited obligations remain open. See the
+[shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).

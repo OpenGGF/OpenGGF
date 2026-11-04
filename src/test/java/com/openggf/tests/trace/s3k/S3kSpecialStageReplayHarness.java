@@ -17,6 +17,11 @@ import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
+import com.openggf.game.EmeraldRewardKind;
+import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.trace.replay.TraceSegmentCarriedState;
+import com.openggf.trace.replay.TraceSegmentCarriedStateImport;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -48,10 +53,13 @@ import java.util.Objects;
  *       BEFORE {@code initializeStage} runs) so the manager's
  *       {@code resolvePlayerCharacter()} resolves the recorded solo-Sonic
  *       route.</li>
- *   <li>{@code provider.initializeStage(index)} -&gt; {@code manager.reset()}
- *       + {@code manager.initialize(index)} (loads the SS layout/art from
- *       ROM), then {@code manager.advanceThroughEntryFade()} because the
- *       comparator never steps the entry {@code Pal_FadeToWhite} rows.</li>
+ *   <li>The segment's carried run state is imported
+ *       ({@link TraceSegmentCarriedStateImport#importAtSpecialStageEntry}) and
+ *       the ROM's {@code sub_85B0} search selects the stage and layout set;
+ *       {@code provider.initializeStage(index, FAST, reward)} then loads it
+ *       (manager reset + layout/art from ROM), followed by
+ *       {@code manager.advanceThroughEntryFade()} because the comparator never
+ *       steps the entry {@code Pal_FadeToWhite} rows.</li>
  * </ol>
  *
  * <h2>Input injection</h2>
@@ -83,10 +91,16 @@ final class S3kSpecialStageReplayHarness {
     private final RecordedInputRows recordedInputs;
     private final InputHandler inputHandler;
     private final Sonic3kSpecialStageProvider provider;
+    private final TraceSegmentCarriedStateImport.SpecialStageEntry entry;
     private TraceHardwareTimingBoundaryObserver timingObserver;
     private HardwareTimingReplayPort timingPort;
 
-    S3kSpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex)
+    /**
+     * @param carried the segment's carried run state; its imported emerald
+     *                state and {@code Current_special_stage} decide the stage
+     *                exactly as {@code sub_85B0} does
+     */
+    S3kSpecialStageReplayHarness(Path bk2, int bk2FrameOffset, TraceSegmentCarriedState carried)
             throws IOException {
         // Recorded blue-spheres runs are captured solo (Sonic). Set the
         // standard team config before initializeStage() runs
@@ -100,7 +114,14 @@ final class S3kSpecialStageReplayHarness {
         this.recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
         this.inputHandler = new InputHandler();
         this.provider = new Sonic3kSpecialStageProvider();
-        this.provider.initializeStage(specialStageIndex);
+        // The stage identity is carried state, not a fixture constant: the
+        // segment-entry import restores Collected_emeralds_array and the
+        // counters, then sub_85B0's own search (loc_85E4-loc_8630) chooses the
+        // layout set and index from Current_special_stage.
+        this.entry = TraceSegmentCarriedStateImport.importAtSpecialStageEntry(carried);
+        this.provider.initializeStage(entry.stageIndex(), SpecialStageStartupPolicy.FAST,
+                entry.superEmeraldSet() ? EmeraldRewardKind.SUPER_EMERALD
+                        : EmeraldRewardKind.CHAOS_EMERALD);
         // The comparator starts at the first interactive row after the ROM's
         // masked-interrupt load (AbstractS3kSpecialStageTraceReplayTest#
         // firstInteractiveFrame), so the entry Pal_FadeToWhite rows that
@@ -168,6 +189,11 @@ final class S3kSpecialStageReplayHarness {
     /** Read-only comparison snapshot of the current engine SS state. */
     Sonic3kSpecialStageComparisonState capture() {
         return provider.getManager().captureComparisonState();
+    }
+
+    /** The stage and set selected from the carried state. */
+    TraceSegmentCarriedStateImport.SpecialStageEntry entry() {
+        return entry;
     }
 
     boolean isFinished() {

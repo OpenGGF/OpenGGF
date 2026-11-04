@@ -51,7 +51,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B # public rel
 - The runner classifies every skip with `tools/testing/release-skip-policy.json`; unexplained or required skips make validation incomplete. Report its final `VERDICT` line. Passing runs delete diagnostics automatically; inspect failed/incomplete results and delete them with `run_categories.py --acknowledge <run-id>`. Add skip-policy rules only for verified explicit opt-ins or optional inputs.
 - Use Java 25, JUnit 5 and `-Dmse=off`. Guards need Lua 5.4 and PowerShell. Category `--run` checks prerequisites automatically; `--preflight` checks them without launching tests.
 - GL tests need `-Dopenggf.headless.gl=surfaceless-egl`. Render headless or offscreen only; window diagnostics need an isolated display, never the shared desktop.
-- `--lean` (1 GiB) suits small, already-compiled classes. It runs out of memory when tests must be recompiled; rerun with `--normal`.
+- The lean lane compiles with normal Maven memory and caps only test execution at 1 GiB heaps.
 - Report the command, commit, outcome, skips and limits, and read the [measurement hazards](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output). A bounded pass is never a full-suite pass. Full procedures: [testing guide](tools/testing/README.md).
 
 ## Enforced correction contracts

@@ -23,23 +23,22 @@ import java.util.List;
  */
 final class LevelActTransitionExecutor {
     private final LevelManager levelManager;
-    private boolean executedDuringFrame;
-    private boolean rewindBoundaryDuringFrame;
-    private boolean oscillationAdvancedDuringFrame;
+    record Completed(boolean loopTailOscillationAdvanced) {}
 
     LevelActTransitionExecutor(LevelManager levelManager) {
         this.levelManager = levelManager;
     }
 
-    void execute(SeamlessLevelTransitionRequest request) throws IOException {
+    Completed execute(SeamlessLevelTransitionRequest request) throws IOException {
         // BEGIN HCZ1_DIRECT_FF_SEAMLESS_ADMISSION: the public owner surrounds its original single delegate.
         var previousPlcAdmission = levelManager.nativePlcLoadAdmission;
         var plcAdmission = request != null ? levelManager.beginNativePlcLoadAdmission() : null;
         levelManager.nativePlcLoadAdmission = request != null ? plcAdmission : previousPlcAdmission;
         boolean plcLoadCompleted = false;
         try {
-            executeAdmitted(request);
+            Completed completed = executeAdmitted(request);
             plcLoadCompleted = true;
+            return completed;
         } finally {
             levelManager.finishNativePlcLoadAdmission(plcAdmission, plcLoadCompleted);
             levelManager.nativePlcLoadAdmission = previousPlcAdmission;
@@ -47,9 +46,9 @@ final class LevelActTransitionExecutor {
         // END HCZ1_DIRECT_FF_SEAMLESS_ADMISSION
     }
 
-    private void executeAdmitted(SeamlessLevelTransitionRequest request) throws IOException {
+    private Completed executeAdmitted(SeamlessLevelTransitionRequest request) throws IOException {
         if (request == null) {
-            return;
+            return null;
         }
         if (request.runtimeArtAdmissionPolicy()
                         == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER
@@ -65,7 +64,7 @@ final class LevelActTransitionExecutor {
                         ? handoffRegistry.claim(request.resourceHandoffId())
                         : null);
         try {
-            executeClaimed(request, claimed);
+            boolean oscillationAdvanced = executeClaimed(request, claimed);
             // The ROM's own seamless advance -- AIZ1BGE_Finish writes
             // Current_zone_and_act and calls Load_Level from inside the
             // level's background-event dispatch
@@ -75,8 +74,7 @@ final class LevelActTransitionExecutor {
             // replay observes the identity reached; a no-op outside a run.
             com.openggf.TraceSessionLauncher.observeRunSeamlessLevelAdvance(
                     levelManager);
-            executedDuringFrame = true;
-            rewindBoundaryDuringFrame = true;
+            return new Completed(oscillationAdvanced);
         } catch (IOException | RuntimeException failure) {
             if (claimed.handoff != null
                     && !claimed.transferComplete
@@ -88,35 +86,7 @@ final class LevelActTransitionExecutor {
         }
     }
 
-    void markOscillationAdvancedDuringFrame() {
-        oscillationAdvancedDuringFrame = true;
-    }
-
-    boolean consumeExecutedDuringFrame() {
-        boolean executed = executedDuringFrame;
-        executedDuringFrame = false;
-        return executed;
-    }
-
-    boolean consumeRewindBoundaryDuringFrame() {
-        boolean boundary = rewindBoundaryDuringFrame;
-        rewindBoundaryDuringFrame = false;
-        return boundary;
-    }
-
-    boolean consumeOscillationAdvancedDuringFrame() {
-        boolean advanced = oscillationAdvancedDuringFrame;
-        oscillationAdvancedDuringFrame = false;
-        return advanced;
-    }
-
-    void resetFrameMarkers() {
-        executedDuringFrame = false;
-        rewindBoundaryDuringFrame = false;
-        oscillationAdvancedDuringFrame = false;
-    }
-
-    private void executeClaimed(
+    private boolean executeClaimed(
             SeamlessLevelTransitionRequest request,
             ClaimedTransitionHandoff claimed) throws IOException {
         // The outgoing act's palette animation for this main-loop iteration
@@ -160,7 +130,6 @@ final class LevelActTransitionExecutor {
         boolean transitionOwnsLoopTail =
                 transitionRuntime.advancesOscillationOnSeamlessTransition();
         if (transitionOwnsLoopTail) {
-            levelManager.markActTransitionOscillationAdvancedDuringFrame();
             OscillationManager.advanceForSeamlessTransition();
         }
 
@@ -304,6 +273,7 @@ final class LevelActTransitionExecutor {
                     request.inLevelTitleCardExitAdditionalDispatches(),
                     request.inLevelTitleCardExitPhaseOneDispatchOverlap());
         }
+        return transitionOwnsLoopTail;
     }
 
     static void offsetCarriedObjectsForTransition(List<TransitionSstOccupant> carried,

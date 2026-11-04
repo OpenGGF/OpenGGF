@@ -101,6 +101,15 @@ final class GameLoopTitleCardLifecycle {
         }
 
         if (titleCard == null || titleCard.shouldCompleteFreshLevelTransitionBoundary()) {
+            if (preparedByFrameStep
+                    && titleCard instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication loadLoop
+                    && loadLoop.releaseScanServicesLoadLoopVBlank()) {
+                // This hardware-timed scan is the final loc_7870 iteration:
+                // Process_Kos_Queue, Wait_VSync, then Process_Kos_Module_Queue
+                // retires the last terrain module (sonic3k.asm:9772-9782). Its
+                // V-int has been serviced; count it like any locked iteration.
+                levelManager.advanceTitleCardVblankOnly();
+            }
             int preludePasses = 0;
             boolean ranPlayerPrelude = false;
             if (titleCard != null) {

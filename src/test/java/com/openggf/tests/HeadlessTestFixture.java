@@ -459,6 +459,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
             // 4. Load or rewire the requested level.
             if (sharedLevel == null) {
+                com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                        GameServices.level(), entryProvenance);
                 try {
                     GameServices.level().loadZoneAndAct(zone, act);
                 } catch (IOException e) {
@@ -466,6 +468,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                             "Failed to load zone " + zone + " act " + act, e);
                 }
             } else if (GameServices.level().getCurrentLevel() == null) {
+                com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                        GameServices.level(), entryProvenance);
                 try {
                     GameServices.level().loadZoneAndAct(sharedLevel.zone(), sharedLevel.act());
                 } catch (IOException e) {

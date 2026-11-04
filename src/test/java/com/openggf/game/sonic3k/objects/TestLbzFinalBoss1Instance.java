@@ -718,7 +718,7 @@ class TestLbzFinalBoss1Instance {
         services.rng().setSeed(0x13572468L);
         GameRng expected = new GameRng(GameRng.Flavour.S3K, 0x13572468L);
         expected.nextRaw();
-        AbstractObjectInstance shower = newExplosionShowerForTest(boss, 0x44A0, 0x0780, 0);
+        AbstractObjectInstance shower = newExplosionShowerForTest(services, 0x44A0, 0x0780, 0);
 
         shower.update(0, null);
         shower.update(1, null);
@@ -938,17 +938,24 @@ class TestLbzFinalBoss1Instance {
     }
 
     private static AbstractObjectInstance newExplosionShowerForTest(
-            LbzFinalBoss1Instance boss,
+            HarnessServices services,
             int x,
             int y,
             int subtype)
             throws Exception {
         Class<?> cls = Class.forName(
                 "com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$ExplosionShowerChild");
-        Constructor<?> ctor = cls.getDeclaredConstructor(
-                LbzFinalBoss1Instance.class, int.class, int.class, int.class);
+        Constructor<?> ctor = cls.getDeclaredConstructor(int.class, int.class, int.class);
         ctor.setAccessible(true);
-        return (AbstractObjectInstance) ctor.newInstance(boss, x, y, subtype);
+        return ObjectConstructionContext.construct(services, () -> {
+            try {
+                var shower = (AbstractObjectInstance) ctor.newInstance(x, y, subtype);
+                shower.setServices(services);
+                return shower;
+            } catch (ReflectiveOperationException failure) {
+                throw new AssertionError(failure);
+            }
+        });
     }
 
     private static void writeIntField(Object target, String fieldName, int value) throws Exception {

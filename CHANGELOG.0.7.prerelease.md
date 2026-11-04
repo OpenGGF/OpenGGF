@@ -24,6 +24,16 @@ Unreleased. The earlier development themes remain in
   results. Hill Top and Mystic Cave events read the level frame counter the
   shipped game reads.
 
+- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
+  platform's last stood-on piece gives way, Sonic and Tails each lose their
+  "standing on an object" status if it is set, whatever they are standing on,
+  as the shipped game does. A Tails who died on the oil and is still falling
+  therefore drops the stale status at that moment instead of keeping it.
+
+- Seamless reloads preserve runtime-art admission, title camera-release timing
+  and independent end-state flags. Frame-boundary reloads no longer leave a
+  second rewind-boundary marker or suppress the following gameplay oscillator tick.
+
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
   descends to its pacing height. It previously stayed on layer 3, which is the
@@ -47,8 +57,24 @@ Unreleased. The earlier development themes remain in
 
 - MGZ swinging platforms use native fractional chain arithmetic and execution-order inputs instead of fitted slot/angle carry tables; spring animation starts from the native cleared timer.
 
+- Trace segments read the recorder's `level_entry_placement_source`, so a
+  standalone boot takes the ROM's own fresh or return entry branch: S3K
+  start-table segments use the post-spawn camera derivation (including the
+  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
+  its native start history. The three S3K campaign chains also record their
+  movie endpoint. Fixtures without the field keep their previous setup.
+
+- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
+  fresh entry, for every character.
+
+- S3K fresh level loads count the terrain wait's final VBlank in the live game
+  loop, as the recording driver already did. The remaining load-time lag
+  frames are documented, not estimated.
+
 - Held transition fades continue servicing VBlank work and the native clock
-  after trace comparison closes, while preserving movie-row ownership.
+  after trace comparison closes, while preserving movie-row ownership. Bonus entry
+  also reserves its fade-completion iteration, preventing premature title-loop
+  resource preparation.
 
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain; the ending resource adapter
   restores art while the existing layout owner handles scene geometry. A rendered
@@ -1868,6 +1894,13 @@ its original drawing priority.
   existing broad catch handlers across main Java sources, with explicit legacy
   inventory and adversarial scanner controls.
 
+- Standalone S3K run segments enter with the run state the ROM carried in:
+  rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
+  Player 1's shield and path bits. One segment-entry import reads them from the run manifest and
+  the segment's recorded entry row; nothing is written after entry. Standalone
+  special stages select their stage and Chaos or Super layout set through the
+  ROM's own search instead of defaulting to the Chaos set.
+
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow
   diagnostics now identify pending archive jobs, direct children and submitters.
@@ -1995,3 +2028,5 @@ its original drawing priority.
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
   require every named case to execute without skips. Original ROMs remain local
   or private; hosted builds and automatic publication retain their existing flow.
+
+- LBZ phase-one explosion showers retain their own controller through boss deletion and rewind, allowing Knuckles' Big Arm replay to finish its comparisons.
