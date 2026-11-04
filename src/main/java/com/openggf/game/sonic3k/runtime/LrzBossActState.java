@@ -4,13 +4,12 @@ import java.nio.ByteBuffer;
 
 /** LRZ3 screen and special-event words, captured by the owning zone runtime. */
 public final class LrzBossActState {
-    static final int CAPTURE_BYTES = 22 * Integer.BYTES + 192;
+    static final int CAPTURE_BYTES = 21 * Integer.BYTES + 192;
     private boolean initialized;
     private int foregroundRoutine;
     private int foregroundRequest;
     private int autoscrollRoutine = -1;
     private int autoscrollDelay;
-    private int cameraFractionX;
     private int cameraFractionY;
     private int chunkEditX;
     private int chunkEditY;
@@ -97,10 +96,13 @@ public final class LrzBossActState {
     public void setAutoscrollRoutine(int value) { autoscrollRoutine = value; }
     public int autoscrollDelay() { return autoscrollDelay; }
     public void setAutoscrollDelay(int value) { autoscrollDelay = value; }
-    public int cameraFractionX() { return cameraFractionX; }
+    /**
+     * The Camera_Y_pos low word while loc_59F3C owns the camera. Unlike the X word it is
+     * not carried: MoveCameraY's direct step rewrites the long from a word-only value
+     * (loc_1C1C8 then loc_1C21A, sonic3k.asm:38565-38571, 38615-38622).
+     */
     public int cameraFractionY() { return cameraFractionY; }
-    public void setCameraFractions(int x, int y) {
-        cameraFractionX = x & 0xFFFF;
+    public void setCameraFractionY(int y) {
         cameraFractionY = y & 0xFFFF;
     }
     public int chunkEditX() { return chunkEditX; }
@@ -110,7 +112,7 @@ public final class LrzBossActState {
 
     void captureTo(ByteBuffer buffer) {
         buffer.putInt(initialized ? 1 : 0).putInt(foregroundRoutine).putInt(foregroundRequest)
-                .putInt(autoscrollRoutine).putInt(autoscrollDelay).putInt(cameraFractionX)
+                .putInt(autoscrollRoutine).putInt(autoscrollDelay)
                 .putInt(cameraFractionY).putInt(chunkEditX).putInt(chunkEditY).putInt(paletteMode).putInt(capsuleOpened ? 1 : 0).putInt(lavaDirection).putInt(lavaAmplitude).putInt(lavaFlow).putInt(bossSlot).putInt(entryPlatformClaimed ? 1 : 0)
                 .putInt(entryPlatformReady ? 1 : 0).putInt(streamDirection).putInt(driftClock).putInt(backgroundExitRequested ? 1 : 0).putInt(primaryPaletteTimerWrite).putInt(autoscrollSignals).put(lavaHeights);
     }
@@ -118,7 +120,7 @@ public final class LrzBossActState {
         initialized = buffer.getInt() != 0;
         foregroundRoutine = buffer.getInt(); foregroundRequest = buffer.getInt();
         autoscrollRoutine = buffer.getInt(); autoscrollDelay = buffer.getInt();
-        cameraFractionX = buffer.getInt(); cameraFractionY = buffer.getInt();
+        cameraFractionY = buffer.getInt();
         chunkEditX = buffer.getInt(); chunkEditY = buffer.getInt(); paletteMode = buffer.getInt();
         capsuleOpened = buffer.getInt() != 0; lavaDirection = buffer.getInt(); lavaAmplitude = buffer.getInt();
         lavaFlow = buffer.getInt(); bossSlot = buffer.getInt(); entryPlatformClaimed = buffer.getInt() != 0;

@@ -156,7 +156,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         flags |= 1 << 3;
         Camera camera = services().camera();
         int cameraX = camera.getX() & 0xFFFF;
-        ddz.setLockedCameraX((cameraX << 16) | ddz.cameraXFraction());
+        // loc_814B8: move.l (Camera_X_pos).w,(_unkFA86).w, the shared low word included.
+        ddz.setLockedCameraX(com.openggf.camera.CameraSubpixelAccess.xFixed(camera));
         ddz.setCameraStoredMinX(cameraX);
         camera.setMinX((short) cameraX);
         camera.setMaxX((short) cameraX);
@@ -445,11 +446,11 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             ddz.setScrollSpeed(speed);
         }
         Camera camera = services().camera();
-        int oldCamera = ((camera.getX() & 0xFFFF) << 16) | ddz.cameraXFraction();
+        int oldCamera = com.openggf.camera.CameraSubpixelAccess.xFixed(camera);
         int newCamera = (oldCamera + speed) & 0x7FFFFFFF;
         int newX = (newCamera >>> 16) & 0xFFFF;
         camera.setX((short) newX);
-        ddz.setCameraXFraction(newCamera & 0xFFFF);
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera, newCamera);
         ddz.addBackgroundScroll((short) (speed >> 16));
         camera.setMinX((short) newX);
         camera.setMaxX((short) (newX + maxXOffset));

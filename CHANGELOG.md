@@ -32,6 +32,8 @@ readable and historical versions can be referenced directly.
 
 - The Doomsday Super transformation starts its animation and releases Sonic on the shipped frames.
 
+- S3K keeps one sub-pixel camera X position across level loads, shared by every scrolling sequence that uses it; the ending keeps its start camera until its art has loaded.
+
 - Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
 
 - HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.

@@ -81,7 +81,7 @@ class TestS3kLrzBossCameraHeadless {
         assertEquals(0x920,camera.getX()); assertEquals(0x2F0,camera.getY());
         fixture.stepFrame(false,false,false,false,false);
         assertEquals(0x921,camera.getX()); assertEquals(0x2F0,camera.getY());
-        assertEquals(0xD900,state.cameraFractionX()); assertEquals(0xC400,state.cameraFractionY());
+        assertEquals(0xD900,com.openggf.camera.CameraSubpixelAccess.xFraction(GameServices.camera())); assertEquals(0xC400,state.cameraFractionY());
         var registry=fixture.gameplayMode().getRewindRegistry(); var before=registry.capture();
         fixture.stepFrame(false,false,false,true,false); var after=registry.capture();
         fixture.stepFrame(false,false,false,false,true); registry.restore(before);
@@ -121,9 +121,9 @@ class TestS3kLrzBossCameraHeadless {
         state=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow().bossAct();
         events=((Sonic3kLevelEventManager)GameServices.module().getLevelEventProvider()).getLrzEventsForTest();
         events.update(0,2); assertEquals(8,state.foregroundRoutine(),"one signal cannot skip the flash wait");
-        state.requestForegroundAdvance(); state.setCameraFractions(0x1234,0x5678);
+        state.requestForegroundAdvance(); com.openggf.camera.CameraSubpixelAccess.setXFraction(GameServices.camera(),0x1234); state.setCameraFractionY(0x5678);
         events.update(0,3); assertEquals(12,state.foregroundRoutine()); assertEquals(0,state.autoscrollRoutine());
-        assertEquals(0,state.cameraFractionX()); assertEquals(0,state.cameraFractionY());
+        assertEquals(0,com.openggf.camera.CameraSubpixelAccess.xFraction(GameServices.camera())); assertEquals(0,state.cameraFractionY());
         var beforeEdit=registry.capture();
         byte[] encodedBefore=((S3kCollisionLayoutRewindAdapter.State)beforeEdit.get("s3k-collision-layout")).encoded();
         byte[] decodedBefore=((LevelSnapshot)beforeEdit.get("level")).mapData().clone();

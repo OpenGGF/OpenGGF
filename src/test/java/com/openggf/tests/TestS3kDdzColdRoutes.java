@@ -113,7 +113,9 @@ class TestS3kDdzColdRoutes {
         var player = fixture.sprite();
         var ddz = S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         GameServices.level().getObjectManager().initVblaCounter(NATIVE_V_INT_RUN_COUNT);
-        ddz.setCameraXFraction(ddz.cameraXFraction() + NATIVE_CAMERA_X_FRACTION);
+        var camera = GameServices.camera();
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera,
+                com.openggf.camera.CameraSubpixelAccess.xFraction(camera) + NATIVE_CAMERA_X_FRACTION);
         assertTrue(GameServices.sprites().getSidekicks().isEmpty(), "loc_81554 clears Player_2");
 
         List<String[]> rows = readRows();

@@ -87,9 +87,29 @@ public final class TraceSegmentCarriedStateImport {
         // sonic3k.asm:61815/61847; S2 Obj79_LoadData s2.asm:44827) put the star
         // post's path pair back on Player 1 at the reload.
         applyRecordedSolidBits(trace, player);
+        applyRecordedCameraXFraction(trace);
         TraceSegmentCarriedState carried = resolve(trace);
         applyRunState(carried, player);
         return carried;
+    }
+
+    /**
+     * The {@code Camera_X_pos} low word the load inherited ({@code level_entry_ram}
+     * {@code camera_x_pos}, sampled at the first PreLevel frame). No level load clears
+     * it ({@code Get_LevelSizeStart} writes the word only, sonic3k.asm:38241), so 16.16
+     * producers such as Doomsday's {@code sub_82920} accumulate onto it. The boot's
+     * camera started from zero, as after {@code Title_Screen}, so any adds its own load
+     * already made are kept on top. Absent: the zero start stands.
+     */
+    private static void applyRecordedCameraXFraction(TraceData trace) {
+        var ram = trace.metadata().levelEntryRam();
+        Integer recorded = ram == null ? null : ram.get("camera_x_pos");
+        var camera = GameServices.cameraOrNull();
+        if (recorded == null || camera == null) {
+            return;
+        }
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera,
+                com.openggf.camera.CameraSubpixelAccess.xFraction(camera) + recorded);
     }
 
     /**

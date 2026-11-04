@@ -183,12 +183,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             GameServices.gameState().setReverseGravityActive(true);
         }
         if (settings.cameraXSub() != null) {
-            // Declared capture setup: the inherited Camera_X_pos low word. Only zones that keep
-            // a camera fraction honour it (S3K Doomsday autoscroll, sub_82920).
-            com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "--camera-x-sub needs a zone that keeps a camera fraction"))
-                    .setCameraXFraction(settings.cameraXSub());
+            // Declared capture setup: the inherited Camera_X_pos low word, which only the
+            // 16.16 camera producers (for example Doomsday's sub_82920) observe.
+            com.openggf.camera.CameraSubpixelAccess.setXFraction(GameServices.camera(), settings.cameraXSub());
         }
         if (settings.starPost()) {
             // Declared capture setup: a star post already hit, with Saved_X/Y at the requested

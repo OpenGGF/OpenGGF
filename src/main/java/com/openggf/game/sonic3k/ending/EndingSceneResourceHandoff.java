@@ -99,6 +99,8 @@ public final class EndingSceneResourceHandoff {
                 S3kEndingPalette.targetLine(s,2,S3kEndingResources.PAL_SSZ2_REUNION);
             }
             state.installed();
+            // loc_5AE36's move.l #$2000000,(Camera_X_pos).w also clears its low word.
+            com.openggf.camera.CameraSubpixelAccess.setXFraction(s.camera(),0);
             int x=sceneId==S3kEndingSceneState.AIZ?0x1EB8:0x200;
             int y=sceneId==S3kEndingSceneState.AIZ?0x1E0:0x200;
             state.foreground().begin(x,y);

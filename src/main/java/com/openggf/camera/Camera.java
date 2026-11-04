@@ -46,6 +46,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
     // Host presentation serial, intentionally outside gameplay snapshots.
     long forcedRecentreSerial;
 
+    // Camera_X_pos low word (S3K): the 16.16 sub-pixel fraction. Level loads never
+    // clear it (Get_LevelSizeStart writes only the word); Title_Screen's Camera_RAM
+    // clear does. Owned by CameraSubpixelAccess and its own rewind entry.
+    int xFraction;
+
 	// Target boundaries for smooth easing (ROM: Camera_Max_Y_pos_target, etc.)
 	private short minXTarget;
 	private short minYTarget;
@@ -1486,6 +1491,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public void resetState() {
 		viewportMaxX = Short.MAX_VALUE;
+		xFraction = 0;
 		boundaryDestination.resetForMissingSnapshot();
 		x = 0;
 		y = 0;

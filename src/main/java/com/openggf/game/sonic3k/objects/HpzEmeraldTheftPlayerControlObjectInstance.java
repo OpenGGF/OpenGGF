@@ -62,7 +62,6 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
     private int phase;
     private int timer;
     /** Low word of {@code Camera_X_pos}'s longword, which {@code loc_64D5C} adds speed into. */
-    private int cameraFraction;
     /** Held bits of {@code Ctrl_1_logical} latched by {@code loc_64DAA}'s lock. */
     private int latchedHeld;
 
@@ -221,9 +220,9 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
         p1.setXSpeed((short) d0);
         p1.setGSpeed((short) d0);
         // ext.l d0 / lsl.l #8,d0 / add.l d0,(Camera_X_pos).w
-        long cameraLong = (((long) camera.getX() & 0xFFFF) << 16 | cameraFraction) + ((long) (short) d0 << 8);
+        long cameraLong = ((long) com.openggf.camera.CameraSubpixelAccess.xFixed(camera) & 0xFFFFFFFFL) + ((long) (short) d0 << 8);
         int cameraX = (int) (cameraLong >> 16) & 0xFFFF;
-        cameraFraction = (int) cameraLong & 0xFFFF;
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera, (int) cameraLong);
         camera.setX((short) cameraX);
         if (CAMERA_LOCK_X > cameraX) {
             return;
