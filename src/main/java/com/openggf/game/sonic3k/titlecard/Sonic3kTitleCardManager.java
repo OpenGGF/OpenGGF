@@ -1151,7 +1151,11 @@ public class Sonic3kTitleCardManager
 
     @Override
     public boolean installsImmediateFreshLevelPalette() {
-        return true;
+        // loc_5FC4 (sonic3k.asm:7543-7557) skips the black fade at $D01;
+        // the ending keeps its white entry rather than a title-owned black field.
+        var level = GameServices.levelOrNull();
+        return level == null
+                || !freshLevelTitleOwnerDeletesAtInit(level.getCurrentZone(), level.getCurrentAct());
     }
 
     @Override

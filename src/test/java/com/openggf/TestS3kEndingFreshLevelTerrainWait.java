@@ -7,6 +7,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -29,8 +30,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kEndingFreshLevelTerrainWait {
     private static final int STEP_CAP = 800;
-    /** ArtKosM_SSZ2, LevelLoadBlock entry for $D01. */
-    private static final String ENDING_TERRAIN = "sourceAddress=" + 0x1CFB44 + ",";
+    /** ArtKosM_SSZ2, the LevelLoadBlock entry for $D01, queued at tile 0. */
+    private static final int ENDING_TERRAIN = 0x1CFB44;
 
     @AfterEach
     void reset() {
@@ -43,8 +44,10 @@ class TestS3kEndingFreshLevelTerrainWait {
     void endingLoadQueuesTerrainAndHoldsTheDirectorUntilTheQueueDrains(boolean recording)
             throws Exception {
         Runnable step = start(recording);
+        long terrainBefore = endingTerrainJobs();
         GameServices.level().requestZoneAndAct(0x0D, 1);
         boolean terrainQueued = false;
+        boolean terrainStarted = false;
         boolean released = false;
         for (int i = 0; i < STEP_CAP && !released; i++) {
             boolean terrainWait = title().capture().freshLevelTransitionMode();
@@ -54,7 +57,8 @@ class TestS3kEndingFreshLevelTerrainWait {
             assertFalse(title().isOverlayActive(), "the deleted ending owner has no presentation");
             var modules = S3kRuntimeArtCoordinator.current().moduleQueue();
             if (after.freshLevelTerrainStarted() && after.freshLevelTransitionMode()) {
-                terrainQueued |= modules.pendingModuleDiagnostics().contains(ENDING_TERRAIN);
+                terrainStarted = true;
+                terrainQueued |= endingTerrainJobs() > terrainBefore;
                 assertTrue(director() == null || director().routine() == 0,
                         "Ending_ScreenInit's director runs only after LoadLevelLoadBlock");
             }
@@ -64,8 +68,16 @@ class TestS3kEndingFreshLevelTerrainWait {
                         "loc_7870 releases only once Kos_modules_left is clear");
             }
         }
-        assertTrue(terrainQueued, "LoadLevelLoadBlock never queued the ending terrain");
+        assertTrue(terrainQueued, "LoadLevelLoadBlock never queued the ending terrain (terrain wait seen: "
+                + terrainStarted + ", released: " + released + ")");
         assertTrue(released, "ending terrain wait never released");
+    }
+
+    private static long endingTerrainJobs() {
+        return SessionManager.getCurrentGameplayMode().hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                        && job.romSourceAddress() == ENDING_TERRAIN && job.destinationAddress() == 0)
+                .count();
     }
 
     private static EndingRescueDirectorObjectInstance director() {
@@ -84,7 +96,9 @@ class TestS3kEndingFreshLevelTerrainWait {
         }
         var loop = new GameLoop(new InputHandler());
         loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
-        return loop::step;
+        var fade = SessionManager.getCurrentGameplayMode().getFadeManager();
+        // Headless GameLoop has no UiRenderPipeline to advance its presentation fade.
+        return () -> { fade.update(); loop.step(); };
     }
 
     private static Sonic3kTitleCardManager title() {
