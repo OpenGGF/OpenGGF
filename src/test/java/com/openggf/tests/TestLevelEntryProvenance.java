@@ -64,15 +64,17 @@ class TestLevelEntryProvenance {
 
     @Test
     void timingPreludeAloneDoesNotDeclareStartTableOrReturnPlacement() throws Exception {
-        // Both fixtures carry the title-card timing prelude. Only the one whose
-        // recorder observed level_entry_placement_source is classified by it.
-        var unobserved = TraceData.load(Path.of(
+        // Both fixtures carry the title-card timing prelude. The S2 special-stage
+        // return restores the star pole (Obj79_LoadData), and S2 restores keep
+        // the unclassified setup; only the start-table entry becomes native.
+        var restored = TraceData.load(Path.of(
                 "src/test/resources/traces/s2/runs/s2-ehz-halfpipe-roundtrip/seg2_ehz1"));
-        assertTrue(unobserved.metadata().hasNativePreludeBootstrap());
-        assertNull(unobserved.metadata().levelEntryPlacementSource());
+        assertTrue(restored.metadata().hasNativePreludeBootstrap());
+        assertEquals(com.openggf.trace.LevelEntryPlacementSource.STARPOST_RESTORE,
+                restored.metadata().levelEntryPlacementSource());
         assertEquals(LevelEntryProvenance.UNCLASSIFIED_ENTRY,
-                TraceReplayBootstrap.entryProvenanceForTraceReplay(unobserved));
-        assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(unobserved));
+                TraceReplayBootstrap.entryProvenanceForTraceReplay(restored));
+        assertTrue(TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(restored));
 
         var observed = TraceData.load(Path.of("src/test/resources/traces/kis2/ehz1"));
         assertTrue(observed.metadata().hasNativePreludeBootstrap());
