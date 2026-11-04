@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 
 import java.util.ArrayList;
@@ -18,14 +19,14 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, executed over the live dynamic pool and saved bank of
  * one CdObjectPlacementRuntime. One {@link #run} is one RunObjects dispatch of the slot:
  * DestroyOnGoodFuture, the routine selected by oRoutine, DrawObject through the supplied port,
- * then CheckObjDespawn2 against the original X anchor (oVar2A). Native writes are committed to the
- * pool in source order; a failure propagates and the caller closes the frame. There is no private
- * queue, renderer, audio owner, pool snapshot or player mutation here, and no state outside the pool.
+ * then CheckObjDespawn2 against the original X anchor (oVar2A). The named Past path commits pool
+ * and scratch/FM ports at reached native cuts; the legacy A74 path retains its deferred routine
+ * adoption. Returned effects describe completed work on Past and must not be replayed. The private
+ * running guard supplies no World/Frame authority, retained capture, player, art or sound owner.
  *
- * <p>Finite admission: fresh/same-world R11A Present with goodFuture = 0 runs completely. The good
- * future conversion into Explosion ($18) stops at its predicate before any write; unknown routine
- * bytes and unbound script pointers stop before any write; the native infinite reversal loop of a
- * corrupt slot stops instead of hanging. Nothing is keyed on a fixture, frame or route coordinate.</p>
+ * <p>The good-future Explosion conversion stops before writes. Unknown routines stop before writes;
+ * Past selected-read failures retain the completed native prefix. The native infinite reversal loop
+ * of a corrupt slot stops instead of hanging. Nothing is keyed on a fixture, frame or route coordinate.</p>
  */
 public final class CdMosqui {
     public static final int OBJECT_ID = 0x3D;
@@ -42,8 +43,8 @@ public final class CdMosqui {
 
     /**
      * Ordered return metadata. Pool/bank effects describe completed writes and must not be replayed.
-     * Sound requests go to the caller's sound owner. PRIMARY_ANGLE supplies the final scratch byte
-     * for the caller's separate shared angle owner; this body has not committed that global.
+     * The legacy A74 caller adopts sound and PRIMARY_ANGLE after return. On the named Past
+     * path they describe completed synchronous ports and must not be replayed.
      */
     public sealed interface Effect permits CallReturned, SoundRequest, GlobalWrite, Despawn { }
     /** INIT precedes MAIN in the same dispatch because Init falls through into Main (Mosqui/Main.asm:55-59). */
@@ -165,10 +166,11 @@ public final class CdMosqui {
         /** oVar30 selects neither bound Mosqui script table (Mosqui/Main.asm:85,117). */
         ANIMATION_SCRIPT_POINTER,
         /** .SkipRange would reverse twice in one call: the native loop never terminates. */
-        PATROL_REVERSAL_LOOP
+        PATROL_REVERSAL_LOOP,
+        TILE_ADDRESS, ANIMATION_DIRECTORY_READ, ANIMATION_SPEED_READ, ANIMATION_FRAME_READ, ANIMATION_OPERAND_READ
     }
 
-    /** Thrown before the boundary's writes; the pool and bank hold the last committed source state. */
+    /** The pool and bank hold the last committed native prefix; the missing action has not run. */
     public static final class UnsupportedMosqui extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
         private final int wholeIndex;
@@ -182,10 +184,31 @@ public final class CdMosqui {
         public int wholeIndex() { return wholeIndex; }
     }
 
+    /** Read-only source cut; values alone grant no private World invocation or Frame authority. */
+    public record PrimaryAngleCall(CdObjectPool.Snapshot actualCut, CdObjectState expectedSource, int value) {
+        public PrimaryAngleCall { sourceInCut(actualCut, expectedSource); byteValue(value, "primary angle"); }
+    }
+    @FunctionalInterface public interface PrimaryAngleCommit { void commit(PrimaryAngleCall call); }
+    /** The genuine completed Dive prefix precedes this synchronous FM cut. */
+    public record FmCall(CdObjectPool.Snapshot actualCut, CdObjectState expectedSource, Sound sound) {
+        public FmCall { sourceInCut(actualCut, expectedSource); Objects.requireNonNull(sound, "sound"); }
+    }
+    @FunctionalInterface public interface PlayFmSound { void play(FmCall call); }
+
+    @FunctionalInterface private interface TileOperand { int read(int secondary); }
+    private record NativeAssets(TileOperand tileOperand, CdObjectVisualAssets normal, CdObjectVisualAssets damaged,
+                                int normalMappingsAddress, int normalScriptAddress,
+                                int damagedMappingsAddress, int damagedScriptAddress) { }
+
     private final CdObjectPlacementRuntime runtime;
     private final Assets assets;
     private final CdPlayerTerrain terrain;
     private final DrawObjectCall drawObject;
+    private final NativeAssets nativeAssets;
+    private final PrimaryAngleCommit angleCommit;
+    private final PlayFmSound playFm;
+    private final boolean prefixMode;
+    private boolean running;
 
     /** The runtime supplies the single live pool and saved bank; the terrain is the production floor owner. */
     public CdMosqui(CdObjectPlacementRuntime runtime, Assets assets, CdPlayerTerrain terrain, DrawObjectCall drawObject) {
@@ -193,12 +216,56 @@ public final class CdMosqui {
         this.assets = Objects.requireNonNull(assets, "assets");
         this.terrain = Objects.requireNonNull(terrain, "terrain");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+        this.nativeAssets = new NativeAssets(secondary -> CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), 0, secondary),
+                assets.normal(), assets.damaged(), assets.normalMappingsAddress(), assets.normalScriptAddress(),
+                assets.damagedMappingsAddress(), assets.damagedScriptAddress());
+        this.angleCommit = null; this.playFm = null; this.prefixMode = false;
     }
 
-    public Assets assets() { return assets; }
+    private CdMosqui(CdObjectPlacementRuntime runtime, NativeAssets assets, CdPlayerTerrain terrain,
+                     PrimaryAngleCommit angleCommit, PlayFmSound playFm, DrawObjectCall drawObject) {
+        this.runtime = Objects.requireNonNull(runtime, "runtime");
+        this.assets = null; this.nativeAssets = Objects.requireNonNull(assets, "native assets");
+        this.terrain = Objects.requireNonNull(terrain, "terrain");
+        this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
+        this.playFm = Objects.requireNonNull(playFm, "playFm");
+        this.drawObject = Objects.requireNonNull(drawObject, "drawObject"); this.prefixMode = true;
+    }
+
+    /** Actual B72 tile selector and the four complete B views; no new art or reader owner. */
+    public static CdMosqui fromPastAssets(CdObjectPlacementRuntime runtime, CdR11bAssets owner, CdPlayerTerrain terrain,
+                                         PrimaryAngleCommit angleCommit, PlayFmSound playFm, DrawObjectCall drawObject) {
+        Objects.requireNonNull(owner, "owner");
+        var tiles = owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+        if (tiles.length() != 72) throw new IllegalArgumentException("Past ObjectTileIDs extent");
+        var normalMap = owner.view(CdR11bAssets.Asset.MAP_SPR_MOSQUI_NORMAL);
+        var damagedMap = owner.view(CdR11bAssets.Asset.MAP_SPR_MOSQUI_DAMAGED);
+        var normalAni = owner.view(CdR11bAssets.Asset.ANI_MOSQUI_NORMAL);
+        var damagedAni = owner.view(CdR11bAssets.Asset.ANI_MOSQUI_DAMAGED);
+        var nativeAssets = new NativeAssets(secondary -> tiles.unsignedWord((short) tiles.unsignedWord(0) + 2 * secondary),
+                CdObjectVisualAssets.decode(normalMap.bytes().copy(), 5, normalAni.bytes().copy(), 2, 70),
+                CdObjectVisualAssets.decode(damagedMap.bytes().copy(), 5, damagedAni.bytes().copy(), 2, 70),
+                normalMap.range().nativeAddress(), normalAni.range().nativeAddress(),
+                damagedMap.range().nativeAddress(), damagedAni.range().nativeAddress());
+        return new CdMosqui(runtime, nativeAssets, terrain, angleCommit, playFm, drawObject);
+    }
+
+    /** The legacy A74 aggregate is intentionally unavailable on a named Past instance. */
+    public Assets assets() {
+        if (assets == null) throw new IllegalStateException("Named Past Mosqui has no legacy A74 Assets");
+        return assets;
+    }
 
     /** One ObjMosqui dispatch for the whole-pool dynamic slot currently holding ID $3D. */
     public Result run(int wholeIndex, Globals globals) {
+        if (!prefixMode) return execute(wholeIndex, globals);
+        if (running) throw new IllegalStateException("Named Past Mosqui cannot reenter its active dispatch");
+        running = true;
+        try { return execute(wholeIndex, globals); }
+        finally { running = false; }
+    }
+
+    private Result execute(int wholeIndex, Globals globals) {
         Objects.requireNonNull(globals, "globals");
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
@@ -214,22 +281,22 @@ public final class CdMosqui {
                 state = init(state);
                 effects.add(new CallReturned(NativeCall.INIT));
                 state = main(state, globals);
-                pool.write(state);
+                if (!prefixMode) pool.write(state);
                 effects.add(new CallReturned(NativeCall.MAIN));
             }
             case 2 -> {
                 state = main(state, globals);
-                pool.write(state);
+                if (!prefixMode) pool.write(state);
                 effects.add(new CallReturned(NativeCall.MAIN));
             }
             case 4 -> {
                 state = animate(state);
-                pool.write(state);
+                if (!prefixMode) pool.write(state);
                 effects.add(new CallReturned(NativeCall.ANIMATE));
             }
             case 6 -> {
                 state = dive(state, effects);
-                pool.write(state);
+                if (!prefixMode) pool.write(state);
                 effects.add(new CallReturned(NativeCall.DIVE));
             }
             case 8 -> {
@@ -259,35 +326,41 @@ public final class CdMosqui {
                         + ", oSubtype $" + Integer.toHexString(state.subtype()));
     }
 
-    /** ObjMosqui_Init (Mosqui/Main.asm:26-54); no animator, velocity, fraction or collision-status field is cleared. */
+    /** Init prefix precedes the actual tile operand on B; the legacy A read remains at its old cut. */
     private CdObjectState init(CdObjectState state) {
-        // MOVEQ #0,d0 / JSR SetObjectTileID (Object Tile ID Set.asm:7-17): selector 0, this slot's oSubtype2.
-        int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), 0, state.subtype2());
-        boolean damaged = state.subtype() != 0;                           // TST.B oSubtype / BNE .Damaged
-        return state.addByte(ROUTINE, 2)
-                .moveByte(SPRITE_FLAGS, state.spriteFlags() | 4)          // ORI.B #4: retain flips and path layer
-                .moveByte(PRIORITY, 3)
-                .moveByte(X_RADIUS, 0x10)
-                .moveByte(WIDTH, 0x10)
-                .moveByte(Y_RADIUS, 0x10)
-                .moveByte(COLLISION_TYPE, NATIVE_COLLISION_TYPE)
-                .moveWord(MOSQUI_ANCHOR_X, state.centreX())               // MOVE.W oX,oVar2A: original anchor
-                .moveWord(TILE, tile)
-                .moveLong(MAPPINGS, damaged ? assets.damagedMappingsAddress() : assets.normalMappingsAddress())
-                .moveLong(MOSQUI_ANIMATION_SCRIPT, damaged ? assets.damagedScriptAddress() : assets.normalScriptAddress())
+        int tile = 0;
+        if (!prefixMode) tile = nativeAssets.tileOperand().read(state.subtype2());
+        state = state.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, state.spriteFlags() | 4).moveByte(PRIORITY, 3)
+                .moveByte(X_RADIUS, 0x10).moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 0x10)
+                .moveByte(COLLISION_TYPE, NATIVE_COLLISION_TYPE).moveWord(MOSQUI_ANCHOR_X, state.centreX());
+        if (prefixMode) {
+            publish(state);
+            try { tile = nativeAssets.tileOperand().read(state.subtype2()); }
+            catch (IndexOutOfBoundsException missing) {
+                throw new UnsupportedMosqui(UnsupportedBoundary.TILE_ADDRESS, state.identity().wholeIndex(),
+                        "selector0/secondary " + state.subtype2() + " leaves its actual B72 WORD view");
+            }
+        }
+        boolean damaged = state.subtype() != 0;
+        state = state.moveWord(TILE, tile)
+                .moveLong(MAPPINGS, damaged ? nativeAssets.damagedMappingsAddress() : nativeAssets.normalMappingsAddress())
+                .moveLong(MOSQUI_ANIMATION_SCRIPT, damaged ? nativeAssets.damagedScriptAddress() : nativeAssets.normalScriptAddress())
                 .moveLong(MOSQUI_X_DELTA, damaged ? -0x8000 : -0x10000);
+        publish(state); return state;
     }
 
     /** ObjMosqui_Main (Mosqui/Main.asm:59-94). */
     private CdObjectState main(CdObjectState state, Globals globals) {
         // TST.W debugMode: the full word. BSR ObjMosqui_CheckInRange / BCS .StartDive.
         if (globals.debugMode() == 0 && checkInRange(state, globals)) {
-            return state.addByte(ROUTINE, 2).moveByte(ANIMATION, 1);       // .StartDive: RTS, no movement or animation
+            state = state.addByte(ROUTINE, 2).moveByte(ANIMATION, 1);       // .StartDive: RTS, no movement or animation
+            publish(state); return state;
         }
         int reversals = 0;
         while (true) {                                                     // .SkipRange
             int delta = state.longBits(MOSQUI_X_DELTA);
             state = state.addLong(X_POSITION, delta);                      // ADD.L oVar2C(a0),oX(a0): 16:16 add
+            publish(state);
             int d0 = (state.centreX() - state.word(MOSQUI_ANCHOR_X)) & 0xFFFF;
             if ((short) d0 < 0) { d0 = (-d0) & 0xFFFF; }                   // BPL .ChkTurn / NEG.W: $8000 stays negative
             if ((short) d0 < 0x80) { break; }                              // CMPI.W #$80 / BLT .Animate (signed)
@@ -298,6 +371,7 @@ public final class CdMosqui {
             state = state.moveLong(MOSQUI_X_DELTA, -delta)                 // NEG.L oVar2C(a0)
                     .moveByte(SPRITE_FLAGS, state.spriteFlags() ^ 1)       // BCHG #0,oSprFlags(a0)
                     .moveByte(FLAGS, state.flags() ^ 1);                   // BCHG #0,oFlags(a0); BRA .SkipRange adds again
+            publish(state);
         }
         return animate(state);                                             // .Animate: MOVEA.L oVar30,a1 / JMP AnimateObject
     }
@@ -314,10 +388,11 @@ public final class CdMosqui {
 
     /** ObjMosqui_Animate / .Animate: the stored oVar30 long selects the script table, not the subtype. */
     private CdObjectState animate(CdObjectState state) {
+        if (prefixMode) return animatePast(state);
         int pointer = state.longBits(MOSQUI_ANIMATION_SCRIPT);
         CdObjectVisualAssets visual;
-        if (pointer == assets.normalScriptAddress()) { visual = assets.normal(); }
-        else if (pointer == assets.damagedScriptAddress()) { visual = assets.damaged(); }
+        if (pointer == nativeAssets.normalScriptAddress()) { visual = nativeAssets.normal(); }
+        else if (pointer == nativeAssets.damagedScriptAddress()) { visual = nativeAssets.damaged(); }
         else {
             throw new UnsupportedMosqui(UnsupportedBoundary.ANIMATION_SCRIPT_POINTER, state.identity().wholeIndex(),
                     "oVar30 $" + Integer.toHexString(pointer) + " is not a bound Mosqui script table");
@@ -342,13 +417,18 @@ public final class CdMosqui {
     /** ObjMosqui_Dive (Mosqui/Main.asm:123-138). */
     private CdObjectState dive(CdObjectState state, List<Effect> effects) {
         state = state.addWord(Y, 6);                                       // ADDQ.W #6,oY(a0): integer word only
-        var floor = CdObjectCollisionCheck.objGetFloorDist(terrain, state);
+        publish(state);
+        final var probeSource = state;
+        var floor = prefixMode ? CdObjectCollisionCheck.objGetFloorDist(terrain, state,
+                value -> commitPastAngle(probeSource, value)) : CdObjectCollisionCheck.objGetFloorDist(terrain, state);
         effects.add(new GlobalWrite(GlobalField.PRIMARY_ANGLE, floor.primaryAngle()));
         int d1 = floor.distance();
         if (d1 > -8) { return state; }                                     // CMPI.W #-8,d1 / BGT .End
         state = state.addWord(Y, d1 + 8)                                   // SUBI.W #-8,d1 / ADD.W d1,oY(a0)
                 .addByte(ROUTINE, 2);                                      // ADDQ.B #2,oRoutine(a0)
+        publish(state);
         if ((state.spriteFlags() & 0x80) != 0) {                           // TST.B oSprFlags / BPL .End: last build's bit 7
+            if (prefixMode) playPastFm(state);
             effects.add(new SoundRequest(Sound.FM_A7));                    // MOVE.W #FM_A7,d0 / JSR PlayFMSound
         }
         return state;
@@ -395,6 +475,117 @@ public final class CdMosqui {
         d1 = (short) ((d1 - (byte) globals.timeWarpDir()) & 0xFFFF);       // EXT.W / NEG.W d2 / ADD.W d2,d1
         if (d1 < 0) { return 0; }                                          // BPL .CheckFuture; MOVEQ #TIME_PAST
         return d1 < 3 ? d1 : 2;                                            // CMPI.W #TIME_FUTURE+1 / BCS; MOVEQ #TIME_FUTURE
+    }
+
+    private void publish(CdObjectState state) {
+        if (prefixMode) runtime.pool().write(state);
+    }
+
+    /** Values only. The actual private World invocation must authenticate the producer and complete Frame CAS. */
+    private static void sourceInCut(CdObjectPool.Snapshot cut, CdObjectState source) {
+        Objects.requireNonNull(cut, "actual cut"); Objects.requireNonNull(source, "actual source");
+        int whole = source.identity().wholeIndex(); Objects.checkIndex(whole - 32, 96);
+        if (cut.slots().size() != 96 || !cut.slots().get(whole - 32).equals(source))
+            throw new IllegalArgumentException("Mosqui source differs from its supplied full96 cut");
+    }
+    private void verifyPastPortCut(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) {
+        if (!prefixMode || !running) throw new IllegalStateException("No active named Past Mosqui call");
+        runtime.pool().validateRestore(cut.pool()); sourceInCut(cut.pool(), source);
+        var actual = runtime.capture();
+        if (!actual.status().equals(cut.status()) || !actual.pool().slots().equals(cut.pool().slots())
+                || !java.util.Arrays.equals(actual.savedFlags().copy(), cut.savedFlags().copy()))
+            throw new IllegalStateException("Mosqui read-only port changed full96/source/placement/saved state");
+    }
+    private void readOnlyPastPort(CdObjectState source, java.util.function.Consumer<CdObjectPool.Snapshot> port) {
+        var cut = runtime.capture(); verifyPastPortCut(cut, source); Throwable original = null;
+        try { port.accept(cut.pool()); }
+        catch (RuntimeException | Error failure) { original = failure; throw failure; }
+        finally {
+            try { verifyPastPortCut(cut, source); }
+            catch (RuntimeException | Error verification) {
+                if (original == null) throw verification;
+                if (verification != original) original.addSuppressed(verification);
+            }
+        }
+    }
+    private void commitPastAngle(CdObjectState source, int value) {
+        readOnlyPastPort(source, cut -> angleCommit.commit(new PrimaryAngleCall(cut, source, value)));
+    }
+    private void playPastFm(CdObjectState source) {
+        readOnlyPastPort(source, cut -> playFm.play(new FmCall(cut, source, Sound.FM_A7)));
+    }
+
+    /** Only the genuine shared owner computes successful animation, once on the original full image. */
+    private CdObjectState animatePast(CdObjectState original) {
+        int animation = original.unsignedByte(ANIMATION);
+        int timer = animation == original.unsignedByte(PREVIOUS_ANIMATION) ? original.unsignedByte(ANIMATION_TIME) : 0;
+        boolean held = ((timer - 1) & 255) < 0x80;
+        CdObjectVisualAssets visual;
+        if (held) {
+            // Explicitly unread argument: shared step returns before directory access. This is
+            // not a resolution/substitution of the raw foreign live oVar30 pointer.
+            visual = nativeAssets.normal();
+        } else {
+            int pointer = original.longBits(MOSQUI_ANIMATION_SCRIPT);
+            if (pointer == nativeAssets.normalScriptAddress()) visual = nativeAssets.normal();
+            else if (pointer == nativeAssets.damagedScriptAddress()) visual = nativeAssets.damaged();
+            else {
+                animationFailureHead(original);
+                throw new UnsupportedMosqui(UnsupportedBoundary.ANIMATION_SCRIPT_POINTER, original.identity().wholeIndex(),
+                        "reached full oVar30 $" + Integer.toHexString(pointer));
+            }
+        }
+        var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
+        CdObjectAnimation.State out;
+        try {
+            out = CdObjectAnimation.step(new CdObjectAnimation.State(animation, original.unsignedByte(PREVIOUS_ANIMATION),
+                    original.unsignedByte(ANIMATION_FRAME), original.unsignedByte(ANIMATION_TIME), original.unsignedByte(MAP_FRAME),
+                    original.spriteFlags(), original.flags(), original.routine(), original.unsignedByte(ROUTINE_2)), table);
+        } catch (UnsupportedOperationException selectedRead) {
+            animationFailurePrefix(original, table, selectedRead);
+            throw new IllegalStateException("Shared animation failure did not match a reached read", selectedRead);
+        }
+        var result = original.moveByte(ANIMATION, out.animationId()).moveByte(PREVIOUS_ANIMATION, out.previousId())
+                .moveByte(ANIMATION_FRAME, out.scriptIndex()).moveByte(ANIMATION_TIME, out.timer()).moveByte(MAP_FRAME, out.mapFrame())
+                .moveByte(SPRITE_FLAGS, out.spriteFlags()).moveByte(FLAGS, out.statusFlags())
+                .moveByte(ROUTINE, out.routine()).moveByte(ROUTINE_2, out.routine2());
+        publish(result); return result;
+    }
+    private CdObjectState animationFailureHead(CdObjectState state) {
+        if (state.unsignedByte(ANIMATION) != state.unsignedByte(PREVIOUS_ANIMATION)) {
+            state = state.moveByte(PREVIOUS_ANIMATION, state.unsignedByte(ANIMATION)).moveByte(ANIMATION_FRAME, 0).moveByte(ANIMATION_TIME, 0);
+            publish(state);
+        }
+        state = state.addByte(ANIMATION_TIME, -1); publish(state); return state;
+    }
+    /** Reached read-failure stores only; never a second animation call or a successful transition. */
+    private void animationFailurePrefix(CdObjectState original, CdObjectAnimation.AnimationTable table, RuntimeException cause) {
+        var state = animationFailureHead(original); int animation = state.unsignedByte(ANIMATION);
+        if (animation >= table.scriptCount()) throw animationMissing(state, UnsupportedBoundary.ANIMATION_DIRECTORY_READ, 2 * animation, cause);
+        int script = table.tableOffset() + (short) table.bytes().unsignedWord(table.tableOffset() + animation * 2);
+        int speed = animationFailureByte(state, table, script, UnsupportedBoundary.ANIMATION_SPEED_READ, cause);
+        state = state.moveByte(ANIMATION_TIME, speed); publish(state);
+        int index = state.unsignedByte(ANIMATION_FRAME);
+        int frame = animationFailureByte(state, table, script + 1 + index, UnsupportedBoundary.ANIMATION_FRAME_READ, cause);
+        if (frame == 0xFF) {
+            state = state.moveByte(ANIMATION_FRAME, 0); publish(state);
+            animationFailureByte(state, table, script + 1, UnsupportedBoundary.ANIMATION_FRAME_READ, cause);
+        } else if (frame == 0xFE) {
+            int back = animationFailureByte(state, table, script + 2 + index, UnsupportedBoundary.ANIMATION_OPERAND_READ, cause);
+            index = (index - back) & 255; state = state.moveByte(ANIMATION_FRAME, index); publish(state);
+            animationFailureByte(state, table, script + 1 + index, UnsupportedBoundary.ANIMATION_FRAME_READ, cause);
+        } else if (frame == 0xFD) {
+            animationFailureByte(state, table, script + 2 + index, UnsupportedBoundary.ANIMATION_OPERAND_READ, cause);
+        }
+    }
+    private int animationFailureByte(CdObjectState state, CdObjectAnimation.AnimationTable table, int at,
+                                     UnsupportedBoundary boundary, RuntimeException cause) {
+        if (at < 0 || at >= table.bytes().length()) throw animationMissing(state, boundary, at, cause);
+        return table.bytes().unsignedByte(at);
+    }
+    private UnsupportedMosqui animationMissing(CdObjectState state, UnsupportedBoundary boundary, int at, RuntimeException cause) {
+        var stopped = new UnsupportedMosqui(boundary, state.identity().wholeIndex(), "reached animation byte " + at);
+        stopped.initCause(cause); return stopped;
     }
 
     private static void byteValue(int value, String name) {

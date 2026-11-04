@@ -73,7 +73,7 @@ class TestCdR11bMonitorTimeAssets {
 
     @Test void oneRawAnimationAppendsWithoutChangingExistingMappingArtReadersOrPlcSources() throws Exception {
         var a = retail().assets(); var key = ANI_MONITOR; var view = a.view(key);
-        assertEquals(107, CdR11bAssets.Asset.values().length); assertEquals(89, key.ordinal());
+        assertEquals(114, CdR11bAssets.Asset.values().length); assertEquals(89, key.ordinal());
         assertEquals("Ani_Monitor", key.nativeLabel()); assertEquals(0xA81E, key.fileOffset());
         assertEquals(136, key.length()); assertSame(key, view.asset()); assertEquals(key.range(), view.range());
         assertEquals(CdNativeFile.R11B, view.range().file());

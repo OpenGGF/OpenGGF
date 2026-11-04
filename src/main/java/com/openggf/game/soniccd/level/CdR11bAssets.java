@@ -196,7 +196,19 @@ public final class CdR11bAssets {
         MAP_SPR_COLLAPSE_PLATFORM_2("MapSpr_CollapsePlatform2", 0xC4A8, 782, 0, 0, 0, 0, false),
         COLLAPSE_PLATFORM_SIZES_2("ObjCollapsePlatform_Sizes2", 0xC7B6, 58, 0, 0, 0, 0, false),
         MAP_SPR_COLLAPSE_PLATFORM_4("MapSpr_CollapsePlatform4", 0xC7F0, 172, 0, 0, 0, 0, false),
-        MAP_SPR_BOULDER("MapSpr_Boulder", 0x94AC, 14, 0, 0, 0, 0, false);
+        MAP_SPR_BOULDER("MapSpr_Boulder", 0x94AC, 14, 0, 0, 0, 0, false),
+
+        // USA B: ObjSpikes_Init (_Objects/Spikes/Main.asm:20-25), MapSpr_Spikes (:87-89);
+        // ObjAnton_Init/Animate (Palmtree Panic/Objects/Anton/Main.asm:27-34,85,98-103), native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+        MAP_SPR_SPIKES("MapSpr_Spikes", 0xC048, 24, 0, 0, 0, 0, false),
+        ANI_ANTON("Ani_Anton", 0xB1F6, 12, 0, 0, 0, 0, false),
+        MAP_SPR_ANTON("MapSpr_Anton", 0xB202, 112, 0, 0, 0, 0, false),
+
+        // Mosqui/Main.asm:154-165; actual original USA LEAs atB43A/B43E/B44A/B44E.
+        ANI_MOSQUI_NORMAL("Ani_Mosqui1", 0xB522, 14, 0, 0, 0, 0, false),
+        ANI_MOSQUI_DAMAGED("Ani_Mosqui2", 0xB530, 13, 0, 0, 0, 0, false),
+        MAP_SPR_MOSQUI_NORMAL("MapSpr_Mosqui1", 0xB53E, 60, 0, 0, 0, 0, false),
+        MAP_SPR_MOSQUI_DAMAGED("MapSpr_Mosqui2", 0xB57A, 66, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

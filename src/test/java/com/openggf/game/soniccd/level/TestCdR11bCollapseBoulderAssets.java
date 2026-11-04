@@ -50,7 +50,7 @@ MAP_SPR_BOULDER MapSpr_Boulder 94ac 14 f1613b80dc72cd1d153d190f3a660e3990f92648d
 
     @Test void sevenRawViewsAppendExactOriginalUsaRangesAndWholeHashes() throws Exception {
         var f = retail(); var a = f.assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(107, CdR11bAssets.Asset.values().length);
+        assertEquals(114, CdR11bAssets.Asset.values().length);
         assertEquals(TABLES, Arrays.asList(CdR11bAssets.Asset.values()).subList(100, 107));
         for (int i = 0; i < rows.size(); i++) {
             var columns = rows.get(i).split(" "); var key = TABLES.get(i); var view = a.view(key);

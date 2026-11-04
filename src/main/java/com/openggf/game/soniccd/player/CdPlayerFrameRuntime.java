@@ -60,7 +60,13 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
 
     /** Publish only the checked Y LONG; every other partition/reference and earlier Display survives. */
     public void applyObjectPreHurtYRewind(CdPlayerTouchResponse.Actor expectedActor, int finalYLongBits) {
+        applyPreparedObjectSolidPublication(prepareObjectPreHurtYRewind(expectedActor, finalYLongBits));
+    }
+
+    /** Prepare the existing checked Y-only formula without adopting either Frame aggregate. */
+    public ObjectSolidPublication prepareObjectPreHurtYRewind(CdPlayerTouchResponse.Actor expectedActor, int finalYLongBits) {
         validateObjectPreHurtYRewind(expectedActor, finalYLongBits);
+        var expectedState = state; var expectedEnvironment = environment;
         var m = expectedActor.motion();
         var motion = new CdPlayerMotionState(m.centreX16_16(), finalYLongBits, m.xVelocity(), m.yVelocity(),
                 m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
@@ -68,7 +74,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(),
                 state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
-        state = nextState;
+        return new ObjectSolidPublication(expectedState, expectedEnvironment, nextState, expectedEnvironment);
     }
 
     /**
@@ -162,8 +168,21 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public void applyObjectHurtResult(CdPlayerTouchResponse.Actor expectedActor,
                                       CdPlayerTouchResponse.PlayerGlobals expectedPlayer,
                                       CdPlayerTouchResponse.Result result) {
+        applyPreparedObjectSolidPublication(prepareObjectHurtResult(expectedActor, expectedPlayer, result));
+    }
+
+    /**
+     * Prepare direct HurtPlayer's already-validated owning formulas before any caller pool publication.
+     * This four-value carrier is reusable observational State/Environment CAS data, never invocation,
+     * Frame identity, contact/world/slot ownership, native-call or exactly-once authority.
+     */
+    public ObjectSolidPublication prepareObjectHurtResult(CdPlayerTouchResponse.Actor expectedActor,
+                                                         CdPlayerTouchResponse.PlayerGlobals expectedPlayer,
+                                                         CdPlayerTouchResponse.Result result) {
         validateObjectHurtResult(expectedActor, expectedPlayer, result);
-        if (result.exit() == CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) return;
+        var expectedState = state; var expectedEnvironment = environment;
+        if (result.exit() == CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE)
+            return new ObjectSolidPublication(expectedState, expectedEnvironment, expectedState, expectedEnvironment);
         boolean kill = result.exit() == CdPlayerTouchResponse.Exit.KILL_PLAYER;
         var actor = result.actor(); var globals = result.player(); var h = state.header(); var timers = state.timers();
         var nextHeader = kill ? new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()) : h;
@@ -177,8 +196,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 b.debugCheat(), b.timeWarpTimer(), globals.invincible(), b.bossMusic()) : b;
         var nextEnvironment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(),
                 movementGlobals), environment.controls(), nextBodyGlobals, environment.dynamicSlots());
-        state = nextState;
-        environment = nextEnvironment;
+        return new ObjectSolidPublication(expectedState, expectedEnvironment, nextState, nextEnvironment);
     }
     // END direct object HurtPlayer publication ports.
     private static final long ULONG_MASK = 0xFFFFFFFFL;

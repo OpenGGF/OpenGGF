@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse.Actor;
@@ -176,6 +177,26 @@ public final class CdSpikes {
         }
     }
 
+    /** One actual plain-Solid outcome at the opt-in Past invocation's fresh current cut. */
+    public record PrefixSolidCall(CdObjectPool.Snapshot actualCut, CdSolidObject.Player expectedPlayer,
+                                  CdSolidObject.Globals expectedGlobals, CdSolidObject.Outcome outcome) {
+        public PrefixSolidCall {
+            Objects.requireNonNull(actualCut, "actualCut"); Objects.requireNonNull(expectedPlayer, "expectedPlayer");
+            Objects.requireNonNull(expectedGlobals, "expectedGlobals"); Objects.requireNonNull(outcome, "outcome");
+            var entry = outcome instanceof CdSolidObject.Completed done ? done.completedResult().entry()
+                    : ((CdSolidObject.NativeStopped) outcome).prefix().entry();
+            if (entry != CdSolidObject.Entry.SOLID_OBJECT)
+                throw new IllegalArgumentException("Past Spikes prefixes require genuine plain SolidObject");
+        }
+    }
+    /**
+     * Opt-in publication owner: preflight actual phase/source/full96 and the full expected Frame pair,
+     * then adopt the genuine completed Result or stopped Prefix and ordered FM exactly once. These
+     * public values grant no invocation authority. Frame/FM adoption cannot be authenticated here.
+     * NativeStopped is committed before this body rethrows its identical original exception.
+     */
+    @FunctionalInterface public interface PrefixSolidCommit { void commit(PrefixSolidCall call); }
+
     /**
      * Root synchronously validates the complete same-owner 96-image cut, current source ID/physical phase,
      * expectedPlayer/expectedGlobals and Frame.validateObjectSolidResult before publishing a0, otherSlots,
@@ -247,9 +268,10 @@ public final class CdSpikes {
     }
 
     private final CdObjectPlacementRuntime placement;
-    private final BodyAssets assets;
+    private final NativeAssets assets;
     private final CdSolidObject sharedSolid;
     private final SolidCommit solidCommit;
+    private final PrefixSolidCommit prefixSolidCommit;
     private final YRewindCommit yRewindCommit;
     private final HurtCommit hurtCommit;
     private final DrawObjectCall drawObject;
@@ -258,11 +280,69 @@ public final class CdSpikes {
     public CdSpikes(CdObjectPlacementRuntime placement, BodyAssets assets, CdSolidObject sharedSolid,
                     SolidCommit solidCommit, YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement, "placement");
-        this.assets = Objects.requireNonNull(assets, "assets");
+        this.assets = presentAssets(Objects.requireNonNull(assets, "assets"));
         this.sharedSolid = Objects.requireNonNull(sharedSolid, "sharedSolid");
-        this.solidCommit = Objects.requireNonNull(solidCommit, "solidCommit");
+        this.solidCommit = Objects.requireNonNull(solidCommit, "solidCommit"); this.prefixSolidCommit = null;
         this.yRewindCommit = Objects.requireNonNull(yRewindCommit, "yRewindCommit");
         this.hurtCommit = Objects.requireNonNull(hurtCommit, "hurtCommit");
+        this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    @FunctionalInterface private interface TileOperand { int read(int secondary); }
+    private record NativeAssets(TileOperand tileOperand, int mappingsAddress) { }
+    private static NativeAssets presentAssets(BodyAssets assets) {
+        return new NativeAssets(secondary -> CdR11aObjectAssets.decodeTileWord(
+                assets.objectTileIds().copy(), TILE_SELECTOR, secondary), assets.mappingsAddress());
+    }
+
+    /**
+     * Explicit original-USA B binding. ObjSpikes_Init (_Objects/Spikes/Main.asm:20-31) reaches
+     * selector10 after publishing its header. Actual B72 is never padded into Present's A74 contract.
+     * No new Solid/Hurt publication protocol, art, PLC, current residency or execution owner is added.
+     */
+    public static CdSpikes fromPastAssets(CdObjectPlacementRuntime placement, CdR11bAssets owner,
+                                          CdSolidObject sharedSolid, SolidCommit solidCommit,
+                                          YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
+        return new CdSpikes(placement, pastAssets(owner), sharedSolid, solidCommit, yRewindCommit, hurtCommit, drawObject);
+    }
+    private static NativeAssets pastAssets(CdR11bAssets owner) {
+        Objects.requireNonNull(owner, "owner");
+        var tiles = owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+        if (tiles.length() != 72) throw new IllegalArgumentException("Past Spikes requires the actual72-byte tile directory");
+        var map = owner.view(CdR11bAssets.Asset.MAP_SPR_SPIKES);
+        CdObjectVisualAssets.decodeStatic(map.bytes().copy(), 1, 8);
+        return new NativeAssets(secondary -> readPastTileWord(tiles, secondary), map.range().nativeAddress());
+    }
+    /** Package format seam only; this grants no source, callback or pool authority. */
+    static int readPastTileWord(CdAssetBytes bytes, int secondary) {
+        Objects.requireNonNull(bytes, "tile bytes"); byteValue(secondary, "secondary");
+        int target = (short) bytes.unsignedWord(TILE_SELECTOR * 2);
+        return bytes.unsignedWord(target + secondary * 2);
+    }
+    private CdSpikes(CdObjectPlacementRuntime placement, NativeAssets assets, CdSolidObject sharedSolid,
+                     SolidCommit solidCommit, YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
+        this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
+        this.sharedSolid = Objects.requireNonNull(sharedSolid, "sharedSolid"); this.solidCommit = Objects.requireNonNull(solidCommit, "solidCommit"); this.prefixSolidCommit = null;
+        this.yRewindCommit = Objects.requireNonNull(yRewindCommit, "yRewindCommit"); this.hurtCommit = Objects.requireNonNull(hurtCommit, "hurtCommit");
+        this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    /**
+     * Separate named opt-in, preserving completed-only fromPastAssets/7 and the Present constructor.
+     * Native common Spikes/Main.asm:46-50 reaches plain SolidObject before its d0/standing/Hurt gates.
+     * One actual runWithPrefix call commits stopped stores before rethrow; it supplies no invented d0.
+     */
+    public static CdSpikes fromPastAssetsWithPrefix(CdObjectPlacementRuntime placement, CdR11bAssets owner,
+                                                    CdSolidObject sharedSolid, PrefixSolidCommit solidCommit,
+                                                    YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
+        return new CdSpikes(placement, pastAssets(owner), sharedSolid, solidCommit, yRewindCommit, hurtCommit, drawObject);
+    }
+    private CdSpikes(CdObjectPlacementRuntime placement, NativeAssets assets, CdSolidObject sharedSolid,
+                     PrefixSolidCommit solidCommit, YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
+        this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
+        this.sharedSolid = Objects.requireNonNull(sharedSolid, "sharedSolid"); this.solidCommit = null;
+        this.prefixSolidCommit = Objects.requireNonNull(solidCommit, "solidCommit");
+        this.yRewindCommit = Objects.requireNonNull(yRewindCommit, "yRewindCommit"); this.hurtCommit = Objects.requireNonNull(hurtCommit, "hurtCommit");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
@@ -293,7 +373,7 @@ public final class CdSpikes {
                     throw new UnsupportedSpikes(UnsupportedBoundary.TILE_ID_SUBTYPE2, wholeIndex,
                             "selector $A / subtype2 $" + Integer.toHexString(state.subtype2()) + " is unreviewed");
                 }
-                int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, state.subtype2());
+                int tile = assets.tileOperand().read(state.subtype2());
                 state = state.moveWord(TILE, tile); // SetObjectTileID:16, after its actual bounded reads succeed.
                 pool.write(state);
                 state = state.moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 8); // :26-27, after the tile helper.
@@ -316,9 +396,14 @@ public final class CdSpikes {
                 boolean verticalFlip = (state.spriteFlags() & 2) != 0; // Native BTST BEFORE the shared call.
                 pool.write(state);
                 var solidCut = pool.capture(); // ONE actual capture; never an overlay or an earlier dispatch cut.
-                var solid = sharedSolid.run(CdSolidObject.Entry.SOLID_OBJECT, state, player,
-                        inputs.gates(), solidGlobals, solidCut);
-                solidCommit.commit(new SolidCall(solidCut, player, solidGlobals, solid));
+                CdSolidObject.Result solid;
+                if (prefixSolidCommit != null) {
+                    solid = publishPrefixSolid(state, inputs, solidCut);
+                } else {
+                    solid = sharedSolid.run(CdSolidObject.Entry.SOLID_OBJECT, state, player,
+                            inputs.gates(), solidGlobals, solidCut);
+                    solidCommit.commit(new SolidCall(solidCut, player, solidGlobals, solid));
+                }
                 if (!pool.state(wholeIndex).equals(solid.object())) {
                     throw new IllegalStateException("SolidObject commit did not publish a0's final image");
                 }
@@ -372,6 +457,48 @@ public final class CdSpikes {
             return new Result(pool.state(wholeIndex), player, solidGlobals, playerGlobals, worldGlobals, effects);
         } finally {
             running = false;
+        }
+    }
+
+    /** Genuine pure helper once, synchronous publication, then identical native failure or completed d0. */
+    private CdSolidObject.Result publishPrefixSolid(CdObjectState source, Inputs inputs, CdObjectPool.Snapshot cut) {
+        var pool = placement.pool(); pool.validateRestore(cut);
+        if (!cut.slots().equals(pool.capture().slots()) || !pool.state(source.identity().wholeIndex()).equals(source))
+            throw new IllegalStateException("Past Spikes Solid source differs from its actual full96 cut");
+        var outcome = sharedSolid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT, source,
+                inputs.player(), inputs.gates(), inputs.solidGlobals(), cut);
+        CdSolidObject.Result completed = null; CdSolidObject.NativeStopped stopped = null;
+        CdObjectState object; List<CdObjectState> others;
+        if (outcome instanceof CdSolidObject.Completed done) {
+            completed = done.completedResult(); object = completed.object(); others = completed.otherSlots();
+        } else {
+            stopped = (CdSolidObject.NativeStopped) outcome; object = stopped.prefix().object(); others = stopped.prefix().otherSlots();
+        }
+        if (!object.identity().equals(source.identity())) throw new IllegalStateException("Solid changed Spikes physical identity");
+        var images = new ArrayList<CdObjectState>(); images.add(object); images.addAll(others);
+        var ready = CdObjectPool.overlay(cut, images); pool.validateRestore(ready);
+        if (!cut.slots().equals(pool.capture().slots()))
+            throw new IllegalStateException("Past Spikes helper changed its pure actual full96 source");
+        try {
+            prefixSolidCommit.commit(new PrefixSolidCall(cut, inputs.player(), inputs.solidGlobals(), outcome));
+        } catch (RuntimeException | Error original) {
+            // Retain any legitimate partial publication. Report unrelated-image corruption without
+            // replacing the callback's identical failure; never retry or roll back another owner.
+            try { requirePrefixNonwrites(pool, cut, images); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        }
+        if (!ready.slots().equals(pool.capture().slots()))
+            throw new IllegalStateException("Past Spikes Solid commit did not publish exactly its full96 output/nonwrites");
+        if (stopped != null) throw stopped.stop().originalException();
+        return completed;
+    }
+    private static void requirePrefixNonwrites(CdObjectPool pool, CdObjectPool.Snapshot before, List<CdObjectState> writes) {
+        for (var source : before.slots()) {
+            boolean written = false;
+            for (var image : writes) if (source.identity().equals(image.identity())) { written = true; break; }
+            if (!written && !source.equals(pool.state(source.identity().wholeIndex())))
+                throw new IllegalStateException("Past Spikes callback changed an unrelated physical image");
         }
     }
 

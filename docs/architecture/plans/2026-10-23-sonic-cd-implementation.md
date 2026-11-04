@@ -22,7 +22,7 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns through8084 after the native timer210 save, timer230 restart HIGH-byte
+now returns through8276 after the native timer210 save, timer230 restart HIGH-byte
 write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
 source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
@@ -46,6 +46,65 @@ Animal presence and Pata-Bata before the ordinary Main continuation returns.
 Natural full/course7807→7808 restoration compares complete represented native
 state before forwarding the unchanged controller input. Selected Past GPU presentation now retains the actual prior SAT with current
 service output; whole acts and regional parity remain unfinished.
+
+## Past Mosqui/Spikes/Anton and actual8276 — 4 November 2026
+
+Seven original-disc raw metadata entries extend B107→114 without changing any
+existing row, art,36 PLC lists,37 finite reader identities or residency ownership.
+Named B72 factories retain Present's A74 contracts. The selected Mosqui path owns
+synchronous floor3/prezero/raw-angle writes and FM A7; Spikes' separate genuine
+plain-Solid prefix path adopts stopped work before rethrowing the identical native
+fault. Frame's two new prepared YRewind/Hurt entry points prebuild the existing
+immutable full-pair publication; only legacy apply delegation changes. World
+caches all three bodies, authenticates private actual invocation/cut/physical slot
+and ordered callback sites, then publishes ready references without effect replay.
+Old74 call ordinals remain; Mosqui/Spikes/Anton append74/75/76. No new art bank,
+source, Frame capture partition or synthesis owner is introduced.
+
+Initial source-bound1174/28-class execution had1169passes,5new fixture failures,
+0errors/skips. All749 Frame cases,107 metadata,226 legacy body cases,18 Mosqui
+factory and13 Spikes prefix checks passed. The failures were source-attributed:
+Anton Place already advances LONG Y, layout includes another-period duplicate,
+CdAssetBytes wrapper identity is not byte equality, plain Solid needs prior-visible
+bit7, and a fixed Anton floor does not necessarily complete Place. Test-only
+corrections leave production byte-identical. Later25 selected tests had22passes,
+one remaining Spikes prerequisite failure, the expected old8085-fence retirement
+failure and one intentional original-failure observer error, with no skips.
+
+Fixed Spikes vflip scenes now prove real support, complete nonwrites and full/course
+replay. Upright retains actual hurt protection and correctly bypasses Hurt. A
+source-derived44-neutral-row expiry attempt did expire the timer, but left Sonic
+ascending; that attempted fixture was rejected rather than fitting an actor or
+searching coordinates. Live changed direct-Hurt publication remains a World gap;
+component/owning Frame tests cover its value/preparation contracts. Both Anton
+normal/damaged fixed scenes qualify Init/Place and full/course replay, without
+claiming unreached grounded patrol. No tests skip or manufacture a floor to pass.
+
+The unchanged controller returns8276. Permanent full/course8083→8084,
+8084→8085 and8275→8276 compare complete represented native state before each
+restored forward. Natural Mosqui51 now completes8085, alongside earlier Collapse
+and Boulder bodies. First8277 completes service/placement/primary/reserved work,
+then stops before physical32 ID2D/routine0/savedDB/X9064/Y158. Native Past index
+names Robot Generator. Exact unvisited64 bytes and increasing native physical
+order supply identity; the generic exception exposes only DYNAMIC_OBJECTS.
+Original Frame/World/generation identities remain; Frame closes. No failed-owner
+capture/restore/replay is attempted. Comparison values never hydrate gameplay.
+
+Verification:1174 run93552 (55.82s execution/424s queue/97s compile),25 run22632
+(16.60s/25s/39.70s),3 run60695 (2pass/1Spikes prerequisite failure,7.09s/0s/35.05s)
+and final Spikes2 run72981 (2pass/0failures/errors/skips,5.87s/0s/34.96s).
+The permanent route passed in60695. Source fingerprints before/after match at each
+run:4179d6d1…0965a1, d2c0b130…62bf8,253704db…53a37 and2417d483…665c3.
+1151 retained positives plus23 refreshed fixture cases and one new permanent route
+qualify1175 distinct checks across snapshots, not one green1175 command or a full
+suite. Fresh identities/counts/Java25.0.5.0.3/private cwd/original media/EGL/opt-in
+were inspected; all owned diagnostics consumed. Independent static review had no
+actionable findings but did not establish execution or catch these fixture gaps.
+
+No new framebuffer/audio/native image comparison/full-act/regional claim. Earlier
+actual7778 pixels remain the latest image. Next concrete source owner is Robot
+Generator and its native Explosion children; existing art/PLC/residency already
+contains their sources. Main remains untouched; this is private local progress.
 
 ## Past Collapse/Boulder and actual8084 — 4 November 2026
 

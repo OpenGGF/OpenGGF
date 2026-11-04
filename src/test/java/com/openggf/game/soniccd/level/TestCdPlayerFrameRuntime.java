@@ -5007,4 +5007,213 @@ class TestCdPlayerFrameRuntime {
             }
         }
     }
+
+    // BEGIN prepared direct-Hurt Frame pair values. No pool/world/invocation ownership is added.
+    @Test void preparedPreHurtYBuildsLiteralLongWrapValuesWithoutAnyMutationUntilAdoption() throws IOException {
+        int[][] vectors = {{0, 1, 0xFFFFFF00}, {0, -1, 0x100}, {0x1234, 0x7FFF, 0xFF801334},
+                {0xFFFFFFFF, -0x8000, 0x007FFFFF}, {0x80000000, -0x8000, 0x80800000},
+                {0x00010001, 0x101, 0xFFFFFF01}, {0xFFFDBEEF, -0x234, 0xFFFFF2EF}, {0x12345678, 0, 0x12345678}};
+        for (var v : vectors) {
+            var fixture = new Fixture();
+            try (var f = spinTunnelDirtyFrame(fixture)) {
+                var old = f.captureActor(); var s = old.state(); var motion = hurtMotion(s.motion(), v[0], v[1], s.motion().flags());
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(old.owner(), new CdPlayerBody.State(motion, s.animation(),
+                        s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), old.display()));
+                var actor = f.captureActor(); var shared = f.captureShared(); var observation = observe(f); int uploads = fixture.dmas.size();
+                f.bindArtPublication((dma, state) -> fail("Preparing/adopting Y cannot publish art"));
+                var publication = f.prepareObjectPreHurtYRewind(hurtActor(f), v[2]);
+                assertSame(actor.state(), publication.expectedState()); assertSame(shared.environment(), publication.expectedEnvironment());
+                assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+                assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(observation, observe(f));
+                var expected = new CdPlayerBody.State(hurtMotion(motion, v[2], v[1], motion.flags()), s.animation(),
+                        s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+                assertEquals(expected, publication.finalState()); assertSame(shared.environment(), publication.finalEnvironment());
+                assertSame(s.history(), publication.finalState().history()); assertSame(s.objectLinks(), publication.finalState().objectLinks());
+                assertEquals(s.rotationAngle(), publication.finalState().rotationAngle());
+                f.validatePreparedObjectSolidPublication(publication); assertEquals(observation, observe(f));
+                f.applyPreparedObjectSolidPublication(publication);
+                assertSame(publication.finalState(), f.state()); assertSame(publication.finalEnvironment(), f.environment());
+                assertEquals(new CdPlayerFrameRuntime.ActorState(actor.owner(), expected, actor.display()), f.captureActor());
+                assertEquals(shared, f.captureShared()); assertSame(actor.display(), f.display());
+                assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock()); assertEquals(uploads, fixture.dmas.size());
+            }
+        }
+    }
+
+    @Test void preparedHurtBuildsRealNormalKillAndDebugPairsAndPreservesAllNonwrites() throws IOException {
+        for (int mini : new int[]{0, 1}) for (int roll : new int[]{0, 4}) for (int water : new int[]{0, 0x40}) for (int kind = 0; kind < 3; kind++) {
+            var fixture = new Fixture();
+            try (var f = hurtFrame(fixture, 0xB9 | roll | water, mini, 0, kind == 2 ? 0x100 : 0)) {
+                var actor = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); var globals = hurtGlobals(f);
+                if (kind != 0) globals = hurtPlayerGlobals(globals, 2, 0);
+                var pool = hurtPool(); var cut = pool.capture(); var result = directFrameHurt(f, globals, pool, kind == 0 ? 5 : 0);
+                assertEquals(kind == 0 ? CdPlayerTouchResponse.Exit.HURT : kind == 1 ? CdPlayerTouchResponse.Exit.KILL_PLAYER
+                        : CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, result.exit());
+                int uploads = fixture.dmas.size(); var observation = observe(f);
+                f.bindArtPublication((dma, state) -> fail("Hurt pair preparation/adoption executes no effect observations"));
+                var publication = f.prepareObjectHurtResult(a, globals, result);
+                assertSame(actor.state(), publication.expectedState()); assertSame(shared.environment(), publication.expectedEnvironment());
+                assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+                assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(observation, observe(f));
+                assertEquals(cut.slots(), pool.capture().slots());
+                assertSame(actor.state().history(), publication.finalState().history());
+                assertSame(actor.state().objectLinks(), publication.finalState().objectLinks());
+                assertEquals(actor.state().rotationAngle(), publication.finalState().rotationAngle());
+                if (kind == 2) {
+                    assertSame(actor.state(), publication.finalState()); assertSame(shared.environment(), publication.finalEnvironment());
+                }
+                f.applyPreparedObjectSolidPublication(publication);
+                assertSame(publication.finalState(), f.state()); assertSame(publication.finalEnvironment(), f.environment());
+                if (kind == 2) { assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); }
+                else hurtAssertAdopted(f, actor, shared, result); // Unchanged established owning-formula oracle.
+                if (kind == 0) assertSame(actor.state().header(), f.state().header());
+                if (kind == 1) assertSame(actor.state().timers(), f.state().timers());
+                assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+                assertEquals(cut.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+            }
+        }
+    }
+
+    @Test void preparedHurtUsesTheActuallyAdoptedFullYPrefixBeforeTheRealHelperCallCut() throws IOException {
+        var fixture = new Fixture();
+        try (var f = hurtFrame(fixture, 0xBD, 0, 0, 0)) {
+            var original = f.captureActor(); var shared = f.captureShared(); var oldActor = hurtActor(f);
+            var y = f.prepareObjectPreHurtYRewind(oldActor, 0xFFFFF2EF);
+            assertSame(original.state(), f.state()); f.applyPreparedObjectSolidPublication(y);
+            assertEquals(0xFFFFF2EF, f.state().motion().centreY16_16());
+            var prefixed = f.captureActor(); var a = hurtActor(f); var g = hurtGlobals(f); var pool = hurtPool();
+            var cut = pool.capture(); var result = directFrameHurt(f, g, pool, 5);
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectHurtResult(oldActor, g, result));
+            var publication = f.prepareObjectHurtResult(a, g, result);
+            assertSame(y.finalState(), publication.expectedState()); assertSame(shared.environment(), publication.expectedEnvironment());
+            assertEquals(prefixed, f.captureActor()); assertEquals(shared, f.captureShared());
+            f.applyPreparedObjectSolidPublication(publication); hurtAssertAdopted(f, prefixed, shared, result);
+            assertEquals(original.state().rotationAngle(), f.state().rotationAngle());
+            assertEquals(cut.slots(), pool.capture().slots());
+        }
+    }
+
+    @Test void preparedHurtAndYValuesCasEveryFieldOfTheEntireActualState() throws IOException {
+        try (var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0)) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); var g = hurtGlobals(f);
+            var result = directFrameHurt(f, g, hurtPool(), 5);
+            var publications = List.of(f.prepareObjectPreHurtYRewind(a, 0xFFFFF2EF), f.prepareObjectHurtResult(a, g, result));
+            for (var publication : publications) for (String field : new String[]{"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "SCRIPT_INDEX", "ANIMATION_TIMER", "MAP_FRAME", "SLOT_ID", "MAPPING_ADDRESS", "TILE", "PRIORITY", "WIDTH", "HURT", "INVINCIBILITY", "SPEED_SHOES", "RESET", "HISTORY_INDEX", "ROTATION_DISTANCE", "PUSH_OBJECT", "STAND_OBJECT", "ROTATION_ANGLE", "HISTORY_BYTES"}) {
+                f.restoreActor(actor); f.restoreShared(shared);
+                var changed = framePortChangedState(actor.state(), field); assertNotEquals(actor.state(), changed, field);
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), changed, actor.display()));
+                framePortPreparedRejected(f, publication, IllegalArgumentException.class);
+            }
+            f.restoreActor(actor); f.restoreShared(shared);
+        }
+    }
+
+    @Test void preparedHurtAndYValuesCasEveryFieldOfTheEntireActualEnvironment() throws IOException {
+        try (var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0)) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); var g = hurtGlobals(f);
+            var result = directFrameHurt(f, g, hurtPool(), 5);
+            var publications = List.of(f.prepareObjectPreHurtYRewind(a, 0xFFFFF2EF), f.prepareObjectHurtResult(a, g, result));
+            for (var publication : publications) for (String field : new String[]{"TOP_SPEED", "ACCELERATION", "DECELERATION", "BOUND_LEFT", "BOUND_RIGHT", "BOUND_BOTTOM", "BOUND_BOSS_FIGHT", "GATE_ZONE_ACT", "GATE_TIME_ZONE", "GATE_MINI_SONIC", "GATE_WATER_SLIDE", "GATE_WIND_TUNNEL", "GATE_SPEED_SHOES", "GATE_TIME_WARP_DIRECTION", "MOVEMENT_LOOK_MODE", "MOVEMENT_CAMERA_Y_CENTRE", "MOVEMENT_PRIMARY_ANGLE", "MOVEMENT_SECONDARY_ANGLE", "MOVEMENT_BORED_TIMER", "MOVEMENT_SCORE_CHAIN", "MOVEMENT_DEBUG_ANGLE", "MOVEMENT_DEBUG_ANGLE_SHIFT", "MOVEMENT_DEBUG_QUADRANT", "MOVEMENT_DEBUG_FLOOR_DISTANCE", "RAW_HELD", "RAW_TAP", "LOGICAL_HELD", "LOGICAL_TAP", "CONTROL_LOCKED", "BODY_LEVEL_FRAMES", "BODY_CAMERA_X_CENTRE", "BODY_TIME_ATTACK_MODE", "BODY_DEBUG_MODE", "BODY_DEBUG_CHEAT", "BODY_TIME_WARP_TIMER", "BODY_INVINCIBLE", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS"}) {
+                f.restoreActor(actor); f.restoreShared(shared);
+                var changed = framePortChangedEnvironment(shared.environment(), field); assertNotEquals(shared.environment(), changed, field);
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), changed, shared.artState(), shared.paused(), shared.vIntClock()));
+                framePortPreparedRejected(f, publication, IllegalArgumentException.class);
+            }
+            f.restoreActor(actor); f.restoreShared(shared);
+        }
+    }
+
+    @Test void preparedHurtCapturesCurrentUnrepresentedDomainsAndPreservesTheirRawValues() throws IOException {
+        try (var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0)) {
+            var before = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); var g = hurtGlobals(f);
+            var result = directFrameHurt(f, g, hurtPool(), 5); var changed = before.state();
+            for (String field : List.of("ROTATION_ANGLE", "SCRIPT_INDEX", "RESET", "HISTORY_BYTES", "STAND_OBJECT"))
+                changed = framePortChangedState(changed, field);
+            var environment = framePortChangedEnvironment(shared.environment(), "BODY_TIME_WARP_TIMER");
+            environment = framePortChangedEnvironment(environment, "RAW_TAP");
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(before.owner(), changed, before.display()));
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(), shared.paused(), shared.vIntClock()));
+            assertEquals(a, hurtActor(f)); assertEquals(g, hurtGlobals(f), "The historical helper projection omits these domains");
+            var actor = f.captureActor(); var currentShared = f.captureShared();
+            var y = f.prepareObjectPreHurtYRewind(a, 0xFFFFF2EF); var hurt = f.prepareObjectHurtResult(a, g, result);
+            for (var publication : List.of(y, hurt)) {
+                assertSame(changed, publication.expectedState()); assertSame(environment, publication.expectedEnvironment());
+                assertSame(changed.history(), publication.finalState().history()); assertSame(changed.objectLinks(), publication.finalState().objectLinks());
+                assertEquals(changed.rotationAngle(), publication.finalState().rotationAngle());
+                assertSame(changed.animation(), publication.finalState().animation());
+                assertEquals(environment.controls(), publication.finalEnvironment().controls());
+                assertEquals(environment.globals().timeWarpTimer(), publication.finalEnvironment().globals().timeWarpTimer());
+            }
+            assertEquals(actor, f.captureActor()); assertEquals(currentShared, f.captureShared());
+            f.applyPreparedObjectSolidPublication(hurt); hurtAssertAdopted(f, actor, currentShared, result);
+        }
+    }
+
+    @Test void preparedHurtAndYKeepOriginalNullStaleArithmeticAndLifecycleGuardOrder() throws IOException {
+        try (var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0)) {
+            var a = hurtActor(f); var g = hurtGlobals(f); var r = directFrameHurt(f, g, hurtPool(), 5);
+            var actor = f.captureActor(); var shared = f.captureShared();
+            assertEquals("pre-Hurt actor", assertThrows(NullPointerException.class, () -> f.prepareObjectPreHurtYRewind(null, 0)).getMessage());
+            assertEquals("HurtPlayer actor", assertThrows(NullPointerException.class, () -> f.prepareObjectHurtResult(null, null, null)).getMessage());
+            assertEquals("HurtPlayer globals", assertThrows(NullPointerException.class, () -> f.prepareObjectHurtResult(a, null, null)).getMessage());
+            assertEquals("HurtPlayer result", assertThrows(NullPointerException.class, () -> f.prepareObjectHurtResult(a, g, null)).getMessage());
+            var stale = hurtActorChanged(a, "PREVIOUS_ANIMATION");
+            var oldY = assertThrows(IllegalArgumentException.class, () -> f.validateObjectPreHurtYRewind(stale, 0));
+            assertEquals(oldY.getMessage(), assertThrows(IllegalArgumentException.class, () -> f.prepareObjectPreHurtYRewind(stale, 0)).getMessage());
+            var oldHurt = assertThrows(IllegalArgumentException.class, () -> f.validateObjectHurtResult(stale, g, r));
+            assertEquals(oldHurt.getMessage(), assertThrows(IllegalArgumentException.class, () -> f.prepareObjectHurtResult(stale, g, r)).getMessage());
+            var wrong = assertThrows(IllegalArgumentException.class, () -> f.validateObjectPreHurtYRewind(a, 0));
+            assertEquals(wrong.getMessage(), assertThrows(IllegalArgumentException.class, () -> f.prepareObjectPreHurtYRewind(a, 0)).getMessage());
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+        var fixture = new Fixture();
+        try (var f = fixture.runtime()) {
+            var selection = f.prepareInput(8);
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectPreHurtYRewind(null, 0));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectHurtResult(null, null, null));
+            f.serviceVBlank(selection.phase(), () -> {
+                assertThrows(IllegalStateException.class, () -> f.prepareObjectPreHurtYRewind(null, 0));
+                assertThrows(IllegalStateException.class, () -> f.prepareObjectHurtResult(null, null, null));
+            });
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectPreHurtYRewind(null, 0));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectHurtResult(null, null, null));
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+            var state = f.state(); var environment = f.environment(); var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+            f.close();
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectPreHurtYRewind(null, 0));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectHurtResult(null, null, null));
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertSame(art, f.artState());
+            assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+        }
+    }
+
+    @Test void preparedHurtAndYSameValueAndEqualFrameAcceptanceRemainOnlyObservationalDataCas() throws IOException {
+        for (boolean debugHurt : new boolean[]{false, true}) {
+            try (var a = hurtFrame(new Fixture(), 0xBD, 0, 0, debugHurt ? 0x100 : 0);
+                 var b = hurtFrame(new Fixture(), 0xBD, 0, 0, debugHurt ? 0x100 : 0)) {
+                var oldA = a.captureActor(); var s = oldA.state();
+                var zeroVelocity = hurtMotion(s.motion(), s.motion().centreY16_16(), 0, s.motion().flags());
+                a.restoreActor(new CdPlayerFrameRuntime.ActorState(oldA.owner(), new CdPlayerBody.State(zeroVelocity, s.animation(), s.header(),
+                        s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), oldA.display()));
+                var oldB = b.captureActor(); var sharedB = b.captureShared();
+                b.restoreActor(new CdPlayerFrameRuntime.ActorState(oldB.owner(), a.state(), oldB.display()));
+                b.restoreShared(new CdPlayerFrameRuntime.SharedState(sharedB.owner(), a.environment(), sharedB.artState(), sharedB.paused(), sharedB.vIntClock()));
+                var actorA = a.captureActor(); var actorB = b.captureActor(); var cutA = a.captureShared(); var cutB = b.captureShared();
+                CdPlayerFrameRuntime.ObjectSolidPublication publication;
+                if (debugHurt) {
+                    var g = hurtPlayerGlobals(hurtGlobals(a), 2, 0); var result = directFrameHurt(a, g, hurtPool(), 0);
+                    assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, result.exit());
+                    publication = a.prepareObjectHurtResult(hurtActor(a), g, result);
+                } else publication = a.prepareObjectPreHurtYRewind(hurtActor(a), a.state().motion().centreY16_16());
+                a.applyPreparedObjectSolidPublication(publication); a.applyPreparedObjectSolidPublication(publication);
+                b.validatePreparedObjectSolidPublication(publication); b.applyPreparedObjectSolidPublication(publication);
+                assertEquals(actorA, a.captureActor()); assertEquals(actorB, b.captureActor());
+                assertEquals(cutA, a.captureShared()); assertEquals(cutB, b.captureShared());
+                assertSame(publication.finalState(), a.state()); assertSame(publication.finalState(), b.state());
+                assertSame(publication.finalEnvironment(), b.environment()); assertNotSame(actorA.owner(), actorB.owner());
+            }
+        }
+    }
+    // END prepared direct-Hurt Frame pair values.
+
 }

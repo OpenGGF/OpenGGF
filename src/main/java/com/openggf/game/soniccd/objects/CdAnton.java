@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 
 import java.util.ArrayList;
@@ -148,7 +149,7 @@ public final class CdAnton {
     }
 
     private final CdObjectPlacementRuntime placement;
-    private final Assets assets;
+    private final NativeAssets assets;
     private final CdPlayerTerrain terrain;
     private final PrimaryAngleCommit angleCommit;
     private final DrawObjectCall drawObject;
@@ -156,6 +157,46 @@ public final class CdAnton {
 
     public CdAnton(CdObjectPlacementRuntime placement, Assets assets, CdPlayerTerrain terrain,
                    PrimaryAngleCommit angleCommit, DrawObjectCall drawObject) {
+        this.placement = Objects.requireNonNull(placement, "placement"); this.assets = presentAssets(Objects.requireNonNull(assets, "assets"));
+        this.terrain = Objects.requireNonNull(terrain, "terrain"); this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
+        this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    @FunctionalInterface private interface TileOperand { int read(int secondary); }
+    private record NativeAssets(TileOperand tileOperand, CdObjectVisualAssets visual, int mappingsAddress) { }
+    private static NativeAssets presentAssets(Assets assets) {
+        return new NativeAssets(secondary -> CdR11aObjectAssets.decodeTileWord(
+                assets.objectTileIds().copy(), TILE_SELECTOR, secondary), assets.visual(), assets.mappingsAddress());
+    }
+
+    /**
+     * Actual original-USA B tables; ObjAnton_Init/Animate (Anton/Main.asm:27-34,85,98-103).
+     * The unchanged kernel reaches B72 selector2 only after its Init header. Actual raw subtype2=1
+     * aliases the next genuine WORD; it is not replaced with Present's second Anton tile entry.
+     * Assets3 and Present's A74 selector policy remain unchanged. No new cross-owner port is added.
+     */
+    public static CdAnton fromPastAssets(CdObjectPlacementRuntime placement, CdR11bAssets owner,
+                                         CdPlayerTerrain terrain, PrimaryAngleCommit angleCommit, DrawObjectCall drawObject) {
+        return new CdAnton(placement, pastAssets(owner), terrain, angleCommit, drawObject);
+    }
+    private static NativeAssets pastAssets(CdR11bAssets owner) {
+        Objects.requireNonNull(owner, "owner");
+        var tiles = owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+        if (tiles.length() != 72) throw new IllegalArgumentException("Past Anton requires the actual72-byte tile directory");
+        var map = owner.view(CdR11bAssets.Asset.MAP_SPR_ANTON);
+        var animation = owner.view(CdR11bAssets.Asset.ANI_ANTON);
+        var visual = CdObjectVisualAssets.decode(map.bytes().copy(), 4, animation.bytes().copy(), 2, 22);
+        return new NativeAssets(secondary -> readPastTileWord(tiles, secondary), visual, map.range().nativeAddress());
+    }
+    /** Package format seam only; no fabricated authenticated owner is needed to test a reached WORD read. */
+    static int readPastTileWord(CdAssetBytes bytes, int secondary) {
+        Objects.requireNonNull(bytes, "tile bytes");
+        if ((secondary & ~0xFF) != 0) throw new IllegalArgumentException("secondary must be an unsigned native byte");
+        int target = (short) bytes.unsignedWord(TILE_SELECTOR * 2);
+        return bytes.unsignedWord(target + secondary * 2);
+    }
+    private CdAnton(CdObjectPlacementRuntime placement, NativeAssets assets, CdPlayerTerrain terrain,
+                    PrimaryAngleCommit angleCommit, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
         this.terrain = Objects.requireNonNull(terrain, "terrain"); this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
@@ -209,7 +250,7 @@ public final class CdAnton {
         c.publish();
         int secondary = c.state.subtype2();
         if (secondary > 1) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, secondary);
-        int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, secondary);
+        int tile = assets.tileOperand().read(secondary);
         c.state = c.state.moveWord(TILE, tile); c.publish();
         c.effects.add(new CallReturned(NativeCall.SET_OBJECT_TILE_ID));
         boolean damaged = c.state.subtype() != 0;
