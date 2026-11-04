@@ -19,6 +19,21 @@ Unreleased. The earlier development themes remain in
   and independent end-state flags. Frame-boundary reloads no longer leave a
   second rewind-boundary marker or suppress the following gameplay oscillator tick.
 
+- **Sonic 2 elevators and monitors:** Casino Night elevators keep their
+  fractional position between trips and accelerate the shipped way when they
+  pass exactly through their centre, so a second ride starts moving on the
+  original frame. Rolling through a monitor while another platform carries the
+  player no longer knocks the player off that platform.
+
+- **Sonic 2 level start:** The title card spends the extra frame the shipped
+  game waits after the zone name lands, and its exit runs the camera and zone
+  events only on the frame the blue background starts to leave. Casino Night's
+  slot machine therefore draws its first reels on the native frame, a finished
+  spin pays out on the frame the cage sees it, and the seventh-emerald and
+  Knuckles in Sonic 2 results return to the level on the same frame as ordinary
+  results. Hill Top and Mystic Cave events read the level frame counter the
+  shipped game reads.
+
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
   descends to its pacing height. It previously stayed on layer 3, which is the

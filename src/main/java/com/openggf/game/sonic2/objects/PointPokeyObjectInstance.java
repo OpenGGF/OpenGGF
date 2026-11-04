@@ -448,6 +448,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
                 activePrizeCount[0] = 0;  // No prizes on screen yet
                 prizeAngle = 0;
                 playerState = STATE_SPAWNING_PRIZES;
+                // loc_2BDF8's "beq.w loc_2BC86" enters the payout in this same
+                // invocation (s2.asm:59315-59322), so this pass can already
+                // create the first prize on an odd Level_frame_counter.
+                runPayoutPass(player, vIntRunCount);
             }
         } else {
             // Play sound at 16-frame intervals using the global counter
@@ -471,13 +475,18 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * - Eject when all prizes spawned AND all collected/expired (activePrizeCount == 0)
      */
     private void updateSpawningPrizes(AbstractPlayableSprite player, int vIntRunCount) {
+        // Keep player locked
+        keepPlayerLocked(player);
+
+        // Animate cage (Bug fix #2: toggle between frames 0 and 1)
+        updateCageAnimation();
+
+        runPayoutPass(player, vIntRunCount);
+    }
+
+    /** One pass of loc_2BC86 / loc_2BD4E after the occupied cage's shared prelude. */
+    private void runPayoutPass(AbstractPlayableSprite player, int vIntRunCount) {
         try {
-            // Keep player locked
-            keepPlayerLocked(player);
-
-            // Animate cage (Bug fix #2: toggle between frames 0 and 1)
-            updateCageAnimation();
-
             // NO SFX during prize spawning - ROM only plays sound during waiting/countdown
 
             // loc_2BD4E (rings, s2.asm:59271-59308) and its identical twin at
