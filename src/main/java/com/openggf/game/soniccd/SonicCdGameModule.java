@@ -33,6 +33,7 @@ import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
 import com.openggf.game.soniccd.objects.CdMonitor;
 import com.openggf.game.soniccd.objects.CdTimePost;
+import com.openggf.game.soniccd.objects.CdTamabboh;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.objects.CdTimeWarpSaveData;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -114,7 +115,7 @@ public final class SonicCdGameModule implements GameModule {
         MONITOR_SOLID, MONITOR_FLOOR_ANGLE, MONITOR_FM, TIME_POST_DIRECTION, TIME_POST_SUB_CPU, MONITOR_BODY, TIME_POST_BODY,
         CLEAR_DEMO_INDEX, POST_OBJECT_GUARDS, DEAD_CAMERA_FREEZE, DRAW_OBJECTS, PALETTE_CYCLE,
         UPDATE_SECTION, PREPARE_PLCS, UPDATE_GLOBAL_ANIMATIONS, ORDINARY_MAIN_RETURN,
-        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY
+        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY, TAMABBOH_BODY
     }
     enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
@@ -125,7 +126,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu { }
+    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm { }
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }
@@ -147,6 +148,9 @@ public final class SonicCdGameModule implements GameModule {
     }
     record PastMonitorFm(CdMonitor.FmSound sound) implements PastSound {
         PastMonitorFm { Objects.requireNonNull(sound); }
+    }
+    record PastTamabbohFm(CdTamabboh.FmSound sound) implements PastSound {
+        PastTamabbohFm { Objects.requireNonNull(sound); }
     }
     record PastTimePostSubCpu(CdTimePost.SubCpuCommand command) implements PastSound {
         PastTimePostSubCpu { Objects.requireNonNull(command); }
@@ -212,7 +216,13 @@ public final class SonicCdGameModule implements GameModule {
     void validatePastLoadingCut() {
         requirePastLoadingVisit(pastLoading); playerFrame.captureShared();
     }
+    SonicCdPastDisplay.Selection pastSelectedDisplay() {
+        validatePastLoadingCut();
+        return pastLoading.selectedDisplay();
+    }
     void servicePastLoading(int held) {
+        // Rejected graphics reentry is not a native producer failure and must not close Frame.
+        playerPresentation.requirePastRenderIdle();
         try {
             validatePastLoadingCut(); pastLoading.service(held); playerPresentation.projectPastLoading();
         }

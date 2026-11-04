@@ -244,6 +244,19 @@ class TestSonicCdPastLoadingWorld {
         assertNotNull(expected, field); assertNotNull(actual, field);
         if (expected instanceof com.openggf.game.soniccd.level.CdAssetBytes bytes) {
             assertArrayEquals(bytes.copy(), assertInstanceOf(com.openggf.game.soniccd.level.CdAssetBytes.class, actual).copy(), field);
+        } else if (expected instanceof com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat cpu) {
+            var other = assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat.class, actual);
+            assertArrayEquals(cpu.bytes(), other.bytes(), field);
+            assertEquals(cpu.spriteCount(), other.spriteCount(), field);
+            assertEquals(cpu.provenance(), other.provenance(), field);
+        } else if (expected instanceof java.util.Optional<?> optional) {
+            var other = assertInstanceOf(java.util.Optional.class, actual);
+            assertEquals(optional.isPresent(), other.isPresent(), field);
+            if (optional.isPresent()) assertNativeValue(optional.orElseThrow(), other.orElseThrow(), field + ".value");
+        } else if (expected instanceof java.util.Map<?, ?> map) {
+            var other = assertInstanceOf(java.util.Map.class, actual);
+            assertEquals(map.keySet(), other.keySet(), field);
+            for (var key : map.keySet()) assertNativeValue(map.get(key), other.get(key), field + "[" + key + "]");
         } else if (expected instanceof List<?> list) {
             var other = assertInstanceOf(List.class, actual); assertEquals(list.size(), other.size(), field);
             for (int i = 0; i < list.size(); i++) assertNativeValue(list.get(i), other.get(i), field + "[" + i + "]");

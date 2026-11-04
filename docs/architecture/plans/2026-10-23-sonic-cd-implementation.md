@@ -1,6 +1,6 @@
 # Implement Sonic CD with complete regional parity
 
-Date: 2026-10-23; source pause 26 October; delivery 27 October; resumed 28 October; latest local qualification30October2026. Status: partial implementation, not complete game support.
+Date: 2026-10-23; source pause 26 October; delivery 27 October; resumed 28 October; latest local qualification4November2026. Status: partial implementation, not complete game support.
 Design: [fourth-game architecture](../designs/2026-10-23-sonic-cd-fourth-game.md).
 Engine baseline: `b979916808b7f9379ede2b5dcdde1bcdc8bf8357`.
 Reference pin: `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
@@ -22,7 +22,7 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns through7808 after the native timer210 save, timer230 restart HIGH-byte
+now returns through7851 after the native timer210 save, timer230 restart HIGH-byte
 write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
 source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
@@ -44,8 +44,53 @@ healthy7775 cut. A bounded unchanged-controller observation returns through7807,
 with natural Sonic SAT pieces from7777. The actual7808 now completes Float,
 Animal presence and Pata-Bata before the ordinary Main continuation returns.
 Natural full/course7807→7808 restoration compares complete represented native
-state before forwarding the unchanged controller input. Selected GPU presentation,
-whole acts and regional parity remain unfinished.
+state before forwarding the unchanged controller input. Selected Past GPU presentation now retains the actual prior SAT with current
+service output; whole acts and regional parity remain unfinished.
+
+## Resumed World and component integration — 4 November 2026
+
+Three parallel lanes integrated authenticated Past Tamabboh metadata/shared-body
+construction, immutable selected-display projection and USA Good Future terrain.
+The renderer/Atlas corrections and these components passed444 tests across30
+classes with zero failures, errors or skips. Exact fresh identities, original
+media, Java25, surfaceless EGL and equal source fingerprints were checked. This
+was58.79seconds of admitted execution after950seconds waiting, not a full suite.
+
+The live Past Visit now stores its actual selected prior CPU with post-service
+resident art, physical planes, palette and scroll before ordinary Main builds the
+next CPU. Captures retain that selection; later Main art cues and streamed planes
+are distinct values. The actual overlay uses the shared retained renderer with
+World/load/Frame/context/atlas identity checks and owned resource retirement.
+Source-defined draw, scroll capture/restore and native-service guards prevent old
+queued graphics callbacks from mutating the native state or closing a healthy
+Frame through rejected reentry. Pixel replay uses the actual selected Sonic,
+including a primary-omission contrast and unrelated-producer retirement control.
+
+One326-case affected run had325 passes and one superseded enum-inventory
+expectation. All nine new World cases passed, including real call7778 EGL output,
+full/course selected-state replay, natural7851 Tamabboh, constructed Fire/children
+and cleared-missile handling. Both later reviewed reentry faults were independently
+reproduced by two new failing EGL cases. The exact guard fixes, enum migration and
+retained Tamabboh behavior then pass17 focused checks with zero skips;311 retained
+passing cases plus17 refreshed cases cover328 distinct cases across source
+snapshots. No single green328-case or full-suite command is claimed.
+
+The new named Tamabboh factory retains Present's public74-byte contract while
+reading the genuine Past72-byte selector through a private adapter. Its cached
+World bridge authenticates the actual full96/source and stable Frame, publishes
+every reached primary-angle store synchronously, reads Y then conditional X,
+records first-free FM_A0 and permits the native cleared-ID0 missile Draw. Effects
+are observations and trigger no replay. Natural floor output is real; the test
+has no detached final terrain-motion oracle. The fixed callback scenes are
+constructed object ingress, not additional natural controller progress.
+
+Terrain-only profiles also cover USA R11C Good Future and R11D Bad Future with
+original-file identity/header/operand checks, distinct explicit shapes and the
+existing decoders. Their actual asset and all four-shape terrain/source regression
+checks pass within the326 selection. No Future World, player, current-art or PLC
+admission is added. The first subsequent natural boundary is unmeasured; parallel
+Collapse/Boulder metadata, factories and World bridges remain staging work.
+Native visual comparison, audio, full USA and Japan/Europe support remain open.
 
 ## Actual Past Pata-Bata and completed7808 — 30 October 2026
 

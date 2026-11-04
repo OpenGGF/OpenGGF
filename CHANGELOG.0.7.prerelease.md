@@ -120,7 +120,20 @@ Unreleased. The earlier development themes remain in
   migration passes10 cases, retaining381 unchanged cases from that run. No single
   all-green391 run or new rendered Past picture is claimed. Current CPU sprites
   remain distinct from the genuine prior SAT selected at V-int.
-  Destination-picture publication and audible synthesis remain open.
+  Past Tamabboh now runs through its named shared-body factory and actual cached
+  World invocation, with synchronous floor-angle/player reads, typed FM metadata,
+  native missile allocation and cleared-ID draw handling. The unchanged controller
+  route now executes this Past encounter; full/course captures preserve its complete state.
+  Past rendering now retains the genuine prior SAT selected at V-int, joins it to
+  resident art, complete planes, palette and scroll, then draws through the shared
+  native-priority renderer. Full/course state and full pixel replay are checked;
+  actual selected Sonic pixels and owned GPU retirement are covered in EGL.
+  Native state rejects capture, restore, service and recursive draw reentry from
+  queued graphics commands without closing the healthy producer.
+  Terrain-only USA Good Future and Bad Future profiles decode their original
+  disc-backed layouts, collision, blocks and patterns through existing loaders;
+  they add no Future gameplay, PLC service or World admission. Native visual
+  comparison, complete acts and audible synthesis remain open.
   Authenticated HUD glyph/mapping views and sparse current-pattern destinations
   now preserve existing source identities; fixed loading-value writers keep native
   field lifetimes on the same Frame without certifying a completed destination.

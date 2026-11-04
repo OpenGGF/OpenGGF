@@ -638,7 +638,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     void unbind() {
+        requirePastRenderIdle();
         try {
+            if (pastRenderBinding != null) {
+                // Resource retirement uses only its bound GL/atlas identities, never a healthy
+                // native getter: module teardown has already closed the actual Frame.
+                pastRenderBinding.renderer().close();
+                pastRenderBinding = null;
+            }
             if (frame != null) frame.clearPendingInput();
             if (openingAtlas != null && GameServices.graphics().getPatternAtlas() == openingAtlas) {
                 for (int i = 0; i < OPENING_PICTURE_PATTERNS; i++) {
@@ -927,6 +934,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public boolean drawScene() { return true; }
     @Override public boolean presentationPaused() { return frame != null && frame.paused(); }
     @Override public void drawOverlay() {
+        requirePastRenderIdle(); // Rejected recursive drawing must not enter native failure closure.
         try { drawCompletedOverlay(); }
         catch (RuntimeException | Error failure) {
             module.closePlayerCycleAfterFailure(failure);
@@ -951,8 +959,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     private void drawCompletedOverlay() {
         if (module.pastLoadingSelected()) {
-            module.validatePastLoadingCut();
-            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.DISPLAY_PUBLICATION);
+            drawPastSelectedDisplay();
+            return;
         }
         requireBound();
         actor.requireCompletedNativeFrame();
@@ -1000,6 +1008,60 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         GameServices.graphics().flush();
     }
 
+
+    /** Render the actual retained service selection, without borrowing Main's later CPU or source art. */
+    private void drawPastSelectedDisplay() {
+        requirePastRenderIdle();
+        var selected = module.pastSelectedDisplay();
+        if (selected.projection() instanceof SonicCdPastDisplay.Blocked blocked)
+            throw new UnsupportedOperationException("Actual Past selected display is blocked: " + blocked.failure());
+        var scene = selected.projection() instanceof SonicCdPastDisplay.Ready ready ? ready.scene()
+                : ((SonicCdPastDisplay.Disabled) selected.projection()).scene();
+        drawingPast = true;
+        try {
+            if (pastRenderBinding == null) {
+                var actualSource = requirePastClosedSource();
+                var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+                var world = mode.getWorldSession(); var levels = mode.getLevelManager();
+                var graphics = GameServices.graphics(); var camera = mode.getCamera();
+                var renderer = new com.openggf.graphics.RetainedPlaneSceneRenderer(graphics, PatternAtlasRange.OBJECTS);
+                pastRenderBinding = new PastRenderBinding(actualSource, mode, world, world.getDataSource(), levels,
+                        levels.getCurrentLevel(), levels.getCompletedProductionLoadGeneration(), camera, graphics,
+                        graphics.getPatternAtlas(), org.lwjgl.opengl.GL.getCapabilities(), Thread.currentThread(),
+                        System.getProperty("openggf.headless.gl"), renderer);
+            }
+            requirePastRenderBinding(selected);
+            var binding = pastRenderBinding;
+            binding.renderer().draw(scene, binding.camera().getX(), binding.camera().getY(),
+                    () -> requirePastRenderBinding(selected));
+        } finally { drawingPast = false; }
+    }
+
+    /** The module/Visit relation grants source authority; renderer values and equal pixels do not. */
+    private void requirePastRenderBinding(SonicCdPastDisplay.Selection selected) {
+        var binding = pastRenderBinding;
+        var actualSource = requirePastClosedSource();
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (binding == null || module.pastSelectedDisplay() != selected || actualSource != binding.source()
+                || mode != binding.mode() || mode.getWorldSession() != binding.world()
+                || binding.world().getDataSource() != binding.data()
+                || mode.getLevelManager() != binding.levels() || GameServices.level() != binding.levels()
+                || binding.levels().getCurrentLevel() != binding.level()
+                || binding.levels().getCompletedProductionLoadGeneration() != binding.generation()
+                || mode.getCamera() != binding.camera() || GameServices.camera() != binding.camera()
+                || binding.camera().getWidth() != 320 || binding.camera().getHeight() != 224
+                || GameServices.graphics() != binding.graphics() || !binding.graphics().isGlInitialized()
+                || binding.graphics().isHeadlessMode() || binding.graphics().getPatternAtlas() != binding.atlas()
+                || Thread.currentThread() != binding.thread()
+                || !Objects.equals(System.getProperty("openggf.headless.gl"), binding.backend())
+                || org.lwjgl.opengl.GL.getCapabilities() != binding.capabilities())
+            throw new IllegalStateException("Past retained draw source/World/load/Frame/graphics lifetime changed");
+    }
+
+    /** Native service/capture/restore may not reenter from an old queued graphics command. */
+    void requirePastRenderIdle() {
+        if (drawingPast) throw new IllegalStateException("Past selected draw is active");
+    }
 
     /** Pure selected-scene projection inside the existing controller draw; no native work occurs here. */
     private void drawWarpProgram() {
@@ -1244,12 +1306,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             return 512; // Physical64x32 Plane B, Main.asm:227-231; never the source layout extent.
         }
         @Override public Object captureRewindState() {
+            requirePastRenderIdle();
             if (scrollState == null) return null;
             if (pastSource != null) return capturePastScroll();
             requireBound();
             return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
         }
         @Override public void restoreRewindState(Object snapshot) {
+            requirePastRenderIdle();
             if (snapshot == null) return;
             if (pastSource != null) {
                 if (!(snapshot instanceof ScrollCapture value)) throw new IllegalArgumentException("Not a Past scroll capture");
@@ -1370,6 +1434,15 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private record PastSource(CdR11bAssets assets, CdStagePlayerSource source,
                               CdPlayerFrameRuntime frame, CdR11bBackgroundPlane plane) { }
     private PastSource pastSource;
+    // Derived render resources only: existing native snapshots retain the selected immutable data.
+    private record PastRenderBinding(PastSource source, com.openggf.game.session.GameplayModeContext mode,
+            com.openggf.game.session.WorldSession world, com.openggf.game.GameDataSource data,
+            LevelManager levels, com.openggf.level.Level level, long generation, Camera camera,
+            com.openggf.graphics.GraphicsManager graphics, PatternAtlas atlas,
+            org.lwjgl.opengl.GLCapabilities capabilities, Thread thread, String backend,
+            com.openggf.graphics.RetainedPlaneSceneRenderer renderer) { }
+    private PastRenderBinding pastRenderBinding;
+    private boolean drawingPast;
 
     /**
      * Borrows the actual B aggregate and the existing complete mutable images at this source cut.
@@ -1380,6 +1453,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                         CdR11aForegroundScroll.State foreground,
                         CdR11aBackgroundScroll.State backgroundImage,
                         CdR11aBackgroundPlane.State plane, DrawCopies copies) {
+        requirePastRenderIdle();
         Objects.requireNonNull(sourceAssets, "actual Past aggregate");
         Objects.requireNonNull(sourceFrame, "actual Past Frame");
         Objects.requireNonNull(foreground, "current foreground");
@@ -1590,6 +1664,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     ScrollCapture capturePastScroll() {
+        requirePastRenderIdle();
         requirePastClosedSource();
         return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
     }
@@ -1605,6 +1680,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 && value.plane() == planeState && value.copies() == drawCopies;
     }
     void restorePastScroll(ScrollCapture value) {
+        requirePastRenderIdle();
         validatePastScroll(value);
         scrollState = value.state(); backgroundState = value.background();
         planeState = value.plane(); publishedPlane = value.plane(); drawCopies = value.copies();

@@ -1,5 +1,17 @@
 # Shared implementation pitfalls
 
+**Retained pictures need selected values and guards at every entry.** A native
+sprite table can be one pass older than resident art. Keep the genuine selected
+CPU, physical planes, palette and scroll in the captured value; Main may prepare
+a later CPU art cue or stream names without changing the displayed selection.
+Compare resident pixels at restore, not a later cue. Guard direct scroll handler
+capture/restore and recursive draw calls as well as registry operations. Reject
+render reentry before a failure handler can close the healthy producer. Scope
+ambient sprite wrapping, water-palette selection and graphics state around replay,
+then restore them on failure; retire only the exact owned atlas entries. The
+[Past World checks](validation/levels/scd-palmtree-panic-act1-present.md) exercise
+actual service timing, queued callback adversaries and full/course replay.
+
 **A handler capture is not proof of a stored world checkpoint.** Cold headless
 loading can leave parallax's active selection uninitialized even when a zone
 handler is available directly. Initialize through the ordinary production entry

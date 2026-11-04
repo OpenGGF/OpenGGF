@@ -1272,6 +1272,21 @@ public class GraphicsManager {
 		this.verticalWrapAdjustEnabled = false;
 	}
 
+	/** Replays already-selected SAT coordinates without borrowing the caller's zone wrapping. */
+	void withoutVerticalWrapAdjust(Runnable draw) {
+		Objects.requireNonNull(draw, "selected sprite replay");
+		boolean enabled = verticalWrapAdjustEnabled;
+		int range = verticalWrapRange, cameraY = verticalWrapCameraY;
+		try {
+			verticalWrapAdjustEnabled = false;
+			draw.run();
+		} finally {
+			verticalWrapAdjustEnabled = enabled;
+			verticalWrapRange = range;
+			verticalWrapCameraY = cameraY;
+		}
+	}
+
 	/**
 	 * Get the combined palette texture ID.
 	 */

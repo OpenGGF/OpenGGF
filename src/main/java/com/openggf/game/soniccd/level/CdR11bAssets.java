@@ -179,7 +179,12 @@ public final class CdR11bAssets {
         MAP_SPR_FLOAT_BLOCK("MapSpr_FloatBlock", 0xA252, 76, 0, 0, 0, 0, false),
         ANI_PATA_BATA("Ani_PataBata", 0xB374, 18, 0, 0, 0, 0, false),
         MAP_SPR_PATA_BATA1("MapSpr_PataBata1", 0xB386, 34, 0, 0, 0, 0, false),
-        MAP_SPR_PATA_BATA2("MapSpr_PataBata2", 0xB3A8, 40, 0, 0, 0, 0, false);
+        MAP_SPR_PATA_BATA2("MapSpr_PataBata2", 0xB3A8, 40, 0, 0, 0, 0, false),
+        ANI_TAMABBOH_NORMAL("Ani_Tamabboh1", 0xB79A, 12, 0, 0, 0, 0, false),
+        ANI_TAMABBOH_DAMAGED("Ani_Tamabboh2", 0xB7A6, 26, 0, 0, 0, 0, false),
+        MAP_SPR_TAMABBOH("MapSpr_Tamabboh1/MapSpr_Tamabboh2", 0xB7C0, 62, 0, 0, 0, 0, false),
+        ANI_TAMABBOH_MISSILE("Ani_TamabbohMissile", 0xB8C0, 8, 0, 0, 0, 0, false),
+        MAP_SPR_TAMABBOH_MISSILE("MapSpr_TamabbohMissile", 0xB8C8, 42, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

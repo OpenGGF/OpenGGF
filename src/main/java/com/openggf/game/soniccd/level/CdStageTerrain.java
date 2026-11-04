@@ -15,7 +15,9 @@ public final class CdStageTerrain {
     /** Exact asset-format profiles; no arbitrary/default dimensions or runtime admission. */
     public enum Shape {
         PPZ1_PRESENT("R11A", 6432, 25600, 61952, 42, 8, 6, 8, 900),
-        PPZ1_PAST("R11B", 5280, 23872, 54272, 42, 4, 10, 2, 800);
+        PPZ1_PAST("R11B", 5280, 23872, 54272, 42, 4, 10, 2, 800),
+        PPZ1_GOOD_FUTURE("R11C", 5792, 24192, 55296, 42, 4, 14, 2, 800),
+        PPZ1_BAD_FUTURE("R11D", 5920, 25024, 55296, 42, 4, 14, 2, 800);
 
         private final String label;
         private final int blockBytes;

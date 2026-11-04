@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 
 import java.util.ArrayList;
@@ -182,7 +183,7 @@ public final class CdTamabboh {
     }
 
     private final CdObjectPlacementRuntime placement;
-    private final Assets assets;
+    private final NativeAssets assets;
     private final CdPlayerTerrain terrain;
     private final PrimaryAngleCommit angleCommit;
     private final PlayerWordRead playerRead;
@@ -192,6 +193,66 @@ public final class CdTamabboh {
 
     public CdTamabboh(CdObjectPlacementRuntime placement, Assets assets, CdPlayerTerrain terrain,
                      PrimaryAngleCommit angleCommit, PlayerWordRead playerRead, PlayFmSound playFmSound, DrawObjectCall drawObject) {
+        this.placement = Objects.requireNonNull(placement, "placement"); this.assets = presentAssets(Objects.requireNonNull(assets, "assets"));
+        this.terrain = Objects.requireNonNull(terrain, "terrain"); this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
+        this.playerRead = Objects.requireNonNull(playerRead, "playerRead"); this.playFmSound = Objects.requireNonNull(playFmSound, "playFmSound");
+        this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+
+    /** Pure reached tile operand; choosing it is explicit construction, never stage/length inference. */
+    @FunctionalInterface
+    private interface TileOperand { int read(int secondary); }
+
+    /** Private immutable common binding; public legacy Assets retains its exact A74 format contract. */
+    private record NativeAssets(TileOperand tileOperand, CdObjectVisualAssets normal, CdObjectVisualAssets damaged,
+                                CdObjectVisualAssets missile, int normalMappingsAddress, int damagedMappingsAddress,
+                                int missileMappingsAddress, int normalAnimationAddress, int damagedAnimationAddress) { }
+
+    private static NativeAssets presentAssets(Assets assets) {
+        return new NativeAssets(secondary -> CdR11aObjectAssets.decodeTileWord(
+                assets.objectTileIds().copy(), TILE_SELECTOR, secondary),
+                assets.normal(), assets.damaged(), assets.missile(), assets.normalMappingsAddress(),
+                assets.damagedMappingsAddress(), assets.missileMappingsAddress(),
+                assets.normalAnimationAddress(), assets.damagedAnimationAddress());
+    }
+
+    /**
+     * Explicit original-USA B binding; native Tamabboh/Main.asm:29-58,226-252.
+     * Five finite raw views are structurally decoded once. This creates no art decode, preload,
+     * current-pixel owner, dispatch authority or player Frame. The genuine B72 tile directory is
+     * retained unread until the existing Init prefix reaches selector4; A74 is never padded or relaxed.
+     */
+    public static CdTamabboh fromPastAssets(CdObjectPlacementRuntime placement, CdR11bAssets owner,
+                                            CdPlayerTerrain terrain, PrimaryAngleCommit angleCommit,
+                                            PlayerWordRead playerRead, PlayFmSound playFmSound, DrawObjectCall drawObject) {
+        return new CdTamabboh(placement, pastAssets(owner), terrain, angleCommit, playerRead, playFmSound, drawObject);
+    }
+
+    private static NativeAssets pastAssets(CdR11bAssets owner) {
+        Objects.requireNonNull(owner, "owner");
+        var tiles = owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+        if (tiles.length() != 72) throw new IllegalArgumentException("Tamabboh Past requires the actual72-byte tile directory");
+        var body = owner.view(CdR11bAssets.Asset.MAP_SPR_TAMABBOH);
+        var missile = owner.view(CdR11bAssets.Asset.MAP_SPR_TAMABBOH_MISSILE);
+        var normalAnimation = owner.view(CdR11bAssets.Asset.ANI_TAMABBOH_NORMAL);
+        var damagedAnimation = owner.view(CdR11bAssets.Asset.ANI_TAMABBOH_DAMAGED);
+        var missileAnimation = owner.view(CdR11bAssets.Asset.ANI_TAMABBOH_MISSILE);
+        return new NativeAssets(secondary -> {
+                    int target = (short) tiles.unsignedWord(TILE_SELECTOR * 2);
+                    return tiles.unsignedWord(target + secondary * 2);
+                },
+                CdObjectVisualAssets.decode(body.bytes().copy(), 3, normalAnimation.bytes().copy(), 2, 59,
+                        java.util.Map.of(0, 12)),
+                CdObjectVisualAssets.decodeIndexed(body.bytes().copy(), 22, 3, 28, 62,
+                        damagedAnimation.bytes().copy(), 2, 59),
+                CdObjectVisualAssets.decode(missile.bytes().copy(), 4, missileAnimation.bytes().copy(), 1, 59),
+                body.range().nativeAddress(), body.range().nativeAddress() + 22, missile.range().nativeAddress(),
+                normalAnimation.range().nativeAddress(), damagedAnimation.range().nativeAddress());
+    }
+
+    private CdTamabboh(CdObjectPlacementRuntime placement, NativeAssets assets, CdPlayerTerrain terrain,
+                       PrimaryAngleCommit angleCommit, PlayerWordRead playerRead, PlayFmSound playFmSound, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
         this.terrain = Objects.requireNonNull(terrain, "terrain"); this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
         this.playerRead = Objects.requireNonNull(playerRead, "playerRead"); this.playFmSound = Objects.requireNonNull(playFmSound, "playFmSound");
@@ -252,7 +313,7 @@ public final class CdTamabboh {
                 .moveByte(WIDTH, 16).moveByte(Y_RADIUS, 15).moveWord(TAMABBOH_ANCHOR_X, c.state.centreX()); c.publish();
         int secondary = c.state.subtype2();
         if (secondary != 0) throw unsupported(UnsupportedBoundary.TILE_ENTRY, c, secondary);
-        int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, secondary);
+        int tile = assets.tileOperand().read(secondary);
         c.state = c.state.moveWord(TILE, tile); c.publish(); c.returned(NativeCall.SET_OBJECT_TILE_ID);
         boolean damaged = c.state.subtype() != 0;
         c.state = c.state.moveLong(MAPPINGS, damaged ? assets.damagedMappingsAddress() : assets.normalMappingsAddress())

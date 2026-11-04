@@ -720,6 +720,12 @@ public class PatternAtlas {
         retainSlotRef(entry.atlasIndex(), entry.slot());
     }
 
+    /** Engine-internal admission for consumers that require physical upload completion. */
+    void requireUploadIdle() {
+        if (batchMode || batchDepth != 0)
+            throw new IllegalStateException("Pattern atlas upload transaction is still active");
+    }
+
     /**
      * Begin batch mode. Pattern uploads write to a CPU-side buffer only.
      * Call {@link #endBatch()} to flush everything to the GPU in one call per page.

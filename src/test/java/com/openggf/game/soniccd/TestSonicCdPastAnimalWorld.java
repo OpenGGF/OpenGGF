@@ -90,10 +90,11 @@ class TestSonicCdPastAnimalWorld {
                 + "TIME_POST_DIRECTION TIME_POST_SUB_CPU MONITOR_BODY TIME_POST_BODY CLEAR_DEMO_INDEX POST_OBJECT_GUARDS "
                 + "DEAD_CAMERA_FREEZE DRAW_OBJECTS PALETTE_CYCLE UPDATE_SECTION PREPARE_PLCS UPDATE_GLOBAL_ANIMATIONS "
                 + "ORDINARY_MAIN_RETURN FLOAT_BLOCK_SOLID FLOAT_BLOCK_BODY").split(" ");
-        assertEquals(oldNames.length + 2, calls.length);
+        assertEquals(oldNames.length + 3, calls.length);
         for (int i = 0; i < oldNames.length; i++) assertEquals(oldNames[i], calls[i].name(), "Existing ordinal " + i);
         assertEquals("ANIMAL_PRESENCE", calls[oldNames.length].name());
         assertEquals("PATA_BATA_BODY", calls[oldNames.length + 1].name());
+        assertEquals("TAMABBOH_BODY", calls[oldNames.length + 2].name());
         assertCachedAnimal(p, null);
     }
 
