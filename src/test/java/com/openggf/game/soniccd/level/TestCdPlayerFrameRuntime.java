@@ -5216,4 +5216,151 @@ class TestCdPlayerFrameRuntime {
     }
     // END prepared direct-Hurt Frame pair values.
 
+    // BEGIN Goal Post reached Frame pair preparation. Root owns the actual invocation/contact/PLC.
+    @Test void goalPostReachedPrebuildsOnlyItsLiteralRawStoresAndAdoptsWithoutOtherWork() throws IOException {
+        var fixture = new Fixture();
+        try (var f = spinTunnelDirtyFrame(fixture)) {
+            var old = f.captureShared(); var dirty = old.environment();
+            var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(
+                    new CdPlayerMovement.Physics(-0x1234, 0x2345, -0x3456),
+                    new CdPlayerMovement.Bounds(0x1234, 0x2345, 0x3456, 0xF3),
+                    new CdPlayerMovement.Gates(0xBEEF, 0xFE, 0x81, 0x82, 0x83, 0x84, 0xFF),
+                    dirty.movement().globals()), dirty.controls(), dirty.globals(), dirty.dynamicSlots());
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(old.owner(), environment, old.artState(), true, old.vIntClock()));
+            var actor = f.captureActor(); var shared = f.captureShared(); var observation = observe(f); int dmas = fixture.dmas.size();
+            f.bindArtPublication((dma, state) -> fail("Goal Post preparation/adoption cannot publish art"));
+            var ready = f.prepareObjectGoalPostReached(actor.state(), environment, 0xFF00);
+            var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(environment.movement().physics(),
+                    new CdPlayerMovement.Bounds(0xFF00, 0x2345, 0x3456, 0xF3),
+                    new CdPlayerMovement.Gates(0xBEEF, 0xFE, 0x81, 0x82, 0x83, 0x84, 0),
+                    environment.movement().globals()), environment.controls(),
+                    new CdPlayerBody.Globals(0x3456, 0x4567, 1, 0x0001, 0x0123, 0, 1, 1), environment.dynamicSlots());
+            assertSame(actor.state(), ready.expectedState()); assertSame(environment, ready.expectedEnvironment());
+            assertSame(actor.state(), ready.finalState()); assertEquals(expected, ready.finalEnvironment());
+            assertSame(environment.movement().physics(), ready.finalEnvironment().movement().physics());
+            assertSame(environment.movement().globals(), ready.finalEnvironment().movement().globals());
+            assertSame(environment.controls(), ready.finalEnvironment().controls());
+            assertSame(environment.dynamicSlots(), ready.finalEnvironment().dynamicSlots());
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(observation, observe(f));
+            f.validatePreparedObjectSolidPublication(ready); assertEquals(observation, observe(f));
+            f.applyPreparedObjectSolidPublication(ready);
+            assertSame(actor.state(), f.state()); assertSame(actor.display(), f.display());
+            assertSame(ready.finalEnvironment(), f.environment()); assertEquals(expected, f.environment());
+            assertEquals(Set.of("bounds", "gates", "timeWarpTimer"), differences(observation, observe(f)));
+            assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock()); assertTrue(f.paused());
+            assertEquals(actor, f.captureActor()); assertEquals(dmas, fixture.dmas.size());
+        }
+    }
+
+    @Test void goalPostReachedSameValueStoresRemainLegalAndKeepTheActualActorIdentity() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var actor = f.captureActor(); var shared = f.captureShared();
+            var ready = f.prepareObjectGoalPostReached(actor.state(), shared.environment(), 0);
+            assertSame(actor.state(), ready.finalState()); assertEquals(shared.environment(), ready.finalEnvironment());
+            f.applyPreparedObjectSolidPublication(ready); f.applyPreparedObjectSolidPublication(ready);
+            assertSame(actor.state(), f.state()); assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            assertThrows(IllegalStateException.class, () -> f.runBody(1), "Same-value data adoption supplies no Body entitlement");
+        }
+    }
+
+    @Test void goalPostReachedAcceptsEqualExpectedValuesButRetainsActualFrameReferences() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actual = f.state(); var environment = f.environment();
+            var equalState = new CdPlayerBody.State(actual.motion(), actual.animation(), actual.header(), actual.timers(),
+                    actual.history(), actual.rotationDistance(), actual.objectLinks(), actual.rotationAngle());
+            var equalEnvironment = new CdPlayerBody.Environment(environment.movement(), environment.controls(),
+                    environment.globals(), environment.dynamicSlots());
+            assertEquals(actual, equalState); assertNotSame(actual, equalState);
+            assertEquals(environment, equalEnvironment); assertNotSame(environment, equalEnvironment);
+            var ready = f.prepareObjectGoalPostReached(equalState, equalEnvironment, 0x200);
+            assertSame(actual, ready.expectedState()); assertSame(actual, ready.finalState());
+            assertSame(environment, ready.expectedEnvironment());
+            f.applyPreparedObjectSolidPublication(ready); assertSame(actual, f.state());
+        }
+    }
+
+    @Test void goalPostReachedRejectsStaleFullStateAndEnvironmentBeforePreparationMutatesAnything() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            for (String field : List.of("RESET", "HISTORY_BYTES", "STAND_OBJECT")) {
+                var stale = framePortChangedState(state, field); assertNotEquals(state, stale);
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectGoalPostReached(stale, environment, 0x200));
+            }
+            for (String field : List.of("BOUND_RIGHT", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS")) {
+                var stale = framePortChangedEnvironment(environment, field); assertNotEquals(environment, stale);
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectGoalPostReached(state, stale, 0x200));
+            }
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void goalPostReachedPreparedPairRejectsInterveningActorAndSharedChangesThenReplaysAfterRestore() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared();
+            var ready = f.prepareObjectGoalPostReached(actor.state(), shared.environment(), 0x200);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
+                    framePortChangedState(actor.state(), "ROTATION_ANGLE"), actor.display()));
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class);
+            f.restoreActor(actor);
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(),
+                    framePortChangedEnvironment(shared.environment(), "RAW_TAP"), shared.artState(), shared.paused(), shared.vIntClock()));
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class);
+            f.restoreShared(shared); f.applyPreparedObjectSolidPublication(ready);
+            var after = f.captureShared();
+            f.restoreActor(actor); f.restoreShared(shared); f.applyPreparedObjectSolidPublication(ready);
+            assertEquals(actor, f.captureActor()); assertEquals(after, f.captureShared());
+            assertSame(ready.finalEnvironment(), f.environment());
+        }
+    }
+
+    @Test void goalPostReachedRejectsNullAndNonWordCamerasAndAcceptsBothRawWordEdges() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var state = f.state(); var environment = f.environment(); var before = observe(f);
+            assertThrows(NullPointerException.class, () -> f.prepareObjectGoalPostReached(null, environment, 0));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectGoalPostReached(state, null, 0));
+            for (int camera : new int[]{-1, 0x10000, Integer.MIN_VALUE, Integer.MAX_VALUE})
+                assertThrows(IllegalArgumentException.class, () -> f.prepareObjectGoalPostReached(state, environment, camera));
+            assertEquals(0, f.prepareObjectGoalPostReached(state, environment, 0).finalEnvironment().movement().bounds().left());
+            assertEquals(0xFFFF, f.prepareObjectGoalPostReached(state, environment, 0xFFFF).finalEnvironment().movement().bounds().left());
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(before, observe(f));
+        }
+    }
+
+    @Test void goalPostReachedUsesExistingPendingActiveEntitledAndClosedGuardsBeforeArgumentChecks() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var selection = f.prepareInput(0);
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectGoalPostReached(null, null, -1));
+            f.serviceVBlank(selection.phase(), () ->
+                    assertThrows(IllegalStateException.class, () -> f.prepareObjectGoalPostReached(null, null, -1)));
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectGoalPostReached(null, null, -1));
+            f.runBody(1);
+            assertDoesNotThrow(() -> f.prepareObjectGoalPostReached(f.state(), f.environment(), 0));
+            var state = f.state(); var environment = f.environment(); var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+            f.close();
+            assertThrows(IllegalStateException.class, () -> f.prepareObjectGoalPostReached(null, null, -1));
+            assertSame(state, f.state()); assertSame(environment, f.environment()); assertSame(art, f.artState());
+            assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+        }
+    }
+
+    @Test void goalPostReachedCarrierIsReusableEqualValueDataAndCannotGrantAnotherFrameBodyAuthority() throws IOException {
+        try (var a = new Fixture().runtime(); var b = new Fixture().runtime()) {
+            var actorA = a.captureActor(); var sharedA = a.captureShared();
+            var actorB = b.captureActor(); var sharedB = b.captureShared();
+            assertNotSame(actorA.owner(), actorB.owner()); assertEquals(actorA.state(), actorB.state());
+            assertEquals(sharedA.environment(), sharedB.environment());
+            var ready = a.prepareObjectGoalPostReached(actorA.state(), sharedA.environment(), 0x200);
+            b.validatePreparedObjectSolidPublication(ready); b.applyPreparedObjectSolidPublication(ready);
+            assertSame(ready.finalEnvironment(), b.environment());
+            assertThrows(IllegalStateException.class, () -> b.runBody(1));
+            assertThrows(IllegalArgumentException.class, () -> b.restoreActor(actorA), "The value carrier does not change capture ownership");
+            a.applyPreparedObjectSolidPublication(ready);
+            a.restoreActor(actorA); a.restoreShared(sharedA); a.applyPreparedObjectSolidPublication(ready);
+            assertSame(ready.finalEnvironment(), a.environment()); assertSame(actorA.state(), a.state());
+            assertThrows(IllegalStateException.class, () -> a.runBody(1));
+            b.restoreActor(actorB); b.restoreShared(sharedB); assertEquals(actorB, b.captureActor()); assertEquals(sharedB, b.captureShared());
+        }
+    }
+    // END Goal Post reached Frame pair preparation.
+
 }

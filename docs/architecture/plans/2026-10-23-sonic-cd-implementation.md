@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — GoalPost raw component and same-Frame preparation
+
+Private3f9317f98 plus owned source adds native GoalPost16 ctor7/run2 and exact
+source-conditional Y/X, raw base-tile selection, TTZ PLC13 wait, goal PLC12 and
+unconditional PP despawn. Existing placement/Draw/current art owners remain.
+Frame preparation reuses the existing immutable pair carrier and actual full-pair
+CAS, retains the actual actor reference, and changes only left bound, warp
+direction and timer. No new Frame owner, callback, service or clock.
+Raw metadata120→125 appends three Projector views and two GoalPost views while
+retaining all earlier descriptors/implementation/36PLC/37readers. Root adds the
+missed full-table TouchTables witness120→125 only; historical prefix ranges stay.
+
+Root11496 passes933/21classes,0failures/errors/skips. Sourcebefore/after
+676ee958395a2415957a21428d11af844b43dcc0f0663f9c6faf3e3ec7d6ef2e,
+16:21:04.475279–16:21:31.846844Z/27.37s execution,0s queue,106s normal compile.
+Counts:129 metadata, GoalPost29, fullFrame757 (eight new), API/teardown16, existing
+permanent route1, temporary input observer1. Actual fresh933IDs/Java25/privatecwd/
+original-media/EGL properties verified. Independent static review found noP1/P2;
+it did not execute tests. All42 owned XML/TXT inspected/consumed.
+
+The additional B9001..9032 still returns11000 nearX8632 without an unsupported
+feature. Separate33997 passes three input-only controller probes through12500
+(reverse/run-up, Down+B/release, periodic jump), but none clears the curved terrain.
+Sourceequal d5005591e0220f9af94da3be5a0e4a1b6fbc7a71b84f6cb7f1d2ec411ca23574;
+16:26:18.047667–16:26:35.501150Z/17.45s execution,22s queue,43.786s compile.
+Temporary sources removed after diagnostics, not promoted as forward routes.
+No GoalPost World/contact/goal-reached/act-end, Projector body, new pixels/audio
+or native/regional parity claim. Further source components remain external.
+
+
 ## 4 November 2026 — live Past Robot/Explosion and healthy controller9000
 
 Private f7deff058 plus five owned Java changes joins native Robot2D and B Explosion18

@@ -1880,4 +1880,38 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         CdTunnelPath.validatePlayerResult(new CdTunnelPath.PlayerCut(expectedState, expectedEnvironment), result);
         return new ObjectSolidPublication(expectedState, expectedEnvironment, result.finalState(), result.finalEnvironment());
     }
+
+    /**
+     * Prepare only the Frame stores of reached ObjGoalPost_Main (Level/_Objects/Level End/Main.asm:626-650,
+     * scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff): leftBound WORD receives cameraX,
+     * timeWarpTimer WORD and timeWarpDir BYTE clear. The private caller owns the reached Y/X gates,
+     * actual source/camera/phase, destLeftBound/contact timeWarp stores and LoadPLC $12 call.
+     * This reusable complete-value CAS carries no invocation or exactly-once authority and executes
+     * no Body, service, cue, input, clock, callback or publication. The untouched actor retains this
+     * Frame's actual reference even when the expected pair is separately constructed but equal.
+     */
+    public ObjectSolidPublication prepareObjectGoalPostReached(CdPlayerBody.State expectedState,
+                                                               CdPlayerBody.Environment expectedEnvironment,
+                                                               int cameraXWord) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Goal Post player State");
+        Objects.requireNonNull(expectedEnvironment, "Goal Post player Environment");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Goal Post player State/Environment cut");
+        }
+        if ((cameraXWord & ~0xFFFF) != 0) {
+            throw new IllegalArgumentException("Goal Post camera X requires an unsigned native word");
+        }
+        var actualState = state; var actualEnvironment = environment;
+        var movement = actualEnvironment.movement(); var bounds = movement.bounds(); var gates = movement.gates();
+        var body = actualEnvironment.globals();
+        var nextMovement = new CdPlayerMovement.Environment(movement.physics(),
+                new CdPlayerMovement.Bounds(cameraXWord, bounds.right(), bounds.bottom(), bounds.bossFight()),
+                new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(), gates.waterSlide(),
+                        gates.windTunnel(), gates.speedShoes(), 0), movement.globals());
+        var nextEnvironment = new CdPlayerBody.Environment(nextMovement, actualEnvironment.controls(),
+                new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
+                        body.debugCheat(), 0, body.invincible(), body.bossMusic()), actualEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(actualState, actualEnvironment, actualState, nextEnvironment);
+    }
 }

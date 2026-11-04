@@ -32,7 +32,7 @@ class TestCdR11bMosquiAssets {
 
     @Test void fourRawViewsAppendAfterAll110WithoutChangingSpikesAntonOrAnyReader()throws Exception{
         var a=retail().assets();int[] offsets={0xB522,0xB530,0xB53E,0xB57A};int[] lengths={14,13,60,66};
-        assertEquals(120,CdR11bAssets.Asset.values().length);assertEquals(KEYS,Arrays.asList(CdR11bAssets.Asset.values()).subList(110,114));
+        assertEquals(125,CdR11bAssets.Asset.values().length);assertEquals(KEYS,Arrays.asList(CdR11bAssets.Asset.values()).subList(110,114));
         assertEquals(107,MAP_SPR_SPIKES.ordinal());assertEquals(108,ANI_ANTON.ordinal());assertEquals(109,MAP_SPR_ANTON.ordinal());
         for(int i=0;i<4;i++){var key=KEYS.get(i);var view=a.view(key);assertEquals(110+i,key.ordinal());assertEquals(offsets[i],key.fileOffset());assertEquals(lengths[i],key.length());
             assertEquals(HASH[i],sha(view.bytes().copy()));assertArrayEquals(hex(RAW[i]),view.bytes().copy());assertArrayEquals(retail().past().readFile(offsets[i],lengths[i]),view.bytes().copy());

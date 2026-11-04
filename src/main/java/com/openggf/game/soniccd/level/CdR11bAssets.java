@@ -219,7 +219,18 @@ public final class CdR11bAssets {
 
         // _Objects/Explosion/Main.asm:73,89-92; actual original B mapping/animation operands at5EA0/5ECE.
         ANI_EXPLOSION("Ani_Explosion", 0x1D700, 20, 0, 0, 0, 0, false),
-        MAP_SPR_EXPLOSION("MapSpr_Explosion", 0x1D714, 146, 0, 0, 0, 0, false);
+        MAP_SPR_EXPLOSION("MapSpr_Explosion", 0x1D714, 146, 0, 0, 0, 0, false),
+
+        // Palmtree Panic/Objects/Projector/Main.asm:106-107,279,286-323 at native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+        // Actual original USA B operands atEB42/EB4A/ED06/ED30; the schedule's final zero is explicit source data.
+        ANI_METAL_SONIC_HOLOGRAM("Ani_MetalSonicHologram", 0xED40, 68, 0, 0, 0, 0, false),
+        MAP_SPR_PROJECTOR("MapSpr_Projector", 0xED84, 68, 0, 0, 0, 0, false),
+        PROJECTOR_EXPLOSION_SCHEDULE("ObjProjector_ExplosionLocs", 0xEDC8, 38, 0, 0, 0, 0, false),
+
+        // _Objects/Level End/Main.asm:615,677,688-702 and Data/Mappings (Post).asm at native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+        // Actual original USA B Init MOVE.L atD6E8 and PC-indexed WORD read atD776 authenticate these complete spans.
+        MAP_SPR_GOAL_SIGNPOST("MapSpr_GoalSignpost", 0x1D9B4, 126, 0, 0, 0, 0, false),
+        GOAL_POST_BASE_TILES("ObjGoalPost_SetBaseTile.TileIDs", 0xD78E, 112, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

@@ -151,6 +151,11 @@ ROBOT_GENERATOR_BASE_TILES ea94 22 3948236aa2a83a827ef6a7fb0f0e863b4a1ffc2b74335
 ROBOT_GENERATOR_EXPLOSION_SCHEDULE ea54 64 1827c7470bb98b70240de9237aeb30aec8841ae3cc1f2e7f51332b3b18155123
 ANI_EXPLOSION 1d700 20 9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649
 MAP_SPR_EXPLOSION 1d714 146 0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44
+ANI_METAL_SONIC_HOLOGRAM ed40 68 2b431fb6fc08fbccef96299a1c83c99327b680924c8420b2eb56ef98eff4aa6f
+MAP_SPR_PROJECTOR ed84 68 2e180977b04b20230e5aced68385346b6f992bed19139df617477bd30780cda3
+PROJECTOR_EXPLOSION_SCHEDULE edc8 38 5830294609ca462a39688a5a11982198b43d6b04058c4335d0b9d923064a74a3
+MAP_SPR_GOAL_SIGNPOST 1d9b4 126 610a02baa99d911f509b5fc06a1e4c0c72bc7ef71fa56ecd72640e409734bad8
+GOAL_POST_BASE_TILES d78e 112 82fd77609648d39ac2f50bc4c0e3762fccf3ef0986bf6bc8cef7f4cdeb3b3724
             """;
     // blob, retained Java view, native view, independently modelled Java minimum/cursor, output, output SHA.
     private static final String READERS = """
@@ -235,7 +240,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
 
     @Test void allSeventyViewsRetainLiteralOrderRangesAndCompleteHashes() throws Exception {
         var a = retail().assets(); var rows = MANIFEST.strip().lines().toList();
-        assertEquals(120, rows.size()); assertEquals(120, CdR11bAssets.Asset.values().length);
+        assertEquals(125, rows.size()); assertEquals(125, CdR11bAssets.Asset.values().length);
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var key = CdR11bAssets.Asset.values()[i];
             assertEquals(c[0], key.name()); assertEquals(Integer.parseInt(c[1], 16), key.fileOffset());
@@ -576,7 +581,7 @@ ART_TUNNEL_WATERFALL 328 328 328 327 928 f3cc6438669479cd3bb36fa0f6cb176ed514865
         var keys = new CdR11bAssets.Asset[]{ANI_FLOAT_BLOCK, MAP_SPR_FLOAT_BLOCK};
         String[] labels = {"Ani_FloatBlock", "MapSpr_FloatBlock"};
         int[] offsets = {0xA234, 0xA252}; int[] lengths = {30, 76};
-        assertEquals(120, CdR11bAssets.Asset.values().length);
+        assertEquals(125, CdR11bAssets.Asset.values().length);
         assertEquals(89, ANI_MONITOR.ordinal());
         for (int i = 0; i < keys.length; i++) {
             var key = keys[i]; var view = a.view(key);

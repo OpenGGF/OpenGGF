@@ -48,7 +48,7 @@ class TestCdR11bRobotExplosionAssets {
         int[] lengths = {8, 574, 22, 64, 20, 146};
         String[] labels = {"Ani_RobotGenerator", "MapSpr_RobotGenerator", "ObjRobotGenerator_BaseTileList",
                 "ObjRobotGenerator_ExplosionLocs", "Ani_Explosion", "MapSpr_Explosion"};
-        assertEquals(120, CdR11bAssets.Asset.values().length);
+        assertEquals(125, CdR11bAssets.Asset.values().length);
         assertEquals(KEYS, Arrays.asList(CdR11bAssets.Asset.values()).subList(114, 120));
         for (int i = 0; i < KEYS.size(); i++) {
             var key = KEYS.get(i); var view = a.view(key);
