@@ -23,6 +23,11 @@ import static com.openggf.game.soniccd.level.CdR11aAsset.WATER_DEFORM_SECTS;
  * singleton, callback, clock, renderer, tile-streaming or PLC service is retained.
  * Call step once at the source cut; capture/restore and publication only replace/read
  * State. This component alone makes no live-route or native-plane/pixel claim.
+ *
+ * <p>The explicit Act2 Present static entry points also translate Scroll (Act 2 Present).asm:153-177,212-368
+ * over this same State. They consume no ROM tables: the three cloud counters live in deformationRam[0,12),
+ * the36 band WORDs in[12,84), and cloudRam (scrlSectSpeeds) remains untouched. No Act1 asset binding,
+ * period substitution, new RAM/capture owner or runtime admission is implied.</p>
  */
 public final class CdR11aBackgroundScroll {
     /** Raw bytes at horizBlkCrossedBg through the three bytes before scrollFlags. */
@@ -189,6 +194,122 @@ public final class CdR11aBackgroundScroll {
                 storeWord(initial.cameraBg3X(), bg3X), storeWord(initial.cameraBg3Y(), y),
                 initial.crossingRam(), initial.scrollFlagsBg(), initial.scrollFlagsBg2(), initial.scrollFlagsBg3(),
                 CdAssetBytes.copyOf(clouds), initial.deformationRam(), initial.hscrollRam(), initial.vscroll());
+    }
+
+    /**
+     * Act2 Present InitLevelScroll:153-177. ASR.L consumes the FULL swapped incoming d0, including its
+     * sign/fraction, before the native wrapping multiply-by-three. Only BG1 Y is a complete LONG store;
+     * all other camera stores retain their supplied low WORD. The three CLR.L stores target deformBuffer,
+     * not Act1's separate scrlSectSpeeds. No asset table, player-position branch or initial RAM is invented.
+     */
+    public static State initAct2Present(State initial, InitRegisters registers) {
+        Objects.requireNonNull(initial, "initial"); Objects.requireNonNull(registers, "registers");
+        int bgY = swap(registers.foregroundYRegister()) >> 4;
+        bgY += bgY + bgY;
+        int yWord = bgY >>> 16;
+        int x = (registers.foregroundXRegister() & 0xFFFF) >>> 1;
+        int bg3X = x >>> 2;
+        int sixteenthX = bg3X >>> 1;
+        int bg2X = uw(sixteenthX + sixteenthX + sixteenthX);
+        byte[] deform = initial.deformationRam().copy();
+        putLong(deform, 0, 0); putLong(deform, 4, 0); putLong(deform, 8, 0);
+        return new State(storeWord(initial.cameraBgX(), x), bgY,
+                storeWord(initial.cameraBg2X(), bg2X), storeWord(initial.cameraBg2Y(), yWord),
+                storeWord(initial.cameraBg3X(), bg3X), storeWord(initial.cameraBg3Y(), yWord),
+                initial.crossingRam(), initial.scrollFlagsBg(), initial.scrollFlagsBg2(), initial.scrollFlagsBg3(),
+                initial.cloudRam(), CdAssetBytes.copyOf(deform), initial.hscrollRam(), initial.vscroll());
+    }
+
+    /**
+     * Act2 Present ordinary BG continuation:212-368, after actual USA foreground/events. The signed Y-diff
+     * WORD is explicit because legacy Input has only scrollXDiff; it is not reconstructed from integer Y.
+     * Player X/control/velocity are not read by this native continuation. Scroll lock precedes every write.
+     * Result's deformationWordsWritten counts the36 band WORDs, separately from the three counter LONGs;
+     * rampOffset is0, and the three existing delta fields report the native X LONG additions.
+     * This pure component performs no foreground selection, table binding, streaming or publication.
+     */
+    public static Result stepAct2Present(State state, Input input, int scrollYDiff) {
+        Objects.requireNonNull(state, "state"); Objects.requireNonNull(input, "input");
+        signedWord(scrollYDiff);
+        if (input.scrollLockByte() != 0) return new Result(state, Boundary.SCROLL_LOCKED, 0, 0, 0, 0, 0, 0);
+
+        int bg3Delta = input.scrollXDiff() << 5;
+        int base = input.scrollXDiff() << 4;
+        int bg2Delta = base + base + base;
+        int bgDelta = input.scrollXDiff() << 7;
+        int vertical = scrollYDiff << 4;
+        int bgX = state.cameraBgX() + bgDelta;
+        int bg2X = state.cameraBg2X() + bg2Delta;
+        int bg3X = state.cameraBg3X() + bg3Delta;
+        int bgY = state.cameraBgY() + vertical + vertical + vertical;
+        byte[] crossings = state.crossingRam().copy();
+        // All three flag WORDs were CLR.W at Act2:192-195. SetScrollFlagsBG:15-59 has the same
+        // crossing/SUB.L/BPL arithmetic as the common horizontal helper, with base bit0 for Y.
+        int flags3 = horizontalFlags(crossings, 4, state.cameraBg3X(), bg3X, 6);
+        int flags2 = horizontalFlags(crossings, 2, state.cameraBg2X(), bg2X, 4);
+        int flags = horizontalFlags(crossings, 0, state.cameraBgX(), bgX, 2)
+                | horizontalFlags(crossings, 1, state.cameraBgY(), bgY, 0);
+        flags |= (flags2 | flags3) & 0xFF00; // Act2:244-248 OR.B then CLR.B, after full WORD clears.
+
+        byte[] deform = state.deformationRam().copy();
+        addCloud(deform, 0, 0x10000); addCloud(deform, 4, 0xC000); addCloud(deform, 8, 0x8000);
+        int deformationWords = buildAct2Deformation(deform, bg2X >>> 16, bg3X >>> 16);
+        byte[] hscroll = state.hscrollRam().copy();
+        int hscrollLongs = applyAct2HScroll(deform, hscroll, input.cameraX(), bg2X >>> 16, bgY >>> 16);
+        int yWord = bgY >>> 16;
+        var next = new State(bgX, bgY, bg2X, storeWord(state.cameraBg2Y(), yWord),
+                bg3X, storeWord(state.cameraBg3Y(), yWord), CdAssetBytes.copyOf(crossings),
+                flags, 0, 0, state.cloudRam(), CdAssetBytes.copyOf(deform), CdAssetBytes.copyOf(hscroll),
+                (input.cameraY() << 16) | yWord);
+        return new Result(next, Boundary.ARITHMETIC_COMPLETE, deformationWords, hscrollLongs,
+                0, bgDelta, bg2Delta, bg3Delta);
+    }
+
+    /** Act2:259-300: three four-WORD cloud bands,20mountain WORDs,4waterfall WORDs. */
+    private static int buildAct2Deformation(byte[] deform, int bg2X, int bg3X) {
+        int cursor = 12;
+        for (int i = 0; i < 3; i++) {
+            int cloudWord = readLong(deform, i * 4) >>> 16;
+            cursor = writeWords(deform, cursor, -(cloudWord + bg3X), 4);
+        }
+        cursor = writeWords(deform, cursor, -bg3X, 20);
+        cursor = writeWords(deform, cursor, -bg2X, 4);
+        return (cursor - 12) / 2;
+    }
+
+    /**
+     * Act2:302-368. The first DBF includes its initial block even when its counter is0; a partial first
+     * block skips only bgY&7 lines. A row index above35 takes the unsigned borrow directly to224
+     * interpolation lines, without a band read. The ordinary band path writes232-(bgY&7) lines;
+     * neither path is fitted/clamped to a screen-height count. Unwritten HScroll bytes retain their values.
+     */
+    private static int applyAct2HScroll(byte[] deform, byte[] output, int foregroundX, int bg2X, int bgY) {
+        int foregroundHigh = uw(-foregroundX) << 16;
+        int row = (bgY & 0x1F8) >>> 3;
+        int destination = 0;
+        int interpolationLines = 224;
+        if (row <= 35) {
+            int counter = Math.min(35 - row, 27);
+            int source = 12 + row * 2;
+            for (int block = 0; block <= counter; block++) {
+                int value = deformationWord(deform, source);
+                source += 2;
+                int skipped = block == 0 ? bgY & 7 : 0;
+                for (int line = skipped; line < 8; line++) {
+                    destination = writeLine(output, destination, foregroundHigh | value);
+                }
+            }
+            interpolationLines = (28 - counter) * 8;
+        }
+        // Act2:325-338: SUB.W wraps before EXT.L/ASL.L/DIVS256/EXT.L/ASL.L. The signed WORD
+        // difference divided after its8-bit shift always fits a WORD; the exact final rate is diff<<8.
+        int rate = ((short) (foregroundX - bg2X)) << 8;
+        int speed = bg2X;
+        for (int line = 0; line < interpolationLines; line++) {
+            destination = writeLine(output, destination, foregroundHigh | uw(-speed));
+            speed = swap(swap(speed) + rate); // Same native fractional layout as Act1 water interpolation.
+        }
+        return destination / 4;
     }
 
     /**

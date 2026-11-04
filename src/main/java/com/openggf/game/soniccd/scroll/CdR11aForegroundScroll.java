@@ -7,7 +7,7 @@ import com.openggf.game.soniccd.player.CdPlayerMovement;
 import java.util.Objects;
 
 /**
- * Pure R11A foreground LevelScroll cut and its PP1-present/shared bottom events.
+ * Pure Palmtree Panic foreground LevelScroll cut with explicit native PPZ1/PPZ2 event selection.
  * Source pin: 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, FixBugs=0.
  * Citations to "PP Scroll" mean Level/Palmtree Panic/Scroll (Act 1 Present).asm;
  * "Events" means Level/_Events.asm, under docs/scddisasm/src/.
@@ -76,6 +76,9 @@ public final class CdR11aForegroundScroll {
             wordValue(cameraXCentre); wordValue(cameraYCentre); byteValue(sourceHudTimeActive);
         }
     }
+
+    /** Native LevEvents_PPZ_Index entries (_Events.asm:79-82), not a period or World admission. */
+    public enum EventRoutine { PPZ1, PPZ2 }
 
     public enum Boundary {
         SCROLL_LOCKED, FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT,
@@ -192,11 +195,30 @@ public final class CdR11aForegroundScroll {
         return step(state, input, true, rawTimeZoneByte);
     }
 
+    /**
+     * Explicit selected native event routine with the actual raw timeZone value, never an act-to-period
+     * substitution. _Events.asm:70-82 chooses PPZ2 for act BYTE1; PPZ2:121-123 writes only destination
+     * bottom$310 before common RunLevelEvents:14-52. PPZ1 alone reads timeZone at:87.
+     * The actual source-bound caller must select the immutable programme's routine (R12A -> PPZ2).
+     * This value operation authenticates no source, Frame, programme, period or BG continuation.
+     */
+    public static Result stepForPeriodBackground(State state, Input input, int rawTimeZoneByte,
+                                                 EventRoutine eventRoutine) {
+        byteValue(rawTimeZoneByte);
+        Objects.requireNonNull(eventRoutine, "native foreground event routine");
+        return step(state, input, true, rawTimeZoneByte, eventRoutine);
+    }
+
     private static Result step(State state, Input input, boolean forBackground) {
         return step(state, input, forBackground, 1);
     }
 
     private static Result step(State state, Input input, boolean forBackground, int rawTimeZoneByte) {
+        return step(state, input, forBackground, rawTimeZoneByte, EventRoutine.PPZ1);
+    }
+
+    private static Result step(State state, Input input, boolean forBackground, int rawTimeZoneByte,
+                               EventRoutine eventRoutine) {
         Objects.requireNonNull(state, "state"); Objects.requireNonNull(input, "input");
         requireViewport(input.viewportWidth(), input.viewportHeight());
         // LevelScroll:177-186 returns before flag clears, events, X/Y or BG when the HIGH byte is set.
@@ -208,17 +230,17 @@ public final class CdR11aForegroundScroll {
         if (!forBackground && (input.actor().playerControl() & 2) != 0) reject(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND);
         var c = new Cursor(state, input);
         // LevelScroll:188-196: events see old XY in USA, completed new XY in JP/EU.
-        if (input.region() == CdReleaseVariant.USA) events(c, rawTimeZoneByte);
+        if (input.region() == CdReleaseVariant.USA) events(c, rawTimeZoneByte, eventRoutine);
         horizontal(c);
         vertical(c);
-        if (input.region() != CdReleaseVariant.USA) events(c, rawTimeZoneByte);
+        if (input.region() != CdReleaseVariant.USA) events(c, rawTimeZoneByte, eventRoutine);
         return c.finish(forBackground ? Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND
                 : Boundary.FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT);
     }
 
     /** LevEvents_PPZ1/PPZ2:86-123 then RunLevelEvents:14-52, in that order. */
-    private static void events(Cursor c, int rawTimeZoneByte) {
-        if (rawTimeZoneByte == 1) {
+    private static void events(Cursor c, int rawTimeZoneByte, EventRoutine eventRoutine) {
+        if (eventRoutine == EventRoutine.PPZ1 && rawTimeZoneByte == 1) {
             int actorX = c.in.actor().centreX();
             if (actorX >= 0x1C16 && actorX < 0x21C6) c.yCentre = 0x88;
             c.destBottom = 0x710;

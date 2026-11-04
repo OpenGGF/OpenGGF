@@ -1,5 +1,49 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — Act2 backend and normal-entry components
+
+Original-USA R12A now binds88 raw descriptors,35 finite native/Java art readers,
+19 PLC lists and five camera sections through its retained terrain source. Ring
+uses all nine native roots, including sparkle and invisible frames; Title Card
+uses its actual selected data and nine-root mapping source. The strict visual
+parser is unchanged. Section art delegates the existing queued kernel; immediate
+stage3→std1, RAM blocks and life-icon operations remain explicit calls. The native
+block refill needs4601 genuine bytes while the canonical view stays4600.
+Sparse current patterns preserve unknown versus explicitly cleared bytes over
+1597 admitted tiles; no initial queue/current knowledge is inferred.
+
+PPZ2 foreground events, three-cloud LONG progression, native background band
+interpolation and Plane B lookup use existing scroll values and block logic.
+A named six-input Act2 Frame entry borrows actual terrain/player source and full
+explicit State/Environment/art/clock. Guards derive its act from that bound
+source; PPZ1-only branches and old-programme service restrictions remain strict.
+
+Title Card supports its reserved parent and dynamic children without broadening
+pool identity. Every allocation is a fresh first-free lookup. Native Init/slides,
+BYTE timers, deferred PLC2 and wait-unlock/delete preserve full-image nonwrites
+and completed callback prefixes. Caller authority, actual physical walk and
+Frame/scroll adoption remain the live World binding's responsibility.
+
+The authenticated cold MAINVARS operation now writes the existing initialization
+capture's known palette-clear bit before PCM. Legacy values remain unknown until
+that writer; ordinary WARP does not borrow the special-stage IPX write. The marker
+and controller fields retain their distinct lifetimes. No new capture partition
+or implicit palette flag is introduced.
+
+Observed checks are separate source-bound scopes:322 scroll/data and88 cold/
+retained-exit checks passed. A subsequent998 resource/Frame scope had996 passes
+and two strict Ring binding errors; the requested mapping count was corrected
+from4 to the native9. Fresh204/11classes then passed0failures/errors/skips,
+including all11 resource,19 Title,23 section,14 current,12 pool and selected
+source/Frame regressions. Source before/after:
+`6e4bea0c6976f50bded8c4695d32ea019230c63058767d0c8c4d77a71bb1a789`;
+21:07:03.509362–21:09:11.130039Z,0s queue. All204 identities and environment
+properties were inspected;22 owned report files consumed. There is no single
+green998 or full-suite certificate. Independent cold/current and foreground/
+resource/background/Frame reviews found no additional open P1/P2 after Ring's
+correction. Actual Act2 normal-load/Title/HUD/selected-display World admission is
+being connected next; controller10419 remains the qualified route endpoint.
+
 ## 4 November 2026 — native old-programme exit returns10419
 
 The unchanged controller recipe now returns through Results NextLevel10395,

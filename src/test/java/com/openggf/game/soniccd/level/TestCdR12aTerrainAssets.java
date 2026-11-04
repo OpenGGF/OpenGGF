@@ -76,9 +76,9 @@ PAL_LEVEL 6f4 96 436a0046a269e03d256e48ea8d5ad4965bae9127e9ba4ba1fef3df29b2f155b
 
     @Test void allSeventeenOriginalViewsRetainCompleteSourceHashesAndOriginalDomainAddresses() throws Exception {
         var a = retail().assets(); var lines = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        // Player-source stage appends nine complete raw extents after these original17 terrain rows.
-        // This manifest deliberately remains the historical terrain prefix, not a complete26-row census.
-        assertEquals(26, CdR12aProfile.Asset.values().length); assertEquals(17, lines.size());
+        // The original player/Plane B prefix appends eleven spans; object resources append58 more.
+        // This manifest deliberately remains the historical terrain prefix, not the complete86-row census now pinned by TestCdR12aObjectAssets.
+        assertEquals(88, CdR12aProfile.Asset.values().length); assertEquals(17, lines.size());
         for (int i = 0; i < lines.size(); i++) {
             var columns = lines.get(i).split(" "); var asset = CdR12aProfile.Asset.values()[i]; var range = a.profile().range(asset);
             assertEquals(columns[0], asset.name()); assertEquals(Integer.parseInt(columns[1], 16), asset.fileOffset());

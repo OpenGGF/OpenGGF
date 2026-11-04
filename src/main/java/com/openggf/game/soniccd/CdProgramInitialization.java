@@ -4,10 +4,11 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Inactive, pure value operations for native level-program Start initialization.
+ * Inactive, pure value operations for bounded MAINVARS and level-program Start initialization.
  * J b25e62cb94a2f3d7599bb0330e323373fde5e2d0;
  * N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
- * src/Level/Initialization.asm:56-80; Functions (General).asm:39-47.
+ * src/CD Initial Program/IPX.asm:32-37; Mega Drive Init/Main.asm:25-30;
+ * Level/Initialization.asm:56-80; Functions (General).asm:39-47.
  *
  * <p>The actual module owns entry admission, native order, synchronous adoption,
  * once-only execution, the optional scratch clear and actual InitVDP. These values
@@ -34,12 +35,18 @@ final class CdProgramInitialization {
         }
     }
 
-    /** Only the three retained source facts; no Frame, phase, clock or owner token. */
-    record State(KnownBit controllerSetupBit, MarkerKnowledge initMarker, VersionCache versionCache) {
+    /** Four finite retained facts; no native memory image, Frame, phase, clock or owner token. */
+    record State(KnownBit controllerSetupBit, MarkerKnowledge initMarker, VersionCache versionCache,
+                 KnownBit palClearFlagBit0) {
         State {
             Objects.requireNonNull(controllerSetupBit, "controller setup bit knowledge");
             Objects.requireNonNull(initMarker, "init marker equality knowledge");
             Objects.requireNonNull(versionCache, "version cache knowledge");
+            Objects.requireNonNull(palClearFlagBit0, "palette clear bit0 knowledge");
+        }
+        /** Omitted history remains unknown; compatibility construction executes no native clear. */
+        State(KnownBit controllerSetupBit, MarkerKnowledge initMarker, VersionCache versionCache) {
+            this(controllerSetupBit, initMarker, versionCache, KnownBit.UNKNOWN);
         }
     }
 
@@ -60,7 +67,7 @@ final class CdProgramInitialization {
     }
 
     enum Branch { DO_INIT, GAME_INIT }
-    enum Read { CONTROLLER_SETUP_BIT, INIT_MARKER, EXECUTION_REGION }
+    enum Read { CONTROLLER_SETUP_BIT, INIT_MARKER, EXECUTION_REGION, PAL_CLEAR_FLAG_BIT0 }
 
     /** An indeterminate reached source read; no state change or resume capability. */
     static final class UnknownRead extends IllegalStateException {
@@ -72,6 +79,7 @@ final class CdProgramInitialization {
                 case CONTROLLER_SETUP_BIT -> "Start (Initialization.asm:57): unknown controller setup bit";
                 case INIT_MARKER -> "Start (Initialization.asm:59): unknown init marker comparison";
                 case EXECUTION_REGION -> "Start (Initialization.asm:72): unknown explicit execution region";
+                case PAL_CLEAR_FLAG_BIT0 -> "NormalLoad (Level/Main.asm:131): unknown palette-clear bit0";
             });
             this.read = read;
         }
@@ -81,7 +89,30 @@ final class CdProgramInitialization {
 
     /** Explicit lack of knowledge; this is not native cold-boot or known-zero ingress. */
     static State unknown() {
-        return new State(KnownBit.UNKNOWN, MarkerKnowledge.UNKNOWN, new VersionCache(0, 0));
+        return new State(KnownBit.UNKNOWN, MarkerKnowledge.UNKNOWN, new VersionCache(0, 0), KnownBit.UNKNOWN);
+    }
+
+    /**
+     * IPX.Start32-37 / MDINIT.Start25-30:1088 zero LONG stores over[FF0F00,FF2000).
+     * The projection includes only represented fields: palClearFlags BYTE FF0F22 bit0,
+     * versionCache BYTE FF1586 and initFlag LONG FF158A. Zero differs from 'init'.
+     * Controller setup is an I/O-control bit outside this range, so it is retained.
+     * Calling this pure rule confers no actual source/World/once-only execution authority.
+     */
+    static State clearMainVariables(State current) {
+        Objects.requireNonNull(current, "initialization state");
+        return new State(current.controllerSetupBit(), MarkerKnowledge.DIFFERS_FROM_INIT,
+                new VersionCache(0, 0xFF), KnownBit.CLEAR);
+    }
+
+    /** Main131's reached bit read; unknown is never interpreted as clear or set. */
+    static boolean requirePalClearFlagBit0(State current) {
+        Objects.requireNonNull(current, "initialization state");
+        return switch (current.palClearFlagBit0()) {
+            case UNKNOWN -> throw new UnknownRead(Read.PAL_CLEAR_FLAG_BIT0);
+            case CLEAR -> false;
+            case SET -> true;
+        };
     }
 
     /** Start:57-60. A clear controller bit skips the marker read completely. */
@@ -109,13 +140,13 @@ final class CdProgramInitialization {
         Objects.requireNonNull(current, "initialization state");
         Objects.requireNonNull(reachedInput, "reached execution region input");
         return new State(current.controllerSetupBit(), current.initMarker(),
-                new VersionCache(reachedInput.versionC0(), 0xFF));
+                new VersionCache(reachedInput.versionC0(), 0xFF), current.palClearFlagBit0());
     }
 
-    /** Start:76. Records the marker equality fact without changing either other fact. */
+    /** Start:76. Records the marker equality fact without changing any other fact. */
     static State writeInitMarker(State current) {
         Objects.requireNonNull(current, "initialization state");
-        return new State(current.controllerSetupBit(), MarkerKnowledge.EQUALS_INIT, current.versionCache());
+        return new State(current.controllerSetupBit(), MarkerKnowledge.EQUALS_INIT, current.versionCache(), current.palClearFlagBit0());
     }
 
     /**
@@ -125,6 +156,6 @@ final class CdProgramInitialization {
      */
     static State initializeControllers(State current) {
         Objects.requireNonNull(current, "initialization state");
-        return new State(KnownBit.SET, current.initMarker(), current.versionCache());
+        return new State(KnownBit.SET, current.initMarker(), current.versionCache(), current.palClearFlagBit0());
     }
 }

@@ -11,9 +11,10 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
- * Original USA R12A terrain and player-source metadata. Pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
+ * Original USA R12A detached terrain, player and object-source metadata. Pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
  * Palmtree Panic/Data (Act 2 Present).asm:11-20,45-47,273-334; Scroll (Act 2 Present).asm:21-35,44-45,139-140;
- * Palette Data (Act 2 Present).asm:7-25,48-59. Complete native blobs were matched to original R12A;
+ * Palette Data (Act 2 Present).asm:7-25,48-59; Graphics Lists (Act 2 Present).asm:7-26 and its full bodies.
+ * Complete native blobs were matched to original R12A;
  * the actual loader at$203494 selects$20F09E, and layout loader$203510 selects$23B5F8.
  * These original-file extents are not runtime, programme-transition or World admission.
  */
@@ -34,7 +35,70 @@ public final class CdR12aProfile {
         // The pinned gfx/r1/player.unc already contains its real final00; no read padding is added.
         ART_SONIC(0x20000, 69472), MAP_SPR_SONIC(0x30F60, 3004), DPLC_SONIC(0x31B1C, 1636),
         ANI_SONIC(0x582E, 578), SONIC_MINI_ANIMATIONS(0x57DE, 80), SONIC_RAMP_CHUNKS(0x45A4, 6),
-        SPEC_CHUNKS(0x2A1C, 4), SINE_TABLE(0x872, 640), ARC_TAN_TABLE(0xB58, 258);
+        SPEC_CHUNKS(0x2A1C, 4), SINE_TABLE(0x872, 640), ARC_TAN_TABLE(0xB58, 258),
+        // Scroll (Act 2 Present).asm:981-993; actual Init/Draw LEAs select$203428.
+        BG_CAMERA_SECT_IDS(0x3428, 34), BG_CAMERA_SECTS(0x344A, 16),
+        // Original USA first-viewport data and complete finite PLC source directory.
+        PLC_LISTS(0xF0AE, 564),
+        ART_ANIMALS(0x38D7C, 446),
+        ART_ANTON(0x37A02, 484),
+        ART_BIG_RING(0x3288C, 1034),
+        ART_BIG_RING_FLASH(0xD866, 384),
+        ART_BOULDER(0x3707E, 270),
+        ART_CHECKPOINT(0x36982, 212),
+        ART_DIAGONAL_SPRING(0x351C8, 780),
+        ART_EXPLOSIONS(0x35CFA, 1256),
+        ART_FLOAT_BLOCK(0x3718C, 230),
+        ART_FLOWER(0x36B0A, 646),
+        ART_GOAL_POST(0x32C96, 448),
+        ART_HUD(0x36856, 300),
+        ART_LOG_SHADOW(0x36A7C, 24),
+        ART_MONITOR_TIME_POSTS(0x356F6, 1540),
+        ART_MOSQUI(0x37BE6, 846),
+        ART_PATA_BATA(0x37F34, 714),
+        ART_PLATFORM(0x36EBA, 452),
+        ART_POINTS(0x32180, 100),
+        ART_RESULTS(0x33432, 1354),
+        ART_RINGS(0x361E2, 244),
+        ART_ROBOT_GEN_WITHERED(0x39028, 332),
+        ART_SIGNPOST(0x32E56, 1500),
+        ART_SPIKES(0x38BD4, 86),
+        ART_SPINNING_DISC(0x37328, 166),
+        ART_SPRING_WHEEL(0x37272, 182),
+        ART_SPRINGBOARD(0x38982, 312),
+        ART_SPRINGS(0x354D4, 546),
+        ART_SWING(0x38C2A, 338),
+        ART_TAGA_TAGA(0x381FE, 782),
+        ART_TAMABBOH(0x3850C, 1142),
+        ART_TITLE_CARD(0x3413C, 940),
+        ART_TITLE_CARD_TEXT(0x36D90, 298),
+        ART_TUNNEL_DOOR(0x376BA, 154),
+        ART_TUNNEL_DOOR_SPLASH(0x37754, 686),
+        OBJECT_LAYOUTS(0x776A, 3930),
+        OBJECT_INDEX(0x3CC8, 256),
+        MAP_SPR_RING(0x9F22, 67),
+        ANI_RING(0x9F1A, 8),
+        MAP_SPRING(0x99C8, 199),
+        ANI_SPRING(0x99BA, 14),
+        MAP_SPR_HUD(0xAB8E, 168),
+        ANI_MONITOR(0xA7EE, 136),
+        MAP_SPR_MONITOR_TIME(0xA876, 450),
+        SECTION_DATA(0xCC32, 30),
+        OBJECT_TILE_IDS(0xCC72, 74),
+        RING_DELTAS(0x9ABE, 32),
+        SPRING_SPEEDS(0x9710, 4),
+        TOUCH_DIMENSIONS(0x6F5A, 126),
+        ENEMY_POINTS(0x6D70, 8),
+        HUD_RESET_TILES(0xAEC4, 12),
+        HUD_DIVISORS(0xB024, 40),
+        PALETTE_CYCLE_DATA(0x2C0, 84),
+        ART_LIFE_ICON(0x362D6, 384),
+        ART_HUD_NUMBERS(0x36456, 1024),
+        ART_SHIELD(0x344E8, 1152),
+        ART_INV_STARS(0x34968, 1152),
+        ART_TIME_STARS(0x34DE8, 992),
+        TITLE_CARD_DATA(0xE1CE, 64),
+        TITLE_CARD_MAPPINGS(0xE20E, 276);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

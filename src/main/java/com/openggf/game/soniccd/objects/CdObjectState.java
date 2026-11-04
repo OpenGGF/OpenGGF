@@ -106,7 +106,10 @@ public final class CdObjectState {
         ROBOT_GENERATOR_TIMER(0x2A), ROBOT_GENERATOR_BASE_Y(0x30), ROBOT_GENERATOR_FLOAT_STEP(0x32),
         // Results/Main.asm:97,108,136-138,158-173: overlapping native screen-Y/destination/timer WORDs.
         // Init alone SUBQ.B's RESULTS_TIMER at HIGH $32 (:62); preserve its separate BYTE alias.
-        RESULTS_SCREEN_Y_WORD(0x0A), RESULTS_DEST_X(0x2A), RESULTS_TIMER_WORD(0x32);
+        RESULTS_SCREEN_Y_WORD(0x0A), RESULTS_DEST_X(0x2A), RESULTS_TIMER_WORD(0x32),
+        // Title Card/Main.asm:42-44,61-64,82-89,103-110,132-139,163-170: overlapping WORD storage only.
+        TITLE_CARD_SCREEN_Y_WORD(0x0A), TITLE_CARD_DEST_X(0x2A), TITLE_CARD_START_X(0x2C),
+        TITLE_CARD_DEST_Y(0x2E), TITLE_CARD_START_Y(0x30);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

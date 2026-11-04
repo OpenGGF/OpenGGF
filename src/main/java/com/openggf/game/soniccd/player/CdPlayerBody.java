@@ -489,6 +489,8 @@ public final class CdPlayerBody {
     private final CdAssetBytes layout;
     private final CdReleaseVariant variant;
     private final int ordinaryPeriod;
+    // Immutable source metadata; PPZ1-specific native branches still compare the raw global WORD to0.
+    private final int ordinaryZoneAct;
     private final CdSonicVisualAssets sonic;
     private final CdPlayerMovement movement;
     private final CdPlayerAnimation animator;
@@ -503,15 +505,17 @@ public final class CdPlayerBody {
         mappingAddress = Objects.requireNonNull(assets.profile()).range(CdR11aAsset.MAP_SPR_SONIC).nativeAddress();
         movement = new CdPlayerMovement(terrain, player); animator = new CdPlayerAnimation(player);
         layout = terrain.layout().ram(); variant = assets.profile().variant(); ordinaryPeriod = 1;
+        ordinaryZoneAct = 0;
     }
 
     private CdPlayerBody(CdStagePlayerSource source, CdPlayerMovement movement) {
         player = source.player(); sonic = source.sonic(); layout = source.terrain().layout().ram();
         mappingAddress = source.mappingAddress(); variant = source.variant(); ordinaryPeriod = source.ordinaryPeriod();
+        ordinaryZoneAct = source.stage().actNumber() - 1;
         this.movement = movement; animator = new CdPlayerAnimation(player);
     }
 
-    /** Immutable stage-data binding only; grants no Frame, invocation, load or touch-owner admission. */
+    /** Actual native act/period and immutable stage-data binding only; grants no Frame, invocation, load or touch-owner admission. */
     public static CdPlayerBody fromStageSource(CdStagePlayerSource source) {
         Objects.requireNonNull(source, "stage player source");
         return new CdPlayerBody(source, CdPlayerMovement.fromStageSource(source));
@@ -569,7 +573,7 @@ public final class CdPlayerBody {
         if (state.header().slotId() != 1) unsupported(UnsupportedBoundary.SLOT_ID);
         var gates = environment.movement().gates();
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
-        if (gates.zoneAct() != 0 || (gates.timeZone() != ordinaryPeriod && !(activePeriod && timeWarpContext.isPresent()))) {
+        if (gates.zoneAct() != ordinaryZoneAct || (gates.timeZone() != ordinaryPeriod && !(activePeriod && timeWarpContext.isPresent()))) {
             unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         }
         // Retail main-player branch (56-73): time attack bypasses this debug dispatch test.

@@ -164,8 +164,15 @@ Unreleased. The earlier development themes remain in
   requests through existing owners. Original Projector metadata reuses existing art.
   Original-USA Act2 terrain and player factories now retain their own source bytes
   and immutable binding. Stock USA preparation detaches both products before closing
-  its existing CUE owner; JP/EU retain explicit absence. Playable stage admission is
-  unchanged.
+  its existing CUE owner; JP/EU retain explicit absence. Act2 now has explicit
+  same-source player/Frame component entry, native PPZ2 foreground events,
+  three-cloud background deformation and Plane B binding. Its lazy raw/visual
+  resources and sparse current patterns reuse existing decoders; section loading
+  uses the shared queued PLC kernel. Reserved Title Card parent and fresh dynamic
+  children retain native routines, allocation, timed slides, locks and deferred
+  PLC2 request. Cold start now records the authenticated MAINVARS palette-clear
+  bit writer before PCM rather than inferring a default. These are qualified
+  components; live Act2 World admission remains separate work.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

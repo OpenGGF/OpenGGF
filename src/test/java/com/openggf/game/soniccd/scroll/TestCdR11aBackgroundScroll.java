@@ -430,6 +430,283 @@ class TestCdR11aBackgroundScroll {
         assertEquals(240, result.hscrollLongsWritten());
     }
 
+    // Act2 source vectors, N1ecc5f3a Scroll (Act 2 Present).asm:153-177,212-368.
+    // Appended source-only; no Java execution by this author. No ROM table or Act1 owner is needed.
+    @Test
+    void act2InitUsesFullSwappedArithmeticAndClearsOnlyThreeLongsInDeformationRam() {
+        var before = state(0x11223344, 0x55667788, 0x99AABBCC, 0xDDEEFF11, 0x12345678, 0xABCDEF01);
+        var after = initAct2Present(before, new InitRegisters(0xA55A0125, 0xC33C0123, 0xFFFF));
+        byte[] deform = before.deformationRam().copy();
+        Arrays.fill(deform, 0, 12, (byte) 0);
+        var expected = new State(0x00913344, 0x00370EFF, 0x0036BBCC, 0x0037FF11,
+                0x00245678, 0x0037EF01, before.crossingRam(), 0xF5A5, 0xA55A, 0x5AC3,
+                before.cloudRam(), bytes(deform), before.hscrollRam(), 0x76543210);
+        assertAct2StateValue(expected, after);
+        assertSame(before.cloudRam(), after.cloudRam());
+        assertSame(before.crossingRam(), after.crossingRam());
+        assertSame(before.hscrollRam(), after.hscrollRam());
+        assertEquals(0x55667788, before.cameraBgY());
+        assertArrayEquals(pattern(512, 0x79), before.deformationRam().copy());
+    }
+
+    @Test
+    void act2InitKeepsSignedAsrAndNativeWordShiftTruncationAtTheRawEdges() {
+        var before = state(0x11112222, 0, 0x33334444, 0x55556666, 0x77778888, 0x9999AAAA);
+        var after = initAct2Present(before, new InitRegisters(0x12348000, 0xBEEFFFFF, 0));
+        assertEquals(0x7FFF2222, after.cameraBgX());
+        assertEquals(0x2FFD4444, after.cameraBg2X());
+        assertEquals(0x1FFF8888, after.cameraBg3X());
+        assertEquals(0xE8000369, after.cameraBgY());
+        assertEquals(0xE8006666, after.cameraBg2Y());
+        assertEquals(0xE800AAAA, after.cameraBg3Y());
+        var allBits = initAct2Present(before, new InitRegisters(-1, 0, 0xFFFF));
+        assertEquals(0xFFFFFFFD, allBits.cameraBgY());
+        assertEquals(0xFFFF6666, allBits.cameraBg2Y());
+        assertEquals(0xFFFFAAAA, allBits.cameraBg3Y());
+    }
+
+    @Test
+    void act2StepMatchesAllLiteralBandsFullBuffersAndEveryUnwrittenStateComponent() {
+        var before = act2Scene(0);
+        byte[] oldDeform = before.deformationRam().copy();
+        byte[] oldHscroll = before.hscrollRam().copy();
+        var result = stepAct2Present(before, input(0x110, 0x345, 0, 0x600, 0xFFFF, 2), 0);
+        byte[] deform = act2ExpectedDeformation(before);
+        byte[] hscroll = act2ExpectedHscroll(before, 0x110,
+                new int[][]{{32, -51}, {32, -54}, {160, -48}}, 8, 32, 240);
+        var expected = new State(0x00100091, 0x1234, 0x00200082, 0x5678, 0x00300073, 0x9ABC,
+                bytes(new byte[]{0, 0x10, 0x10, 0x23, 0, 0x45, 0x67, (byte) 0x89}),
+                0x8800, 0, 0, before.cloudRam(), bytes(deform), bytes(hscroll), 0x03450000);
+        assertAct2StateValue(expected, result.state());
+        assertEquals(Boundary.ARITHMETIC_COMPLETE, result.boundary());
+        assertEquals(36, result.deformationWordsWritten());
+        assertEquals(232, result.hscrollLongsWritten());
+        assertEquals(0, result.rampOffset());
+        assertEquals(0, result.bgDelta()); assertEquals(0, result.bg2Delta()); assertEquals(0, result.bg3Delta());
+        assertSame(before.cloudRam(), result.state().cloudRam());
+        assertArrayEquals(oldDeform, before.deformationRam().copy());
+        assertArrayEquals(oldHscroll, before.hscrollRam().copy());
+    }
+
+    @Test
+    void act2SignedXAndYDiffsRetainFractionsAndMergeAllRightDownHighByteFlags() {
+        var before = state(0x000F8000, 0x000FD000, 0x000FD000, 0xABCD5678, 0x000FE000, 0xDCBA9ABC);
+        var result = stepAct2Present(before, input(0x123, 0x456, 0x100, 32767, 0xFFFF, 0xFF), 0x100);
+        var after = result.state();
+        assertEquals(0x00100000, after.cameraBgX());
+        assertEquals(0x00100000, after.cameraBg2X());
+        assertEquals(0x00100000, after.cameraBg3X());
+        assertEquals(0x00100000, after.cameraBgY());
+        assertEquals(0x00105678, after.cameraBg2Y());
+        assertEquals(0x00109ABC, after.cameraBg3Y());
+        assertEquals(0xAA00, after.scrollFlagsBg());
+        assertEquals(0, after.scrollFlagsBg2()); assertEquals(0, after.scrollFlagsBg3());
+        assertArrayEquals(new byte[]{0, 0, 0, 0x23, 0, 0x45, 0x67, (byte) 0x89}, after.crossingRam().copy());
+        assertEquals(0x04560010, after.vscroll());
+        assertEquals(0x8000, result.bgDelta()); assertEquals(0x3000, result.bg2Delta());
+        assertEquals(0x2000, result.bg3Delta()); assertEquals(0, result.rampOffset());
+    }
+
+    @Test
+    void act2LeftUpChecksUseLongSubtractionAndPreservePaddingAndBg2Bg3YFractions() {
+        var before = state(0x00108000, 0x00103000, 0x00103000, 0xABCD5678, 0x00102000, 0xDCBA9ABC);
+        var after = stepAct2Present(before, input(0, 0, -0x100, -32768, 0, 2), -0x100).state();
+        assertEquals(0x00100000, after.cameraBgX()); assertEquals(0x00100000, after.cameraBgY());
+        assertEquals(0x00100000, after.cameraBg2X()); assertEquals(0x00100000, after.cameraBg3X());
+        assertEquals(0x00105678, after.cameraBg2Y()); assertEquals(0x00109ABC, after.cameraBg3Y());
+        assertEquals(0x5500, after.scrollFlagsBg());
+        assertEquals(0, after.scrollFlagsBg2()); assertEquals(0, after.scrollFlagsBg3());
+        assertArrayEquals(new byte[]{0, 0, 0, 0x23, 0, 0x45, 0x67, (byte) 0x89}, after.crossingRam().copy());
+    }
+
+    @Test
+    void act2WordDiffExtremesAndLongWrapDoNotClampOrBorrowAct1RampVelocity() {
+        var before = state(0x7FFFFFF0, 0x7FFFFFF0, 0x7FFFFFF0, 0x5678, 0x7FFFFFF0, 0x9ABC);
+        var plus = stepAct2Present(before, input(0, 0, 32767, -32768, 0xFFFF, 2), -32768);
+        assertEquals(0x803FFF70, plus.state().cameraBgX());
+        assertEquals(0x8017FFC0, plus.state().cameraBg2X());
+        assertEquals(0x800FFFD0, plus.state().cameraBg3X());
+        assertEquals(0x7FE7FFF0, plus.state().cameraBgY());
+        var minus = stepAct2Present(before, input(0, 0, -32768, 32767, 0xFFFF, 2), 32767);
+        assertEquals(0x7FBFFFF0, minus.state().cameraBgX());
+        assertEquals(0x7FE7FFF0, minus.state().cameraBg2X());
+        assertEquals(0x7FEFFFF0, minus.state().cameraBg3X());
+        assertEquals(0x8017FFC0, minus.state().cameraBgY());
+        var wrap = state(0xFFFFFFF0, 0xFFFFF000, 0xFFFFFFF0, 0x1234, 0xFFFFFFF0, 0x5678);
+        var wrapped = stepAct2Present(wrap, input(0, 0, 0x100, 0, 0, 0), 0x100).state();
+        assertEquals(0x00007FF0, wrapped.cameraBgX());
+        assertEquals(0x00002FF0, wrapped.cameraBg2X());
+        assertEquals(0x00001FF0, wrapped.cameraBg3X());
+        assertEquals(0x00002000, wrapped.cameraBgY());
+        assertEquals(0x1234, wrapped.cameraBg2Y()); assertEquals(0x5678, wrapped.cameraBg3Y());
+    }
+
+    @Test
+    void act2CloudCountersWrapInSharedDeformationPrefixWhileSeparateCloudRamNeverChanges() {
+        var before = act2Scene(0);
+        byte[] raw = before.deformationRam().copy();
+        var buffer = ByteBuffer.wrap(raw);
+        buffer.putInt(0, 0xFFFF8000).putInt(4, 0xFFFF8000).putInt(8, 0xFFFF8000);
+        before = withRam(before, before.crossingRam(), before.cloudRam(), bytes(raw), before.hscrollRam());
+        var after = stepAct2Present(before, input(0, 0, 0, 0, 0, 0), 0).state();
+        assertEquals(0x00008000L, after.deformationRam().unsignedLong(0));
+        assertEquals(0x00004000L, after.deformationRam().unsignedLong(4));
+        assertEquals(0, after.deformationRam().unsignedLong(8));
+        assertSame(before.cloudRam(), after.cloudRam());
+        assertArrayEquals(Arrays.copyOfRange(raw, 84, 512), Arrays.copyOfRange(after.deformationRam().copy(), 84, 512));
+        assertArrayEquals(raw, before.deformationRam().copy());
+    }
+
+    @Test
+    void act2ZeroDeltasStillCheckDirtyCrossingsAndClearAllThreeOldFlagWords() {
+        var before = withCrossings(act2Scene(0), new byte[]{(byte) 0x90, (byte) 0x90, (byte) 0x90,
+                0x23, (byte) 0x90, 0x45, 0x67, (byte) 0x89});
+        var after = stepAct2Present(before, input(0, 0, 0, 0, 0, 0), 0).state();
+        assertArrayEquals(before.crossingRam().copy(), after.crossingRam().copy());
+        assertEquals(0, after.scrollFlagsBg()); assertEquals(0, after.scrollFlagsBg2()); assertEquals(0, after.scrollFlagsBg3());
+        var clean = withCrossings(state(0, 0, 0, 0, 0, 0), new byte[8]);
+        assertEquals(0xAA00, stepAct2Present(clean, input(0, 0, 0, 0, 0, 0), 0).state().scrollFlagsBg());
+    }
+
+    @Test
+    void act2HscrollTraversesPartialCloudsWaterfallLastBandAndUnsignedBorrowWithoutClamping() {
+        int[] y = {3, 72, 280, 288, 511, 515};
+        int[] counts = {229, 232, 232, 224, 224, 229};
+        int[] interpolated = {8, 16, 224, 224, 224, 8};
+        int[][][] runs = {{{29, -51}, {32, -54}, {160, -48}}, {{184, -48}, {32, -32}},
+                {{8, -32}}, {}, {}, {{29, -51}, {32, -54}, {160, -48}}};
+        for (int i = 0; i < y.length; i++) {
+            var before = act2Scene(y[i]);
+            var result = stepAct2Present(before, input(0x110, 0x345, 0, 0, 0, 0), 0);
+            assertEquals(counts[i], result.hscrollLongsWritten(), "BG Y " + y[i]);
+            assertArrayEquals(act2ExpectedHscroll(before, 0x110, runs[i], interpolated[i], 32, 240),
+                    result.state().hscrollRam().copy(), "BG Y " + y[i]);
+            assertArrayEquals(act2ExpectedDeformation(before), result.state().deformationRam().copy());
+        }
+    }
+
+    @Test
+    void act2InterpolationWrapsSubWordBeforeSignedDivsAndAccumulatesTheFullFraction() {
+        var before = state(0x00100091, 0x01201234, 0x7FF00082, 0x5678, 0x00300073, 0x9ABC);
+        var result = stepAct2Present(before, input(0x10, 0, 0, 0, 0, 0), 0);
+        assertEquals(224, result.hscrollLongsWritten());
+        assertArrayEquals(act2ExpectedHscroll(before, 0x10, new int[][]{}, 224, 0x7FF0, -32736),
+                result.state().hscrollRam().copy());
+        assertEquals(packed(0x10, -32752), ByteBuffer.wrap(result.state().hscrollRam().copy()).getInt(0));
+        assertEquals(packed(0x10, -32624), ByteBuffer.wrap(result.state().hscrollRam().copy()).getInt(4));
+        var minimum = state(0, 0x01200000, 0, 0, 0, 0);
+        var minResult = stepAct2Present(minimum, input(0x8000, 0, 0, 0, 0, 0), 0);
+        assertArrayEquals(act2ExpectedHscroll(minimum, 0x8000, new int[][]{}, 224, 0, -32768),
+                minResult.state().hscrollRam().copy());
+    }
+
+    @Test
+    void act2IgnoresAllAct1PlayerRampOperandsAndRepeatedPreparationCannotAdvanceTheInputState() {
+        var before = act2Scene(0);
+        var first = stepAct2Present(before, input(0x110, 0x345, 0x600, -32768, 0, 0), -0x100);
+        var other = stepAct2Present(before, input(0x110, 0x345, 0x600, 32767, 0xFFFF, 0xFF), -0x100);
+        assertAct2StateValue(first.state(), other.state());
+        assertEquals(first.bgDelta(), other.bgDelta()); assertEquals(first.bg2Delta(), other.bg2Delta());
+        assertEquals(first.bg3Delta(), other.bg3Delta()); assertEquals(0, first.rampOffset());
+        assertAct2StateValue(first.state(), stepAct2Present(before,
+                input(0x110, 0x345, 0x600, -32768, 0, 0), -0x100).state());
+        assertEquals(0x0002FFFFL, before.deformationRam().unsignedLong(0));
+    }
+
+    @Test
+    void act2OrdinaryForwardReverseContinuationUsesOnlyExplicitCompletedDeltas() {
+        var initial = initAct2Present(state(0, 0, 0, 0, 0, 0), new InitRegisters(293, 0, 80));
+        assertEquals(0x0036F000, initial.cameraBgY());
+        var first = stepAct2Present(initial, input(1, 294, 0x100, 0, 80, 0), 0x100).state();
+        assertEquals(0x00008000, first.cameraBgX()); assertEquals(0x00003000, first.cameraBg2X());
+        assertEquals(0x00002000, first.cameraBg3X()); assertEquals(0x00372000, first.cameraBgY());
+        var second = stepAct2Present(first, input(0, 293, -0x100, 0, 80, 0), -0x100).state();
+        assertEquals(0, second.cameraBgX()); assertEquals(0, second.cameraBg2X()); assertEquals(0, second.cameraBg3X());
+        assertEquals(0x0036F000, second.cameraBgY());
+        assertEquals(0x00020000L, second.deformationRam().unsignedLong(0));
+        assertEquals(0x00018000L, second.deformationRam().unsignedLong(4));
+        assertEquals(0x00010000L, second.deformationRam().unsignedLong(8));
+        assertSame(initial.cloudRam(), second.cloudRam());
+        assertArrayEquals(Arrays.copyOfRange(initial.deformationRam().copy(), 84, 512),
+                Arrays.copyOfRange(second.deformationRam().copy(), 84, 512));
+    }
+
+    @Test
+    void act2ScrollLockReturnsActualSameStateBeforeAnyNativeWritesForEveryNonzeroByte() {
+        var before = act2Scene(0);
+        for (int lock : new int[]{1, 0x80, 0xFF}) {
+            var result = stepAct2Present(before, new Input(0x110, 0x345, 32767, -32768, 0xFFFF, 0xFF, lock), 32767);
+            assertSame(before, result.state()); assertEquals(Boundary.SCROLL_LOCKED, result.boundary());
+            assertEquals(0, result.deformationWordsWritten()); assertEquals(0, result.hscrollLongsWritten());
+            assertEquals(0, result.bgDelta()); assertEquals(0, result.bg2Delta()); assertEquals(0, result.bg3Delta());
+            assertEquals(0, result.rampOffset());
+        }
+    }
+
+    @Test
+    void act2NewEntrypointsRejectNullAndNonSignedWordYWithoutTouchingExistingValues() {
+        var before = act2Scene(0); byte[] prior = before.deformationRam().copy();
+        assertThrows(NullPointerException.class, () -> initAct2Present(null, new InitRegisters(0, 0, 0)));
+        assertThrows(NullPointerException.class, () -> initAct2Present(before, null));
+        assertThrows(NullPointerException.class, () -> stepAct2Present(null, input(0, 0, 0, 0, 0, 0), 0));
+        assertThrows(NullPointerException.class, () -> stepAct2Present(before, null, 0));
+        assertFailure(Failure.SIGNED_WORD_SHAPE, () -> stepAct2Present(before, input(0, 0, 0, 0, 0, 0), -32769));
+        assertFailure(Failure.SIGNED_WORD_SHAPE, () -> stepAct2Present(before, input(0, 0, 0, 0, 0, 0), 32768));
+        assertArrayEquals(prior, before.deformationRam().copy());
+    }
+
+    private static State act2Scene(int bgY) {
+        var s = state(0x00100091, (bgY << 16) | 0x1234, 0x00200082, 0x5678, 0x00300073, 0x9ABC);
+        byte[] deform = s.deformationRam().copy();
+        ByteBuffer.wrap(deform).putInt(0, 0x0002FFFF).putInt(4, 0x0005FFFF).putInt(8, 0xFFFFFF00);
+        return withRam(s, s.crossingRam(), s.cloudRam(), bytes(deform), s.hscrollRam());
+    }
+
+    private static byte[] act2ExpectedDeformation(State before) {
+        byte[] expected = before.deformationRam().copy();
+        var output = ByteBuffer.wrap(expected);
+        output.putInt(0, 0x0003FFFF).putInt(4, 0x0006BFFF).putInt(8, 0x00007F00);
+        output.position(12);
+        // Literal native scene: 4top/4middle/4bottom cloud WORDs,20mountain,4waterfall.
+        for (int[] run : new int[][]{{4, -51}, {4, -54}, {24, -48}, {4, -32}}) {
+            for (int i = 0; i < run[0]; i++) output.putShort((short) run[1]);
+        }
+        assertEquals(84, output.position());
+        return expected;
+    }
+
+    private static byte[] act2ExpectedHscroll(State before, int foregroundX, int[][] literalRuns,
+                                             int interpolationLines, int initialBg2Word, int signedQuotient) {
+        byte[] expected = before.hscrollRam().copy();
+        var output = ByteBuffer.wrap(expected);
+        for (int[] run : literalRuns) {
+            for (int i = 0; i < run[0]; i++) output.putInt(packed(foregroundX, run[1]));
+        }
+        // Independent closed form, not the production SWAP/add loop or source-table traversal.
+        for (int line = 0; line < interpolationLines; line++) {
+            long fixed = ((long) initialBg2Word << 16) + (long) line * signedQuotient * 256;
+            output.putInt(packed(foregroundX, -(int) (fixed >> 16)));
+        }
+        return expected;
+    }
+
+    private static void assertAct2StateValue(State expected, State actual) {
+        assertEquals(expected.cameraBgX(), actual.cameraBgX(), "cameraBgX");
+        assertEquals(expected.cameraBgY(), actual.cameraBgY(), "cameraBgY");
+        assertEquals(expected.cameraBg2X(), actual.cameraBg2X(), "cameraBg2X");
+        assertEquals(expected.cameraBg2Y(), actual.cameraBg2Y(), "cameraBg2Y");
+        assertEquals(expected.cameraBg3X(), actual.cameraBg3X(), "cameraBg3X");
+        assertEquals(expected.cameraBg3Y(), actual.cameraBg3Y(), "cameraBg3Y");
+        assertArrayEquals(expected.crossingRam().copy(), actual.crossingRam().copy(), "crossingRam");
+        assertEquals(expected.scrollFlagsBg(), actual.scrollFlagsBg(), "scrollFlagsBg");
+        assertEquals(expected.scrollFlagsBg2(), actual.scrollFlagsBg2(), "scrollFlagsBg2");
+        assertEquals(expected.scrollFlagsBg3(), actual.scrollFlagsBg3(), "scrollFlagsBg3");
+        assertArrayEquals(expected.cloudRam().copy(), actual.cloudRam().copy(), "cloudRam");
+        assertArrayEquals(expected.deformationRam().copy(), actual.deformationRam().copy(), "deformationRam");
+        assertArrayEquals(expected.hscrollRam().copy(), actual.hscrollRam().copy(), "hscrollRam");
+        assertEquals(expected.vscroll(), actual.vscroll(), "vscroll");
+    }
+
     private static CdR11aBackgroundScroll fixture() { return fromTables(bytes(TOP), bytes(UPSIDE), bytes(WATER)); }
     private static CdAssetBytes bytes(byte[] value) { return CdAssetBytes.copyOf(value); }
     private static Input input(int x, int y, int diff, int velocity, int playerX, int control) {

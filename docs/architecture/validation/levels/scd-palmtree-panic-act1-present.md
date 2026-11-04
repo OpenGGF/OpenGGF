@@ -2,6 +2,14 @@
 
 ## Opening-object checkpoint, latest local qualification4November2026
 
+Act2 prerequisites now have component coverage for explicit source-bound Frame
+entry, PPZ2 scroll/Plane B, raw/visual resources, sparse current patterns, shared
+section loading and reserved/dynamic Title Card. Separate322,88 and204 focused
+selections passed with zero skips. The intervening998 scope had two Ring binding
+errors corrected and covered in204; it is not a green998 pass. These checks do
+not admit an Act2 World, route, pixels or regional parity. The implementation
+plan records exact source and scope; controller10419 remains qualified.
+
 This current entry extends the historical terrain-only inventory below. The
 explicit USA opening-object DEV entry now owns source-ordered player/object
 passes, native SAT, current camera-art bytes, Plane B, life/restart and same-world

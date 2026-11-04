@@ -6,6 +6,8 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssetLoader;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.media.CdTimeWarpPrograms;
@@ -31,6 +33,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class TestCdStagePlayerBodyMovement {
     private static CdR11aAssets present;
     private static CdR11bAssets past;
+    private static CdR12aTerrainAssets act2Terrain;
+    private static CdR12aPlayerAssets act2Player;
 
     @BeforeAll
     static void loadConfiguredOriginalUsa() throws Exception {
@@ -46,6 +50,8 @@ class TestCdStagePlayerBodyMovement {
         try (var source = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) {
             present = CdR11aAssetLoader.load(source, CdReleaseVariant.USA, CdStagePayload.R11A.stage());
             past = CdR11bAssets.fromPrograms(CdTimeWarpPrograms.fromPrograms(source));
+            act2Terrain = CdR12aTerrainAssets.fromPrograms(source);
+            act2Player = CdR12aPlayerAssets.fromPrograms(source);
         }
     }
 
@@ -386,15 +392,20 @@ class TestCdStagePlayerBodyMovement {
     }
 
     private static void checkInit(CdStagePlayerSource source, int period, int map) {
+        checkInit(source, 0, period, map);
+    }
+
+    private static void checkInit(CdStagePlayerSource source, int zoneAct, int period, int map) {
         var m = new CdPlayerMotionState(0x00201234, 0x04205678, -0x123, 0x234, -0x345,
                 0, 0x24, 1, 0xC3, 3, 4, 5, 6, 1, 29, -7, 8, 0x12, 0x12, 0x34);
-        var state = state(m, 1, 0x11223344); var env = bodyEnvironment(0, period, 0, 37, 0);
+        var state = state(m, 1, 0x11223344); var env = bodyEnvironment(zoneAct, period, 0, 37, 0);
         var result = body(source).step(state, env);
         assertEquals(CdPlayerBody.Boundary.INIT_RETURN, result.boundary());
         assertEquals(new CdPlayerBody.Header(1, map, 0x780, 2, 0x18), result.state().header());
         assertEquals(new CdPlayerMotionState(0x00201234, 0x04205678, -0x123, 0x234, -0x345,
                 2, 0x24, 1, 4, 9, 19, 5, 6, 1, 30, -7, 8, 0x12, 0x12, 0x34), result.state().motion());
-        assertEquals(new CdPlayerMovement.Physics(0x600, 0xC, 0x80), result.environment().movement().physics());
+        assertEquals(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600, 0xC, 0x80),
+                env.movement().bounds(), env.movement().gates(), env.movement().globals()), result.environment().movement());
         assertEquals(state.animation(), result.state().animation()); assertEquals(state.timers(), result.state().timers());
         assertEquals(state.history(), result.state().history()); assertEquals(state.objectLinks(), result.state().objectLinks());
         assertEquals(0x39, result.state().rotationDistance()); assertEquals(0x2B, result.state().rotationAngle());
@@ -561,6 +572,86 @@ class TestCdStagePlayerBodyMovement {
         assertEquals(invincible, env.globals().invincible());
         assertEquals(shoes, env.movement().gates().speedShoes());
         return result;
+    }
+
+    @Test
+    void actualAct2InitUsesItsNativeActAndLiveMappingWithAllExistingInitNonwrites() {
+        requireAct2();
+        var source = c();
+        assertTrue(source.ownsAct2(act2Terrain, act2Player));
+        assertEquals(2, source.stage().actNumber()); assertEquals(1, source.ordinaryPeriod());
+        assertEquals(0x230F60, source.mappingAddress());
+        assertArrayEquals(new byte[]{(byte) 0x91, (byte) 0xB6, 0x7F, 0x7F}, source.player().specialChunks().copy());
+        checkInit(source, 1, 1, 0x230F60);
+    }
+
+    @Test
+    void eachBodyAndMovementSourceRequiresItsWholeRawNativeActAndOrdinaryPeriod() {
+        requireAct2();
+        var init = state(motion(0x700, 0x420, 0, 2, 0, 0), 1, 0);
+        var air = motion(0x700, 0x420, 2, 2, 0, 0);
+        for (int wrongAct : new int[]{0, 2, 0x0101, 0xFFFF}) {
+            assertBodyBoundary(CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY,
+                    () -> body(c()).step(init, bodyEnvironment(wrongAct, 1, 0, 0, 0)));
+            assertMotionBoundary(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY,
+                    () -> movement(c()).step(air, neutral(), movementEnvironment(wrongAct, 1, 0)));
+        }
+        for (int period : new int[]{0, 2, 0x7F, 0x80, 0x81, 0x82, 0x83, 0xFF}) {
+            assertBodyBoundary(CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY,
+                    () -> body(c()).step(init, bodyEnvironment(1, period, 0, 0, 0)));
+            assertMotionBoundary(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY,
+                    () -> movement(c()).step(air, neutral(), movementEnvironment(1, period, 0)));
+        }
+        for (var old : List.of(a(), b())) {
+            assertBodyBoundary(CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY,
+                    () -> body(old).step(init, bodyEnvironment(1, old.ordinaryPeriod(), 0, 0, 0)));
+            assertMotionBoundary(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY,
+                    () -> movement(old).step(air, neutral(), movementEnvironment(1, old.ordinaryPeriod(), 0)));
+        }
+        assertBodyBoundary(CdPlayerBody.UnsupportedBoundary.SOURCE_FAMILY,
+                () -> new CdPlayerBody(present).step(init, bodyEnvironment(1, 1, 0, 0, 0)));
+        assertMotionBoundary(CdPlayerMovement.UnsupportedBoundary.SOURCE_FAMILY,
+                () -> new CdPlayerMovement(present.terrain(), present.player()).step(air, neutral(), movementEnvironment(1, 1, 0)));
+        assertEquals(0, init.motion().routine()); assertEquals(0x07000000, air.centreX16_16());
+    }
+
+    @Test
+    void act2AirUsesItsExplicitClearedRowAndSkipsOnlyTheNativeActZeroLaunchRestrictions() {
+        requireAct2(); assertAct2ClearRow();
+        var before = motion(0x700, 0x420, 2, 2, 0, 2);
+        var env = movementEnvironment(1, 1, 0);
+        var result = movement(c()).step(before, new CdPlayerMovement.Input(8, 0), env);
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, result.boundary());
+        assertEquals(0x07001800, result.state().centreX16_16());
+        assertEquals(0x04200000, result.state().centreY16_16());
+        assertEquals(0x18, result.state().xVelocity()); assertEquals(0x38, result.state().yVelocity());
+        assertEquals(2, result.state().playerControl() & 2);
+        assertEquals(1, result.environment().gates().zoneAct()); assertEquals(1, result.environment().gates().timeZone());
+        assertEquals(0x07000000, before.centreX16_16()); assertEquals(0, before.xVelocity());
+        assertEquals(0, env.globals().boredTimer());
+    }
+
+    @Test
+    void act2ExplicitTimeWarpCutKeepsNativeActOneAndDoesNotRunTheActZeroRamp() {
+        requireAct2();
+        var before = motion(0x700, 0x420, 2, 2, 17, 2);
+        for (int period : new int[]{1, 0x80, 0x81, 0x82}) {
+            var result = movement(c()).stepToTimeWarp(before, neutral(), movementEnvironment(1, period, 0), Optional.empty());
+            assertEquals(CdPlayerMovement.Boundary.TIME_WARP, result.boundary());
+            assertEquals(CdPlayerMovement.Continuation.MD_AIR_AFTER_TIME_WARP, result.continuation());
+            assertEquals(before, result.state());
+            assertEquals(period, result.environment().gates().timeZone());
+        }
+    }
+
+    private static void requireAct2() {
+        requireActual(); assumeTrue(act2Terrain != null && act2Player != null, "Set soniccd.media.root to original media");
+    }
+    private static CdStagePlayerSource c() { return CdStagePlayerSource.fromAct2(act2Terrain, act2Player); }
+    private static void assertAct2ClearRow() {
+        // Original R12A has four FG rows. Native LoadLevelLayout clears the remaining row4 RAM first.
+        for (int column = 0; column < 64; column++)
+            assertEquals(0, act2Terrain.terrain().layout().ram().unsignedByte(0x200 + column));
     }
 
     private static List<String> musicNames(CdPlayerBody.Result result) {

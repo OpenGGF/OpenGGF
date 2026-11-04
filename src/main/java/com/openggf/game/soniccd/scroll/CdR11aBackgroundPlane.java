@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.level.CdStageTerrain;
 
 import java.util.ArrayList;
@@ -18,8 +20,8 @@ import java.util.Objects;
  * Shipped FixBugs=0 behavior; no generic renderer, camera tick, PLC or publication service.
  * Only immutable terrain and source views are retained. Output observations describe a
  * completed RAM transformation, and are not an upload/replay command stream.
- * The strict R11A factories keep their original bounds. A package-private Past binding
- * shares this algorithm with a separately named facade, without decoding or retaining another terrain owner.
+ * The strict R11A factories keep their original bounds. Explicit Past and PPZ2 Present
+ * bindings share this algorithm without decoding or retaining another terrain owner.
  */
 public final class CdR11aBackgroundPlane {
     // InitVDP/VDPInitRegs (Functions (General).asm:149,162,173-174), Main.asm:229-231.
@@ -140,9 +142,15 @@ public final class CdR11aBackgroundPlane {
     }
 
     private CdR11aBackgroundPlane(CdStageTerrain terrain, CdAssetBytes ids, CdAssetBytes livePointers) {
+        this(terrain, ids, livePointers, CdStageTerrain.Shape.PPZ1_PAST);
+    }
+
+    private CdR11aBackgroundPlane(CdStageTerrain terrain, CdAssetBytes ids, CdAssetBytes livePointers,
+                                  CdStageTerrain.Shape expectedShape) {
         Objects.requireNonNull(terrain, "terrain");
-        if (terrain.shape() != CdStageTerrain.Shape.PPZ1_PAST) {
-            throw new IllegalArgumentException("Expected the explicit PPZ1 Past terrain format");
+        if (terrain.shape() != expectedShape) {
+            throw new IllegalArgumentException(expectedShape == CdStageTerrain.Shape.PPZ1_PAST
+                    ? "Expected the explicit PPZ1 Past terrain format" : "Expected the explicit PPZ2 Present terrain format");
         }
         this.ids = Objects.requireNonNull(ids, "ids");
         this.livePointers = Objects.requireNonNull(livePointers, "livePointers");
@@ -180,6 +188,23 @@ public final class CdR11aBackgroundPlane {
         Objects.requireNonNull(assets, "assets");
         return fromViews(assets.terrain(), assets.view(CdR11aAsset.BG_CAMERA_SECT_IDS),
                 assets.view(CdR11aAsset.BG_CAMERA_SECTS));
+    }
+
+    /**
+     * Original USA R12A source binding. Scroll (Act 2 Present).asm:751-854,950-1027
+     * uses the same block/name-table algorithm with34 IDs, four pointers and mask$1F0.
+     * The actual aggregate already authenticates the complete original file. This binds
+     * only detached source data; it does not admit a Frame, World, camera or current art.
+     */
+    public static CdR11aBackgroundPlane bindAct2(CdR12aTerrainAssets assets) {
+        Objects.requireNonNull(assets, "assets");
+        return fromAct2Tables(assets.terrain(), assets.view(CdR12aProfile.Asset.BG_CAMERA_SECT_IDS),
+                assets.view(CdR12aProfile.Asset.BG_CAMERA_SECTS));
+    }
+
+    /** Explicit PPZ2 format-fixture seam; supplied values confer no media or execution authority. */
+    public static CdR11aBackgroundPlane fromAct2Tables(CdStageTerrain terrain, CdAssetBytes ids, CdAssetBytes pointers) {
+        return new CdR11aBackgroundPlane(terrain, ids, pointers, CdStageTerrain.Shape.PPZ2_PRESENT);
     }
 
     /** Shape/selector binding only. Constructed Views cannot establish media authority. */

@@ -9,6 +9,8 @@ import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.level.CdStagePlayerSource;
 import com.openggf.game.soniccd.objects.CdBigRing;
 import com.openggf.game.soniccd.objects.CdResults;
@@ -418,6 +420,25 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /**
+     * Fresh actual-R12A binding over complete explicit existing values. The detached terrain/player
+     * pair supplies its actual native act, ordinary period and mapping through the existing source
+     * relation. This factory performs no Init, native clear, actor/camera/art/clock default, service,
+     * programme carry or World admission. Its source and CaptureOwner are fresh; art publication
+     * remains unbound, and existing ordinary/old-programme service guards retain their own scope.
+     */
+    public static CdPlayerFrameRuntime fromAct2Entry(CdR12aTerrainAssets terrain, CdR12aPlayerAssets player,
+                                                     CdPlayerBody.State state, CdPlayerBody.Environment environment,
+                                                     CdPlayerArtRuntime.State artIngress, VIntClock clock) {
+        Objects.requireNonNull(terrain, "Act2 terrain assets");
+        Objects.requireNonNull(player, "Act2 player assets");
+        Objects.requireNonNull(state, "Act2 player state");
+        Objects.requireNonNull(environment, "Act2 player environment");
+        Objects.requireNonNull(artIngress, "Act2 player art ingress");
+        Objects.requireNonNull(clock, "Act2 player V-int clock");
+        return new CdPlayerFrameRuntime(CdStagePlayerSource.fromAct2(terrain, player), state, environment, artIngress, clock);
+    }
+
+    /**
      * Explicit new terrain-only development ingress, not a generic constructor
      * or restore/reset path. Production must supply the authenticated loader's
      * aggregate/load plan, and root must complete actor/renderer/world admission
@@ -674,7 +695,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
 
     /** Same immutable Present aggregate for every legacy A owner; an actual B visit has no A facade. */
     public CdR11aAssets assets() {
-        if (pastSource != null) throw new IllegalStateException("The bound R11B player has no R11A assets");
+        if (pastSource != null) throw new IllegalStateException("The bound stage player has no legacy R11A assets");
         return assets;
     }
 
@@ -1710,10 +1731,11 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         // The bound program continues while native timeZone carries an active destination marker.
         boolean activePeriod = gates.timeZone() >= 0x80 && gates.timeZone() <= 0x82;
         int ordinaryPeriod = pastSource == null ? 1 : pastSource.ordinaryPeriod();
-        if (gates.zoneAct() != 0 || (gates.timeZone() != ordinaryPeriod && !activePeriod)) {
+        int ordinaryZoneAct = pastSource == null ? 0 : pastSource.stage().actNumber() - 1;
+        if (gates.zoneAct() != ordinaryZoneAct || (gates.timeZone() != ordinaryPeriod && !activePeriod)) {
             throw new UnsupportedFrame(UnsupportedBoundary.SOURCE_FAMILY, pastSource == null
                     ? "Only the bound R11A present/active-warp program is admitted"
-                    : "Only the bound R11B past/active-warp program is admitted");
+                    : "Only the bound source's actual native act and ordinary/active-warp period are admitted");
         }
     }
     private static void requireSupportedPhase(PlcLifecyclePhase phase) {

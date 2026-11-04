@@ -16,7 +16,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /**
- * One source-bound PPZ1 normal-sized MODE call (Main.asm:675-776), plus the shared
+ * One source-bound PPZ normal-sized MODE call (Main.asm:675-776), plus the shared
  * native collision and level-bound subroutine ports used by Hurt.
  * Source pin: 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. FixBugs=0 semantics;
  * no repaired sign asymmetry, byte/word overflow, skid-register or high-memory-byte Y read.
@@ -45,7 +45,7 @@ public final class CdPlayerMovement {
     public record Bounds(int left, int right, int bottom, int bossFight) {
         public Bounds { wordValue(left); wordValue(right); wordValue(bottom); byteValue(bossFight); }
     }
-    /** Native globals, not safe-work booleans. PPZ1 ordinary source periods are Present1/Past0, zoneAct0. */
+    /** Native globals; the full raw zoneAct WORD/period must match the actual bound source. */
     public record Gates(int zoneAct, int timeZone, int miniSonic, int waterSlide,
                         int windTunnel, int speedShoes, int timeWarpDirection) {
         public Gates {
@@ -202,6 +202,8 @@ public final class CdPlayerMovement {
 
     private final CdAssetBytes layout;
     private final int ordinaryPeriod;
+    // Immutable source metadata, not a captured/global act or permission for other native act branches.
+    private final int ordinaryZoneAct;
     private final CdR11aPlayerAssets assets;
     private final CdPlayerTerrain terrain;
     private final CdPlayerMath math;
@@ -214,12 +216,14 @@ public final class CdPlayerMovement {
         math = new CdPlayerMath(assets);
         ground = new CdPlayerGroundCollision(this.terrain);
         layout = terrainData.layout().ram(); ordinaryPeriod = 1;
+        ordinaryZoneAct = 0;
     }
 
     private CdPlayerMovement(CdStagePlayerSource source) {
         Objects.requireNonNull(source, "stage player source");
         var terrainData = source.terrain();
         assets = source.player(); layout = terrainData.layout().ram(); ordinaryPeriod = source.ordinaryPeriod();
+        ordinaryZoneAct = source.stage().actNumber() - 1;
         terrain = CdPlayerTerrain.fromStageTerrain(terrainData);
         math = new CdPlayerMath(assets); ground = new CdPlayerGroundCollision(terrain);
     }
@@ -286,7 +290,7 @@ public final class CdPlayerMovement {
         if (state.animation() == 0x2B) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
         int period = environment.gates().timeZone();
         boolean activePeriod = period >= 0x80 && period <= 0x82;
-        if (environment.gates().zoneAct() != 0 || (period != ordinaryPeriod && !(stopAtTimeWarp && activePeriod))) {
+        if (environment.gates().zoneAct() != ordinaryZoneAct || (period != ordinaryPeriod && !(stopAtTimeWarp && activePeriod))) {
             unsupported(UnsupportedBoundary.SOURCE_FAMILY);
         }
         if (environment.gates().miniSonic() != 0) unsupported(UnsupportedBoundary.MINIATURE);

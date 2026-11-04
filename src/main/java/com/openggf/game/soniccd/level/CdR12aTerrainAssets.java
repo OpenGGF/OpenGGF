@@ -31,6 +31,7 @@ public final class CdR12aTerrainAssets {
     private final CdNemesisAsset.Decoded blocks, tiles;
     private final CdStageTerrain terrain;
     private final CdR12aLoadPlan plan;
+    private CdR12aObjectAssets objects;
     private CdR12aTerrainAssets(Identity identity, CdR12aProfile profile, CdMmdImage image, CdNemesisAsset.Decoded blocks,
                                  CdNemesisAsset.Decoded tiles, CdStageTerrain terrain, CdR12aLoadPlan plan) {
         this.identity = identity; this.profile = profile; this.image = image; this.blocks = blocks;
@@ -58,6 +59,11 @@ public final class CdR12aTerrainAssets {
         var plan = CdR12aLoadPlan.decode(profile, image);
         return new CdR12aTerrainAssets(new Identity(profile.variant(), profile.stage(), profile.file(), profile.domain(),
                 profile.expectedMmdSha256(), programs.identity().normalizedSha256()), profile, image, blocks, tiles, terrain, plan);
+    }
+    /** Lazy detached metadata binding to this actual authenticated immutable image; no decoder/service runs. */
+    public synchronized CdR12aObjectAssets objects() {
+        if (objects == null) objects = new CdR12aObjectAssets(this, image);
+        return objects;
     }
     public Identity identity() { return identity; }
     public CdR12aProfile profile() { return profile; }

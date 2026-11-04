@@ -883,4 +883,78 @@ class TestCdR11aForegroundScroll {
         assertEquals(0x710, setup.destBottomBound());
         assertEquals(0x2222BEEF, before.cameraY16_16());
     }
+
+    // BEGIN explicit PPZ2 event routine. Native component vectors only; ALL appended Java UNRUN.
+    @Test void ppz2PresentInitialSourceTupleKeepsItsOwnNativeBottomAndCameraCentre() {
+        // Act2 Present Scroll:44-45,139-140; SetupCamera subtracts160/96 from centre($50,$185).
+        var before=new State(0,0x01250000,0x10,0x10,0,0,0,0x310,0,0,0);
+        var in=new Input(new Actor(0x50,0x185,0,0,0,0),bounds(0,0x2897,0x310),0,0xA0,0x60,CdReleaseVariant.USA,0,320,224);
+        var result=stepForPeriodBackground(before,in,1,EventRoutine.PPZ2);
+        assertEquals(new Result(before,in.bounds(),0x60,Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND),result);assertSame(in.bounds(),result.bounds());
+        assertEquals(0x310,before.destBottomBound());assertEquals(0x125,before.cameraYWord());
+    }
+    @Test void ppz2RealPresentByteSkipsPpz1RampCentreAndHudLeftLockWithoutChangingRawInput() {
+        var before=new State(0x1B76,0x01000000,0x43,0x54,0x1111,0x2222,0xF5A5,0x777,0x123,0x007A,0);
+        var in=withHud(withBounds(withActor(input(0x1C16,0x160),new Actor(0x1C16,0x160,0,0,0,2)),bounds(7,0x2897,0x710)),0xFF);
+        var result=stepForPeriodBackground(before,in,1,EventRoutine.PPZ2);
+        assertEquals(new Result(new State(0x1B76,0x01000000,0x43,0x54,0,0,0,0x310,0x123,0x007A,0),bounds(7,0x2897,0x70C),0x60,Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND),result);
+        var old=stepForPeriodBackground(before,in,1);assertEquals(0x88,old.cameraYCentre());assertEquals(0x820,old.bounds().left());
+        assertEquals(0xFF,in.sourceHudTimeActive());assertEquals(7,in.bounds().left());assertEquals(2,in.actor().playerControl());assertEquals(0x60,in.cameraYCentre());
+    }
+    @Test void ppz2DoesNotReadPeriodOrResetAnAlreadyChangedCameraCentre() {
+        var before=new State(0x200,0x01000000,0x43,0x54,0xBEEF,0xCAFE,0xF5A5,0x777,0xBEEF,0x007A,0);
+        var in=new Input(new Actor(0x2A0,0x188,0,0,0,2),bounds(0x123,0x2897,0x710),0,0xA0,0x88,CdReleaseVariant.USA,0xFF,320,224);
+        var expected=new Result(new State(0x200,0x01000000,0x43,0x54,0,0,0,0x310,0xBEEF,0x007A,0),bounds(0x123,0x2897,0x70C),0x88,Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND);
+        for(int raw=0;raw<=255;raw++)assertEquals(expected,stepForPeriodBackground(before,in,raw,EventRoutine.PPZ2),"raw BYTE "+raw);
+        assertEquals(0x777,before.destBottomBound());assertEquals(0x88,in.cameraYCentre());
+    }
+    @Test void ppz2CommonBoundConvergenceKeepsUsaBeforeMovementAndJapanEuropeAfterMovement() {
+        var before=state(0x200,0x03100000);var in=withBounds(input(0x2A0,0x380),bounds(0,0x2897,0x400));
+        var expected=new State(0x200,0x03160000,0x10,0,0,0x0600,0x0200,0x310,0,0x0100,0);
+        assertEquals(new Result(expected,bounds(0,0x2897,0x3FC),0x60,Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND),stepForPeriodBackground(before,in,1,EventRoutine.PPZ2));
+        for(var region:List.of(CdReleaseVariant.JAPAN,CdReleaseVariant.EUROPE))assertEquals(new Result(expected,bounds(0,0x2897,0x312),0x60,Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND),stepForPeriodBackground(before,withRegion(in,region),1,EventRoutine.PPZ2));
+        assertEquals(0x400,in.bounds().bottom());
+    }
+    @Test void ppz2GiveUpOverridesDefaultAtTheSameRegionalCameraCutWithoutASecondIntegration() {
+        var before=withShift(state(0x200,0x01001234),0x007A);var in=withActor(input(0x2A0,0x170),new Actor(0x2A0,0x170,0,0,0x2B,0));
+        var usa=stepForPeriodBackground(before,in,1,EventRoutine.PPZ2);assertEquals(0x01001234,usa.state().cameraY16_16());assertEquals(0x100,usa.bounds().bottom());assertEquals(0x100,usa.state().destBottomBound());assertEquals(0,usa.state().scrollYDiff());assertEquals(0x007A,usa.state().bottomBoundShift());
+        for(var region:List.of(CdReleaseVariant.JAPAN,CdReleaseVariant.EUROPE)) {
+            var late=stepForPeriodBackground(before,withRegion(in,region),1,EventRoutine.PPZ2);assertEquals(0x01061234,late.state().cameraY16_16());assertEquals(0x106,late.bounds().bottom());assertEquals(0x106,late.state().destBottomBound());assertEquals(0x0600,late.state().scrollYDiff());assertEquals(0x007A,late.state().bottomBoundShift());
+        }
+    }
+    @Test void ppz2CommonShiftPreservesUnsignedOvershootAndNearBottomAirSpeed() {
+        var before=new State(0x200,0x03000000,0x43,0x54,0x1234,0xABCD,0xF5A5,0x777,0x55,0x007A,0);
+        for(int[] v:new int[][]{{0x310,0x310},{0x314,0x310},{0x312,0x30E},{0x30E,0x312},{0x8000,0x7FFC}}) {
+            var in=withBounds(input(0x2A0,0x360),bounds(0,0x2897,v[0]));var result=stepForPeriodBackground(before,in,1,EventRoutine.PPZ2);
+            assertEquals(new State(0x200,0x03000000,0x43,0x54,0,0,0,0x310,0x55,0x007A,0),result.state());assertEquals(bounds(0,0x2897,v[1]),result.bounds());assertEquals(v[0],in.bounds().bottom());
+        }
+        var ground=withBounds(input(0x2A0,0x360),bounds(0,0x2897,0x2FC));var air=withActor(ground,new Actor(0x2A0,0x360,2,0,0,0));
+        assertEquals(0x300,stepForPeriodBackground(before,ground,1,EventRoutine.PPZ2).bounds().bottom());assertEquals(0x30C,stepForPeriodBackground(before,air,1,EventRoutine.PPZ2).bounds().bottom());
+    }
+    @Test void explicitPpz1SelectionPreservesAllCompatibilityEntriesAcrossNativePeriodsAndRegions() {
+        State[] states={state(0x200,0x01001234),state(0x830,0x01000000),state(0xDF0,0x01000000),new State(0x234,0x0300ABCD,0x43,0x54,0xBEEF,0xCAFE,0xF5A5,0x777,0x123,0xA57A,0xB612)};
+        Input[] inputs={input(0x2A0,0x163),withHud(input(0xA00,0x180),0xFF),withBounds(input(0x1000,0x160),bounds(0,0x2897,0x410)),withActor(input(0x1C16,0x500),new Actor(0x1C16,0x500,2,-32768,0x2B,2))};
+        for(int i=0;i<states.length;i++)for(var region:CdReleaseVariant.values()) {
+            var in=withRegion(inputs[i],region);assertEquals(stepForBackground(states[i],in),stepForPeriodBackground(states[i],in,1,EventRoutine.PPZ1));
+            for(int raw:new int[]{0,1,2,0x80,0x81,0x82,0xFF})assertEquals(stepForPeriodBackground(states[i],in,raw),stepForPeriodBackground(states[i],in,raw,EventRoutine.PPZ1));
+        }
+        assertEquals(List.of(EventRoutine.PPZ1,EventRoutine.PPZ2),List.of(EventRoutine.values()));
+    }
+    @Test void explicitEventsKeepLockWidthViewportAndNullAdmissionWithoutMutatingInputs() {
+        var before=new State(0x200,0x0100BEEF,0x43,0x54,0x1234,0xABCD,0xF5A5,0x777,0x123,0xA57A,0x0101);var in=withActor(input(0x1C16,0x300),new Actor(0x1C16,0x300,2,-32768,0x2B,2));
+        for(var event:EventRoutine.values()) {
+            var locked=stepForPeriodBackground(before,in,1,event);assertSame(before,locked.state());assertSame(in.bounds(),locked.bounds());assertEquals(Boundary.SCROLL_LOCKED,locked.boundary());
+            for(int bad:new int[]{-1,0x100,Integer.MIN_VALUE,Integer.MAX_VALUE})assertThrows(IllegalArgumentException.class,()->stepForPeriodBackground(before,in,bad,event));
+            assertThrows(NullPointerException.class,()->stepForPeriodBackground(null,in,1,event));assertThrows(NullPointerException.class,()->stepForPeriodBackground(before,null,1,event));
+            var wide=new Input(in.actor(),in.bounds(),in.topBound(),in.cameraXCentre(),in.cameraYCentre(),in.region(),in.sourceHudTimeActive(),424,224);assertThrows(IllegalArgumentException.class,()->stepForPeriodBackground(before,wide,1,event));
+        }
+        assertThrows(NullPointerException.class,()->stepForPeriodBackground(before,in,1,null));assertEquals(0x777,before.destBottomBound());assertEquals(0x710,in.bounds().bottom());
+    }
+    @Test void ppz2PresentSelectionRetainsExactUnownedTopBottomWrapStops() {
+        var topState=state(0x200,0xFF060000);var top=withRegion(withActor(input(0x2A0,0xFF60),new Actor(0x2A0,0xFF60,0,0,0,2)),CdReleaseVariant.JAPAN);
+        assertEquals(UnsupportedBoundary.TOP_WRAP_ACTOR_AND_BACKGROUND,assertThrows(UnsupportedScroll.class,()->stepForPeriodBackground(topState,top,1,EventRoutine.PPZ2)).boundary());assertEquals(0xFF060000,topState.cameraY16_16());
+        var bottomState=state(0x200,0x07FA1234);var bottom=withRegion(withBounds(withActor(input(0x2A0,0x900),new Actor(0x2A0,0x900,0,0,0,2)),bounds(0,0x2897,0x700)),CdReleaseVariant.JAPAN);
+        assertEquals(UnsupportedBoundary.BOTTOM_WRAP_ACTOR_AND_BACKGROUND,assertThrows(UnsupportedScroll.class,()->stepForPeriodBackground(bottomState,bottom,1,EventRoutine.PPZ2)).boundary());assertEquals(0x07FA1234,bottomState.cameraY16_16());assertEquals(0x700,bottom.bounds().bottom());
+    }
+    // END explicit PPZ2 event routine.
 }

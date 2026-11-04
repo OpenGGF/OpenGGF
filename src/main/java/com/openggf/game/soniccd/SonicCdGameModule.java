@@ -583,7 +583,7 @@ public final class SonicCdGameModule implements GameModule {
 
     enum ProgramStartCall {
         LOAD_LEVEL_PCM, WRITE_VERSION_CACHE, WRITE_INIT_MARKER, INIT_VDP,
-        INIT_CONTROLLERS, DECLARED_BEGIN_LEVEL_INGRESS
+        INIT_CONTROLLERS, DECLARED_BEGIN_LEVEL_INGRESS, CLEAR_MAIN_VARIABLES
     }
     record ProgramServicesState(SonicCdProgramLoadServices.State loads,
                                 CdProgramInitialization.State initialization,
@@ -616,8 +616,10 @@ public final class SonicCdGameModule implements GameModule {
 
     /**
      * Earlier explicitly selected DEV ingress. Actual immutable A media has already been
-     * authenticated; source-backed PCM adoption precedes Start (SPX:745-773 at N1ecc5f3a).
-     * Initialization:56-80 then performs its real finite branch and presentation outputs.
+     * authenticated. Its extended cold prelude first projects the authenticated MDINIT
+     * MAINVARS clear (MDINIT.Start25-30, also IPX.Start32-37), then adopts PCM before
+     * level Start (SPX:745-773 at N1ecc5f3a). Initialization:56-80 performs its finite branch
+     * and presentation outputs. Omitted MDINIT/BIOS/Title work is not declared complete.
      * No BIOS/CPU/VDP protocol, driver update, input, clock or gameplay executes here.
      * The later A BeginLevel remains an explicit constructed cut, not a retail boot claim.
      */
@@ -635,6 +637,12 @@ public final class SonicCdGameModule implements GameModule {
             return; // Actual same-program death/checkpoint entry jumps to LevelStart, not Start.
         }
         programWorld = world; // Consume this new-program attempt before its first fallible source operation.
+        // This actual named prelude is earlier than the old level Start cut. Authenticate
+        // the retained original source before the first clear projection; no file instructions,
+        // FM installation, hardware protocol, input, video or clock work execute here.
+        requireColdMainVariableSource(candidate);
+        var cleared = CdProgramInitialization.clearMainVariables(programServices.initialization());
+        programServices = withProgramCall(ProgramStartCall.CLEAR_MAIN_VARIABLES, programServices.loads(), cleared);
         var required = candidate.timeWarpPrograms().orElseThrow(
                 () -> new IllegalStateException("Named program Start requires its authenticated PCM source"));
         SonicCdProgramLoadServices.State loaded;
@@ -665,6 +673,19 @@ public final class SonicCdGameModule implements GameModule {
         programServices = withProgramCall(ProgramStartCall.INIT_CONTROLLERS, programServices.loads(), controls);
     }
 
+    /** Existing asset factory authenticates all original MDINIT bytes/header; the Module checks its actual join. */
+    private void requireColdMainVariableSource(CdGameDataSource candidate) {
+        var mdInit = candidate.fmSoundAssets().orElseThrow(
+                () -> new IllegalStateException("Cold MAINVARS clear requires its authenticated MDINIT source"));
+        var stamp = mdInit.source(); var binding = candidate.assets().identity();
+        if (stamp.variant() != CdReleaseVariant.USA || stamp.file() != CdNativeFile.MDINIT
+                || binding.variant() != CdReleaseVariant.USA || candidate.release().variant() != CdReleaseVariant.USA
+                || !stamp.wholeDiscSha256().equals(binding.observedWholeDiscSha256())
+                || !stamp.wholeDiscSha256().equals(candidate.release().normalizedSha256())
+                || !stamp.mdinitSha256().equals("abd4735cb55aac797402d611b6d732276f02f1394ef39e7e1af6cd9dbd6fdf7e"))
+            throw new IllegalArgumentException("Cold MAINVARS clear source differs from the actual original USA stage/disc");
+    }
+
     private void validateProgramServicesState(ProgramServicesState value) {
         Objects.requireNonNull(value, "program service capture");
         if (!coldProgramStartAdmission) {
@@ -681,7 +702,10 @@ public final class SonicCdGameModule implements GameModule {
         var init = value.initialization();
         if (init.controllerSetupBit() != CdProgramInitialization.KnownBit.SET
                 || init.initMarker() != CdProgramInitialization.MarkerKnowledge.EQUALS_INIT
-                || init.versionCache().knownBits() != 0xFF) {
+                || init.versionCache().knownBits() != 0xFF
+                || init.palClearFlagBit0() != CdProgramInitialization.KnownBit.CLEAR
+                || value.completedCalls().isEmpty() || value.completedCalls().getFirst() != ProgramStartCall.CLEAR_MAIN_VARIABLES
+                || value.completedCalls().stream().filter(call -> call == ProgramStartCall.CLEAR_MAIN_VARIABLES).count() != 1) {
             throw new IllegalArgumentException("A healthy named DEV cut requires its actually completed Start facts");
         }
     }
@@ -1246,7 +1270,7 @@ public final class SonicCdGameModule implements GameModule {
     /** Private USA R11A DEV ingress; stock registry/configuration/menu remain unchanged. */
     public static SonicCdGameModule openingObjectsDevelopmentPlayer() { return new SonicCdGameModule(true, true); }
 
-    /** Earlier named DEV inputs, not completed boot defaults; execution happens in the actual load. */
+    /** Earlier named DEV inputs; the actual load executes the bounded MDINIT-clear/level-Start prelude, not a full boot. */
     static SonicCdGameModule openingObjectsDevelopmentPlayerFromColdProgramStart(
             CdProgramInitialization.ExecutionEnvironment explicitEnvironment) {
         return new SonicCdGameModule(true, true, Objects.requireNonNull(explicitEnvironment, "explicit execution environment"));

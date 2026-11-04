@@ -49,6 +49,8 @@ SONIC_RAMP_CHUNKS 45a4 6 203fe6a5ab55693db5a4daca78171984996c54a85119395dbd59d5f
 SPEC_CHUNKS 2a1c 4 674d922d5583edfb5fba68eb6619dd121fe0387c3bbf2e0504d95420827b2f2f
 SINE_TABLE 872 640 bbde7b84eb90b56a2425842a67a0ff0316b3f3b0ff49b956f9b86c1267d75bb9
 ARC_TAN_TABLE b58 258 7d0ff986365e0596080368cab93935822e1f39220f50071db5dd075c0cabe66f
+BG_CAMERA_SECT_IDS 3428 34 81e548cbfa2e4fc9719ba3b2009a8abb80bd2a54e3f3e8ec2187589e62e4801c
+BG_CAMERA_SECTS 344a 16 2f5b9f478f4f44230ea76cb1574eca41017e2b09e378ea1be295aaef5f9cc6a1
             """;
 
     @Test void actualCatalogueAndWholeOriginalFileOwnDetachedAct2PlayerAndVisualValues() throws Exception {
@@ -62,9 +64,9 @@ ARC_TAN_TABLE b58 258 7d0ff986365e0596080368cab93935822e1f39220f50071db5dd075c0c
         assertNotEquals(MMD, CdR11aProfile.sha256(f.present1().readFile(0, 262144)));
     }
 
-    @Test void complete26RowProfilePreservesOriginal17DescriptorsAndPinsAllNineNewRawSpans() throws Exception {
+    @Test void profilePreservesTheOriginal28DescriptorsAndPinsItsHistoricalElevenTailSpans() throws Exception {
         var a = retail().assets(); var all = CdR12aProfile.Asset.values(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(26, all.length); assertEquals(9, rows.size()); var prefix = new StringBuilder();
+        assertEquals(88, all.length); assertEquals(11, rows.size()); var prefix = new StringBuilder();
         for (int i = 0; i < 17; i++) prefix.append(all[i].name()).append(' ').append(Integer.toHexString(all[i].fileOffset()))
                 .append(' ').append(all[i].length()).append('\n');
         assertEquals("1e096a08addb1fb4dbfefbfe2467149e5f0b6f7fe3b215263554876e94eba102", hash(prefix));

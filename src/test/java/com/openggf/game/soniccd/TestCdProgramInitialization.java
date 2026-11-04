@@ -13,11 +13,12 @@ import static com.openggf.game.soniccd.CdProgramInitialization.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Source-derived, media-free initialization oracles, frozen before production.
- * All checks are UNRUN by this author; Root owns the missing-API RED and R2.
+ * Source-derived, media-free initialization and fixed MAINVARS-clear value oracles.
+ * All new/changed Java checks are UNRUN by this author; Root owns integration and validation.
  * J b25e62cb94a2f3d7599bb0330e323373fde5e2d0;
  * N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
- * src/Level/Initialization.asm:56-80; Functions (General).asm:39-47.
+ * src/CD Initial Program/IPX.asm:32-37; Mega Drive Init/Main.asm:25-30;
+ * Level/Initialization.asm:56-80; Functions (General).asm:39-47.
  * These pure values establish no actual program, presentation or input readiness.
  */
 class TestCdProgramInitialization {
@@ -231,15 +232,15 @@ class TestCdProgramInitialization {
         assertTrue(VersionCache.class.isRecord());
         assertTrue(ExecutionRegion.class.isRecord());
         assertTrue(ExecutionEnvironment.class.isRecord());
-        assertEquals(List.of("controllerSetupBit", "initMarker", "versionCache"),
+        assertEquals(List.of("controllerSetupBit", "initMarker", "versionCache", "palClearFlagBit0"),
                 Arrays.stream(State.class.getRecordComponents()).map(component -> component.getName()).toList());
-        assertEquals(List.of(KnownBit.class, MarkerKnowledge.class, VersionCache.class),
+        assertEquals(List.of(KnownBit.class, MarkerKnowledge.class, VersionCache.class, KnownBit.class),
                 Arrays.stream(State.class.getRecordComponents()).map(component -> component.getType()).toList());
         assertEquals(List.of(KnownBit.UNKNOWN, KnownBit.CLEAR, KnownBit.SET), List.of(KnownBit.values()));
         assertEquals(List.of(MarkerKnowledge.UNKNOWN, MarkerKnowledge.EQUALS_INIT, MarkerKnowledge.DIFFERS_FROM_INIT),
                 List.of(MarkerKnowledge.values()));
         assertEquals(List.of(Branch.DO_INIT, Branch.GAME_INIT), List.of(Branch.values()));
-        assertEquals(List.of(Read.CONTROLLER_SETUP_BIT, Read.INIT_MARKER, Read.EXECUTION_REGION), List.of(Read.values()));
+        assertEquals(List.of(Read.CONTROLLER_SETUP_BIT, Read.INIT_MARKER, Read.EXECUTION_REGION, Read.PAL_CLEAR_FLAG_BIT0), List.of(Read.values()));
     }
 
     @Test
@@ -256,8 +257,67 @@ class TestCdProgramInitialization {
         assertThrows(NullPointerException.class, () -> writeVersionCache(valid, null));
         assertThrows(NullPointerException.class, () -> writeInitMarker(null));
         assertThrows(NullPointerException.class, () -> initializeControllers(null));
+        assertThrows(NullPointerException.class, () -> new State(KnownBit.CLEAR, MarkerKnowledge.UNKNOWN, UNKNOWN_CACHE, null));
+        assertThrows(NullPointerException.class, () -> clearMainVariables(null));
+        assertThrows(NullPointerException.class, () -> requirePalClearFlagBit0(null));
         assertEquals(new State(KnownBit.CLEAR, MarkerKnowledge.UNKNOWN, UNKNOWN_CACHE), valid);
     }
 
     private record BranchCase(KnownBit controller, MarkerKnowledge marker, Branch branch, Read missing) { }
+    @Test
+    void nativeMainVariableClearZerosAllRepresentedInRangeFactsAndPreservesEveryIoKnowledgeValue() {
+        // Literal source projection: [FF0F00,FF2000), DBF043F/1088 LONGs.
+        // FF0F22, FF1586 and FF158A..158D are covered; IOCTRL3 bit6 is outside.
+        for (KnownBit io : KnownBit.values()) {
+            State before = new State(io, MarkerKnowledge.EQUALS_INIT, new VersionCache(0xFF, 0xFF), KnownBit.SET);
+            State expected = new State(io, MarkerKnowledge.DIFFERS_FROM_INIT, new VersionCache(0, 0xFF), KnownBit.CLEAR);
+            State after = clearMainVariables(before);
+            assertEquals(expected, after); assertEquals(expected.hashCode(), after.hashCode());
+            assertSame(io, after.controllerSetupBit()); assertFalse(requirePalClearFlagBit0(after));
+            assertEquals(new State(io, MarkerKnowledge.EQUALS_INIT, new VersionCache(0xFF, 0xFF), KnownBit.SET), before);
+            assertEquals(after, clearMainVariables(after), "Pure repeated value calculation is not actual execution authority");
+            if (io == KnownBit.UNKNOWN)
+                assertEquals(Read.CONTROLLER_SETUP_BIT, assertThrows(UnknownRead.class, () -> selectStartBranch(after)).read());
+            else assertEquals(Branch.DO_INIT, selectStartBranch(after));
+        }
+    }
+
+    @Test
+    void compatibilityAndUnknownConstructionCannotClaimTheEarlierMainVariableClear() {
+        State legacy = new State(KnownBit.CLEAR, MarkerKnowledge.UNKNOWN, PARTIAL_CACHE);
+        assertEquals(KnownBit.UNKNOWN, legacy.palClearFlagBit0());
+        assertEquals(new State(KnownBit.CLEAR, MarkerKnowledge.UNKNOWN, PARTIAL_CACHE, KnownBit.UNKNOWN), legacy);
+        assertEquals(KnownBit.UNKNOWN, unknown().palClearFlagBit0());
+        assertEquals(Read.PAL_CLEAR_FLAG_BIT0, assertThrows(UnknownRead.class, () -> requirePalClearFlagBit0(legacy)).read());
+        State later = initializeControllers(writeInitMarker(writeVersionCache(legacy, new ExecutionRegion(0x80))));
+        assertEquals(Branch.GAME_INIT, selectStartBranch(later)); assertEquals(KnownBit.UNKNOWN, later.palClearFlagBit0());
+        assertEquals(Read.PAL_CLEAR_FLAG_BIT0, assertThrows(UnknownRead.class, () -> requirePalClearFlagBit0(later)).read());
+    }
+
+    @Test
+    void existingIndependentWritersRetainKnownClearSetAndUnknownPaletteKnowledgeWithoutSourceAuthority() {
+        // SET is constructed component data only. No special-stage World or native writer is claimed.
+        for (KnownBit flag : KnownBit.values()) {
+            State before = new State(KnownBit.CLEAR, MarkerKnowledge.DIFFERS_FROM_INIT, PARTIAL_CACHE, flag);
+            assertEquals(new State(KnownBit.CLEAR, MarkerKnowledge.DIFFERS_FROM_INIT, new VersionCache(0x80, 0xFF), flag),
+                    writeVersionCache(before, new ExecutionRegion(0x80)));
+            assertEquals(new State(KnownBit.CLEAR, MarkerKnowledge.EQUALS_INIT, PARTIAL_CACHE, flag), writeInitMarker(before));
+            assertEquals(new State(KnownBit.SET, MarkerKnowledge.DIFFERS_FROM_INIT, PARTIAL_CACHE, flag), initializeControllers(before));
+            assertEquals(new State(KnownBit.CLEAR, MarkerKnowledge.DIFFERS_FROM_INIT, PARTIAL_CACHE, flag), before);
+        }
+    }
+
+    @Test
+    void paletteBitReachedReadAndValueEqualityKeepUnknownClearAndSetDistinct() {
+        State unknown = new State(KnownBit.SET, MarkerKnowledge.EQUALS_INIT, PARTIAL_CACHE, KnownBit.UNKNOWN);
+        State clear = new State(KnownBit.SET, MarkerKnowledge.EQUALS_INIT, PARTIAL_CACHE, KnownBit.CLEAR);
+        State set = new State(KnownBit.SET, MarkerKnowledge.EQUALS_INIT, PARTIAL_CACHE, KnownBit.SET);
+        assertEquals(Read.PAL_CLEAR_FLAG_BIT0, assertThrows(UnknownRead.class, () -> requirePalClearFlagBit0(unknown)).read());
+        assertFalse(requirePalClearFlagBit0(clear)); assertTrue(requirePalClearFlagBit0(set));
+        assertEquals(3, Set.of(unknown, clear, set).size());
+        assertEquals(clear, new State(KnownBit.SET, MarkerKnowledge.EQUALS_INIT, new VersionCache(0x40, 0x40), KnownBit.CLEAR));
+        assertEquals(KnownBit.UNKNOWN, unknown.palClearFlagBit0()); assertEquals(KnownBit.CLEAR, clear.palClearFlagBit0());
+        assertEquals(KnownBit.SET, set.palClearFlagBit0());
+    }
+
 }
