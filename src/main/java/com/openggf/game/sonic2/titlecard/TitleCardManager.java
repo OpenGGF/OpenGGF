@@ -266,6 +266,13 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
      */
     private static final int ZONE_TILE_DMA_CHUNK_BYTES = 0x1000;
 
+    /**
+     * The single {@code WaitForVint} after the exit test of
+     * {@code Level_TtlCard} (docs/s2disasm/s2.asm:4914-4927), ahead of the
+     * {@code Hud_Base} call.
+     */
+    private static final int LEVEL_TTLCARD_EXIT_VBLANKS = 1;
+
     /** Remaining LoadZoneTiles {@code dbf} iterations, one VBlank each (s2.asm:6519). */
     private int zoneTileUploadFramesLeft = 0;
 
@@ -846,19 +853,21 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     }
 
     /**
-     * Leaves {@code Level_TtlCard} the way the ROM does: straight into
-     * {@code bsr.w LoadZoneTiles} (docs/s2disasm/s2.asm:4938), ahead of any of
-     * the leave sequence.
+     * Leaves the locked loop the way the ROM does, ahead of any of the leave
+     * sequence. Its exit falls through to one more {@code VintID_TitleCard}
+     * {@code WaitForVint} before {@code Hud_Base}, in
+     * {@code Level_TtlCard} (docs/s2disasm/s2.asm:4914-4927), and only then
+     * calls {@code LoadZoneTiles} (docs/s2disasm/s2.asm:6471-6524), whose DMA
+     * loop waits once per chunk. That exit wait is a V-int of its own: counting
+     * it as the first chunk put the players' first object pass one V-int before
+     * the last chunk.
      */
     private void enterZoneTileUpload() {
         state = TitleCardState.ZONE_TILE_UPLOAD;
         stateTimer = 0;
-        zoneTileUploadFramesLeft = zoneTileUploadVBlanks();
+        zoneTileUploadFramesLeft = LEVEL_TTLCARD_EXIT_VBLANKS + zoneTileUploadVBlanks();
         LOGGER.fine("Title card entered ZONE_TILE_UPLOAD state at frame " + frameCounter
                 + " for " + zoneTileUploadFramesLeft + " VBlank(s)");
-        if (zoneTileUploadFramesLeft <= 0) {
-            enterLeftSwooshExit();
-        }
     }
 
     /**
