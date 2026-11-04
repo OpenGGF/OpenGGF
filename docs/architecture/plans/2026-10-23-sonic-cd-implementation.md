@@ -1,5 +1,36 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — live Past Robot/Explosion and healthy controller9000
+
+Private f7deff058 plus five owned Java changes joins native Robot2D and B Explosion18
+to the existing same-Frame, placement, shared Solid, score and current-art owners.
+Private invocation/cursor checks preflight actual full96/source/pair and ready
+publications. GoodFuture1 precedes selected AddPoints150 and genuine Solid/GetOff;
+FM9E/D9 and optional existing one-up metadata preserve source order. Two B mapping
+roots reuse existing70-tile art; no queue, region, client or capture owner is added.
+
+Source-bound97780 passes166/27classes,0failures/errors/skips, unchanged fingerprint
+2fc9663fd48a4e068cd87c239bde2d90a18d3c4cabb4c8125916e0105f4ec631,
+15:51:55.607986–15:53:39.355168Z/103.75s execution,3s queue,102s compile. Four new
+World cases cover actual8277 Init/8278 Main with full/course replay; fixed hit
+publication; earlier/later dirty explosion allocations; timer and finite-failure
+prefixes. Fixed hit ingress is not natural scanner contact or changed standing.
+Stopped-Solid World reach and extra-life World publication remain open. Independent
+static review found no P1/P2; it did not execute tests.
+
+Source-bound29891 passes2 focused cases,0failures/errors/skips, unchanged fingerprint
+7da45798fdd3f8b5bfe413a2af08e9a62882b5b9ee83097d6247c16c69bdd8c0,
+16:07:32.635382–16:07:41.727017Z/9.09s execution,3s queue,37.467s compile. The
+permanent five-jump route compares complete full/course state before and after
+8084,8085,8276 and9000. Healthy9000 is circling nearX8563 with negative ground
+velocity, not spatial progress or act completion. One temporary additional jump
+at measured grounded8276 also reaches9000 but settles nearX8632. Observer removed
+after retained-safe diagnostics were recorded externally. Production predates166;
+only the permanent route changed before2. No combined168/full-suite/native-parity
+claim. Fresh identities/environment/source checks inspected; owned reports consumed.
+No new framebuffer, audio, act-end or regional claim. Main untouched; no push.
+
+
 Date: 2026-10-23; source pause 26 October; delivery 27 October; resumed 28 October; latest local qualification4November2026. Status: partial implementation, not complete game support.
 Design: [fourth-game architecture](../designs/2026-10-23-sonic-cd-fourth-game.md).
 Engine baseline: `b979916808b7f9379ede2b5dcdde1bcdc8bf8357`.

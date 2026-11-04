@@ -145,7 +145,10 @@ Unreleased. The earlier development themes remain in
   Selected Robot Generator and Past Explosion components now share the existing
   Solid, animation and current-art owners. A pure selected AddPoints entry reuses
   the original score arithmetic and ordered one-up request, preserving existing
-  touch-response behavior; their live World join is still separate work.
+  touch-response behavior. Cached Past World bodies now publish immediate goal-future,
+  score, Solid and ordered explosion-child effects through the existing owners.
+  The unchanged five-jump controller replays through the healthy9000 bound; this
+  loops within terrain and does not certify the act exit or further level distance.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

@@ -5,8 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
-import java.nio.ByteBuffer;
-import java.util.List;
 
 import static com.openggf.game.soniccd.TestSonicCdPastLoadingWorld.*;
 import static com.openggf.game.soniccd.TestSonicCdPastRingWorld.*;
@@ -15,11 +13,10 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Ordinary unchanged five-jump controller route, measured4November2026.
- * Full/course8083->8084,8084->8085 and8275->8276 compare complete represented
- * native state BEFORE forwarding. Increasing32..127 dispatch identifies the
- * unvisited Robot Generator32; the public failure exposes only DYNAMIC_OBJECTS.
- * Native comparison values never seed gameplay. No framebuffer/audio/parity claim.
+ * Unchanged five-jump ordinary controller through the measured healthy9000 bound.
+ * Complete full/course state is compared before and after forwarded8084,8085,8276,9000.
+ * The final bound is not an act end or a claim of further spatial progress: Sonic
+ * circulates near X8.5k with the same owners. All comparison values are read-only.
  */
 @Isolated
 class TestSonicCdPastControllerRoute {
@@ -27,7 +24,7 @@ class TestSonicCdPastControllerRoute {
     @BeforeEach void setup() { fixture.setup(); }
     @AfterEach void cleanup() { fixture.cleanup(); }
 
-    @Test void unchangedControllerReturns8276ReplaysAndRetainsTheRobotGeneratorPrefix() throws Exception {
+    @Test void unchangedControllerReturns9000AndReplaysCompleteRobotAndFinalCuts() throws Exception {
         var p = ready(); var h = p.harness(); var frame = p.frame();
         var world = h.mode().getWorldSession();
         long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
@@ -67,24 +64,21 @@ class TestSonicCdPastControllerRoute {
         assertEquals(8320, p.placement().status().previousChunkWord());
         assertEquals(467, p.placement().status().rightRecordIndex());
         assertArrayEquals(new byte[64], pool.state(32).copyBytes());
-        var stopped = assertThrows(SonicCdGameModule.UnsupportedPastLoading.class, () -> step(h, route(8277)));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.DYNAMIC_OBJECTS, stopped.boundary());
-        assertTrue(frame.closed()); assertSame(world, h.mode().getWorldSession());
-        assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
-        // Retained references only after failure: no guarded require/capture/restore or replay.
-        var reached = assertInstanceOf(List.class, actualField(actualField(p.visit(), "values"), "calls"));
-        assertTrue(reached.contains(SonicCdGameModule.PastLoadCall.PRIMARY_MAIN));
-        assertTrue(reached.contains(SonicCdGameModule.PastLoadCall.RESERVED_OBJECTS));
-        assertFalse(reached.contains(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS));
-        assertFalse(reached.contains(SonicCdGameModule.PastLoadCall.ORDINARY_MAIN_RETURN));
-        byte[] expected = new byte[64]; expected[0] = 0x2D; expected[0x23] = (byte) 0xDB;
-        ByteBuffer.wrap(expected).putShort(8, (short) 9064).putShort(12, (short) 158);
-        assertArrayEquals(expected, pool.state(32).copyBytes(),
-                "First physical dynamic occupant is the fresh unvisited native Robot Generator");
-        assertEquals(560559104, frame.state().motion().centreX16_16());
-        assertEquals(62991872, frame.state().motion().centreY16_16());
-        assertEquals(8448, p.placement().status().previousChunkWord());
-        assertEquals(471, p.placement().status().rightRecordIndex());
+        for (int call = 8277; call <= 8999; call++) {
+            step(h, route(call)); healthy(p, world, generation);
+            if (call == 8277) assertTrue(h.module().pastLoadState().calls().contains(SonicCdGameModule.PastLoadCall.ROBOT_GENERATOR_BODY));
+        }
+        replay(p, 9000, world, generation);
+        assertEquals(561186048, frame.state().motion().centreX16_16());
+        assertEquals(62505216, frame.state().motion().centreY16_16());
+        assertEquals(1226, frame.environment().globals().levelFrames());
+        assertEquals(8387, presentation.pastForegroundImage().cameraX());
+        assertEquals(784, presentation.pastForegroundImage().cameraYWord());
+        assertEquals(8320, p.placement().status().previousChunkWord());
+        assertEquals(467, p.placement().status().rightRecordIndex());
+        assertEquals(8, frame.environment().controls().rawHeld());
+        assertTrue(frame.state().motion().groundVelocity() < 0,
+                "This healthy input bound is circling terrain, not proof of reaching the act exit");
     }
 
     private static void replay(Prepared p, int call, Object world, long generation) throws Exception {
