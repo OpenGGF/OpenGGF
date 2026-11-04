@@ -44,18 +44,18 @@
     {"dir": "sbz3", "kind": "level", "trace_profile": "complete_run", "bk2_frame_offset": 209072, "trace_frame_count": 5086, "zone_id": 5, "act": 3}
   ],
   "transitions": [
-    {"from_segment": 0, "to_segment": 1, "entry_kind": "giant_ring", "mode_change_bk2_frame": 4976, "rings_before": 118, "emeralds_before": 0},
-    {"from_segment": 1, "to_segment": 2, "entry_kind": "stage_exit", "mode_change_bk2_frame": 8705, "rings_after": 55, "emeralds_after": 1},
-    {"from_segment": 3, "to_segment": 4, "entry_kind": "giant_ring", "mode_change_bk2_frame": 13348, "rings_before": 66, "emeralds_before": 1},
-    {"from_segment": 4, "to_segment": 5, "entry_kind": "stage_exit", "mode_change_bk2_frame": 17686, "rings_after": 53, "emeralds_after": 2},
-    {"from_segment": 8, "to_segment": 9, "entry_kind": "giant_ring", "mode_change_bk2_frame": 39771, "rings_before": 76, "emeralds_before": 2},
-    {"from_segment": 9, "to_segment": 10, "entry_kind": "stage_exit", "mode_change_bk2_frame": 42308, "rings_after": 38, "emeralds_after": 3},
-    {"from_segment": 12, "to_segment": 13, "entry_kind": "giant_ring", "mode_change_bk2_frame": 63242, "rings_before": 112, "emeralds_before": 3},
-    {"from_segment": 13, "to_segment": 14, "entry_kind": "stage_exit", "mode_change_bk2_frame": 65572, "rings_after": 59, "emeralds_after": 4},
-    {"from_segment": 16, "to_segment": 17, "entry_kind": "giant_ring", "mode_change_bk2_frame": 87703, "rings_before": 97, "emeralds_before": 4},
-    {"from_segment": 17, "to_segment": 18, "entry_kind": "stage_exit", "mode_change_bk2_frame": 92783, "rings_after": 67, "emeralds_after": 5},
-    {"from_segment": 19, "to_segment": 20, "entry_kind": "giant_ring", "mode_change_bk2_frame": 102280, "rings_before": 51, "emeralds_before": 5},
-    {"from_segment": 20, "to_segment": 21, "entry_kind": "stage_exit", "mode_change_bk2_frame": 106110, "rings_after": 56, "emeralds_after": 6}
+    {"from_segment": 0, "to_segment": 1, "entry_kind": "giant_ring", "mode_change_bk2_frame": 4976, "rings_before": 118, "emeralds_before": 0, "gap_admission_runs": [1]},
+    {"from_segment": 1, "to_segment": 2, "entry_kind": "stage_exit", "mode_change_bk2_frame": 8705, "rings_after": 55, "emeralds_after": 1, "gap_admission_runs": [1]},
+    {"from_segment": 3, "to_segment": 4, "entry_kind": "giant_ring", "mode_change_bk2_frame": 13348, "rings_before": 66, "emeralds_before": 1, "gap_admission_runs": [1]},
+    {"from_segment": 4, "to_segment": 5, "entry_kind": "stage_exit", "mode_change_bk2_frame": 17686, "rings_after": 53, "emeralds_after": 2, "gap_admission_runs": [1]},
+    {"from_segment": 8, "to_segment": 9, "entry_kind": "giant_ring", "mode_change_bk2_frame": 39771, "rings_before": 76, "emeralds_before": 2, "gap_admission_runs": [1]},
+    {"from_segment": 9, "to_segment": 10, "entry_kind": "stage_exit", "mode_change_bk2_frame": 42308, "rings_after": 38, "emeralds_after": 3, "gap_admission_runs": [1]},
+    {"from_segment": 12, "to_segment": 13, "entry_kind": "giant_ring", "mode_change_bk2_frame": 63242, "rings_before": 112, "emeralds_before": 3, "gap_admission_runs": [1]},
+    {"from_segment": 13, "to_segment": 14, "entry_kind": "stage_exit", "mode_change_bk2_frame": 65572, "rings_after": 59, "emeralds_after": 4, "gap_admission_runs": [1]},
+    {"from_segment": 16, "to_segment": 17, "entry_kind": "giant_ring", "mode_change_bk2_frame": 87703, "rings_before": 97, "emeralds_before": 4, "gap_admission_runs": [1]},
+    {"from_segment": 17, "to_segment": 18, "entry_kind": "stage_exit", "mode_change_bk2_frame": 92783, "rings_after": 67, "emeralds_after": 5, "gap_admission_runs": [1]},
+    {"from_segment": 19, "to_segment": 20, "entry_kind": "giant_ring", "mode_change_bk2_frame": 102280, "rings_before": 51, "emeralds_before": 5, "gap_admission_runs": [1]},
+    {"from_segment": 20, "to_segment": 21, "entry_kind": "stage_exit", "mode_change_bk2_frame": 106110, "rings_after": 56, "emeralds_after": 6, "gap_admission_runs": [1]}
   ],
   "dynamic_art_gap_transitions": [
     {"dynamic_art_gap_edge":{"edge_ordinal":0,"transfer_id":0,"phase":"submitted","owner":"sonic","submission_origin":"run_gap","mapping_frame":1,"movie_logical_frame":834,"gap_edge_index":0,"rom_callback_pc":3360,"requests":[{"rom_source_address":140816,"source_tile_index":0,"ram_source_address":-1,"vram_destination":61440,"byte_length":96},{"rom_source_address":140912,"source_tile_index":3,"ram_source_address":-1,"vram_destination":61536,"byte_length":256},{"rom_source_address":141168,"source_tile_index":11,"ram_source_address":-1,"vram_destination":61792,"byte_length":96},{"rom_source_address":141264,"source_tile_index":14,"ram_source_address":-1,"vram_destination":61888,"byte_length":96}]},"before_ledger_hash":"sha256:42f87419ea3765ece5e0a63ffa9f9ebe5e60d91c115090adf9133c0bd0aca3c9","after_ledger_descriptors":[{"transfer_id":0,"owner":"sonic","mapping_frame":1,"submission_origin":"run_gap","requests":[{"rom_source_address":140816,"source_tile_index":0,"ram_source_address":-1,"vram_destination":61440,"byte_length":96},{"rom_source_address":140912,"source_tile_index":3,"ram_source_address":-1,"vram_destination":61536,"byte_length":256},{"rom_source_address":141168,"source_tile_index":11,"ram_source_address":-1,"vram_destination":61792,"byte_length":96},{"rom_source_address":141264,"source_tile_index":14,"ram_source_address":-1,"vram_destination":61888,"byte_length":96}],"fingerprint":"sha256:794dd9a8a845be26ffa8d03574229489629760f97aa6d158e48e43927b8cb558"}]},
