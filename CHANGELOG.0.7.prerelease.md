@@ -9,6 +9,16 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
+  platform's last stood-on piece gives way, Sonic and Tails each lose their
+  "standing on an object" status if it is set, whatever they are standing on,
+  as the shipped game does. A Tails who died on the oil and is still falling
+  therefore drops the stale status at that moment instead of keeping it.
+
+- Seamless reloads preserve runtime-art admission, title camera-release timing
+  and independent end-state flags. Frame-boundary reloads no longer leave a
+  second rewind-boundary marker or suppress the following gameplay oscillator tick.
+
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it
   descends to its pacing height. It previously stayed on layer 3, which is the

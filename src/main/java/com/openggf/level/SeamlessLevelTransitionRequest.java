@@ -275,48 +275,60 @@ public final class SeamlessLevelTransitionRequest {
                 && slot < objectOffsetEndSlotExclusive;
     }
 
+    /**
+     * Changes only reload identity. Copy final fields directly rather than
+     * rebuilding policy through builder setters: some setters deliberately
+     * combine flags, and defaults must never replace the caller's policy.
+     * Adding a final field requires this constructor to account for it too.
+     */
+    private SeamlessLevelTransitionRequest(SeamlessLevelTransitionRequest source,
+                                           int zone, int act) {
+        this.type = TransitionType.RELOAD_TARGET_LEVEL;
+        this.targetZone = zone;
+        this.targetAct = act;
+        this.deactivateLevelNow = source.deactivateLevelNow;
+        this.preserveMusic = source.preserveMusic;
+        this.preserveLevelGamestate = source.preserveLevelGamestate;
+        this.preserveEndOfLevelActive = source.preserveEndOfLevelActive;
+        this.preserveEndOfLevelFlag = source.preserveEndOfLevelFlag;
+        this.showInLevelTitleCard = source.showInLevelTitleCard;
+        this.runtimeArtAdmissionPolicy = source.runtimeArtAdmissionPolicy;
+        this.resetLevelGamestateAtInLevelTitleCardDisplay = source.resetLevelGamestateAtInLevelTitleCardDisplay;
+        this.inLevelTitleCardResetAdditionalDispatches = source.inLevelTitleCardResetAdditionalDispatches;
+        this.inLevelTitleCardResetPhaseOneDispatchOverlap = source.inLevelTitleCardResetPhaseOneDispatchOverlap;
+        this.lockPlayerControlForInLevelTitleCard = source.lockPlayerControlForInLevelTitleCard;
+        this.inLevelTitleCardExitAdditionalDispatches = source.inLevelTitleCardExitAdditionalDispatches;
+        this.inLevelTitleCardExitPhaseOneDispatchOverlap = source.inLevelTitleCardExitPhaseOneDispatchOverlap;
+        this.inLevelTitleCardPreloadedActCameraReleaseDispatches = source.inLevelTitleCardPreloadedActCameraReleaseDispatches;
+        this.preserveOffsetCameraPosition = source.preserveOffsetCameraPosition;
+        this.postTransitionMinX = source.postTransitionMinX;
+        this.postTransitionMaxX = source.postTransitionMaxX;
+        this.postTransitionMinY = source.postTransitionMinY;
+        this.postTransitionMaxY = source.postTransitionMaxY;
+        this.postTransitionMaxYTarget = source.postTransitionMaxYTarget;
+        this.postTransitionMinXTarget = source.postTransitionMinXTarget;
+        this.postTransitionMaxXTarget = source.postTransitionMaxXTarget;
+        this.postTransitionMinYTarget = source.postTransitionMinYTarget;
+        this.playerOffsetX = source.playerOffsetX;
+        this.playerOffsetY = source.playerOffsetY;
+        this.cameraOffsetX = source.cameraOffsetX;
+        this.cameraOffsetY = source.cameraOffsetY;
+        this.mutationKey = source.mutationKey;
+        this.musicOverrideId = source.musicOverrideId;
+        this.objectSurvivalPolicy = source.objectSurvivalPolicy;
+        this.objectOffsetPolicy = source.objectOffsetPolicy;
+        this.objectOffsetStartSlot = source.objectOffsetStartSlot;
+        this.objectOffsetEndSlotExclusive = source.objectOffsetEndSlotExclusive;
+        this.preserveCheckpointUntilResults = source.preserveCheckpointUntilResults;
+        this.omitSecondaryLevelPlc = source.omitSecondaryLevelPlc;
+        this.suppressLevelLoadRewindBoundary = source.suppressLevelLoadRewindBoundary;
+        this.deferRingInitializationToLevelUpdate = source.deferRingInitializationToLevelUpdate;
+        this.resourceHandoffId = source.resourceHandoffId;
+    }
+
     /** Converts a same-level request to the concrete target used by the reload executor. */
     public SeamlessLevelTransitionRequest retargetedForReload(int zone, int act) {
-        Builder adjusted = builder(TransitionType.RELOAD_TARGET_LEVEL)
-                .targetZoneAct(zone, act)
-                .deactivateLevelNow(deactivateLevelNow)
-                .preserveMusic(preserveMusic)
-                .preserveLevelGamestate(preserveLevelGamestate)
-                .preserveEndOfLevelState(preserveEndOfLevelState())
-                .showInLevelTitleCard(showInLevelTitleCard)
-                .resetLevelGamestateAtInLevelTitleCardDisplay(
-                        resetLevelGamestateAtInLevelTitleCardDisplay)
-                .inLevelTitleCardResetAdditionalDispatches(
-                        inLevelTitleCardResetAdditionalDispatches)
-                .inLevelTitleCardResetPhaseOneDispatchOverlap(
-                        inLevelTitleCardResetPhaseOneDispatchOverlap)
-                .lockPlayerControlForInLevelTitleCard(lockPlayerControlForInLevelTitleCard)
-                .inLevelTitleCardExitAdditionalDispatches(inLevelTitleCardExitAdditionalDispatches)
-                .inLevelTitleCardExitPhaseOneDispatchOverlap(
-                        inLevelTitleCardExitPhaseOneDispatchOverlap)
-                .preserveOffsetCameraPosition(preserveOffsetCameraPosition)
-                .postTransitionMinXIfPresent(postTransitionMinX)
-                .postTransitionMaxXIfPresent(postTransitionMaxX)
-                .postTransitionMinYIfPresent(postTransitionMinY)
-                .postTransitionMaxYIfPresent(postTransitionMaxY)
-                .postTransitionMaxYTargetIfPresent(postTransitionMaxYTarget)
-                .postTransitionMinXTargetIfPresent(postTransitionMinXTarget)
-                .postTransitionMaxXTargetIfPresent(postTransitionMaxXTarget)
-                .postTransitionMinYTargetIfPresent(postTransitionMinYTarget)
-                .playerOffset(playerOffsetX, playerOffsetY)
-                .cameraOffset(cameraOffsetX, cameraOffsetY)
-                .mutationKey(mutationKey)
-                .musicOverrideId(musicOverrideId)
-                .objectSurvivalPolicy(objectSurvivalPolicy)
-                .preserveCheckpointUntilResults(preserveCheckpointUntilResults)
-                .omitSecondaryLevelPlc(omitSecondaryLevelPlc)
-                .suppressLevelLoadRewindBoundary(suppressLevelLoadRewindBoundary)
-                .deferRingInitializationToLevelUpdate(deferRingInitializationToLevelUpdate)
-                .resourceHandoff(resourceHandoffId);
-        if (objectOffsetPolicy == ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE) {
-            adjusted.romWorldObjectOffsetRange(objectOffsetStartSlot, objectOffsetEndSlotExclusive);
-        }
-        return adjusted.build();
+        return new SeamlessLevelTransitionRequest(this, zone, act);
     }
 
     public static Builder builder(TransitionType type) {

@@ -8,10 +8,15 @@ import java.io.IOException;
 
 /** Owns top-level dispatch and frame-boundary handling for seamless transitions. */
 final class LevelSeamlessTransitionExecutor {
+    enum Host { FRAME_BOUNDARY, LEVEL_FRAME }
+
     private final LevelManager levelManager;
     private final LevelTransitionCoordinator transitions;
     private boolean frameCounterBridgeActive;
     private boolean frameCounterBridgePrimed;
+    private boolean executedDuringFrame;
+    private boolean rewindBoundaryDuringFrame;
+    private boolean oscillationAdvancedDuringFrame;
 
     LevelSeamlessTransitionExecutor(
             LevelManager levelManager,
@@ -29,18 +34,18 @@ final class LevelSeamlessTransitionExecutor {
         // expose a half-finished FBZ1BGE_Normal frame to LiveRewindManager.
         transitions.beginSynchronousScreenEventTransition(levelManager.currentZone, levelManager.currentAct, request);
         try {
-            execute(request, false);
+            execute(request, Host.LEVEL_FRAME);
         } finally {
             transitions.endSynchronousScreenEventTransition();
         }
     }
 
     void execute(SeamlessLevelTransitionRequest request) {
-        execute(request, true);
+        execute(request, Host.FRAME_BOUNDARY);
     }
 
     void execute(SeamlessLevelTransitionRequest request,
-                                         boolean advanceReloadFrameCounter) {
+                                         Host host) {
         if (request == null) {
             return;
         }
@@ -57,8 +62,7 @@ final class LevelSeamlessTransitionExecutor {
                     // BEGIN HCZ1_DIRECT_FF_RELOAD_SAME_SELECTED
                     plcReloadSelected = true;
                     // END HCZ1_DIRECT_FF_RELOAD_SAME_SELECTED
-                    levelManager.executeActTransition(request.retargetedForReload(levelManager.currentZone, levelManager.currentAct));
-                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossReload();
+                    executeReload(request.retargetedForReload(levelManager.currentZone, levelManager.currentAct), host);
                     // BEGIN HCZ1_DIRECT_FF_RELOAD_SAME_COMPLETED
                     plcReloadCompleted = true;
                     // END HCZ1_DIRECT_FF_RELOAD_SAME_COMPLETED
@@ -67,8 +71,7 @@ final class LevelSeamlessTransitionExecutor {
                     // BEGIN HCZ1_DIRECT_FF_RELOAD_TARGET_SELECTED
                     plcReloadSelected = true;
                     // END HCZ1_DIRECT_FF_RELOAD_TARGET_SELECTED
-                    levelManager.executeActTransition(request);
-                    if (advanceReloadFrameCounter) advanceFrameCounterAcrossReload();
+                    executeReload(request, host);
                     // BEGIN HCZ1_DIRECT_FF_RELOAD_TARGET_COMPLETED
                     plcReloadCompleted = true;
                     // END HCZ1_DIRECT_FF_RELOAD_TARGET_COMPLETED
@@ -91,48 +94,46 @@ final class LevelSeamlessTransitionExecutor {
     }
 
 
-    static SeamlessLevelTransitionRequest normalizeReloadSameRequest(
-            SeamlessLevelTransitionRequest request,
-            int currentZone,
-            int currentAct) {
-        return SeamlessLevelTransitionRequest
-                .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
-                .targetZoneAct(currentZone, currentAct)
-                .deactivateLevelNow(request.deactivateLevelNow())
-                .preserveMusic(request.preserveMusic())
-                .preserveLevelGamestate(request.preserveLevelGamestate())
-                .preserveEndOfLevelState(request.preserveEndOfLevelFlag())
-                .preserveEndOfLevelActive(request.preserveEndOfLevelActive())
-                .showInLevelTitleCard(request.showInLevelTitleCard())
-                .runtimeArtAdmissionPolicy(request.runtimeArtAdmissionPolicy())
-                .resetLevelGamestateAtInLevelTitleCardDisplay(
-                        request.resetLevelGamestateAtInLevelTitleCardDisplay())
-                .inLevelTitleCardResetAdditionalDispatches(
-                        request.inLevelTitleCardResetAdditionalDispatches())
-                .inLevelTitleCardResetPhaseOneDispatchOverlap(
-                        request.inLevelTitleCardResetPhaseOneDispatchOverlap())
-                .lockPlayerControlForInLevelTitleCard(
-                        request.lockPlayerControlForInLevelTitleCard())
-                .inLevelTitleCardExitAdditionalDispatches(
-                        request.inLevelTitleCardExitAdditionalDispatches())
-                .inLevelTitleCardExitPhaseOneDispatchOverlap(
-                        request.inLevelTitleCardExitPhaseOneDispatchOverlap())
-                .inLevelTitleCardPreloadedActCameraReleaseDispatches(
-                        request.inLevelTitleCardPreloadedActCameraReleaseDispatches())
-                .preserveOffsetCameraPosition(
-                        request.preserveOffsetCameraPosition())
-                .postTransitionMinXIfPresent(request.postTransitionMinX())
-                .postTransitionMaxXIfPresent(request.postTransitionMaxX())
-                .postTransitionMinYIfPresent(request.postTransitionMinY())
-                .postTransitionMaxYIfPresent(request.postTransitionMaxY())
-                .postTransitionMaxYTargetIfPresent(
-                        request.postTransitionMaxYTarget())
-                .playerOffset(request.playerOffsetX(), request.playerOffsetY())
-                .cameraOffset(request.cameraOffsetX(), request.cameraOffsetY())
-                .mutationKey(request.mutationKey())
-                .musicOverrideId(request.musicOverrideId())
-                .resourceHandoff(request.resourceHandoffId())
-                .build();
+    /** Only the public in-frame entry publishes completion to level-loop consumers. */
+    void publishLevelFrameCompletion(LevelActTransitionExecutor.Completed completed) {
+        if (completed == null) return;
+        executedDuringFrame = true;
+        rewindBoundaryDuringFrame = true;
+        oscillationAdvancedDuringFrame |= completed.loopTailOscillationAdvanced();
+    }
+
+    boolean consumeExecutedDuringFrame() {
+        boolean executed = executedDuringFrame;
+        executedDuringFrame = false;
+        return executed;
+    }
+
+    boolean consumeRewindBoundaryDuringFrame() {
+        boolean boundary = rewindBoundaryDuringFrame;
+        rewindBoundaryDuringFrame = false;
+        return boundary;
+    }
+
+    boolean consumeOscillationAdvancedDuringFrame() {
+        boolean advanced = oscillationAdvancedDuringFrame;
+        oscillationAdvancedDuringFrame = false;
+        return advanced;
+    }
+
+    void resetFrameMarkers() {
+        executedDuringFrame = false;
+        rewindBoundaryDuringFrame = false;
+        oscillationAdvancedDuringFrame = false;
+    }
+
+    private void executeReload(SeamlessLevelTransitionRequest request, Host host) throws IOException {
+        switch (host) {
+            case FRAME_BOUNDARY -> {
+                levelManager.reloadActAtFrameBoundary(request);
+                advanceFrameCounterAcrossReload();
+            }
+            case LEVEL_FRAME -> levelManager.executeActTransition(request);
+        }
     }
 
     /**
