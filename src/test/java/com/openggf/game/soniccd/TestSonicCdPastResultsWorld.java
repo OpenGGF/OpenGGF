@@ -113,21 +113,23 @@ class TestSonicCdPastResultsWorld {
         assertEquals(List.of(CdResults.Sound.FM_TALLY),resultsSounds(p).stream().map(SonicCdGameModule.PastResultsSound::sound).toList());control.assertFrameAndScroll(p);
     }
 
-    @Test void nextLevelProgrammePrefixFencesAfterTheCompletePhysicalWalkBeforeOrdinaryDraw() throws Exception {
+    @Test void nextLevelProgrammePrefixEntersOldBlackExitAfterTheCompletePhysicalWalkBeforeOrdinaryDraw() throws Exception {
         var p=ordinary();var entry=fixed(p,127).moveByte(ROUTINE,8);seed(p,entry);
         var program=p.harness().module().levelProgramState();
         var dev=(CdOpeningObjectRuntime.DevGlobals)actualField(globals(p),"retainedDev");assertEquals(0,dev.goodFuture());
-        var failure=assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,()->step(p.harness(),neutral()));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_END_PROGRAMME,failure.boundary());
-        assertSame(program,p.harness().module().levelProgramState());assertEquals(2,((CdLevelGlobals)actualField(actualField(p.visit(),"values"),"level")).levelRestart());
+        step(p.harness(),neutral());
+        assertEquals(SonicCdGameModule.PastLoadPhase.OLD_BLACK_FADE,p.harness().module().pastLoadState().phase());
+        assertEquals(program.goodFutureFlags(),p.harness().module().levelProgramState().goodFutureFlags());
+        assertEquals(SonicCdGameModule.LevelProgramPhase.OLD_BLACK_FADE,p.harness().module().levelProgramState().phase());
+        assertEquals(2,((CdLevelGlobals)actualField(actualField(p.visit(),"values"),"level")).levelRestart());
         assertEquals(1,p.frame().environment().movement().gates().zoneAct());assertEquals(1,p.frame().environment().movement().gates().timeZone());
         assertEquals(entry.moveByte(SPRITE_FLAGS,entry.spriteFlags()&0x7F),p.placement().pool().state(127));
-        assertEquals(0,failure.getSuppressed().length);assertTrue(p.frame().closed());retired(p);
+        assertFalse(p.frame().closed());retired(p);
         var calls=(List<?>)actualField(actualField(p.visit(),"values"),"calls");
-        assertTrue(calls.contains(SonicCdGameModule.PastLoadCall.RESULTS_BODY));assertEquals(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS,calls.getLast());
+        assertTrue(calls.contains(SonicCdGameModule.PastLoadCall.RESULTS_BODY));assertEquals(SonicCdGameModule.PastLoadCall.OLD_EXIT_CLEAR_PLCS,calls.getLast());
         assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.DRAW_OBJECTS));assertFalse(calls.contains(SonicCdGameModule.PastLoadCall.ORDINARY_MAIN_RETURN));
-        assertEquals(CdObjectDrawQueue.Phase.CLOSED,((CdObjectDrawQueue)actualField(p.visit(),"drawQueue")).phase());
-        // A failed Frame is terminal; do not restore it to claim replay or a new visit.
+        assertNull(actualField(p.visit(),"drawQueue"));
+        // The completed physical collector is discarded undrained; the old Frame remains live.
     }
 
     @Test void finiteMappingFrameReadFailureKeepsCompletedMoveAndDrawClearButClosesTheActualFrame() throws Exception {
@@ -154,7 +156,7 @@ class TestSonicCdPastResultsWorld {
         int[][] counts={{8,14,10,10,10},{8,14,10,10,10},{14,14,11,11,11},{14,14,11,11,11}};
         for(int root=0;root<4;root++)for(int frame=0;frame<5;frame++)assertEquals(counts[root][frame],resolver.resolve(data.mappingsAddress()+root*10,false,frame).pieces().size());
         assertEquals(81,SonicCdGameModule.PastLoadCall.BIG_RING_BODY.ordinal());assertEquals(82,SonicCdGameModule.PastLoadCall.RESULTS_BODY.ordinal());
-        assertEquals(83,SonicCdGameModule.PastLoadCall.values().length);
+        assertEquals(91,SonicCdGameModule.PastLoadCall.values().length);
         for(var sound:CdResults.Sound.values())assertEquals(sound.nativeId(),new SonicCdGameModule.PastResultsSound(sound).nativeId());
     }
 

@@ -31,28 +31,29 @@ class TestSonicCdPastResultsNextProgrammeWorld {
     @BeforeEach void setup() { fixture.setup(); }
     @AfterEach void cleanup() { fixture.cleanup(); }
 
-    @Test void actualNextLevelCompletesItsScalarResetSoundDrawTailBeforeTheNewProgrammeFence() throws Exception {
+    @Test void actualNextLevelCompletesItsScalarResetSoundDrawTailBeforeOldBlackExit() throws Exception {
         var p=ordinary(); assertEquals(0,dev(p).goodFuture());
         var oldProgram=p.harness().module().levelProgramState(); assertEquals(OptionalInt.empty(),oldProgram.goodFutureFlags());
         var oldLevel=level(p); var oldTail=actualField(globals(p),"tail"); var oldSaved=p.placement().capture().savedFlags().copy();
         var oldCpu=actualField(values(p),"cpuSat"); var oldCompleted=actualField(actualField(values(p),"loop"),"completedDraw");
         var entry=fixed(p,127); seed(p,entry);
-        var failure=assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,()->step(p.harness(),neutral()));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_END_PROGRAMME,failure.boundary());
-        assertEquals(0,failure.getSuppressed().length); assertTrue(p.frame().closed()); retired(p);
+        step(p.harness(),neutral());
+        assertEquals(SonicCdGameModule.PastLoadPhase.OLD_BLACK_FADE,p.harness().module().pastLoadState().phase());
+        assertFalse(p.frame().closed()); retired(p);
         var l=level(p); assertEquals(new CdLevelGlobals(2,l.updateHudTime(),0,0,oldLevel.plcLoadFlags()&~2,0,0,l.powerup(),l.timeOver()),l);
         assertEquals(1,p.frame().environment().movement().gates().zoneAct()); assertEquals(1,p.frame().environment().movement().gates().timeZone());
         assertEquals(0,section(p).sectionWord()); assertEquals(0,dev(p).projDestroyed()); assertEquals(0,dev(p).goodFuture());
-        assertSame(oldProgram,p.harness().module().levelProgramState()); assertEquals(OptionalInt.empty(),oldProgram.goodFutureFlags());
+        assertEquals(oldProgram.goodFutureFlags(),p.harness().module().levelProgramState().goodFutureFlags());
+        assertEquals(SonicCdGameModule.LevelProgramPhase.OLD_BLACK_FADE,p.harness().module().levelProgramState().phase());
         var tail=((java.util.Optional<?>)actualField(globals(p),"tail")).orElseThrow(); var prior=((java.util.Optional<?>)oldTail).orElseThrow();
-        for(String name:List.of("player2ControlsWord","player2BoredWord","demoS1IndexWord","paletteFadeInfoWord")) assertEquals(actualField(prior,name),actualField(tail,name));
-        assertEquals(0,actualField(tail,"unknownLevelByte")); assertSavedReset(p);
+        for(String name:List.of("player2ControlsWord","player2BoredWord","demoS1IndexWord")) assertEquals(actualField(prior,name),actualField(tail,name));
+        assertEquals(0,actualField(tail,"unknownLevelByte")); assertEquals(0x003F,actualField(tail,"paletteFadeInfoWord")); assertSavedReset(p);
         assertEquals(entry.moveByte(SPRITE_FLAGS,entry.spriteFlags()&0x7F),p.placement().pool().state(127));
         assertSame(oldCpu,actualField(values(p),"cpuSat")); assertSame(oldCompleted,actualField(actualField(values(p),"loop"),"completedDraw"));
         assertFalse(java.util.Arrays.equals(oldSaved,p.placement().capture().savedFlags().copy()),"Genuine route has saved placement bits to reset");
-        assertEquals(1,fadeCommands(p)); var calls=calls(p); assertEquals(SonicCdGameModule.PastLoadCall.DYNAMIC_OBJECTS,calls.getLast());
+        assertEquals(1,fadeCommands(p)); var calls=calls(p); assertEquals(SonicCdGameModule.PastLoadCall.OLD_EXIT_CLEAR_PLCS,calls.getLast());
         assertTrue(calls.contains(SonicCdGameModule.PastLoadCall.RESULTS_BODY)); assertNoOrdinaryTail(calls);
-        assertEquals(CdObjectDrawQueue.Phase.CLOSED,((CdObjectDrawQueue)actualField(p.visit(),"drawQueue")).phase());
+        assertNull(actualField(p.visit(),"drawQueue"));
     }
 
     @Test void programmePrefixRetainsTheCompleteOrdinaryPlayerPairExceptItsTwoRawGates() throws Exception {
@@ -65,8 +66,9 @@ class TestSonicCdPastResultsNextProgrammeWorld {
         registry.restore(goodCut);assertNativeCapture(before,p.harness());healthy(p);
         registry.restoreCourse(goodCourse);assertNativeCapture(before,p.harness());healthy(p);
         var entry=fixed(p,127);seed(p,entry);
-        var failure=assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,()->step(p.harness(),neutral()));
-        assertEquals(SonicCdGameModule.PastLoadBoundary.LEVEL_END_PROGRAMME,failure.boundary());assertEquals(withoutScreenBit(actor.state()),p.frame().state());
+        step(p.harness(),neutral());
+        assertEquals(SonicCdGameModule.PastLoadPhase.OLD_BLACK_FADE,p.harness().module().pastLoadState().phase());
+        assertFalse(p.frame().closed());assertEquals(withoutScreenBit(actor.state()),p.frame().state());
         assertEquals(actor.display().map(d->new CdPlayerBody.DisplayPublication(d.queued(),d.mappingAddress(),d.tile(),d.priority(),d.width(),d.mapFrame(),d.spriteFlags()&0x7F,d.centreX16_16(),d.centreY16_16())),p.frame().display());
         var old=shared.environment();var movement=old.movement();var g=movement.gates();
         assertEquals(incomingMovement.bounds(),movement.bounds(),"This healthy control has no post-scroll bound writer");
@@ -81,7 +83,7 @@ class TestSonicCdPastResultsNextProgrammeWorld {
         assertEquals(shared.paused(),p.frame().paused());assertEquals(shared.vIntClock(),p.frame().vIntClock());
         assertEquals(score,actualField(globals(p),"score"));assertEquals(contact,actualField(globals(p),"contact"));assertEquals(live,actualField(globals(p),"live"));
         assertEquals(ring,(CdRingGlobals)actualField(values(p),"ring"));retired(p);
-        // Only healthy completed captures above were restored; this terminal prefix is never restored.
+        // Only healthy completed captures above were restored; this exit is now healthy; the separate bridge tests replay its native continuation.
     }
 
     @Test void aLaterPhysicalFailureRetainsTheCompleteResultsPrefixAndWinsBeforeTheProgrammeFence() throws Exception {

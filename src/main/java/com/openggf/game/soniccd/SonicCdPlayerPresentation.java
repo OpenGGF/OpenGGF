@@ -1020,7 +1020,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         drawingPast = true;
         try {
             if (pastRenderBinding == null) {
-                var actualSource = requirePastClosedSource();
+                var actualSource = requirePastProgrammeClosedSource();
                 var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
                 var world = mode.getWorldSession(); var levels = mode.getLevelManager();
                 var graphics = GameServices.graphics(); var camera = mode.getCamera();
@@ -1040,7 +1040,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     /** The module/Visit relation grants source authority; renderer values and equal pixels do not. */
     private void requirePastRenderBinding(SonicCdPastDisplay.Selection selected) {
         var binding = pastRenderBinding;
-        var actualSource = requirePastClosedSource();
+        var actualSource = requirePastProgrammeClosedSource();
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (binding == null || module.pastSelectedDisplay() != selected || actualSource != binding.source()
                 || mode != binding.mode() || mode.getWorldSession() != binding.world()
@@ -1317,7 +1317,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             if (snapshot == null) return;
             if (pastSource != null) {
                 if (!(snapshot instanceof ScrollCapture value)) throw new IllegalArgumentException("Not a Past scroll capture");
-                restorePastScroll(value);
+                if (module.pastOldProgrammeExitSelected()) restorePastProgrammeScroll(value);
+                else restorePastScroll(value);
                 return;
             }
             requireBound();
@@ -1576,6 +1577,20 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return source;
     }
 
+    private PastSource requirePastOldProgrammeSource() {
+        var source = requirePastBoundSource();
+        module.requirePastOldProgrammePresentation(this, source.frame());
+        return source;
+    }
+    /** Retained rendering/restoration only; ordinary mutation continues to requirePastSource. */
+    private PastSource requirePastProgrammeClosedSource() {
+        var source = module.pastOldProgrammeExitSelected() ? requirePastOldProgrammeSource() : requirePastSource();
+        source.frame().captureShared();
+        return source;
+    }
+    void validatePastOldProgrammePlane() {
+        var source = requirePastOldProgrammeSource(); source.frame().captureShared();
+    }
     /** LoadTimeWarpData:19-27 addressed destination observations; no saved bytes are sampled. */
     int readPastLoadWord(CdTimeWarpLoadData.StoreTarget target) {
         requirePastClosedSource();
@@ -1700,7 +1715,15 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
      * No BG step, FG arithmetic, Body, DPLC, PLC, input or counter service is performed here.
      */
     CdR11aBackgroundPlane.Result servicePastPlaneAtLevelLoad() {
-        var source = requirePastSource();
+        return servicePastPlaneAtLevelLoad(requirePastSource());
+    }
+    CdR11aBackgroundPlane.Result servicePastOldProgrammePlaneAtLevelLoad() {
+        var source = requirePastOldProgrammeSource();
+        module.requirePastOldProgrammeCallback(this, source.frame());
+        return servicePastPlaneAtLevelLoad(source);
+    }
+    /** Both private admissions borrow this one actual copy/DrawLevel algorithm. */
+    private CdR11aBackgroundPlane.Result servicePastPlaneAtLevelLoad(PastSource source) {
         var live = liveCameras(backgroundState);
         var copied = new DrawCopies(scrollState.cameraX() << 16, scrollState.cameraY16_16(),
                 new CdR11aBackgroundPlane.CopiedCameras(live.bg1(), live.bg2(), live.bg3()),
@@ -1720,7 +1743,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     CdR11aBackgroundPlane.State pastPlaneImage() { requirePastBoundSource(); return planeState; }
 
     void consumePastForegroundFlags(int flagsWord) {
-        requirePastSource();
+        requirePastSource(); consumePastForegroundFlagValue(flagsWord);
+    }
+    void consumePastOldProgrammeForegroundFlags(int flagsWord) {
+        var source = requirePastOldProgrammeSource();
+        module.requirePastOldProgrammeCallback(this, source.frame()); consumePastForegroundFlagValue(flagsWord);
+    }
+    private void consumePastForegroundFlagValue(int flagsWord) {
         drawCopies = new DrawCopies(drawCopies.fgX16_16(), drawCopies.fgY16_16(),
                 drawCopies.bg(), flagsWord, drawCopies.bgFlags());
     }
@@ -1731,7 +1760,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
     }
     void validatePastScroll(ScrollCapture value) {
-        requirePastClosedSource(); Objects.requireNonNull(value);
+        requirePastClosedSource(); validatePastScrollOwner(value);
+    }
+    private void validatePastProgrammeScroll(ScrollCapture value) {
+        requirePastProgrammeClosedSource(); validatePastScrollOwner(value);
+    }
+    private void validatePastScrollOwner(ScrollCapture value) {
+        Objects.requireNonNull(value);
         if (value.owner() != scrollCaptureOwner) throw new IllegalArgumentException("Retired Past scroll capture");
     }
     boolean samePastScroll(ScrollCapture value) {
@@ -1745,7 +1780,12 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
     void restorePastScroll(ScrollCapture value) {
         requirePastRenderIdle();
-        validatePastScroll(value);
+        validatePastScroll(value); adoptPastScroll(value);
+    }
+    private void restorePastProgrammeScroll(ScrollCapture value) {
+        requirePastRenderIdle(); validatePastProgrammeScroll(value); adoptPastScroll(value);
+    }
+    private void adoptPastScroll(ScrollCapture value) {
         scrollState = value.state(); backgroundState = value.background();
         planeState = value.plane(); publishedPlane = value.plane(); drawCopies = value.copies();
         // The module's typed B payload restores the exact setup flags separately;
@@ -1760,6 +1800,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         loadScrollPending = flags.load(); checkpointSetupPending = flags.setup();
     }
 
+    PastLoadFlags capturePastProgrammeLoadFlags() {
+        requirePastProgrammeClosedSource(); return new PastLoadFlags(loadScrollPending, checkpointSetupPending);
+    }
+    void restorePastProgrammeLoadFlags(PastLoadFlags flags) {
+        requirePastProgrammeClosedSource(); Objects.requireNonNull(flags);
+        loadScrollPending = flags.load(); checkpointSetupPending = flags.setup();
+    }
     /** Main178 clears cloud/camera-copy storage; RunMMD already cleared A800/CC00. */
     void clearPastFlowersImages() {
         requirePastClosedSource();
@@ -1802,7 +1849,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         GameServices.parallax().update(0, 0, GameServices.camera(), GameServices.level().getFrameCounter());
     }
     private void projectPastCamera(Camera camera) {
-        var source = requirePastClosedSource(); var bounds = source.frame().environment().movement().bounds();
+        var source = requirePastProgrammeClosedSource(); var bounds = source.frame().environment().movement().bounds();
         camera.setMinX((short) bounds.left()); camera.setMaxX((short) bounds.right());
         camera.setMinY((short) source.assets().loadPlan().bounds().top()); camera.setMaxY((short) bounds.bottom());
         camera.setVerticalWrapEnabled(false);

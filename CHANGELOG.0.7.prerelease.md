@@ -153,8 +153,10 @@ Unreleased. The earlier development themes remain in
   tally10394. Goal9598 and Results10394 have real selected-pixel and resource-retirement
   checks. Results now publishes its native next-level scalar, saved-bank, sound and
   draw prefix before the programme boundary, after the complete physical walk.
-  Retained water colours and dedicated old-programme Frame services prepare the
-  pending exit; next-act execution remains separate work.
+  Retained independent water colours and guarded old-programme Frame services now
+  carry the controller route through all22 black waits, the final clear, programme
+  return and IPX blank. Complete full/course replay reaches10419 on the same retained
+  World; Act2 programme admission remains separate work.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
   goal-bound and warp clears. Live Signpost and Results bindings preserve native

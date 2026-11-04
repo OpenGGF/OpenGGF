@@ -106,7 +106,7 @@ public final class SonicCdGameModule implements GameModule {
     private com.openggf.game.soniccd.level.SonicCdPastLevel pastLevel;
     private long pastLoadGeneration = -1;
 
-    enum PastLoadPhase { FIRST_PLC, SECTION_PLC, ANIMATED_TILES, FROM_WHITE, BEGIN_LEVEL }
+    enum PastLoadPhase { FIRST_PLC, SECTION_PLC, ANIMATED_TILES, FROM_WHITE, BEGIN_LEVEL, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED }
     enum PastLoadCall {
         LOAD_LEVEL_PCM, INIT_VDP, INIT_CONTROLLERS, NORMAL_LOAD, LEVEL_SERVICE, PROCESS_PLCS,
         PLAY_LEVEL_MUSIC, IMMEDIATE_LEVEL, IMMEDIATE_STANDARD, CLEAR_FLOWERS, CLEAR_OBJECTS,
@@ -120,9 +120,9 @@ public final class SonicCdGameModule implements GameModule {
         MONITOR_SOLID, MONITOR_FLOOR_ANGLE, MONITOR_FM, TIME_POST_DIRECTION, TIME_POST_SUB_CPU, MONITOR_BODY, TIME_POST_BODY,
         CLEAR_DEMO_INDEX, POST_OBJECT_GUARDS, DEAD_CAMERA_FREEZE, DRAW_OBJECTS, PALETTE_CYCLE,
         UPDATE_SECTION, PREPARE_PLCS, UPDATE_GLOBAL_ANIMATIONS, ORDINARY_MAIN_RETURN,
-        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY, TAMABBOH_BODY, COLLAPSE_PLATFORM_BODY, BOULDER_BODY, MOSQUI_BODY, SPIKES_BODY, ANTON_BODY, ROBOT_GENERATOR_BODY, EXPLOSION_BODY, GOAL_POST_BODY, SIGNPOST_BODY, BIG_RING_BODY, RESULTS_BODY
+        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY, ANIMAL_PRESENCE, PATA_BATA_BODY, TAMABBOH_BODY, COLLAPSE_PLATFORM_BODY, BOULDER_BODY, MOSQUI_BODY, SPIKES_BODY, ANTON_BODY, ROBOT_GENERATOR_BODY, EXPLOSION_BODY, GOAL_POST_BODY, SIGNPOST_BODY, BIG_RING_BODY, RESULTS_BODY, OLD_EXIT_PRELUDE, OLD_EXIT_CLEAR_PLCS, OLD_EXIT_FADE_SERVICE, OLD_EXIT_BLACK_COLOURS, OLD_EXIT_CLEAR_PALETTE, OLD_EXIT_LOAD_SERVICE, OLD_EXIT_RETURN, OLD_IPX_BLANK
     }
-    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, LEVEL_END_PROGRAMME }
+    enum PastLoadBoundary { ENTRY, ANIMATED_TILES, DISPLAY_PUBLICATION, POWERUP_ART, LEVEL_VINT_ART_PUBLICATION, PLACEMENT, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, MONITOR_LAYER_READ, LEVEL_RESTART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, LEVEL_END_PROGRAMME, OLD_EXIT_SPECIAL_STAGE, OLD_EXIT_MARKED_PERIOD, IPX_LEVEL_GAME_OVER, IPX_LEVEL_TIME_WARP, IPX_LEVEL_SPECIAL_STAGE, NEXT_ACT_PROGRAMME_ADMISSION }
     static final class UnsupportedPastLoading extends UnsupportedOperationException {
         private final PastLoadBoundary boundary;
         private UnsupportedPastLoading(PastLoadBoundary boundary) {
@@ -131,7 +131,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound { }
+    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound { }
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }
@@ -165,6 +165,10 @@ public final class SonicCdGameModule implements GameModule {
     }
     record PastBigRingFm() implements PastSound {
         int nativeId() { return CdBigRing.FM_BIG_RING; }
+    }
+    record PastProgrammeSound(ProgramSound sound) implements PastSound {
+        PastProgrammeSound { Objects.requireNonNull(sound); }
+        int nativeId() { return sound.nativeId(); }
     }
     record PastResultsSound(CdResults.Sound sound) implements PastSound {
         PastResultsSound { Objects.requireNonNull(sound); }
@@ -222,7 +226,7 @@ public final class SonicCdGameModule implements GameModule {
         var mode = SessionManager.getCurrentGameplayMode();
         if (!coldProgramStartAdmission || visit == null || pastLoading != visit || playerFrame == null
                 || playerFrame.closed() || playerActor != null || openingObjects != null || mode == null || mode != playerMode
-                || levelProgram == null || levelProgram.phase() != LevelProgramPhase.PAST_LOADING
+                || levelProgram == null || !pastProgrammePhase(levelProgram.phase())
                 || mode.getWorldSession() != programWorld || programWorld.rootGameModule() != this
                 || programWorld.resolvedGameModule() != this || programWorld.getDataSource() != source
                 || !(mode.getLevelManager().getCurrentLevel() instanceof com.openggf.game.soniccd.level.SonicCdPastLevel level)
@@ -252,7 +256,15 @@ public final class SonicCdGameModule implements GameModule {
         try {
             validatePastLoadingCut(); pastLoading.service(held); playerPresentation.projectPastLoading();
         }
-        catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
+        catch (RuntimeException | Error failure) {
+            // A completed RTS is a healthy retained old programme, not a native Frame failure.
+            if (!(failure instanceof UnsupportedPastLoading stopped
+                    && (stopped.boundary() == PastLoadBoundary.NEXT_ACT_PROGRAMME_ADMISSION
+                        || stopped.boundary() == PastLoadBoundary.IPX_LEVEL_GAME_OVER
+                        || stopped.boundary() == PastLoadBoundary.IPX_LEVEL_TIME_WARP
+                        || stopped.boundary() == PastLoadBoundary.IPX_LEVEL_SPECIAL_STAGE))) closePlayerCycleAfterFailure(failure);
+            throw failure;
+        }
     }
     // Native Main:328-329, after all22 actual FromWhite waits. This is the existing
     // programme value, not permission to run an unbound ordinary player/art service.
@@ -261,6 +273,89 @@ public final class SonicCdGameModule implements GameModule {
         var p = levelProgram;
         levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
                 p.palFadeFlags(), p.gameMode() & 0x7F, 1, p.whiteFadeSteps(), p.phase(), p.goodFutureFlags());
+    }
+    private static boolean pastProgrammePhase(LevelProgramPhase phase) {
+        return phase == LevelProgramPhase.PAST_LOADING || phase == LevelProgramPhase.OLD_EXIT_PRELUDE
+                || phase == LevelProgramPhase.OLD_BLACK_FADE || phase == LevelProgramPhase.OLD_CLEAR_WAIT
+                || phase == LevelProgramPhase.OLD_RETURNED || phase == LevelProgramPhase.OLD_IPX_RETURNED;
+    }
+    boolean pastOldProgrammeExitSelected() {
+        return pastLoading != null && levelProgram != null && levelProgram.phase() != LevelProgramPhase.PAST_LOADING
+                && pastProgrammePhase(levelProgram.phase());
+    }
+    /** Narrow retained-image/callback admission; equal Gates or public values confer no authority. */
+    void requirePastOldProgrammePresentation(SonicCdPlayerPresentation presentation, CdPlayerFrameRuntime frame) {
+        requirePastLoadingVisit(pastLoading);
+        if (presentation != playerPresentation || frame != playerFrame || !pastOldProgrammeExitSelected())
+            throw new IllegalStateException("No actual old-programme Presentation binding");
+        pastLoading.requireOldProgrammePresentation();
+    }
+    void requirePastOldProgrammeCallback(SonicCdPlayerPresentation presentation, CdPlayerFrameRuntime frame) {
+        requirePastOldProgrammePresentation(presentation, frame); pastLoading.requireOldProgrammeCallback();
+    }
+    /** LevelStart19-57 after the real completed physical pass, never from a public value. */
+    void beginPastOldProgrammeExit(SonicCdPastLoadingVisit visit, boolean reset) {
+        requirePastLoadingVisit(visit); visit.requireOldProgrammePrelude(reset);
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.PAST_LOADING) throw new IllegalStateException("Old exit already entered");
+        var next = new LevelProgramState(0, p.timeStones(), p.specialStage(), 0,
+                reset ? 0 : p.palFadeFlags(), p.gameMode() | 0x80, 0, 0,
+                LevelProgramPhase.OLD_EXIT_PRELUDE, reset ? OptionalInt.of(0) : p.goodFutureFlags());
+        playerFrame.beginLevelStart(); // Main35: only the existing pause authority changes.
+        levelProgram = next;
+    }
+    /** Native BSET85 tests the OLD bit; no forced fade count or period branch. */
+    boolean selectPastOldBlackExit(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_EXIT_PRELUDE) throw new IllegalStateException("No old exit prelude");
+        boolean fade = (p.palFadeFlags() & 1) != 0;
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags() | 1, p.gameMode(), p.levelStarted(), 0,
+                fade ? LevelProgramPhase.OLD_BLACK_FADE : LevelProgramPhase.OLD_CLEAR_WAIT, p.goodFutureFlags());
+        return fade;
+    }
+    void completePastOldBlackFadeWait(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_BLACK_FADE || p.whiteFadeSteps() >= 22)
+            throw new IllegalStateException("No actual old black-fade wait");
+        int count = p.whiteFadeSteps() + 1;
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), count,
+                count == 22 ? LevelProgramPhase.OLD_CLEAR_WAIT : p.phase(), p.goodFutureFlags());
+    }
+    void clearPastOldBlackExitFlags(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_CLEAR_WAIT) throw new IllegalStateException("No old clear continuation");
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                0, p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), p.phase(), p.goodFutureFlags());
+    }
+    void completePastOldBlackExitLoad(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_CLEAR_WAIT || p.palFadeFlags() != 0)
+            throw new IllegalStateException("No actual old selectorC return");
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), LevelProgramPhase.OLD_RETURNED,
+                p.goodFutureFlags());
+    }
+    void completePastOldIpxBlank(SonicCdPastLoadingVisit visit) {
+        requirePastLoadingVisit(visit); visit.requireOldProgrammeStoreContinuation();
+        var p = levelProgram;
+        if (p.phase() != LevelProgramPhase.OLD_RETURNED) throw new IllegalStateException("No actual MMD return tail");
+        levelProgram = new LevelProgramState(p.demoMode(), p.timeStones(), p.specialStage(), p.usePlayer2(),
+                p.palFadeFlags(), p.gameMode(), p.levelStarted(), p.whiteFadeSteps(), LevelProgramPhase.OLD_IPX_RETURNED,
+                p.goodFutureFlags());
+    }
+    /** ClearPLCs DBF leaves native return BYTEFF; VSync/VInterrupt preserve it. Not a CPU register owner. */
+    int pastOldProgrammeReturnCode() {
+        requirePastLoadingVisit(pastLoading);
+        if (levelProgram.phase() != LevelProgramPhase.OLD_RETURNED
+                && levelProgram.phase() != LevelProgramPhase.OLD_IPX_RETURNED)
+            throw new IllegalStateException("No completed old MMD semantic result");
+        return 0xFF;
     }
     enum BigRingProgramBoundary { TIME_STONES_READ, SPECIAL_STAGE_STORE }
     static final class UnsupportedBigRingProgram extends UnsupportedOperationException {
@@ -596,7 +691,7 @@ public final class SonicCdGameModule implements GameModule {
     private CdWarpScene.State warpState;
     private List<ProgramSound> programSounds = List.of();
 
-    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING, PAST_LOADING }
+    enum LevelProgramPhase { LEVEL, WHITE_FADE, RETURNED, WARP, PAST_PENDING, PAST_LOADING, OLD_EXIT_PRELUDE, OLD_BLACK_FADE, OLD_CLEAR_WAIT, OLD_RETURNED, OLD_IPX_RETURNED }
     /** Completed source requests only: no sound-driver execution or old Frame ledger mutation. */
     enum ProgramSound {
         STOP_FM(0xE0), WARP_DIRECT_FM_D8(0xD8);
@@ -1056,7 +1151,7 @@ public final class SonicCdGameModule implements GameModule {
             if (pastLoading != null) {
                 if (!(value instanceof PastOpeningShared past)) throw new IllegalArgumentException("Prior programme snapshot in Past epoch");
                 pastLoading.validateRestore(past.loading(), past.program()); validateProgramServicesState(past.services());
-                if (past.program().phase() != LevelProgramPhase.PAST_LOADING) throw new IllegalArgumentException("Foreign Past programme phase");
+                if (!pastProgrammePhase(past.program().phase())) throw new IllegalArgumentException("Foreign Past programme phase");
                 return;
             }
             if (!(value instanceof OpeningSharedState snapshot)) throw new IllegalArgumentException("Past snapshot in Present epoch");
@@ -1076,7 +1171,12 @@ public final class SonicCdGameModule implements GameModule {
         @Override public void restore(Object value) {
             validateRestore(value); // Keep direct adapter restore guarded as well as composite restore.
             if (value instanceof PastOpeningShared past) {
-                try { pastLoading.restore(past.loading(), past.program()); programServices = past.services(); levelProgram = past.program(); }
+                try {
+                    // The outer preflight validated the whole pair before this first adoption.
+                    // Restore the programme phase before its flags/scroll projections select admission.
+                    levelProgram = past.program();
+                    pastLoading.restore(past.loading(), past.program()); programServices = past.services();
+                }
                 catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
                 return;
             }

@@ -123,6 +123,7 @@ final class SonicCdPastLoadingVisit {
     private Values values;
     private List<SonicCdGameModule.PastSound> sounds = List.of();
     private boolean servicing;
+    private boolean oldProgrammeContinuation;
     private boolean loadingSaved;
     private int savedCursor;
     private CdTimeWarpLoadData.StoreTarget observedTarget;
@@ -226,7 +227,7 @@ final class SonicCdPastLoadingVisit {
                          CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared) {
             this.owner = owner; this.values = values; this.actor = actor; this.shared = shared;
             this.placement = owner.placement.capture();
-            this.flags = owner.presentation.capturePastLoadFlags(); this.sounds = owner.sounds;
+            this.flags = owner.presentation.capturePastProgrammeLoadFlags(); this.sounds = owner.sounds;
         }
     }
 
@@ -351,7 +352,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || drawQueue != null)
+        if (activeResults != null || resultsPort || drawingResults || activeBigRing != null || bigRingPort || drawingBigRing || activeSignpost != null || signpostPort || drawingSignpost || activeGoal != null || goalPort || drawingGoal || activeMachine != null || machinePort || drawingMachine || servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || activeMosqui != null || activeSpikes != null || activeAnton != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || spikesPort || drawingCollapse || drawingBoulder || drawingSpikes || antonPort || drawingAnton || floatPort || drawingFloat || drawQueue != null || oldProgrammeContinuation)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
@@ -396,6 +397,7 @@ final class SonicCdPastLoadingVisit {
     void service(int held) {
         presentation.requirePastRenderIdle();
         requireCurrent();
+        if (oldProgrammePhase(values.phase())) { serviceOldProgrammeExit(held); return; }
         if (values.phase() == ANIMATED_TILES) throw module.pastLoadingBoundary(
                 SonicCdGameModule.PastLoadBoundary.ANIMATED_TILES);
         if (values.phase() == BEGIN_LEVEL) { serviceLevel(held); return; }
@@ -906,9 +908,10 @@ final class SonicCdPastLoadingVisit {
         if (values.level().levelRestart() != 0) {
             // Main407-408: only the completed physical walk reaches the programme branch.
             // Preserve the pending DrawObject pointers and prior CPU SAT; never drain/scroll here.
-            throw module.pastLoadingBoundary(values.level().levelRestart() == 2
-                    ? SonicCdGameModule.PastLoadBoundary.LEVEL_END_PROGRAMME
-                    : SonicCdGameModule.PastLoadBoundary.LEVEL_RESTART);
+            if (values.level().levelRestart() != 2)
+                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.LEVEL_RESTART);
+            beginOldProgrammeExit();
+            return;
         }
         call(POST_OBJECT_GUARDS);
         CdObjectDrawQueue.DrawCameras cameras;
@@ -952,6 +955,164 @@ final class SonicCdPastLoadingVisit {
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), animated.ring(),
                 values.level(), values.globals(), values.hudObjects(), values.calls());
         loop(readyAnimationLoop); call(UPDATE_GLOBAL_ANIMATIONS); call(ORDINARY_MAIN_RETURN);
+    }
+
+    private static boolean oldProgrammePhase(SonicCdGameModule.PastLoadPhase phase) {
+        return phase == OLD_BLACK_FADE || phase == OLD_CLEAR_WAIT || phase == OLD_RETURNED || phase == OLD_IPX_RETURNED;
+    }
+    /** Called by Module only while this real physical pass has finished all96 dynamic slots. */
+    void requireOldProgrammePrelude(boolean reset) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || activeResults != null || resultsPort || drawingResults
+                || activePrimary != null || activeReserved != null || activeDrain != null
+                || values.phase() != BEGIN_LEVEL || values.level().levelRestart() != 2
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || values.calls().isEmpty() || values.calls().getLast() != DYNAMIC_OBJECTS
+                || reset != ((values.level().plcLoadFlags() & 1) == 0))
+            throw new IllegalStateException("No actual completed-walk old LevelStart prelude");
+        var gates = frame.environment().movement().gates();
+        if (gates.zoneAct() != 1 || gates.timeZone() != 1)
+            throw new IllegalStateException("Old LevelStart requires actual Results act1/present stores");
+    }
+    /** The private visit/World relation admits retained exit images and synchronous callbacks. */
+    void requireOldProgrammePresentation() {
+        module.requirePastLoadingVisit(this);
+        var phase = module.levelProgramState().phase();
+        boolean setup = runningObjects && phase == SonicCdGameModule.LevelProgramPhase.OLD_EXIT_PRELUDE;
+        if ((!setup && !oldProgrammePhase(values.phase())) || loadingSaved || activeResults != null
+                || resultsPort || drawingResults || activePrimary != null || activeReserved != null || activeDrain != null
+                || (!setup && drawQueue != null))
+            throw new IllegalStateException("No actual old-programme continuation");
+        var gates = frame.environment().movement().gates();
+        if (gates.zoneAct() != 1 || gates.timeZone() != 1)
+            throw new IllegalStateException("Old programme Gates/source changed");
+    }
+    void requireOldProgrammeStoreContinuation() {
+        requireOldProgrammePresentation();
+        if (!oldProgrammeContinuation && !(runningObjects
+                && module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.OLD_EXIT_PRELUDE))
+            throw new IllegalStateException("No actual old-programme scalar continuation");
+    }
+    void requireOldProgrammeCallback() {
+        requireOldProgrammeStoreContinuation();
+        if (!oldProgrammeContinuation || !servicing)
+            throw new IllegalStateException("No actual old-programme Frame callback");
+    }
+    /** Native LevelStart19-115. No object draw, scroll or extra wait is inserted at this host cut. */
+    private void beginOldProgrammeExit() {
+        boolean reset = (values.level().plcLoadFlags() & 1) == 0;
+        requireOldProgrammePrelude(reset);
+        var p = module.levelProgramState();
+        var l = values.level(); var g = values.globals(); var r = values.ring();
+        boolean goodFuture = p.timeStones() == 0x7F && frame.environment().globals().timeAttackMode() == 0;
+        var dev = goodFuture ? new CdOpeningObjectRuntime.DevGlobals(1, g.retainedDev().projDestroyed()) : g.retainedDev();
+        var score = reset ? new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, g.score().updateHudScore()) : g.score();
+        var nextGlobals = new LoadingGlobals(g.live(), g.contact(), score, g.drownTimerWord(), g.tail(), g.bonus(),
+                g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), dev);
+        var nextLevel = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), reset ? 0 : l.checkpoint(),
+                reset ? 0 : l.spawnMode(), l.plcLoadFlags() | 1, l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
+        var nextRing = reset ? new CdRingGlobals(r.rings(), frame.environment().globals().timeAttackMode() == 0 ? 3 : 1,
+                r.livesFlags(), r.updateHudRings(), r.updateHudLives(), r.timeStopTimer(), r.ringAnimationTimer(), r.ringAnimationFrame()) : r;
+        module.beginPastOldProgrammeExit(this, reset);
+        replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
+                values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), nextRing,
+                nextLevel, nextGlobals, values.hudObjects(), values.calls());
+        if (reset) placement.resetSavedObjectFlags();
+        call(OLD_EXIT_PRELUDE);
+        section(art::clearPlcs); call(OLD_EXIT_CLEAR_PLCS);
+        if (p.specialStage() != 0)
+            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.OLD_EXIT_SPECIAL_STAGE);
+        if ((frame.environment().movement().gates().timeZone() & 0x80) != 0)
+            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.OLD_EXIT_MARKED_PERIOD);
+        boolean fade = module.selectPastOldBlackExit(this);
+        // The completed RunObjects collector is intentionally UNDRAINED. Its native pointers
+        // are ephemeral; the genuine prior completed CPU SAT stays in Values/LoopGlobals.
+        drawQueue.close(); drawQueue = null;
+        phase(fade ? OLD_BLACK_FADE : OLD_CLEAR_WAIT);
+        if (fade) oldExitFadeInfo(); else clearOldExitPalette();
+    }
+    private void oldExitFadeInfo() {
+        globals(g -> {
+            var t = g.tail().orElseThrow();
+            return new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
+                    Optional.of(new TailValues(t.player2ControlsWord(), t.player2BoredWord(), t.unknownLevelByte(),
+                            t.demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
+        });
+    }
+    private void clearOldExitPalette() {
+        var l = values.level();
+        if (l.levelRestart() != 2) throw new IllegalStateException("Old black exit lost actual restart2");
+        // Main93-109: clear the complete restart WORD, all palFadeFlags and only CPU-normal128.
+        module.clearPastOldBlackExitFlags(this);
+        replace(OLD_CLEAR_WAIT, values.section(), CdAssetBytes.copyOf(new byte[128]), values.fadePalette(),
+                values.displayedPalette(), values.cpuSat(), values.displayedSat(), values.displayedHScroll(),
+                values.foregroundPlane(), values.ring(), new CdLevelGlobals(0, l.updateHudTime(), l.checkpoint(),
+                        l.spawnMode(), l.plcLoadFlags(), l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver()),
+                values.globals(), values.hudObjects(), values.calls());
+        call(OLD_EXIT_CLEAR_PALETTE);
+    }
+    private void serviceOldProgrammeExit(int held) {
+        requireOldProgrammePresentation();
+        if (oldProgrammeContinuation) throw new IllegalStateException("Old programme continuation reentry");
+        oldProgrammeContinuation = true;
+        try { runOldProgrammeExit(held); }
+        finally { oldProgrammeContinuation = false; }
+    }
+    private void runOldProgrammeExit(int held) {
+        if (values.phase() == OLD_IPX_RETURNED) {
+            // IPX.RunMMD1387 hardware arbitration is deliberately omitted for immutable detached
+            // programme data. RunLevel545-594 then selects only from these actual retained values.
+            if (values.ring().lives() == 0)
+                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_GAME_OVER);
+            if ((frame.environment().movement().gates().timeZone() & 0x80) != 0)
+                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_TIME_WARP);
+            if (module.levelProgramState().specialStage() != 0)
+                throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.IPX_LEVEL_SPECIAL_STAGE);
+            // RunR12 selects R12SubCmds[0]/R12A. No new-act Frame/World/palette authority exists here.
+            throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.NEXT_ACT_PROGRAMME_ADMISSION);
+        }
+        if (values.phase() == OLD_RETURNED) {
+            // IPX.RunMMD1373-1385: semantic known BYTEFF result, FM stop and one blank.
+            // No level controller read/Finish or Frame clock is invented at this caller wait.
+            if (module.pastOldProgrammeReturnCode() != 0xFF) throw new IllegalStateException("Old MMD result changed");
+            appendSound(new SonicCdGameModule.PastProgrammeSound(SonicCdGameModule.ProgramSound.STOP_FM));
+            fadeProgress(new FadeProgress(values.fadeProgress().completedSteps(), false));
+            representedServiceCompleted();
+            module.completePastOldIpxBlank(this); phase(OLD_IPX_RETURNED); call(OLD_IPX_BLANK);
+            settleSelectedDisplay(values.loop().completedDraw());
+            return;
+        }
+        presentation.validatePastOldProgrammePlane();
+        var selectedCpu = values.loop().completedDraw();
+        var before = frame.state(); var environment = frame.environment();
+        boolean fade = values.phase() == OLD_BLACK_FADE;
+        servicing = true;
+        try {
+            if (fade) frame.serviceOldProgrammeExitPaletteFade(held, before, environment, this::publishOldExitFade, this::fastPlc);
+            else frame.serviceOldProgrammeExitLoad(held, before, environment, this::publish, this::copyAndDraw, this::fastPlc);
+        } finally { servicing = false; }
+        representedServiceCompleted(); call(fade ? OLD_EXIT_FADE_SERVICE : OLD_EXIT_LOAD_SERVICE);
+        if (fade) {
+            var colours = CdLevelPaletteFade.stepToBlack(new CdLevelPaletteFade.Palettes(values.cpuPalette(), values.waterPalette()));
+            values = new Values(values.phase(), values.section(), colours.palette(), values.fadePalette(), colours.waterPalette(),
+                    values.displayedPalette(), values.cpuSat(), values.displayedSat(), values.displayedHScroll(),
+                    values.displayedVScrollLongBits(), values.foregroundPlane(), values.ring(), values.level(), values.globals(),
+                    values.hudObjects(), values.fadeProgress(), values.calls(), values.loop());
+            call(OLD_EXIT_BLACK_COLOURS); section(art::prepare); call(PROCESS_PLCS);
+            module.completePastOldBlackFadeWait(this);
+            if (module.levelProgramState().phase() == SonicCdGameModule.LevelProgramPhase.OLD_CLEAR_WAIT) {
+                phase(OLD_CLEAR_WAIT); clearOldExitPalette();
+            }
+        } else {
+            module.completePastOldBlackExitLoad(this); phase(OLD_RETURNED); call(OLD_EXIT_RETURN);
+        }
+        settleSelectedDisplay(selectedCpu);
+    }
+    private void publishOldExitFade() {
+        requireCallback(); requireOldProgrammePresentation();
+        // Reuse selector12's existing normal/SAT/HScroll publication and display-enable branch.
+        // Colour arithmetic follows only after the actual Frame service returns.
+        publishFromWhite();
     }
 
     private void cyclePalette() {
@@ -8521,7 +8682,8 @@ final class SonicCdPastLoadingVisit {
 
     private void copyAndDraw() {
         requireCallback();
-        var bg = presentation.servicePastPlaneAtLevelLoad();
+        var bg = oldProgrammePhase(values.phase()) ? presentation.servicePastOldProgrammePlaneAtLevelLoad()
+                : presentation.servicePastPlaneAtLevelLoad();
         var copies = presentation.pastDrawCopies();
         if ((copies.fgFlags() & 0xFF00) == 0) return;
         if (values.foregroundPlane() == null) throw module.pastLoadingBoundary(SonicCdGameModule.PastLoadBoundary.ENTRY);
@@ -8546,7 +8708,8 @@ final class SonicCdPastLoadingVisit {
         adoptForeground(result.state(), result.flagsWord());
     }
     private void adoptForeground(CdR11aBackgroundPlane.State plane, int flags) {
-        presentation.consumePastForegroundFlags(flags);
+        if (oldProgrammePhase(values.phase())) presentation.consumePastOldProgrammeForegroundFlags(flags);
+        else presentation.consumePastForegroundFlags(flags);
         replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), plane, values.ring(), values.level(),
                 values.globals(), values.hudObjects(), values.calls());
@@ -8880,6 +9043,31 @@ final class SonicCdPastLoadingVisit {
                 v.displayedVScrollLongBits(), displayEnabled, retained.inputs().foreground(),
                 retained.inputs().background(), displayEnabled ? v.section().residency() : null,
                 retained.inputs().player()));
+        if (oldProgrammePhase(v.phase())) {
+            var gates = capture.shared.environment().movement().gates();
+            var expectedPhase = switch (v.phase()) {
+                case OLD_BLACK_FADE -> SonicCdGameModule.LevelProgramPhase.OLD_BLACK_FADE;
+                case OLD_CLEAR_WAIT -> SonicCdGameModule.LevelProgramPhase.OLD_CLEAR_WAIT;
+                case OLD_RETURNED -> SonicCdGameModule.LevelProgramPhase.OLD_RETURNED;
+                case OLD_IPX_RETURNED -> SonicCdGameModule.LevelProgramPhase.OLD_IPX_RETURNED;
+                default -> throw new IllegalArgumentException("Not an old exit capture");
+            };
+            boolean fadeWait = v.phase() == OLD_BLACK_FADE;
+            if (gates.zoneAct() != 1 || gates.timeZone() != 1 || program.phase() != expectedPhase
+                    || program.demoMode() != 0 || program.usePlayer2() != 0 || program.levelStarted() != 0
+                    || (program.gameMode() & 0x80) == 0 || capture.shared.paused()
+                    || program.specialStage() != 0 || progress.completedSteps() != 22
+                    || progress.displayEnabled() != (v.phase() != OLD_IPX_RETURNED)
+                    || v.level().levelRestart() != (fadeWait ? 2 : 0)
+                    || (v.level().plcLoadFlags() & 1) == 0
+                    || (fadeWait ? (program.palFadeFlags() & 1) == 0 || program.whiteFadeSteps() >= 22
+                            : program.palFadeFlags() != 0 || (program.whiteFadeSteps() != 0 && program.whiteFadeSteps() != 22))
+                    || v.section().queue().headSource() != 0 || v.section().remainingTilesWord() != 0
+                    || (!fadeWait && !Arrays.equals(new byte[128], v.cpuPalette().copy()))
+                    || (fadeWait && v.globals().tail().orElseThrow().paletteFadeInfoWord() != 0x003F))
+                throw new IllegalArgumentException("Captured old exit source/progress/queue/programme differs");
+            return;
+        }
         boolean fading = v.phase() == FROM_WHITE; boolean begun = v.phase() == BEGIN_LEVEL;
         if (capture.shared.environment().movement().gates().timeZone() != (fading || begun ? 0 : 0x80)
                 || (fading && progress.completedSteps() >= 22)
@@ -8900,7 +9088,10 @@ final class SonicCdPastLoadingVisit {
         validateRestore(capture, program);
         frame.restoreActor(capture.actor); frame.restoreShared(capture.shared);
         placement.restore(capture.placement);
-        presentation.restorePastLoadFlags(capture.flags); values = capture.values; sounds = capture.sounds;
+        // The full preflight above precedes every adoption. Programme (Module) and Values
+        // select the target admission before restoring their flags; no native work is replayed.
+        values = capture.values; sounds = capture.sounds;
+        presentation.restorePastProgrammeLoadFlags(capture.flags);
         restorePlayerBank();
     }
 }

@@ -43,20 +43,76 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.lwjgl.opengl.GL11.*;
 
 /**
- * Positive ordinary controller route/EGL proof through10394; no next-programme admission.
+ * Controller-only Results10394 pixels and native old-programme return10419; no Act2 admission.
  * Native N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Results/Main.asm:61-272;
  * Object Functions.asm:137-196,275-346. Original USA/FixBugs=0.
- * Stops at returned10394, before the first unowned programme store at10395. No actor, global,
+ * The pixel case stops at10394; the exit case reaches10419 before Act2 admission. No actor, global,
  * pool, terrain, art, camera, queue, clock or Frame seed, input search or failed restore.
  * Frozen input call numbers select only this fixture's input/positive bound, never production.
  * Actual current selected scene is drawn; renderer-only whole32 omission checks Results pixels.
- * No visible-Sonic, native-image parity, >=50 BigRing touch, new act, programme/LoadMMD or save claim.
+ * No visible-Sonic, native-image parity, >=50 BigRing touch, new act, new LoadMMD or save claim.
  */
 @Isolated
 class TestSonicCdPastResultsRoute {
     private final TestSonicCdPastLoadingWorld fixture=new TestSonicCdPastLoadingWorld();
     @BeforeEach void setup(){fixture.setup();}
     @AfterEach void cleanup(){fixture.cleanup();}
+
+    @Test void naturalResultsReturnThroughBlackFadeAndIpx10419WithFullAndCourseReplay() throws Exception {
+        var p=ready();var h=p.harness();var owners=new Owners(p);var evidence=new Evidence();
+        for(int call=p.returned()+1;call<=10394;call++)advance(p,call,owners,evidence);
+        assertFinalResults(p,evidence);
+        var input=controller(10394); // The same held Right continues; no gameplay state ingress.
+        long beforeClock=p.frame().vIntClock().absoluteValue().orElseThrow();
+        int beforeFrames=p.frame().environment().globals().levelFrames();
+        CdPlayerFrameRuntime.ActorState stoppedActor=null;
+        CdObjectPlacementRuntime.Snapshot stoppedPlacement=null;
+        for(int offset=0;offset<=24;offset++) {
+            var phase=offset<22?SonicCdGameModule.PastLoadPhase.OLD_BLACK_FADE
+                    :offset==22?SonicCdGameModule.PastLoadPhase.OLD_CLEAR_WAIT
+                    :offset==23?SonicCdGameModule.PastLoadPhase.OLD_RETURNED:SonicCdGameModule.PastLoadPhase.OLD_IPX_RETURNED;
+            boolean replay=offset==0||offset==1||offset==11||offset>=22;
+            var registry=h.mode().getRewindRegistry();var full=replay?registry.capture():null;
+            var course=replay?registry.captureCourse():null;var before=replay?captureNative(h):null;
+            step(h,input);assertOldExitOwners(p,owners,phase);
+            if(replay) {
+                var after=captureNative(h);
+                registry.restore(full);assertNativeCapture(before,h);step(h,input);assertOldExitOwners(p,owners,phase);assertNativeCapture(after,h);
+                registry.restoreCourse(course);assertNativeCapture(before,h);step(h,input);assertOldExitOwners(p,owners,phase);assertNativeCapture(after,h);
+            }
+            if(offset==0){stoppedActor=p.frame().captureActor();stoppedPlacement=p.placement().capture();}
+            else {CdCapturedValueAssertions.assertCapturedValueEquals(stoppedActor,p.frame().captureActor());assertPlacement(stoppedPlacement,p);}
+            assertEquals((beforeFrames+1)&0xFFFF,p.frame().environment().globals().levelFrames());
+            assertEquals(beforeClock+1+Math.min(offset,23),p.frame().vIntClock().absoluteValue().orElseThrow());
+            assertEquals(Math.min(offset,22),h.module().levelProgramState().whiteFadeSteps());
+            assertEquals(offset<22?1:0,h.module().levelProgramState().palFadeFlags());
+            assertEquals(offset<22?2:0,h.module().pastLoadState().level().levelRestart());
+            assertEquals(1,p.frame().environment().movement().gates().zoneAct());
+            assertEquals(1,p.frame().environment().movement().gates().timeZone());
+            if(offset>=22)assertArrayEquals(new byte[128],h.module().pastLoadState().cpuPalette().copy());
+            if(offset>=23)assertEquals(0xFF,h.module().pastOldProgrammeReturnCode());
+        }
+        assertArrayEquals(new byte[128],h.module().pastLoadState().displayedPalette().copy());
+        var sound=assertInstanceOf(SonicCdGameModule.PastProgrammeSound.class,h.module().pastLoadState().sounds().getLast());
+        assertEquals(SonicCdGameModule.ProgramSound.STOP_FM,sound.sound());
+        var beforeNext=captureNative(h);var clock=p.frame().vIntClock();
+        var boundary=assertThrows(SonicCdGameModule.UnsupportedPastLoading.class,()->step(h,input));
+        assertEquals(SonicCdGameModule.PastLoadBoundary.NEXT_ACT_PROGRAMME_ADMISSION,boundary.boundary());
+        assertEquals(0,boundary.getSuppressed().length);assertOldExitOwners(p,owners,SonicCdGameModule.PastLoadPhase.OLD_IPX_RETURNED);
+        assertSame(clock,p.frame().vIntClock());assertNativeCapture(beforeNext,h);
+        System.out.println("Past controller returned10419: Results NextLevel,22 black services,clear-C,FF return and IPX blank;10420 awaits Act2 admission.");
+    }
+
+    private static void assertOldExitOwners(Prepared p,Owners owners,SonicCdGameModule.PastLoadPhase phase)throws Exception {
+        var h=p.harness();assertFalse(p.frame().closed());assertSame(p.frame(),h.module().requirePlayerFrame());
+        assertSame(owners.world(),h.mode().getWorldSession());assertEquals(owners.generation(),h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertSame(owners.source(),p.frame().stageSource());assertSame(owners.visit(),actualField(h.module(),"pastLoading"));
+        assertSame(owners.pool(),p.placement().pool());assertSame(owners.assets(),h.module().pastLoadState().assets());
+        assertSame(owners.body(),actualField(p.visit(),"results"));assertEquals(phase,h.module().pastLoadState().phase());
+        assertNull(actualField(p.visit(),"drawQueue"));assertNull(actualField(p.visit(),"activeResults"));
+        assertFalse((boolean)actualField(p.visit(),"resultsPort"));assertFalse((boolean)actualField(p.visit(),"drawingResults"));
+        assertFalse((boolean)actualField(p.visit(),"oldProgrammeContinuation"));
+    }
 
     @Test void naturalResultsCompleteBonusesReturn10394ReplayBothScopesAndDrawTheirSelectedPixels() throws Exception {
         byte[] imageForExport;

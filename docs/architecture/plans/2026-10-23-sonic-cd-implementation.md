@@ -1,5 +1,36 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — native old-programme exit returns10419
+
+The unchanged controller recipe now returns through Results NextLevel10395,
+22 selector12 black-fade waits10396–10417, final selectorC10418 and the semantic
+MMD return/IPX blank10419. The marked entry's BSET sets palFadeFlags bit0 even
+when its old bit skips white fade; that genuine retained1 selects the later22
+black waits. No default flag or synthetic skip branch is used.
+
+Each black wait publishes before normal64-colour and independent water64-colour
+updates; the final clear changes CPU normal colours only. Existing Frame service,
+section decoder, draw-copy, sound and timing owners remain authoritative. IPX's
+blank performs no old Frame input/clock/Body work. Semantic returnBYTEFF follows
+the owning native routines; no register, bus or hardware arbitration is modelled.
+The prior collector is closed undrained after every physical slot completes.
+
+Full/course restore BEFORE forward covers prelude, first/mid/final fade, C, RTS
+and IPX cuts on the same World/Frame/source/placement and production epoch. A new
+seven-case constructed Results ingress class separately checks service and guard
+branches. First10420 stops at NEXT_ACT_PROGRAMME_ADMISSION without mutation or
+retiring the healthy returned Frame; no failed owner is restored. NewGame old0,
+time-attack/special-stage branches lack genuine World ingress coverage.
+
+One fresh source-bound864-case/10-class run passes0failures/errors/skips, including
+Frame796, retained World/selected-display/port consumers, both Goal/Results GPU
+checks and the natural10419 exit. Source before/after
+`d8523e01e32d828f65a52589659742a135d0d455e49a4bc65164be19beb8ae62`;
+execution20:00:46.291141–20:02:01.003614Z,0s queue,97s compilation. All fresh test
+identities/properties were inspected and diagnostics consumed. Independent static
+review reports no actionable P1/P2. This is a focused pass, not a full-suite,
+Act2 World or native-image/audio/regional parity certificate.
+
 ## 4 November 2026 — Results next-programme prefix and detached Act2 custody
 
 The actual Results NextLevel path now publishes its ordered scalar writes,
