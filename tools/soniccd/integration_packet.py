@@ -8,7 +8,8 @@ Only run --execute launches tests through the existing queue; compile --execute
 launches build-only test-compile through that wrapper. Other read-only modes never
 execute supplied code.
 Origin: 2026-10-26 private Sonic CD packet preservation tooling task. Workflow:
-.agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr only.
+.agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr unless
+junit --evidence explicitly creates a new external JSON observations file.
 """
 from __future__ import annotations
 
@@ -669,6 +670,8 @@ def main(argv=None):
     junit.add_argument("--since", required=True, help="run-start ISO-8601 timestamp with timezone, e.g. 2026-10-26T10:00:00Z")
     junit.add_argument("--property", action="append", default=[], metavar="NAME=VALUE",
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
+    junit.add_argument("--evidence", metavar="ABSOLUTE_EXTERNAL_JSON",
+                       help="exclusively save complete bounded XML observations; stdout becomes path/hash/counts, not run authority")
     comparison = commands.add_parser("compare-junit", help="read-only exact matched Surefire outcome comparison; never runs tests")
     comparison.add_argument("--baseline-worktree", required=True)
     comparison.add_argument("--candidate-worktree", required=True)
@@ -727,7 +730,16 @@ def main(argv=None):
                 require(not args.maven_terminal, "--maven-terminal is only meaningful with --apply")
                 result = plan_report(*validate_packet(args.worktree, manifest))
         else:
-            result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
+            if args.evidence is not None:
+                from integration_junit_evidence import save_junit_evidence
+                try:
+                    result = save_junit_evidence(args.worktree, args.classes, cutoff(args.since),
+                            requested_properties(args.property), args.evidence)
+                except (ValueError, OSError) as error:
+                    # Script execution and imported helpers may have distinct module instances.
+                    raise PacketError(str(error), getattr(error, "report", None)) from error
+            else:
+                result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
         compact_compile = args.command == "compile" and args.compact_output
         print(json.dumps(result, indent=None if compact_compile else 2,
                          separators=(",", ":") if compact_compile else None, ensure_ascii=True))

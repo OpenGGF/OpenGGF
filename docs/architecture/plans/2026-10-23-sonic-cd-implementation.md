@@ -1,5 +1,20 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — exact JUnit evidence export
+
+The existing integration helper now offers `junit --evidence` for an explicit
+fresh class/property selection. It reuses the strict parser and exports all case
+identities/outcomes, allowed environment and XML hashes into a new bounded0600
+external JSON artifact. No default output, report deletion, command execution or
+pass cache is added. XML observations cannot prove completion or source identity.
+Independent synthetic forward tests found the empty explicit path fell back to
+plain output; Root reproduced it, changed dispatch to test omission with
+`is not None`, and added a regression. Fresh50 focused Python tests pass with
+zero skips. Syntax, CLI help, both skill validators/mirrors and whitespace pass.
+A first Root CLI-test invocation used the wrong Python module search path and
+failed to import the harness; the corrected invocation ran all12 cases. No engine
+result or gameplay claim follows from this tool qualification.
+
 ## 4 November 2026 — shared Act2 HUD and authenticated placement
 
 Explicit R12A placement retains all766 carried saved-bank bytes and the actual

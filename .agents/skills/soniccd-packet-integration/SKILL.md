@@ -12,6 +12,8 @@ the destination worktree explicitly. Read-only modes do not stage, commit, fetch
 push, launch Maven, inspect foreign jobs or execute supplied source. Only the
 explicit `run --execute` mode launches a focused Maven test through the existing queue.
 `compile --execute` launches compilation through the existing build-only wrapper.
+Only explicit `junit --evidence` creates a new external JSON observations file;
+selected reports and source remain read-only.
 
 Keep the full USA then JP/EU integration goal in the owning task. A validated
 source packet is an integration aid, not evidence that a region or feature works.
@@ -630,8 +632,58 @@ evidence. XML freshness does not prove process completion, source identity or
 test discovery. Attribute the result to the exact command, tested SHA and relevant
 uncommitted source, invocation cutoff, classes, environment, identities and skips.
 `head_at_inspection` is not a claimed execution SHA. Never combine older narrow
-passes into an invented fresh total. No output is retained unless the caller
-explicitly redirects text; do not create pass caches, receipts or raw-log archives.
+passes into an invented fresh total. Without `--evidence`, output remains on
+stdout/stderr unless the caller explicitly redirects it. Do not create pass
+caches, execution receipts or raw-log archives.
+
+To replace repeated ad hoc XML snippets with a complete self-contained inventory,
+add one explicit **new external** JSON destination to the same selection:
+
+```bash
+python3 -B tools/soniccd/integration_packet.py junit \
+  --worktree "$DESTINATION_WORKTREE" --since "$RUN_START_UTC" \
+  --class example.TestCanonicalOwner --class example.TestAffectedConsumer \
+  --property openggf.headless.gl=surfaceless-egl \
+  --evidence "$ABSOLUTE_NEW_EXTERNAL_JSON"
+```
+
+This optional export reuses the existing bounded comparison reader and strict
+fresh-JUnit parser. It retains every exact case identity/status/message/type,
+per-class and total counts, requested allowlisted properties plus JVM/worktree
+properties, the cutoff, inspected HEAD, and each selected report's byte count
+and SHA256. It copies no raw XML, system-out/err or arbitrary JVM properties.
+The inspected HEAD and report hashes are **observations**, not an execution SHA,
+command completion, unchanged source, native correctness or discovery proof.
+The file is not consulted by any runner, admission gate or future pass check.
+
+The destination must be canonical and absolute, with an existing parent, outside
+the selected checkout, its main-checkout/common-metadata roots and the tool
+checkout. Git-metadata/`target` path components, lexical aliases, symlinks and
+existing destinations (including unrelated files/hardlinks) reject. An unrelated
+ancestor dotfiles repository does not make an explicitly external area part of
+the selected repository. POSIX no-follow directory descriptors and exclusive
+creation protect the chosen new file; successful output is mode0600. There is no
+overwrite, directory creation, report deletion, command execution or retry.
+
+Export requires1–50 distinct exact classes,4096 flat directory entries, at most
+16MiB/selected XML and64MiB selected XML total,50000 testcase elements, depth64,
+and a complete JSON artifact of at most32MiB. Oversized output rejects before
+creation; cases/messages are never silently dropped or truncated. Missing or
+mismatched required environment properties reject export with exit2 and no file;
+ordinary `junit` without export retains its existing issue-reporting behavior.
+Exit0 exports clean XML observations; exit1 exports accepted failures/errors/skips
+in full. Stdout contains only path/hash/bytes/class and outcome counts plus the
+XML-only attribution, not the full case list. Invalid/incomplete evidence returns2;
+a write failure after exclusive creation returns3 with `partial=true`, retains
+the newly created artifact for inspection and prints no success result. Choose a
+new path after reviewing it; no automatic overwrite or cleanup is attempted.
+
+Report bytes, inventory, parent identities and inspected HEAD are rechecked
+non-atomically before publication. Output bytes and parent identities are checked
+after writing. Change-and-restore and later filesystem changes can escape these
+observations; the artifact is not a lease, atomic snapshot, pass cache or proof
+that the selected command has terminated. The caller still establishes terminal
+command/source/environment attribution and performs normal diagnostic handling.
 
 ## Compare selected matched test evidence
 

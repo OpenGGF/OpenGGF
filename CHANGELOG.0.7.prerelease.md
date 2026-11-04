@@ -11,6 +11,9 @@ Unreleased. The earlier development themes remain in
   reduction is measured as coverage selection, not a claimed runtime speedup.
   The integration runner can also shorten Maven progress separately from its
   structured result, retaining complete source and fresh JUnit verification.
+  Explicit JUnit evidence export saves complete bounded case identities, outcomes,
+  environment and report hashes to a new external artifact, with XML observation
+  kept separate from command completion and tested-source attribution.
   Focused lean checks compile with normal Maven memory before bounded execution,
   rechecking source and external packet inputs after admission so preparation
   reports cannot stand in for tests.
