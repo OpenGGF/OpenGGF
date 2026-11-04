@@ -7,6 +7,8 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectPlacements;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aTerrainAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.Arrays;
@@ -45,16 +47,19 @@ public final class CdObjectPlacementRuntime {
         private final CdObjectPlacements placements;
         private final Optional<CdR11aAssets.Identity> identity;
         private final Optional<CdR11bAssets.Identity> pastIdentity;
+        private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
         private final Status status;
         private final CdObjectPool.Snapshot pool;
         private final CdAssetBytes savedFlags;
         private Snapshot(Object owner, CdObjectPlacements placements, Optional<CdR11aAssets.Identity> identity,
                          Optional<CdR11bAssets.Identity> pastIdentity,
+                         Optional<CdR12aTerrainAssets.Identity> act2Identity,
                          Status status, CdObjectPool.Snapshot pool, CdAssetBytes savedFlags) {
             this.owner = owner;
             this.placements = placements;
             this.identity = identity;
             this.pastIdentity = pastIdentity;
+            this.act2Identity = act2Identity;
             this.status = status;
             this.pool = pool;
             this.savedFlags = savedFlags;
@@ -68,6 +73,7 @@ public final class CdObjectPlacementRuntime {
     private final CdObjectPlacements placements;
     private final Optional<CdR11aAssets.Identity> identity;
     private final Optional<CdR11bAssets.Identity> pastIdentity;
+    private final Optional<CdR12aTerrainAssets.Identity> act2Identity;
     private final CdObjectPool pool = new CdObjectPool();
     private final byte[] savedFlags = new byte[SAVED_BANK_BYTES];
     private int routine;
@@ -90,9 +96,16 @@ public final class CdObjectPlacementRuntime {
 
     private CdObjectPlacementRuntime(CdObjectPlacements placements, Optional<CdR11aAssets.Identity> identity,
                                      Optional<CdR11bAssets.Identity> pastIdentity) {
+        this(placements, identity, pastIdentity, Optional.empty());
+    }
+
+    private CdObjectPlacementRuntime(CdObjectPlacements placements, Optional<CdR11aAssets.Identity> identity,
+                                     Optional<CdR11bAssets.Identity> pastIdentity,
+                                     Optional<CdR12aTerrainAssets.Identity> act2Identity) {
         this.placements = Objects.requireNonNull(placements);
         this.identity = identity;
         this.pastIdentity = pastIdentity;
+        this.act2Identity = act2Identity;
         if (placements.backwardSentinel().isEmpty() || placements.nullList().isEmpty()) {
             throw new IllegalArgumentException("CD spawner requires distinct backward/forward/Null layout views");
         }
@@ -141,6 +154,28 @@ public final class CdObjectPlacementRuntime {
     }
 
     /**
+     * Actual original-USA R12A relation over its authenticated terrain owner's retained MMD/layout.
+     * The caller supplies every surviving saved-bank byte and owns any reached ResetSavedObjFlags;
+     * this factory performs no native clear, Init, spawn, body or programme/World admission.
+     * Object Spawner.asm:42-101,240-319 is the same common-list algorithm for PPZ2.
+     */
+    public static CdObjectPlacementRuntime fromAssets(CdR12aTerrainAssets assets, CdAssetBytes exactSavedBank) {
+        Objects.requireNonNull(exactSavedBank, "exact carried saved-object bank");
+        if (exactSavedBank.length() != SAVED_BANK_BYTES) {
+            throw new IllegalArgumentException("Carried saved-object bank must be 2+$2FC bytes, was " + exactSavedBank.length());
+        }
+        Objects.requireNonNull(assets, "authenticated original R12A terrain assets");
+        var identity = assets.identity();
+        if (identity.variant() != CdReleaseVariant.USA || !identity.stage().equals(CdStageKey.parse("R12A"))
+                || identity.file() != CdNativeFile.R12A || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM) {
+            throw new IllegalArgumentException("CD placement source must be authenticated original USA R12A Word RAM");
+        }
+        var runtime = new CdObjectPlacementRuntime(assets.objects().placements(), Optional.empty(), Optional.empty(), Optional.of(identity));
+        exactSavedBank.buffer().get(runtime.savedFlags);
+        return runtime;
+    }
+
+    /**
      * Authenticated original USA R11B placement source with the exact surviving MAINVARS bank.
      * Native savedObjFlags at FF1200..FF14FD survives RunMMD/.ClearFlowers/.ClearObjects;
      * Main:37-55 selects ResetSavedObjFlags separately, and SpawnObjects_Init:54-55 writes
@@ -172,9 +207,13 @@ public final class CdObjectPlacementRuntime {
     public Optional<CdR11aAssets.Identity> sourceIdentity() { return identity; }
 
     /** Package-local admission guards; the public identity accessor retains its A-only contract. */
-    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent(); }
+    boolean hasAuthenticatedSource() { return identity.isPresent() || pastIdentity.isPresent() || act2Identity.isPresent(); }
     boolean sameBSource(CdR11bAssets assets) {
         return pastIdentity.equals(Optional.of(Objects.requireNonNull(assets, "assets").identity()));
+    }
+    boolean sameAct2Source(CdR12aObjectAssets assets) {
+        Objects.requireNonNull(assets, "assets");
+        return act2Identity.equals(Optional.of(assets.identity())) && placements == assets.placements();
     }
 
     public CdObjectPool pool() { return pool; }
@@ -322,13 +361,13 @@ public final class CdObjectPlacementRuntime {
     }
 
     public Snapshot capture() {
-        return new Snapshot(owner, placements, identity, pastIdentity, status(), pool.capture(), CdAssetBytes.copyOf(savedFlags));
+        return new Snapshot(owner, placements, identity, pastIdentity, act2Identity, status(), pool.capture(), CdAssetBytes.copyOf(savedFlags));
     }
 
     public void validateRestore(Snapshot snapshot) {
         Objects.requireNonNull(snapshot);
         if (snapshot.owner != owner || snapshot.placements != placements || !snapshot.identity.equals(identity)
-                || !snapshot.pastIdentity.equals(pastIdentity)) {
+                || !snapshot.pastIdentity.equals(pastIdentity) || !snapshot.act2Identity.equals(act2Identity)) {
             throw new IllegalArgumentException("Foreign CD placement source/runtime capture");
         }
         pool.validateRestore(snapshot.pool);

@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 4 November 2026 — shared Act2 HUD and authenticated placement
+
+Explicit R12A placement retains all766 carried saved-bank bytes and the actual
+terrain owner's cached layout. Ring factory admission requires that same retained
+source relation; equal identity values or a raw placement cannot substitute. The
+common spawning and full Ring body algorithms are unchanged. Literal camera0/
+Present component ingress selects its six native rows and separately checks later
+Ring expansion; actual Title-before-placed execution remains the World binding.
+
+One private HUD algorithm now serves the unchanged B API and a typed Act2 facade.
+Both preserve correctly typed complete failure prefixes and original reached
+causes. Actual R12A numbers/reset/divisor views are borrowed, not loaded into a new
+bank. The pure FromBlack helper covers the selected start/count WORD range and
+native wrapped unsigned colour arithmetic; it supplies no clear, wait or phase.
+
+Fresh64/3classes passed0failures/errors/skips for new8 source-relation cases plus
+legacy Ring26 and placement30. Source815b28fcffeb89112dc175f89c462a327267d6836809694cc5eaaa8dafa82bc6,
+21:15:11.759690–21:16:52.308672Z,0s queue. Root corrected two test-only calls to
+a package-private profile hash helper using a private standard MessageDigest;
+production API visibility is unchanged. All64 identities/properties inspected;
+six report files consumed.
+
+Fresh184/8classes passed0failures/errors/skips for old HUD46, new HUD13,
+palette fades65 and retained programme/start/Results/section regressions.
+Source41062525e3688b0495261d770c85218e924ae984b9849cb6b6995bb29d52f36b,
+21:24:00.766716–21:26:03.684573Z,0s queue. All184 identities/properties inspected;
+16 report files consumed. These are separate focused passes, not a full suite or
+actual Act2 World/selected-pixel certificate. The live lifecycle and selected
+display binding remain in progress.
+
 ## 4 November 2026 — Act2 backend and normal-entry components
 
 Original-USA R12A now binds88 raw descriptors,35 finite native/Java art readers,

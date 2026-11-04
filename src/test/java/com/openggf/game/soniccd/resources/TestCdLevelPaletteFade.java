@@ -174,4 +174,66 @@ class TestCdLevelPaletteFade {
         assertThrows(NullPointerException.class, () -> CdLevelPaletteFade.stepFromWhite(null, filled(0)));
         assertThrows(NullPointerException.class, () -> CdLevelPaletteFade.stepFromWhite(filled(0x0EEE), null));
     }
+
+    private static Stream<Arguments> fromBlackSteps() {
+        return Stream.of(Arguments.of(0x0000, 0x0EEE, 0x0200), Arguments.of(0x0000, 0x00EE, 0x0020),
+                Arguments.of(0x0000, 0x000E, 0x0002), Arguments.of(0x0200, 0x000E, 0x0202),
+                Arguments.of(0x0EEE, 0x0EEE, 0x0EEE), Arguments.of(0xFE00, 0x0000, 0x0000),
+                Arguments.of(0xFFE0, 0x0000, 0x0000), Arguments.of(0xFFFF, 0x0000, 0x0001),
+                Arguments.of(0xFFFF, 0x0001, 0x0001), Arguments.of(0xFE00, 0x0001, 0x0000),
+                Arguments.of(0x0000, 0xFFFF, 0x0200), Arguments.of(0x7FFF, 0x8000, 0x8001),
+                Arguments.of(0x8000, 0x8001, 0x8002), Arguments.of(0x01FF, 0x0200, 0x0201),
+                Arguments.of(0xF01F, 0xFFFF, 0xF21F), Arguments.of(0xFFFE, 0xFFFF, 0x01FE),
+                Arguments.of(0x0001, 0x0000, 0x0003));
+    }
+
+    @ParameterizedTest @MethodSource("fromBlackSteps")
+    void fromBlackWrapsWholeWordBeforeUnsignedBlueThenGreenComparisonsAndNeverClampsRed(int before, int target, int after) {
+        var current = filled(before); var wanted = filled(target);
+        byte[] expected = current.copy(); put(expected, 126, after);
+        assertArrayEquals(expected, CdLevelPaletteFade.stepFromBlack(current, wanted, 0x7E00).copy());
+        assertArrayEquals(filled(before).copy(), current.copy()); assertArrayEquals(filled(target).copy(), wanted.copy());
+    }
+
+    @Test void fromBlackActual202fRangePreservesAllFirst32BytesAndBothOriginalValues() {
+        byte[] raw = filled(0).copy(); for (int i = 0; i < 32; i++) raw[i] = (byte) (i * 13 + 7);
+        var current = CdAssetBytes.copyOf(raw); var target = filled(0x0EEE); byte[] expected = raw.clone();
+        for (int at = 32; at < 128; at += 2) put(expected, at, 0x0200);
+        assertArrayEquals(expected, CdLevelPaletteFade.stepFromBlack(current, target, 0x202F).copy());
+        byte[] ignored = target.copy(); Arrays.fill(ignored, 0, 32, (byte) 0xFF);
+        assertArrayEquals(expected, CdLevelPaletteFade.stepFromBlack(current, CdAssetBytes.copyOf(ignored), 0x202F).copy());
+        assertArrayEquals(raw, current.copy()); assertArrayEquals(filled(0x0EEE).copy(), target.copy());
+    }
+
+    @Test void fromBlackNativeCountZeroStillWritesOneWordAndFull003fUsesEveryWord() {
+        byte[] expected = filled(0).copy(); put(expected, 0, 0x0200);
+        assertArrayEquals(expected, CdLevelPaletteFade.stepFromBlack(filled(0), filled(0x0EEE), 0).copy());
+        assertArrayEquals(filled(0x0200).copy(), CdLevelPaletteFade.stepFromBlack(filled(0), filled(0x0EEE), 0x003F).copy());
+    }
+
+    @Test void fromBlackLiteralTwentyTwoPassesReachTargetOnlyInTheSelectedRangeWithoutOwningWaitsOrClear() {
+        int[] words = {0x0200, 0x0400, 0x0600, 0x0800, 0x0A00, 0x0C00, 0x0E00,
+                0x0E20, 0x0E40, 0x0E60, 0x0E80, 0x0EA0, 0x0EC0, 0x0EE0,
+                0x0EE2, 0x0EE4, 0x0EE6, 0x0EE8, 0x0EEA, 0x0EEC, 0x0EEE, 0x0EEE};
+        byte[] raw = filled(0).copy(); Arrays.fill(raw, 0, 32, (byte) 0x55);
+        var current = CdAssetBytes.copyOf(raw); var target = filled(0x0EEE);
+        for (int word : words) { current = CdLevelPaletteFade.stepFromBlack(current, target, 0x202F); byte[] expected = raw.clone();
+            for (int at = 32; at < 128; at += 2) put(expected, at, word); assertArrayEquals(expected, current.copy()); }
+        assertArrayEquals(filled(0x0EEE).copy(), target.copy());
+    }
+
+    @Test void fromBlackRejectsMissingFullBuffersAndUnrepresentedRangesWithoutDefaultingOrMutating() {
+        var current = filled(0); var target = filled(0x0EEE);
+        for (int length : new int[]{0, 1, 126, 127, 129, 256}) {
+            var bad = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class, () -> CdLevelPaletteFade.stepFromBlack(bad, target, 0x202F));
+            assertThrows(IllegalArgumentException.class, () -> CdLevelPaletteFade.stepFromBlack(current, bad, 0x202F));
+        }
+        assertThrows(NullPointerException.class, () -> CdLevelPaletteFade.stepFromBlack(null, target, 0x202F));
+        assertThrows(NullPointerException.class, () -> CdLevelPaletteFade.stepFromBlack(current, null, 0x202F));
+        for (int raw : new int[]{-1, 0x10000, 0x013F, 0x2030, 0xFF00, 0x8000, 0x007F, 0x7E01})
+            assertThrows(IllegalArgumentException.class, () -> CdLevelPaletteFade.stepFromBlack(current, target, raw));
+        assertArrayEquals(filled(0).copy(), current.copy()); assertArrayEquals(filled(0x0EEE).copy(), target.copy());
+    }
+
 }

@@ -9,6 +9,9 @@ selections passed with zero skips. The intervening998 scope had two Ring binding
 errors corrected and covered in204; it is not a green998 pass. These checks do
 not admit an Act2 World, route, pixels or regional parity. The implementation
 plan records exact source and scope; controller10419 remains qualified.
+Authenticated placement/Ring binding adds a separate64-case positive. Shared
+Act2 HUD and selected-range FromBlack plus retained Past regressions add184
+passes. Neither scope claims a completed Act2 World or new rendered image.
 
 This current entry extends the historical terrain-only inventory below. The
 explicit USA opening-object DEV entry now owns source-ordered player/object

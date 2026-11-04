@@ -173,6 +173,10 @@ Unreleased. The earlier development themes remain in
   PLC2 request. Cold start now records the authenticated MAINVARS palette-clear
   bit writer before PCM rather than inferring a default. These are qualified
   components; live Act2 World admission remains separate work.
+  Authenticated Act2 placement and Ring bindings retain the actual carried saved
+  bank and layout without changing their algorithms. A typed Act2 HUD facade
+  shares the existing digit, time and failure-prefix kernel; selected-range black
+  fade uses native whole-WORD arithmetic without assuming a clear or owning waits.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

@@ -7,14 +7,15 @@ import java.util.Objects;
 
 /**
  * One colour step of the level program's palette fades, after its actual VSync.
- * Native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Level/Palette Fade.asm:104-343.
- * The two callers first write palFadeInfo=$003F, then perform22 VSync/colour/ProcessPLCs iterations.
- * These functions implement only their full64-word colour passes, normal palette THEN water palette.
+ * Native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Level/Palette Fade.asm:11-343.
+ * To-white/black callers first write palFadeInfo=$003F, then perform22 VSync/colour/ProcessPLCs iterations.
+ * Those two functions implement their full64-word passes, normal palette THEN water palette.
  * They have no clock, wait, fade progress, renderer, PLC or program-lifetime authority. WARP's separate
  * 24-pulse fade is a different algorithm/caller and must not borrow this iteration count.
  *
  * <p>To-white/black require both current128-byte buffers. From-white processes one explicit
- * current/target pair; only the native zone1 caller selects a second water pair. No missing
+ * current/target pair; from-black additionally requires an explicit bounded raw range.
+ * Only the native zone1 caller selects a second water pair. No missing
  * target, waterFade/SAT alias or native RAM is supplied. Full WORD arithmetic retains dirty bits;
  * from-white uses unsigned comparisons/borrow, rather than per-channel RGB clamping.
  */
@@ -58,6 +59,40 @@ public final class CdLevelPaletteFade {
             bytes[at] = (byte) (colour >>> 8); bytes[at + 1] = (byte) colour;
         }
         return CdAssetBytes.copyOf(bytes);
+    }
+
+    /**
+     * One FadeColorsFromBlack selected-range pass (Palette Fade.asm:36-98), after the actual VSync.
+     * rawFadeInfoWord retains native BYTE start / BYTE count-minus-one; $202F means bytes32..127.
+     * The caller owns FadeFromBlack's earlier initial clear, zone1 water selection and22 waits/PLCs.
+     * Only an aligned range within these complete128-byte values is represented; no adjacent RAM,
+     * target default, per-channel clamp, fade phase or initial-fill operation is manufactured.
+     */
+    public static CdAssetBytes stepFromBlack(CdAssetBytes current, CdAssetBytes target, int rawFadeInfoWord) {
+        Objects.requireNonNull(current, "explicit current palette");
+        Objects.requireNonNull(target, "explicit target palette");
+        if (current.length() != PALETTE_BYTES || target.length() != PALETTE_BYTES)
+            throw new IllegalArgumentException("Native from-black requires complete128-byte current and target palettes");
+        if ((rawFadeInfoWord & ~0xFFFF) != 0) throw new IllegalArgumentException("Fade info exceeds its native WORD");
+        int start = rawFadeInfoWord >>> 8, words = (rawFadeInfoWord & 0xFF) + 1;
+        if ((start & 1) != 0 || start > PALETTE_BYTES || words > (PALETTE_BYTES - start) / 2)
+            throw new IllegalArgumentException("Fade range reaches unowned or unaligned palette bytes");
+        byte[] bytes = current.copy();
+        for (int at = start; at < start + words * 2; at += 2) {
+            int colour = fromBlack(current.unsignedWord(at), target.unsignedWord(at));
+            bytes[at] = (byte) (colour >>> 8); bytes[at + 1] = (byte) colour;
+        }
+        return CdAssetBytes.copyOf(bytes);
+    }
+
+    private static int fromBlack(int current, int target) {
+        if (current == target) return current;
+        // ADDI.W wraps before CMP.W/BHI. Both tests use the complete unsigned WORD.
+        int blue = (current + 0x200) & 0xFFFF;
+        if (blue <= target) return blue;
+        int green = (current + 0x20) & 0xFFFF;
+        if (green <= target) return green;
+        return (current + 2) & 0xFFFF;
     }
 
     private static int fromWhite(int current, int target) {

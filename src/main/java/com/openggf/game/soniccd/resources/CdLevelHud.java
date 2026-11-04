@@ -54,6 +54,19 @@ public final class CdLevelHud {
             Objects.requireNonNull(score); Objects.requireNonNull(liveTime); Objects.requireNonNull(bonus);
         }
     }
+    /** R12A value projection of the same six existing owners; no new persistent state or admission. */
+    public record Act2State(CdR12aSectionArt.State section, CdRingGlobals ring, CdLevelGlobals level,
+                            CdOpeningObjectRuntime.ScoreGlobals score, CdCheckpointLiveAux.State liveTime,
+                            Optional<BonusValues> bonus) {
+        public Act2State {
+            Objects.requireNonNull(section); Objects.requireNonNull(ring); Objects.requireNonNull(level);
+            Objects.requireNonNull(score); Objects.requireNonNull(liveTime); Objects.requireNonNull(bonus);
+        }
+    }
+    public record Act2Result(Act2State state, List<NativeCall> calls) {
+        public Act2Result { Objects.requireNonNull(state); calls = List.copyOf(calls); }
+    }
+
     /** Known together only when their actual writer/carry has supplied the three-field projection. */
     public record BonusValues(int timeBonusWord, int ringBonusWord, int updateHudBonusByte) {
         public BonusValues {
@@ -118,6 +131,49 @@ public final class CdLevelHud {
         public int destinationWord() { return destinationWord; }
     }
 
+    /** Complete Act2-typed prefix of the same reached HUD boundary, never a successful result. */
+    public static final class UnsupportedAct2Hud extends UnsupportedOperationException {
+        private static final long serialVersionUID = 1L;
+        private final Boundary boundary;
+        private final Act2State state;
+        private final List<NativeCall> calls;
+        private final int sourceOffset;
+        private final int destinationWord;
+        private UnsupportedAct2Hud(Boundary boundary, Act2State state, List<NativeCall> calls,
+                                   int sourceOffset, int destinationWord, Throwable cause) {
+            super(boundary + " at HUD source " + sourceOffset + ", destination " + destinationWord, cause);
+            this.boundary = boundary; this.state = state; this.calls = List.copyOf(calls);
+            this.sourceOffset = sourceOffset; this.destinationWord = destinationWord;
+        }
+        public Boundary boundary() { return boundary; }
+        public Act2State state() { return state; }
+        public List<NativeCall> calls() { return calls; }
+        public int sourceOffset() { return sourceOffset; }
+        public int destinationWord() { return destinationWord; }
+    }
+
+    /** Explicit actual-R12A section/raw-view binding; no factory default, service or source authority. */
+    public static final class Act2 {
+        private final Assets assets;
+        private final CdR12aSectionArt art;
+        /** Production borrows its actual TerrainAssets.objects().hudAssets() and section adapter. */
+        public Act2(Assets assets, CdR12aSectionArt art) {
+            this.assets = Objects.requireNonNull(assets); this.art = Objects.requireNonNull(art);
+        }
+        public Act2Result run(Act2State state, Inputs inputs) {
+            Objects.requireNonNull(state); Objects.requireNonNull(inputs);
+            if (state.section().stopped()) throw new IllegalStateException("Stopped section cannot resume HUD admission");
+            var initial = new Values<>(state.section(), state.ring(), state.level(), state.score(), state.liveTime(), state.bonus());
+            var cursor = new Cursor<>(initial, inputs, assets, art::writeCurrentTile);
+            try { cursor.run(); }
+            catch (Stop failure) {
+                throw new UnsupportedAct2Hud(failure.boundary, act2State(cursor.state, initial, state), cursor.calls,
+                        failure.sourceOffset, failure.destinationWord, failure.getCause());
+            }
+            return new Act2Result(act2State(cursor.state, initial, state), cursor.calls);
+        }
+    }
+
     private final Assets assets;
     private final CdR11bSectionArt art;
     public CdLevelHud(Assets assets, CdR11bSectionArt art) {
@@ -128,43 +184,80 @@ public final class CdLevelHud {
     public Result run(State state, Inputs inputs) {
         Objects.requireNonNull(state); Objects.requireNonNull(inputs);
         if (state.section().stopped()) throw new IllegalStateException("Stopped section cannot resume HUD admission");
-        var c = new Cursor(state, inputs);
-        if (inputs.globals().debugCheatWord() == 0) { c.score(); c.rings(); }
-        else c.debug();
-        if (!c.time()) return c.result(); // Native max-time active-warp return skips lives/bonus.
-        if (c.state.ring().updateHudLives() != 0) {
-            c.ring(c.state.ring().rings(), c.state.ring().updateHudRings(), 0);
-            c.lives();
+        var initial = new Values<>(state.section(), state.ring(), state.level(), state.score(), state.liveTime(), state.bonus());
+        var cursor = new Cursor<>(initial, inputs, assets, art::writeCurrentTile);
+        try { cursor.run(); }
+        catch (Stop failure) {
+            throw new UnsupportedHud(failure.boundary, pastState(cursor.state, initial, state), cursor.calls,
+                    failure.sourceOffset, failure.destinationWord, failure.getCause());
         }
-        c.bonus();
-        return c.result();
+        return new Result(pastState(cursor.state, initial, state), cursor.calls);
+    }
+
+    /** Invocation-local views retain the existing six references; they are not captured or published owners. */
+    private record Values<S>(S section, CdRingGlobals ring, CdLevelGlobals level,
+                             CdOpeningObjectRuntime.ScoreGlobals score, CdCheckpointLiveAux.State liveTime,
+                             Optional<BonusValues> bonus) {
+        private Values {
+            Objects.requireNonNull(section); Objects.requireNonNull(ring); Objects.requireNonNull(level);
+            Objects.requireNonNull(score); Objects.requireNonNull(liveTime); Objects.requireNonNull(bonus);
+        }
+    }
+    @FunctionalInterface private interface TileWriter<S> { S write(S section, int destination, CdAssetBytes bytes); }
+    private static final class Stop extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        private final Boundary boundary;
+        private final int sourceOffset, destinationWord;
+        private Stop(Boundary boundary, int sourceOffset, int destinationWord, Throwable cause) {
+            super(null, cause); this.boundary = boundary; this.sourceOffset = sourceOffset; this.destinationWord = destinationWord;
+        }
+    }
+    private static State pastState(Values<CdR11bSectionArt.State> value, Values<CdR11bSectionArt.State> initial, State before) {
+        return value == initial ? before : new State(value.section(), value.ring(), value.level(), value.score(), value.liveTime(), value.bonus());
+    }
+    private static Act2State act2State(Values<CdR12aSectionArt.State> value, Values<CdR12aSectionArt.State> initial, Act2State before) {
+        return value == initial ? before : new Act2State(value.section(), value.ring(), value.level(), value.score(), value.liveTime(), value.bonus());
     }
 
     private enum Digits { SKIP_LEADING, ALWAYS, BLANK_LEADING }
     /** Ephemeral local cursor; no mutable field is retained by the component. */
-    private final class Cursor {
-        private State state;
+    private static final class Cursor<S> {
+        private Values<S> state;
+        private final Assets assets;
+        private final TileWriter<S> writer;
         private final Inputs inputs;
         private final List<NativeCall> calls = new ArrayList<>();
-        private Cursor(State state, Inputs inputs) { this.state = state; this.inputs = inputs; }
-        private Result result() { return new Result(state, calls); }
-        private UnsupportedHud stop(Boundary boundary, int source, int destination) {
-            return new UnsupportedHud(boundary, state, calls, source, destination, null);
+        private Cursor(Values<S> state, Inputs inputs, Assets assets, TileWriter<S> writer) {
+            this.state = state; this.inputs = inputs; this.assets = assets; this.writer = writer;
         }
-        private void section(CdR11bSectionArt.State section) {
-            state = new State(section, state.ring(), state.level(), state.score(), state.liveTime(), state.bonus());
+        /** The single native UpdateHUD ordering, shared by both typed facades. */
+        private void run() {
+            if (inputs.globals().debugCheatWord() == 0) { score(); rings(); }
+            else debug();
+            if (!time()) return; // Native max-time active-warp return skips lives/bonus.
+            if (state.ring().updateHudLives() != 0) {
+                ring(state.ring().rings(), state.ring().updateHudRings(), 0);
+                lives();
+            }
+            bonus();
+        }
+        private Stop stop(Boundary boundary, int source, int destination) {
+            return new Stop(boundary, source, destination, null);
+        }
+        private void section(S section) {
+            state = new Values<>(section, state.ring(), state.level(), state.score(), state.liveTime(), state.bonus());
         }
         private void ring(int count, int ringsFlag, int livesFlag) {
             var r = state.ring();
-            state = new State(state.section(), new CdRingGlobals(count, r.lives(), r.livesFlags(), ringsFlag,
+            state = new Values<>(state.section(), new CdRingGlobals(count, r.lives(), r.livesFlags(), ringsFlag,
                     livesFlag, r.timeStopTimer(), r.ringAnimationTimer(), r.ringAnimationFrame()),
                     state.level(), state.score(), state.liveTime(), state.bonus());
         }
         private void live(CdCheckpointLiveAux.State live) {
-            state = new State(state.section(), state.ring(), state.level(), state.score(), live, state.bonus());
+            state = new Values<>(state.section(), state.ring(), state.level(), state.score(), live, state.bonus());
         }
         private void bonus(BonusValues bonus) {
-            state = new State(state.section(), state.ring(), state.level(), state.score(), state.liveTime(), Optional.of(bonus));
+            state = new Values<>(state.section(), state.ring(), state.level(), state.score(), state.liveTime(), Optional.of(bonus));
         }
         private void score() {
             int flag = state.score().updateHudScore();
@@ -174,7 +267,7 @@ public final class CdLevelHud {
                 reset(0, 7, 0xB060); calls.add(NativeCall.RESET_SCORE);
             }
             var s = state.score();
-            state = new State(state.section(), state.ring(), state.level(),
+            state = new Values<>(state.section(), state.ring(), state.level(),
                     new CdOpeningObjectRuntime.ScoreGlobals(s.score(), s.nextLifeScore(), 0), state.liveTime(), state.bonus());
             number(s.score(), 0, 6, 0xB060, Digits.SKIP_LEADING);
             calls.add(NativeCall.DRAW_SCORE);
@@ -195,7 +288,7 @@ public final class CdLevelHud {
         private int timeLong() {
             try { return CdCheckpointLiveAux.read(state.liveTime(), CdCheckpointLiveAux.Field.TIME_LONG); }
             catch (CdCheckpointLiveAux.UnknownLiveByte unknown) {
-                throw new UnsupportedHud(Boundary.LIVE_TIME, state, calls, unknown.nativeAddress(), -1, unknown);
+                throw new Stop(Boundary.LIVE_TIME, unknown.nativeAddress(), -1, unknown);
             }
         }
         private void timeByte(CdCheckpointLiveAux.TimeByte field, int value) {
@@ -208,7 +301,7 @@ public final class CdLevelHud {
             if (old == 0x00093B3B) {
                 if ((g.rawTimeZoneByte() & 0x80) != 0) return false;
                 var l = state.level();
-                state = new State(state.section(), state.ring(), new CdLevelGlobals(l.levelRestart(), 0,
+                state = new Values<>(state.section(), state.ring(), new CdLevelGlobals(l.levelRestart(), 0,
                         l.checkpoint(), l.spawnMode(), l.plcLoadFlags(), l.flowerCount(), l.fadeEnableDisplay(),
                         l.powerup(), l.timeOver()), state.score(), state.liveTime(), state.bonus());
                 live(CdCheckpointLiveAux.writeTimeLong(state.liveTime(), 0));
@@ -296,12 +389,12 @@ public final class CdLevelHud {
                 int at = source + half;
                 if (at < 0 || at > assets.numbers().length() - 32)
                     throw stop(Boundary.FONT_ADDRESS, at, destination + half);
-                section(art.writeCurrentTile(state.section(), destination + half, assets.numbers().slice(at, 32)));
+                section(writer.write(state.section(), destination + half, assets.numbers().slice(at, 32)));
             }
         }
         private void blank(int destination) {
-            section(art.writeCurrentTile(state.section(), destination, CdAssetBytes.copyOf(new byte[32])));
-            section(art.writeCurrentTile(state.section(), destination + 32, CdAssetBytes.copyOf(new byte[32])));
+            section(writer.write(state.section(), destination, CdAssetBytes.copyOf(new byte[32])));
+            section(writer.write(state.section(), destination + 32, CdAssetBytes.copyOf(new byte[32])));
         }
     }
 
