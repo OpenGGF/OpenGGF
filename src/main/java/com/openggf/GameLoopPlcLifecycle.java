@@ -20,6 +20,43 @@ import java.util.function.Supplier;
 
 /** Bridges GameLoop-owned modes and fades to the session PLC lifecycle. */
 final class GameLoopPlcLifecycle {
+    record TitleLoadScan(boolean parked, boolean preparedByFrameStep,
+                         boolean clockOwned, LevelFrameContext frameContext) { }
+
+    /** Services the title scan around native load work; title release remains with its lifecycle owner. */
+    static TitleLoadScan scanTitleLoad(TitleCardProvider titleCard, PlcLifecycleFrame frame,
+                                      GameplayModeContext gameplayMode, LevelManager levelManager) {
+        var load = com.openggf.level.NativeLevelLoadAccess.beginTitleScan(levelManager);
+        if (load.parked()) return new TitleLoadScan(true, false, false, null);
+        boolean nativeLoadCompletedBeforeScan = load.completedBeforeScan();
+        boolean nativeTitleClockOwned = load.clockOwned()
+                && titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
+        if (!nativeLoadCompletedBeforeScan) frame.claim(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        LevelFrameContext frameContext = LevelFrameContext.from(gameplayMode);
+        // The title-card loop owns a real VBlank even when it does not run the
+        // ordinary player/object body, and several of its branches never reach
+        // a LevelFrameStep edge. Dispatch the game-owned hook here so every
+        // branch services it exactly once; the token's guard makes the later
+        // LevelFrameStep dispatches on the physics branch no-ops. This adds no
+        // hardware service boundary -- VINT_SERVICE stays owned by
+        // LevelFrameStep alone.
+        if (!nativeLoadCompletedBeforeScan) LevelFrameStep.dispatchGameVBlank(frameContext, frame);
+        // This caller claimed the title token before querying its provider;
+        // the external scan only prepares a token it claimed itself.
+        // The world-bound operation is resolved inside the object scan, after its
+        // VBlank service, so callbacks can replace the world before dispatch.
+        // A failed scan or a phase owned by a fade cannot prepare a title tail.
+        // Ordinary providers still update without a hardware service boundary;
+        // only successful hardware scans suppress the caller's later preparation.
+        boolean preparedByFrameStep = !nativeLoadCompletedBeforeScan
+                && GameLoopPlcLifecycle.updateTitleCardProvider(
+                        frameContext, frame, titleCard, gameplayMode,
+                        () -> { if (nativeTitleClockOwned) levelManager.advanceTitleCardVblankOnly(); });
+        if (com.openggf.level.NativeLevelLoadAccess.finishTitleScan(levelManager)) return new TitleLoadScan(true, false, false, null);
+
+        return new TitleLoadScan(false, preparedByFrameStep, nativeTitleClockOwned, frameContext);
+    }
+
     private GameLoopPlcLifecycle() {
     }
 
@@ -27,10 +64,27 @@ final class GameLoopPlcLifecycle {
     static void runLogicalIteration(PlcFrameLifecycleCoordinator lifecycle,
                                     GameplayModeContext context, Runnable updateFade,
                                     Function<PlcLifecycleFrame, Void> body) {
+        runLogicalIteration(lifecycle, context, false, updateFade, body);
+    }
+
+    /** Captures the outgoing held loop before a fade callback can replace it. */
+    static void runLogicalIteration(PlcFrameLifecycleCoordinator lifecycle,
+                                    GameplayModeContext context, boolean sourceGameplayHeld,
+                                    Runnable updateFade, Function<PlcLifecycleFrame, Void> body) {
         lifecycle.runLogicalIteration(
                 frame -> {
                     if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
-                        LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+                        var source = LevelFrameContext.from(context);
+                        var objects = source.levelManager() != null
+                                ? source.levelManager().getObjectManager() : null;
+                        if (sourceGameplayHeld && objects != null) {
+                            // Pal_FadeToBlack (sonic3k.asm:5074-5085) spends its
+                            // final synchronization wait before its caller resumes.
+                            // Its callback can replace the held loop before body.
+                            LevelFrameStep.serviceHeldVBlank(source, frame, objects::advanceVblaCounter);
+                        } else {
+                            LevelFrameStep.dispatchGameVBlank(source, frame);
+                        }
                     }
                 }, updateFade, body);
     }
@@ -95,13 +149,17 @@ final class GameLoopPlcLifecycle {
 
     /** Returns whether the provider's hardware scan owns this iteration's preparation. */
     static boolean updateTitleCardProvider(LevelFrameContext frameContext, PlcLifecycleFrame frame,
-                                           TitleCardProvider titleCard, GameplayModeContext context) {
+                                           TitleCardProvider titleCard, GameplayModeContext context,
+                                           Runnable afterVIntBeforeObjects) {
         boolean hardwareTimedProviderScan = titleCard != null
                 && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
         if (hardwareTimedProviderScan) {
             LevelFrameStep.executeHardwareTimedObjectScan(frameContext, frame,
                     PlcLifecyclePhase.LEVEL_TITLE_CARD,
-                    () -> WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession()));
+                    () -> {
+                        afterVIntBeforeObjects.run();
+                        WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession());
+                    });
             // The caller already attempted to claim this token. Prepare only its
             // surviving title phase, after the scan and all hardware boundaries.
             prepare(frame, PlcLifecyclePhase.LEVEL_TITLE_CARD);

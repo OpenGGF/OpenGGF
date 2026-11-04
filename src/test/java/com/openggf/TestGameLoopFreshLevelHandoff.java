@@ -52,6 +52,35 @@ class TestGameLoopFreshLevelHandoff {
     }
 
     @Test
+    void frozenGameplayFadeServicesEveryVintBeforeReloadCallback() {
+        var objects = context.getLevelManager().getObjectManager();
+        int incomingClock = objects.getVblaCounter();
+        AtomicBoolean completed = new AtomicBoolean();
+        var fade = context.getFadeManager();
+        GameLoopPlcLifecycle.startToBlack(context, fade, () -> {
+            assertEquals(incomingClock + 22, objects.getVblaCounter(),
+                    "Pal_FadeToBlack's $15/dbf includes its final VSync before loading");
+            completed.set(true);
+        });
+        int rows = 0;
+        while (!completed.get() && rows++ < 64) {
+            GameLoopPlcLifecycle.runLogicalIteration(context.plcFrameLifecycle(), context, true,
+                    fade::update, frame -> {
+                        if (!completed.get()) {
+                            // The ordinary held body remains reachable on all
+                            // nonterminal rows; it must not spend their tick twice.
+                            LevelFrameStep.serviceHeldVBlank(LevelFrameContext.from(context), frame,
+                                    objects::advanceVblaCounter);
+                        }
+                        return null;
+                    });
+        }
+        assertTrue(completed.get());
+        assertEquals(22, rows);
+        assertEquals(incomingClock + 22, objects.getVblaCounter());
+    }
+
+    @Test
     void realFadeCallbackKeepsItsOwnerAndDefersTheFourTitleArchives() throws Exception {
         var timing = context.hardwareTiming();
         int jobsBefore = timing.capture().jobs().size();

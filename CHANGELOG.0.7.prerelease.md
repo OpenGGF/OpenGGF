@@ -373,7 +373,12 @@ Unreleased. The earlier development themes remain in
 
 - **Trace playback handoffs:** Visual run replay keeps its boundary observer
   active between segments after closing the previous comparison payload, so
-  special-stage requests are not missed at a giant-ring transition.
+  special-stage requests are not missed at a giant-ring transition. Recorded S3K
+  fresh loads retain the source's recorded terrain-readiness ownership and use real
+  resumable decoding, placement, object and presentation phases. A dedicated,
+  matched timing stream can pace those phases without importing gameplay state;
+  incomplete or mismatched observations fail the replay.
+  Fresh bonus cards also reclaim child updates from a preceding in-level title.
 
 - **Marble Zone burning platforms:** Flames are retired from their native object
   slots immediately when their platform cleans them up, preventing an orphan

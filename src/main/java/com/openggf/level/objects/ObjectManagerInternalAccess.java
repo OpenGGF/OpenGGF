@@ -16,7 +16,15 @@ import java.util.function.Supplier;
 
 /** Internal native gameplay seams; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
+    public static void prepareInitialPlacementWindow(ObjectManager manager, List<ObjectSpawn> spawns,
+                                                     int cameraX, PersistentRespawnState respawn) {
+        manager.prepareInitialPlacementWindow(spawns, cameraX, respawn);
+    }
     private ObjectManagerInternalAccess() { }
+
+    public static void installDeferredFixedLevelObjects(ObjectManager manager) {
+        manager.installDeferredFixedLevelObjects();
+    }
 
     /** Native chain arithmetic input; internal gameplay state, outside the creator API. */
     public static int sineCosineInputFraction(ObjectManager manager) {

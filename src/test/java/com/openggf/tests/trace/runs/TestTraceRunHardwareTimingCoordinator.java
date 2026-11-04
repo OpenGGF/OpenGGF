@@ -50,6 +50,193 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTraceRunHardwareTimingCoordinator {
 
     @Test
+    void initializationGapUsesOnlyItsDedicatedMatchingQueueCompletion() throws Exception {
+        var inputs = com.openggf.game.internal.NativeLevelLoadInputs.fromRom(
+                com.openggf.data.RomByteReader.fromBytes(new byte[] {1, 2, 3}), List.of(), List.of(0));
+        var display = new com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase(1, 1,
+                com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.DISPLAY_CLEAR, inputs);
+        var initial = new com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase(1, 6,
+                com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.INITIAL_PRESENTATION, inputs);
+        var initialization = new com.openggf.trace.timing.InitializationTimingSchedule(List.of(
+                initializationEvent(10, 0, display, com.openggf.trace.timing.InitializationTimingEvent.Operation.RESUME),
+                initializationEvent(12, 0, initial, com.openggf.trace.timing.InitializationTimingEvent.Operation.HOLD),
+                initializationEvent(13, 0, initial, com.openggf.trace.timing.InitializationTimingEvent.Operation.VINT_0),
+                initializationEvent(13, 1, initial, com.openggf.trace.timing.InitializationTimingEvent.Operation.RESUME)));
+        var service = new HardwareTimingService();
+        var port = new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        port.install(HardwareTimingSchedule.empty());
+        var fixture = new TimingFixture(port);
+        fixture.installHardwareTimingReplay(port);
+        var work = submission(true, 0, 0x48);
+        var expected = new HardwareWorkHandle(work.kind(), 0,
+                com.openggf.game.timing.HardwareSubmissionFingerprint.compute(work));
+        var suffixWork = submission(true, 0, 0x49);
+        var suffixHandle = new HardwareWorkHandle(suffixWork.kind(), 1,
+                com.openggf.game.timing.HardwareSubmissionFingerprint.compute(suffixWork));
+        var destinationWork = submission(true, 0, 0x50);
+        var destinationHandle = new HardwareWorkHandle(destinationWork.kind(), 2,
+                com.openggf.game.timing.HardwareSubmissionFingerprint.compute(destinationWork));
+        var beforeGap = port.capture();
+        var snapshotCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(new com.openggf.game.rewind.RewindSnapshottable<Integer>() {
+            public String key() { return "earlier-owner"; }
+            public Integer capture() { snapshotCalls.incrementAndGet(); return 1; }
+            public void restore(Integer snapshot) { snapshotCalls.incrementAndGet(); }
+        });
+        registry.register(port);
+        var stableSnapshot = registry.capture();
+        snapshotCalls.set(0);
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(fixture,
+                List.of(new TraceRunReplayWalker.HardwareTimingSegment(10, List.of(100), HardwareTimingSchedule.empty()),
+                        new TraceRunReplayWalker.HardwareTimingSegment(15, List.of(200),
+                                new HardwareTimingSchedule(List.of(edge(200, destinationHandle))))),
+                initializationSpans(expected, suffixHandle), initialization,
+                new com.openggf.trace.timing.InitializationHardwareTimingStream(Map.of(1L,
+                        new HardwareTimingSchedule(List.of(edge(12, expected))))));
+        var input = fixture.initialization;
+        coordinator.beginPlaybackFrame(frame(10));
+        org.junit.jupiter.api.Assertions.assertNull(input.representedLoadRow(),
+                "a sidecar row cannot arm membership before a prepared display operation matches");
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.RESUME, input.next(display));
+        var staleRow = input.representedLoadRow();
+        coordinator.enterTransitionGap();
+        coordinator.beginGapFrame(11);
+        assertThrows(IllegalStateException.class, registry::capture);
+        assertThrows(IllegalStateException.class, () -> registry.restore(stableSnapshot));
+        assertThrows(IllegalStateException.class, registry::captureCourse);
+        assertThrows(IllegalStateException.class, () -> registry.restoreCourse(stableSnapshot));
+        assertEquals(0, snapshotCalls.get(), "gap rewind rejects before any other owner runs");
+        assertThrows(IllegalStateException.class, () -> port.beginInitializationGapReplay(staleRow, HardwareTimingSchedule.empty(), Map.of()));
+        assertThrows(IllegalStateException.class, port::capture);
+        assertThrows(IllegalStateException.class, () -> port.restore(beforeGap));
+        HardwareWorkHandle actual = service.submit(work);
+        assertEquals(expected, actual);
+        assertFalse(service.wasSubmittedUnrepresented(actual), "the actual load job retains its recorded ordinal");
+        service.service(POST_OBJECTS);
+        fixture.observer.onBoundary(POST_OBJECTS);
+        assertFalse(service.isReady(actual), "initialization membership must not apply a queue completion edge");
+        coordinator.beginGapFrame(12);
+        fixture.observer.onBoundary(POST_OBJECTS);
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.HOLD, input.next(initial));
+        coordinator.beginGapFrame(13);
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.VINT_0, input.next(initial));
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.RESUME, input.next(initial));
+        fixture.observer.onBoundary(POST_OBJECTS);
+        assertTrue(service.isReady(actual), "only the dedicated gap edge releases prepared work");
+        assertArrayEquals(new byte[] {0x48}, service.claim(actual));
+        coordinator.beginGapFrame(14);
+        var suffix = service.submit(suffixWork);
+        assertEquals(suffixHandle, suffix);
+        assertTrue(service.wasSubmittedUnrepresented(suffix), "work after the load keeps ordinary gap semantics");
+        service.service(POST_OBJECTS);
+        assertArrayEquals(new byte[] {0x49}, service.claim(suffix));
+        coordinator.enterSegment(1);
+        coordinator.beginPlaybackFrame(frame(15));
+        var destination = service.submit(destinationWork);
+        assertEquals(destinationHandle, destination, "the captured suffix is proved once before destination numbering");
+        service.service(POST_OBJECTS);
+        fixture.observer.onBoundary(POST_OBJECTS);
+        assertArrayEquals(new byte[] {0x50}, service.claim(destination));
+        coordinator.close();
+        org.junit.jupiter.api.Assertions.assertNull(fixture.initialization);
+        assertThrows(IllegalStateException.class, () -> input.next(initial));
+    }
+
+    @org.junit.jupiter.api.io.TempDir Path initializationDirectory;
+
+    private com.openggf.trace.timing.HardwareTimingInterstitialSpans initializationSpans(HardwareWorkHandle... work) throws Exception {
+        var content = new StringBuilder();
+        for (int index = 0; index < work.length; index++) {
+            content.append("{\"event\":\"hardware_work_completed\",\"origin\":\"interstitial\",\"after_segment\":\"source\",\"after_segment_index\":0,\"bk2_frame\":")
+                    .append(12 + index).append(",\"boundary\":\"post_objects\",\"kind\":\"kos_module_queue\",\"ordinal\":")
+                    .append(work[index].ordinal()).append(",\"submission_fingerprint\":\"")
+                    .append(work[index].submissionFingerprint()).append("\"}\n");
+        }
+        java.nio.file.Files.writeString(initializationDirectory.resolve("hardware_timing_interstitial.jsonl"), content);
+        return com.openggf.trace.timing.HardwareTimingInterstitialStreamLoader.load(initializationDirectory);
+    }
+
+    @Test
+    void preparedLoadEnablesReadinessOnItsFirstPhysicalRowWithoutAnotherPump() throws Exception {
+        var inputs = com.openggf.game.internal.NativeLevelLoadInputs.fromRom(
+                com.openggf.data.RomByteReader.fromBytes(new byte[]{1}), List.of(), List.of(0));
+        var display = new com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase(1, 1,
+                com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.DISPLAY_CLEAR, inputs);
+        var last = new com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase(1, 6,
+                com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.INITIAL_PRESENTATION, inputs);
+        var phases = new com.openggf.trace.timing.InitializationTimingSchedule(List.of(
+                initializationEvent(11, 0, display, com.openggf.trace.timing.InitializationTimingEvent.Operation.RESUME),
+                initializationEvent(12, 0, last, com.openggf.trace.timing.InitializationTimingEvent.Operation.RESUME)));
+        var service = new HardwareTimingService();
+        var port = new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        port.install(HardwareTimingSchedule.empty());
+        var fixture = new TimingFixture(port);
+        fixture.installHardwareTimingReplay(port);
+        var work = submission(true, 0, 0x48);
+        var expected = new HardwareWorkHandle(work.kind(), 0,
+                com.openggf.game.timing.HardwareSubmissionFingerprint.compute(work));
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(fixture, List.of(
+                new TraceRunReplayWalker.HardwareTimingSegment(10, List.of(100), HardwareTimingSchedule.empty()),
+                new TraceRunReplayWalker.HardwareTimingSegment(13, List.of(200), HardwareTimingSchedule.empty())),
+                initializationSpans(expected), phases,
+                new com.openggf.trace.timing.InitializationHardwareTimingStream(Map.of(1L,
+                        new HardwareTimingSchedule(List.of(edge(11, expected))))));
+        coordinator.beginPlaybackFrame(frame(10));
+        coordinator.enterTransitionGap();
+        coordinator.beginGapFrame(11);
+        var input = fixture.initialization;
+        org.junit.jupiter.api.Assertions.assertNull(input.representedLoadRow());
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.RESUME, input.next(display));
+        var actual = service.submit(work);
+        assertFalse(service.wasSubmittedUnrepresented(actual));
+        service.service(POST_OBJECTS);
+        fixture.observer.onBoundary(POST_OBJECTS);
+        assertArrayEquals(new byte[]{0x48}, service.claim(actual));
+        coordinator.beginGapFrame(12);
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.RESUME, input.next(last));
+        coordinator.enterSegment(1);
+        coordinator.beginPlaybackFrame(frame(13));
+        coordinator.close();
+    }
+
+    @Test
+    void runCloseRejectsUnconsumedInitializationAndStillDetachesAdmission() {
+        var inputs = com.openggf.game.internal.NativeLevelLoadInputs.fromRom(
+                com.openggf.data.RomByteReader.fromBytes(new byte[] {1}), List.of(), List.of(0));
+        var display = new com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase(1, 1,
+                com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Phase.DISPLAY_CLEAR, inputs);
+        var service = new HardwareTimingService();
+        var queue = new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        queue.install(HardwareTimingSchedule.empty());
+        var fixture = new TimingFixture(queue);
+        fixture.installHardwareTimingReplay(queue);
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(fixture,
+                List.of(new TraceRunReplayWalker.HardwareTimingSegment(0, List.of(0, 1), HardwareTimingSchedule.empty())),
+                com.openggf.trace.timing.HardwareTimingInterstitialSpans.empty(),
+                new com.openggf.trace.timing.InitializationTimingSchedule(List.of(
+                        initializationEvent(0, 0, display, com.openggf.trace.timing.InitializationTimingEvent.Operation.HOLD),
+                        initializationEvent(1, 0, display, com.openggf.trace.timing.InitializationTimingEvent.Operation.RESUME))));
+        var input = fixture.initialization;
+        coordinator.beginPlaybackFrame(frame(0));
+        assertEquals(com.openggf.game.internal.NativeLevelLoadPhaseAdmission.Decision.HOLD, input.next(display));
+        var failure = assertThrows(IllegalStateException.class, coordinator::close);
+        assertTrue(failure.getMessage().contains("unconsumed initialization"));
+        assertTrue(fixture.closed);
+        org.junit.jupiter.api.Assertions.assertNull(fixture.initialization);
+        assertThrows(IllegalStateException.class, () -> input.next(display));
+    }
+
+    private static com.openggf.trace.timing.InitializationTimingEvent initializationEvent(
+            int row, int sequence,
+            com.openggf.game.internal.NativeLevelLoadPhaseAdmission.PreparedPhase prepared,
+            com.openggf.trace.timing.InitializationTimingEvent.Operation operation) {
+        return new com.openggf.trace.timing.InitializationTimingEvent(row, sequence, prepared.loadOrdinal(),
+                prepared.phaseOrdinal(), com.openggf.trace.timing.InitializationTimingEvent.Phase.valueOf(prepared.phase().name()),
+                prepared.fingerprint(), operation);
+    }
+
+    @Test
     void emptyInitialScheduleCannotSeedOrdinalFourDuringLaterHandoff() {
         HardwareTimingService service = new HardwareTimingService();
         HardwareTimingReplayPort port =
@@ -435,6 +622,7 @@ class TestTraceRunHardwareTimingCoordinator {
         private final HardwareTimingReplayPort port;
         private TraceHardwareTimingBoundaryObserver observer;
         private boolean closed;
+        private com.openggf.trace.timing.InitializationTimingReplayPort initialization;
         private final java.util.ArrayList<Integer> latchedRawFrames =
                 new java.util.ArrayList<>();
 
@@ -445,6 +633,33 @@ class TestTraceRunHardwareTimingCoordinator {
         @Override
         public void installHardwareTimingReplay(HardwareTimingReplayPort replayPort) {
             observer = new TraceHardwareTimingBoundaryObserver(replayPort);
+        }
+
+        @Override
+        public void installInitializationTimingReplay(com.openggf.trace.timing.InitializationTimingReplayPort input) {
+            initialization = input;
+        }
+
+        @Override
+        public void clearInitializationTimingReplay() { initialization = null; }
+
+        @Override
+        public void beginInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+                HardwareTimingSchedule readiness,
+                Map<HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+            port.beginInitializationGapReplay(row, readiness, prefix);
+        }
+
+        @Override
+        public void beginInitializationGapFrame(int rawFrame) {
+            port.beginRawFrame(rawFrame);
+        }
+
+        @Override
+        public void endInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+            port.endInitializationGapReplay(row);
         }
 
         @Override
@@ -466,6 +681,12 @@ class TestTraceRunHardwareTimingCoordinator {
         @Override
         public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
             port.handoffTo(nextSchedule);
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule,
+                Map<HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> spans) {
+            port.handoffTo(nextSchedule, spans);
         }
 
         @Override

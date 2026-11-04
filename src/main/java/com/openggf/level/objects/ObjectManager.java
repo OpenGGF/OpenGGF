@@ -570,6 +570,12 @@ public class ObjectManager {
         return objectServices;
     }
 
+    void installDeferredFixedLevelObjects() {
+        if (registry instanceof com.openggf.game.internal.DeferredLevelFixedObjectInstallation deferred
+                && deferred.defersFixedLevelObjects())
+            deferred.installDeferredFixedLevelObjects(objectServices.romZoneId(), objectServices.currentAct(), fixedSstObjects);
+    }
+
     /** The services this manager injects into every object it owns. */
     public ObjectServices getObjectServices() {
         return objectServices;
@@ -617,6 +623,16 @@ public class ObjectManager {
      * <p>Idempotent: objects that already exist are not re-created.
      */
     public void preloadInitialSpawnsForHydration() {
+        syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
+    }
+
+    /** Initializes Load_Sprites cursors after installing a fresh layout, retaining fixed SST owners. */
+    void prepareInitialPlacementWindow(List<ObjectSpawn> spawns, int cameraX, PersistentRespawnState respawn) {
+        placement.replaceSpawnsAndReset(spawns, competitionStreaming.upfrontActive());
+        // Prefix-only construction had no layout; size state before restoring it.
+        placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
+        placement.reset(cameraX, respawn, competitionStreaming.upfrontActive());
+        twoAxisCameraYCoarse = Integer.MIN_VALUE;
         syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
     }
 

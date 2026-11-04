@@ -44,7 +44,7 @@ class TestS3kEndingFreshLevelTerrainWait {
     void endingLoadQueuesTerrainAndHoldsTheDirectorUntilTheQueueDrains(boolean recording)
             throws Exception {
         Runnable step = start(recording);
-        long terrainBefore = endingTerrainJobs();
+        long terrainBefore = endingTerrainJobs().size();
         GameServices.level().requestZoneAndAct(0x0D, 1);
         boolean terrainQueued = false;
         boolean terrainStarted = false;
@@ -56,11 +56,22 @@ class TestS3kEndingFreshLevelTerrainWait {
             if (GameServices.level().getCurrentZone() != 0x0D) continue;
             assertFalse(title().isOverlayActive(), "the deleted ending owner has no presentation");
             var modules = S3kRuntimeArtCoordinator.current().moduleQueue();
+            var terrain = endingTerrainJobs();
+            var director = director();
+            // LevelSetup/initial Process_Sprites can enqueue later scene art.
+            // The director's fence is the original LoadLevelLoadBlock batch,
+            // not every later module present while the title provider retires.
+            if (director != null && director.routine() != 0) {
+                assertTrue(terrain.size() > terrainBefore && terrain.stream().skip(terrainBefore)
+                                .allMatch(job -> job.physicallyRetired()),
+                        () -> "Ending_ScreenInit's director must follow terrain retirement; "
+                                + modules.pendingModuleDiagnostics() + " terrain=" + terrain.stream()
+                                        .map(job -> job.handle() + " claimed=" + job.claimed()
+                                                + " retired=" + job.physicallyRetired()).toList());
+            }
             if (after.freshLevelTerrainStarted() && after.freshLevelTransitionMode()) {
                 terrainStarted = true;
-                terrainQueued |= endingTerrainJobs() > terrainBefore;
-                assertTrue(director() == null || director().routine() == 0,
-                        "Ending_ScreenInit's director runs only after LoadLevelLoadBlock");
+                terrainQueued |= terrain.size() > terrainBefore;
             }
             if (terrainWait && !after.freshLevelTransitionMode()) {
                 released = true;
@@ -73,11 +84,11 @@ class TestS3kEndingFreshLevelTerrainWait {
         assertTrue(released, "ending terrain wait never released");
     }
 
-    private static long endingTerrainJobs() {
+    private static java.util.List<com.openggf.game.timing.HardwareTimingJob.Snapshot> endingTerrainJobs() {
         return SessionManager.getCurrentGameplayMode().hardwareTiming().capture().jobs().stream()
                 .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
                         && job.romSourceAddress() == ENDING_TERRAIN && job.destinationAddress() == 0)
-                .count();
+                .toList();
     }
 
     private static EndingRescueDirectorObjectInstance director() {

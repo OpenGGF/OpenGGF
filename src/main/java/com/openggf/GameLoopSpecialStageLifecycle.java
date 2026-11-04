@@ -118,6 +118,14 @@ final class GameLoopSpecialStageLifecycle {
     }
 
     void updateSpecialStageResultsMode() {
+        if (resultsExitFadeCompleted && continuesResultsLoadAfterFadeWait()) {
+            // The final fade interrupt has already run. Continue Level now,
+            // without inventing another results scan or physical wait.
+            resultsExitFadeCompleted = false;
+            resultsExitReady = true;
+            runSpecialStageResultsIteration();
+            return;
+        }
         if (resultsScreen instanceof com.openggf.game.internal.ResultsResourcePreparation preparation
                 && preparation.isPreparingResults()) {
             // The resource loop has VBlank and queue tails, but no results sprite yet.
@@ -137,6 +145,19 @@ final class GameLoopSpecialStageLifecycle {
                 LevelFrameContext.from(host.boundGameplayContext()), host.plcFrame(),
                 PlcLifecyclePhase.SPECIAL_STAGE_RESULTS,
                 this::runSpecialStageResultsIteration);
+    }
+
+    boolean holdsNativeResultsExitFade() {
+        return host.currentMode() == GameMode.SPECIAL_STAGE_RESULTS
+                && resultsScreen != null && resultsScreen.isComplete()
+                && continuesResultsLoadAfterFadeWait() && host.fade().hasPendingCompletion();
+    }
+
+    private boolean continuesResultsLoadAfterFadeWait() {
+        var module = host.module();
+        var profile = module != null ? module.getLevelInitProfile() : null;
+        return profile instanceof com.openggf.game.internal.NativeFreshLevelLoadProfile nativeProfile
+                && nativeProfile.continuesResultsLoadAfterFadeWait();
     }
 
     /** One ROM SS_NormalExit iteration (docs/s1disasm/sonic.asm:3402-3413). */
@@ -619,15 +640,19 @@ final class GameLoopSpecialStageLifecycle {
             sanctuaryReturn = SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
                     host.level(), activeSpecialStageRewardKind, ssStageIndex);
         } finally {
-            host.level().setResultsReturnCardOwnedByCaller(false);
+            var cleanupLevel = host.level();
+            com.openggf.level.NativeLevelLoadAccess.afterAttempt(cleanupLevel,
+                    () -> cleanupLevel.setResultsReturnCardOwnedByCaller(false));
         }
-        if (returnStarPostActivationMark >= 0) {
-            RespawnState checkpointAfterReturnReload = host.level().getCheckpointState();
-            if (checkpointAfterReturnReload != null) {
-                checkpointAfterReturnReload.restoreStarPostActivationMark(
-                        returnStarPostActivationMark);
+        int retainedStarPostMark = returnStarPostActivationMark;
+        com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(host.level(), () -> {
+            if (retainedStarPostMark >= 0) {
+                RespawnState checkpointAfterReturnReload = host.level().getCheckpointState();
+                if (checkpointAfterReturnReload != null) {
+                    checkpointAfterReturnReload.restoreStarPostActivationMark(retainedStarPostMark);
+                }
             }
-        }
+        });
 
         // Consume any pending title card request to prevent double title card
         // (we're manually entering the title card below)
@@ -641,8 +666,10 @@ final class GameLoopSpecialStageLifecycle {
             returningFromSpecialStage = false;
             GameMode oldMode = host.changeMode(GameMode.LEVEL);
             host.notifyModeChanged(oldMode);
-            startResultsReturnFadeIn();
-            host.requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
+            com.openggf.level.NativeLevelLoadAccess.afterCompletion(host.level(), () -> {
+                startResultsReturnFadeIn();
+                host.requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
+            });
             LOGGER.info("Exited Results Screen directly into the HPZ sanctuary hub"
                     + " (stage=" + ssStageIndex + ", success=" + ssEmeraldCollected + ")");
             return;
@@ -669,8 +696,9 @@ final class GameLoopSpecialStageLifecycle {
 
         // Reveal the title card from the exit fade's colour. Without this, the overlay
         // persists indefinitely because completeFade() sees no new fade was started.
-        startResultsReturnFadeIn();
-        host.requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
+        com.openggf.level.NativeLevelLoadAccess.afterTitlePrefix(host.level(), this::startResultsReturnFadeIn);
+        com.openggf.level.NativeLevelLoadAccess.afterCompletion(host.level(),
+                () -> host.requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE));
 
         LOGGER.info("Exited Results Screen, entering Title Card for zone " + zoneIndex + " act " + actIndex);
     }
@@ -695,9 +723,16 @@ final class GameLoopSpecialStageLifecycle {
      */
     void enterTitleCardFromResults(int zoneIndex, int actIndex) {
         GameMode oldMode = host.changeMode(GameMode.TITLE_CARD);
+        host.lockTitleControls(true);
+        com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(host.level(),
+                () -> restoreResultsReturnPlayers(zoneIndex, actIndex));
+        com.openggf.level.NativeLevelLoadAccess.afterTitlePrefix(host.level(),
+                () -> initializeResultsReturnTitle(zoneIndex, actIndex, oldMode));
+    }
 
-        // Restore player to checkpoint state BEFORE title card starts
-        // This prevents the player from falling/dying during the title card animation
+    private void restoreResultsReturnPlayers(int zoneIndex, int actIndex) {
+        // Restore after native player assembly and before its initial object pass.
+        // The locked title prefix can precede player creation.
         String mainCode = host.mainCharacterCode();
         var sprite = host.sprites().getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite playable) {
@@ -741,7 +776,9 @@ final class GameLoopSpecialStageLifecycle {
         }
         InLevelTitleCardCoordinator.prepareResultsTransition(
                 sprite, host::lockTitleControls, host::module, host.sprites(), host.level());
+    }
 
+    private void initializeResultsReturnTitle(int zoneIndex, int actIndex, GameMode oldMode) {
         // Initialize the title card manager
         if (host.titleCard() != null) {
             host.titleCard().initializeFreshLevelTransition(zoneIndex, actIndex);

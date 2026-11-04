@@ -84,14 +84,19 @@ second import or write anything after entry. See the
 `trace_schema: 5` is the sole live contract; recorder names/versions are opaque
 provenance and never behavior selectors. Read the
 [hardware-timing contract](../../../docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
-when touching timing authority. It permits two scheduling inputs:
+when touching timing authority. It permits bounded scheduling inputs:
 
 - Readiness release delays matching prepared, production-submitted ROM work;
   kind, ordinal, fingerprint, and service boundary must match.
 - Per-row lag admission chooses an already-implemented ROM loop, including
   `VBlank_Lag`; it supplies no gameplay values and creates no work.
+- Reviewed initialization input may hold/resume a matching, already-prepared
+  production load phase and select its observed zero-routine interrupt service.
+  Queue readiness outside structural segments uses a separate dedicated
+  initialization companion and the existing job identity/boundary checks.
+  Interstitial `bk2_frame` stays provenance, never readiness input.
 
-Neither shape may use physics/aux comparison values, key on a route/game/frame,
+None may use physics/aux comparison values, key on a route/game/frame,
 or decide what work exists. S1 PLC, S2 DPLC, and S3K Kosinski timing are in contract
 scope; implementation and fixture coverage differ. Consult the contract's
 coverage status rather than inferring support. Keep `TestHardwareTimingAuthorityGuard`

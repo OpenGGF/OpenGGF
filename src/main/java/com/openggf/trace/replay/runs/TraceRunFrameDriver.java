@@ -18,6 +18,7 @@ public final class TraceRunFrameDriver {
 
     public enum Disposition {
         GAMEPLAY_SHARED(true),
+        SOURCE_LOAD_ROW(true),
         SPECIAL_LOCAL(true),
         PRESENTATION_VBLANK(true),
         PRESENTATION_SUPPRESSED_CLOSURE(true),
@@ -391,6 +392,7 @@ public final class TraceRunFrameDriver {
         Objects.requireNonNull(rowPhase, "rowPhase");
         return switch (coordinatorPhase) {
             case TRANSITION_GAP -> Disposition.SHARED_GAP;
+            case SOURCE_LOAD_TAIL -> Disposition.SOURCE_LOAD_ROW;
             case TERMINAL_TAIL -> Disposition.TERMINAL_TAIL;
             case CURRENT_SEGMENT -> switch (executionPolicy) {
                 case GAMEPLAY -> Disposition.GAMEPLAY_SHARED;

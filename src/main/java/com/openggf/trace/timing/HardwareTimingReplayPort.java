@@ -27,7 +27,8 @@ import java.util.Set;
  * already-prepared matching head at the represented service boundary.
  */
 public final class HardwareTimingReplayPort
-        implements RewindSnapshottable<HardwareTimingReplaySnapshot> {
+        implements RewindSnapshottable<HardwareTimingReplaySnapshot>,
+        com.openggf.game.rewind.RewindOperationGuard {
     public static final String REWIND_KEY = "hardware-timing-replay";
 
     private final RecordedCompletionAuthority authority;
@@ -55,6 +56,8 @@ public final class HardwareTimingReplayPort
     private HardwareServiceBoundary lastAppliedBoundary;
     private boolean installed;
     private boolean runComplete;
+    private boolean initializationGap;
+    private Long initializationGapLoad;
     private boolean reportsPendingSubmissions;
 
     public HardwareTimingReplayPort(RecordedCompletionAuthority authority) {
@@ -127,9 +130,34 @@ public final class HardwareTimingReplayPort
      */
     public void enterUnrepresentedGap() {
         requireActive();
+        if (initializationGap) return;
         rawFrameLatch = null;
         lastAppliedBoundary = null;
         authority.setRecordedRowRepresentation(false);
+    }
+
+
+
+    /** A matched production load may use its separately captured queue readiness. */
+    public void beginInitializationGapReplay(InitializationTimingReplayPort.RepresentedLoadRow row,
+            HardwareTimingSchedule readiness, Map<HardwareWorkKind, RecordedOrdinalSpan> prefix) {
+        requireActive();
+        Objects.requireNonNull(row, "row").requireCurrent();
+        handoffTo(readiness, prefix);
+        initializationGap = true;
+        initializationGapLoad = row.loadOrdinal();
+        beginRawFrame(row.rawFrame());
+    }
+
+    /** Stops gap authority after the final physical load row; later gap work stays live. */
+    public void endInitializationGapReplay(InitializationTimingReplayPort.CompletedLoadRow row) {
+        requireActive();
+        if (!Objects.equals(initializationGapLoad, Objects.requireNonNull(row).loadOrdinal()))
+            throw new IllegalStateException("completed receipt does not own this initialization gap");
+        verifySegmentEdges();
+        initializationGap = false;
+        initializationGapLoad = null;
+        enterUnrepresentedGap();
     }
 
     public void apply(HardwareServiceBoundary boundary) {
@@ -338,6 +366,8 @@ public final class HardwareTimingReplayPort
         }
 
         schedule = checkedNext;
+        initializationGap = false;
+        initializationGapLoad = null;
         edgeCursor = 0;
         rawFrameLatch = null;
         lastAppliedBoundary = null;
@@ -460,7 +490,18 @@ public final class HardwareTimingReplayPort
     }
 
     @Override
+    public void requireSnapshotBoundary() {
+        requireRewindable();
+    }
+
+    private void requireRewindable() {
+        if (initializationGap && !runComplete)
+            throw new IllegalStateException("initialization gap replay does not support rewind");
+    }
+
+    @Override
     public HardwareTimingReplaySnapshot capture() {
+        requireRewindable();
         return new HardwareTimingReplaySnapshot(
                 schedule,
                 edgeCursor,
@@ -475,6 +516,9 @@ public final class HardwareTimingReplayPort
 
     @Override
     public void restore(HardwareTimingReplaySnapshot snapshot) {
+        requireRewindable();
+        initializationGap = false;
+        initializationGapLoad = null;
         Objects.requireNonNull(snapshot, "snapshot");
         schedule = validateSchedule(snapshot.schedule());
         edgeCursor = snapshot.edgeCursor();
@@ -492,6 +536,9 @@ public final class HardwareTimingReplayPort
 
     @Override
     public void resetForMissingSnapshot() {
+        requireRewindable();
+        initializationGap = false;
+        initializationGapLoad = null;
         schedule = HardwareTimingSchedule.empty();
         edgeCursor = 0;
         consumedIdentities.clear();

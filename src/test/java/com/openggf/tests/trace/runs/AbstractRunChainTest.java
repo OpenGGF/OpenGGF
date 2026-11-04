@@ -190,6 +190,9 @@ abstract class AbstractRunChainTest {
             TraceRunReplayWalker::openActiveSegment;
     Runnable afterInitialHeadlessPayloadOpen = () -> { };
     Runnable afterProductionStep = () -> { };
+    int productionMovieRow = -1;
+    java.util.function.Consumer<com.openggf.trace.timing.HardwareTimingReplaySnapshot>
+            sourceLoadTailTimingObserver = snapshot -> { };
     IntConsumer productionOutputRowObserver = row -> { };
     HeadlessSlotProbeFactory slotProbeFactory =
             AbstractRunChainTest::createSlotProbe;
@@ -718,7 +721,9 @@ abstract class AbstractRunChainTest {
                                 + " before its comparator publication completed");
             }
             RunPlaybackObservation current = observation(mode, true, 0, false);
-            RunPlaybackObservation production = productionOwnerSegmentIndex == source
+            RunPlaybackObservation production = coordinator.phase()
+                            != TraceRunPlaybackCoordinator.Phase.SOURCE_LOAD_TAIL
+                    && productionOwnerSegmentIndex == source
                     && productionOwnerObservation != null
                     ? withProductionOwner(current, productionOwnerObservation)
                     : current;
@@ -1320,7 +1325,11 @@ abstract class AbstractRunChainTest {
                         TraceRunReplayWalker.descriptorHardwareTimingSegments(
                                 descriptors),
                         com.openggf.trace.timing.HardwareTimingInterstitialStreamLoader
-                                .load(runDir));
+                                .load(runDir),
+                        com.openggf.trace.timing.InitializationTimingStreamLoader.loadRun(
+                                runDir, run, movie.getFrameCount()),
+                        com.openggf.trace.timing.InitializationHardwareTimingStream.loadRun(
+                                runDir, run, movie.getFrameCount()));
         activeHardwareTiming = hardwareTiming;
         GameplayModeContext gameplayMode =
                 SessionManager.getCurrentGameplayMode();
@@ -1908,13 +1917,14 @@ abstract class AbstractRunChainTest {
                             var fadeObjects =
                                     GameServices.level().getObjectManager();
                             int fadeVblank = fadeObjects.getVblaCounter();
+                            boolean loadOwnedRow = com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level());
                             stepEngineFrame(loop);
                             if (fadeVblankRow) {
                                 // Every one of Pal_FadeToBlack's passes is a
                                 // V-int that reaches VintRet; see
                                 // serviceSuppressedRowVint.
                                 serviceSuppressedRowVint(
-                                        fadeObjects, fadeVblank);
+                                        fadeObjects, fadeVblank, loadOwnedRow);
                                 playback.onLevelFrameAdvanced();
                             }
                             latchSourceTailVblank(seg.segment(), rowBeingPlayed);
@@ -2020,6 +2030,7 @@ abstract class AbstractRunChainTest {
                 // this segment's comparator will ever get if the assert throws.
                 activeComparator.finalizeTerminalDynamicArtComparison();
                 requireComparatorComplete(seg, activeComparator);
+                retainSourceBonusLoadTail(loop, playback, probe, seg, obs, fixture);
                 dynamicArtSegments.enterGap();
                 // Observed after the window actually closes: the close is what
                 // records the state the gap opens on, so reading the snapshot
@@ -2048,7 +2059,7 @@ abstract class AbstractRunChainTest {
                 driveLagOnlyGapCensus(exit, interior.segment().bk2FrameOffset(),
                         fixture, gameplayMode, loop, playback);
                 int rowsConsumed = prepareIntoInterior(
-                        loop, playback, probe, movie, interior, stepCap);
+                        loop, playback, probe, movie, interior, stepCap, inputHandler, fixture);
                 runCoordinator.admitInterior(
                         exit, obs.observedBk2Frame(),
                         loop.getCurrentGameMode(), rowsConsumed);
@@ -3317,7 +3328,8 @@ abstract class AbstractRunChainTest {
                     @Override
                     public void prepareHardwareTiming(
                             TraceRunFrameDriver.Step step) {
-                        fixture.enterHardwareTimingGap();
+                        if (activeHardwareTiming != null) activeHardwareTiming.beginGapFrame(playback.currentFrameOrThrow());
+                        else fixture.enterHardwareTimingGap();
                     }
 
                     @Override
@@ -3524,14 +3536,97 @@ abstract class AbstractRunChainTest {
      * ENTRY = 0, special = uncompared) follows the COMPARATOR FRAME BASE contract
      * on {@link #attachReturnedLevelSegment}.
      */
+    private void retainSourceBonusLoadTail(
+            GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
+            TraceRunSegmentDescriptor source, BoundaryObservation boundary,
+            LiveEngineFixture fixture) {
+        if (boundary.bonusType() == null) {
+            return;
+        }
+        var adapter = activeRunCoordinator;
+        adapter.coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(
+                boundary.observedBk2Frame(), boundary.bonusType()));
+        var actions = adapter.coordinator.beginSourceLoadTail(
+                adapter.observation(loop.getCurrentGameMode(), true, 0, false));
+        adapter.actions.addAll(actions);
+        if (actions.isEmpty()) {
+            // The production adapter may already have compared the full tail.
+            // Observe the same retained source schedule before its handoff.
+            sourceLoadTailTimingObserver.accept(fixture.hardwareTimingReplayPort.capture());
+            return;
+        }
+        // Comparison has ended, but its payload, timing schedule and art
+        // window remain owned until production releases or coverage runs out.
+        probe.detachDelegate();
+        productionComparator = null;
+        int end = Math.addExact(source.segment().bk2FrameOffset(), source.rowCount());
+        var gameplay = SessionManager.getCurrentGameplayMode();
+        var driver = new TraceRunFrameDriver();
+        gameplay.installTraceRunFrameDriver(driver);
+        try {
+            while (loop.getCurrentGameMode() != GameMode.BONUS_STAGE
+                    && playback.getCursorFrame() < end) {
+                driver.execute(new TraceRunFrameDriver.Step(
+                                TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW,
+                                playback.getCursorFrame(), false),
+                        new TraceRunFrameDriver.Hooks<Void>() {
+                            public void preparePhysicalRow(TraceRunFrameDriver.Step row) {
+                                playback.prepareCurrentFrame();
+                            }
+                            public void prepareHardwareTiming(TraceRunFrameDriver.Step row) { }
+                            public Void captureBefore(TraceRunFrameDriver.Step row) { return null; }
+                            public void runProductionLifecycle(TraceRunFrameDriver.Step row) {
+                                stepEngineFrame(loop);
+                            }
+                            public void advancePhysicalRow(TraceRunFrameDriver.Step row) {
+                                playback.onLevelFrameAdvanced();
+                            }
+                            public Void captureAfter(TraceRunFrameDriver.Step row) { return null; }
+                            public void compare(TraceRunFrameDriver.Step row, Void before, Void after) { }
+                            public void afterStep(TraceRunFrameDriver.Step row) { }
+                        });
+            }
+        } finally {
+            gameplay.clearTraceRunFrameDriver(driver);
+        }
+        sourceLoadTailTimingObserver.accept(fixture.hardwareTimingReplayPort.capture());
+        if (playback.getCursorFrame() < end) {
+            System.out.println("Source load released with "
+                    + (end - playback.getCursorFrame())
+                    + " unrepresented synchronous-load source rows in " + source.segment().dir());
+        }
+    }
+
     private int prepareIntoInterior(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, TraceRunSegmentDescriptor interior, int stepCap) {
+            Bk2Movie movie, TraceRunSegmentDescriptor interior, int stepCap,
+            InputHandler inputHandler, LiveEngineFixture fixture) {
         probe.setDelegate(null);
         declareHardwareTimingTransitionGap();
         productionComparator = null;
         int offset = interior.segment().bk2FrameOffset();
         GameMode target = TraceRunReplayWalker.expectedMode(interior.segment());
+        if (activeHardwareTiming != null && activeHardwareTiming.hasInitializationTiming()) {
+            // Continue real loading rows before parking destination input.
+            // Seeking first would discard represented phase observations.
+            var gameplay = SessionManager.getCurrentGameplayMode();
+            var rows = new TraceRunFrameDriver();
+            gameplay.installTraceRunFrameDriver(rows);
+            int steps = 0;
+            try {
+                while (loop.getCurrentGameMode() != target) {
+                    if (steps++ >= stepCap) throw new AssertionError("Native initialization never released " + target);
+                    driveHeadlessTransitionRow(rows, TraceRunFrameDriver.Disposition.SHARED_GAP,
+                            loop, inputHandler, movie, playback, fixture, activeRunCoordinator);
+                }
+            } finally {
+                gameplay.clearTraceRunFrameDriver(rows);
+            }
+            com.openggf.level.NativeLevelLoadAccess.requireComplete(GameServices.level());
+            playback.startSession(movie, offset);
+            primeInteriorEntryRngFromMetadata(interior);
+            return 0;
+        }
         if (!TraceRunReplayWalker.isUncomparedInterior(interior.segment())) {
             // Title-card release is setup-only. Park input at the first interior
             // row before releasing control; the next loop step owns its first
@@ -3615,6 +3710,10 @@ abstract class AbstractRunChainTest {
      */
     private void primeInteriorEntryRngFromMetadata(
             TraceRunSegmentDescriptor interior) {
+        // A represented native continuation has performed its real seed read.
+        // Reapplying metadata here would hide a missing load interrupt and erase
+        // any RNG use performed by the initial object pass.
+        if (activeHardwareTiming != null && activeHardwareTiming.hasInitializationTiming()) return;
         TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(
                 interior.metadata());
     }
@@ -5148,10 +5247,16 @@ abstract class AbstractRunChainTest {
      *
      * <p>This carries no position, speed, object state or any physics/aux
      * comparison value, and reads no trace field: the only input is the
-     * engine's own counter before the row.
+     * engine's own counter before the row. A resumable native load is excluded:
+     * its dedicated admission can represent a masked interrupt, so an unchanged
+     * counter on that row is intentional rather than an unserviced gap tick.
      */
     private static void serviceSuppressedRowVint(
-            Object objectManagerBefore, int counterBefore) {
+            Object objectManagerBefore, int counterBefore, boolean nativeLoadPendingBefore) {
+        // A native HOLD may mask the interrupt. Its phase port owns whether this
+        // row ticks, including the rows that start or complete the load.
+        if (nativeLoadPendingBefore
+                || com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level())) return;
         var objectManager = GameServices.level().getObjectManager();
         if (suppressedRowOwesVint(
                 objectManager == objectManagerBefore,
@@ -5430,6 +5535,7 @@ abstract class AbstractRunChainTest {
 
                         @Override
                         public void prepareHardwareTiming(TraceRunFrameDriver.Step step) {
+                            if (activeHardwareTiming != null) activeHardwareTiming.beginGapFrame(step.movieRow());
                         }
 
                         @Override
@@ -5439,7 +5545,7 @@ abstract class AbstractRunChainTest {
 
                         @Override
                         public void runProductionLifecycle(TraceRunFrameDriver.Step step) {
-                            if (lag) {
+                            if (lag && !com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level())) {
                                 if (lagVint) {
                                     serviceLagRowVint();
                                 }
@@ -5459,11 +5565,12 @@ abstract class AbstractRunChainTest {
                             var gapObjects =
                                     GameServices.level().getObjectManager();
                             int gapVblank = gapObjects.getVblaCounter();
+                            boolean loadOwnedRow = com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level());
                             stepEngineFrame(loop);
                             // TRANSITION_GAP suppresses the source level body,
                             // so a non-lag gap row can end without the ROM's
                             // VintRet tick; see serviceSuppressedRowVint.
-                            serviceSuppressedRowVint(gapObjects, gapVblank);
+                            serviceSuppressedRowVint(gapObjects, gapVblank, loadOwnedRow);
                             if (levelEntryLoadCompletes) {
                                 releasePlayerArtForLevelEntryLoad();
                             }
@@ -5557,6 +5664,9 @@ abstract class AbstractRunChainTest {
         if (coordinator != null) {
             coordinator.beforeProduction(loop.getCurrentGameMode());
         }
+        // Publication can advance playback inside the step; observations
+        // belong to the input row that actually drove production.
+        productionMovieRow = GameServices.playbackDebug().getCursorFrame();
         // Capture the row index BEFORE production: the single-segment path
         // observes with the index of the frame just produced, and the comparator
         // may or may not have advanced its cursor inside loop.step() depending on
@@ -6000,6 +6110,25 @@ abstract class AbstractRunChainTest {
             gameplayMode().setHardwareTimingBoundaryObserver(hardwareTimingObserver);
             gameplayMode().setHardwareTimingReplayCloseHook(
                     this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+                HardwareTimingSchedule readiness,
+                java.util.Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+            hardwareTimingReplayPort.beginInitializationGapReplay(row, readiness, prefix);
+        }
+
+        @Override
+        public void beginInitializationGapFrame(int rawFrame) {
+            hardwareTimingReplayPort.beginRawFrame(rawFrame);
+        }
+
+        @Override
+        public void endInitializationGapReplay(
+                com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+            hardwareTimingReplayPort.endInitializationGapReplay(row);
         }
 
         @Override

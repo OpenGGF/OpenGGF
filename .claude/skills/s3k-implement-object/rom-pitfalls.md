@@ -6869,3 +6869,33 @@ separates the row15625 phantom birth from row16216 acceptance/award and from
 inherited slot drift. Source identities include the native ring-list sentinel;
 engine source indices exclude it. Do not infer allocation or motion parity
 from matching player fields alone.
+
+
+## Synchronous loading can split an object's initial pass (2026-11-03)
+
+`Obj_GumballMachine (sonic3k.asm:127458-127482)` copies the longword
+`V_int_run_count` into `RNG_seed` before `CreateChild1_Normal`. A native
+zero-routine interrupt can occur between those operations. Completing loading
+in one host call and seeding at the destination's first gameplay row therefore
+uses the wrong clock, even if terrain and art queues match. Preserve the actual
+seed owner and the ordering of the real work around the interrupt; copying the
+recorded seed would conceal the missing work.
+
+Loading rows and serviced interrupts are different measurements: masked rows
+advance neither clock, while a serviced zero-routine interrupt advances the ROM
+clock without executing the normal level loop. PLC completion receipts describe
+work readiness; they do not price unrelated synchronous decoding or object
+initialization into interrupt counts. A callback in the SST scan is not proof
+that all object work has finished: inspect remaining live routine heads and
+their clock/RNG dependencies before moving an interrupt across the pass. See
+`docs/architecture/designs/2026-11-03-synchronous-load-vint-accounting.md` for the
+native observations and the bounded timing-input contract.
+
+
+A fresh bonus title must also revoke an earlier in-level title's external child
+dispatch ownership. `loc_60DE (sonic3k.asm:7649-7652)` clears the old SST before
+`loc_62B6 (sonic3k.asm:7762-7767)` installs its new title owner. Retaining that
+presentation-only delegation across `initializeBonus()` leaves the new card in
+SLIDE_IN even with empty resource queues; it is an ownership bug, not evidence
+for another loading delay. A regression should enter from a real externally
+owned in-level card and verify the new bonus card progresses.

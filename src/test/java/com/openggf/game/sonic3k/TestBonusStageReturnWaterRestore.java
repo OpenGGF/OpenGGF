@@ -75,7 +75,7 @@ public class TestBonusStageReturnWaterRestore {
     }
 
     @Test
-    public void bonusStageReturn_restoresSavedWaterLevelImmediately() throws Exception {
+    public void bonusStageReturn_restoresSavedWaterLevelBeforeReturnedGameplay() throws Exception {
         GraphicsManager.getInstance().initHeadless();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(ZONE_HCZ, ACT_1)
@@ -129,10 +129,18 @@ public class TestBonusStageReturnWaterRestore {
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
 
         BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
+        finishNativeLoad(loop);
+        assertEquals(com.openggf.game.GameMode.BONUS_STAGE, loop.getCurrentGameMode());
 
         BonusStageSessionTestAccess.exited(loop, provider, savedState);
+        finishNativeLoad(loop);
 
         assertEquals(HCZ1_LATE_WATER_LEVEL, waterSystem.getWaterLevelY(ZONE_HCZ, ACT_1),
-                "Bonus-stage return should restore the saved water level immediately");
+                "Bonus-stage return restores saved water before returned gameplay");
     }
+    private static void finishNativeLoad(GameLoop loop) {
+        for (int n = 0; n < 2_000 && com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level()); n++) loop.step();
+        assertFalse(com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level()), "native title load did not finish");
+    }
+
 }

@@ -13,6 +13,16 @@ inventory includes reported recovery boundaries as well as unresolved fallback;
 review each owner rather than deleting catches indiscriminately. Remove retired
 rows; do not add new engine catch-and-fallback allowances.
 
+**A resumable load outlives its caller's stack frame.** A load returning at a
+prepared HOLD has not completed or failed. Keep saved respawn/ring banks,
+caller-owned presentation flags and continuation-carry state until that exact
+attempt finishes. Clearing the outer zone wrapper's bank in its immediate
+`finally` revived a spent monitor and stopped the returned player even though
+all clock values matched. Register terminal cleanup with the existing load
+owner, report success only after real completion, and preserve primary/suppressed
+failure identity. Verify a real return route as well as once-only cleanup; see
+[load ownership evidence](designs/2026-11-03-synchronous-load-vint-accounting.md#enclosing-ownership-corrections).
+
 **A counter's name does not establish its native clock.** In S2 continuous
 loads, LevelManager's execution counter includes title object passes while the
 player gameplay counter resets at release. Obj2C needs the latter native level
