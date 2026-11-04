@@ -14,9 +14,12 @@ review each owner rather than deleting catches indiscriminately. Remove retired
 rows; do not add new engine catch-and-fallback allowances.
 
 **A counter's name does not establish its native clock.** In S2 continuous
-loads, LevelManager's execution counter includes title object passes while the
-player gameplay counter resets at release. Obj2C needs the latter native level
-word (held at zero during the locked title), not execution or VInt count.
+loads, title object passes and gameplay have distinct clock ownership. Obj2C
+needs the native level word (held at zero during the locked title), not execution
+or VInt count; both level-word mirrors reset at release. That word also drives
+ARZ's camera shake: a one-pixel render-boundary change alters the pillar's cached
+render flag and therefore its next solid contact. See the
+[title-release clock attribution](audits/2026-11-04-s2-title-release-level-clock.md).
 Instrument the owning read before choosing a counter. A shared clock-hold
 experiment produced earlier physics failures even though it reduced the axis
 total; the producer-local correction restores the native RNG inventory. See the
