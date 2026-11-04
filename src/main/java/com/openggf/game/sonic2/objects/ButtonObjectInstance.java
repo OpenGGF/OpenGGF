@@ -107,7 +107,7 @@ public class ButtonObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
-        // ROM Obj47_Main (s2.asm:50826-50827) gates the ENTIRE button routine
+        // ROM Obj47_Main (s2.asm:50889-50890) gates the ENTIRE button routine
         // behind the render_flags.on_screen bit:
         //   _btst #render_flags.on_screen,render_flags(a0)
         //   _beq.s BranchTo_JmpTo12_MarkObjGone   ; off-screen -> MarkObjGone, return
@@ -121,9 +121,9 @@ public class ButtonObjectInstance extends AbstractObjectInstance
         // every frame, so the MTZ_LONG_PLATFORM (subtype-7 button retract) never saw
         // the press and stayed extended, dropping Sonic through the floor it should
         // have landed on (mtz1 trace f863 air/rolling/y divergence).
-        // isWithinSolidContactBounds() mirrors the ROM Render_Sprites render_flags
+        // isWithinOnScreenRenderBounds() mirrors the ROM Render_Sprites render_flags
         // bit-7 bounding-box test for this object's width_pixels.
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             return;
         }
 

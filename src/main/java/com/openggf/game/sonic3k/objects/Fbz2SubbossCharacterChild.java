@@ -39,7 +39,7 @@ final class Fbz2SubbossCharacterChild extends AbstractFbz2SubbossChild implement
                 if(animCursor>=frames.length)animCursor=0;
                 frame=frames[animCursor];animTimer=5;
             }
-            if(tryServices()!=null&&!isWithinSolidContactBounds()){
+            if(tryServices()!=null&&!isWithinOnScreenRenderBounds()){
                 Sonic3kPlcLoader.RawPlcApplyResult result=Sonic3kPlcLoader.applyRawQuietly(Sonic3kPlcLoader.monitorSpikesSpringsPlcEntries(),services());
                 rawPlcAttempted=result.attemptedEntries();rawPlcApplied=result.appliedEntries();rawPlcFailure=result.failure();
                 ObjectLifetimeOps.deleteNoRespawn(this);

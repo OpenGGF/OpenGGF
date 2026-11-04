@@ -699,7 +699,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             return;
         }
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
-        // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
+        // Set_PlayerEndingPose (sonic3k.asm:182067-182088).
         sprite.setControlLocked(false);
         if (sprite.getCpuController() != null) {
             sprite.getCpuController().setController2SignedLocked(false);

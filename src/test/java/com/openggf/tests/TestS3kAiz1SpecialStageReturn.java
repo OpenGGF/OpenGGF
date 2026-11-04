@@ -252,7 +252,7 @@ public class TestS3kAiz1SpecialStageReturn {
                     "Camera should use the ROM's player-centred return position after applying saved max Y");
 
             // Ground snap with correct solid bits
-            GameServices.collision().resolveGroundAttachment(sprite, 14, () -> false);
+            GameServices.collision().placeOnTerrain(sprite, 14);
             System.out.println("After snap: centreY=0x"
                     + Integer.toHexString(sprite.getCentreY())
                     + " air=" + sprite.getAir());
@@ -352,7 +352,7 @@ public class TestS3kAiz1SpecialStageReturn {
         sprite.setCentreY((short) teleportY);
         sprite.setAir(false);
         fixture.camera().updatePosition(true);
-        GameServices.collision().resolveGroundAttachment(sprite, 14, () -> false);
+        GameServices.collision().placeOnTerrain(sprite, 14);
 
         System.out.println("=== " + label + " INITIAL PLACEMENT ===");
         System.out.println("Requested: X=0x" + Integer.toHexString(teleportX)
@@ -423,7 +423,7 @@ public class TestS3kAiz1SpecialStageReturn {
         System.out.println("Has collision below restored pos: " + hasCollision);
 
         // Ground snap
-        GameServices.collision().resolveGroundAttachment(sprite, 14, () -> false);
+        GameServices.collision().placeOnTerrain(sprite, 14);
         System.out.println("After ground snap: centreY=0x"
                 + Integer.toHexString(sprite.getCentreY())
                 + " air=" + sprite.getAir());

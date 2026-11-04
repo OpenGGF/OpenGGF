@@ -13,22 +13,16 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSszBossInputAuthorTool {
-    @Test
-    void missingBossAndDeathCannotOutscoreObservedDamage() {
-        double hit = SszBossInputAuthorTool.score(false, 8, 7, 1, false, 20);
-        assertTrue(hit > SszBossInputAuthorTool.score(false, 8, null, 99, false, 0),
-                "losing the target is not proof of defeating it");
-        assertTrue(hit > SszBossInputAuthorTool.score(true, 8, 0, 99, false, 0));
-        assertTrue(SszBossInputAuthorTool.score(false, 1, 0, 0, false, 0) > hit);
-    }
+    // The encounter scoring moved into the shared planner; see TestGoalExpander.
 
     @Test
     @RequiresRom(SonicGame.SONIC_3K)
     void authoredFatalHitReplaysFromColdWithIdenticalObservedState(@TempDir Path output) throws Exception {
-        Path input = Path.of("src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-320.bk2");
+        Path input = Path.of("src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-320.route.json");
         Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
-        // 4829: two GHZ hits remain in the 2026-10-15 re-authored cold movie.
+        // 4829: two GHZ hits remain. The 2026-10-15 cold movie's rows, repaired by one edited row
+        // (1495) after the cutscene-bridge walk-off, reproduce its run exactly from row 1962 on.
         var result = SszBossInputAuthorTool.run(rom, settings, input, 4829,
                 SszBossInputAuthorTool.Encounter.GHZ, output, 240);
         assertEquals(SszBossInputAuthorTool.Stop.DEFEATED, result.stop());

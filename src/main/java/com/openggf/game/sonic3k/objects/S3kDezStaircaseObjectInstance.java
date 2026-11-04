@@ -145,11 +145,6 @@ public final class S3kDezStaircaseObjectInstance extends AbstractObjectInstance
         // Rebuilt dynamic spawn metadata must not replace its standing bits.
         return true;
     }
-    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-        // SolidObjectFull_1P (sonic3k.asm:41061-41081) consumes a0's bit
-        // at this section's own call; earlier sections leave that ride intact.
-        return true;
-    }
     @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         // loc_1DC98 (sonic3k.asm:41075-41081) clears OnObj/a0.d6 and
         // returns without reaching the new-contact position lift at loc_1E154.

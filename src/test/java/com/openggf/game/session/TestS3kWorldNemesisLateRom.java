@@ -107,8 +107,16 @@ class TestS3kWorldNemesisLateRom {
         var root = new Sonic3kGameModule();
         var wrapper = new com.openggf.game.patch.DelegatingGameModule(root, "fixture:null-rules") {
             @Override public com.openggf.game.rules.GameRules getRules() { return null; }
+            @Override public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.game.resources.PlayerArtTransferPlan.class)
+                    return new com.openggf.game.sonic2.Sonic2GameModule().getGameService(type);
+                return super.getGameService(type);
+            }
         };
         var mock = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+        org.mockito.Mockito.when(mock.getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class))
+                .thenReturn(new com.openggf.game.sonic2.Sonic2GameModule()
+                        .getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         for (var resolved : List.of(wrapper, mock)) {
             var world = new WorldSession(root, resolved,
                     StockGameDataSources.pinned(TestEnvironment.currentRom(), root), null);
@@ -119,7 +127,7 @@ class TestS3kWorldNemesisLateRom {
                 var dynamicArt = target.dynamicArtLifecycle();
                 dynamicArt.beginRun();
                 // Declared typed DPLC ingress discriminates EVERY_CLAIM from per-game DMA filtering.
-                dynamicArt.observePlayerDplc(com.openggf.game.GameId.S2, "sonic", 1,
+                dynamicArt.observePlayerDplc("sonic", 1,
                         new com.openggf.level.render.SpriteDplcFrame(List.of(
                                 new com.openggf.level.render.TileLoadRequest(0, 1))));
                 dynamicArt.openComparisonSegment();

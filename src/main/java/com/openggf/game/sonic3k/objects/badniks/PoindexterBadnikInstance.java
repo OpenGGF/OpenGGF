@@ -155,7 +155,7 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance im
     }
 
     /**
-     * Set_VelocityXTrackSonic (sonic3k.asm:179413). With d4 = -$40, sets x_vel
+     * Set_VelocityXTrackSonic (sonic3k.asm:179418). With d4 = -$40, sets x_vel
      * so the object drifts toward the player, and sets render_flags to face them.
      *
      * <pre>
@@ -208,7 +208,7 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance im
      * reversal callback at $34(a0) → loc_8830E.
      *
      * <pre>
-     * Obj_Wait:                          ; sonic3k.asm:178035
+     * Obj_Wait:                          ; sonic3k.asm:178040
      *     subq.w #1,$2E(a0)
      *     bmi.s  loc_84892              ; branch if negative → call callback
      *     rts

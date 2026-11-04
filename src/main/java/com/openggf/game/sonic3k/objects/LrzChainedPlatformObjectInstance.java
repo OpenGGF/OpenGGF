@@ -64,7 +64,7 @@ public final class LrzChainedPlatformObjectInstance extends AbstractObjectInstan
                 hurtUnderside(player, vIntRunCount);
             }
         });
-        if (services().levelManager() != null && isWithinSolidContactBounds()
+        if (services().levelManager() != null && isWithinOnScreenRenderBounds()
                 && (services().levelManager().getFrameCounter() & 15) == 0) {
             services().playSfx(Sonic3kSfx.CHAIN_TICK.id);
         }
@@ -162,7 +162,6 @@ public final class LrzChainedPlatformObjectInstance extends AbstractObjectInstan
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean zeroXSpeedStopsOnLeftSideContact() { return true; }
     @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) { return true; }
-    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) { return true; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public int romObjectCodePointerHighWord() { return 4; }
     @Override public int getPriorityBucket() { return 4; }

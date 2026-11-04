@@ -109,6 +109,21 @@ class TestGameLoopBonusStageSession {
         enter(loop, BonusStageType.GUMBALL);
         verify(context).getRunPolicy(); verifyNoInteractions(module, fade, levels, audio, sprites);
     }
+    @Test void entryFadeReservesTheCompletionIterationBeforeTitleWork() throws Exception {
+        var context = spy(SessionManager.getCurrentGameplayMode());
+        doReturn(true).when(context).isGameplayRuntimeReady();
+        write(loop, "gameplayMode", context);
+        entryFade();
+        enter(loop, BonusStageType.GUMBALL);
+        var frame = context.plcFrameLifecycle().latchBeforeFadeUpdate();
+        try {
+            assertTrue(frame.isOwnedBy(
+                    com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE),
+                    "Level's blocking entry fade must retain its completion token");
+        } finally {
+            frame.finish();
+        }
+    }
     @Test void entryCaptureAndMusicPrecedePendingAndFade() throws Exception {
         var callback = entryFade();
         doAnswer(c -> { assertFalse(pending(loop)); return null; }).when(audio).fadeOutMusic();
@@ -202,6 +217,18 @@ class TestGameLoopBonusStageSession {
         assertSame(failure, assertThrows(IllegalStateException.class, () -> completeDeferred(loop)));
         completeDeferred(loop); verify(provider, times(1)).onDeferredSetupComplete(); verifyNoInteractions(replacement);
     }
+    @Test void returnRestoresSavedApparentActOnTheLiveDestinationBeforeTitleInitialization() throws Exception {
+        var rebound = mock(LevelManager.class);
+        doAnswer(call -> { write(loop, "levelManager", rebound); return null; })
+                .when(levels).loadZoneAndAct(1, 2);
+        exited(loop, provider, state(11));
+        var order = inOrder(levels, rebound, title);
+        order.verify(levels).loadZoneAndAct(1, 2);
+        order.verify(rebound).setApparentAct(4);
+        order.verify(rebound).consumeTitleCardRequest();
+        order.verify(title).initialize(3, 4);
+    }
+
     @Test void exitCapturesSavedStateBeforeFadeButLiveRingsAndRewardsAtCompletion() throws Exception {
         var callback = entryFade(); mode(GameMode.BONUS_STAGE); provider(loop, provider);
         var saved = state(11); var live = mock(LevelState.class);
@@ -214,6 +241,39 @@ class TestGameLoopBonusStageSession {
         var order = inOrder(live, provider); order.verify(live).getRings(); order.verify(provider).getRewards(); order.verify(provider).onExit();
         verify(live).setRings(69); verify(live, never()).setRings(211); verify(levels).loadZoneAndAct(1, 2);
         verify(title).initialize(3, 4); verify(provider, times(1)).getSavedState();
+    }
+    @Test void heldReturnRestoresTheAssembledDestinationAndRetainsExitInputsUntilThen() throws Exception {
+        var assembly = new AtomicReference<Runnable>();
+        var cleanup = new AtomicReference<Runnable>();
+        var sourceHud = mock(LevelState.class); var destinationHud = mock(LevelState.class);
+        var destinationPlayer = mock(AbstractPlayableSprite.class);
+        var gameState = mock(GameStateManager.class); write(loop, "gameState", gameState);
+        when(levels.getLevelGamestate()).thenReturn(sourceHud); when(sourceHud.getRings()).thenReturn(69);
+        when(provider.getRewards()).thenReturn(new BonusStageProvider.BonusStageRewards(0, 2, false, false, false, false));
+        mode(GameMode.BONUS_STAGE); provider(loop, provider);
+        try (var loads = mockStatic(com.openggf.level.NativeLevelLoadAccess.class, CALLS_REAL_METHODS)) {
+            loads.when(() -> com.openggf.level.NativeLevelLoadAccess.afterPlayerAssembly(eq(levels), any(Runnable.class)))
+                    .thenAnswer(call -> { assembly.set(call.getArgument(1)); return null; });
+            loads.when(() -> com.openggf.level.NativeLevelLoadAccess.afterAttempt(eq(levels), any(Runnable.class)))
+                    .thenAnswer(call -> { cleanup.set(call.getArgument(1)); return null; });
+            exited(loop, provider, state(11));
+            assertNotNull(assembly.get()); assertNotNull(cleanup.get());
+            verify(levels, never()).clearBonusStageReturn();
+            verify(sourceHud, never()).setTimerFrames(anyLong());
+            verify(gameState, never()).addLife();
+            clearInvocations(player);
+            when(sprites.getSprite(anyString())).thenReturn(destinationPlayer);
+            when(levels.getLevelGamestate()).thenReturn(destinationHud);
+            when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
+            assembly.get().run();
+            verify(destinationPlayer).setTopSolidBit((byte) 0);
+            verify(destinationHud).setRings(69);
+            verify(destinationHud).setTimerFrames(123L);
+            verify(gameState, times(2)).addLife();
+            verify(player, never()).setTopSolidBit(anyByte());
+            cleanup.get().run();
+            verify(levels).clearBonusStageReturn();
+        }
     }
     @Test void exitLooksUpPublishedContextAfterOnExitAndRetainsPartialStateIfItThrows() throws Exception {
         var first = mock(GameplayModeContext.class); var later = mock(GameplayModeContext.class); var current = new AtomicReference<>(first);

@@ -107,7 +107,6 @@ final class InitialObjectDispatchController {
             objects.runExecLoop(cameraX, player, second, true, true);
             objects.flushPostExecDynamicSpawns();
         } finally {
-            objects.solidContacts().finishInlineFrame(player, second);
             registry.finishFrame();
         }
         objects.captureCollisionResponseListForNextFrame();

@@ -77,7 +77,6 @@ public final class SozFloatingPillarObjectInstance extends AbstractObjectInstanc
     // SolidObjectFull_1P loc_1DC98 consumes an airborne stale standing bit
     // at this object's own checkpoint and returns without a new contact.
     @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) { return true; }
-    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) { return true; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public int romObjectCodePointerHighWord() { return 4; }
     @Override public int getPriorityBucket() { return 5; }

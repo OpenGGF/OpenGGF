@@ -75,15 +75,15 @@ ROMs. This includes `TestS2CompleteRunStateDecoder` and
 `TestS3kCompleteRunStateDecoder`, which use assumptions when their ROM is absent.
 Explicit external-reference lanes have stricter prerequisites; see [Testing](testing.md).
 
-ROM paths are passed per game as system properties -- note the S3K property is
-`s3k.rom.path`, not `sonic3k.rom.path`:
+The queue wrapper finds these ROMs by SHA-1 in the repository root (and, from a linked
+worktree, the main checkout) and passes absolute per-game system properties:
 
 ```bash
-python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading \
-    -Ds3k.rom.path=/abs/path/s3k.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading test
 ```
 
-Use **absolute** paths. From a git worktree (or any directory that is not the repository
+To pin another dump, pass the property yourself -- note the S3K property is
+`s3k.rom.path`, not `sonic3k.rom.path` -- and use **absolute** paths. From a git worktree (or any directory that is not the repository
 root) a relative path resolves against the Surefire fork's working directory, the ROM is not
 found, and every ROM-gated class is silently skipped and reported green.
 

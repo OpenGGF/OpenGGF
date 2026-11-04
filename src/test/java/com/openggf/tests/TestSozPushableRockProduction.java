@@ -90,7 +90,7 @@ class TestSozPushableRockProduction {
                     if(pushed && !fell && r.getX()==previousRockX && r.getY()>previousRockY) {
                         verifyRewindStep(fixture,before,left,right,"edge fall"); fell=true;
                     }
-                    if(fell && !rode && r.carriesRiderOnHorizontalMove(player)) {
+                    if(fell && !rode && r.carriesRiderThisPassForTest()) {
                         verifyRewindStep(fixture,before,left,right,"horizontal track start"); rode=true;
                     }
                     if(rode && r.getX()==finalX && r.getY()==finalY) {

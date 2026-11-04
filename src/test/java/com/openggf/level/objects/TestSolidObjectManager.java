@@ -164,41 +164,6 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    public void topSolidHistoryProviderUsesPreviousPlayerPositionForNewLanding() {
-        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
-        HistoryTopSolidObject object = new HistoryTopSolidObject(100, 100, params);
-        ObjectManager manager = buildManager(object);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.setWidth(20);
-        player.setHeight(38);
-        player.setCentreX((short) 100);
-        int rejectCentreY = 100 - 4 - params.airHalfHeight() - player.getYRadius() - 1;
-        int contactCentreY = rejectCentreY + 2;
-        player.setCentreY((short) rejectCentreY);
-        player.endOfTick();
-
-        player.setCentreY((short) contactCentreY);
-        player.setYSpeed((short) 0x100);
-        player.setAir(true);
-        player.endOfTick();
-
-        manager.update(0, player, List.of(), 0, false, true, false);
-
-        assertTrue(player.getAir());
-        assertFalse(player.isOnObject());
-
-        player.setCentreY((short) (contactCentreY + 1));
-        player.endOfTick();
-
-        manager.update(0, player, List.of(), 0, false, true, false);
-
-        assertFalse(player.getAir());
-        assertTrue(player.isOnObject());
-        assertEquals(0, player.getYSpeed());
-    }
-
-    @Test
     public void compatibilityAutoObjectPreservesPerPlayerCallbackTimingWithSidekickMutation() {
         TestPlayableSprite player = createStandingProbePlayer();
         TestPlayableSprite sidekick = createStandingProbePlayer();
@@ -229,7 +194,9 @@ public class TestSolidObjectManager {
         player.setCentreY((short) centreY);
         player.setYSpeed((short) 0);
 
-        assertTrue(manager.hasStandingContact(player));
+        runObjectPass(manager, player);
+        assertTrue(manager.isRidingObject(player, object));
+        assertTrue(player.isOnObject());
     }
 
     @Test
@@ -247,14 +214,14 @@ public class TestSolidObjectManager {
         player.setYSpeed((short) 0);
         player.setAir(true);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
 
         player.setLatchedSolidObject(object.getSpawn().objectId(), object);
         player.setCentreX((short) (100 + (params.halfWidth() * 2) + 1));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.isOnObject(),
                 "S3K SolidObjectFull_1P/SolidObjectTop_1P clear Status_OnObj when riding bounds are left");
@@ -282,14 +249,14 @@ public class TestSolidObjectManager {
         sidekick.setYSpeed((short) 0);
         sidekick.setAir(true);
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
         assertTrue(sidekick.isOnObject());
         assertFalse(sidekick.getAir());
 
         sidekick.setRenderFlagOnScreen(false);
         sidekick.setCentreX((short) (100 - params.halfWidth() - 1));
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
 
         assertTrue(sidekick.isOnObject(),
                 "S3K SolidObjectFull gates offscreen Player_2 before the standing bounds branch");
@@ -315,7 +282,7 @@ public class TestSolidObjectManager {
         sidekick.setYSpeed((short) 0);
         sidekick.setAir(true);
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
         assertTrue(sidekick.isOnObject());
         assertFalse(sidekick.getAir());
         assertTrue(manager.isRidingObject(sidekick));
@@ -324,7 +291,7 @@ public class TestSolidObjectManager {
         sidekick.setOnObject(true);
         sidekick.setAir(true);
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
 
         assertTrue(sidekick.isOnObject(),
                 "S3K SolidObjectFull gates offscreen Player_2 before the in-air riding unseat branch");
@@ -392,16 +359,8 @@ public class TestSolidObjectManager {
         sidekick.setYSpeed((short) 0);
         sidekick.setAir(true);
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
         assertTrue(manager.isRidingObject(sidekick));
-        assertTrue(manager.hasGroundingObjectSupport(sidekick));
-
-        sidekick.setOnObject(true);
-        sidekick.setAir(true);
-        sidekick.setYSpeed((short) 0x0038);
-        assertFalse(manager.hasGroundingObjectSupport(sidekick),
-                "A stale airborne SolidObject standing bit is not active grounding support because "
-                        + "the helper returns before SolidObject_cont (s2.asm:35028-35046)");
 
         sidekick.setRenderFlagOnScreen(false);
         sidekick.setOnObject(true);
@@ -410,18 +369,14 @@ public class TestSolidObjectManager {
 
         assertTrue(manager.isRidingObject(sidekick),
                 "S2 SolidObject preserves the stale P2 ride latch when render_flags.on_screen is clear");
-        assertFalse(manager.hasGroundingObjectSupport(sidekick),
-                "The preserved offscreen P2 latch is not active grounding support because "
-                        + "SolidObject returns before SolidObject_cont (s2.asm:35022-35031)");
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
 
         assertTrue(sidekick.isOnObject(),
                 "Skipping offscreen P2 SolidObject preserves Status_OnObj");
         assertTrue(sidekick.getAir(),
                 "Skipping offscreen P2 SolidObject preserves Status_InAir");
         assertTrue(manager.isRidingObject(sidekick));
-        assertFalse(manager.hasGroundingObjectSupport(sidekick));
         assertEquals(0x0038, sidekick.getYSpeed() & 0xFFFF,
                 "No SolidObject_cont support pass should zero the airborne sidekick's y_vel");
     }
@@ -444,7 +399,7 @@ public class TestSolidObjectManager {
         player.setSuppressGroundWallCollision(true);
         player.setObjectControlled(false);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
@@ -485,7 +440,7 @@ public class TestSolidObjectManager {
 
             int startCentreY = player.getCentreY();
             try (var events = mockStatic(PlayableAudioEvents.class)) {
-                manager.updateSolidContacts(player);
+                runObjectPass(manager, player);
                 events.verifyNoInteractions();
             }
 
@@ -525,7 +480,7 @@ public class TestSolidObjectManager {
             player.setAir(true);
 
             int startCentreY = player.getCentreY();
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
 
             assertEquals(startCentreY, player.getCentreY(),
                     "Narrow default landing width rejects the right-edge graze: no lift");
@@ -550,35 +505,18 @@ public class TestSolidObjectManager {
         player.setYSpeed((short) 0);
         player.setAir(true);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
 
         player.setCentreX((short) (100 + params.halfWidth()));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.isOnObject(),
                 "S3K SolidObjectFull_1P/SolidObjectTop_1P treat relX == width*2 as outside ride bounds");
         assertTrue(player.getAir(),
                 "Leaving exact ride bounds sets Status_InAir instead of extending support with a sticky buffer");
-    }
-
-    @Test
-    public void testHeadroomDistanceUpward() {
-        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
-        TestSolidObject object = new TestSolidObject(100, 70, params);
-        ObjectManager manager = buildManager(object);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.setWidth(20);
-        player.setHeight(20);
-        player.setCentreX((short) 100);
-        player.setCentreY((short) 100);
-
-        int distance = manager.getHeadroomDistance(player, 0x00);
-
-        assertEquals(3, distance);
     }
 
     @Test
@@ -600,7 +538,7 @@ public class TestSolidObjectManager {
         // Use an interior X so top resolution wins over side resolution.
         player.setCentreX((short) 64);
         player.setCentreY((short) 48);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         int leftCenterY = player.getCentreY();
         assertEquals(48, leftCenterY);
 
@@ -609,7 +547,7 @@ public class TestSolidObjectManager {
         player.setYSpeed((short) 0);
         player.setCentreX((short) 136);
         player.setCentreY((short) 32);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         int rightCenterY = player.getCentreY();
         assertEquals(32, rightCenterY);
 
@@ -682,6 +620,55 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void collapsingLedgeDelayExpiryTestsSonicAfterExitPlatform() throws Exception {
+        // .delayCollapse runs Ledge_WalkOff -> ExitPlatform before btst #3
+        // (_incObj/1A, 53 Collapsing Ledges and Floors.asm:94-110): a Sonic who
+        // jumped this frame is released there and gets no obPrevAni restart,
+        // while a Sonic still standing gets the forced release.
+        assertEquals(-1, delayExpiryPreviousAnimation(true),
+                "airborne Sonic leaves through ExitPlatform; obPrevAni is not rewritten");
+        assertEquals(1, delayExpiryPreviousAnimation(false),
+                "standing Sonic takes the timer-zero release that writes Run to obPrevAni");
+    }
+
+    private int delayExpiryPreviousAnimation(boolean airborne) throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x1A, 0, 1, false, 0);
+        Sonic1CollapsingLedgeObjectInstance ledge = new Sonic1CollapsingLedgeObjectInstance(spawn);
+        ObjectManager manager = buildManager(ledge);
+        ledge.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        });
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.applyCustomRadii(9, 19);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 34);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(5,
+                List.of(0x08, 0x09, 0x0A), SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(animations);
+        player.setAnimationId(0);
+        player.getAnimationManager().update(0);
+        player.getAnimationManager().resetLastAnimationId();
+        manager.forceRidingObjectForBootstrap(player, ledge);
+        player.setAir(airborne);
+        setPrivateInt(ledge, "routine", 6);
+        setPrivateBoolean(ledge, "collapseFlag", true);
+        setPrivateInt(ledge, "collapseDelay", 1);
+
+        ledge.update(0, player);
+
+        assertFalse(ledge.isSolidFor(player), ".startCollapse clears the collapse flag either way");
+        return player.getAnimationManager().captureRewindState().lastAnimationId();
+    }
+
+    @Test
     public void testNearTopSideContactDoesNotSetPushingFlag() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
@@ -696,7 +683,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 85);
         player.setCentreY((short) 71);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getPushing());
     }
@@ -716,7 +703,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 85);
         player.setCentreY((short) 81);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getPushing());
         assertTrue(manager.hasObjectPushingBit(player),
@@ -736,7 +723,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) 100);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(84, player.getCentreX(),
                 "cmp.w d0,d1 / bhs chooses the left half when player and solid centres are equal");
@@ -764,14 +751,14 @@ public class TestSolidObjectManager {
         player.setAnimationId(5);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing());
         assertTrue(manager.hasObjectPushingBit(player));
 
         // Same horizontal side, but within four pixels of the top edge:
         // Solid_SideAir calls Solid_NotPushing rather than Solid_NoCollision.
         player.setCentreY((short) 71);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getPushing());
         assertFalse(manager.hasObjectPushingBit(player));
@@ -795,12 +782,12 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 85);
         player.setCentreY((short) 81);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing());
         assertTrue(object.lastPushingState);
 
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getPushing(),
                 "SolidObject_TestClearPush clears Status_Push only for the object that owned the push bit");
@@ -834,7 +821,7 @@ public class TestSolidObjectManager {
         player.setAnimationId(0);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing());
         assertTrue(manager.hasObjectPushingBit(player));
         player.captureOnObjectAtFrameStart();
@@ -842,7 +829,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) 82);
         player.setYSpeed((short) 0);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.isOnObject(), "fixture should produce a standing sibling contact");
         assertTrue(player.getPushing(), "the provider-preserved native push latch stays visible");
@@ -868,7 +855,7 @@ public class TestSolidObjectManager {
         player.setCentreY((short) 83);
         player.setYSpeed((short) 0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.isOnObject(), "fixture should establish a standing multi-piece contact");
         assertEquals(0, object.preserveChecks,
@@ -897,7 +884,7 @@ public class TestSolidObjectManager {
         player.setCentreY((short) 83);
         player.setYSpeed((short) 0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.isOnObject(), "fixture should establish a standing multi-piece contact");
         assertTrue(player.getPushing(), "the later riding slot must preserve the live earlier-slot push");
@@ -930,11 +917,11 @@ public class TestSolidObjectManager {
         player.setAnimationId(5);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing(), "Fixture should establish the object's native push latch");
 
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getPushing());
         assertEquals(0, player.getAnimationId(),
@@ -968,9 +955,9 @@ public class TestSolidObjectManager {
         player.setAnimationId(5);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0, player.getAnimationId(),
                 "S2 SolidObject_TestClearPush writes Walk to anim");
@@ -1000,9 +987,9 @@ public class TestSolidObjectManager {
         player.setAnimationId(2);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(2, player.getAnimationId(),
                 "SolidObject_TestClearPush branches around the Walk/Run word write for Roll");
@@ -1027,9 +1014,9 @@ public class TestSolidObjectManager {
         player.setAnimationId(5);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0, player.getAnimationId(),
                 "S3K SolidObjectFull loc_1E0A2 writes Walk to anim");
@@ -1129,9 +1116,9 @@ public class TestSolidObjectManager {
         player.setAnimationId(9);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(9, player.getAnimationId(),
                 "S3K loc_1E0A2 branches around the word write for Spindash");
@@ -1160,10 +1147,10 @@ public class TestSolidObjectManager {
         player.setAnimationId(5);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing());
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0, player.getAnimationId(),
                 "The paired object/player Status_Push bits own S1 Solid_NoCollision");
@@ -1202,7 +1189,7 @@ public class TestSolidObjectManager {
         ObjectManager manager = buildManager(object);
         TestPlayableSprite player = createSonic1WalkPushPlayer();
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing());
 
         // The legacy S1 UNIFIED post-movement resolver has no inline checkpoint
@@ -1213,7 +1200,7 @@ public class TestSolidObjectManager {
         player.setPushing(false);
         player.setAnimationId(5);
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player, true, false);
+        runObjectPass(manager, player, true);
 
         assertFalse(player.getPushing());
         assertEquals(0, player.getAnimationId());
@@ -1245,12 +1232,12 @@ public class TestSolidObjectManager {
         player.setAnimationId(5);
         player.getAnimationManager().update(0);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.getPushing(), "Fixture should establish the monitor's native push latch");
 
         player.setAir(true);
         player.setCentreX((short) 40);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getPushing());
         assertFalse(manager.hasObjectPushingBit(player));
@@ -1314,7 +1301,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 120);
         player.setCentreY((short) 83);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.isOnObject());
         assertEquals(1, object.lastStandingPieceIndex);
         assertFalse(player.getPushing());
@@ -1325,7 +1312,7 @@ public class TestSolidObjectManager {
         player.setXSpeed((short) 0x100);
         player.setGSpeed((short) 0x100);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(object.piece0Contacted,
                 "Earlier piece should contact before the ridden piece shortcut; player="
@@ -1354,7 +1341,7 @@ public class TestSolidObjectManager {
         sidekick.setCentreX((short) 120);
         sidekick.setCentreY((short) 83);
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
         assertTrue(manager.isRidingObject(sidekick));
         assertEquals(1, object.lastStandingPieceIndex);
 
@@ -1365,7 +1352,7 @@ public class TestSolidObjectManager {
         sidekick.setXSpeed((short) 0x100);
         sidekick.setGSpeed((short) 0x100);
 
-        manager.updateSolidContacts(sidekick);
+        runObjectPass(manager, sidekick);
 
         assertTrue(object.piece0Contacted,
                 "ROM Obj70 sibling slots still run SolidObject_cont before the stale ridden tooth returns");
@@ -1391,14 +1378,14 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) (100 - params.groundHalfHeight() - player.getYRadius()));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.isOnObject());
         assertEquals(100 - params.groundHalfHeight() - player.getYRadius() - 1,
                 player.getCentreY(),
                 "Initial SolidObject_Landed contact includes the ROM subq #1 snap");
 
         object.setY(104);
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(104 - params.groundHalfHeight() - player.getYRadius(),
                 player.getCentreY(),
@@ -1419,7 +1406,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) (100 - 8 - player.getYRadius() - 1));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getAir(),
                 "Multi-piece sloped solids must use SolidObjectTopSloped2 surfaceY = pieceY - sample");
@@ -1456,7 +1443,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) (wallCenterX - halfWidth + 6));
         player.setCentreY((short) 0x0280);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getPushing(),
                 "SolidObjectFull2 side contact must set the pushing flag");
@@ -1481,7 +1468,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) (100 + params.halfWidth()));
         player.setCentreY((short) 100);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getPushing(),
                 "SolidObject_cont uses cmp/bhi, so relX == width*2 is still a side contact");
@@ -1496,6 +1483,8 @@ public class TestSolidObjectManager {
         CnzCylinderInstance cylinder = new CnzCylinderInstance(
                 new ObjectSpawn(0x15C0, 0x04FF, 0x47, 0x45, 0, false, 0));
         ObjectManager manager = buildManager(cylinder);
+        // SolidObjectFull_1P tests the object's render_flags bit 7 (loc_1DF88).
+        AbstractObjectInstance.updateCameraBounds(0x1500, 0x0480, 0x1500 + 320, 0x0480 + 224, 0);
 
         TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
         player.useGameRules(GameRules.SONIC_3K);
@@ -1507,7 +1496,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) (0x15C0 + cylinder.getSolidParams().halfWidth()));
         player.setCentreY((short) 0x052C);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getPushing(),
                 "SolidObject_cont accepts relX == d1*2 and sets Status_Push for a grounded side contact");
@@ -1534,7 +1523,7 @@ public class TestSolidObjectManager {
         exactEdge.setSubpixelRaw(0x8000, 0);
         exactEdge.setCentreY((short) 100);
 
-        manager.updateSolidContacts(exactEdge);
+        runObjectPass(manager, exactEdge);
 
         assertTrue(exactEdge.getPushing());
         assertEquals(100 + params.halfWidth(), exactEdge.getCentreX());
@@ -1553,7 +1542,7 @@ public class TestSolidObjectManager {
         nonzeroOverlap.setSubpixelRaw(0x8000, 0);
         nonzeroOverlap.setCentreY((short) 100);
 
-        manager.updateSolidContacts(nonzeroOverlap);
+        runObjectPass(manager, nonzeroOverlap);
 
         assertEquals(100 + params.halfWidth(), nonzeroOverlap.getCentreX());
         assertEquals(0, nonzeroOverlap.getXSubpixelRaw(),
@@ -1574,6 +1563,8 @@ public class TestSolidObjectManager {
         TestPlayableSprite tails = new TestPlayableSprite((short) 0, (short) 0);
         tails.useGameRules(GameRules.SONIC_2);
         tails.setCpuControlled(true);
+        // SolidObject skips an off-screen Sidekick (s2.asm:35023-35025).
+        tails.setRenderFlagOnScreen(true);
         tails.setWidth(20);
         tails.setHeight(38);
         tails.setAir(false);
@@ -1582,7 +1573,7 @@ public class TestSolidObjectManager {
         tails.setCentreX((short) 0x31D7);
         tails.setCentreY((short) 0x04D4);
 
-        manager.updateSolidContacts(tails);
+        runObjectPass(manager, tails);
 
         assertTrue(tails.getPushing(),
                 "S2 SolidObject_AtEdge sets Status_Push for grounded exact-edge capsule body contact");
@@ -1607,7 +1598,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) (100 + params.halfWidth()));
         player.setCentreY((short) 100);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getPushing(),
                 "Solid routine profile should capture inclusive-right-edge policy before provider hooks mutate");
@@ -1646,7 +1637,7 @@ public class TestSolidObjectManager {
         int maxTop = params.airHalfHeight() + player.getYRadius();
         player.setCentreY((short) (100 - 4 - maxTop + 8));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getAir(),
                 "Rolling downward monitor contact is delegated to touch response, not full-solid landing");
@@ -1682,7 +1673,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 85);
         player.setCentreY((short) 81);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.getPushing(),
                 "Profile top-only policy must suppress full-solid side pushing even if provider hook disagrees");
@@ -1717,13 +1708,13 @@ public class TestSolidObjectManager {
         player.setYSpeed((short) 0);
         player.setAir(true);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
 
         player.setCentreX((short) (100 + params.halfWidth()));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.isOnObject());
         assertFalse(player.getAir(),
@@ -1744,7 +1735,7 @@ public class TestSolidObjectManager {
             player.setYSpeed((short) 0x100);
             player.setCentreX((short) 100);
             player.setCentreY((short) 119);
-            buildManager(object).updateSolidContacts(player);
+            runObjectPass(buildManager(object), player);
             assertEquals(alwaysSquashes, player.getDead(),
                     "the patched falling pillar enters squash even at positive y_vel");
         }
@@ -1766,7 +1757,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) 119);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0x0B54, player.getGSpeed() & 0xFFFF);
         assertEquals(0, player.getYSpeed());
@@ -1790,7 +1781,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) 119);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0, player.getGSpeed());
         assertEquals(0, player.getYSpeed());
@@ -1817,7 +1808,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 101);
         player.setCentreY((short) 129);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0, player.getYSpeed());
         assertEquals(0x0351, player.getGSpeed() & 0xFFFF);
@@ -1842,7 +1833,7 @@ public class TestSolidObjectManager {
         // At deltaY = airHalfHeight + rollingYRadius, ROM remains just outside the box.
         player.setCentreY((short) (100 + params.airHalfHeight() + player.getYRadius()));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(-0x00F0, player.getYSpeed(),
                 "Rolling airborne full-solid overlap should not use standing radius for the underside check");
@@ -1870,7 +1861,7 @@ public class TestSolidObjectManager {
         // but the taller S2/S3K underside box should still resolve the bottom hit.
         player.setCentreY((short) (100 + params.airHalfHeight() + player.getYRadius()));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(0, player.getYSpeed());
         assertEquals(0, player.getGSpeed());
@@ -1896,7 +1887,7 @@ public class TestSolidObjectManager {
         player.setCentreX((short) 100);
         player.setCentreY((short) 176);
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertEquals(183, player.getCentreY(),
                 "S3K loc_1E0E0 separates an airborne bottom overlap even when y_vel is zero");
@@ -1930,7 +1921,7 @@ public class TestSolidObjectManager {
             playerOutside.setCentreX((short) (100 - params.halfWidth() - 5)); // X = 63
             playerOutside.setCentreY((short) centreY);
 
-            manager.updateSolidContacts(playerOutside);
+            runObjectPass(manager, playerOutside);
 
             assertFalse(playerOutside.isOnObject());
             assertTrue(playerOutside.getAir());
@@ -1946,7 +1937,7 @@ public class TestSolidObjectManager {
             playerInside.setCentreX((short) (100 - landingHalfWidth + 5)); // X = 84
             playerInside.setCentreY((short) centreY);
 
-            manager.updateSolidContacts(playerInside);
+            runObjectPass(manager, playerInside);
 
             assertTrue(playerInside.isOnObject());
             assertFalse(playerInside.getAir());
@@ -1977,7 +1968,7 @@ public class TestSolidObjectManager {
                 player.setCentreY((short) y);
                 player.resetPositionHistory();
 
-                manager.updateSolidContacts(player);
+                runObjectPass(manager, player);
 
                 String context = object.getClass().getSimpleName() + " overlap=" + overlap;
                 boolean lands = overlap >= 1 && overlap <= 16;
@@ -2004,7 +1995,7 @@ public class TestSolidObjectManager {
                 player.setCentreY((short) y);
                 player.resetPositionHistory();
 
-                manager.updateSolidContacts(player);
+                runObjectPass(manager, player);
 
                 assertTopWindowResult(player, overlap, y);
             }
@@ -2027,7 +2018,7 @@ public class TestSolidObjectManager {
             player.setCentreY((short) y);
             player.resetPositionHistory();
 
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
 
             assertTopWindowResult(player, overlap, y);
             if (overlap >= 1 && overlap <= 16) {
@@ -2052,7 +2043,7 @@ public class TestSolidObjectManager {
                 player.setCentreY((short) y);
                 player.resetPositionHistory();
 
-                manager.updateSolidContacts(player);
+                runObjectPass(manager, player);
 
                 assertTopWindowResult(player, overlap, y);
             }
@@ -2109,7 +2100,7 @@ public class TestSolidObjectManager {
         exactBoundary.setCentreY((short) (100 - 4 - maxTop));
         exactBoundary.resetPositionHistory();
 
-        manager.updateSolidContacts(exactBoundary);
+        runObjectPass(manager, exactBoundary);
 
         assertFalse(exactBoundary.isOnObject(),
                 "loc_1E45A (sonic3k.asm:42044-42055) rejects zero via unsigned cmpi/blo");
@@ -2127,13 +2118,41 @@ public class TestSolidObjectManager {
         insideBoundary.setCentreY((short) (100 - 4 - maxTop + 1));
         insideBoundary.resetPositionHistory();
 
-        manager.updateSolidContacts(insideBoundary);
+        runObjectPass(manager, insideBoundary);
 
         assertTrue(insideBoundary.isOnObject());
         assertFalse(insideBoundary.getAir());
         assertEquals(0, insideBoundary.getYSpeed());
         assertEquals(100 - params.groundHalfHeight() - insideBoundary.getYRadius() - 1,
                 insideBoundary.getCentreY());
+    }
+
+    @Test
+    public void cnzTrapDoorRejectsTheExactSurfaceNewLanding() {
+        ObjectSpawn spawn = new ObjectSpawn(0x1560, 0x0284, 0x44, 0, 0, false, 0);
+        CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
+        ObjectManager manager = buildManager(object);
+        // Advance past the constructor's no-contact frame, like the object loop.
+        object.snapshotPreUpdatePosition();
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(true);
+        player.setYSpeed((short) 0x07A8);
+        player.setCentreX((short) 0x1566);
+        player.setCentreY((short) 0x0264);
+
+        runObjectPass(manager, player);
+
+        assertTrue(player.getAir(),
+                "CNZ f9801: y $264 + y_radius $13 + 4 meets the door's top ($284 - 9) exactly; "
+                        + "loc_1E45A's cmpi.w #-$10,d0 / blo returns on d0=0 "
+                        + "(sonic3k.asm:42044-42053)");
+        assertFalse(player.isOnObject());
+        assertEquals(0x07A8, player.getYSpeed() & 0xFFFF);
+        assertEquals(0x0264, player.getCentreY() & 0xFFFF);
     }
 
     @Test
@@ -2149,9 +2168,9 @@ public class TestSolidObjectManager {
         player.resetPositionHistory();
         player.setCentreY((short) (zeroY + 1));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
-        // loc_31CCA -> loc_1E45A (sonic3k.asm:67262-67270,42038-42063)
+        // loc_31CCA (sonic3k.asm:67262-67270) -> loc_1E45A (sonic3k.asm:42038-42063)
         // reads current y_pos, not the previous zero-distance position.
         assertFalse(player.getAir());
         assertTrue(player.isOnObject());
@@ -2220,7 +2239,7 @@ public class TestSolidObjectManager {
         int maxTop = params.groundHalfHeight() + player.getYRadius();
         player.setCentreY((short) (100 - 4 - maxTop + 8));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertFalse(player.isOnObject());
         assertTrue(player.getAir());
@@ -2244,7 +2263,7 @@ public class TestSolidObjectManager {
             int maxTop = params.groundHalfHeight() + player.getYRadius();
             player.setCentreY((short) (100 - 4 - maxTop + 10));
 
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
 
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());
@@ -2269,7 +2288,7 @@ public class TestSolidObjectManager {
         int maxTop = params.groundHalfHeight() + player.getYRadius();
         player.setCentreY((short) (100 - 4 - maxTop + 8));
 
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.isOnObject());
         assertFalse(player.getAir());
@@ -2292,14 +2311,14 @@ public class TestSolidObjectManager {
         // Land first to establish riding state.
         player.setCentreX((short) (100 + 0x10));
         player.setCentreY((short) (100 - 4 - maxTop + 8));
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
         assertTrue(manager.isRidingObject(player));
 
         // Move to X that is still inside the full collision width but outside the
         // narrower top-standing width. ExitPlatform-style continuation should keep
         // the player riding until they actually leave the object's collision box.
         player.setCentreX((short) (100 + 0x28));
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(manager.isRidingObject(player));
     }
@@ -2359,68 +2378,7 @@ public class TestSolidObjectManager {
         player.setAir(true);
         player.setOnObject(true);
 
-        manager.updateSolidContacts(player);
-
-        assertTrue(player.getAir());
-        assertFalse(player.isOnObject());
-        assertFalse(manager.isRidingObject(player));
-    }
-
-    @Test
-    public void groundedPrePhysicsStatusClearWaitsForLaterRidingCheckpoint() {
-        AutoCheckpointProbeObject clearingObject = new AutoCheckpointProbeObject(60, 100);
-        AutoCheckpointProbeObject support = new AutoCheckpointProbeObject(100, 100);
-        SolidObjectParams params = support.getSolidParams();
-        ObjectManager manager = buildManager(clearingObject);
-        manager.addDynamicObject(support);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useGameRules(GameRules.SONIC_1);
-        player.setWidth(20);
-        player.setHeight(20);
-        player.setCentreX((short) 100);
-        player.setCentreY((short) (100 - params.groundHalfHeight()
-                - player.getYRadius()));
-        player.setYSpeed((short) 0);
-        manager.forceRidingObjectForBootstrap(player, support);
-
-        // A lower SST slot runs after Sonic in the ROM, but before physics in
-        // the engine's legacy order. Its grounded Status_OnObj clear must not
-        // manufacture InAir before this later support slot executes.
-        manager.solidContacts().noteGroundedOnObjectClearedBeforePhysics(player, clearingObject);
-        player.setOnObject(false);
-        player.setAir(true);
-
-        manager.updateSolidContacts(player);
-
-        assertFalse(player.getAir());
-        assertTrue(player.isOnObject());
-        assertTrue(manager.isRidingObject(player, support));
-    }
-
-    @Test
-    public void groundedStatusClearAfterRidingCheckpointIsNotRestored() {
-        AutoCheckpointProbeObject support = new AutoCheckpointProbeObject(100, 100);
-        AutoCheckpointProbeObject laterClearingObject = new AutoCheckpointProbeObject(140, 100);
-        SolidObjectParams params = support.getSolidParams();
-        ObjectManager manager = buildManager(support);
-        manager.addDynamicObject(laterClearingObject);
-
-        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
-        player.useGameRules(GameRules.SONIC_1);
-        player.setWidth(20);
-        player.setHeight(20);
-        player.setCentreX((short) 100);
-        player.setCentreY((short) (100 - params.groundHalfHeight()
-                - player.getYRadius()));
-        player.setYSpeed((short) 0);
-        manager.forceRidingObjectForBootstrap(player, support);
-
-        manager.solidContacts().noteGroundedOnObjectClearedBeforePhysics(player, laterClearingObject);
-        player.setOnObject(false);
-        player.setAir(true);
-
-        manager.updateSolidContacts(player);
+        runObjectPass(manager, player);
 
         assertTrue(player.getAir());
         assertFalse(player.isOnObject());
@@ -2600,7 +2558,7 @@ public class TestSolidObjectManager {
             player.setCentreY((short) centerY);
 
             try (var events = mockStatic(PlayableAudioEvents.class)) {
-                manager.updateSolidContacts(player);
+                runObjectPass(manager, player);
                 events.verify(() -> PlayableAudioEvents.landed(player));
 
                 assertTrue(player.isOnObject());
@@ -2617,7 +2575,7 @@ public class TestSolidObjectManager {
 
                 int expectedStandingCenterY = 100 - params.groundHalfHeight() - 19 - 1;
                 assertEquals(expectedStandingCenterY, player.getCentreY());
-                manager.updateSolidContacts(player);
+                runObjectPass(manager, player);
                 events.verify(() -> PlayableAudioEvents.landed(player));
                 events.verifyNoMoreInteractions();
             }
@@ -2646,7 +2604,7 @@ public class TestSolidObjectManager {
             player.setCentreY((short) (100 - 4 - params.groundHalfHeight()
                     - player.getYRadius() + 8));
 
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
 
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());
@@ -2681,7 +2639,7 @@ public class TestSolidObjectManager {
             int centerY = 100 - 4 - (params.groundHalfHeight() + currentRadius) + distY;
             player.setCentreY((short) centerY);
 
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
 
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());
@@ -2744,11 +2702,11 @@ public class TestSolidObjectManager {
             player.setCentreX((short)(200 - 48 + 37));
             int sample = flip ? 58 : 37;
             player.setCentreY((short)(300 - sample - player.getYRadius() - 1));
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
             assertTrue(player.isOnObject(), "falling player must use full pixel index, flip=" + flip);
             assertEquals(300 - sample - player.getYRadius() - 1, player.getCentreY());
             player.setCentreX((short)(200 - 48 + 38));
-            manager.updateSolidContacts(player);
+            runObjectPass(manager, player);
             sample = flip ? 57 : 38;
             assertEquals(300 - sample - player.getYRadius(), player.getCentreY(),
                     "continued ride must use the same full-resolution surface");
@@ -2814,8 +2772,6 @@ public class TestSolidObjectManager {
             player.setCentreX((short)200);
             int surfaceY = 340 - 48;
             player.setCentreY((short)(surfaceY - player.getYRadius() - 4 + overlap));
-            assertEquals(overlap > 0 && overlap <= 16, manager.hasStandingContact(player),
-                    "geometry overlap="+overlap+" radius="+player.getYRadius()+" y="+player.getCentreY()+" anchor="+vine.getY());
             manager.processImmediateInlineSolidCheckpoint(vine, player, List.of());
             assertEquals(overlap > 0 && overlap <= 16, player.isOnObject(), "native overlap=" + overlap);
             // Snap reads the incoming radius; ResetOnFloor then restores standing radii.
@@ -2872,7 +2828,12 @@ public class TestSolidObjectManager {
         org.mockito.Mockito.when(rom.read16BitAddr(0x104L)).thenReturn(0xFFFF);
         var context=org.mockito.Mockito.mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
         org.mockito.Mockito.when(context.resolveSolidNowAll()).thenAnswer(i -> {
-            manager.processImmediateInlineSolidCheckpoint(rock,rider,List.of(pusher));
+            SolidObjectPassTestSupport.routineCheckpoint(manager,rock,rider,List.of(pusher));
+            return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
+        });
+        // A rock that is not carrying loads its current x_pos into d4.
+        org.mockito.Mockito.when(context.solidWithD4(org.mockito.ArgumentMatchers.anyInt())).thenAnswer(i -> {
+            SolidObjectPassTestSupport.routineCheckpoint(manager,rock,rider,List.of(pusher),i.getArgument(0));
             return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
         });
         var level=org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
@@ -2900,6 +2861,15 @@ public class TestSolidObjectManager {
                     "first horizontal track pass carries by exactly its own one-pixel motion");
             assertTrue(manager.isRidingObject(rider,rock));
         }
+    }
+
+    /** Resolves every solid object's slot checkpoint (the deleted player-side sweep's replacement). */
+    private static void runObjectPass(ObjectManager manager, PlayableEntity player) {
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player);
+    }
+
+    private static void runObjectPass(ObjectManager manager, PlayableEntity player, boolean postMovement) {
+        SolidObjectPassTestSupport.resolveSolidCheckpoints(manager, player, postMovement);
     }
 
     private ObjectManager buildManager(ObjectInstance instance) {
@@ -3029,11 +2999,6 @@ public class TestSolidObjectManager {
     private static final class OwnCheckpointAirUnseatSolidObject extends TestSolidObject {
         private OwnCheckpointAirUnseatSolidObject(int x, int y, SolidObjectParams params) {
             super(x, y, params);
-        }
-
-        @Override
-        public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) {
-            return true;
         }
     }
 
@@ -3327,11 +3292,6 @@ public class TestSolidObjectManager {
         public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
             return true;
         }
-
-        @Override
-        public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
-            return true;
-        }
     }
 
     private static SolidRoutineProfile solidProfile(
@@ -3366,17 +3326,6 @@ public class TestSolidObjectManager {
                 carriesAirborneRiderAfterExitPlatform);
     }
 
-    private static final class HistoryTopSolidObject extends TestSolidObject {
-        private HistoryTopSolidObject(int x, int y, SolidObjectParams params) {
-            super(x, y, params, true);
-        }
-
-        @Override
-        public int getTopSolidPlayerPositionHistoryFrames(PlayableEntity player) {
-            return 1;
-        }
-    }
-
     private static final class ManualCheckpointProbeObject extends AbstractObjectInstance
             implements SolidObjectProvider, SolidObjectListener {
         private final SolidObjectParams params = new SolidObjectParams(16, 8, 8);
@@ -3400,7 +3349,7 @@ public class TestSolidObjectManager {
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            PlayerSolidContactResult result = services().solidExecution().resolveSolidNow(player);
+            PlayerSolidContactResult result = services().solidExecution().resolveSolidNowAll().perPlayer().get(player);
             standingSeenInsideUpdate = result.standingNow();
             manualCheckpointCount++;
         }
@@ -3472,7 +3421,7 @@ public class TestSolidObjectManager {
                 skipNextCheckpoint = false;
                 return;
             }
-            services().solidExecution().resolveSolidNow(player);
+            services().solidExecution().resolveSolidNowAll().perPlayer().get(player);
         }
 
         @Override

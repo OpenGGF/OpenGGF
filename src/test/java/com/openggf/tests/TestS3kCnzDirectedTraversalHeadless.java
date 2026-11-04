@@ -42,7 +42,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 .build();
 
         AbstractPlayableSprite player = fixture.sprite();
-        // ROM Obj_CNZCannon (sonic3k.asm:66910) calls SolidObjectTop with
+        // ROM Obj_CNZCannon (sonic3k.asm:66915) calls SolidObjectTop with
         // d1=$10 (half-width) and d3=$29 (top offset). MvSonicOnPtfm puts the
         // player feet at cannon.y - $29, so player centre Y must be
         // cannon.y - $29 - yRadius + small overlap to land standing.
@@ -272,7 +272,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 "CNZ cylinder should suppress movement through object_control while captured");
         assertFalse(player.isControlLocked(),
                 "CNZ cylinder object_control=$03 capture does not set Ctrl_locked");
-        // ROM sub_324C0 (sonic3k.asm:68025) at capture explicitly does
+        // ROM sub_324C0 (sonic3k.asm:68030) at capture explicitly does
         // bclr #Status_Roll, status(a1) (line 68005) and writes
         // default_y_radius / default_x_radius to y_radius / x_radius
         // (lines 68003-68004). Rolling radii (7, 14) and Status_Roll are
@@ -816,7 +816,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 "CNZ cylinder object_control=$03 capture does not set player Ctrl_locked");
         assertFalse(sidekick.isControlLocked(),
                 "CNZ cylinder object_control=$03 capture does not set sidekick Ctrl_locked");
-        // ROM sub_324C0 (sonic3k.asm:68025) at capture explicitly does
+        // ROM sub_324C0 (sonic3k.asm:68030) at capture explicitly does
         // bclr #Status_Roll, status(a1) (line 68005) and writes
         // default_y_radius / default_x_radius (lines 68003-68004).
         assertFalse(player.getRolling(),

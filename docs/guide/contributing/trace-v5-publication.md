@@ -37,6 +37,20 @@ widths: S1 14, S2 48, and S3K 20. Presence of
 timing registry. The loader prefers a plain sibling when both exist and applies
 the same strict UTF-8 and event validation after decompression. Every run
 manifest has `dynamic_art_gap_transitions`, including an empty array.
+S3K complete-run capture can opt into a run-root `initialization_timing.jsonl`
+stream. Its absolute BK2 row namespace, independently selected ROM-backed phase
+identity and fail-closed service windows are distinct from comparison payloads.
+Freeze its exact native logical bytes and deterministic gzip bytes with the
+candidate inventory; installation requires the same explicit approval as other
+canonical payload changes. It supplies scheduling outcomes, never clock values
+or gameplay state. The [timing contract](../../architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#2026-11-03-approved-extension-synchronous-initialization-phases)
+owns its bounded authority and current implementation limits.
+Its paired `initialization_hardware_timing.jsonl.gz` carries actual queue
+readiness during matching represented loads outside structural segments.
+`load_ordinal` binds each seven-field completion to that load; `raw_frame` uses
+the phase stream's absolute zero-based movie namespace. Existing interstitial
+provenance is unchanged and supplies no timing authority. Producer compression
+also covers empty/tiny initialization companions.
 
 ## Candidate validation and comparison
 

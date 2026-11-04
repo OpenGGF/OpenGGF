@@ -1168,15 +1168,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
                 // Test_Ring_Collisions_AttractRing runs from the player's SST inside
                 // Process_Sprites, after Load_Sprites has filled first-free slots
-                // (sonic3k.asm:7916-7926). When the engine runs the player before the
-                // object load, reserve the SST after that load instead.
-                boolean deferSlot = objectManager != null
-                        && levelManager.objectsExecuteAfterPlayerPhysics();
-                int objectSlotIndex = objectManager != null && !deferSlot
-                        ? objectManager.allocateDynamicSlot() : -1;
-                if (objectManager != null && !deferSlot && objectSlotIndex < 0) {
-                    return false;
-                }
+                // (sonic3k.asm:7916-7926). The engine runs the player before the
+                // object load, so reserve the SST after that load instead.
+                boolean deferSlot = objectManager != null;
+                int objectSlotIndex = -1;
                 if (deferSlot && !objectManager.hasFreeDynamicSlotForDeferredAllocation(
                         pendingAttractedRingSlotCount())) {
                     return false;

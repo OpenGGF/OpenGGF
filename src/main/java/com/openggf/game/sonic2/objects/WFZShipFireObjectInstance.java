@@ -116,7 +116,7 @@ public class WFZShipFireObjectInstance extends AbstractObjectInstance implements
             return;
         }
 
-        // ROM: ObjBC_Main (s2.asm line 79915)
+        // ROM: ObjBC_Main (s2.asm line 80562)
         // move.w objoff_2C(a0),d0          ; d0 = initial X
         // move.w (Camera_BG_X_offset).w,d1 ; d1 = BG scroll offset
         int bgXOffset = getWfzBgXOffset();

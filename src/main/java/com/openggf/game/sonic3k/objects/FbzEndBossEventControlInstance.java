@@ -253,11 +253,12 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
         // loc_533B8 -> loc_1E45A accepts only [-$10,-1], even for a grounded new contact.
         return true;
     }
-    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+    @Override
+    public int tailCallD4(int routineEntryX) {
         // loc_53388 publishes both x_pos and d4=$31C0 on this dispatch.
         // The later loc_53134 event translates the cohort; carrying the old
         // platform-to-new-platform delta here would subtract the offset twice.
-        return !rebasingSolidThisUpdate;
+        return rebasingSolidThisUpdate ? getX() : routineEntryX;
     }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     // Fresh SolidObjectTop landings store the current position. loc_533A4

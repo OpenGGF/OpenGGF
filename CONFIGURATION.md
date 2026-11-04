@@ -57,7 +57,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `roms` | ROM filenames for S1, S2, S3K; default game selection |
 | `capture` | Trace and live video output, codecs, encoder settings and recording shortcut |
 | `startup` | Title screen, master title, legal disclaimer flags |
-| `hub` | Last focused game and ignored legacy continue values |
+| `hub` | Last focused game, dismissed game support notices and ignored legacy continue values |
 | `mods` | Mod-zone title-card behavior |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
@@ -786,6 +786,9 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
 | `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
+| `CAPTURE_QUEUE_BUDGET_MB` | `capture.queueBudgetMb` | int | `192` | Memory budget in MB for the live-recording encoder queue. The queue holds whole frames, so it holds fewer at larger viewports; a deeper queue absorbs longer encoder stalls before backpressure stalls the game loop. |
+| `CAPTURE_ENCODER_THREADS` | `capture.encoderThreads` | int | `0` | ffmpeg thread count for the encode pass; `0` lets ffmpeg choose. FFV1 is sliced so it can use threads; x264/x265 already thread internally, so prefer `capture.encoderPreset` for them. |
+| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `"fast"` | x264/x265 speed preset (`ultrafast` … `placebo`); blank uses the encoder's own default. Ignored by FFV1. Presets trade encode speed for file size and never affect losslessness. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
 
@@ -1434,6 +1437,20 @@ saves before Return to the game hub. Failed saves keep that title and error;
 accepted exits hold menu input throughout the fade. Gameplay configuration also
 keeps Start, Resume, Restart and Return behind their persistence boundary.
 
+
+### Game support notices
+
+Starting a stock game whose OpenGGF support is unfinished first shows a **Please
+note** dialog naming its stage (currently Sonic 3 & Knuckles, alpha) and asking
+players to report bugs on Discord (`openggf.com/discord`) or GitHub
+(`openggf.com/report-issue`); selecting either link opens it in the default
+browser, and the address stays on screen if no browser opens. Back returns to the hub without
+starting; **Continue** starts the game. **Don't show again** hides that game's
+notice for its current stage; the choice is stored in `hub.dismissedNotices`
+as comma-separated `game:stage` tokens (for example `s3k:alpha`). Clear the value
+to see hidden notices again. A game that moves to another stage shows its new
+notice once. Developers gate or release a game in
+`GameSupportNotices.DEFAULT_STAGES`.
 
 ### Hub history and game discovery
 

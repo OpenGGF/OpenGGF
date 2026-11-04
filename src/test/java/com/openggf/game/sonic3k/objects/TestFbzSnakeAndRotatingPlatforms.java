@@ -25,10 +25,10 @@ class TestFbzSnakeAndRotatingPlatforms {
         var platform=new FbzRotatingPlatformObjectInstance(spawn(0x77,0xC));
         AbstractObjectInstance.updateCameraBounds(0x100C,0x780,0x114C,0x860,0);
         try {
-            platform.snapshotPreUpdatePosition();
+            com.openggf.level.objects.RenderFlagPassTestSupport.pass(platform, true);
             platform.offsetNativePositionWordsPreserveSubpixel(-1,0);
             assertTrue(platform.isWithinSolidContactBounds(), "movement cannot replace the prior render flag");
-            platform.snapshotPreUpdatePosition();
+            com.openggf.level.objects.RenderFlagPassTestSupport.pass(platform, true);
             assertFalse(platform.isWithinSolidContactBounds(), "the next render pass excludes the twelve-pixel edge");
         } finally {
             AbstractObjectInstance.updateCameraBounds(0,0,320,224,0);

@@ -1936,7 +1936,7 @@ public class Sonic3kConstants {
     public static final int ARTTILE_ORBINAUT = 0x056E;
     public static final int ARTTILE_RIBOT = 0x0547;
     public static final int ARTTILE_CORKEY = 0x0558;
-    // Obj_Flybot767 (sonic3k.asm:192074), LockOn data include.
+    // Obj_Flybot767 (sonic3k.asm:192079), LockOn data include.
     // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
     public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;
     public static final int ART_UNC_FLYBOT_767_SIZE = 4896;
@@ -2027,6 +2027,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_DDZ_MISC = 0x02DB;
     /** {@code ArtKosM_BossMasterEmerald} / {@code Map_BossMasterEmerald}. */
     public static final int ART_KOSM_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    /** Native {@code ArtTile_BossMasterEmerald}, loc_819CE's Queue_Kos_Module destination. */
+    public static final int ARTTILE_BOSS_MASTER_EMERALD = 0x04D0;
     /** Two-entry infinite Run_PalRotationScript tables, DEZ line 2 / DDZ line 3. */
     public static final int PAL_DEZ_MASTER_EMERALD_SCRIPT_ADDR = 0x813AA;
     public static final int PAL_DDZ_MASTER_EMERALD_SCRIPT_ADDR = 0x8141E;
@@ -2461,7 +2463,7 @@ public class Sonic3kConstants {
     //                                            the 0x20 block grid)
     // =====================================================================
 
-    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,x_vel(a0)` (sonic3k.asm:145113). */
+    /** ROM: Obj_CNZMinibossTopGo `move.w #$200,x_vel(a0)` (sonic3k.asm:145118). */
     public static final short CNZ_MINIBOSS_TOP_INIT_X_VEL = (short) 0x0200;
 
     /** ROM: Obj_CNZMinibossTopGo `move.w #$200,y_vel(a0)` (sonic3k.asm:145114). */

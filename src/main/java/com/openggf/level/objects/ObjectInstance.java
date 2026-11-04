@@ -171,7 +171,7 @@ public interface ObjectInstance {
     /**
      * Returns true when this object is currently within the camera viewport (ROM
      * render_flags bit 7 equivalent, set by Render_Sprites).  Solid contact
-     * resolution is gated on this in ROM SolidObject_cont (s2.asm:35140-35145
+     * resolution is gated on this in ROM SolidObject_cont (s2.asm:35341-35346
      * SolidObject_OnScreenTest, sonic3k.asm:41430-41432 loc_1DF88,
      * s1disasm/_incObj/sub SolidObject.asm:124-126 Solid_ChkEnter / line 86-87
      * SolidObject2F).  Off-screen objects skip the side / top / bottom path so

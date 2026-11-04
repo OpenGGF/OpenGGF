@@ -435,6 +435,22 @@ at the correct service points. Queue order, ROM archive identity, module
 count, prepared payload, readiness polling, and the consumer's downstream
 mutation remain native-owned and rewind-safe.
 
+Fresh native initialization now separates display clear, deferred terrain
+decoding, level setup, placement, object execution and initial presentation.
+The approved dedicated run-root input can schedule those real prepared phases;
+it cannot supply decoder output, clock values or gameplay state. This does not
+establish exact synchronous live-play loading duration. Active continuations
+reject rewind capture/restore, and unsupported native interrupt placements fail
+capture rather than being moved across clock/RNG reads. Qualification is tracked
+in the [synchronous-load design and evidence](architecture/designs/2026-11-03-synchronous-load-vint-accounting.md);
+its current implementation checkpoints are not a full-route certification.
+
+Special-stage startup is outside this Level-load phase contract. Its masked
+initialization can leave an earlier global-clock error even when the following
+Level load preserves its own native interval. The independent-movie observation
+and exact remaining offset are recorded in the same design artifact; absolute
+clock continuity through that startup is not certified.
+
 ### Verification
 
 `TestS3kKosModuleQueue`, `TestSonic3kTitleCardKosQueue`,
@@ -626,7 +642,7 @@ composition delivery remain separate.
 ## Tails Flying-With-Cargo Physics
 
 **Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
-**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27593` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
+**ROM Reference:** `sonic3k.asm:27632` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27633` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
 
@@ -2104,3 +2120,12 @@ capture. Spring solid reactions precede animation, preserving the fractional
 input on timer-only passes. See the [current discrepancy record](status/s3k-known-bugs.md#mgz-swinging-platform-endpoint-fractional-input-ownership)
 and [MGZ1 coverage](architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03).
 The independent carried-emerald bootstrap remains policy A.
+
+
+DDZ recorded-entry bootstrap (2026-11-04): the strict Sonic+Tails Zone0c replay
+now passes from committed native entry data, including the camera long's
+persistent low word. This closes the recorded oracle's entry-state gap, not
+expanded native-pixel/team/viewport or ending coverage. The
+[current discrepancy record](status/s3k-known-bugs.md#doomsday-presentation-gaps-and-unseeded-entry)
+and [DDZ matrix](architecture/validation/levels/s3k-ddz.md) distinguish it from
+the older seeded cold-route witnesses and remaining breadth obligations.

@@ -394,7 +394,7 @@ class TestLiveTraceComparatorObserver {
     @Test
     void finalDynamicArtWaitsForProductionCloseAndComparesExactlyOnce() {
         DynamicArtLifecycleService lifecycle =
-                new DynamicArtLifecycleService();
+                new DynamicArtLifecycleService(null);
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         PlcFrameLifecycleCoordinator coordinator =

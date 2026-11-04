@@ -149,7 +149,7 @@ public class LaserObjectInstance extends AbstractObjectInstance implements Rewin
      * When on screen: advance to routine 4, set x_vel, play sound.
      */
     private void updateWaitForOnScreen() {
-        if (!isWithinSolidContactBounds()) {
+        if (!isWithinOnScreenRenderBounds()) {
             return;
         }
         // ROM: addq.b #2,routine(a0) => routine 4

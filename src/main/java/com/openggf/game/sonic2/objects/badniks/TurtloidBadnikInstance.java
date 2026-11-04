@@ -32,7 +32,7 @@ import java.util.List;
  * fire a projectile, then resumes movement. Player can stand on it (platform).
  * Spawns a rider (Obj9B) and jet exhaust (Obj9C) as children.
  *
- * Based on disassembly Obj9A (s2.asm:74332-74418).
+ * Based on disassembly Obj9A (s2.asm:74934-75020).
  */
 public class TurtloidBadnikInstance extends AbstractBadnikInstance
         implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Source {
@@ -135,7 +135,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             case DONE -> {} // Do nothing, just drift
         }
 
-        // ROM ObjectMove (s2.asm:29993-30008): 16.16 position += sign-extended x_vel << 8.
+        // ROM ObjectMove (s2.asm:30190-30205): 16.16 position += sign-extended x_vel << 8.
         motionState.x = currentX;
         motionState.y = currentY;
         motionState.xVel = xVelocity;
@@ -315,14 +315,6 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     @Override
     public boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
         return true;
-    }
-
-    @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // Obj9A passes pre-move x_pos in d4, but S2 PlatformObject consumes d4
-        // only for already-standing players. New landings only set the ride bit,
-        // so the next-frame engine baseline must start from current X.
-        return false;
     }
 
     @Override

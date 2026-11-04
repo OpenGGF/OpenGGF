@@ -40,85 +40,6 @@ class TestLevelSeamlessTransitionExecutor {
     }
 
     @Test
-    void reloadSameNormalizationCopiesEveryRequestFieldAndReplacesOnlyTarget() {
-        SeamlessTransitionResourceHandoffId handoffId =
-                new SeamlessTransitionResourceHandoffId(73);
-        SeamlessLevelTransitionRequest source = SeamlessLevelTransitionRequest
-                .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_SAME_LEVEL)
-                .targetZoneAct(90, 91)
-                .deactivateLevelNow(true)
-                .preserveMusic(false)
-                .preserveLevelGamestate(true)
-                .preserveEndOfLevelState(true)
-                .preserveEndOfLevelActive(false)
-                .showInLevelTitleCard(true)
-                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER)
-                .resetLevelGamestateAtInLevelTitleCardDisplay(true)
-                .inLevelTitleCardResetAdditionalDispatches(12)
-                .inLevelTitleCardResetPhaseOneDispatchOverlap(6)
-                .lockPlayerControlForInLevelTitleCard(true)
-                .inLevelTitleCardExitAdditionalDispatches(10)
-                .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
-                .forceAirOnStaleObjectSupportLoss(true)
-                .preserveOffsetCameraPosition(true)
-                .postTransitionMinX(101)
-                .postTransitionMaxX(102)
-                .postTransitionMinY(103)
-                .postTransitionMaxY(104)
-                .postTransitionMaxYTarget(105)
-                .playerOffset(106, 107)
-                .cameraOffset(108, 109)
-                .mutationKey("copy-all-fields")
-                .musicOverrideId(110)
-                .resourceHandoff(handoffId)
-                .build();
-
-        SeamlessLevelTransitionRequest normalized =
-                LevelSeamlessTransitionExecutor.normalizeReloadSameRequest(
-                        source, 7, 1);
-
-        assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL,
-                normalized.type());
-        assertEquals(7, normalized.targetZone());
-        assertEquals(1, normalized.targetAct());
-        assertEquals(source.deactivateLevelNow(), normalized.deactivateLevelNow());
-        assertEquals(source.preserveMusic(), normalized.preserveMusic());
-        assertEquals(source.preserveLevelGamestate(), normalized.preserveLevelGamestate());
-        assertEquals(source.preserveEndOfLevelActive(), normalized.preserveEndOfLevelActive());
-        assertEquals(source.preserveEndOfLevelFlag(), normalized.preserveEndOfLevelFlag());
-        assertEquals(source.showInLevelTitleCard(), normalized.showInLevelTitleCard());
-        assertEquals(source.runtimeArtAdmissionPolicy(), normalized.runtimeArtAdmissionPolicy());
-        assertEquals(source.resetLevelGamestateAtInLevelTitleCardDisplay(),
-                normalized.resetLevelGamestateAtInLevelTitleCardDisplay());
-        assertEquals(source.inLevelTitleCardResetAdditionalDispatches(),
-                normalized.inLevelTitleCardResetAdditionalDispatches());
-        assertEquals(source.inLevelTitleCardResetPhaseOneDispatchOverlap(),
-                normalized.inLevelTitleCardResetPhaseOneDispatchOverlap());
-        assertEquals(source.lockPlayerControlForInLevelTitleCard(),
-                normalized.lockPlayerControlForInLevelTitleCard());
-        assertEquals(source.inLevelTitleCardExitAdditionalDispatches(),
-                normalized.inLevelTitleCardExitAdditionalDispatches());
-        assertEquals(source.inLevelTitleCardExitPhaseOneDispatchOverlap(),
-                normalized.inLevelTitleCardExitPhaseOneDispatchOverlap());
-        assertEquals(source.forceAirOnStaleObjectSupportLoss(),
-                normalized.forceAirOnStaleObjectSupportLoss());
-        assertEquals(source.preserveOffsetCameraPosition(),
-                normalized.preserveOffsetCameraPosition());
-        assertEquals(source.postTransitionMinX(), normalized.postTransitionMinX());
-        assertEquals(source.postTransitionMaxX(), normalized.postTransitionMaxX());
-        assertEquals(source.postTransitionMinY(), normalized.postTransitionMinY());
-        assertEquals(source.postTransitionMaxY(), normalized.postTransitionMaxY());
-        assertEquals(source.postTransitionMaxYTarget(), normalized.postTransitionMaxYTarget());
-        assertEquals(source.playerOffsetX(), normalized.playerOffsetX());
-        assertEquals(source.playerOffsetY(), normalized.playerOffsetY());
-        assertEquals(source.cameraOffsetX(), normalized.cameraOffsetX());
-        assertEquals(source.cameraOffsetY(), normalized.cameraOffsetY());
-        assertEquals(source.mutationKey(), normalized.mutationKey());
-        assertEquals(source.musicOverrideId(), normalized.musicOverrideId());
-        assertSame(handoffId, normalized.resourceHandoffId());
-    }
-
-    @Test
     void nativeWaitGateSurvivesNormalizationAndCarriedOwnerPolicy() {
         var source = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_SAME_LEVEL)
@@ -126,7 +47,7 @@ class TestLevelSeamlessTransitionExecutor {
                 .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                 .inLevelTitleCardResetAdditionalDispatches(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE)
                 .build();
-        var normalized = LevelSeamlessTransitionExecutor.normalizeReloadSameRequest(source, 1, 1);
+        var normalized = source.retargetedForReload(1, 1);
         assertEquals(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
                 normalized.inLevelTitleCardResetAdditionalDispatches(),
                 "a native child-movement gate is not a zero-dispatch countdown");
@@ -167,13 +88,19 @@ class TestLevelSeamlessTransitionExecutor {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
                 .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_SAME_LEVEL)
                 .playerOffset(9, -12)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER)
+                .resourceHandoff(new SeamlessTransitionResourceHandoffId(73))
+                .preserveEndOfLevelActive(true)
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(8)
+                .objectSurvivalPolicy(SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
                 .build();
 
         executor.execute(request);
 
         ArgumentCaptor<SeamlessLevelTransitionRequest> capture =
                 ArgumentCaptor.forClass(SeamlessLevelTransitionRequest.class);
-        verify(levelManager).executeActTransition(capture.capture());
+        verify(levelManager).reloadActAtFrameBoundary(capture.capture());
+        verify(levelManager, never()).executeActTransition(any());
         verify(levelManager, never()).consumeActTransitionRewindBoundaryDuringFrame();
         verify(levelManager, never()).consumeActTransitionExecutedDuringFrame();
         assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL,
@@ -182,6 +109,13 @@ class TestLevelSeamlessTransitionExecutor {
         assertEquals(1, capture.getValue().targetAct());
         assertEquals(9, capture.getValue().playerOffsetX());
         assertEquals(-12, capture.getValue().playerOffsetY());
+        assertEquals(RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER,
+                capture.getValue().runtimeArtAdmissionPolicy());
+        assertSame(request.resourceHandoffId(), capture.getValue().resourceHandoffId());
+        assertTrue(capture.getValue().preserveEndOfLevelActive());
+        assertFalse(capture.getValue().preserveEndOfLevelFlag());
+        assertEquals(8, capture.getValue().inLevelTitleCardPreloadedActCameraReleaseDispatches());
+        assertEquals(request.objectSurvivalPolicy(), capture.getValue().objectSurvivalPolicy());
         verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         verify(levelManager.objectManager).advanceVblaCounter();
         verify(levelManager).markSidekickRomVisibleReloadFrameCounterBridge();
@@ -197,7 +131,7 @@ class TestLevelSeamlessTransitionExecutor {
 
         executor.execute(request);
 
-        verify(levelManager).executeActTransition(request);
+        verify(levelManager).reloadActAtFrameBoundary(request);
         verify(levelManager, never()).consumeActTransitionRewindBoundaryDuringFrame();
         verify(levelManager, never()).consumeActTransitionExecutedDuringFrame();
         verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
@@ -211,7 +145,7 @@ class TestLevelSeamlessTransitionExecutor {
                 .targetZoneAct(6, 0)
                 .build();
         IOException failure = new IOException("broken load");
-        doThrow(failure).when(levelManager).executeActTransition(request);
+        doThrow(failure).when(levelManager).reloadActAtFrameBoundary(request);
 
         RuntimeException thrown = assertThrows(RuntimeException.class,
                 () -> executor.execute(request));
@@ -276,6 +210,7 @@ class TestLevelSeamlessTransitionExecutor {
         InOrder order = inOrder(transitions, levelManager);
         order.verify(transitions).beginSynchronousScreenEventTransition(5, 1, request);
         order.verify(levelManager).executeActTransition(request);
+        verify(levelManager, never()).reloadActAtFrameBoundary(any());
         order.verify(transitions).setLevelInactiveForTransition(false);
         order.verify(transitions).endSynchronousScreenEventTransition();
         verify(levelManager, never()).advanceGlobalOscillationAtLevelLoopTail();
@@ -296,7 +231,7 @@ class TestLevelSeamlessTransitionExecutor {
                 () -> executor.execute(request)));
 
         InOrder order = inOrder(levelManager, transitions);
-        order.verify(levelManager).executeActTransition(request);
+        order.verify(levelManager).reloadActAtFrameBoundary(request);
         order.verify(levelManager).advanceGlobalOscillationAtLevelLoopTail();
         order.verify(transitions).setLevelInactiveForTransition(false);
         order.verify(levelManager).revokeNativePlcTargetAdmission();
@@ -315,7 +250,7 @@ class TestLevelSeamlessTransitionExecutor {
         var reload = SeamlessLevelTransitionRequest.builder(
                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL).build();
         assertSame(failure, assertThrows(IllegalStateException.class,
-                () -> executor.execute(reload, false)));
+                () -> executor.execute(reload, LevelSeamlessTransitionExecutor.Host.LEVEL_FRAME)));
         verify(levelManager).revokeNativePlcTargetAdmission();
     }
 

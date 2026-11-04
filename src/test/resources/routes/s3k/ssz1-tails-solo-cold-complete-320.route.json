@@ -1,0 +1,127 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s3k",
+      "crc32" : "63522553",
+      "sha1" : "CFBF98C36C776677290A872547AC47C53D2761D6"
+    },
+    "inlet" : {
+      "kind" : "cold-level",
+      "zone" : 10,
+      "act" : 0,
+      "showTitleCard" : false
+    },
+    "roster" : {
+      "main" : "tails",
+      "sidekick" : ""
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "legs" : [ {
+      "id" : "ghz-replica",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszGhzBossObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "mtz-replica",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszMtzBossObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "mecha-sonic",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszMechaSonicObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "dez-load",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "enter-boundary"
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ssz1-tails-solo-cold-complete-320.script",
+    "rows" : 14923,
+    "sha256" : "9af83456dc3d3b66f7c69a251ebb33761de4c75015abefc46f530885354e3464"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/2 exact_resync(window 320, horizon 600, edits 4, confirm 120, with sidekick)",
+    "engine" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "source" : "repair of 3093ac77f1fa from row 1366 following ReferencePath[14923 rows of f8f4eb74479f, window 1366..14922, openggf 36aaddb37 recorded track ssz1-tails-solo-cold-complete-320.csv.gz]",
+    "notes" : [ "kept 14922/14923 original rows (100.0%), 0 reference rows, 1 authored rows, 14923 output rows; unchanged through row 1495" ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "8e4f553d062a4ee7b85b417629d07f77429b5f68c979df5f4e88e48100420c02",
+    "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "rows" : 14923
+  } ],
+  "native" : {
+    "lag" : [ ]
+  }
+}

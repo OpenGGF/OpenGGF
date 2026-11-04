@@ -15,6 +15,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -117,6 +118,8 @@ class TestBonusStageTransitionCoordinator {
         coordinator.restoreReturnState(level, camera, water, playable, events,
                 state, 7, 69, ShieldType.LIGHTNING, rewards, lives::incrementAndGet);
 
+        // loc_6034: the saved apparent act (AIZ1 over loaded act 2) is restored.
+        verify(level).setApparentAct(0);
         verify(checkpoint).restoreFromSaved(0x3456, 0x789, 0x111, 0x222, 0);
         verify(checkpoint).restoreStarPostActivationMark(7);
         verify(events).restoreEventRoutineState(8, 12);
@@ -135,7 +138,7 @@ class TestBonusStageTransitionCoordinator {
         verify(camera, never()).setMaxY(anyShort());
         verify(camera, never()).updatePosition(anyBoolean());
         verify(water).setWaterLevelDirect(1, 0, 0x6A0);
-        verify(water).setWaterLevelTarget(1, 0, 0x6A0);
+        verify(water, never()).setWaterLevelTarget(anyInt(), anyInt(), anyInt());
         verify(levelState).setRings(69);
         verify(levelState).setTimerFrames(9_876L);
         verify(levelState).resumeTimer();
@@ -189,6 +192,7 @@ class TestBonusStageTransitionCoordinator {
         var order = org.mockito.Mockito.inOrder(first, second, third);
         order.verify(first).setBonusStageReturnCheckpointIndex(saved.savedLastStarPostHit());
         order.verify(second).setSuppressNextMusicChange(true);
+        order.verify(third).setApparentAct(saved.savedApparentZoneAndAct() & 0xFF);
         order.verify(third).getCheckpointState();
         order.verify(third).restorePersistentRespawnOnNextObjectReset(null);
         verify(first, never()).getCheckpointState();

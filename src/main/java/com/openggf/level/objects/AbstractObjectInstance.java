@@ -81,6 +81,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * intentionally uses this constant rather than the per-object height.
      */
     private static final int TOUCH_RESPONSE_Y_MARGIN = 32;
+    /** S1/S2 BuildSprites' assumed Y radius when the explicit-height flag is clear. */
+    private static final int BUILD_SPRITES_ASSUMED_Y_RADIUS = 32;
     private static final int COARSE_X_ALIGNMENT_MASK = 0xFF80;
     private static final int COARSE_X_CAMERA_BIAS = 0x80;
     protected final ObjectSpawn spawn;
@@ -147,6 +149,16 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * This flag starts true and is cleared after the first {@link #snapshotPreUpdatePosition()}.
      */
     private boolean solidContactFirstFrame = true;
+
+    /**
+     * ROM {@code render_flags.on_screen} as the most recent BuildSprites (S1/S2) or
+     * Render_Sprites (S3K) pass wrote it, and whether such a pass has seen this
+     * object yet. Written only by {@link #captureRenderFlagOnScreen(boolean)} from
+     * the end-of-frame render pass; read by the solid helpers' on-screen gate on
+     * the next object pass.
+     */
+    private boolean renderFlagPassSeen;
+    private boolean renderFlagOnScreen;
 
     /**
      * Pre-update collision flags snapshot. ROM parity: ReactToItem runs before other
@@ -741,34 +753,55 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
-     * ROM parity for SolidObject_OnScreenTest (s2.asm:35140-35145,
-     * sonic3k.asm:41430-41432 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm
-     * Solid_ChkEnter / SolidObject2F): returns true when the object's render
-     * box currently overlaps the camera viewport. ROM equivalent is render_flags
-     * bit 7 which Render_Sprites sets each frame based on bounding-box
-     * overlap. Used by the inline solid contact path to skip side / top / bottom
-     * resolution for objects the camera has already scrolled past, matching the
-     * ROM's "if Sonic outruns the screen then he can phase through solid objects"
-     * optimisation that the S2 disassembly explicitly documents.
+     * ROM {@code render_flags.on_screen} as read by the solid helpers' on-screen
+     * gate: S1 {@code SolidObject} / {@code Solid_ChkEnter} ({@code tst.b obRender},
+     * _incObj/sub SolidObject.asm:112,153), S2 {@code SolidObject_OnScreenTest}
+     * (s2.asm:35336-35341) and S3K {@code loc_1DF88} (sonic3k.asm:41435-41436).
+     * The bit is the one the previous frame's BuildSprites / Render_Sprites pass
+     * wrote, from the object's position at that pass and that pass's camera
+     * copy including the screen-shake offset (S2 {@code Camera_X_pos_copy} /
+     * {@code Camera_Y_pos_copy}, s2.asm:30567,30589-30611; S3K sonic3k.asm:36364,
+     * 36383-36404). An object no pass has seen yet answers from its current render
+     * box against the cached camera, as the playable render flag does before its
+     * first pass.
      */
     public boolean isWithinSolidContactBounds() {
-        // ROM Render_Sprites (sonic3k.asm:36376-36410 SolidObject_OnScreenTest,
-        // s2.asm:35140-35145, s1disasm Solid_ChkEnter / SolidObject2F) sets
-        // render_flags bit 7 when the object's bounding box overlaps the
-        // 320x224 screen rectangle. The bounding box is centered on x_pos with
-        // half-width = width_pixels(a0) (sonic3k.asm:36387 reads width_pixels
-        // into d2, then 36350/36353 add/subtract d2 from (x_pos - cam) before
-        // comparing against [0, 320]). Most gameplay objects use width_pixels=16,
-        // but larger sprites (e.g. the CNZ horizontal door at sonic3k.asm:66207
-        // byte_30FCE = $20, $08) use a wider rendered half-width and stay
-        // on-screen longer than a hardcoded 16-px margin allows. Defer to the
-        // per-object on-screen half-width so collision parity matches the ROM
-        // for both small and large sprites.
-        //
-        // ObjectManager runs before the current frame's camera step, so the
-        // cached camera bounds already represent the prior Render_Sprites pass
-        // that set render_flags bit 7. The extra previous-frame snapshot lags
-        // the ROM gate by two frames in inline object order.
+        return renderFlagPassSeen ? renderFlagOnScreen : isWithinOnScreenRenderBounds();
+    }
+
+    /**
+     * Records this object's ROM {@code render_flags.on_screen} for the end-of-frame
+     * render pass. The cached camera bounds are the render copy plus shake at this
+     * point ({@link ObjectManager#refreshPostCameraRenderState()}).
+     * <p>
+     * X: {@code width_pixels} against the 320-px screen in all three games. Y: S1/S2
+     * BuildSprites use the approximate 32-px band unless the object sets the
+     * explicit-height flag (S1 {@code .assumeHeight}, _inc/BuildSprites.asm:62,86-94;
+     * S2 {@code BuildSprites_ApproxYCheck}, s2.asm:30580-30611); S3K Render_Sprites
+     * always uses {@code height_pixels} (sonic3k.asm:36396-36404).
+     *
+     * @param heightPixelsTest true when the game's renderer always tests
+     *                         {@code height_pixels} (S3K Render_Sprites)
+     */
+    final void captureRenderFlagOnScreen(boolean heightPixelsTest) {
+        if (getSpawn() == null) return;
+        int yRadius = heightPixelsTest || usesCustomRenderHeight()
+                ? getOnScreenHalfHeight()
+                : BUILD_SPRITES_ASSUMED_Y_RADIUS;
+        int halfWidth = getOnScreenHalfWidth();
+        renderFlagOnScreen = cameraBounds.containsRenderSpriteBounds(getX(), getY(), halfWidth, yRadius)
+                || stageplayVisible(getX(), getY(), halfWidth, yRadius);
+        renderFlagPassSeen = true;
+    }
+
+    /**
+     * Current render box against the cached camera bounds, with this object's
+     * {@link #getOnScreenHalfWidth()} / {@link #getOnScreenHalfHeight()}. Objects
+     * whose own routine tests the render box at the time it runs use this; the
+     * solid gate reads the retained bit instead
+     * ({@link #isWithinSolidContactBounds()}).
+     */
+    protected boolean isWithinOnScreenRenderBounds() {
         return cameraBounds.containsRenderSpriteBounds(
                 getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight())
                 || stageplayVisible(getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight());
@@ -780,7 +813,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * (sonic3k.asm:36387 / s2.asm equivalent). Defaults to the widely shared
      * gameplay sprite half-width of 16 px so existing call sites stay
      * unchanged; objects with a wider rendered footprint (e.g. CNZ horizontal
-     * door byte_30FCE = $20, $08 at sonic3k.asm:66207) override this to match
+     * door byte_30FCE = $20, $08 at sonic3k.asm:66212) override this to match
      * the ROM-side on-screen test.
      */
     public int getOnScreenHalfWidth() {
@@ -1394,6 +1427,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return services().solidExecution().resolveSolidNowAll();
     }
 
+    /** {@link #checkpointAll()} with the {@code d4} the call site loads itself. */
+    protected SolidCheckpointBatch checkpointAll(int d4) {
+        return services().solidExecution().solidWithD4(d4);
+    }
+
     protected boolean hasStandingContact(SolidCheckpointBatch batch) {
         for (PlayerSolidContactResult result : batch.perPlayer().values()) {
             if (result != null && result.standingNow()) {
@@ -1461,7 +1499,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 null,  // Base class does not capture badnik extra; subclass overrides if needed
                 null,  // Base class does not capture badnik subclass extra
                 null   // Base class does not capture player extra; subclass overrides if needed
-        );
+        ).withRenderFlagOnScreen(renderFlagPassSeen, renderFlagOnScreen);
         if (GenericRewindEligibility.usesDefaultObjectSubclassCapture(getClass())) {
             if (GenericRewindEligibility.usesCompactDefaultSubclassCapture(getClass())) {
                 RewindObjectStateBlob compactState =
@@ -1502,6 +1540,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         this.preUpdateCollisionFlags = s.preUpdateCollisionFlags();
         this.skipTouchThisFrame = s.skipTouchThisFrame();
         this.solidContactFirstFrame = s.solidContactFirstFrame();
+        this.renderFlagPassSeen = s.renderFlagPassSeen();
+        this.renderFlagOnScreen = s.renderFlagOnScreen();
         this.slotIndex = s.slotIndex();
         this.respawnStateIndex = s.respawnStateIndex();
         if (s.compactGenericState() != null) {

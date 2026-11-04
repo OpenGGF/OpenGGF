@@ -181,6 +181,57 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                 .onLevelFrameAdvanced();
     }
 
+    @Test
+    void titleAdmissionRetainsPreparedSourceRowAndRealQueueMembership() throws Exception {
+        Harness harness = harness(1);
+        var session = TestRunPayloads.session(null, null, List.of(), null);
+        var fixture = mock(com.openggf.trace.replay.TraceReplayFixture.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            harness.observer().enterUnrepresentedGap();
+            return null;
+        }).when(fixture).enterHardwareTimingGap();
+        var fixtureField = TraceSessionLauncher.class.getDeclaredField("fixture");
+        fixtureField.setAccessible(true);
+        fixtureField.set(session, fixture);
+        var dispositionField = TraceSessionLauncher.class.getDeclaredField("activeRunDisposition");
+        dispositionField.setAccessible(true);
+        dispositionField.set(session,
+                com.openggf.trace.replay.runs.TraceRunFrameDriver.Disposition.SOURCE_LOAD_ROW);
+        harness.observer().beginRawFrame(1);
+        harness.context().serviceHardwareTimingBoundary(VINT_SERVICE);
+        HardwareWorkHandle[] submitted = new HardwareWorkHandle[1];
+        Path romPath = tempDir.resolve("title-terrain-submission.gen");
+        Files.write(romPath, ABC_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            var result = new LevelIterationAdmissionController().admit(
+                    GameMode.TITLE_CARD,
+                    () -> {
+                        session.prepareHardwareTimingForAdmission(GameMode.TITLE_CARD);
+                        submitted[0] = org.junit.jupiter.api.Assertions.assertDoesNotThrow(() -> S3kRuntimeArtCoordinator.from(
+                                harness.context().runtimeArtCoordinator())
+                                .moduleQueue().queue(rom, 0, 0x400));
+                        return false;
+                    },
+                    () -> LevelFrameResult.SETUP_ONLY,
+                    mock(com.openggf.level.LevelManager.class), harness.context(),
+                    false, mock(UserRecordingRuntimeControls.class), () -> { },
+                    () -> session.prepareHardwareTimingForAdmission(GameMode.TITLE_CARD),
+                    session::deactivateHardwareTimingForAdmission);
+            assertEquals(LevelFrameResult.SETUP_ONLY, result);
+        }
+        assertEquals(1, harness.port().capture().rawFrameLatch());
+        assertEquals(VINT_SERVICE, harness.port().capture().lastAppliedBoundary(),
+                "title admission must neither clear nor re-begin the outer source row");
+        assertFalse(harness.context().hardwareTiming().capture()
+                .unrepresentedSubmissions().contains(submitted[0]),
+                "the actual title producer must submit represented terrain work");
+        dispositionField.set(session, null);
+        session.deactivateHardwareTimingForAdmission();
+        assertEquals(null, harness.port().capture().rawFrameLatch(),
+                "an explicit gap after physical ownership ends must still invalidate the latch");
+    }
+
     private Harness harness(int edgeRawFrame) throws Exception {
         GameplayModeContext context = new GameplayModeContext(
                 new WorldSession(new Sonic3kGameModule()),

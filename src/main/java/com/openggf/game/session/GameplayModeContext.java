@@ -260,7 +260,7 @@ public final class GameplayModeContext implements ModeContext {
             acquiredHandoffs = seamlessTransitionResourceHandoffs;
             this.dynamicArtLifecycle = new DynamicArtLifecycleService(
                     worldSession.getGameModule().getGameService(
-                            com.openggf.game.resources.PlayerArtSourceAddressProfile.class));
+                            com.openggf.game.resources.PlayerArtTransferPlan.class));
             acquiredDynamicArt = dynamicArtLifecycle;
             var worldPlc = WorldPlcLifecycleAccess.owned(worldSession);
             if (worldPlc != null) {
@@ -398,6 +398,7 @@ public final class GameplayModeContext implements ModeContext {
         runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
+        this.rewindRegistry.register(com.openggf.camera.CameraSubpixelAccess.rewindAdapter(camera));
         this.rewindRegistry.register(directedPlayerLease);
         this.rewindRegistry.registerPostRestoreCallback(directedPlayerLease.key(), directedPlayerLease::afterRestore);
         this.rewindRegistry.register(gameStateManager);

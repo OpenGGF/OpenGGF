@@ -17,6 +17,8 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
         var ram=state().screen();if(ram.initialized)return;ram.initialized=true;
         var services=objectServices();services.objectManager().createDynamicObject(EndingRescueDirectorObjectInstance::new);
         camera().setScrollLocked(true);camera().setX((short)0x200);camera().setY((short)0x200);
+        // loc_5AAB0 writes the whole $2000000 long: the inherited low word is cleared.
+        com.openggf.camera.CameraSubpixelAccess.setXFraction(camera(),0);
         camera().setXCopy((short)0x200);camera().setYCopy((short)0x200);
         ram.foregroundX=0x200;ram.foregroundY=0x200;
         // Ending_ScreenInit and Ending_BackgroundInit refresh the resident ROM planes.
@@ -150,7 +152,7 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
         if(finished){ram.backgroundRoutine=aiz?8:20;ram.foregroundRoutine=aiz?24:48;}}
     private void fadeIn(){S3kEndingPalette.fromBlackAll(objectServices());}
     /** loc_5AEA8: its expiry falls into loc_5AED4, so sub_5B18E's first dispatch (loc_5B1A2
-     * credits init) runs on the same 52->56 frame and skips loc_5AEE4 (sonic3k.asm:121209-121228, loc_5B1A2 121487). */
+     * credits init) runs on the same 52->56 frame and skips loc_5AEE4 (sonic3k.asm:121214-121233, loc_5B1A2 121487). */
     private void fadeReunionIn(){var ram=state().screen();fadeIn();
         if((ram.fadeTimer=(short)(ram.fadeTimer-1))>=0)return;
         ram.foregroundRoutine=56;setPaletteAnimationBlocked(false);ram.aizPalette.beginHold();

@@ -52,7 +52,7 @@ import java.util.Map;
  *   <li>Mode 4: Screwing - player pushes nut, accumulating displacement</li>
  * </ul>
  * <p>
- * <b>Two-player handling:</b> ROM Obj69_Main (s2.asm:53523-53531) runs
+ * <b>Two-player handling:</b> ROM Obj69_Main (s2.asm:53995-54003) runs
  * Obj69_Action TWICE — once for MainCharacter (objoff_38 / p1_standing_bit) and
  * once for Sidekick (objoff_3C / p2_standing_bit) — each gated by that player's
  * own standing bit. This class mirrors that with per-player action state and a
@@ -239,14 +239,6 @@ public class NutObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean suppressesGroundingRecoveryFromAirborneStaleRide(PlayableEntity player) {
-        // Obj69 runs player movement before its late SolidObject tail, so a
-        // stale airborne ride must not be converted back into ground support
-        // before Obj69 can clear it (s2.asm:35028-35046,54006-54013).
-        return player instanceof AbstractPlayableSprite;
-    }
-
-    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (!(contact.standing() || contact.touchTop())) {
             return;
@@ -282,7 +274,7 @@ public class NutObjectInstance extends AbstractObjectInstance
             case ROUTINE_MAIN -> updateMain(participants);
             case ROUTINE_FALLING -> {
                 updateFalling();
-                // ROM loc_279FC falls through to loc_278F4 (s2.asm:53655), so the
+                // ROM loc_279FC falls through to loc_278F4 (s2.asm:54012), so the
                 // SolidObject + MarkObjGone tail also runs while falling. The
                 // engine provides solid collision via SolidObjectProvider and
                 // despawn via placement windowing each frame regardless of routine.

@@ -44,7 +44,7 @@ import java.util.List;
  * positions three child sprites, each drawing mapping frame zero at X-$40, X and X+$40.
  */
 public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+        implements com.openggf.level.objects.observe.PhaseSource, RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
 
     // Native cutscene bridge/button art is geometric scenery; the cutscene character is separately owned.
     /** {@code move.w #$C0,$2E(a0)}. */
@@ -156,6 +156,19 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
         return S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
     }
 
+    /** Route observation phases: waiting for the cutscene, retracting toward rest, extended (at rest). */
+    private static final java.util.List<String> PHASES = java.util.List.of("waiting", "retracting", "extended");
+
+    @Override public java.util.List<String> phaseNames() { return PHASES; }
+
+    @Override public String phase() {
+        return extended ? "extended" : offset == START_OFFSET ? "waiting" : "retracting";
+    }
+
+    @Override public com.openggf.level.objects.observe.PhaseClock phaseClock() {
+        return com.openggf.level.objects.observe.PhaseClock.OWN_TIMER;
+    }
+
     public int offsetForTest() { return offset; }
     public boolean extendedForTest() { return extended; }
 
@@ -181,6 +194,13 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
     @Override public boolean suppressesObjectEdgeBalance() {
         // Obj_SSZCutsceneBridge bset #7,status. Tails loc_14A16 and the
         // other native standing branches retain Wait for this negative header.
+        return true;
+    }
+    @Override public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectTop_1P loc_1E2E0 (sonic3k.asm:41852-41857): a rider that is
+        // airborne or outside [x-$60,x+$60) loses Status_OnObj, gains Status_InAir
+        // and loses this bridge's d6 bit in the same call. Native SSZ1 clears P1's
+        // and P2's bit on the walk-off frame, not on the next stale-rider pass.
         return true;
     }
     @Override public boolean isTopSolidOnly() { return true; }

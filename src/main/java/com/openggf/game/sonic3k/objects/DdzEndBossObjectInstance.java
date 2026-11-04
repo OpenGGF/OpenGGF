@@ -6,6 +6,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.difficulty.DoomsdayMissileRecipe;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -272,7 +273,10 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
         // Pal_DDZ+$20 -> Normal_palette_line_3, Normal_palette -> Target_palette.
         DdzPalette.loadDdzLine3(services());
         DdzPalette.copyNormalToTarget(services());
-        // Queue_Kos_Module ArtKosM_BossMasterEmerald: the standalone sheet is registered with the zone art.
+        // loc_819CE (sonic3k.asm:173676-173678): Queue_Kos_Module ArtKosM_BossMasterEmerald
+        // at ArtTile_BossMasterEmerald. The phase-2 emerald still draws its standalone sheet.
+        DdzObjectSupport.queueGlobalModule(services(), Sonic3kConstants.ART_KOSM_BOSS_MASTER_EMERALD_ADDR,
+                Sonic3kConstants.ARTTILE_BOSS_MASTER_EMERALD, "DDZ boss Master Emerald");
     }
 
     /** {@code loc_81A00}. */

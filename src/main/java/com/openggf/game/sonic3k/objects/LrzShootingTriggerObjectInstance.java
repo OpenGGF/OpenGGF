@@ -216,13 +216,9 @@ public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstan
         ObjectLifetimeOps.destroyLatched(this);
     }
 
-    /** The engine's {@code render_flags} bit 7 equivalent; a probe build has no camera bounds. */
+    /** The engine's {@code render_flags} bit 7 equivalent, against the cached camera bounds. */
     private boolean onScreen() {
-        try {
-            return isWithinSolidContactBounds();
-        } catch (Exception e) {
-            return false;
-        }
+        return isWithinOnScreenRenderBounds();
     }
 
     private void playSfx(int id) {

@@ -509,36 +509,6 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         return true;
     }
 
-    @Override
-    public boolean preservesSidekickCpuPushGraceFromInteractSlot(PlayableEntity player) {
-        // TailsCPU_Normal reads current Status_Push before Obj3E's later
-        // SolidObject body pass refreshes the live object status byte.
-        return isGroundedCpuSidekickAtBodyEdge(player);
-    }
-
-    @Override
-    public boolean preservesMovingSidekickCpuPushAtZeroGraceFromInteractSlot(PlayableEntity player) {
-        // HTZ2 capsule edge: ROM Tails interact still points at Obj3E when
-        // TailsCPU_Normal tests Status_Push (s2.asm:39297-39300), while the
-        // body SolidObject call is Obj3E loc_3F278.
-        return isGroundedCpuSidekickAtBodyEdge(player);
-    }
-
-    @Override
-    public boolean publishesSidekickCpuPushFromInteractSlot(PlayableEntity player) {
-        return isGroundedCpuSidekickAtBodyEdge(player);
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMinimumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MAX_VALUE;
-    }
-
-    @Override
-    public int sidekickCpuPushGraceMaximumFramesFromInteractSlot(PlayableEntity player) {
-        return preservesSidekickCpuPushGraceFromInteractSlot(player) ? 0 : Integer.MIN_VALUE;
-    }
-
     private boolean isGroundedCpuSidekickAtBodyEdge(PlayableEntity player) {
         if (player == null || !player.isCpuControlled() || player.getAir()) {
             return false;

@@ -1,9 +1,35 @@
 # Shared implementation pitfalls
 
+**Do not catch engine-service failures to continue with substitute gameplay.**
+Supply camera, level-clock and audio owners in isolated fixtures; headless boot
+installs its no-device audio backend even with synthesis disabled. V-int is not a
+fallback for `Level_frame_counter`. Retry only an explicit recoverable rejection
+(such as S2 PLC queue capacity), and let ROM reads, renderer failures and programming
+errors escape to their owner. `TestBroadCatchSwallowingGuard` scans all main Java
+sources with the JDK parser and pins non-propagating broad catches in
+[`broad-catch-legacy.tsv`](../../src/test/resources/architecture/broad-catch-legacy.tsv).
+It runs in `-Pguards` by the `Test*Guard*` naming convention. The conservative
+inventory includes reported recovery boundaries as well as unresolved fallback;
+review each owner rather than deleting catches indiscriminately. Remove retired
+rows; do not add new engine catch-and-fallback allowances.
+
+**A resumable load outlives its caller's stack frame.** A load returning at a
+prepared HOLD has not completed or failed. Keep saved respawn/ring banks,
+caller-owned presentation flags and continuation-carry state until that exact
+attempt finishes. Clearing the outer zone wrapper's bank in its immediate
+`finally` revived a spent monitor and stopped the returned player even though
+all clock values matched. Register terminal cleanup with the existing load
+owner, report success only after real completion, and preserve primary/suppressed
+failure identity. Verify a real return route as well as once-only cleanup; see
+[load ownership evidence](designs/2026-11-03-synchronous-load-vint-accounting.md#enclosing-ownership-corrections).
+
 **A counter's name does not establish its native clock.** In S2 continuous
-loads, LevelManager's execution counter includes title object passes while the
-player gameplay counter resets at release. Obj2C needs the latter native level
-word (held at zero during the locked title), not execution or VInt count.
+loads, title object passes and gameplay have distinct clock ownership. Obj2C
+needs the native level word (held at zero during the locked title), not execution
+or VInt count; both level-word mirrors reset at release. That word also drives
+ARZ's camera shake: a one-pixel render-boundary change alters the pillar's cached
+render flag and therefore its next solid contact. See the
+[title-release clock attribution](audits/2026-11-04-s2-title-release-level-clock.md).
 Instrument the owning read before choosing a counter. A shared clock-hold
 experiment produced earlier physics failures even though it reduced the axis
 total; the producer-local correction restores the native RNG inventory. See the
@@ -55,6 +81,24 @@ Read the relevant section when working on coordinates, objects, rendering, rewin
 headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
 The things that cost the most time when missed.
+
+**Transition effects belong to the hosting frame.** Frame-top reloads return to a
+driver-owned transition-only row; they must not publish the in-frame markers that
+`LevelFrameStep` and `GameLoop` consume. Otherwise the next row can skip its loop
+tail or publish a second rewind boundary. `LevelActTransitionExecutor` returns
+completion effects; only the manager's in-frame entry publishes them. Synchronous
+screen events retain the in-frame path. See the
+[ownership rationale](designs/2026-11-03-seamless-request-retargeting.md).
+
+**Reload retargeting changes identity, not policy.** Use
+`SeamlessLevelTransitionRequest.retargetedForReload`; do not reconstruct a request
+with a builder at dispatch. Builder defaults and combined end-state setters once
+dropped runtime-art admission, camera-release timing and independent end flags,
+while an unused normalizer's tests stayed green. The request's private copy
+constructor and non-default field regression own preservation; executor and
+ROM-backed carry checks exercise the live path. See the
+[design rationale](designs/2026-11-03-seamless-request-retargeting.md).
+
 
 Offscreen desktop form pictures reuse an existing `ImGuiEditorChrome` when one is
 already alive in the capture. A nested host caused a missing-current-context
@@ -756,16 +800,16 @@ base for a new category. Range table in
 **S1 silently ignores solid-bit setters.** `setTopSolidBit()` / `setLrbSolidBit()` no-op
 under `CollisionModel.UNIFIED`, so springs and plane switchers are automatic no-ops for S1.
 
-**Non-solid ownership must survive inline cleanup.** Setting `Status_OnObj`
-without `SolidObject` needs an ownership signal recognized by inline cleanup.
-For controllers without an existing live latch, use
-`ObjectManager.markObjectSupportThisFrame` on acquisition and held passes.
-Do not report support after native release or during a recapture cooldown.
-SOZ quicksand (`sub_3FD4E` and its variant owners; initial implementation
-`86d800e53`) passed direct object tests while the ordinary route lost the flag at
-frame end. Use the existing support contract rather than inventing a solid ride
-or setting object-control bits the ROM never wrote. Test the production frame
-boundary and restore/forward replay, not only calls to `update`.
+**Only ROM writers write contact state.** No pass runs after the objects and
+player code never derives `Status_OnObj` / `Status_InAir` from object support
+(the post-object finaliser, the player-slot grounding recovery and the AnglePos
+stale-support clear were deleted on 2026-10-31). A non-solid controller that sets
+`Status_OnObj` without `SolidObject` (S2 Obj06 spiral, SOZ quicksand `sub_3FD4E`)
+owns that bit until its own routine clears it; it needs no support marker. A
+stood-on object that deletes itself without clearing the bit leaves it set, as
+the ROM does (FixBugs=0). Only the ridden object's own helper releases an
+airborne rider. Test the production frame boundary and restore/forward replay,
+not only calls to `update`.
 
 **Rewind coverage is guarded.** A new spawnable object without a recreate path, an
 uncaptured `final` scalar, or an object reference not captured as a rewind id fails
@@ -1950,8 +1994,9 @@ therefore publishes facing and gravity itself (`loc_14492` / `sub_1459E`).
 
 ### Proximity is not an established platform ride
 
-DEZ final floor (2026-09-25): `providesPreMovementGroundAttachmentSupport`
-feeds the pre-physics grounding recovery, not just terrain attachment. Opting a
+DEZ final floor (2026-09-25; the hook and the pre-physics grounding recovery it
+fed were deleted on 2026-10-31): `providesPreMovementGroundAttachmentSupport`
+fed the pre-physics grounding recovery, not just terrain attachment. Opting a
 persistent top-solid into it accepted Sonic at Y186 above the real Y205 standing
 height. Recovery cleared air without establishing a rider; the inline checkpoint
 then rejected contact, producing alternating air/ground and mapping7/8 every frame.

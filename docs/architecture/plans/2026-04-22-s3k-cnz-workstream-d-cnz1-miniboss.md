@@ -1542,11 +1542,11 @@ Open `CHANGELOG.md`. Add a new sub-section under `## Unreleased`:
 ```markdown
 ### Sonic 3&K CNZ1 Mini-Boss (Workstream D)
 
-- Ported `Obj_CNZMiniboss` (sonic3k.asm:144888..145002) to
+- Ported `Obj_CNZMiniboss` (sonic3k.asm:144893..145002) to
   `CnzMinibossInstance` atop `AbstractBossInstance`: full 8-routine
   state machine (Init, Lower, Move, Opening, WaitHit, Closing, Lower2,
   End), ROM hit count of 6, and the Lower2 per-pixel descent.
-- Ported `Obj_CNZMinibossTop` (sonic3k.asm:145069..145673) to
+- Ported `Obj_CNZMinibossTop` (sonic3k.asm:145074..145673) to
   `CnzMinibossTopInstance`: 4-routine state machine (TopInit, TopWait,
   TopWait2, TopMain) with bouncing-ball physics and arena-chunk
   destruction publication.

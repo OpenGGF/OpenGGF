@@ -276,7 +276,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private short lastWfzDockPlayerXSpeed;
     private short lastWfzDockPlayerYSpeed;
 
-    // ObjB2_Animate_Pilot state (s2.asm:79538-79556):
+    // ObjB2_Animate_Pilot state (s2.asm:79653-79671):
     // objoff_37 = 9-frame countdown, objoff_36 = pilot-frame table cursor.
     private int pilotTimer;
     private int pilotTableCursor;
@@ -469,7 +469,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code ObjB2_Init} (docs/s2disasm/s2.asm:78799-78813). The object's first
+     * {@code ObjB2_Init} (docs/s2disasm/s2.asm:78914-78928). The object's first
      * executed frame runs the routine-0 entry only: it derives
      * {@code routine = subtype - $4E}, applies the {@code Player_mode == 2}
      * mapping/animation patch, then tail-jumps to {@code DisplaySprite}. No main
@@ -500,12 +500,12 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     // ------------------------------------------------------------------------
-    // ObjB2_Animate_Pilot (docs/s2disasm/s2.asm:79536-79599)
+    // ObjB2_Animate_Pilot (docs/s2disasm/s2.asm:79651-79714)
     // ------------------------------------------------------------------------
 
     /**
      * Pilot DPLC frame tables, {@code Sonic_pilot_frames} (4 entries) and
-     * {@code Tails_pilot_frames} (24 entries), docs/s2disasm/s2.asm:79566-79599.
+     * {@code Tails_pilot_frames} (24 entries), docs/s2disasm/s2.asm:79681-79714.
      * The table byte is a DPLC frame index handed straight to
      * {@code LoadSonicDynPLC_Part2} / {@code LoadTailsDynPLC_Part2}.
      */
@@ -517,10 +517,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     };
 
     /**
-     * {@code ObjB2_Animate_Pilot} (docs/s2disasm/s2.asm:79536-79565). Runs as the
-     * first instruction of {@code ObjB2_Main_SCZ} (s2.asm:78815-78816),
-     * {@code ObjB2_Main_WFZ_Start} (s2.asm:78879-78880) and
-     * {@code ObjB2_Main_WFZ_End} (s2.asm:78951-78952) — this is the object's own
+     * {@code ObjB2_Animate_Pilot} (docs/s2disasm/s2.asm:79651-79680). Runs as the
+     * first instruction of {@code ObjB2_Main_SCZ} (s2.asm:78930-78931),
+     * {@code ObjB2_Main_WFZ_Start} (s2.asm:78994-78995) and
+     * {@code ObjB2_Main_WFZ_End} (s2.asm:79066-79067) — this is the object's own
      * routine value gating it, exactly as the ROM does.
      *
      * <p>Every ninth frame it advances {@code objoff_36} through the pilot frame
@@ -956,7 +956,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private void wfzJumpToShip(AbstractPlayableSprite player) {
-        // ROM ObjB2_Jump_to_ship (s2.asm:79082-79085) forces NO animation in this
+        // ROM ObjB2_Jump_to_ship (s2.asm:79233-79236) forces NO animation in this
         // state, so the invisible grabber's HANG (set once on catch) survives through
         // the DEZ ascent. State $C (wfzApproachingShip) still applies WAIT; re-forcing
         // WAIT here every frame overwrote the hang animation with the standing pose.
@@ -1030,7 +1030,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // but radius changes do not move ROM centre coordinates. The engine's
         // height/radius update affects centre-derived accessors, so apply it
         // before the native position write to leave the final centre at the
-        // ObjB2_Landed_on_plane value (s2.asm:79003-79014).
+        // ObjB2_Landed_on_plane value (s2.asm:79197-79208).
         player.setRolling(false);
         NativePositionOps.writeXPosPreserveSubpixel(player, currentX);
         NativePositionOps.writeYPosPreserveSubpixel(player, currentY - WFZ_LANDED_PLAYER_Y_OFFSET);
@@ -1355,14 +1355,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                         + (orientation.playerIsRight() ? -PLAYER_HORIZONTAL_CLAMP : PLAYER_HORIZONTAL_CLAMP);
                 currentX = targetX;
                 syncFixedXFromPosition();
-
-                // Refresh SolidContacts tracking position so the follow delta isn't
-                // double-applied as a riding delta. In the ROM, SolidObject runs inline
-                // before the horizontal follow, so it never sees this delta.
-                ObjectManager objectManager = services().objectManager();
-                if (objectManager != null) {
-                    objectManager.refreshRidingTrackingPosition(this);
-                }
+                // The follow runs after this routine's SolidObject call, so the
+                // next routine's d4 (its entry x) already includes it.
             }
         }
         if (playerOnObjectNow) {
@@ -1644,7 +1638,15 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        PlayerSolidContactResult contact = services().solidExecution().resolveSolidNow(player);
+        // ObjB2 calls SolidObject, which resolves both characters in this slot.
+        var solid = services().solidExecution();
+        PlayerSolidContactResult contact = solid.resolveSolidNowAll().perPlayer().get(player);
+        if (contact == null) {
+            contact = PlayerSolidContactResult.noContact(
+                    services().solidExecutionRegistry().previousStanding(this, player),
+                    com.openggf.game.solid.PreContactState.ZERO,
+                    com.openggf.game.solid.PostContactState.ZERO);
+        }
         // ObjB2's inline SolidObject calls leave p1_standing in status(a0):
         // RideObject_SetRide sets the bit on a top landing, and SolidObject's
         // standing path clears it on release (s2.asm:35014-35044, 35986-36045).

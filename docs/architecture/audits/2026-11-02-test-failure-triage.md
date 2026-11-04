@@ -56,16 +56,18 @@ entries below require reproduction before being called current defects.
 
 | Remaining group | Evidence/status | Severity | Fix complexity |
 | --- | --- | --- | --- |
-| KiS2 EHZ1 (`TestKis2Ehz1TraceReplay`) | Delivered replay advances93→38 errors; animation/cursor/X history now match. Remaining Y slots26–63 expect$0293 versus$0294. Explicit entry provenance/reanchor repair is assigned to the inlet lane. | High for parity qualification | Large: native bootstrap/history evidence |
-| Knuckles LBZ2/Big Arm (`TestS3kKnucklesLbz2BigArmTraceReplay`) | Delivered replay advances249→232 after camera admission and EggRobo-head submission. Rings55/0 and movement945 remain. Queue frontier1454 expects$376876; the proved Big Arm INIT omission is repaired locally but leaves every replay record unchanged. | High for parity qualification | Large: progression, remaining producers and movement |
+| Knuckles LBZ2/Big Arm (`TestS3kKnucklesLbz2BigArmTraceReplay`) | Pre-wave-5 fixes advanced249→232. Wave-5 carried entry exposes a deleted-boss reference at1454; the independent explosion-shower repair now completes6,309 comparisons, gate reached, with263 divergence records, first rings56/55 at76. Post-abort counts are newly measured and not comparable with the old bootstrap. | High for parity qualification | Large: progression, remaining producers and movement |
 | S3K CNZ (`TestS3kCnzTraceReplay`) | The independent pinned-a8 survey reproduces 3,112 errors, first row17322 `camera_x`; active solid-order effort owns this frontier. No fleet rerun. | High | Large: current camera/slot causes require attribution |
 | Whole-run chains and S2 halfpipe return | Full halfpipe return is freshly red on two timestamp axes, uniformly65 rows early; represented gameplay/art comparisons pass. KiS2 chain freshly reproduces its terminal boundary at65856; the glide repair advances CPZ1 from35,443 to23,755 errors, frontier2051→3490. Three other listed classes are unmeasured by this fleet. | High | Large: production handoffs, progression and timing |
 | S3K cold routes/campaigns | MHZ Knuckles and DEZ solo Sonic deaths freshly reproduced. Nine other listed classes are unmeasured. FBZ’s current short witness passes and its removed historical method is not a current failure. | High | Large: route-specific reproduction and ROM-backed diagnosis |
 
-The two fresh red replays reached their prescribed comparison gates and skipped
-no tests. LBZ retains its carried-rings first assertion; KiS2 now reaches only the remaining Y-slot initialization mismatch. Neither repair may
-hydrate gameplay from expected trace rows or make an assertion weaker. See the
-[bootstrap boundary](../../status/known-discrepancies.md#s3k-complete-run-segment-start-position-bootstrap-debt).
+KiS2 EHZ1 leaves this remaining inventory: the upstream wave-5 three-profile
+gate at `7c82cc1b4` reports it green with recorded entry provenance. This is
+upstream verification, not a new fleet rerun. The original scoped remaining
+inventory therefore contains18 class identities (LBZ, CNZ, five chains and
+eleven cold-route classes), with the historical measurement limits above.
+Entry-carried state follows user Policy A; gameplay values are never invented
+mid-run and trace comparison rows never hydrate gameplay.
 
 Whole-run/return classes:
 
@@ -220,3 +222,17 @@ known LBZ failure, zero errors/skips. Its complete replay profile matches the
 worker exactly. Exact commands and limits are in the frontier log. Remaining high-severity groups above are large campaigns,
 with separately bounded implementation slices assigned where evidence supports
 them. Carried-state policy remains a user decision.
+
+
+## Wave-5 LBZ closure follow-up — 2026-11-03
+
+Exact candidate `35d097848` reproduces a closure error at1454: the explosion
+shower retained its deleted phase-one boss. An independent controller/own-services
+repair fixes it without changing queues, state import or rewind guards. Its
+short regression captures after boss retirement, restores fresh shells and
+compares forward snapshots.102 functional controls pass across the combined
+and final fixture-only runs, zero skips. Full LBZ reaches its gate with263
+divergence records; parity remains open. A synthetic muzzle hypothesis failed
+to reproduce the original error and was discarded. See the frontier log and
+LBZ2 matrix for exact commands, failed intermediate fixture corrections and
+coverage limits.

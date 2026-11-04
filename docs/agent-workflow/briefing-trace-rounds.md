@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A native recorder test can inspect a different checkout from the one that was
+built (2026-11-03, S3K loading). Positional parent-directory walks in a nested
+producer worktree selected the wrong consumer root and producer sources. A
+matched baseline/candidate run therefore reproduced 125 failures without
+qualifying the intended source paths. Use an explicit consumer repository and
+fixture root, and locate producer sources from the running build's own checkout.
+Correcting those paths exposed 52 inherited audio/source-lock failures in both
+trees; the new initialization cases passed. Compare identities and assertions,
+including build-dependent executable seals, rather than totals alone.
+
 Grouped report counts are not raw field-error totals. `DivergenceReport` counts
 error groups and records only each group's starting values; an unchanged group
 can hide a changed engine value later in its span. Live comparator counts instead
@@ -78,6 +88,24 @@ accumulate field mismatches. For an exact added-error gate, compare complete
 `FrameComparison` fields at the actual compared rows; do not expand group spans
 into assumed observations. The [Mega segment2 audit](../architecture/audits/2026-11-03-s3k-mega-segment2.md)
 uses a full standalone capture to distinguish these metrics.
+
+A comparison-only observer can change which run-context outcome is reproduced
+(2026-11-04, ICZ2). Pairing two observed sources proves equality only for those
+observed runs; first reproduce the disputed unobserved outcome before assigning
+its cause. Preserve full assertions, input hashes and actual row fields. The
+[exact field comparator](../../tools/traces/compare_frame_comparisons.py) reports
+added tuples and unmatched coverage, but does not turn grouped summaries,
+missing suffixes or identical observed controls into a universal parity proof.
+
+An aborted replay may never construct a final report containing every row
+(2026-11-04, AIZ2). Capture each already-completed `FrameComparison` before the
+frontier stopper, using the repository's existing serializer; close the stream
+on abort. Reproduce the unmodified full-profile report on each source, then
+require the observed control to reproduce it before interpreting raw tuples.
+The paired AIZ2 capture has 996 common rows and reduces raw ERRORs despite more
+grouped spans. Preserve missing/suffix scope, actual expected values and the
+number of baseline clean rows; zero additions on zero clean rows is not a
+universal parity claim. Restore all instrumentation before integration.
 
 Editing a running shell driver can produce a trailing parse error after every
 Maven run has completed (2026-11-03, Mega segment2). Bash had already parsed the
@@ -1688,7 +1716,9 @@ repair an unsupported debug combination by changing shared combat rules.
 | 118a | Clearing `target/test-tmp` costs the NEXT run | The first classes to run in the cleared tree fail to extract the natives and report mass `UnsatisfiedLinkError`; discard that run and rerun with the natives present rather than quoting it. Three separate runs today. Rule 118 is still right -- the cost is one throwaway run, not a reason to keep a stale dir |
 | 119 | "No arithmetic exists between them" is an argument, not a measurement | Measure both ends first; a chain read bounds only that chain |
 | 120 | Model coverage is a per-branch question, not a per-routine one | Two +4 writes on two arms; the engine implemented one and cited the routine |
-| 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes |
+| 121 | A probe log without a frame delimiter fits two readings | Print the driver row index per frame; both groupings match the bytes. Capture that row before production: a post-step playback cursor can already name the next row and hide the terminal fade tick. |
+| 122a | Interstitial completed-frame provenance resembles a raw input row | `bk2_frame` in the old interstitial file is completed-frame provenance. Dedicated initialization `raw_frame` is zero-based: completed advance N belongs to input N−1. Verify both on the same advance; do not turn provenance into readiness input or adjust terrain to compensate for the apparent row difference. |
+| 122b | One physical frame need not contain one clock service | The independent S3K special-stage startup has 113 flat counter rows followed by one two-tick row. Sample the named ROM counter at frame end and retain multiple same-row services; do not price movie rows as interrupts or use this diagnostic counter delta as timing input. |
 | 122 | A CLI `-DargLine` never reaches the surefire fork | A silent probe, indistinguishable from a branch that never ran; gate on an env var |
 | 123 | Run a survey so the known member must appear in its output | An empty result and a broken matcher look identical |
 | 124 | A stall in the reference series makes two offsets match identically | Classify only where it is strictly monotonic; walk, do not sample |
@@ -4600,7 +4630,7 @@ than an obviously broken probe. It was caught only by going to read *why* a resu
 instead of banking it.
 
 **Related, on scope:** the same batch settled its ROM half from **one routine per game**
-(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85373-85382`)
+(`Touch_Enemy`'s boss path, `sonic3k.asm:20944-20961`; `Touch_Enemy_Part2`, `s2.asm:85499-85508`)
 rather than nine readings — neither writes a routine, so the install is in each boss's own
 dispatch. Same fingerprint, same lever, one reading. But the engine half reached only 1 of 9: the
 rest are blocked on **fixture depth, not analysis** — objects no trace reaches, needing real level
@@ -4678,10 +4708,10 @@ shape matches.
 1. **Do not take a ROM fact from an engine javadoc.** The margin rested on `explicit_height` being
    clear, taken from the engine class's own javadoc rather than the disassembly — the exact
    failure the surrounding audit was written about, committed while writing it. Re-derived at
-   source: `LoadSubObject_Part3` (`s2.asm:72715-72726`) applies mappings, art_tile, render_flags,
+   source: `LoadSubObject_Part3` (`s2.asm:72830-72841`) applies mappings, art_tile, render_flags,
    priority, width_pixels and collision_flags, and **never writes `y_radius`**.
 2. **`ApproxYCheck`'s 32 generalises within its class; the x margin never does.** A second row on
-   the same object (`ObjB8`, `s2.asm:80297`) is also `explicit_height`-clear — so also 32 — but
+   the same object (`ObjB8`, `s2.asm:80317`) is also `explicit_height`-clear — so also 32 — but
    carries `width_pixels` `$10` rather than 4. Per-object width, shared approximate height.
 
 ## One hundred and fourteenth rule: a true general principle can explain away the one piece of evidence pointing at the answer

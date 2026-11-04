@@ -10,7 +10,8 @@ import com.openggf.level.LevelManager;
 /**
  * Rewind adapter for mutable level geometry plus level-scoped HUD and checkpoint state.
  */
-public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<LevelSnapshot> {
+public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<LevelSnapshot>,
+        com.openggf.game.rewind.RewindOperationGuard {
     private final LevelManager manager;
 
     private LevelRewindSnapshotAdapter(LevelManager manager) {
@@ -27,7 +28,13 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
     }
 
     @Override
+    public void requireSnapshotBoundary() {
+        com.openggf.level.NativeLevelLoadAccess.requireComplete(manager);
+    }
+
+    @Override
     public LevelSnapshot capture() {
+        com.openggf.level.NativeLevelLoadAccess.requireComplete(manager);
         AbstractLevel level = currentAbstractLevel();
         LevelState levelState = manager.getLevelGamestate();
 
@@ -55,6 +62,7 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
 
     @Override
     public void restore(LevelSnapshot snapshot) {
+        com.openggf.level.NativeLevelLoadAccess.requireComplete(manager);
         manager.discardPreparedLevelLoad();
         AbstractLevel level = currentAbstractLevel();
         boolean geometryReferencesChanged =

@@ -40,8 +40,7 @@ import java.util.logging.Logger;
  * optional {@link LogicalRom#KIS2} image through the patch context; when the
  * user-supplied dump is absent the module keeps tier-one behaviour exactly.
  */
-final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.resources.PlayerArtTransferProfile,
-        com.openggf.game.internal.NativeRewindPublicationOwner {
+final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.internal.NativeRewindPublicationOwner {
 
     private static final Logger LOGGER = Logger.getLogger(Kis2GameModule.class.getName());
 
@@ -74,13 +73,6 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     Kis2GameModule(GameModule base, PatchContext context) {
         super(base, Kis2Constants.PATCH_ID);
         this.context = context;
-    }
-
-    @Override
-    public ConvertedBank convertedPlayerArtBank(String owner) {
-        // KiS2 LoadSonicDynPLC_Part2 ($31741A) converts the selected S&K runs
-        // into RAM, then its $317538 tail jump queues one contiguous DMA.
-        return "knuckles".equals(owner) ? new ConvertedBank(0xFFF100, 0xF000) : null;
     }
 
     @Override
@@ -211,6 +203,15 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
 
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.resources.PlayerArtTransferPlan.class) {
+            var basePlan = base().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class);
+            var banks = new java.util.HashMap<>(basePlan.banks());
+            // LoadSonicDynPLC_Part2 ($31741A) converts the S&K runs into RAM;
+            // its $317538 tail jump queues one contiguous DMA.
+            banks.put("knuckles", new com.openggf.game.resources.PlayerArtBank(
+                    -1, 0xF000, -1, 0, 0xFFF100));
+            return type.cast(new com.openggf.game.resources.PlayerArtTransferPlan(banks, basePlan.model()));
+        }
         if (type == com.openggf.game.internal.StandingInputPolicy.class)
             return type.cast(com.openggf.game.internal.StandingInputPolicy.UP_FIRST);
         // Lock-on code owns its own shipped behavior. Its attached S2 cart's

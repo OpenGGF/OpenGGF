@@ -1,8 +1,5 @@
 package com.openggf.game.resources;
 
-import com.openggf.game.GameId;
-import com.openggf.game.sonic1.constants.Sonic1Constants;
-import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.TileLoadRequest;
@@ -37,52 +34,19 @@ public final class DynamicArtLifecycleService
     private static final Set<String> OWNERS = Set.of(
             "sonic", "knuckles", "tails", "tails-tails",
             "ss-sonic", "ss-knuckles", "ss-tails", "ss-tails-tails");
-    private static final Map<GameId, Map<String, ProductionArtProfile>>
-            PLAYER_PROFILES = Map.of(
-                    GameId.S1, Map.of(
-                            "sonic", new ProductionArtProfile(
-                                    Sonic1Constants.ART_UNC_SONIC_ADDR,
-                                    0xF000, 0xC800, 0x2E0)),
-                    GameId.S2, Map.of(
-                            "sonic", new ProductionArtProfile(
-                                    Sonic2Constants.ART_UNC_SONIC_ADDR,
-                                    0xF000, -1, 0),
-                            "tails", new ProductionArtProfile(
-                                    Sonic2Constants.ART_UNC_TAILS_ADDR,
-                                    0xF400, -1, 0),
-                            "tails-tails", new ProductionArtProfile(
-                                    Sonic2Constants.ART_UNC_TAILS_ADDR,
-                                    0xF600, -1, 0)));
+    private final PlayerArtTransferPlan plan;
 
-    private final Map<GameId, Map<String, ProductionArtProfile>> playerProfiles;
-
-    public DynamicArtLifecycleService() {
-        this(null);
-    }
-
-    /** Resolve the immutable module's source banks once; rewind never switches ROM ownership. */
-    public DynamicArtLifecycleService(PlayerArtSourceAddressProfile sourceAddresses) {
-        if (sourceAddresses == null) {
-            playerProfiles = PLAYER_PROFILES;
-        } else {
-            Map<GameId, Map<String, ProductionArtProfile>> games = new java.util.EnumMap<>(GameId.class);
-            PLAYER_PROFILES.forEach((game, owners) -> {
-                Map<String, ProductionArtProfile> resolved = new HashMap<>();
-                owners.forEach((owner, profile) -> resolved.put(owner, new ProductionArtProfile(
-                        sourceAddresses.romAddress(game, owner, profile.romArtBase()),
-                        profile.vramDestination(), profile.stagingRamAddress(), profile.stagingByteLength())));
-                games.put(game, Map.copyOf(resolved));
-            });
-            playerProfiles = Map.copyOf(games);
-        }
+    /** The module resolves source banks once; rewind never switches ROM ownership. */
+    public DynamicArtLifecycleService(PlayerArtTransferPlan plan) {
+        this.plan = plan;
     }
 
     private final Map<String, Integer> lastMappingFrames = new HashMap<>();
     private final LinkedHashMap<Long, Descriptor> ledger = new LinkedHashMap<>();
     private final List<BufferedEdge> bufferedEdges = new ArrayList<>();
-    private final List<Long> pendingS2TransferIds = new ArrayList<>();
+    private final List<Long> vblankQueuedTransferIds = new ArrayList<>();
     private final List<DynamicArtGapTransition> gapTransitions = new ArrayList<>();
-    private Preparation s1Preparation;
+    private Preparation stagedPreparation;
     /**
      * A player staging taken while an earlier one is still held for the
      * level's pre-main-loop tail.
@@ -101,7 +65,7 @@ public final class DynamicArtLifecycleService
      * the first would drop a DMA the ROM performs. Holding it here keeps both
      * transfers, each on its own row.
      */
-    private Preparation s1PreparationAfterPreMainLoopTail;
+    private Preparation stagedPreparationAfterPreMainLoopTail;
     /**
      * Level-load player bank staged by a fresh playable's priming, held
      * until a run whose movie spans the load publishes it.
@@ -227,13 +191,6 @@ public final class DynamicArtLifecycleService
     private int gapEdgesBeforeLastIteration;
     private int gapEdgesBeforeCurrentIteration;
 
-    private record ProductionArtProfile(
-            int romArtBase,
-            int vramDestination,
-            int stagingRamAddress,
-            int stagingByteLength) {
-    }
-
     public record ArtUpdate(
             boolean mappingChanged,
             long transferId,
@@ -298,15 +255,15 @@ public final class DynamicArtLifecycleService
             Map<String, Integer> lastMappingFrames,
             List<Descriptor> ledger,
             List<BufferedEdge> bufferedEdges,
-            List<Long> pendingS2TransferIds,
+            List<Long> vblankQueuedTransferIds,
             List<DynamicArtGapTransition> gapTransitions,
             List<Long> publishedOutstanding,
             int latestFrame,
             List<DynamicArtDiagnosticsSnapshot.Edge> latestEdges,
             List<Long> latestOutstandingTransferIds,
             boolean latestPublished,
-            Preparation s1Preparation,
-            Preparation s1PreparationAfterPreMainLoopTail,
+            Preparation stagedPreparation,
+            Preparation stagedPreparationAfterPreMainLoopTail,
             Preparation initialLoadPreparation,
             boolean levelEntryPlayerArtHeld,
             List<Preparation> heldLevelEntryPlayerArt,
@@ -335,7 +292,7 @@ public final class DynamicArtLifecycleService
             lastMappingFrames = Map.copyOf(lastMappingFrames);
             ledger = List.copyOf(ledger);
             bufferedEdges = List.copyOf(bufferedEdges);
-            pendingS2TransferIds = List.copyOf(pendingS2TransferIds);
+            vblankQueuedTransferIds = List.copyOf(vblankQueuedTransferIds);
             gapTransitions = List.copyOf(gapTransitions);
             publishedOutstanding = List.copyOf(publishedOutstanding);
             latestEdges = List.copyOf(latestEdges);
@@ -604,7 +561,7 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "cannot open dynamic-art segment with unpublished production work");
         }
-        if (!ledger.isEmpty() && pendingS2TransferIds.isEmpty()) {
+        if (!ledger.isEmpty() && vblankQueuedTransferIds.isEmpty()) {
             throw new IllegalStateException(
                     "cannot open dynamic-art segment with pending production work");
         }
@@ -737,59 +694,42 @@ public final class DynamicArtLifecycleService
     }
 
     /**
-     * Applies the typed per-game player-art profile to one ROM-loaded DPLC
-     * decision. Unsupported games/owners remain on their existing renderer
+     * Applies the module-supplied player-art plan to one ROM-loaded DPLC
+     * decision. Unsupported modules/owners remain on their existing renderer
      * path and emit no S1/S2 audit fact.
      */
     public ArtUpdate observePlayerDplc(
-            GameId gameId,
             String owner,
             int mappingFrame,
             SpriteDplcFrame dplcFrame) {
-        return observePlayerDplc(gameId, owner, mappingFrame, dplcFrame,
+        return observePlayerDplc(owner, mappingFrame, dplcFrame,
                 DecisionKind.NORMAL_OBJECT);
     }
 
     public ArtUpdate observePlayerDplc(
-            GameId gameId,
-            String owner,
-            int mappingFrame,
-            SpriteDplcFrame dplcFrame,
-            DecisionKind decisionKind) {
-        return observePlayerDplc(gameId, owner, mappingFrame, dplcFrame, decisionKind, null);
-    }
-
-    public ArtUpdate observePlayerDplc(
-            GameId gameId, String owner, int mappingFrame,
-            SpriteDplcFrame dplcFrame, DecisionKind decisionKind,
-            PlayerArtTransferProfile.ConvertedBank convertedBank) {
+            String owner, int mappingFrame,
+            SpriteDplcFrame dplcFrame, DecisionKind decisionKind) {
         requireRunActive();
         Objects.requireNonNull(decisionKind, "decisionKind");
-        Map<String, ProductionArtProfile> gameProfiles =
-                playerProfiles.get(gameId);
-        ProductionArtProfile profile =
-                convertedBank != null
-                        ? new ProductionArtProfile(-1, convertedBank.vramDestination(),
-                                convertedBank.ramAddress(), 0)
-                        : gameProfiles != null ? gameProfiles.get(owner) : null;
+        PlayerArtBank profile = plan != null ? plan.bank(owner) : null;
         if (profile == null) {
             return new ArtUpdate(false, -1, List.of());
         }
         List<TileLoadRequest> requests = dplcFrame != null
                 && dplcFrame.requests() != null
                 ? dplcFrame.requests() : List.of();
-        if (gameId == GameId.S1) {
-            return prepareS1(owner, mappingFrame, requests, profile);
+        if (plan.model() == PlayerArtTransferPlan.TransferModel.STAGED_FOR_VINT) {
+            return stageForVint(owner, mappingFrame, requests, profile);
         }
         if (levelEntryPlayerArtHeld) {
             return holdLevelEntryDecision(owner, mappingFrame, requests,
                     profile);
         }
         ArtUpdate update;
-        if (convertedBank != null) {
+        if (profile.convertedRamAddress() >= 0) {
             // Conversion copies all selected runs consecutively, then queues one DMA.
-            ArtUpdate transfer = observeRamDplc(owner, mappingFrame,
-                    contiguousStagingRequest(requests), profile.stagingRamAddress(),
+            ArtUpdate transfer = observeDplc(owner, mappingFrame,
+                    contiguousStagingRequest(requests), -1, profile.convertedRamAddress(),
                     profile.vramDestination());
             update = new ArtUpdate(transfer.mappingChanged(), transfer.transferId(),
                     transfer.mappingChanged() ? requests : List.of());
@@ -797,8 +737,8 @@ public final class DynamicArtLifecycleService
             update = observeRomDplc(owner, mappingFrame, requests,
                     profile.romArtBase(), profile.vramDestination());
         }
-        if (gameId == GameId.S2 && update.submitted()) {
-            pendingS2TransferIds.add(update.transferId());
+        if (plan != null && plan.model() == PlayerArtTransferPlan.TransferModel.QUEUED_FOR_VBLANK && update.submitted()) {
+            vblankQueuedTransferIds.add(update.transferId());
         }
         return update;
     }
@@ -809,30 +749,15 @@ public final class DynamicArtLifecycleService
      * before the compared presentation/main-loop stream begins.
      */
     public ArtUpdate primePlayerDplc(
-            GameId gameId,
-            String owner,
-            int mappingFrame,
+            String owner, int mappingFrame,
             SpriteDplcFrame dplcFrame) {
-        return primePlayerDplc(gameId, owner, mappingFrame, dplcFrame, null);
-    }
-
-    public ArtUpdate primePlayerDplc(
-            GameId gameId, String owner, int mappingFrame,
-            SpriteDplcFrame dplcFrame,
-            PlayerArtTransferProfile.ConvertedBank convertedBank) {
         requireRunActive();
         validateOwner(owner);
         if (mappingFrame < 0) {
             throw new IllegalArgumentException(
                     "mappingFrame must be nonnegative");
         }
-        Map<String, ProductionArtProfile> gameProfiles =
-                playerProfiles.get(gameId);
-        ProductionArtProfile profile =
-                convertedBank != null
-                        ? new ProductionArtProfile(-1, convertedBank.vramDestination(),
-                                convertedBank.ramAddress(), 0)
-                        : gameProfiles != null ? gameProfiles.get(owner) : null;
+        PlayerArtBank profile = plan != null ? plan.bank(owner) : null;
         if (profile == null) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -843,7 +768,7 @@ public final class DynamicArtLifecycleService
         if (previous != null && previous == mappingFrame) {
             return new ArtUpdate(false, -1, List.of());
         }
-        if (gameId == GameId.S1 && !requests.isEmpty()) {
+        if (plan.model() == PlayerArtTransferPlan.TransferModel.STAGED_FOR_VINT && !requests.isEmpty()) {
             // The ROM does not skip this transfer: Level_LoadObj's
             // ExecuteObjects pass stages the fresh player's tiles and sets
             // f_sonframechg (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398), and
@@ -881,42 +806,13 @@ public final class DynamicArtLifecycleService
             throw new IllegalArgumentException(
                     "row and tail counts must be nonnegative");
         }
-        if (initialLoadPreparation == null || s1Preparation != null) {
+        if (initialLoadPreparation == null || stagedPreparation != null) {
             return;
         }
-        s1Preparation = initialLoadPreparation;
+        stagedPreparation = initialLoadPreparation;
         initialLoadPreparation = null;
         preMainLoopTailRows = tailRows;
-        flushS1PreparationIfPending(firstMainLoopRow);
-    }
-
-    public void completePlayerDplc(
-            GameId gameId,
-            String owner,
-            ArtUpdate update) {
-        if (gameId == GameId.S1 || !update.submitted()) {
-            return;
-        }
-        ProductionArtProfile profile =
-                playerProfiles.getOrDefault(gameId, Map.of()).get(owner);
-        if (profile == null) {
-            throw new IllegalArgumentException(
-                    "missing player dynamic-art profile for "
-                            + gameId + "/" + owner);
-        }
-        if (gameId == GameId.S2) {
-            throw new IllegalStateException(
-                    "S2 dynamic art completes only at the production VBlank boundary");
-        }
-        if (profile.stagingRamAddress() >= 0) {
-            completeApplied(update,
-                    List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
-                            profile.stagingRamAddress(),
-                            profile.vramDestination(),
-                            profile.stagingByteLength())));
-        } else {
-            completeApplied(update);
-        }
+        flushStagedPreparationIfPending(firstMainLoopRow);
     }
 
     public ArtUpdate observeRamDplc(
@@ -925,21 +821,11 @@ public final class DynamicArtLifecycleService
             List<TileLoadRequest> tileRequests,
             int ramArtBase,
             int vramDestination) {
-        return observeDplc(owner, mappingFrame, tileRequests,
+        ArtUpdate update = observeDplc(owner, mappingFrame, tileRequests,
                 -1, ramArtBase, vramDestination);
-    }
-
-    public ArtUpdate observeRamDplc(
-            GameId gameId,
-            String owner,
-            int mappingFrame,
-            List<TileLoadRequest> tileRequests,
-            int ramArtBase,
-            int vramDestination) {
-        ArtUpdate update = observeRamDplc(owner, mappingFrame, tileRequests,
-                ramArtBase, vramDestination);
-        if (gameId == GameId.S2 && update.submitted()) {
-            pendingS2TransferIds.add(update.transferId());
+        if (plan != null && plan.model() == PlayerArtTransferPlan.TransferModel.QUEUED_FOR_VBLANK
+                && update.submitted()) {
+            vblankQueuedTransferIds.add(update.transferId());
         }
         return update;
     }
@@ -1003,8 +889,8 @@ public final class DynamicArtLifecycleService
      */
     public void clearPlayerDplcDedupRegistersForLevelLoad() {
         lastMappingFrames.clear();
-        s1Preparation = null;
-        s1PreparationAfterPreMainLoopTail = null;
+        stagedPreparation = null;
+        stagedPreparationAfterPreMainLoopTail = null;
         initialLoadPreparation = null;
         preMainLoopTailRows = -1;
         preMainLoopHoldBoundaryRow = 0;
@@ -1057,11 +943,11 @@ public final class DynamicArtLifecycleService
         return tiles == 0 ? List.of() : List.of(new TileLoadRequest(0, tiles));
     }
 
-    private ArtUpdate prepareS1(
+    private ArtUpdate stageForVint(
             String owner,
             int mappingFrame,
             List<TileLoadRequest> tileRequests,
-            ProductionArtProfile profile) {
+            PlayerArtBank profile) {
         validateOwner(owner);
         if (mappingFrame < 0) {
             throw new IllegalArgumentException("mappingFrame must be nonnegative");
@@ -1078,12 +964,12 @@ public final class DynamicArtLifecycleService
         Preparation prepared = new Preparation(owner, mappingFrame,
                 toDiagnosticRequests(checked, profile.romArtBase(), -1,
                         profile.vramDestination()));
-        if (s1Preparation != null && preMainLoopTailRows >= 0) {
+        if (stagedPreparation != null && preMainLoopTailRows >= 0) {
             // The held staging belongs to the tail's first V-int; this one is
             // the main loop's. Queue it rather than replacing the held one.
-            s1PreparationAfterPreMainLoopTail = prepared;
+            stagedPreparationAfterPreMainLoopTail = prepared;
         } else {
-            s1Preparation = prepared;
+            stagedPreparation = prepared;
         }
         return new ArtUpdate(true, -1, checked);
     }
@@ -1131,7 +1017,7 @@ public final class DynamicArtLifecycleService
             String owner,
             int mappingFrame,
             List<TileLoadRequest> tileRequests,
-            ProductionArtProfile profile) {
+            PlayerArtBank profile) {
         validateOwner(owner);
         if (mappingFrame < 0) {
             throw new IllegalArgumentException("mappingFrame must be nonnegative");
@@ -1148,10 +1034,10 @@ public final class DynamicArtLifecycleService
         if (checked.isEmpty()) {
             return new ArtUpdate(true, -1, List.of());
         }
-        boolean converted = profile.romArtBase() < 0;
+        boolean converted = profile.convertedRamAddress() >= 0;
         heldLevelEntryPlayerArt.add(new Preparation(owner, mappingFrame,
                 toDiagnosticRequests(converted ? contiguousStagingRequest(checked) : checked,
-                        profile.romArtBase(), converted ? profile.stagingRamAddress() : -1,
+                        converted ? -1 : profile.romArtBase(), converted ? profile.convertedRamAddress() : -1,
                         profile.vramDestination())));
         // The tiles still reach the renderer, as a priming does; only the
         // ledger edge waits for the load to finish.
@@ -1169,7 +1055,7 @@ public final class DynamicArtLifecycleService
         buffer(transferId, "submitted", descriptor.owner(),
                 descriptor.mappingFrame(), descriptor.requests(), before,
                 descriptor.submissionOrigin());
-        pendingS2TransferIds.add(transferId);
+        vblankQueuedTransferIds.add(transferId);
     }
 
     public void completeApplied(ArtUpdate update) {
@@ -1228,7 +1114,7 @@ public final class DynamicArtLifecycleService
         // announced, not observed here. An ordinary service therefore keeps
         // its own row: whatever is still pending belongs to this V-blank.
         preMainLoopTailRows = -1;
-        flushS1PreparationIfPending(movieLogicalFrame);
+        flushStagedPreparationIfPending(movieLogicalFrame);
         retireSubmittedTransfers();
     }
 
@@ -1257,11 +1143,11 @@ public final class DynamicArtLifecycleService
         if (tailRows < 0) {
             throw new IllegalArgumentException("tailRows must be nonnegative");
         }
-        if (s1Preparation == null) {
+        if (stagedPreparation == null) {
             return;
         }
         if (tailRows == 0) {
-            flushS1PreparationIfPending(movieLogicalFrame);
+            flushStagedPreparationIfPending(movieLogicalFrame);
             return;
         }
         preMainLoopTailRows = tailRows;
@@ -1298,7 +1184,7 @@ public final class DynamicArtLifecycleService
             // belongs to the V-blank that services it, not to this boundary.
             return;
         }
-        flushS1PreparationIfPending(firstMainLoopRow);
+        flushStagedPreparationIfPending(firstMainLoopRow);
     }
 
     /**
@@ -1313,11 +1199,11 @@ public final class DynamicArtLifecycleService
         }
         int boundaryRow = preMainLoopHoldBoundaryRow;
         preMainLoopTailRows = -1;
-        flushS1PreparationIfPending(Math.addExact(boundaryRow, 1));
+        flushStagedPreparationIfPending(Math.addExact(boundaryRow, 1));
     }
 
-    private void flushS1PreparationIfPending(int firstMainLoopRow) {
-        if (s1Preparation == null) {
+    private void flushStagedPreparationIfPending(int firstMainLoopRow) {
+        if (stagedPreparation == null) {
             preMainLoopTailRows = -1;
             return;
         }
@@ -1326,16 +1212,16 @@ public final class DynamicArtLifecycleService
         int restore = movieLogicalFrame;
         movieLogicalFrame = Math.max(0, firstMainLoopRow - tailRows);
         try {
-            flushS1Preparation();
+            flushStagedPreparation();
         } finally {
             movieLogicalFrame = restore;
         }
     }
 
-    private void flushS1Preparation() {
-        Preparation preparation = s1Preparation;
-        s1Preparation = s1PreparationAfterPreMainLoopTail;
-        s1PreparationAfterPreMainLoopTail = null;
+    private void flushStagedPreparation() {
+        Preparation preparation = stagedPreparation;
+        stagedPreparation = stagedPreparationAfterPreMainLoopTail;
+        stagedPreparationAfterPreMainLoopTail = null;
         long transferId = nextTransferId++;
         List<Long> before = List.copyOf(ledger.keySet());
         Descriptor descriptor = new Descriptor(
@@ -1347,14 +1233,11 @@ public final class DynamicArtLifecycleService
         buffer(transferId, "submitted", descriptor.owner(),
                 descriptor.mappingFrame(), descriptor.requests(), before,
                 descriptor.submissionOrigin());
+        PlayerArtBank bank = plan.bank(preparation.owner());
         completeApplied(new ArtUpdate(true, transferId, List.of()),
                 List.of(DynamicArtDiagnosticsSnapshot.Request.ram(
-                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                .stagingRamAddress(),
-                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                .vramDestination(),
-                        PLAYER_PROFILES.get(GameId.S1).get("sonic")
-                                .stagingByteLength())));
+                        bank.stagingRamAddress(), bank.vramDestination(),
+                        bank.stagingByteLength())));
     }
 
     /**
@@ -1390,8 +1273,8 @@ public final class DynamicArtLifecycleService
     }
 
     private void retireSubmittedTransfers() {
-        List<Long> retiring = List.copyOf(pendingS2TransferIds);
-        pendingS2TransferIds.clear();
+        List<Long> retiring = List.copyOf(vblankQueuedTransferIds);
+        vblankQueuedTransferIds.clear();
         for (long transferId : retiring) {
             Descriptor descriptor = requirePending(transferId);
             completeApplied(new ArtUpdate(
@@ -1499,10 +1382,10 @@ public final class DynamicArtLifecycleService
     public RewindState capture() {
         return new RewindState(lastMappingFrames,
                 List.copyOf(ledger.values()), bufferedEdges,
-                pendingS2TransferIds, gapTransitions,
+                vblankQueuedTransferIds, gapTransitions,
                 publishedOutstanding, latest.frame(), latest.edges(),
                 latest.outstandingTransferIds(), latest.published(),
-                s1Preparation, s1PreparationAfterPreMainLoopTail,
+                stagedPreparation, stagedPreparationAfterPreMainLoopTail,
                 initialLoadPreparation,
                 levelEntryPlayerArtHeld,
                 List.copyOf(heldLevelEntryPlayerArt), runActive,
@@ -1530,8 +1413,8 @@ public final class DynamicArtLifecycleService
         }
         bufferedEdges.clear();
         bufferedEdges.addAll(snapshot.bufferedEdges());
-        pendingS2TransferIds.clear();
-        pendingS2TransferIds.addAll(snapshot.pendingS2TransferIds());
+        vblankQueuedTransferIds.clear();
+        vblankQueuedTransferIds.addAll(snapshot.vblankQueuedTransferIds());
         gapTransitions.clear();
         gapTransitions.addAll(snapshot.gapTransitions());
         publishedOutstanding = snapshot.publishedOutstanding();
@@ -1539,9 +1422,9 @@ public final class DynamicArtLifecycleService
                 snapshot.latestFrame(), snapshot.latestEdges(),
                 snapshot.latestOutstandingTransferIds(), deliverySerial,
                 segmentGeneration, snapshot.latestPublished());
-        s1Preparation = snapshot.s1Preparation();
-        s1PreparationAfterPreMainLoopTail =
-                snapshot.s1PreparationAfterPreMainLoopTail();
+        stagedPreparation = snapshot.stagedPreparation();
+        stagedPreparationAfterPreMainLoopTail =
+                snapshot.stagedPreparationAfterPreMainLoopTail();
         initialLoadPreparation = snapshot.initialLoadPreparation();
         levelEntryPlayerArtHeld = snapshot.levelEntryPlayerArtHeld();
         heldLevelEntryPlayerArt.clear();
@@ -1587,10 +1470,10 @@ public final class DynamicArtLifecycleService
         lastMappingFrames.clear();
         ledger.clear();
         bufferedEdges.clear();
-        pendingS2TransferIds.clear();
+        vblankQueuedTransferIds.clear();
         gapTransitions.clear();
-        s1Preparation = null;
-        s1PreparationAfterPreMainLoopTail = null;
+        stagedPreparation = null;
+        stagedPreparationAfterPreMainLoopTail = null;
         initialLoadPreparation = null;
         levelEntryPlayerArtHeld = false;
         heldLevelEntryPlayerArt.clear();

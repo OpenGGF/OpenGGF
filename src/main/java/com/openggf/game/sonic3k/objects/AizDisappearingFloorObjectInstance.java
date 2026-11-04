@@ -31,7 +31,7 @@ import java.util.List;
  * (Map_AIZDisappearingFloor2). The child moves off-screen when the parent's
  * mapping frame returns to 3 during the reappear sequence.
  * <p>
- * ROM references: Obj_AIZDisappearingFloor (sonic3k.asm:58360).
+ * ROM references: Obj_AIZDisappearingFloor (sonic3k.asm:58365).
  */
 public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, ObjectVisualFacing.NonDirectional {

@@ -17,7 +17,7 @@ import java.util.List;
  * Invisible solid wall guarding the LBZ1 boss approach during and after the
  * ending-building collapse.
  *
- * <p>ROM: {@code Obj_LBZ1InvisibleBarrier} at {@code sonic3k.asm:111191} —
+ * <p>ROM: {@code Obj_LBZ1InvisibleBarrier} at {@code sonic3k.asm:111196} —
  * pinned at ({@code $3BC0}, {@code $100}) with {@code width_pixels=$40} and
  * {@code SolidObjectFull2} d1={@code $4B}, d2=d3={@code $100}; it deletes
  * itself once {@code Camera_X_pos} reaches {@code $3D80}.

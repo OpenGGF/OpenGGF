@@ -91,7 +91,7 @@ final class ObjectTouchResponseController {
     private static final int SHIELD_TOUCH_SIZE = SHIELD_TOUCH_HALF_SIZE * 2;
     private static final int SHIELD_REACTION_BOUNCE_BIT = 1 << 3;
     /**
-     * ROM Touch_ChkValue lost-ring re-collection gate (s2.asm:85196-85219): a spilled ring
+     * ROM Touch_ChkValue lost-ring re-collection gate (s2.asm:85405-85428): a spilled ring
      * is only collected when {@code invulnerable_time < 90}.
      */
     private static final int LOST_RING_INVULNERABLE_THRESHOLD = 90;
@@ -368,8 +368,8 @@ final class ObjectTouchResponseController {
         int playerHeight = baseYRadius * 2;
         // ASSEMBLY FLAG: fixBugs (docs/s2disasm/s2.asm:27) / FixBugs
         // (docs/s1disasm/sonic.asm:20), both 0 in the shipped ROMs. THE ENGINE
-        // IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH: TouchResponse (s2.asm:85069)
-        // and Touch_Boss (s2.asm:85212) test the mapping frame
+        // IMPLEMENTS THE SHIPPED (UN-FIXED) BRANCH: TouchResponse (s2.asm:85174)
+        // and Touch_Boss (s2.asm:85327) test the mapping frame
         // (`cmpi.b #$4D,mapping_frame(a0)`; S1 uses fr_Duck = $39), so the
         // 12px-down / 20px-tall box applies on exactly one frame of the duck
         // animation, and never to Tails or Super Sonic whose duck frames are $5B
@@ -448,7 +448,7 @@ final class ObjectTouchResponseController {
             return;
         }
 
-        // ROM Tails_Display (sonic3k.asm:26303-26306) and S2/S1 equivalents
+        // ROM Tails_Display (sonic3k.asm:26318-26321) and S2/S1 equivalents
         // skip TouchResponse when object_control's bit 7 (or $A0 in S3K) is
         // set. For S3K this is critical for Tails_CPU_routine 2/4
         // (Tails_Catch_Up_Flying / Tails_FlySwim_Unknown) which ROM enters
@@ -1309,7 +1309,7 @@ final class ObjectTouchResponseController {
 
     /**
      * ROM-accurate boss bounce: negate both X and Y velocities.
-     * S2 {@code Touch_Enemy_Part2} (s2.asm:85330-85331) and the multi-sprite boss
+     * S2 {@code Touch_Enemy_Part2} (s2.asm:85500-85501) and the multi-sprite boss
      * path (s2.asm:85343-85344) only negate x_vel/y_vel.
      * S1 {@code React_BossHit} (docs/s1disasm/_incObj/Sonic ReactToItem.asm:260-263)
      * negates THEN halves both via {@code asr.w} ({@code neg / neg / asr / asr}),

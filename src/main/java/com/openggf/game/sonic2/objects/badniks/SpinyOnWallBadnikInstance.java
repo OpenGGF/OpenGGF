@@ -64,7 +64,7 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements
     // where loc_38BAC skips detection (objoff_2B != 0 -> decrement, bra loc_38BC8).
     private static final int INITIAL_LOCKOUT = 0x80; // Detect lockout from word write (128)
 
-    // Detection range. ROM loc_38BBA (s2.asm:76445-76449) calls
+    // Detection range. ROM loc_38BBA (s2.asm:76652-76656) calls
     // Obj_GetOrientationToPlayer, then: addi.w #$60,d2 / cmpi.w #$C0,d2 / blo.
     // d2 is the *signed* horizontal distance (spiny.x - closestPlayer.x) to the
     // CLOSER of MainCharacter/Sidekick. The unsigned (d2 + $60) < $C0 test
@@ -127,7 +127,7 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements
     }
 
     /**
-     * Mirrors ROM loc_38BAC -> loc_38BC8 (s2.asm:76438-76460). The order is
+     * Mirrors ROM loc_38BAC -> loc_38BC8 (s2.asm:76636-76658). The order is
      * critical for matching ROM badnik Y position over the patrol window:
      *   1. loc_38BAC: if objoff_2B != 0, decrement it and skip detection
      *      (bra loc_38BC8). Otherwise run detection; if in range, jump to
@@ -220,7 +220,7 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements
     }
 
     /**
-     * Mirrors Obj_GetOrientationToPlayer's character selection (s2.asm:72755-72781):
+     * Mirrors Obj_GetOrientationToPlayer's character selection (s2.asm:72953-72979):
      * picks the closer of MainCharacter / Sidekick by absolute horizontal distance.
      */
     private AbstractPlayableSprite closestPlayer(PlayableEntity mainPlayer) {
@@ -258,10 +258,10 @@ public class SpinyOnWallBadnikInstance extends AbstractBadnikInstance implements
     }
 
     private void fireSpike() {
-        // ROM loc_38C6E (s2.asm:76509-76526): the spike spawns at the spiny's
+        // ROM loc_38C6E (s2.asm:76707-76724): the spike spawns at the spiny's
         // exact x_pos/y_pos and moves at x_vel = $300, negated when the spiny's
         // render_flags.x_flip bit is set (facingLeft). y_vel starts at 0 and
-        // Obj98_SpinyShotFall applies +$20 gravity (s2.asm:74628-74632). The
+        // Obj98_SpinyShotFall applies +$20 gravity (s2.asm:74835-74839). The
         // previous +/-8 muzzle offset is not in the ROM and shifted the spike's
         // landing point, contributing to phantom CPU-Tails hits in CPZ1.
         int xVel = facingLeft ? -SPIKE_X_VEL : SPIKE_X_VEL;

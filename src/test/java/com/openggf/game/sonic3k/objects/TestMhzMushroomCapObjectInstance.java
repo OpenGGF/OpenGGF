@@ -79,7 +79,7 @@ class TestMhzMushroomCapObjectInstance {
         assertTrue(solid.rejectsZeroDistanceTopSolidLanding(),
                 "SolidObjectTop rejects d0 == 0 through cmpi.w #-$10,d0 / blo "
                         + "(sonic3k.asm:41996-42015)");
-        assertFalse(solid.carriesRiderOnHorizontalMove(null),
+        assertEquals(cap.getX(), solid.tailCallD4(cap.getX() + 8),
                 "Obj_MHZMushroomCap passes current x_pos as SolidObjectTop d4, so horizontal bobbing "
                         + "does not carry riders through MvSonicOnPtfm");
     }

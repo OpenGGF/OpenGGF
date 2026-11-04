@@ -15,10 +15,11 @@ rg --files src/test | rg 'TestS1.*TraceReplay|traces/s1/.*/metadata.json'
 
 ## Run an existing fixture
 
-Use JDK 25 and the discovered absolute Sonic 1 REV01 ROM path:
+Use JDK 25. The queue wrapper discovers the Sonic 1 REV01 ROM; confirm its ROM line
+reports `sonic1.rom.path` found:
 
 ```bash
-python3 tools/testing/maven_queue.py "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dtest=<TestClass>" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=<TestClass>" test
 ```
 
 Check skips and the newly written report under the current worktree's

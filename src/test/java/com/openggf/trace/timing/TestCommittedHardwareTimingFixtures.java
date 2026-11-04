@@ -89,7 +89,11 @@ class TestCommittedHardwareTimingFixtures {
                     Map.entry("bonus_pachinko",
                             new Ownership("v637-knuckles-c", "pachinko")),
                     Map.entry("special_stage",
-                            new Ownership("v637-knuckles-c", "ss")));
+                            new Ownership("v637-knuckles-c", "ss")),
+                    // SSZ1 cold route spliced onto the complete-run prefix
+                    // (tools/traces/compose_route_on_movie_prefix.py); comparison only.
+                    Map.entry("ssz1_cold_route_native",
+                            new Ownership("ssz1-cold-route-composite-20261102", "hpz")));
     private static final Set<String> EXPECTED_DESTINATIONS = Set.of(
             "aiz1_to_hcz_fullrun",
             "aiz_completerun",
@@ -203,6 +207,7 @@ class TestCommittedHardwareTimingFixtures {
             "runs/s3k-knuckles-complete-superemeralds/hpz",
             "soz_completerun",
             "special_stage",
+            "ssz1_cold_route_native",
             "ssz_completerun");
     /**
      * Approved schema-2 fixtures whose represented route reaches a gameplay
@@ -230,6 +235,17 @@ class TestCommittedHardwareTimingFixtures {
                     Map.entry(
                             "runs/s3k-knuckles-complete-superemeralds/icz",
                             "ICZ act/zone transition"));
+
+    @Test
+    void approvedInitializationCompanionsMatchLiteralNativePublication() throws Exception {
+        // Native producer 80218a0; exact files approved on 2026-11-04.
+        // These literals pin captured bytes, independently of recorder execution.
+        Path run = FIXTURE_ROOT.resolve("runs/s3-knux-multibonus-ss");
+        assertFile(run.resolve("initialization_timing.jsonl.gz"),
+                "22081bbc0c403c4324d5c1bfda678f1c99871d352e335a503f9178684307b1a9", 6912);
+        assertFile(run.resolve("initialization_hardware_timing.jsonl.gz"),
+                "f331b54a3025395aeb4b0890b5b71885db0194d084b01f890d24c5e583c54b82", 1791);
+    }
 
     @Test
     void approvedFleetMatchesFrozenPublicationEvidence() throws Exception {
@@ -262,15 +278,15 @@ class TestCommittedHardwareTimingFixtures {
         assertEquals(Set.of(
                         new RunManifestExpectation(
                                 "runs/s3-knux-multibonus-ss/run_manifest.json",
-                                "v637-knuckles-b", "3.0", 8804,
-                                "149c879ccb3e31cbe806b492dbe40cb060c5e4414e7666a0ab5199f0c7228302",
+                                "v637-knuckles-b", "3.0", 9504,
+                                "ff26c28c6a65eee3d096e2b079175ab938c502cabba4dfabe4a3b6123dd0306c",
                                 25, 22),
                         new RunManifestExpectation(
                                 "runs/s3k-knuckles-complete-superemeralds/"
                                         + "run_manifest.json",
                                 "v638-knuckles-superemeralds",
-                                "3.0", 20804,
-                                "b3581067db368a857137b16b41f90cff452782b0cc98188e9982de9c704c3474",
+                                "3.0", 22395,
+                                "bbada99406b511c528629a943b3904e5710f3633e7b131f4769d8bdb31c07693",
                                 67, 48)),
                 new HashSet<>(runManifests));
         for (RunManifestExpectation runManifest : runManifests) {

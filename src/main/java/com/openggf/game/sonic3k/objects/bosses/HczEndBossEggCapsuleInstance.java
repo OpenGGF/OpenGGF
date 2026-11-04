@@ -100,7 +100,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIn
         }
 
         // Check_TailsEndPose clears Ctrl_2_locked immediately before tail-calling
-        // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
+        // Set_PlayerEndingPose (sonic3k.asm:182067-182088).
         tailsEndingPoseApplied = true;
         if (sidekick.getCpuController() != null) {
             sidekickPoseOwners.add(sidekick);

@@ -19,7 +19,7 @@ import java.util.List;
  * frame from the parent rock's sprite sheet. Falls with gravity until offscreen,
  * then deletes itself.
  * <p>
- * ROM: BreakObjectToPieces (sonic3k.asm:45812) creates fragments with
+ * ROM: BreakObjectToPieces (sonic3k.asm:45817) creates fragments with
  * velocities from word_2A8B0. Gravity = 0x18 subpixels/frame (same as
  * cork floor fragments).
  */

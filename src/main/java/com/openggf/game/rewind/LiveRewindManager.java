@@ -580,6 +580,10 @@ public final class LiveRewindManager {
     private boolean ensureInstalled(RewindContext context) {
         GameplayModeContext gameplayMode = boundOwner;
         if (parked || releasePending || !ready(gameplayMode)) return false;
+        // A run's physical driver owns a timeline that live rewind cannot restore.
+        if (gameplayMode.traceRunFrameDriver().isPresent()) return false;
+        // A resumable load has no snapshot boundary until its real continuation finishes.
+        if (com.openggf.level.NativeLevelLoadAccess.isPending(gameplayMode.getLevelManager())) return false;
         StepperKind requiredKind = context.stepperKind();
         if (requiredKind == StepperKind.LEVEL_FRAME && !supportsLevelGeometry()) return false;
         if (gameplayMode == installedGameplayMode

@@ -201,7 +201,7 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         }
 
         // Derive v_ani0_frame from the trace-seeded level frame counter (gfc).
-        // ROM ExecuteObjects runs before SynchroAnimate (sonic.asm:2988 vs 3010), so objects
+        // ROM ExecuteObjects runs before SynchroAnimate (sonic.asm:3138 vs 3010), so objects
         // at loop iteration gfc=N read v_ani0_frame from after (N-1) SynchroAnimate calls:
         //   animCounter = (-((gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 7
         //               = (-((N+10) / 12)) & 7   (integer division)

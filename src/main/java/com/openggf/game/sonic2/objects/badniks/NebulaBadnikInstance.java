@@ -27,7 +27,7 @@ import java.util.List;
  * Flies left with constant x_vel, checks for player below,
  * rises up and drops a bomb when aligned.
  *
- * Based on disassembly Obj99 (s2.asm lines 74242-74329).
+ * Based on disassembly Obj99 (s2.asm lines 74844-74931).
  *
  * Routine 0 (Init): LoadSubObject with subtype $12, set x_vel = -$C0
  * Routine 2 (Fly): Move with velocity, check if player is ahead and within $80 horizontally.

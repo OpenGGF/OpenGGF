@@ -162,7 +162,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Wait state: Check if player is standing on the platform.
-     * ROM: Obj16_Wait (docs/s2disasm/s2.asm:47405-47417)
+     * ROM: Obj16_Wait (docs/s2disasm/s2.asm:47850-47862)
      */
     private void updateWait() {
         ObjectManager objectManager = services().objectManager();
@@ -189,7 +189,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Slide state: Move diagonally and play click sound every 16 frames.
-     * ROM: Obj16_Slide (docs/s2disasm/s2.asm:47420-47433)
+     * ROM: Obj16_Slide (docs/s2disasm/s2.asm:47865-47878)
      */
     private void updateSlide(int vIntRunCount) {
         // Play click sound every 16 frames
@@ -218,7 +218,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Fall state: Apply gravity and eject player when off-screen.
-     * ROM: Obj16_Fall (docs/s2disasm/s2.asm:47444-47466)
+     * ROM: Obj16_Fall (docs/s2disasm/s2.asm:47889-47911)
      *
      * ROM order: ObjectMove (with current y_vel) FIRST, then add gravity.
      * The first FALL frame therefore moves the lift by 0 (y_vel was just
@@ -299,9 +299,9 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        // ROM parity: Obj16_Main (docs/s2disasm/s2.asm:47381-47389) calls
+        // ROM parity: Obj16_Main (docs/s2disasm/s2.asm:47826-47834) calls
         // Obj16_RunSecondaryRoutine (WAIT/SLIDE/FALL) THEN unconditionally calls
-        // PlatformObject. Obj16_Fall (s2.asm:47444-47466) only clears the
+        // PlatformObject. Obj16_Fall (s2.asm:47889-47911) only clears the
         // standing bit when the lift has fallen below the camera + screen_height
         // (the bhs.s +++ at line 47450 skips the clear while the lift is on
         // screen). The engine's updateFall() destroys the lift via

@@ -75,7 +75,12 @@ public record PerObjectRewindSnapshot(
         // Compact schema-backed sidecar for default object-subclass state.
         // Present when every default-captured subclass field has a compact codec;
         // genericState remains the compatibility fallback for unsupported shapes.
-        RewindObjectStateBlob compactGenericState
+        RewindObjectStateBlob compactGenericState,
+
+        // ROM render_flags.on_screen as the last BuildSprites/Render_Sprites pass
+        // wrote it, and whether such a pass has seen this object yet.
+        boolean renderFlagPassSeen,
+        boolean renderFlagOnScreen
 ) {
     public PerObjectRewindSnapshot(
             boolean destroyed,
@@ -106,7 +111,9 @@ public record PerObjectRewindSnapshot(
                 null,
                 playerExtra,
                 null,
-                null
+                null,
+                false,
+                false
         );
     }
 
@@ -141,7 +148,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                null
+                null,
+                false,
+                false
         );
     }
 
@@ -316,31 +325,13 @@ public record PerObjectRewindSnapshot(
             int minYBound,
             int maxYBound,
             int lastInteractObjectId,
-            boolean normalDespawnLastRenderFlagOffscreen,
-            boolean normalDespawnFreshRenderEntryDelayConsumed,
             int diagnosticS3kInteractWord,
             int normalFrameCount,
             int approachFrameCount,
             int sidekickCount,
-            int normalPushingGraceFrames,
-            boolean suppressNextAirbornePushFollowSteering,
-            boolean releasedUnderwaterPushConsumed,
-            boolean objectOrderGracePushBypassThisFrame,
-            int pendingGroundedFollowNudge,
-            int pendingGroundedFollowNudgeFrame,
-            boolean aizIntroDormantMarkerPrimed,
-            boolean suppressNextLevelEventNormalMovement,
-            boolean catchUpUsesRomVisibleLevelFrameCounter,
-            boolean levelEventDormantMarkerReleasePending,
-            boolean skipPhysicsThisFrame,
-            boolean deadOnObjectReenteredVisibleWindow,
             boolean deferredDespawnDeadFallContinuingThisFrame,
             boolean levelStartLeaderHistoryPrefillPending,
             boolean bootstrapPreludePlacementApplied,
-            boolean cpuFrameCounterFromStoredLevelFrame,
-            int nextCpuFrameCounterOverride,
-            int catchUpFrameCounterOverride,
-            int lastNormalAutoJumpPressFrameCounter,
             boolean controller2SignedLocked,
             boolean nativeEndingPosePending,
             com.openggf.sprites.playable.SidekickCpuController.NormalStepDiagnostics latestNormalStepDiagnostics,
@@ -387,7 +378,6 @@ public record PerObjectRewindSnapshot(
             byte topSolidBit, byte lrbSolidBit,
             boolean prePhysicsAir, byte prePhysicsAngle,
             short prePhysicsGSpeed, short prePhysicsXSpeed, short prePhysicsYSpeed,
-            short preZoneFeatureGSpeed,
             short prePhysicsCentreX, short prePhysicsCentreY,
             boolean air, boolean rolling, boolean jumping, boolean rollingJump,
             boolean pinballMode, boolean pinballSpeedLock,
@@ -397,7 +387,7 @@ public record PerObjectRewindSnapshot(
             boolean objectPreservedRollVelocityCarry,
             boolean tunnelMode,
             // Surface interaction / collision
-            boolean onObject, boolean onObjectAtFrameStart, boolean onObjectAtPreviousFrameStart,
+            boolean onObject,
             boolean pushingAtFrameStart,
             boolean hurtAtFrameStart,
             boolean hurtRecoveryCompletedThisFrame,
@@ -525,7 +515,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 extra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -542,7 +534,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -559,7 +553,9 @@ public record PerObjectRewindSnapshot(
                 extra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -576,7 +572,9 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
         );
     }
 
@@ -593,7 +591,28 @@ public record PerObjectRewindSnapshot(
                 objectSubclassExtra,
                 playerExtra,
                 genericState,
-                compactGenericState
+                compactGenericState,
+                renderFlagPassSeen,
+                renderFlagOnScreen
+        );
+    }
+
+    /** Returns a copy of this snapshot carrying the retained BuildSprites on-screen bit. */
+    public PerObjectRewindSnapshot withRenderFlagOnScreen(boolean passSeen, boolean onScreen) {
+        return new PerObjectRewindSnapshot(
+                destroyed, destroyedRespawnable,
+                hasDynamicSpawn, dynamicSpawnX, dynamicSpawnY,
+                preUpdateX, preUpdateY, preUpdateValid, preUpdateCollisionFlags,
+                skipTouchThisFrame, solidContactFirstFrame,
+                slotIndex, respawnStateIndex,
+                badnikExtra,
+                badnikSubclassExtra,
+                objectSubclassExtra,
+                playerExtra,
+                genericState,
+                compactGenericState,
+                passSeen,
+                onScreen
         );
     }
 }

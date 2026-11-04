@@ -371,12 +371,6 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // ObjBE saves x_pos before calling PlatformObject and passes it through d4.
-        return true;
-    }
-
-    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         lastSolidTrace = String.format("solid=%s p=(%04X,%04X) r=(%d,%d) yTarget=%04X",

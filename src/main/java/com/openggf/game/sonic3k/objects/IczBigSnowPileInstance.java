@@ -161,11 +161,6 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean providesPreMovementGroundAttachmentSupport() {
-        return true;
-    }
-
-    @Override
     public boolean isPersistent() {
         return true;
     }

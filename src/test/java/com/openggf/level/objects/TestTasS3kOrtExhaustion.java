@@ -311,7 +311,7 @@ class TestTasS3kOrtExhaustion {
         // exercise the real air-unseat branch on the following contact frame.
         f.manager.solidContacts().beginInlineFrame(p1, List.of(p2), false);
         p1.setAir(true);
-        f.manager.solidContacts().processParticipantCheckpoint(original, p1, false);
+        SolidObjectPassTestSupport.participantCheckpoint(f.manager, original, p1, false);
         assertFalse(f.manager.hasObjectStandingBit(p1, original));
         assertTrue(f.manager.hasObjectStandingBit(p2, duplicate), "unseating P1 leaves P2's other SST untouched");
         f.restore(standing, 0x300);
@@ -361,7 +361,7 @@ class TestTasS3kOrtExhaustion {
         player.setAir(true);
         player.setOnObject(false);
         player.setYSpeed((short) 0x100);
-        manager.solidContacts().processParticipantCheckpoint(solid, player, false);
+        SolidObjectPassTestSupport.participantCheckpoint(manager, solid, player, false);
         assertTrue(manager.isRidingObject(player, solid), "actual SolidObject checkpoint seats the participant");
     }
 
@@ -374,7 +374,7 @@ class TestTasS3kOrtExhaustion {
         player.setYSpeed((short) 0);
         player.setXSpeed((short) 0x100);
         player.setGSpeed((short) 0x100);
-        var contact = manager.solidContacts().processParticipantCheckpoint(solid, player, false);
+        var contact = SolidObjectPassTestSupport.participantCheckpoint(manager, solid, player, false);
         assertTrue(player.getPushing(), () -> "actual side contact publishes Status_Push: "
                 + contact.perPlayer().get(player) + " actor=" + solid.getX() + "," + solid.getY()
                 + " visible=" + solid.isWithinSolidContactBounds() + " player=" + player.getCentreX()

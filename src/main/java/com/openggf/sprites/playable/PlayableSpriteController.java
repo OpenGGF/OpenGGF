@@ -25,8 +25,6 @@ public class PlayableSpriteController {
     private SpindashDustController spindashDust;
     private TailsTailsController tailsTails;
     private SuperStateController superState;
-    private boolean onObjectAtFrameStart;
-    private boolean onObjectAtPreviousFrameStart;
     private boolean pushingAtFrameStart;
     private boolean airAtFrameStart;
     private boolean hurtAtFrameStart;
@@ -197,25 +195,18 @@ public class PlayableSpriteController {
     }
 
     void captureFrameStartState() {
-        onObjectAtPreviousFrameStart = onObjectAtFrameStart;
-        onObjectAtFrameStart = sprite.isOnObject();
         pushingAtFrameStart = sprite.getPushing();
         airAtFrameStart = sprite.getAir();
         hurtAtFrameStart = sprite.isHurt();
         hurtRecoveryCompletedThisFrame = false;
     }
 
-    void restoreFrameStartState(boolean onObject, boolean previousOnObject,
-            boolean pushing, boolean hurt, boolean hurtRecoveryCompleted) {
-        onObjectAtFrameStart = onObject;
-        onObjectAtPreviousFrameStart = previousOnObject;
+    void restoreFrameStartState(boolean pushing, boolean hurt, boolean hurtRecoveryCompleted) {
         pushingAtFrameStart = pushing;
         hurtAtFrameStart = hurt;
         hurtRecoveryCompletedThisFrame = hurtRecoveryCompleted;
     }
 
-    boolean isOnObjectAtFrameStart() { return onObjectAtFrameStart; }
-    boolean isOnObjectAtPreviousFrameStart() { return onObjectAtPreviousFrameStart; }
     boolean isPushingAtFrameStart() { return pushingAtFrameStart; }
     boolean isAirAtFrameStart() { return airAtFrameStart; }
     boolean isHurtAtFrameStart() { return hurtAtFrameStart; }

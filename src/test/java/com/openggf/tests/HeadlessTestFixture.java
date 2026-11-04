@@ -166,6 +166,25 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     @Override
+    public void beginInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row,
+            HardwareTimingSchedule readiness,
+            java.util.Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> prefix) {
+        hardwareTimingReplayPort.beginInitializationGapReplay(row, readiness, prefix);
+    }
+
+    @Override
+    public void beginInitializationGapFrame(int rawFrame) {
+        hardwareTimingReplayPort.beginRawFrame(rawFrame);
+    }
+
+    @Override
+    public void endInitializationGapReplay(
+            com.openggf.trace.timing.InitializationTimingReplayPort.CompletedLoadRow row) {
+        hardwareTimingReplayPort.endInitializationGapReplay(row);
+    }
+
+    @Override
     public void beginTraceRow(int traceIndex, int rawFrame) {
         runner.beginTraceRow(traceIndex, rawFrame);
     }
@@ -459,6 +478,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
             // 4. Load or rewire the requested level.
             if (sharedLevel == null) {
+                com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                        GameServices.level(), entryProvenance);
                 try {
                     GameServices.level().loadZoneAndAct(zone, act);
                 } catch (IOException e) {
@@ -466,6 +487,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                             "Failed to load zone " + zone + " act " + act, e);
                 }
             } else if (GameServices.level().getCurrentLevel() == null) {
+                com.openggf.level.LevelEntryInitialization.declareNextLoad(
+                        GameServices.level(), entryProvenance);
                 try {
                     GameServices.level().loadZoneAndAct(sharedLevel.zone(), sharedLevel.act());
                 } catch (IOException e) {
@@ -602,8 +625,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                     && GameServices.module().getLevelInitProfile()
                             .preserveFreshGroundedStatusUntilFirstDispatch();
             if (!preserveFreshGroundedStatus) {
-                GameServices.collision().resolveGroundAttachment(
-                        sprite, 14, () -> false);
+                GameServices.collision().placeOnTerrain(sprite, 14);
             }
 
             // 13. Resolve the active session context and create runner

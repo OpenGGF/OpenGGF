@@ -5,6 +5,7 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /** Object-owner bridge for ROM PLC submissions. */
 public final class Sonic2PlcRequests {
@@ -33,10 +34,10 @@ public final class Sonic2PlcRequests {
             Sonic2RuntimePlcPublisher.append(sonic2Provider, plcService,
                     services.levelManager()::refreshObjectArtPatterns, plcIds);
             return true;
+        } catch (Sonic2PlcService.QueueCapacityException e) {
+            return false;
         } catch (IOException e) {
-            return false;
-        } catch (RuntimeException e) {
-            return false;
+            throw new UncheckedIOException("Unable to submit Sonic 2 ROM PLCs", e);
         }
     }
 }

@@ -75,6 +75,8 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
     // Vertical spring position offsets
     private static final int VERTICAL_PLAYER_Y_OFFSET = 0x2E;    // 46 pixels above spring Y
+    /** Obj85_Up's {@code move.w #$20,d2} solid half-height (Obj85_Up, s2.asm:58070-58083). */
+    private static final int VERTICAL_SOLID_TOP_HALF_HEIGHT = 0x20;
 
     // Diagonal spring position offsets
     private static final int DIAGONAL_PLAYER_X_OFFSET = 0x13;    // 19 pixels from spring X
@@ -245,6 +247,36 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     /**
+     * Vertical Obj85's capture seat, from the rider's state at the solid call.
+     *
+     * <p>{@code loc_2AD2A} seats the rider through
+     * {@code SolidObject_Always_SingleCharacter} with d2=$20. Its top landing,
+     * {@code SolidObject_Landed}, leaves {@code y_pos = y_pos(a0) - d2 -
+     * y_radius - 1} (s2.asm:35344-35366, 35588-35626). The landing's
+     * {@code RideObject_SetRide} then runs Sonic/Tails_ResetOnFloor_Part2 for a
+     * rider still in the air (s2.asm:35986-36030): a rolling rider takes its
+     * standing radius and moves up by the radius difference ({@code subq.w
+     * #5}/{@code #1}, s2.asm:38128-38140, 41024-41031). Obj85 finally writes
+     * Status_Roll and y_radius=$E without moving y_pos, so the seat survives the
+     * curl. Inside a solid checkpoint the engine's shared landing has already run
+     * by this callback, so the seat is rebuilt from the checkpoint's pre-contact
+     * state; a contact delivered outside one has had no landing applied.
+     */
+    private short verticalCaptureSeatY(AbstractPlayableSprite player) {
+        var objectManager = services().objectManager();
+        var contacts = objectManager != null ? objectManager.solidContacts() : null;
+        boolean fromCheckpoint = contacts != null && contacts.isResolvingCheckpointFor(player);
+        int yRadius = fromCheckpoint ? contacts.getPreContactYRadius() : player.getYRadius();
+        boolean air = fromCheckpoint ? contacts.getPreContactAir() : player.getAir();
+        boolean rolling = fromCheckpoint ? contacts.getPreContactRolling() : player.getRolling();
+        int seat = currentSpriteY - VERTICAL_SOLID_TOP_HALF_HEIGHT - yRadius - 1;
+        if (air && rolling) {
+            seat -= player.getStandYRadius() - player.getRollYRadius();
+        }
+        return (short) seat;
+    }
+
+    /**
      * Called when player first lands on the spring.
      * Locks controls and sets rolling state (ROM: loc_2AD26).
      */
@@ -289,22 +321,10 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         //      move.b #7,x_radius(a1)
         //      move.b #AniIDSonAni_Roll,anim(a1)
         boolean wasRolling = player.getRolling();
-        boolean wasRollingLastFrame =
-                (player.getStatusHistory(1) & AbstractPlayableSprite.STATUS_ROLLING) != 0;
-        if (!isDiagonal() && isTails(player)
-                && ((!wasRolling && !wasRollingLastFrame) || (wasRolling && player.wasPrePhysicsAir()))) {
-            // Tails' default y_radius is $0F, one pixel taller than Obj85's
-            // capture radius write ($0E). ROM runs SolidObject_Landed before
-            // Obj85 writes y_radius=$0E (s2.asm:58004-58023). Preserve the
-            // established first-capture lift, and also apply it to the
-            // airborne rolling re-capture case where Tails entered the physics
-            // tick as InAir|Roll before Obj85 re-established Status_OnObj.
-            player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
-        }
-        int heightBeforeRolling = player.getHeight();
-        player.setRolling(true);
-        if (!wasRolling) {
-            if (isDiagonal()) {
+        if (isDiagonal()) {
+            int heightBeforeRolling = player.getHeight();
+            player.setRolling(true);
+            if (!wasRolling) {
                 // Diagonal Obj85 writes y_pos(a1)=y_pos(a0)-$13 before setting
                 // y_radius=$E (s2.asm:58179-58191). Preserve that centre write
                 // by compensating only for the actual engine height delta; some
@@ -314,13 +334,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
                 if (centrePreserveDelta != 0) {
                     player.setY((short) (player.getY() + centrePreserveDelta));
                 }
-            } else {
-                // Vertical Obj85 relies on the generic SolidObject_Landed seat
-                // before its radius write (s2.asm:57949-57968). Preserve the
-                // historical radius-delta lift used by the vertical recapture
-                // path.
-                player.setY((short) (player.getY() + (player.getRollHeightAdjustment() / 2)));
             }
+        } else {
+            short seatY = verticalCaptureSeatY(player);
+            player.setRolling(true);
+            player.setCentreYPreserveSubpixel(seatY);
         }
         // Explicitly set roll animation (ROM: move.b #AniIDSonAni_Roll,anim(a1))
         player.setAnimationId(Sonic2AnimationIds.ROLL);
@@ -636,11 +654,11 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
      * Called when all players have left the spring.
      */
     private void resetAnimationState() {
-        // ROM loc_2AD14 (s2.asm:57937-57941) handles spring decompression by only
+        // ROM loc_2AD14 (s2.asm:58115-58119) handles spring decompression by only
         // resetting mainspr_mapframe (move.b #1,mainspr_mapframe) and decaying
         // objoff_38 by 4 per frame. It does NOT touch objoff_32 (the compression
         // countdown). objoff_32 is only written by Obj85_Init's spawn-clear (0) and
-        // by loc_2ADB0's underflow reset to 3 (s2.asm:58000). So a spring that has
+        // by loc_2ADB0's underflow reset to 3 (s2.asm:58172). So a spring that has
         // compressed at least once retains objoff_32's residual countdown across
         // decompression and re-capture, which is what makes the FIRST compression
         // increment after a re-capture land a partial interval later than a

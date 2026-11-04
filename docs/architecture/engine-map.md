@@ -66,9 +66,12 @@ the engine's audio producer remains a software ownership concern.
 
 External emulators are research and verification tools. Native reference
 captures, disassembly analysis and trace comparisons remain allowed. They do not
-provide runtime gameplay state; the existing bounded readiness-input exception
-retains its own [contract](designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
-and is not permission to build an emulator.
+provide runtime gameplay state. The bounded timing-input exception retains its
+own [contract](designs/2026-07-27-cross-game-hardware-timing-trace-contract.md):
+matching queued readiness, existing lag-loop selection, and the approved
+hold/resume/zero-routine scheduling of real prepared initialization phases.
+It supplies no clock values or decoded gameplay state and permits no emulator.
+Exact synchronous live-play timing is not established by replay scheduling.
 
 ## Entry point and packages
 

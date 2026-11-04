@@ -352,7 +352,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
             player.setAngle((byte) state.rideAngle);
         }
         // loc_33958 chooses the left/right cage phase and angle, but
-        // loc_3397A always clears Status_Facing (sonic3k.asm:69963-69975).
+        // loc_3397A always clears Status_Facing (sonic3k.asm:69968-69980).
         player.setDirection(Direction.RIGHT);
     }
 

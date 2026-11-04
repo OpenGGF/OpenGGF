@@ -43,7 +43,6 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
-import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -84,7 +83,7 @@ import java.util.logging.Logger;
 
 /**
  * Sonic 3&K implementation of dynamic level events.
- * ROM equivalent: ScreenEvents (sonic3k.asm:102274)
+ * ROM equivalent: ScreenEvents (sonic3k.asm:102279)
  *
  * S3K uses dual foreground/background event routines (Events_routine_fg
  * and Events_routine_bg) with a stride of 4 per state transition.
@@ -114,7 +113,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
     private static final int CNZ2_CAMERA_MIN_Y = 0x0580;
     private static final int CNZ2_CAMERA_MAX_Y = 0x1000;
-    private static final int EXTRA_MANAGER_BYTES = 30;
+    private static final int EXTRA_MANAGER_BYTES = 31;
 
     private Sonic3kLoadBootstrap bootstrap = Sonic3kLoadBootstrap.NORMAL;
     private Sonic3kAIZEvents aizEvents;
@@ -132,6 +131,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private com.openggf.game.sonic3k.events.Sonic3kSSZEvents sszEvents;
     private com.openggf.game.sonic3k.events.Sonic3kDEZEvents dezEvents;
     private com.openggf.game.sonic3k.events.Sonic3kEndingEvents endingEvents;
+    // Load-scoped placement of Ending_ScreenInit; set by the init profile per load.
+    private boolean deferEndingScreenInit;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -149,6 +150,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     // Tracks whether the intro-fall forced animation is active on each player.
     // Cleared per-player when they land (air → ground transition).
     private boolean introFallActiveOnPlayer;
+    // Player_1 Tails' Tails_CPU_routine for the solo CNZ1/MHZ1 fly-in: 0 (not
+    // owned), $20 (loc_1425C seed), $22 (loc_14286 hold until landing) or 6
+    // (landed; the pad returns next frame).
+    private int tailsSoloFlyInRoutine;
     private boolean introFallActiveOnSidekick;
     private boolean skipSimpleFallingIntroForLoad;
 
@@ -230,6 +235,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
+        tailsSoloFlyInRoutine = 0;
         skipSimpleFallingIntroForLoad = false;
         boolean seamlessActAdvance = fixedAirCountdownZone == zone
                 && fixedAirCountdownAct + 1 == act;
@@ -458,32 +464,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
-    public boolean isSidekickObjectOrderFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return Sonic3kSidekickFollowContext.isObjectOrderFollowSteeringContext(sidekick, effectiveLeader);
-    }
-
-    @Override
-    public boolean isSidekickObjectOrderFollowNudgeContext(
-            AbstractPlayableSprite sidekick,
-            AbstractPlayableSprite effectiveLeader) {
-        return Sonic3kSidekickFollowContext.isObjectOrderFollowNudgeContext(sidekick, effectiveLeader);
-    }
-
-    @Override
-    public boolean isSidekickDoorSupportGraceFollowSteeringContext(
-            AbstractPlayableSprite sidekick,
-            ObjectInstance ridingObject) {
-        return Sonic3kSidekickFollowContext.isDoorSupportGraceFollowSteeringContext(sidekick, ridingObject);
-    }
-
-    @Override
-    public boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(AbstractPlayableSprite sidekick) {
-        return Sonic3kSidekickFollowContext.usesRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
-    }
-
-    @Override
     public boolean shouldEnterSidekickDormantMarker(AbstractPlayableSprite sidekick) {
         return (aizEvents != null && aizEvents.shouldEnterIntroSidekickDormantMarker(sidekick))
                 || (iczEvents != null && iczEvents.shouldEnterIntroSidekickDormantMarker(sidekick))
@@ -538,7 +518,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new com.openggf.game.sonic3k.runtime.SszZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_INTRO_ENDING && act == 1) {
             registry.install(new com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState(playerCharacter));
-            if (endingEvents != null) endingEvents.initializeScreen();
+            // Ending_ScreenInit runs in LevelSetup, which loc_6310 (sonic3k.asm:7788-7796)
+            // calls after the level-size and terrain-wait calls. A load that
+            // holds behind that wait runs it from prepareInitialScreenObjects instead.
+            if (endingEvents != null && !deferEndingScreenInit) endingEvents.initializeScreen();
         } else if (zone == Sonic3kZoneIds.ZONE_DEZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
                     act, playerCharacter));
@@ -766,9 +749,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * Knuckles detaches from the empty spawn terrain and the crane's InAir gate
      * opens during the teleporter rise instead of his later jump.
      */
+    /** Whether this load's LevelSetup follows a held loc_7870 terrain wait. */
+    void deferEndingScreenInitToLevelSetup(boolean defer) {
+        deferEndingScreenInit = defer;
+    }
+
     void prepareInitialScreenObjects() {
         if (sszEvents != null && currentZone == Sonic3kZoneIds.ZONE_SSZ) {
             sszEvents.applyScreenInitAtLoad(currentAct);
+        }
+        // Ending_ScreenInit (sonic3k.asm:120904-120916) allocates the rescue director
+        // and moves the camera to $200 before loc_6468's first Process_Sprites, not at
+        // load: until then the camera is Get_LevelSizeStart's. Idempotent.
+        if (endingEvents != null && currentZone == Sonic3kZoneIds.ZONE_INTRO_ENDING && currentAct == 1) {
+            endingEvents.initializeScreen();
         }
     }
 
@@ -782,6 +776,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updatePrePhysics() {
+        updateTailsSoloFlyIn();
+        // LevelLoop's Animate_Palette -> AnPal_Load precedes Process_Sprites.
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null && sprites.getMainPlayable() instanceof com.openggf.sprites.playable.AbstractPlayableSprite main
+                && main.getSuperStateController() instanceof Sonic3kSuperStateController powered) {
+            powered.advanceDoomsdayTransformationAtAnPal();
+        }
         // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
         // ordinary animator's post-object tail retains only its late resolution.
         if(endingEvents!=null && currentZone==0x0D && currentAct==1)
@@ -1033,8 +1034,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *       park CPU Tails in routine-$0A dormant marker (loc_690A / loc_13A74)</li>
      *   <li>LRZ1 ($0900) non-Knuckles: anim $1B, airborne (loc_68A6); Knuckles
      *       is explicitly excluded by the ROM's {@code Player_mode} gate</li>
-     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6); this manager's
-     *       standard level bootstrap does not expose that boss slot</li>
+     *   <li>LRZ3 boss ($1600): anim $1B, airborne (loc_68A6), every Player_mode</li>
      * </ul>
      */
     public void applyZonePlayerState() {
@@ -1073,6 +1073,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
         }
+        // loc_6896 (sonic3k.asm:8198-8201): the LRZ3 boss act $1600 takes the
+        // same loc_68A6 falling intro (8204-8210) for every Player_mode.
+        if (currentZone == Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ && currentAct == 0) {
+            applySimpleFallingIntro("LRZ3 boss");
+        }
         if (currentZone == Sonic3kZoneIds.ZONE_LRZ && currentAct == 0
                 && getPlayerCharacter() != PlayerCharacter.KNUCKLES
                 && !skipSimpleFallingIntroForLoad) {
@@ -1107,7 +1112,73 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             com.openggf.game.sonic3k.sidekick.Sonic3kIntroCarryParticipants.installIfNeeded(
                     GameServices.module(), getPlayerCharacter(), currentZone, currentAct);
         }
+        // loc_68C2/loc_68D0 -> loc_68FC (sonic3k.asm:8212-8236): Tails alone at
+        // CNZ1, or at MHZ1 with SK_alone_flag clear, starts Tails_CPU_routine $20.
+        if (getPlayerCharacter() == PlayerCharacter.TAILS_ALONE && currentAct == 0
+                && (currentZone == Sonic3kZoneIds.ZONE_CNZ
+                || (currentZone == Sonic3kZoneIds.ZONE_MHZ && !Sonic3kCartridgePolicy.isStandaloneSk()))) {
+            tailsSoloFlyInRoutine = 0x20;
+        }
         primeSidekickIntroPresentation();
+    }
+
+    /**
+     * Player_1 Tails runs Tails_CPU_Control from Tails_Control when Ctrl_1 is
+     * unlocked and Tails_CPU_routine is at least $1A (loc_13808,
+     * sonic3k.asm:26222-26248). Player_1 is the first object, so this pre-object
+     * slot is the same point in the frame.
+     */
+    private void updateTailsSoloFlyIn() {
+        if (tailsSoloFlyInRoutine == 0) {
+            return;
+        }
+        AbstractPlayableSprite tails = GameServices.sprites().getMainPlayable();
+        if (tails == null || !com.openggf.game.CharacterKey.TAILS.equals(tails.characterKey())) {
+            tailsSoloFlyInRoutine = 0;
+            return;
+        }
+        if (tailsSoloFlyInRoutine == 6) {
+            // Routine 6 is below $1A: Tails_Control copies Ctrl_1 again from
+            // the frame after landing.
+            tailsSoloFlyInRoutine = 0;
+            tails.setControlLocked(false);
+            tails.clearForcedInputMask();
+            return;
+        }
+        if (tailsSoloFlyInRoutine == 0x20) {
+            // loc_1425C (sonic3k.asm:27144-27152): enter flight moving right.
+            tails.setDoubleJumpFlag(1);
+            tails.setDoubleJumpProperty((byte) ((8 * 60) / 2));
+            tails.setAir(true);
+            tails.setRolling(false);
+            tails.setPushing(false);
+            tails.setOnObject(false);
+            tails.setDirection(com.openggf.physics.Direction.RIGHT);
+            tails.setXSpeed((short) 0x100);
+            tails.setYSpeed((short) 0);
+            tails.setGSpeed((short) 0);
+            tailsSoloFlyInRoutine = 0x22;
+        }
+        // loc_14286 (sonic3k.asm:27153-27173): Ctrl_2_logical replaces the pad,
+        // pressing Right on every 32nd Level_frame_counter low byte.
+        tails.setControlLocked(true);
+        tails.setForcedInputMask((GameServices.level().getFrameCounter() & 0x1F) == 0
+                ? AbstractPlayableSprite.INPUT_RIGHT : 0);
+        if (!tails.getAir()) {
+            // The landing frame still moves with this Ctrl_2_logical.
+            tailsSoloFlyInRoutine = 6;
+            tails.setForcedAnimationId(-1);
+            tails.setAnimationId(0);
+            tails.setXSpeed((short) 0);
+            tails.setYSpeed((short) 0);
+            tails.setGSpeed((short) 0);
+            // move.b #1<<Status_InAir,status(a0): the shipped routine marks the
+            // landed body airborne again (FixBugs-independent).
+            tails.setAir(true);
+            tails.setRolling(false);
+            tails.setMoveLockTimer(0);
+            tails.setHighPriority(false);
+        }
     }
 
     private void primeSidekickIntroPresentation() {
@@ -1128,9 +1199,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return false;
         }
         var level = GameServices.level();
+        // SpawnLevelMainSprites skips every zone intro when Last_star_post_hit
+        // or Special_bonus_entry_flag is set (sonic3k.asm:8147-8150). A
+        // standalone boot learns that from its recorded entry kind.
         return level.hasBigRingReturn()
                 || level.isBonusStageReturn()
-                || level.getCheckpointState().isActive();
+                || level.getCheckpointState().isActive()
+                || com.openggf.level.LevelEntryInitialization.isDeclaredReturnEntry(level);
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
@@ -2563,6 +2638,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
         buf.put((byte) (introFallActiveOnPlayer  ? 1 : 0));
+        buf.put((byte) tailsSoloFlyInRoutine);
         buf.put((byte) (introFallActiveOnSidekick ? 1 : 0));
         buf.put((byte) (hczPendingPostTransitionCutscene ? 1 : 0));
         buf.put((byte) (mgzPendingPostTransitionRelease  ? 1 : 0));
@@ -2652,6 +2728,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         Sonic3kLoadBootstrap.Mode mode = (modeOrdinal < modes.length) ? modes[modeOrdinal] : Sonic3kLoadBootstrap.Mode.NORMAL;
         bootstrap = new Sonic3kLoadBootstrap(mode, bootstrap.introStartPosition());
         introFallActiveOnPlayer           = buf.get() != 0;
+        tailsSoloFlyInRoutine             = buf.get() & 0xFF;
         introFallActiveOnSidekick         = buf.get() != 0;
         hczPendingPostTransitionCutscene  = buf.get() != 0;
         mgzPendingPostTransitionRelease   = buf.get() != 0;

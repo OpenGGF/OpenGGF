@@ -3,7 +3,6 @@ package com.openggf.game.sonic2.credits;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
-import com.openggf.game.GameId;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.save.SaveReason;
@@ -124,7 +123,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
             Sonic2EndingDynamicArtDecisionSink decisionSink = dynamicArt == null
                     ? Sonic2EndingDynamicArtDecisionSink.NONE
                     : decision -> dynamicArt.observePlayerDplc(
-                            GameId.S2, decision.owner(), decision.mappingFrame(),
+                        decision.owner(), decision.mappingFrame(),
                             decision.dplcFrame(), decision.kind());
             cutsceneManager = new Sonic2EndingCutsceneManager(decisionSink);
             cutsceneManager.setPresentation(presentation);

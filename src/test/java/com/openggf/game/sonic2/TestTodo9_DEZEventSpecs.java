@@ -83,7 +83,7 @@ public class TestTodo9_DEZEventSpecs {
 
     /**
      * Routine 0: Spawn Silver Sonic at camera X >= 320.
-     * ROM reference: LevEvents_DEZ_Routine1 (s2.asm:21676-21691)
+     * ROM reference: LevEvents_DEZ_Routine1 (s2.asm:21694-21709)
      * <pre>
      *   move.w #320,d0                     ; trigger threshold
      *   cmp.w  (Camera_X_pos).w,d0
@@ -119,7 +119,7 @@ public class TestTodo9_DEZEventSpecs {
 
     /**
      * Routine 2: No-op while Silver Sonic is active.
-     * ROM reference: LevEvents_DEZ_Routine2 (s2.asm:21694-21695)
+     * ROM reference: LevEvents_DEZ_Routine2 (s2.asm:21716-21717)
      * <pre>
      *   LevEvents_DEZ_Routine2:
      *     rts
@@ -138,7 +138,7 @@ public class TestTodo9_DEZEventSpecs {
 
     /**
      * Routine 4: Track camera left boundary, load DEZ boss PLC at X >= $300.
-     * ROM reference: LevEvents_DEZ_Routine3 (s2.asm:21698-21707)
+     * ROM reference: LevEvents_DEZ_Routine3 (s2.asm:21716-21725)
      * <pre>
      *   move.w (Camera_X_pos).w,(Camera_Min_X_pos).w  ; lock left to camera
      *   cmpi.w #$300,(Camera_X_pos).w
@@ -167,7 +167,7 @@ public class TestTodo9_DEZEventSpecs {
 
     /**
      * Routine 6: Lock arena at camera X >= $680.
-     * ROM reference: LevEvents_DEZ_Routine4 (s2.asm:21710-21720)
+     * ROM reference: LevEvents_DEZ_Routine4 (s2.asm:21728-21738)
      * <pre>
      *   move.w (Camera_X_pos).w,(Camera_Min_X_pos).w  ; lock left to camera
      *   move.w #$680,d0
@@ -210,7 +210,7 @@ public class TestTodo9_DEZEventSpecs {
 
     /**
      * Routine 8: No-op while final boss is active.
-     * ROM reference: LevEvents_DEZ_Routine5 (s2.asm:21723-21724)
+     * ROM reference: LevEvents_DEZ_Routine5 (s2.asm:21745-21746)
      * <pre>
      *   LevEvents_DEZ_Routine5:
      *     rts

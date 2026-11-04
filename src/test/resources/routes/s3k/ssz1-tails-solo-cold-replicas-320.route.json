@@ -1,0 +1,95 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s3k",
+      "crc32" : "63522553",
+      "sha1" : "CFBF98C36C776677290A872547AC47C53D2761D6"
+    },
+    "inlet" : {
+      "kind" : "cold-level",
+      "zone" : 10,
+      "act" : 0,
+      "showTitleCard" : false
+    },
+    "roster" : {
+      "main" : "tails",
+      "sidekick" : ""
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "legs" : [ {
+      "id" : "ghz-replica",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszGhzBossObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    }, {
+      "id" : "mtz-replica",
+      "maxRows" : 30000,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "defeated",
+          "target" : {
+            "kind" : "typed",
+            "typeKey" : "SszMtzBossObjectInstance",
+            "capability" : "HIT_POINTS"
+          }
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ssz1-tails-solo-cold-replicas-320.script",
+    "rows" : 8350,
+    "sha256" : "6f46569d89ec133c215faf4943f314d53f9c914539e97c5d0d068c07fc8b4065"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/2 exact_resync(window 320, horizon 600, edits 4, confirm 120, with sidekick)",
+    "engine" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "source" : "repair of bb6cc84823a7 from row 1366 following ReferencePath[8350 rows of 93c9535d450f, window 1366..8349, openggf 36aaddb37 recorded track ssz1-tails-solo-cold-replicas-320.csv.gz]",
+    "notes" : [ "kept 8349/8350 original rows (100.0%), 0 reference rows, 1 authored rows, 8350 output rows; unchanged through row 1495" ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "8614274b9c063c473c480857524759dc771d59bb9a84529ca0ce3821db5d255b",
+    "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "rows" : 8350
+  } ],
+  "native" : {
+    "lag" : [ ]
+  }
+}

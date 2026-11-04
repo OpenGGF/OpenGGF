@@ -29,6 +29,38 @@ class TestRomCatalogueFixture {
     }
 
     @Test
+    void optionalImageDirectorySurvivesResetAndRestoresItsOriginalValue() throws Exception {
+        var configuration = configuration();
+        var manager = mock(RomManager.class);
+        configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, "before");
+        try (var fixture = RomCatalogueFixture.bind(configuration, manager,
+                Map.of(RomGame.S3K, image("combined.bin")), temporary)) {
+            configuration.resetToDefaults();
+            fixture.reapply();
+            assertEquals(temporary.toAbsolutePath().normalize().toString(),
+                    configuration.getString(SonicConfiguration.ROMS_DIRECTORY));
+        }
+        assertEquals("before", configuration.getConfigValue(SonicConfiguration.ROMS_DIRECTORY));
+        verify(manager, times(3)).reloadCatalogue();
+    }
+
+    @Test
+    void invalidOrSessionOwnedDirectoryCannotPartiallyInstallImages() throws Exception {
+        var configuration = configuration();
+        var manager = mock(RomManager.class);
+        var images = Map.of(RomGame.S3K, image("combined.bin"));
+        Object original = configuration.getConfigValue(SonicConfiguration.SONIC_3K_ROM);
+        assertThrows(IllegalArgumentException.class, () -> RomCatalogueFixture.bind(
+                configuration, manager, images, temporary.resolve("missing")));
+        configuration.setSessionOverride(SonicConfiguration.ROMS_DIRECTORY, "session directory");
+        assertThrows(IllegalStateException.class, () -> RomCatalogueFixture.bind(
+                configuration, manager, images, temporary));
+        assertEquals(original, configuration.getConfigValue(SonicConfiguration.SONIC_3K_ROM));
+        assertEquals("session directory", configuration.getString(SonicConfiguration.ROMS_DIRECTORY));
+        verifyNoInteractions(manager);
+    }
+
+    @Test
     void copiedPathsAreNormalizedAndOriginalResolvedObjectsAreRestored() throws Exception {
         var configuration = configuration();
         var manager = mock(RomManager.class);

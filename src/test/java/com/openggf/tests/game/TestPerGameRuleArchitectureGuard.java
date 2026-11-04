@@ -110,6 +110,19 @@ class TestPerGameRuleArchitectureGuard {
         }
     }
 
+    @Test
+    void landingAnimationGroupingPreservesNativeGameValuesAndCompatibilityAccess() {
+        for (GameRules rules : List.of(GameRules.SONIC_1, GameRules.SONIC_2, GameRules.SONIC_3K,
+                com.openggf.game.sonic2.kis2.Kis2Rules.RULES)) {
+            boolean expected = rules != GameRules.SONIC_1;
+            assertEquals(expected, rules.playerMovement().landing().landingWalkWriteSkippedWhileSpindashing());
+            assertEquals(expected, rules.playerMovement().landingWalkWriteSkippedWhileSpindashing());
+        }
+        var oldProfile = new PlayerLandingRules(false, false, false, false, true);
+        assertTrue(oldProfile.hurtLandingClearsObjectControl());
+        assertTrue(!oldProfile.landingWalkWriteSkippedWhileSpindashing());
+    }
+
     private static TreeSet<String> findLegacyFeatureSetUsers() throws IOException {
         TreeSet<String> result = new TreeSet<>();
         try (Stream<Path> files = Files.walk(MAIN_SOURCE_ROOT)) {

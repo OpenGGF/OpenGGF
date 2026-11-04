@@ -23,6 +23,7 @@ final class LevelCheckpointCoordinator {
 
     void admitLoadPolicies(com.openggf.game.session.WorldSession world, com.openggf.game.LevelLoadCause cause,
                            LevelLoadContext context, LevelTransitionCoordinator transitions) {
+        transitions.admitDeclaredEntryForLoad();
         if (com.openggf.game.LevelLoadMutatorAdmission.normalize(world, cause, context)) {
             transitions.clearLastStarPostHit();
             clearPendingPersistentRespawn();

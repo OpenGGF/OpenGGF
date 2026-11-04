@@ -318,6 +318,39 @@ class TestGameLoopSpecialStageLifecycle {
         assertEquals("Failed to load starting level after special stage", caught.getMessage()); assertSame(failure, caught.getCause());
         assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
     }
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void nativeResultsExitFadeOwnsItsClockBeforeTheCompletionCallback(boolean nativeContinuation) {
+        var init = mock(LevelInitProfile.class, withSettings().extraInterfaces(com.openggf.game.internal.NativeFreshLevelLoadProfile.class));
+        when(module.getLevelInitProfile()).thenReturn(init);
+        when(((com.openggf.game.internal.NativeFreshLevelLoadProfile) init).continuesResultsLoadAfterFadeWait()).thenReturn(nativeContinuation);
+        mode(GameMode.SPECIAL_STAGE_RESULTS);
+        var results = mock(ResultsScreen.class);
+        when(results.isComplete()).thenReturn(true);
+        write(loop, "resultsScreen", results);
+        when(fade.hasPendingCompletion()).thenReturn(true);
+        assertEquals(nativeContinuation, owner(loop).holdsNativeResultsExitFade());
+        when(fade.hasPendingCompletion()).thenReturn(false);
+        assertFalse(owner(loop).holdsNativeResultsExitFade());
+    }
+
+    @Test void nativeResultsReturnStartsTheLoadOnTheCompletedFadeWait() throws Exception {
+        var init = mock(LevelInitProfile.class, withSettings().extraInterfaces(com.openggf.game.internal.NativeFreshLevelLoadProfile.class));
+        when(module.getLevelInitProfile()).thenReturn(init);
+        when(((com.openggf.game.internal.NativeFreshLevelLoadProfile) init).continuesResultsLoadAfterFadeWait()).thenReturn(true);
+        mode(GameMode.SPECIAL_STAGE_RESULTS);
+        var results = mock(ResultsScreen.class);
+        write(loop, "resultsScreen", results);
+        write(loop, "resultsExitFadeCompleted", true);
+
+        invoke(loop, "updateSpecialStageResultsMode", new Class<?>[0]);
+
+        verify(levels).loadZoneAndAct(0, 0);
+        verify(results, never()).update(anyInt(), any());
+        assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+        assertFalse((boolean) read(loop, "resultsExitFadeCompleted"));
+    }
+
     @Test void modeChangesClearPresentationButRetainResultsAndTransitionLatches() {
         write(loop, "resultsScreen", mock(ResultsScreen.class)); write(loop, "resultsExitReady", true);
         write(loop, "returningFromSpecialStage", true); retained(provider);

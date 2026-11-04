@@ -1,5 +1,30 @@
 # Level test coverage backlog
 
+DDZ recorded entry (2026-11-04): the [DDZ matrix](../architecture/validation/levels/s3k-ddz.md)
+now records a green strict Sonic+Tails Zone0c replay from the native entry camera
+long. This closes that recorded oracle's bootstrap gap; seeded cold-route,
+team/viewport, native-pixel and ending obligations retain their separate scope.
+
+MHZ carried-checkpoint closure (2026-11-04): the
+[MHZ1 matrix](../architecture/validation/levels/s3k-mhz-act1.md) records the
+switch-door parent-removal/pending-child-deletion regression. Broader route,
+restore/forward and configuration obligations remain inherited.
+
+S3K resumable fresh loads (2026-11-04): common load-boundary checks cover prepared
+phase identity, terrain ownership, completion publication and rejection of rewind
+during transient work. GameLoop and recording ending checks distinguish the
+original terrain batch from later scene art. The [load-phase evidence](../architecture/designs/2026-11-03-synchronous-load-vint-accounting.md)
+records bounded Knuckles and Sonic+Tails observations, including the separate
+special-stage startup clock gap. These checks do not certify cold campaigns,
+viewport/team breadth or the inherited act-matrix route and restore obligations.
+
+Shared reload frame ownership (2026-11-03): the CNZ, LBZ and MHZ act matrices
+record positioned cross-act reloads and twice-restored next-row oscillator and
+owner comparisons. In-frame controls retain AIZ/HCZ/CNZ/LBZ marker semantics.
+These short witnesses do not certify cold routes, live rewind-floor recording
+or the broader configuration matrix; see the
+[shared design](../architecture/designs/2026-11-03-seamless-request-retargeting.md).
+
 MGZ swinging-platform arithmetic (2026-11-03): the [MGZ1 matrix](../architecture/validation/levels/s3k-mgz-act1.md#swinging-platform-fractional-input--2026-11-03) records native fractional input ownership, spring timer/read and rewind bindings, and the unchanged wider route/configuration/presentation obligations.
 
 HCZ slice parity (2026-11-03): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#native-capsuleresults-handoff-and-green-slice--2026-11-03) records the green native Sonic+Tails cross-act slice, unchanged sibling frontiers, 97 focused/terminal/rewind/startup checks, absent aux schemas and remaining breadth/restore limits.
@@ -2612,3 +2637,11 @@ rewind spots; comprehensive two-player route/rewind breadth remains open.
 LRZ Act1 invisible support follow-up (2026-11-03): the [status7 audit](../architecture/audits/2026-11-03-lrz-invisible-balance.md)
 records the real rider edge-balance witness and invisible-block rewind checks;
 full-route and broader matrix obligations remain open.
+
+
+LBZ phase-one shower lifetime (2026-11-03): the [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md#independent-phase-one-explosion-lifetime--2026-11-03)
+adds boss-deletion snapshot, destructive restoration and forward replay for
+the independent explosion controller.102 functional controls pass across the
+combined/final selective checks, zero skips. The standalone replay now reaches
+its comparison gate with263 divergences instead of aborting at1454. Inherited
+full-route and breadth gaps remain open.

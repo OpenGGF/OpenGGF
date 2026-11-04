@@ -13,6 +13,7 @@ import java.util.List;
 final class FreshLevelTransitionBoundaryController {
     private Boundary pending;
     private boolean initialPublished;
+    private boolean nativeContinuationPending;
 
     void load(LevelManager level, int zone, int act) throws IOException {
         boolean completed = false;
@@ -25,7 +26,7 @@ final class FreshLevelTransitionBoundaryController {
     }
 
     private void loadBoundary(LevelManager level, int zone, int act) throws IOException {
-        if (pending != null) {
+        if (pending != null || nativeContinuationPending) {
             throw new IllegalStateException("a fresh title-card transition boundary is already pending");
         }
         short previousCameraX = level.camera.getX();
@@ -33,13 +34,36 @@ final class FreshLevelTransitionBoundaryController {
         int previousRings = level.levelGamestate != null ? level.levelGamestate.getRings() : 0;
 
         level.loadZoneAndActWithTitleCard(zone, act);
+        if (NativeLevelLoadAccess.isPending(level)) {
+            // The destination has not assembled players yet. Capturing their
+            // source states here would later overwrite the real native assembly.
+            nativeContinuationPending = true;
+            return;
+        }
         if (!level.getTransitions().isTitleCardRequested()) {
             // A game-owned continuation can bypass the title loop entirely.
             // Keep the destination assembly; there is no title owner to publish
             // or release a deferred player boundary.
             return;
         }
+        hold(level, previousCameraX, previousCameraY, previousRings, true);
+    }
 
+    /**
+     * Opens the same boundary for a load whose caller positions the destination
+     * players itself after the load (a bonus-stage return restoring its saved
+     * position). The destination camera is the one that setup established.
+     */
+    void beginAfterSetup(LevelManager level, short previousCameraX,
+                         short previousCameraY, int previousRings) {
+        if (pending != null) {
+            throw new IllegalStateException("a fresh title-card transition boundary is already pending");
+        }
+        hold(level, previousCameraX, previousCameraY, previousRings, false);
+    }
+
+    private void hold(LevelManager level, short previousCameraX, short previousCameraY,
+                      int previousRings, boolean focusDestinationCamera) {
         // The profile has already performed the destination's counter setup.
         // Rings live in LevelState, not in the playable snapshots below. Keep
         // that value while the pre-title boundary borrows the source HUD count.
@@ -53,7 +77,7 @@ final class FreshLevelTransitionBoundaryController {
             }
         }
         AbstractPlayableSprite destinationPlayer = mainPlayable(level);
-        if (destinationPlayer != null
+        if (focusDestinationCamera && destinationPlayer != null
                 && !(level.getZoneFeatureProvider() instanceof LevelStartCameraPosition)) {
             level.camera.setFocusedSprite(destinationPlayer);
             level.camera.updatePosition(true);
@@ -66,6 +90,16 @@ final class FreshLevelTransitionBoundaryController {
         if (level.levelGamestate != null) {
             level.levelGamestate.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(level, previousRings));
         }
+        clearPlayableSlots(level);
+        var initialPass = level.capturePendingInitialProcessSpritesLifecycleForRewind();
+        level.discardPendingInitialProcessSpritesForStateRestoration();
+        pending = new Boundary(destinationCameraX, destinationCameraY, destinationRings,
+                playableStates, initialPass);
+        initialPublished = false;
+    }
+
+    /** loc_60DE clears native player slots before the locked title loop. */
+    static void clearPlayableSlots(LevelManager level) {
         AbstractPlayableSprite player = mainPlayable(level);
         if (player != null) {
             player.setRolling(false);
@@ -90,16 +124,21 @@ final class FreshLevelTransitionBoundaryController {
             sidekick.setAir(false);
             sidekick.setNativeSlotPresent(false);
         }
-        var initialPass = level.capturePendingInitialProcessSpritesLifecycleForRewind();
-        level.discardPendingInitialProcessSpritesForStateRestoration();
-        pending = new Boundary(destinationCameraX, destinationCameraY, destinationRings,
-                playableStates, initialPass);
-        initialPublished = false;
     }
 
     void complete(LevelManager level) {
+        completeReportingInitialPass(level);
+    }
+
+    /** {@link #complete}, reporting whether loc_6468's initial pass ran. */
+    boolean completeReportingInitialPass(LevelManager level) {
+        if (nativeContinuationPending) {
+            NativeLevelLoadAccess.requireComplete(level);
+            nativeContinuationPending = false;
+            return false;
+        }
         if (pending == null) {
-            return;
+            return false;
         }
         // S3K loc_63B4 (sonic3k.asm:7826-7834) resets the destination
         // counters after the locked title loop, not when its first player
@@ -112,9 +151,10 @@ final class FreshLevelTransitionBoundaryController {
         // after destination players are assembled, before LevelLoop admission,
         // rather than inserting another setup-only ordinary iteration.
         level.restorePendingInitialProcessSpritesLifecycleForRewind(pending.initialPass());
-        level.consumePendingInitialProcessSpritesPass();
+        boolean ranInitialPass = level.consumePendingInitialProcessSpritesPass();
         pending = null;
         initialPublished = false;
+        return ranInitialPass;
     }
 
     void publishInitial(LevelManager level) {
@@ -156,14 +196,19 @@ final class FreshLevelTransitionBoundaryController {
     }
 
     boolean isPending() {
-        return pending != null;
+        return pending != null || nativeContinuationPending;
     }
 
+    void abortNativeContinuation() { nativeContinuationPending = false; }
+    void completeNativeContinuation() { nativeContinuationPending = false; }
+
     RewindState captureForRewind() {
+        if (nativeContinuationPending) throw new IllegalStateException("Active native Level load cannot be captured");
         return new RewindState(pending, initialPublished);
     }
 
     void restoreForRewind(RewindState state) {
+        if (nativeContinuationPending) throw new IllegalStateException("Active native Level load cannot be restored");
         java.util.Objects.requireNonNull(state, "state");
         pending = state.pending();
         initialPublished = state.initialPublished();
@@ -176,7 +221,11 @@ final class FreshLevelTransitionBoundaryController {
         for (PlayableState playableState : pending.playableStates()) {
             Sprite sprite = level.spriteManager.getSprite(playableState.code());
             if (sprite instanceof AbstractPlayableSprite playable) {
+                // This boundary republishes native player state; the live host
+                // owns its title lock, including a release before final assembly.
+                boolean controlLocked = playable.isControlLocked();
                 playable.restoreRewindState(playableState.state());
+                playable.setControlLocked(controlLocked);
                 playable.setObjectRoutineOverride(null);
                 playable.setNativeSlotPresent(true);
             }

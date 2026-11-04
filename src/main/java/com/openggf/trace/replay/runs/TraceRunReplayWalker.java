@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -175,6 +176,12 @@ public final class TraceRunReplayWalker {
         private final TraceReplayFixture fixture;
         private final List<HardwareTimingSegment> segments;
         private final HardwareTimingInterstitialSpans interstitialSpans;
+        private final com.openggf.trace.timing.InitializationTimingReplayPort initializationTiming;
+        private final com.openggf.trace.timing.InitializationHardwareTimingStream initializationReadiness;
+        private Map<com.openggf.game.timing.HardwareWorkKind, com.openggf.game.timing.RecordedOrdinalSpan> remainingGapSpans;
+        private Long gapReadinessLoad;
+        private boolean physicalGapRow;
+        private final java.util.Set<Long> observedReadinessLoads = new java.util.HashSet<>();
         private int currentSegment;
         private boolean closed;
         /**
@@ -204,8 +211,29 @@ public final class TraceRunReplayWalker {
                 TraceReplayFixture fixture,
                 List<HardwareTimingSegment> segments,
                 HardwareTimingInterstitialSpans interstitialSpans) {
+            this(fixture, segments, interstitialSpans,
+                    com.openggf.trace.timing.InitializationTimingSchedule.empty());
+        }
+
+        /** Run-root initialization rows use the absolute physical BK2 namespace. */
+        public HardwareTimingCoordinator(
+                TraceReplayFixture fixture,
+                List<HardwareTimingSegment> segments,
+                HardwareTimingInterstitialSpans interstitialSpans,
+                com.openggf.trace.timing.InitializationTimingSchedule initializationSchedule) {
+            this(fixture, segments, interstitialSpans, initializationSchedule,
+                    com.openggf.trace.timing.InitializationHardwareTimingStream.empty());
+        }
+
+        public HardwareTimingCoordinator(
+                TraceReplayFixture fixture, List<HardwareTimingSegment> segments,
+                HardwareTimingInterstitialSpans interstitialSpans,
+                com.openggf.trace.timing.InitializationTimingSchedule initializationSchedule,
+                com.openggf.trace.timing.InitializationHardwareTimingStream initializationReadiness) {
             this.interstitialSpans = Objects.requireNonNull(
                     interstitialSpans, "interstitialSpans");
+            this.initializationReadiness = Objects.requireNonNull(initializationReadiness);
+            initializationReadiness.requireMatchingPhases(initializationSchedule);
             this.fixture = Objects.requireNonNull(fixture, "fixture");
             this.segments = List.copyOf(
                     Objects.requireNonNull(segments, "segments"));
@@ -221,6 +249,54 @@ public final class TraceRunReplayWalker {
                     throw new IllegalArgumentException(
                             "hardware timing segment BK2 ranges overlap at index " + i);
                 }
+            }
+            initializationTiming = initializationSchedule.hasRecordedInput()
+                    ? new com.openggf.trace.timing.InitializationTimingReplayPort(initializationSchedule, this::activateInitializationReadiness) : null;
+            if (initializationTiming != null) fixture.installInitializationTimingReplay(initializationTiming);
+        }
+
+        public boolean hasInitializationTiming() { return initializationTiming != null; }
+
+        public boolean representsInitializationRow() {
+            return !closed && (gapReadinessLoad != null || initializationTiming != null && initializationTiming.representedLoadRow() != null);
+        }
+
+        /** Maps phase input and any separately captured readiness for a physical gap. */
+        public void beginGapFrame(Bk2FrameInput frame) {
+            Objects.requireNonNull(frame, "frame");
+            beginGapFrame(frame.frameIndex());
+        }
+
+        /** Maps a real gap iteration even when the shared playback cursor is parked. */
+        public void beginGapFrame(int movieRow) {
+            if (movieRow < 0) throw new IllegalArgumentException("negative physical movie row");
+            physicalGapRow = !closed;
+            if (!closed && initializationTiming != null) initializationTiming.beginRawFrame(movieRow);
+            if (!closed && gapReadinessLoad != null) {
+                var completed = initializationTiming.completedLoadRow(gapReadinessLoad);
+                if (completed != null) {
+                    fixture.endInitializationGapReplay(completed);
+                    gapReadinessLoad = null;
+                }
+            }
+            var row = !closed && initializationTiming != null ? initializationTiming.representedLoadRow() : null;
+            activateInitializationReadiness(row);
+            if (!closed && gapReadinessLoad != null) fixture.beginInitializationGapFrame(movieRow);
+            else fixture.enterHardwareTimingGap();
+        }
+
+        private void activateInitializationReadiness(
+                com.openggf.trace.timing.InitializationTimingReplayPort.RepresentedLoadRow row) {
+            if (!closed && physicalGapRow && row != null && initializationReadiness.hasLoad(row.loadOrdinal())
+                    && initializationTiming.completedLoadRow(row.loadOrdinal()) == null
+                    && !Objects.equals(gapReadinessLoad, row.loadOrdinal())) {
+                var readiness = initializationReadiness.forLoad(row.loadOrdinal());
+                var slice = HardwareTimingInterstitialSpans.splitInitializationReadiness(
+                        remainingGapSpans != null ? remainingGapSpans : interstitialSpans.spansAfterSegment(currentSegment), readiness);
+                fixture.beginInitializationGapReplay(row, readiness, slice.prefix());
+                remainingGapSpans = slice.remainder();
+                gapReadinessLoad = row.loadOrdinal();
+                observedReadinessLoads.add(gapReadinessLoad);
             }
         }
 
@@ -240,15 +316,16 @@ public final class TraceRunReplayWalker {
         public void beginPlaybackFrame(Bk2FrameInput frame) {
             Objects.requireNonNull(frame, "frame");
             if (closed || !insideSegment) {
-                fixture.enterHardwareTimingGap();
+                beginGapFrame(frame);
                 return;
             }
+            if (initializationTiming != null) initializationTiming.beginRawFrame(frame.frameIndex());
             HardwareTimingSegment segment = segments.get(currentSegment);
             int traceIndex = frame.frameIndex() - segment.bk2FrameOffset();
             if (traceIndex >= 0 && traceIndex < segment.rawFrames().size()) {
                 beginSegmentRow(currentSegment, traceIndex);
             } else {
-                fixture.enterHardwareTimingGap();
+                beginGapFrame(frame);
             }
         }
 
@@ -269,6 +346,7 @@ public final class TraceRunReplayWalker {
         public void enterSegment(int segmentIndex) {
             handoffToSegment(segmentIndex);
             insideSegment = true;
+            physicalGapRow = false;
         }
 
         /**
@@ -297,6 +375,10 @@ public final class TraceRunReplayWalker {
             // special-stage row driver enters that way rather than through an
             // attach.
             insideSegment = true;
+            physicalGapRow = false;
+            if (initializationTiming != null) initializationTiming.beginRawFrame(
+                    Math.addExact(segment.bk2FrameOffset(), traceIndex));
+            physicalGapRow = false;
             fixture.beginTraceRow(
                     traceIndex, segment.rawFrames().get(traceIndex));
         }
@@ -319,8 +401,11 @@ public final class TraceRunReplayWalker {
             if (segmentIndex == currentSegment + 1) {
                 fixture.handoffHardwareTimingReplay(
                         segments.get(segmentIndex).schedule(),
-                        interstitialSpans.spansAfterSegment(currentSegment));
+                        remainingGapSpans != null ? remainingGapSpans : interstitialSpans.spansAfterSegment(currentSegment));
+                remainingGapSpans = null;
+                gapReadinessLoad = null;
                 currentSegment = segmentIndex;
+                physicalGapRow = false;
                 // A drive that latches the next segment's rows directly (the
                 // special-stage row driver) has declared its entry by doing so.
                 insideSegment = true;
@@ -332,7 +417,13 @@ public final class TraceRunReplayWalker {
                 return;
             }
             closed = true;
-            fixture.closeHardwareTimingReplayRun();
+            try {
+                if (initializationTiming != null) initializationTiming.verifyRunComplete();
+                initializationReadiness.verifyObservedLoads(observedReadinessLoads);
+            } finally {
+                try { fixture.closeHardwareTimingReplayRun(); }
+                finally { detachInitializationTiming(); }
+            }
         }
 
         /** Abandons an intentionally truncated diagnostic prefix without verification. */
@@ -341,7 +432,15 @@ public final class TraceRunReplayWalker {
                 return;
             }
             closed = true;
-            fixture.abortHardwareTimingReplayRun();
+            try { fixture.abortHardwareTimingReplayRun(); }
+            finally { detachInitializationTiming(); }
+        }
+
+        private void detachInitializationTiming() {
+            if (initializationTiming != null) {
+                initializationTiming.abort();
+                fixture.clearInitializationTimingReplay();
+            }
         }
     }
 
@@ -433,7 +532,11 @@ public final class TraceRunReplayWalker {
     }
 
     /** Result of {@link #awaitBoundary}: whether the boundary was observed, and at what BK2 frame. */
-    public record BoundaryObservation(boolean observed, int observedBk2Frame) {
+    public record BoundaryObservation(boolean observed, int observedBk2Frame,
+                                      BonusStageType bonusType) {
+        public BoundaryObservation(boolean observed, int observedBk2Frame) {
+            this(observed, observedBk2Frame, null);
+        }
         static final BoundaryObservation NOT_OBSERVED = new BoundaryObservation(false, -1);
     }
 
@@ -1452,8 +1555,10 @@ public final class TraceRunReplayWalker {
             if (armed == null || latchedObservation != null) {
                 return;
             }
+            BonusStageType bonusRequest = boundaryEntryMode(armed.entryKind())
+                    == BoundaryEntryMode.BONUS_REQUEST ? hooks.peekBonusRequest() : null;
             boolean transientHit = switch (boundaryEntryMode(armed.entryKind())) {
-                case BONUS_REQUEST -> hooks.peekBonusRequest() != null;
+                case BONUS_REQUEST -> bonusRequest != null;
                 case SPECIAL_STAGE_REQUEST -> hooks.isSpecialStageRequested();
                 case LEVEL_MODE -> false; // stage_exit is persistent; evaluated in latched().
                 case LEVEL_LOAD -> false; // supplied by the production level-load seam.
@@ -1461,7 +1566,7 @@ public final class TraceRunReplayWalker {
             if (transientHit) {
                 int observedFrame = hooks.currentBk2Frame();
                 if (withinBoundaryWindow(observedFrame, armed.modeChangeBk2Frame())) {
-                    latchedObservation = new BoundaryObservation(true, observedFrame);
+                    latchedObservation = new BoundaryObservation(true, observedFrame, bonusRequest);
                 }
             }
         }

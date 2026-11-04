@@ -464,7 +464,7 @@ public class CNZSlotMachineManager {
                 }
             }
             case SLOT_SUB_APPROACH -> {
-                // Per disassembly SlotMachine_Routine5_2 (s2.asm:59021-59061):
+                // Per disassembly SlotMachine_Routine5_2 (s2.asm:59602-59642):
                 // Check if we're close to target (add 0xF0 = ~4 tiles lookahead)
                 int pos = (slotIndices[slot] << 8) | (slotOffsets[slot] & 0xFF);
                 int lookAheadPos = (pos + 0xF0) & 0x700;  // Mask to face boundary
@@ -502,7 +502,7 @@ public class CNZSlotMachineManager {
                 }
             }
             case SLOT_SUB_REVERSE -> {
-                // Per disassembly SlotMachine_Routine5_3 (s2.asm:59064-59072):
+                // Per disassembly SlotMachine_Routine5_3 (s2.asm:59676-59684):
                 // Position was set to (face_boundary - 0x10), e.g., 0x2F0.
                 // With speed -8, each frame pos increases: 0x2F0 -> 0x2F8 -> 0x300.
                 // When offset byte reaches 0x00, we're aligned and stop.
@@ -679,7 +679,7 @@ public class CNZSlotMachineManager {
             }
         }
 
-        // Check for bars - per disassembly SlotMachine_CheckBars (s2.asm:59265-59280):
+        // Check for bars - per disassembly SlotMachine_CheckBars (s2.asm:59877-59892):
         // Awards 2 rings per BAR found, regardless of position or count.
         // Even a single BAR awards 2 rings.
         int barReward = 0;

@@ -1,0 +1,72 @@
+{
+  "format" : "openggf-route/1",
+  "launch" : {
+    "rom" : {
+      "game" : "s3k",
+      "crc32" : "63522553",
+      "sha1" : "CFBF98C36C776677290A872547AC47C53D2761D6"
+    },
+    "inlet" : {
+      "kind" : "cold-level",
+      "zone" : 10,
+      "act" : 0,
+      "showTitleCard" : false
+    },
+    "roster" : {
+      "main" : "tails",
+      "sidekick" : ""
+    },
+    "width" : 320,
+    "donor" : "off",
+    "initial" : {
+      "vIntStart" : 0
+    }
+  },
+  "checks" : {
+    "guard" : {
+      "allowHurt" : true,
+      "allowRingLoss" : true,
+      "allowDeath" : false,
+      "allowBoundary" : false
+    },
+    "legs" : [ {
+      "id" : "clears-raised-platform",
+      "maxRows" : 2556,
+      "guard" : {
+        "allowHurt" : true,
+        "allowRingLoss" : true,
+        "allowDeath" : true,
+        "allowBoundary" : true
+      },
+      "goal" : {
+        "kind" : "achieve",
+        "condition" : {
+          "kind" : "player-in",
+          "player" : "P1",
+          "region" : [ 1281, 0, 65535, 3029 ]
+        }
+      }
+    } ]
+  },
+  "tape" : {
+    "script" : "ssz1-tails-solo-cold-flight-320.script",
+    "rows" : 2556,
+    "sha256" : "143972ffb1c8ec004d18545dd365f34053002145b5580c2713de5aedef4fe17d"
+  },
+  "provenance" : {
+    "producer" : "RoutePlanner prefix-search/2 exact_resync(window 320, horizon 600, edits 4, confirm 120, with sidekick)",
+    "engine" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "source" : "repair of 736942e21894 from row 1366 following ReferencePath[2556 rows of 46d06f41f05d, window 1366..2555, openggf 36aaddb37 recorded track ssz1-tails-solo-cold-flight-320.csv.gz]",
+    "notes" : [ "kept 2555/2556 original rows (100.0%), 0 reference rows, 1 authored rows, 2556 output rows; unchanged through row 1495" ]
+  },
+  "qualification" : [ {
+    "scope" : "ENGINE",
+    "passed" : true,
+    "content" : "5679842da4442a291d532546b8caae065a4f9c867fff72483a5943ad671a0ed8",
+    "environment" : "openggf 0.7.prerelease-52965fc26-dirty engine-host/1",
+    "rows" : 2556
+  } ],
+  "native" : {
+    "lag" : [ ]
+  }
+}

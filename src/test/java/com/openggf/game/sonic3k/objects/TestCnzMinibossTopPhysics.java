@@ -242,8 +242,6 @@ class TestCnzMinibossTopPhysics {
                 "S3K SolidObjectFull skips offscreen Player_2 before SolidObjectFull_1P");
         assertTrue(solid.airborneStaleStandingBitReturnsNoContact(player),
                 "SolidObjectFull_1P consumes stale airborne standing bits before new contact");
-        assertTrue(solid.seedsNewRideCarryFromPreUpdateX(),
-                "The top saves x_pos before MoveSprite2 and passes that saved d4 to SolidObjectFull");
     }
 
     @Test

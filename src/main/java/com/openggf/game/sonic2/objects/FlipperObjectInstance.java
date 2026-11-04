@@ -203,7 +203,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                     // sets the rolling bit and, ONLY if rolling was not already
                     // set, nudges y_pos down by a fixed 5 px -- the same
                     // character-independent literal the horizontal launch uses
-                    // at loc_2B3BC (s2.asm:58040-58042).  Engine setRolling()
+                    // at loc_2B3BC (s2.asm:58638-58640).  Engine setRolling()
                     // shrinks the visual height, which already shifts the centre
                     // by (runHeight - rollHeight)/2 (10/2=5 for Sonic, 2/2=1 for
                     // Tails), so the legacy getRollHeightAdjustment() nudge only
@@ -531,8 +531,8 @@ public class FlipperObjectInstance extends BoxObjectInstance
     public boolean bypassesOffscreenSolidGate() {
         // ROM Obj86 (Flipper) reaches SolidObject_cont via
         // SolidObject_Always_SingleCharacter (s2.asm:58418/58427), which jumps
-        // straight to SolidObject_cont (s2.asm:35059->35147) WITHOUT the
-        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35330-35336.
+        // straight to SolidObject_cont (s2.asm:35347->35147) WITHOUT the
+        // SolidObject_OnScreenTest render_flags(a0) gate at s2.asm:35336-35342.
         // Off-screen flippers therefore still resolve push/side contact in ROM,
         // mirroring the S3K SolidObjectFull2_1P behaviour. Required so enabling
         // CollisionRules.solidObjectOffscreenGate for S2 does not regress CNZ
@@ -592,7 +592,12 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        return services().solidExecution().resolveSolidNow(player);
+        // Only a participant the all-player batch above did not cover reaches
+        // here; SolidObject made no contact for it this frame.
+        return PlayerSolidContactResult.noContact(
+                services().solidExecutionRegistry().previousStanding(this, player),
+                com.openggf.game.solid.PreContactState.ZERO,
+                com.openggf.game.solid.PostContactState.ZERO);
     }
 
     /**

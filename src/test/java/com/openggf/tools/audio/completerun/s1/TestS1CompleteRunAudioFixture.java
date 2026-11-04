@@ -23,7 +23,7 @@ class TestS1CompleteRunAudioFixture {
         assertEquals("f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b",
                 fixture.bk2Sha256());
         assertEquals(225_101, fixture.bk2RowCount());
-        assertEquals("5ffb5d861bb64e08e9afb8f5fc4ff614210498fe7a5103ab9c704ba28750cb10",
+        assertEquals("df30b4253ce23b9157fda5b5c7fad47a001fcdb86059495562c6e6e5b9044a3e",
                 fixture.runManifestSha256());
         assertEquals(860, fixture.firstFrame());
         assertEquals(225_101, fixture.exclusiveEnd());

@@ -240,7 +240,7 @@ public class Sonic2SpecialStagePlayer {
      * Dynamic-pattern loads and the ROM-created shadow / Tails-tail sidecars are
      * separate concerns and are not created by this scalar-state method.
      *
-     * <p>Obj09: {@code docs/s2disasm/s2.asm:69040-69076}; Obj10:
+     * <p>Obj09: {@code docs/s2disasm/s2.asm:69155-69191}; Obj10:
      * {@code docs/s2disasm/s2.asm:70319-70372}.</p>
      */
     void initializeScalarStateFromRomObjectRoutine() {
@@ -536,7 +536,7 @@ public class Sonic2SpecialStagePlayer {
     }
 
     private void ssPlayerTraction() {
-        // SSPlayer_Traction (docs/s2disasm/s2.asm:69725-69747): the
+        // SSPlayer_Traction (docs/s2disasm/s2.asm:69840-69862): the
         // `tst.b ss_slide_timer(a0) / bne.s +` branch target is the
         // `move.b angle(a0),d0` that begins the fall-off-the-track test, not
         // the rts. A non-zero slide timer therefore suppresses ONLY the

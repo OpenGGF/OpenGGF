@@ -67,7 +67,7 @@ class TestS3kDezGravityTubeHeadless {
     }
 
     /**
-     * {@code byte_48F90} (:95299) and {@code byte_48F98} (:95301), indexed by the biased dy
+     * {@code byte_48F90} (:95304) and {@code byte_48F98} (:95306), indexed by the biased dy
      * shifted right by 3 — and by 4 for the bit 6 tube. The mount angle is what the whole
      * cosine lift is phased from, so a wrong table is a wrong ride from the first frame.
      */
@@ -354,7 +354,7 @@ class TestS3kDezGravityTubeHeadless {
                 "$20 reflects to $60");
     }
 
-    /** {@code tst.b (Reverse_gravity_flag).w / beq.s locret_48FF4} (:95324-95325). */
+    /** {@code tst.b (Reverse_gravity_flag).w / beq.s locret_48FF4} (:95331-95332). */
     @Test
     void leavingTheTubeUprightLeavesTheFlipAngleAlone() {
         assertEquals(0x20, flipAngleAfterExit(false, 0x20),

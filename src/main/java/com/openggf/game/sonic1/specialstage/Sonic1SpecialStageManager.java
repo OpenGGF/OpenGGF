@@ -1777,13 +1777,10 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
         }
         DynamicArtLifecycleService.ArtUpdate update =
                 lifecycle.observePlayerDplc(
-                        com.openggf.game.GameId.S1,
                         "sonic",
                         sonicSpriteFrame,
                         sonicSpriteRenderer.dplcFrame(sonicSpriteFrame));
         sonicSpriteRenderer.applyRuntimeArtUpdate(sonicSpriteFrame, update);
-        lifecycle.completePlayerDplc(
-                com.openggf.game.GameId.S1, "sonic", update);
     }
 
     private void advanceSonicFrameIndex(SpriteAnimationScript script) {

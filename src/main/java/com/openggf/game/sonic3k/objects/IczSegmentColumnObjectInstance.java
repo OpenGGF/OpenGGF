@@ -364,7 +364,7 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         @Override
         public int getBalanceWidthPixels() {
             // ROM width_pixels byte for the segment, written by SetUp_ObjAttributes3 from
-            // word_8ACEE (docs/skdisasm/sonic3k.asm:188956-188957: dc.w $280 / dc.b $20,$10,$A,0;
+            // word_8ACEE (docs/skdisasm/sonic3k.asm:188961-188962: dc.w $280 / dc.b $20,$10,$A,0;
             // field order at :176998-177003). Verified in the ROM image at 0x8ACEE:
             // 02 80 20 10 0A 00.
             //

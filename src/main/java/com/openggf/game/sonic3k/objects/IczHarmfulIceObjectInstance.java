@@ -35,7 +35,7 @@ import java.util.List;
 /**
  * Object 0xB8 - ICZ harmful ice.
  * <p>
- * ROM reference: {@code Obj_ICZHarmfulIce} at sonic3k.asm:189831.
+ * ROM reference: {@code Obj_ICZHarmfulIce} at sonic3k.asm:189836.
  * Subtype 0 is a static harmful shard. Nonzero subtypes use S3K
  * {@code Touch_Special} collision {@code $D7}, then shatter into 12
  * {@code loc_8B230} ice debris children and delete.

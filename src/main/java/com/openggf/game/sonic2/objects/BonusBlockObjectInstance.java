@@ -216,7 +216,21 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
     /** ROM objoff_31 cooldown for the first sidekick. */
     private int sidekickHitCooldown = 0;
 
+    /**
+     * Passes run in routine 4 after the third hit, or -1 while still in
+     * routine 2. loc_2C806 sets routine 4 without clearing collision_flags, so
+     * the spent block stays a TouchResponse target -- and, TouchResponse taking
+     * only the first overlap, still absorbs touches -- until loc_2C884 deletes it
+     * (s2.asm:60281-60324).
+     */
+    private int spentPasses = -1;
+
     private static final int HIT_COOLDOWN_FRAMES = 4;
+
+    /** Ani_objD8 hit scripts: duration 3, so each frame holds four passes. */
+    private static final int SPENT_SCRIPT_FRAME_PASSES = 4;
+    /** Three frames, then {@code $FD} on the twelfth pass. */
+    private static final int SPENT_SCRIPT_PASSES = 3 * SPENT_SCRIPT_FRAME_PASSES;
 
     public BonusBlockObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -261,6 +275,10 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (spentPasses >= 0) {
+            updateSpent();
+            return;
+        }
 
         processPendingTouches(player);
 
@@ -271,6 +289,24 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
                 animFrame = baseAnimFrame;
             }
         }
+    }
+
+    /**
+     * Routine 4, loc_2C884 (s2.asm:60319-60324): AnimateSprite only; any
+     * collision_property a later touch sets is never read. The hit script set
+     * on the third hit (byte_2C8B1-byte_2C8BD, s2.asm:60346-60351: duration 3, frames hit/base/hit,
+     * then $FD back to anim 0-2) ends on the twelfth pass after the hit, where
+     * {@code cmpi.b #3,anim(a0) / blo DeleteObject} removes the block.
+     */
+    private void updateSpent() {
+        collisionProperty = 0;
+        spentPasses++;
+        if (spentPasses >= SPENT_SCRIPT_PASSES) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+            return;
+        }
+        int scriptFrame = spentPasses / SPENT_SCRIPT_FRAME_PASSES;
+        animFrame = scriptFrame == 1 ? baseAnimFrame : HIT_FRAME_MAP[baseAnimFrame];
     }
 
     private void processPendingTouches(AbstractPlayableSprite player) {
@@ -286,7 +322,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
             mainPlayerHitCooldown = HIT_COOLDOWN_FRAMES;
         }
 
-        if (isDestroyed()) {
+        if (spentPasses >= 0) {
             collisionProperty = 0;
             return;
         }
@@ -394,8 +430,9 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
             // Hit 3: borrow occurred (0 - 1 = -1)
             // ROM: addi.w #palette_line_1,art_tile(a0) - restore palette
             paletteIndex = 0;
-            // ROM: move.b #4,routine(a0) - mark for deletion
-            setDestroyed(true);
+            // ROM: move.b #4,routine(a0). The block stays touchable in routine 4
+            // until its hit script ends (updateSpent).
+            spentPasses = 0;
             hitCount++;
 
             // Mark as destroyed in persistence table to prevent respawning
@@ -423,10 +460,8 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
                 services(), awardedPoints));
 
         // Trigger hit animation
-        if (!isDestroyed()) {
-            animFrame = HIT_FRAME_MAP[baseAnimFrame];
-            animTimer = ANIM_DURATION;
-        }
+        animFrame = HIT_FRAME_MAP[baseAnimFrame];
+        animTimer = ANIM_DURATION;
     }
 
     @Override

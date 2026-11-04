@@ -52,6 +52,35 @@ class TestGameLoopFreshLevelHandoff {
     }
 
     @Test
+    void frozenGameplayFadeServicesEveryVintBeforeReloadCallback() {
+        var objects = context.getLevelManager().getObjectManager();
+        int incomingClock = objects.getVblaCounter();
+        AtomicBoolean completed = new AtomicBoolean();
+        var fade = context.getFadeManager();
+        GameLoopPlcLifecycle.startToBlack(context, fade, () -> {
+            assertEquals(incomingClock + 22, objects.getVblaCounter(),
+                    "Pal_FadeToBlack's $15/dbf includes its final VSync before loading");
+            completed.set(true);
+        });
+        int rows = 0;
+        while (!completed.get() && rows++ < 64) {
+            GameLoopPlcLifecycle.runLogicalIteration(context.plcFrameLifecycle(), context, true,
+                    fade::update, frame -> {
+                        if (!completed.get()) {
+                            // The ordinary held body remains reachable on all
+                            // nonterminal rows; it must not spend their tick twice.
+                            LevelFrameStep.serviceHeldVBlank(LevelFrameContext.from(context), frame,
+                                    objects::advanceVblaCounter);
+                        }
+                        return null;
+                    });
+        }
+        assertTrue(completed.get());
+        assertEquals(22, rows);
+        assertEquals(incomingClock + 22, objects.getVblaCounter());
+    }
+
+    @Test
     void realFadeCallbackKeepsItsOwnerAndDefersTheFourTitleArchives() throws Exception {
         var timing = context.hardwareTiming();
         int jobsBefore = timing.capture().jobs().size();
@@ -79,11 +108,18 @@ class TestGameLoopFreshLevelHandoff {
         }
         assertTrue(loaded.get());
         assertTrue(context.getLevelManager().hasPendingFreshLevelTransitionBoundary());
-        assertEquals(FadeManager.FadeState.NONE, fade.getState(),
-                "LoadPalette_Immediate must clear HOLD_BLACK before deferred title init");
+        // Level has no Wait_VSync between Pal_FadeToBlack and the Obj_TitleCard
+        // install (docs/skdisasm/sonic3k.asm:7556-7767), and a non-water lag
+        // VInt sends no palette (VInt_0_NoWater, 633-670), so LoadPalette_Immediate's
+        // line 0 (7698) first reaches CRAM on loc_62CC's first Wait_VSync
+        // (7769-7772), with the title card already installed.
+        assertEquals(FadeManager.FadeState.HOLD_BLACK, fade.getState(),
+                "destination setup stays black until the title card is entered");
         assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
         loop.step();
         assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
+        assertEquals(FadeManager.FadeState.NONE, fade.getState(),
+                "the entered title card shows LoadPalette_Immediate's line 0");
         assertEquals(parentsBefore + 4, moduleParents(), "Obj_TitleCardInit owns four ROM archives");
     }
 

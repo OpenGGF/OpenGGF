@@ -20,6 +20,8 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
+import com.openggf.game.solid.SolidCall;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -504,11 +506,16 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
         private final ARZRotPformsObjectInstance parent;
         @RewindTransient(reason = "Obj83 child role is constructor metadata preserved by recreateForRewind")
         private final ChildKind kind;
+        // Obj83_last_x_pos (objoff_2C): the platform's x at its previous
+        // PlatformObject call, seeded with the parent's x_pos when
+        // Obj83_LoadSubObject allocates the child (s2.asm:57593-57606).
+        private int lastX;
 
         private Obj83SlotChild(ObjectSpawn spawn, ARZRotPformsObjectInstance parent, ChildKind kind) {
             super(spawn, "ARZRotPformsSlotChild");
             this.parent = parent;
             this.kind = kind;
+            this.lastX = parent.getX();
         }
 
         @Override
@@ -544,7 +551,23 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
+                return;
             }
+            if (kind == ChildKind.CHAIN) {
+                return;
+            }
+            // Obj83_PlatformSubObject (s2.asm:57733-57741): PlatformObject with
+            // d4 = Obj83_last_x_pos, then store this call's x_pos. The parent
+            // slot moved the platform before this slot ran, so the rider is
+            // carried by the parent's move.
+            services().solidExecution().solid(new SolidCall(PLATFORM_PARAMS.halfWidth(),
+                    PLATFORM_PARAMS.airHalfHeight(), PLATFORM_PARAMS.groundHalfHeight(), lastX));
+            lastX = getX();
+        }
+
+        @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
         }
 
         @Override

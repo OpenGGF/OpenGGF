@@ -205,7 +205,7 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM parity: {@code Obj14_Ball_Init} (docs/s2disasm/s2.asm:47151) stores
+     * ROM parity: {@code Obj14_Ball_Init} (docs/s2disasm/s2.asm:47596) stores
      * the parent seesaw's x_pos in {@code objoff_30(a0)} BEFORE applying the
      * {@code addi.w #$28} ball offset. The dispatcher's {@code MarkObjGone2}
      * (s2.asm:46996, {@code move.w objoff_30(a0),d0 / jmpto JmpTo_MarkObjGone2})

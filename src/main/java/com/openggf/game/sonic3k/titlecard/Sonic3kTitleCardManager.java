@@ -62,7 +62,7 @@ public class Sonic3kTitleCardManager
     private static final int SLIDE_SPEED_OUT = 32;
 
     // Display hold duration (frames). ROM: Obj_TitleCardInit stores 90; Level/loc_64DC
-    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62202, 7908-7910),
+    // overwrites $2E with $16 (22) for LevelLoop (sonic3k.asm:62202, 7918-7920),
     // synchronizing the hold with Palette_fade_timer.
     private static final int DISPLAY_HOLD_FRAMES = 90;
     private static final int FRESH_LEVEL_TRANSITION_HOLD_FRAMES = 22;
@@ -461,7 +461,56 @@ public class Sonic3kTitleCardManager
         initializeLevelRoutineTitle(zoneIndex, actIndex);
     }
 
+    /**
+     * Obj_TitleCardInit (sonic3k.asm:62148-62160) deletes at {@code $D01} before
+     * queuing archives or creating children. Level: still installs the owner at
+     * loc_62B6 (sonic3k.asm:7762-7767) and loops at loc_62CC (sonic3k.asm:7769-7781)
+     * until it is gone; LoadLevelLoadBlock (sonic3k.asm:9737-9771) then queues the
+     * terrain parents and loc_7870 (sonic3k.asm:9772-9780) waits for them.
+     */
+    @Override
+    public boolean freshLevelTitleOwnerDeletesAtInit(int zoneIndex, int actIndex) {
+        return zoneIndex == 0x0D && actIndex == 1;
+    }
+
+    private void initializeDeletedLevelRoutineTitle(int zoneIndex, int actIndex) {
+        // The owner never reaches Obj_TitleCardCreate: no archives, children,
+        // display or LoadEnemyArt tail. Reuse the fresh-level gates only; keep
+        // the armed terrain handoff and any retained title art.
+        publishedCard = null;
+        preparedCard = null;
+        currentZone = zoneIndex;
+        currentAct = actIndex;
+        bonusMode = false;
+        inLevelMode = false;
+        displayHoldFrames = DISPLAY_HOLD_FRAMES;
+        resetLevelGamestateOnInLevelDisplay = false;
+        resetLevelGamestateCountdown = 0;
+        heldLevelCounterDispatchOwned = false;
+        retainedResultsHeldLevelCounterOwned = false;
+        inLevelPlayerControlLockOwned = false;
+        inLevelGameplayOwnedExternally = false;
+        inLevelExitDelayFrames = 0;
+        retainedControlPollFollowsTitleCompletion = false;
+        inLevelArtAdmissionPollObserved = false;
+        releasePreloadedActCameraOnComplete = false;
+        preloadedActCompletionPrepared = false;
+        freshLevelChildMovementObserved = false;
+        freshLevelTitleReady = false;
+        freshLevelTerrainStarted = false;
+        artLoading = false;
+        state = Sonic3kTitleCardState.COMPLETE;
+        stateTimer = 0;
+        phaseCounter = 0;
+        exitChildrenGone = false;
+        enterLevelRoutineTitleLoop(zoneIndex, actIndex);
+    }
+
     private void initializeLevelRoutineTitle(int zoneIndex, int actIndex) {
+        if (freshLevelTitleOwnerDeletesAtInit(zoneIndex, actIndex)) {
+            initializeDeletedLevelRoutineTitle(zoneIndex, actIndex);
+            return;
+        }
         // Obj_TitleCardInit stores 90, then Level overwrites the same owner
         // with #$16 just before LevelLoop (sonic3k.asm:62202, 7910).
         // Obj_TitleCardInit queues its archives on every Level: entry even
@@ -728,12 +777,6 @@ public class Sonic3kTitleCardManager
     }
 
     @Override
-    public boolean projectsRetainedResultsSpriteCadence() {
-        return inLevelMode
-                && retainedResultsHeldLevelCounterOwned;
-    }
-
-    @Override
     public boolean ownsInLevelPlayerControlLock() {
         return inLevelPlayerControlLockOwned;
     }
@@ -871,7 +914,7 @@ public class Sonic3kTitleCardManager
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
      * Both elements have exit priority 1 (exit simultaneously).
      *
-     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62522). A bonus
+     * <p>ROM reference: ObjArray_TtlCardBonus (sonic3k.asm line 62527). A bonus
      * stage is entered through the same {@code Level:} routine as any zone, so
      * this owner takes the same loc_62CC gates and loc_64DC hold.
      */
@@ -883,6 +926,9 @@ public class Sonic3kTitleCardManager
         preparedCard = null;
         this.bonusMode = true;
         this.inLevelMode = false;
+        // loc_60DE clears the old SST before loc_62B6 installs a new title
+        // owner (sonic3k.asm:7649-7652,7762-7767); no prior in-level owner dispatches it.
+        this.inLevelGameplayOwnedExternally = false;
         this.freshLevelTransitionMode = false;
         freshLevelChildMovementObserved = false;
         freshLevelTitleReady = false;
@@ -1023,6 +1069,12 @@ public class Sonic3kTitleCardManager
             // Process_Sprites. The carried title owner resumes in LevelLoop.
             return;
         }
+        if (freshLevelTransitionMode && state == Sonic3kTitleCardState.COMPLETE
+                && !freshLevelTitleReady) {
+            // A deleted-at-init owner: this loc_62CC Process_Sprites pass ran
+            // Obj_TitleCardInit's Delete_Current_Sprite, clearing objoff_48.
+            freshLevelTitleReady = true;
+        }
         if (freshLevelTransitionMode && state == Sonic3kTitleCardState.DISPLAY
                 && !freshLevelTitleReady) {
             // Obj_TitleCardWait first clears $34 from the preceding child
@@ -1085,10 +1137,33 @@ public class Sonic3kTitleCardManager
             if (!plc.isBusy()) {
                 // loc_62CC's two gates have opened. LoadLevelLoadBlock owns
                 // these terrain parents; Wait2/LoadEnemyArt remains separate.
-                freshLevelTerrainStarted = true;
-                publishFreshLevelRuntimeArtHandoffIfNeeded();
+                // The resumable Level owner continues after this scan's real
+                // module/direct queue tail, where loc_62CC tests its gates.
+                if (!com.openggf.level.NativeLevelLoadAccess.isPending(GameServices.level()))
+                    beginNativeFreshTerrain();
             }
         }
+    }
+
+    /** The production continuation observes the existing loc_62CC gates only. */
+    public boolean nativeFreshTitleWaitComplete() {
+        if (!freshLevelTransitionMode) return false;
+        var world = GameServices.level().getWorldSession();
+        var plc = com.openggf.game.session.WorldPlcLifecycleAccess.require(
+                world, com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
+        return freshLevelTitleReady && !plc.isBusy();
+    }
+
+    /** Called after the continuation's real camera/deformation prefix. */
+    public void beginNativeFreshTerrain() {
+        freshLevelTerrainStarted = true;
+        publishFreshLevelRuntimeArtHandoffIfNeeded();
+    }
+
+    /** The real loc_62CC tail already ran; the next POST_OBJECTS may start the first child. */
+    public void beginNativeFreshTerrainAfterQueueTail() {
+        freshLevelTerrainStarted = true;
+        publishFreshLevelRuntimeArtHandoffIfNeeded(false);
     }
 
     @Override
@@ -1102,7 +1177,11 @@ public class Sonic3kTitleCardManager
 
     @Override
     public boolean installsImmediateFreshLevelPalette() {
-        return true;
+        // loc_5FC4 (sonic3k.asm:7543-7557) skips the black fade at $D01;
+        // the ending keeps its white entry rather than a title-owned black field.
+        var level = GameServices.levelOrNull();
+        return level == null
+                || !freshLevelTitleOwnerDeletesAtInit(level.getCurrentZone(), level.getCurrentAct());
     }
 
     @Override
@@ -1119,7 +1198,16 @@ public class Sonic3kTitleCardManager
     }
 
     @Override
+    public boolean releaseScanServicesLoadLoopVBlank() {
+        // Only a Level-routine owner waits in LoadLevelLoadBlock's loc_7870
+        // loop; its release is observed after that loop's last Wait_VSync.
+        return freshLevelTransitionMode && freshLevelTerrainStarted;
+    }
+
+    @Override
     public boolean shouldCompleteFreshLevelTransitionBoundary() {
+        var loadingManager = GameServices.levelOrNull();
+        if (loadingManager != null && com.openggf.level.NativeLevelLoadAccess.isPending(loadingManager)) return false;
         return freshLevelTransitionMode
                 ? freshLevelTerrainStarted && !com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.current()
                         .freshLevelArtWaitsForModuleQueue()
@@ -1548,6 +1636,10 @@ public class Sonic3kTitleCardManager
     }
 
     private void publishFreshLevelRuntimeArtHandoffIfNeeded() {
+        publishFreshLevelRuntimeArtHandoffIfNeeded(true);
+    }
+
+    private void publishFreshLevelRuntimeArtHandoffIfNeeded(boolean insideObjectScan) {
         int levelIndex = freshLevelRuntimeArtHandoffLevelIndex;
         if (levelIndex < 0) {
             return;
@@ -1558,7 +1650,7 @@ public class Sonic3kTitleCardManager
             // its title/Nem gates open. LoadLevelLoadBlock then queues terrain
             // parents; their first direct child belongs to the next loc_7870
             // iteration. Keep that late-producer boundary on fresh loads too.
-            if (freshLevelTransitionMode || freshLevelTitleOwnerReplacedAtAssembly) {
+            if (insideObjectScan && (freshLevelTransitionMode || freshLevelTitleOwnerReplacedAtAssembly)) {
                 GameServices.runtimeArtCoordinator()
                         .deferProductionFirstChildForLateProducer();
             }

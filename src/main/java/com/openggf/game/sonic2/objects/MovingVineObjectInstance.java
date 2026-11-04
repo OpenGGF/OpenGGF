@@ -812,7 +812,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         ctx.drawLine(x - 8, currentY - 8, x + 8, currentY + 8, grabR, grabG, 0.0f);
         ctx.drawLine(x + 8, currentY - 8, x - 8, currentY + 8, grabR, grabG, 0.0f);
 
-        // Object bounding box (ROM Obj80_Init: width_pixels $10, y_radius $80; s2.asm:56659-56661).
+        // Object bounding box (ROM Obj80_Init: width_pixels $10, y_radius $80; s2.asm:56775-56777).
         int boxLeft = x - 0x10;
         int boxRight = x + 0x10;
         int boxTop = currentY - 0x80;

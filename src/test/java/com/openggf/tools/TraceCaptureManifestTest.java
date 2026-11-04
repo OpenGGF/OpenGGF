@@ -71,7 +71,7 @@ class TraceCaptureManifestTest {
                 "level", "2.9", "gpgx", null, 0, "aiz1",
                 "trace.bk2", "checksum", "notes", List.of("sonic"),
                 "sonic", List.of(), null, null, "level", "movie",
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private static TraceEntry entry(Path directory, TraceMetadata metadata) {

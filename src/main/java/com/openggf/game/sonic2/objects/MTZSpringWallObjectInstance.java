@@ -125,7 +125,7 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM Obj66 (loc_2702C, s2.asm:52839-52844) performs an explicit coarse-X
+        // ROM Obj66 (loc_2702C, s2.asm:53245-53250) performs an explicit coarse-X
         // DeleteObject after the per-player solid/bounce passes:
         //   move.w x_pos(a0),d0
         //   andi.w #$FF80,d0              ; chunk-align object X
@@ -196,7 +196,7 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
 
     /**
      * Applies the spring wall bounce to the player.
-     * From disassembly: loc_27042 / loc_2704C (s2.asm lines 52855-52921)
+     * From disassembly: loc_27042 / loc_2704C (s2.asm lines 53302-53368)
      */
     private void applyBounce(AbstractPlayableSprite player) {
         // REV01 check: player routine < 4 (not hurt/dead)

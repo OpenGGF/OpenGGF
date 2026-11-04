@@ -66,14 +66,6 @@ public final class SozQuicksandObjectInstance extends AbstractObjectInstance
         } else {
             acquire(player, slot);
         }
-        if (participants.flag(slot, 0) && player.isOnObject()) {
-            // sub_3FD4E and the other sand owners set Status_OnObj without
-            // SolidObject. Preserve that ownership through inline cleanup.
-            var manager = services().objectManager();
-            if (manager != null) {
-                manager.markObjectSupportThisFrame(player);
-            }
-        }
     }
 
     private boolean inside(AbstractPlayableSprite player) {

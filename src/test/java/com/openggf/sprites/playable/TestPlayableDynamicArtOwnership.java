@@ -1,6 +1,5 @@
 package com.openggf.sprites.playable;
 
-import com.openggf.game.GameId;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.level.render.SpriteDplcFrame;
@@ -19,7 +18,8 @@ class TestPlayableDynamicArtOwnership {
 
     @Test
     void animationCapabilityPublishesButGenericMappingSetterDoesNot() {
-        DynamicArtLifecycleService lifecycle = new DynamicArtLifecycleService();
+        DynamicArtLifecycleService lifecycle = new DynamicArtLifecycleService(
+                new com.openggf.game.sonic2.Sonic2GameModule().getGameService(com.openggf.game.resources.PlayerArtTransferPlan.class));
         lifecycle.beginRun();
         lifecycle.openComparisonSegment();
         PlayerSpriteRenderer renderer = mock(PlayerSpriteRenderer.class);
@@ -31,7 +31,7 @@ class TestPlayableDynamicArtOwnership {
         sonic.setAnimationProfile((sprite, frameCounter, frameCount) -> 3);
         sonic.getAnimationManager().setDynamicArtDecisionOwner(
                 new DynamicArtDecisionOwner(
-                        lifecycle, GameId.S2, "sonic", renderer));
+                        lifecycle, "sonic", renderer));
 
         sonic.getAnimationManager().update(0);
         lifecycle.publishRow(0, false);

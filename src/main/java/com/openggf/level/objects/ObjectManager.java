@@ -7,6 +7,8 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameModule;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.SpawnRefId;
@@ -88,7 +90,6 @@ public class ObjectManager {
     private final BitSet slotsFreedDuringObjectPass = new BitSet();
     private final List<PlayableEntity> activePlayersScratch = new ArrayList<>(4);
     private final List<ObjectSpawn> newSpawnsScratch = new ArrayList<>();
-    private final List<ObjectInstance> postPlayerHooksScratch = new ArrayList<>();
     // Cached spawn-order comparators (built lazily; placement is constructor-set).
     private Comparator<ObjectSpawn> forwardSpawnOrder;
     private Comparator<ObjectSpawn> backwardSpawnOrder;
@@ -328,8 +329,7 @@ public class ObjectManager {
                     activeObjectsCacheDirty = true;
                 });
         this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
-                slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
-                postPlayerHooksScratch);
+                slotAllocator, reservedChildSlots, activeObjects, dynamicObjects);
         this.childReservationLedger = new NativeChildReservationLedger(objectCallbacks, slotLayout,
                 reservedChildSlots, instanceToSpawn, activeObjects, dynamicObjects,
                 rewindObjectIds::containsKey, this::managedSpawn, this::allocateSlotAfter,
@@ -570,6 +570,12 @@ public class ObjectManager {
         return objectServices;
     }
 
+    void installDeferredFixedLevelObjects() {
+        if (registry instanceof com.openggf.game.internal.DeferredLevelFixedObjectInstallation deferred
+                && deferred.defersFixedLevelObjects())
+            deferred.installDeferredFixedLevelObjects(objectServices.romZoneId(), objectServices.currentAct(), fixedSstObjects);
+    }
+
     /** The services this manager injects into every object it owns. */
     public ObjectServices getObjectServices() {
         return objectServices;
@@ -617,6 +623,16 @@ public class ObjectManager {
      * <p>Idempotent: objects that already exist are not re-created.
      */
     public void preloadInitialSpawnsForHydration() {
+        syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
+    }
+
+    /** Initializes Load_Sprites cursors after installing a fresh layout, retaining fixed SST owners. */
+    void prepareInitialPlacementWindow(List<ObjectSpawn> spawns, int cameraX, PersistentRespawnState respawn) {
+        placement.replaceSpawnsAndReset(spawns, competitionStreaming.upfrontActive());
+        // Prefix-only construction had no layout; size state before restoring it.
+        placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
+        placement.reset(cameraX, respawn, competitionStreaming.upfrontActive());
+        twoAxisCameraYCoarse = Integer.MIN_VALUE;
         syncActiveSpawnsLoad(skipVerticalSpawnLoadFilterForGame);
     }
 
@@ -753,16 +769,40 @@ public class ObjectManager {
             objectCallbacks.run(inst, inst::snapshotTouchResponseState);
     }
 
+    /**
+     * The end-of-frame BuildSprites / Render_Sprites pass: records every object's
+     * {@code render_flags.on_screen} for the next frame's logic, then lets objects
+     * with their own retained render state refresh it.
+     */
     public void refreshPostCameraRenderState() {
         updateRenderCameraBounds();
+        boolean heightPixelsTest = renderSpritesTestsHeightPixels();
         for (ObjectInstance inst : activeObjects.values()) {
-            if (!ObjectDirectionAccess.suspended(this, inst))
-                objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+            refreshPostCameraRenderState(inst, heightPixelsTest);
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (!ObjectDirectionAccess.suspended(this, inst))
-                objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+            refreshPostCameraRenderState(inst, heightPixelsTest);
         }
+    }
+
+    private void refreshPostCameraRenderState(ObjectInstance inst, boolean heightPixelsTest) {
+        if (ObjectDirectionAccess.suspended(this, inst)) {
+            return;
+        }
+        if (inst instanceof AbstractObjectInstance aoi) {
+            objectCallbacks.run(inst, () -> aoi.captureRenderFlagOnScreen(heightPixelsTest));
+        }
+        objectCallbacks.run(inst, inst::refreshPostCameraRenderState);
+    }
+
+    private boolean renderSpritesTestsHeightPixels() {
+        // S3K Render_Sprites always tests height_pixels; S1/S2 BuildSprites
+        // assume a 32-px Y radius unless the object sets the explicit-height flag.
+        // The same rule selects the playable sprite's render-flag Y test
+        // (Camera.isVisibleForRenderFlag).
+        GameModule module = objectServices != null ? objectServices.gameModule() : null;
+        GameRules rules = module != null ? module.getRules() : null;
+        return rules != null && rules.camera().useScreenYWrapValueForVisibility();
     }
 
     public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks,
@@ -848,9 +888,8 @@ public class ObjectManager {
             }
             flushPostExecDynamicSpawns();
         } finally {
-            if (inlineSolidResolution) {
-                solidContacts.finishInlineFrame(player, activeSidekicks);
-            }
+            // No solid pass runs after the objects: each helper already wrote
+            // Status_OnObj / Status_InAir at its own call site.
             solidExecutionRegistry.finishFrame();
         }
 
@@ -997,18 +1036,20 @@ public class ObjectManager {
             ObjectInstance instance,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
-            boolean solidPostMovement) {
+            boolean solidPostMovement,
+            SolidEntryRegisters registers) {
         return solidContacts.processManualCheckpoint(
-                instance, player, sidekicks, solidPostMovement);
+                instance, player, sidekicks, solidPostMovement, registers);
     }
 
     SolidCheckpointBatch processCompatibilitySolidCheckpoint(
             ObjectInstance instance,
             PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
-            boolean solidPostMovement) {
+            boolean solidPostMovement,
+            SolidEntryRegisters registers) {
         return solidContacts.processCompatibilityCheckpoint(
-                instance, player, sidekicks, solidPostMovement);
+                instance, player, sidekicks, solidPostMovement, registers);
     }
 
     // Initial dispatch callers publish only after their native delete/range tail.
@@ -1782,14 +1823,6 @@ public class ObjectManager {
      */
     public List<TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition() {
         return populationView.snapshotAllLiveSstObjects();
-    }
-
-    /**
-     * Runs post-player hooks for legacy object-order modules after the main
-     * playable update has completed for the current frame.
-     */
-    public void runPostPlayerHooks(PlayableEntity player, int vIntRunCount) {
-        populationView.runPostPlayerHooks(stageplayActiveRoutineObjects(), player, vIntRunCount);
     }
 
     /**
@@ -3134,25 +3167,7 @@ public class ObjectManager {
         solidContacts.clearRidingObjectForJump(player);
     }
 
-    public void forceAirOnStaleObjectSupportLoss(PlayableEntity player) {
-        solidContacts.forceAirOnStaleObjectSupportLoss(player);
-    }
-
-    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) { return solidContacts.hasPendingStaleObjectSupportLoss(player); }
-
     public ObjectSolidContactController solidContacts() { return solidContacts; }
-
-    /**
-     * Preserves a non-solid object's ownership of the player's on-object state for the
-     * current inline ExecuteObjects pass.
-     * <p>
-     * Some ROM objects (for example S2 Obj06 spiral) set {@code status.player.on_object}
-     * without going through SolidObject. Inline solid cleanup must not clear that state at
-     * frame end, so these objects can mark the player as supported for the current pass.
-     */
-    public void markObjectSupportThisFrame(PlayableEntity player) {
-        solidContacts.markObjectSupportThisFrame(player);
-    }
 
     /**
      * Get the object that this player is currently standing on (riding).
@@ -3173,57 +3188,9 @@ public class ObjectManager {
         return solidContacts.getRidingPieceIndex(player);
     }
 
-    public boolean hasStandingContact(PlayableEntity player) {
-        return solidContacts.hasStandingContact(player);
-    }
-
-    public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
-        return solidContacts.getHeadroomDistance(player, hexAngle);
-    }
-
     /** Player y-radius captured before the currently executing solid checkpoint. */
     public int getPreContactYRadius() {
         return solidContacts.getPreContactYRadius();
-    }
-
-    public boolean latestStandingSnapshot(PlayableEntity player) {
-        return solidContacts.latestStandingSnapshot(player);
-    }
-
-    public boolean hasGroundingObjectSupport(PlayableEntity player) {
-        return solidContacts.hasGroundingObjectSupport(player);
-    }
-
-    public int latestHeadroomSnapshot(PlayableEntity player, int hexAngle) {
-        return solidContacts.latestHeadroomSnapshot(player, hexAngle);
-    }
-
-    /**
-     * Run solid contacts resolution for a player sprite.
-     * This is called by the CollisionSystem as part of the unified collision pipeline.
-     */
-    public void updateSolidContacts(PlayableEntity player) {
-        solidContacts.setDeferSideToPostMovement(false);
-        solidContacts.update(player, false);
-    }
-
-    /**
-     * Update solid contacts with an explicit post-movement flag. When {@code postMovement}
-     * is true, the velocity classification adjustment is skipped because the player's
-     * position already reflects their velocity (movement has already happened).
-     * <p>Used by the S1 UNIFIED model where solid objects run AFTER Sonic's movement,
-     * unlike S2/S3K where solid contacts run before movement.
-     *
-     * @param deferSideToPostMovement when true, side collision effects (speed zeroing,
-     *     position correction) are skipped in this pass because a post-movement pass will
-     *     handle them. This is used for the pre-movement pass in S1 UNIFIED, where the ROM
-     *     processes solid objects AFTER Sonic's movement — side collisions at the pre-movement
-     *     position are spurious.
-     */
-    public void updateSolidContacts(PlayableEntity player, boolean postMovement,
-                                     boolean deferSideToPostMovement) {
-        solidContacts.setDeferSideToPostMovement(deferSideToPostMovement);
-        solidContacts.update(player, postMovement);
     }
 
     /**
@@ -3241,15 +3208,14 @@ public class ObjectManager {
             return;
         }
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
-        solidContacts.processCompatibilityCheckpoint(object, player, activeSidekicks, true);
-    }
-
-    /**
-     * Refresh the ObjectSolidContactController riding tracking position for an object after it has moved itself.
-     * Prevents the delta from that movement being double-applied to riding players.
-     */
-    public void refreshRidingTrackingPosition(ObjectInstance object) {
-        solidContacts.refreshRidingTrackingPosition(object);
+        if (!(object instanceof SolidObjectProvider provider)) {
+            return;
+        }
+        // d4 is the object's current x: either it was allocated after the pass
+        // reached its slot, or it already carried its riders at its own call
+        // this frame and must not carry them again.
+        solidContacts.processCompatibilityCheckpoint(object, player, activeSidekicks, true,
+                SolidEntryRegisters.capture(this, object, provider));
     }
 
     /**
@@ -3398,7 +3364,7 @@ public class ObjectManager {
     }
 
     /**
-     * ROM parity: S1 {@code out_of_range} macro (Macros.asm line 261).
+     * ROM parity: S1 {@code out_of_range} macro (Macros.asm line 278).
      * <p>
      * Computes unsigned 16-bit distance between object and screen position:
      * <pre>
@@ -4056,12 +4022,15 @@ public class ObjectManager {
     }
 
     private void updateRenderCameraBounds() {
-        // S3K Render_Sprites reads Camera_X_pos_copy/Camera_Y_pos_copy after
-        // ScreenEvents, while object logic and placement use the live camera
-        // words (sonic3k.asm:36364,36383-36401). Keep this phase-specific so
-        // the copied event coordinates do not leak into the next object pass.
-        int left = camera.getXCopy();
-        int top = camera.getYCopy();
+        // BuildSprites / Render_Sprites read Camera_X_pos_copy/Camera_Y_pos_copy
+        // after the zone's scroll/screen-event routine has added the screen-shake
+        // offset (S2 BuildSprites s2.asm:30567,30589-30611, shake e.g. SwScrl_ARZ
+        // s2.asm:17709-17728; S3K sonic3k.asm:36364,36383-36401 after ScreenEvents),
+        // while object logic and placement use the live camera words. Keep this
+        // phase-specific so the copied coordinates do not leak into the next
+        // object pass.
+        int left = (short) (camera.getXCopy() + camera.getShakeOffsetX());
+        int top = (short) (camera.getYCopy() + camera.getShakeOffsetY());
         updateCameraBounds(left, top);
     }
 

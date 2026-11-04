@@ -8,7 +8,6 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.TestablePlayableSprite;
@@ -96,7 +95,6 @@ class TestMhzSwingVineObjectInstance {
         player.setJumpInputPressed(true);
         player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(1, player);
-        ((PostPlayerUpdateHook) vine).updatePostPlayer(1, player);
 
         assertFalse(player.isObjectControlled(),
                 "Jump release clears object_control after applying the launch");
@@ -161,7 +159,6 @@ class TestMhzSwingVineObjectInstance {
         player.setJumpInputPressed(true);
         player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(1, player);
-        ((PostPlayerUpdateHook) vine).updatePostPlayer(1, player);
 
         assertEquals((short) 0x0C00, player.getXSpeed(),
                 "Fast grab byte $81 triggers loc_22690; loc_229B6 writes x_vel from cos(angle)*$C "
@@ -322,7 +319,6 @@ class TestMhzSwingVineObjectInstance {
         player.setJumpInputPressed(true);
         player.setLogicalInputState(false, false, false, false, true, true);
         vine.update(2, player); // jump release clears the grab
-        ((PostPlayerUpdateHook) vine).updatePostPlayer(2, player);
 
         verify(camera).requestForcedScroll(0x2600, 0x0660);
 

@@ -77,7 +77,7 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM: Obj68_Init (s2.asm lines 53246-53279)
+     * ROM: Obj68_Init (s2.asm lines 53711-53744)
      * Spawns the spike child object with initial direction synchronized to
      * the level frame counter and subtype.
      */
@@ -107,7 +107,7 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
                 false,
                 spawn.rawYWord());
 
-        // ROM: Obj68_Init (s2.asm:53258) spawns the spike via
+        // ROM: Obj68_Init (s2.asm:53729) spawns the spike via
         // AllocateObjectAfterCurrent. Route through spawnChild (the engine's
         // child-spawn helper) rather than calling addDynamicObject directly,
         // per the object-spawning contract in AGENTS.md.

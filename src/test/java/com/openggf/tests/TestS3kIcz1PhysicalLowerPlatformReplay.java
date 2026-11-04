@@ -239,7 +239,6 @@ class TestS3kIcz1PhysicalLowerPlatformReplay {
         if (riding) assertRide();
         else {
             assertNull(objects.getRidingObject(player()));
-            assertFalse(objects.hasStandingContact(player()));
         }
         objects.validateRewindReferenceClosure();
         same(spot, label, 0);
@@ -255,7 +254,6 @@ class TestS3kIcz1PhysicalLowerPlatformReplay {
         var p1 = player();
         assertSame(platform, objects.getRidingObject(p1));
         assertEquals(0, objects.getRidingPieceIndex(p1));
-        assertTrue(objects.hasStandingContact(p1));
         // Native child SSTs have separate standing bits; the folded parent has no aggregate bit.
         var standingBits = objects.rewindSnapshottable().capture().solidContactState().standingBits();
         assertTrue(standingBits.stream()

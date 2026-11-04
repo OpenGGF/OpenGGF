@@ -322,6 +322,74 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         return level;
     }
 
+    /** Immutable source selection made before Get_LevelSizeStart consumes saved-entry ownership. */
+    record FreshLoadSelection(LevelBuildInputs inputs,
+            com.openggf.game.internal.NativeLevelLoadInputs displayInputs,
+            com.openggf.game.internal.NativeLevelLoadInputs dataInputs,
+            com.openggf.game.internal.NativeLevelLoadInputs setupInputs,
+            com.openggf.game.internal.NativeLevelLoadInputs initialObjectInputs) { }
+
+    FreshLoadSelection selectFreshLevelLoad(int levelIndex) throws IOException {
+        LevelBuildInputs inputs = captureLevelBuildInputs(levelIndex, true);
+        int[] identity = zoneAndActOf(levelIndex);
+        var resources = Sonic3kLevelResourceProfile.resolve(identity[0], identity[1]);
+        int llb = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                + resolveLevelLoadBlockIndex(identity[0], identity[1], inputs.bootstrap()) * 24;
+        int layoutEntry = Sonic3kConstants.LEVEL_PTRS_ADDR
+                + resources.tableIndex() * Sonic3kConstants.LEVEL_PTRS_ENTRY_SIZE;
+        int layout = resources.customResources().isPresent()
+                ? resources.requireCustomResources().layoutAddress()
+                : getLayoutAddr(resources.romZone(), resources.romAct());
+        int playerMode = switch (com.openggf.game.session.ActiveGameplayTeamResolver
+                .resolvePlayerCharacter(GameServices.configuration())) {
+            case SONIC_AND_TAILS -> 0; case SONIC_ALONE -> 1;
+            case TAILS_ALONE -> 2; case KNUCKLES -> 3;
+        };
+        var reader = RomByteReader.fromRom(rom);
+        var regions = java.util.List.of(
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(llb, 24),
+                new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(layoutEntry, 4));
+        // These are source choices, never resident-cache contents or decoded progress.
+        var choices = new java.util.ArrayList<Integer>();
+        for (int offset = 0; offset < 24; offset += 4) choices.add(rom.read32BitAddr(llb + offset) & 0xFFFFFF);
+        var custom = resources.customResources().orElse(null);
+        if (custom != null) {
+            choices.set(0, custom.primaryArtAddress()); choices.set(1, custom.secondaryArtAddress());
+            choices.set(2, custom.primaryBlocksAddress()); choices.set(3, custom.secondaryBlocksAddress());
+            choices.set(4, custom.primaryChunksAddress()); choices.set(5, custom.secondaryChunksAddress());
+        }
+        var overlay = resolveGameplayOverlay(identity[0], identity[1], inputs.bootstrap(),
+                resolveLevelLoadBlockIndex(identity[0], identity[1], inputs.bootstrap()), choices.get(1), choices.get(3));
+        choices.set(1, overlay.secondaryArtAddr()); choices.set(3, overlay.secondaryBlocksAddr());
+        choices.add(layout);
+        int resourceIndex = resources.romZone() * 2 + resources.romAct();
+        // Pinned LevelSetupArray at $4E458 interleaves setup/event pairs, 32 bytes per zone.
+        // j_LevelSetup $1C2AA -> LevelSetup $4E35C; sonic3k.asm:102251-102305.
+        int setupEntry = 0x04E458 + resources.romZone() * 32 + resources.romAct() * 8;
+        int startEntry = (playerMode == 3 ? Sonic3kConstants.KNUX_START_LOCATIONS_ADDR
+                : Sonic3kConstants.SONIC_START_LOCATIONS_ADDR) + resourceIndex * 4;
+        return new FreshLoadSelection(inputs,
+                com.openggf.game.internal.NativeLevelLoadInputs.fromRom(reader, java.util.List.of(), java.util.List.of(0)),
+                com.openggf.game.internal.NativeLevelLoadInputs.fromRom(reader, regions, choices),
+                com.openggf.game.internal.NativeLevelLoadInputs.fromRom(reader, java.util.List.of(
+                        new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(setupEntry, 8),
+                        new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(
+                                getLevelBoundariesAddr(resources.romZone(), resources.romAct(), inputs.bootstrap()), 8)), java.util.List.of(playerMode)),
+                com.openggf.game.internal.NativeLevelLoadInputs.fromRom(reader, java.util.List.of(
+                        new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(Sonic3kConstants.SPRITE_LOC_PTRS_ADDR + resourceIndex * 4, 4),
+                        new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(Sonic3kConstants.RING_LOC_PTRS_ADDR + resourceIndex * 4, 4),
+                        new com.openggf.game.internal.NativeLevelLoadInputs.RegionSelection(startEntry, 4)), java.util.List.of(playerMode)));
+    }
+
+    Sonic3kLevel loadFreshLevelPrefix(int levelIndex, FreshLoadSelection selected) throws IOException {
+        com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.validate(selected.inputs().frontendPatterns());
+        Sonic3kLevel level = buildLevel(levelIndex, DeferredLevelResourceTracker.none(), true,
+                selected.inputs(), Sonic3kLevel.ResidentChunkPatterns.EMPTY, true);
+        finishLevelLoad(level, levelIndex);
+        com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.installed(selected.inputs().frontendPatterns());
+        return level;
+    }
+
     /** Captures live character/bootstrap choices before the ROM worker starts. */
     @Override
     public Callable<PreparedLevelBuild> prepareLevelBuildTask(int levelIndex, String mutationKey) {
@@ -505,6 +573,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             int levelIdx, DeferredLevelResourceTracker deferredResources,
             boolean publishGraphics, LevelBuildInputs inputs,
             Sonic3kLevel.ResidentChunkPatterns residentChunks) throws IOException {
+        return buildLevel(levelIdx, deferredResources, publishGraphics, inputs, residentChunks, false);
+    }
+
+    private Sonic3kLevel buildLevel(
+            int levelIdx, DeferredLevelResourceTracker deferredResources,
+            boolean publishGraphics, LevelBuildInputs inputs,
+            Sonic3kLevel.ResidentChunkPatterns residentChunks, boolean deferTerrain) throws IOException {
         int[] zoneAct = zoneAndActOf(levelIdx);
         int zone = zoneAct[0];
         int act = zoneAct[1];
@@ -739,7 +814,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 publishGraphics,
                 new Sonic3kLevel.TerrainArtSources(primaryArtAddr, secondaryArtAddr),
                 inputs.frontendPatterns() == null ? new byte[0] : inputs.frontendPatterns().packed(),
-                inputs.residentBlocks(), residentChunks);
+                inputs.residentBlocks(), residentChunks, deferTerrain);
         validateCustomBounds(level, customResources);
         return level;
     }

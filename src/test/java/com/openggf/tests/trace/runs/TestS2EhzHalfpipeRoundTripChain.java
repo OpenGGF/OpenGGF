@@ -232,7 +232,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * row 1588, exactly as the ROM did. The defect was that the checkpoint was resolved
  * against the ring count captured when the marker was passed (36, row ~1538) instead
  * of the count when the rainbow finished. The ROM reads {@code (Ring_count)} and
- * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:71843-71853),
+ * {@code (Ring_count_2P)} live at {@code loc_35978} (docs/s2disasm/s2.asm:71958-71968),
  * reached only when the rainbow object's x hits {@code $E8} and it deletes itself, so
  * rings taken during the rainbow count. {@code Sonic2SpecialStageCheckpoint} now
  * resolves from a live ring supplier and the interior runs on to row 5213.

@@ -97,7 +97,7 @@ public class TailsTailsController {
         // override forces d0 = 4 (TailsAni_Push) before both the change test and
         // the Obj05AniSelection lookup (docs/s2disasm/s2.asm:41744-41751;
         // docs/skdisasm/sonic3k.asm:30081-30091). Obj05AniSelection[4] = 9 =
-        // Obj05Ani_Pushing (docs/s2disasm/s2.asm:41770-41776).
+        // Obj05Ani_Pushing (docs/s2disasm/s2.asm:41830-41836).
         if (parentPushOverrideApplies()) {
             parentAnimId = PARENT_ANIM_PUSH;
         }
@@ -340,7 +340,7 @@ public class TailsTailsController {
         short xVel = sprite.getXSpeed();
         short yVel = sprite.getYSpeed();
 
-        // ROM: TAnim_GetTailFrame (s2.asm:41478-41481) calls CalcAngle
+        // ROM: TAnim_GetTailFrame (s2.asm:41484-41487) calls CalcAngle
         // (s2.asm:4037-4081, Angle_Data table); S3K's tail routine calls the
         // identical GetArcTan (sonic3k.asm:3075, ArcTanTable).
         // 0=right, 64=down, 128=left, 192=up (Genesis convention, Y-down).

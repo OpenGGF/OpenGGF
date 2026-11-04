@@ -91,12 +91,8 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playsSound && isOnScreen()
-                && (levelFrameCounterOrFallback(vIntRunCount) & SOUND_MASK) == 0) {
-            try {
-                services().playSfx(Sonic3kSfx.LAVA_FALL.id);
-            } catch (Exception ignored) {
-                // Headless replays can omit the audio backend.
-            }
+                && (services().levelManager().getFrameCounter() & SOUND_MASK) == 0) {
+            services().playSfx(Sonic3kSfx.LAVA_FALL.id);
         }
         // subq.w #1,$2E(a0) / bmi -> Delete_Current_Sprite (sonic3k.asm:88866-88867, :88874).
         life = (short) (life - 1);
@@ -109,15 +105,6 @@ public final class LrzLavaFallDropInstance extends AbstractObjectInstance
         updateDynamicSpawn((xPosition >> 16) & 0xFFFF, (yPosition >> 16) & 0xFFFF);
     }
 
-    private int levelFrameCounterOrFallback(int fallback) {
-        try {
-            return services().levelManager() != null
-                    ? services().levelManager().getFrameCounter()
-                    : fallback;
-        } catch (Exception e) {
-            return fallback;
-        }
-    }
 
     /** ROM {@code $2E(a0)}. */
     public int life() {

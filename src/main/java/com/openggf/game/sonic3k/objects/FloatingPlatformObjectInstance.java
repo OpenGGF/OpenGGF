@@ -56,7 +56,7 @@ import java.util.logging.Logger;
  *   <li>12: Horizontal256 - slow accumulating sweep</li>
  * </ul>
  * <p>
- * ROM references: Obj_FloatingPlatform (sonic3k.asm line 50798), byte_254FA,
+ * ROM references: Obj_FloatingPlatform (sonic3k.asm line 50803), byte_254FA,
  * FloatingPlatformIndex (line 50174), Platform_Stationary (line 50190),
  * sub_24FDE (line 50229), Platform_Rising (line 50462), loc_252B8 (line 50556).
  */
@@ -257,7 +257,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         // Obj_FloatingPlatform tests the object render_flags sign bit before
         // calling SolidObjectTop (loc_255F4). Unlike SolidObjectTop itself,
         // this caller-owned gate suppresses both fresh and continued contact.
-        return !isDestroyed() && isWithinSolidContactBounds();
+        return !isDestroyed() && isWithinOnScreenRenderBounds();
     }
 
     // ===== SolidObjectListener =====
@@ -337,7 +337,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
 
     /**
      * Applies movement based on move type (subtype &amp; 0x0F).
-     * Ported from FloatingPlatformIndex (sonic3k.asm line 50214).
+     * Ported from FloatingPlatformIndex (sonic3k.asm line 50219).
      */
     private void applyMovement(AbstractPlayableSprite player) {
         switch (moveType) {

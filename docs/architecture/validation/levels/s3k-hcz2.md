@@ -1224,7 +1224,7 @@ capsule/results adapter; inherited breadth and pending-main restore gaps remain.
 (sonic3k.asm:182073-182084) during results creation. Its animation-byte write
 retains the already-published mapping until the next player pass. The retained
 adapter now publishes that pose immediately, queues native P2 for its next
-player slot, and permits `Obj_LevelResultsInit` (sonic3k.asm:182118-182137)
+player slot, and permits `Obj_LevelResultsInit` (sonic3k.asm:62557-62571)
 to submit art on its own initialization dispatch. Allocation's separate
 first-dispatch boundary remains intact.
 

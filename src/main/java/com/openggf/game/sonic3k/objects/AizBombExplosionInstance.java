@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Bomb explosion fragment from the AIZ2 battleship bombing sequence.
  *
- * <p>ROM: Obj_AIZBombExplosion (sonic3k.asm:105512).
+ * <p>ROM: Obj_AIZBombExplosion (sonic3k.asm:105517).
  * 8 fragments spawned per bomb impact, each with staggered delay, position offset,
  * and one of 2 animation variants. Collision flags 0x8B active during early frames.
  *

@@ -111,9 +111,6 @@ class TestNoProvisionalModApiShims {
                         boolean.class,
                         boolean.class,
                         boolean.class,
-                        boolean.class,
-                        boolean.class,
-                        boolean.class,
                         int.class
                 });
     }

@@ -476,20 +476,27 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             return LevelFrameResult.GAMEPLAY_FRAME;
         }
 
-        if (provider.shouldAdvanceVblankClockDuringLockedPhase()) {
+        var load = com.openggf.level.NativeLevelLoadAccess.beginTitleScan(levelManager);
+        if (load.parked()) return finishNormalTitleFrame(snapshot, LevelFrameResult.SETUP_ONLY);
+        if (!load.completedBeforeScan() && provider.shouldAdvanceVblankClockDuringLockedPhase()) {
             LevelFrameStep.executeHardwareTimedObjectScan(
                     context,
                     lifecycleFrame,
                     PlcLifecyclePhase.LEVEL_TITLE_CARD,
-                    () -> com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
-                            provider, levelManager.getWorldSession()));
-            levelManager.advanceTitleCardVblankOnly();
-        } else {
+                    () -> {
+                        if (load.clockOwned()) levelManager.advanceTitleCardVblankOnly();
+                        com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                                provider, levelManager.getWorldSession());
+                    });
+            if (!load.clockOwned()) levelManager.advanceTitleCardVblankOnly();
+        } else if (!load.completedBeforeScan()) {
             com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
                     provider, levelManager.getWorldSession());
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
         }
+        if (com.openggf.level.NativeLevelLoadAccess.finishTitleScan(levelManager))
+            return finishNormalTitleFrame(snapshot, LevelFrameResult.SETUP_ONLY);
 
         if (!freshLevelInitialBoundaryPublished
                 && (provider instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
@@ -503,9 +510,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             normalTitleCardActive = false;
             applyInLevelTitleCardControlLock(false);
         }
+        return finishNormalTitleFrame(snapshot, LevelFrameResult.GAMEPLAY_FRAME);
+    }
+
+    private LevelFrameResult finishNormalTitleFrame(LogicalInputSnapshot snapshot, LevelFrameResult result) {
         inputHandler.update();
         previousDriverSnapshot = snapshot;
-        return LevelFrameResult.GAMEPLAY_FRAME;
+        lastFrameResult = result;
+        return result;
     }
 
     private void startPendingInLevelTitleCardIfRequested() {

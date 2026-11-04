@@ -30,9 +30,7 @@ class TestSszColdRouteCapture {
     private void runColdRoute(boolean complete) throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null,
                 null, null, null, false, false, null, null, false, null, false);
-        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
-                "src/test/resources/routes/s3k/ssz1-sonic-tails-cold-"
-                        + (complete ? "complete" : "upper") + "-320.bk2"));
+        var movie = RouteFixtures.movie("ssz1-sonic-tails-cold-" + (complete ? "complete" : "upper") + "-320", settings);
         // Keep the qualified SSZ branch/history inlet; the independent neutral
         // tail allows a full one-owner fade and native DEZ entrance release.
         int routePrefixFrames = movie.getFrameCount() - (complete ? 180 : 0);
