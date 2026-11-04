@@ -13,7 +13,9 @@ Unreleased. The earlier development themes remain in
   fractional position between trips and accelerate the shipped way when they
   pass exactly through their centre, so a second ride starts moving on the
   original frame. Rolling through a monitor while another platform carries the
-  player no longer knocks the player off that platform.
+  player no longer knocks the player off that platform. After a plunger launch,
+  Tails' next landing ends the plunger's hold on her roll, so a later stop at
+  zero speed uncurls her as the shipped game does.
 
 - **Sonic 2 level start:** The title card spends the extra frame the shipped
   game waits after the zone name lands, and its exit runs the camera and zone
