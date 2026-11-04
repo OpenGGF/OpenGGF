@@ -1925,6 +1925,8 @@ its original drawing priority.
   ROM's own search instead of defaulting to the Chaos set.
   MHZ switch doors detach from their retired buttons before pending child
   cleanup, keeping rewind references valid on carried checkpoint entries.
+  Special-stage returns use their own saved camera bound for the first snap
+  while retaining the distinct star-post bound for a later death.
 
 - S3K bonus-return chain replay retains the first destination gameplay row,
   preventing a late enemy-art batch from stranding the KosM queue. FIFO overflow

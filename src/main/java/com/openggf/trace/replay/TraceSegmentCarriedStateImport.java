@@ -785,6 +785,20 @@ public final class TraceSegmentCarriedStateImport {
     }
 
     /**
+     * The selected Load_Starpost_Settings block owns the initial camera bound
+     * (loc_2D2C2, sonic3k.asm:61835-61850).
+     * A Saved2 return must not snap against Saved_*'s distinct death-checkpoint
+     * bound, which the same entry import retains for a later respawn.
+     */
+    public static void initializeCameraAtEntry(TraceSegmentCarriedState carried,
+            com.openggf.level.LevelManager level,
+            com.openggf.game.session.LevelEntryProvenance provenance) {
+        var restore = carried == null ? null : carried.restore();
+        com.openggf.level.LevelEntryInitialization.initializeCamera(level, provenance,
+                restore == null ? null : restore.cameraMaxY());
+    }
+
+    /**
      * The part of the entry restore that lands after the level-size and event
      * initialisation it overrides. In the ROM {@code Load_Starpost_Settings}
      * runs after {@code Get_LevelSizeStart} has set the bounds, and replaces

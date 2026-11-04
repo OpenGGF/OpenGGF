@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The S3K {@code Camera_X_pos} low word is one value. {@code Get_LevelSizeStart} writes
@@ -77,5 +78,28 @@ class TestCameraXFraction {
         TraceSegmentCarriedStateImport.importAtSegmentEntry(
                 TraceData.loadMetadataOnly(dir), GameServices.sprites().getMainPlayable());
         assertEquals(0x2F00, CameraSubpixelAccess.xFraction(camera), "absent: nothing is invented");
+    }
+
+    @Test
+    void returnCameraUsesSelectedRestoreBoundAndRetainsDistinctDeathCheckpoint() throws Exception {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        HeadlessTestFixture.builder().withZoneAndAct(0, 1).build();
+        var trace = TraceData.loadMetadataOnly(Path.of(
+                "src/test/resources/traces/s3k/runs/s3k-tails-full-chain-all-emeralds/aiz_3"));
+        var player = GameServices.sprites().getMainPlayable();
+        player.setCentreX(trace.metadata().startX());
+        player.setCentreY(trace.metadata().startY());
+        var carried = TraceSegmentCarriedStateImport.importAtSegmentEntry(trace, player);
+        var checkpoint = (com.openggf.game.CheckpointState) GameServices.level().getCheckpointState();
+        int deathBound = checkpoint.getSavedCameraMaxY();
+        assertTrue(deathBound < carried.restore().cameraMaxY(), "the recording has distinct saved blocks");
+
+        TraceSegmentCarriedStateImport.initializeCameraAtEntry(carried, GameServices.level(),
+                com.openggf.game.session.LevelEntryProvenance.POSITIONED_RETURN_SPAWN);
+
+        assertEquals(carried.restore().cameraMaxY(), GameServices.camera().getMaxY());
+        assertTrue(GameServices.camera().getY() > deathBound,
+                "the current return must not clamp to its unrelated death checkpoint");
+        assertEquals(deathBound, checkpoint.getSavedCameraMaxY(), "later death retains Saved_*");
     }
 }

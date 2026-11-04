@@ -128,6 +128,12 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (parent == null || parent.isDestroyed()) {
+            // A later slot can still dispatch after the parent retired it.
+            // Child_Draw_Sprite's deletion path must not read the old parent.
+            retireWithParent();
+            return;
+        }
         if (state == State.IDLE) {
             if (parent.isDoorSwitchActive()) {
                 parent.clearDoorSwitchActive();

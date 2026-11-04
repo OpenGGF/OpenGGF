@@ -1311,7 +1311,7 @@ public final class TraceReplaySessionBootstrap {
             }
             GroundSensor.setLevelManager(level);
             if (!preserveProductionLoadCamera) {
-                com.openggf.level.LevelEntryInitialization.initializeCamera(level,
+                TraceSegmentCarriedStateImport.initializeCameraAtEntry(carried, level,
                         TraceReplayBootstrap.entryProvenanceForTraceReplay(trace));
             }
             level.initLevelEventsForLevel();

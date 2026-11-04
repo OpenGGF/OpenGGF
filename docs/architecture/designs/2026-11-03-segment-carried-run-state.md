@@ -35,6 +35,14 @@ engine gameplay after entry, and no value is hand-authored for a fixture.
 Run-chain walks never call it. A continuation segment's state lives in the
 engine that played the previous segment.
 
+The selected restore block's camera maximum must reach camera initialization
+before its first snap. A special-stage return can use `Saved2_*` while the
+imported death checkpoint retains different `Saved_*` bounds; the latter must
+not clamp the current return. `initializeCameraAtEntry` supplies that bound
+through the same entry mechanism. The checkpoint remains available unchanged
+for a later death, and the post-initialization import still restores the live
+bounds, event routine and water after event setup.
+
 The run is found from the segment's own metadata (`run_id`, `segment_index`):
 `run_manifest.json` beside the segment directory, or `runs/<run_id>/` for a
 standalone copy. The manifest segment must agree on `bk2_frame_offset` and

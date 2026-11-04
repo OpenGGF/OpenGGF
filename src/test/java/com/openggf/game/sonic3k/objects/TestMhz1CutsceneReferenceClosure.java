@@ -106,6 +106,7 @@ class TestMhz1CutsceneReferenceClosure {
         assertNull(readObjectField(door, "parent"));
         assertNull(readObjectField(button, "spawnedDoor"));
         assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+        assertDoesNotThrow(() -> door.update(0, null), "a later slot can still dispatch the retired child");
         assertDoesNotThrow(door::onUnload, "later child cleanup is idempotent");
     }
 
