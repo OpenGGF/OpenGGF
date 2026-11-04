@@ -1007,6 +1007,11 @@ public class LevelTransitionCoordinator {
         return levelInactiveForTransition || bonusStageRequested != null;
     }
 
+    /** The inactive flag alone; see {@link LevelTransitionHostAccess#freezesHostIteration}. */
+    boolean isLevelInactiveBeforeObjectPass() {
+        return levelInactiveForTransition;
+    }
+
     /**
      * Sets the level-inactive-for-transition flag.
      */

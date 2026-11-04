@@ -289,3 +289,14 @@ expected inherited failure, zero errors/skips. All four segment report JSONs
 are identical to the completed candidate profile, including seg0/seg2 zero.
 The only assertion is the missing Slots interior exit; no segment-physics axis
 remains. New audit citations pass strict checking; staged whitespace checks pass.
+
+## Follow-up: host-loop freeze on an unconsumed request (2026-11-04)
+
+`TestS3kTitleCardHoldRoutes.bonusEntryAndReturnBothReleaseIntoTheHold` went red
+at the merge of this work (`046220301`; `5a1b74708` green). `GameLoop`'s freeze
+gate reads `isLevelInactiveForTransition()`, and its only bonus consumer runs in
+the unfrozen branch, so a request raised outside an object pass froze every
+later iteration and was never consumed. The gate now reads the inactive flag
+without the pending request (`LevelTransitionHostAccess`); the in-frame restart
+guards and `RecordingFrameDriver` still see the request, so the camera hold and
+the HPZ22 attribution above are unchanged.
