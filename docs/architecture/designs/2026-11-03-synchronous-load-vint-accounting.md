@@ -1028,6 +1028,12 @@ counter reseed nor an emulated hardware model is introduced.
 Both exact user-approved compressed companions remain unchanged. Producer
 `c73335417979e2cc4303d25d9fc948bba370badc` is pushed to TraceChaser main, with
 repository policy/history checks passing and its owned task checkout/branch
-cleaned. Engine source is committed as `aba50b4f7dab48ba13833a4449810db36a85b636`; destination
-integration and accounted worktree/stash cleanup follow this qualification. Raw category diagnostics are acknowledged after recording
+cleaned. Engine source `aba50b4f7dab48ba13833a4449810db36a85b636` is integrated and
+pushed to develop by `06cb547e43405592e8ce92d9e2a05b6318c66a33`. The merged
+tracked tree equals the qualified candidate, and both approved compressed hashes
+are verified again from Git blobs. Owned engine/native task and baseline worktrees,
+fully merged local task branches and accounted task stashes are removed; user
+reference dirt, unknown files and unrelated worktrees/stashes are preserved.
+Durable reference captures remain in the external task directory. The later
+campaign and SpecialStage startup clock limits above remain open. Raw category diagnostics are acknowledged after recording
 these outcomes; they are not archived as pass receipts.
