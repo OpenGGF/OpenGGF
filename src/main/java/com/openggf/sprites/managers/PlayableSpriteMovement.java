@@ -4322,6 +4322,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		boolean preservePinballMode = movementRules != null
 				&& movementRules.landing().pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
+		// Obj85's preserved roll-stop handoff covers only the curl it leaves
+		// before the next landing. Tails_ResetOnFloor (s2.asm:41020-41033)
+		// clears rolling on landing unless pinball_mode is set, and Obj85 never
+		// writes pinball_mode, so no later roll stop belongs to the plunger.
+		sprite.clearObjectPreservedRollingHandoff();
 		boolean skipLandingRollClear = sprite.getRolling()
 				&& (com.openggf.game.mode.ControlledFrameRuntime.retainRolling(sprite)
 				|| (sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);

@@ -19,11 +19,16 @@ Unreleased. The earlier development themes remain in
   and independent end-state flags. Frame-boundary reloads no longer leave a
   second rewind-boundary marker or suppress the following gameplay oscillator tick.
 
+
 - **Sonic 2 elevators and monitors:** Casino Night elevators keep their
   fractional position between trips and accelerate the shipped way when they
   pass exactly through their centre, so a second ride starts moving on the
   original frame. Rolling through a monitor while another platform carries the
-  player no longer knocks the player off that platform.
+  player no longer knocks the player off that platform. After a plunger launch,
+  Tails' next landing ends the plunger's hold on her roll, so a later stop at
+  zero speed uncurls her as the shipped game does. A plunger seats a rider at the
+  height the shipped game's landing gives, and a bumper block on its third hit
+  stays touchable while its hit animation plays, as in the shipped game.
 
 - **Sonic 2 level start:** The title card spends the extra frame the shipped
   game waits after the zone name lands, and its exit runs the camera and zone
@@ -33,6 +38,17 @@ Unreleased. The earlier development themes remain in
   Knuckles in Sonic 2 results return to the level on the same frame as ordinary
   results. Hill Top and Mystic Cave events read the level frame counter the
   shipped game reads.
+
+
+- **Collapsing platforms (Oil Ocean, Mystic Cave, Aquatic Ruin):** When a
+  platform's last stood-on piece gives way, Sonic and Tails each lose their
+  "standing on an object" status if it is set, whatever they are standing on,
+  as the shipped game does. A Tails who died on the oil and is still falling
+  therefore drops the stale status at that moment instead of keeping it.
+
+- Seamless reloads preserve runtime-art admission, title camera-release timing
+  and independent end-state flags. Frame-boundary reloads no longer leave a
+  second rewind-boundary marker or suppress the following gameplay oscillator tick.
 
 - **Metropolis Zone boss draw layer:** The boss now takes its display layer from
   its height as the shipped game does, so it moves from layer 3 to layer 4 once it

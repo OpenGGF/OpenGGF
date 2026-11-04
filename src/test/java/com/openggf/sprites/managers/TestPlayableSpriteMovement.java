@@ -2895,6 +2895,31 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2LandingRetiresTheObj85PreservedRollStopForLaterRolls() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_2);
+                mockSprite.preserveRollingOnNextRollStop();
+                mockSprite.setRolling(false);
+                mockSprite.setPinballMode(false);
+                mockSprite.setAir(true);
+                Method floor = PlayableSpriteMovement.class.getDeclaredMethod("resetOnFloor");
+                floor.setAccessible(true);
+                floor.invoke(manager);
+                assertFalse(mockSprite.shouldPreserveRollingOnNextRollStop(),
+                                "Tails_ResetOnFloor ends any Obj85 curl; Obj85 never writes pinball_mode");
+
+                // A later, unrelated roll at zero inertia takes Tails_CheckRollStop's
+                // ordinary unroll branch (pinball_mode clear).
+                mockSprite.setAir(false);
+                mockSprite.setRolling(true);
+                mockSprite.setGSpeed((short) 0);
+                Method speed = PlayableSpriteMovement.class.getDeclaredMethod("doRollSpeed");
+                speed.setAccessible(true);
+                speed.invoke(manager);
+                assertFalse(mockSprite.getRolling());
+                assertEquals(0, mockSprite.getGSpeed());
+        }
+
+        @Test
         public void s2RomBackedPinballStillBlocksRollingJump() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
                 mockSprite.setGroundSensors(rightEdgeFloorSensors(mockSprite));
