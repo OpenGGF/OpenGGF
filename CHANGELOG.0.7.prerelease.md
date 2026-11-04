@@ -88,6 +88,7 @@ Unreleased. The earlier development themes remain in
   scroll and the Hidden Palace emerald theft share it instead of each starting
   from zero. The ending keeps its start camera until its art has loaded, and
   trace segments take the recorded sub-pixel position from their level-entry RAM.
+  Entry metadata preserves unsigned 32-bit camera longs as their native bits.
 
 - S3K fresh level loads count the terrain wait's final VBlank in the live game
   loop, as the recording driver already did. The remaining load-time lag

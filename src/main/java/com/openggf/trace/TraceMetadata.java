@@ -110,6 +110,7 @@ public record TraceMetadata(
      * restore blocks and the carried run counters, keyed by their wire names.
      * {@code null} when not recorded. The live counters are sampled before the
      * level's own initialisation runs; only the segment-entry import reads this.
+     * Signed or unsigned 32-bit wire integers retain their bits in Java ints.
      */
     public java.util.Map<String, Integer> levelEntryRam() {
         return levelEntryRam;
@@ -538,10 +539,16 @@ public record TraceMetadata(
                             + ": level_entry_ram must be an object");
                 }
                 for (var field : (Iterable<java.util.Map.Entry<String, JsonNode>>) entryRam::fields) {
-                    if (!field.getValue().isInt()) {
+                    JsonNode value = field.getValue();
+                    if (!value.isIntegralNumber() || !value.canConvertToLong()
+                            || value.longValue() < Integer.MIN_VALUE || value.longValue() > 0xFFFFFFFFL) {
                         throw new IllegalArgumentException(metadataFile.getFileName()
-                                + ": level_entry_ram." + field.getKey() + " must be an integer");
+                                + ": level_entry_ram." + field.getKey() + " must be a 32-bit integer");
                     }
+                    // The recorder exports RAM longs unsigned. Normalize the
+                    // bit pattern before Jackson binds Map<String, Integer>.
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) entryRam)
+                            .put(field.getKey(), (int) value.longValue());
                 }
             }
             JsonNode starPost = root.get("last_star_post_hit");
