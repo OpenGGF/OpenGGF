@@ -22,7 +22,7 @@ record. The ordinary four-jump route now returns through call7000, with real
 pre-save time-warp stars, cancellation and complete full/course replay. An extra
 controller jump reaches a Spinning Disc attachment on7178. Controlled Main now
 returns through the native common tail, and the permanent five-jump route
-now returns through7851 after the native timer210 save, timer230 restart HIGH-byte
+now returns through8084 after the native timer210 save, timer230 restart HIGH-byte
 write,22 old-LevelStart white-fade waits, the actual detached WARP scene,
 source-ordered Past loading and22 native from-white services. The named earlier cold-programme DEV lineage admits
 actual same-World FULL B entry at7729; legacy unknown-startup entries retain their
@@ -46,6 +46,45 @@ Animal presence and Pata-Bata before the ordinary Main continuation returns.
 Natural full/course7807→7808 restoration compares complete represented native
 state before forwarding the unchanged controller input. Selected Past GPU presentation now retains the actual prior SAT with current
 service output; whole acts and regional parity remain unfinished.
+
+## Past Collapse/Boulder and actual8084 — 4 November 2026
+
+Seven authenticated raw B views append after the old100 metadata entries without
+adding art/PLC ownership. Collapse retains its shared native body with the actual
+B mapping roots2/6/7/7. Boulder keeps Present's A74 contract and uses a named B72
+factory, actual selector11/tile0346, and a genuine completed/stopped plain-Solid
+publication path. The World caches both bodies, admits only their actual physical
+invocations, prebuilds pool/Frame/ledger outputs and retires callback scopes on
+all exits. No returned effect is replayed to publish behavior.
+
+One source-bound247-check run produced246 passes and one new fixture failure,
+zero errors/skips. The failure assumed free child slots on both sides of physical40;
+all earlier images were occupied. Two fixed genuinely clear parents40/127 now test
+later/earlier child visits without fillers, coordinate search or actor/global edits.
+All five refreshed Collapse World cases pass;242 unaffected retained passes plus
+those5 cover247 distinct affected cases across snapshots, not one green247 run.
+Boulder actual support and quarter-pixel carry, current complete nonwrites and
+full/course capture are constructed object-only scenes, not natural contact proof.
+
+One bounded unchanged-controller observation returned8084 and rethrew the original
+DYNAMIC_OBJECTS failure on8085. Source-ordered physical walk plus retained images
+identify unvisited Mosqui51/ID3D/savedB7 at8115,856; the generic exception exposes no
+typed ID/slot. Completed natural rows run Collapse43. Failed8085 finishes new
+Collapse32 and Boulder33, then Spring50, before that fence. A permanent ordinary
+route regression passes full/course8083->8084 comparisons before forwarding and
+asserts the exact failed-prefix image. Actor comparison values never hydrate the
+game. Current/selected display remains Ready, but no new framebuffer/audio,
+returned8085, whole-act or regional claim follows.
+
+Focused execution used originalUSA media, Java25 and the source-bound lean queue:
+normal-memory compilation, retained worktree lease, then4GiB/4core test admission.
+247-case execution43.93seconds followed1296seconds waiting; the6-case follow-up
+had5 positive checks and1 intentional observer error after526seconds waiting.
+The permanent route check passed separately with5seconds queue wait. Equal full
+source fingerprints and exact fresh case/properties were inspected. The temporary
+intentionally failing observer and owned reports were consumed/removed; its source
+and provenance stay external. Next actual priority is the genuine Past Mosqui
+adapter; Spikes/Anton and owning Frame preparation are parallel source work only.
 
 ## Resumed World and component integration — 4 November 2026
 

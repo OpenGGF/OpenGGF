@@ -66,7 +66,7 @@ class TestCdR11bTamabbohAssets {
 
     @Test void exactlyFiveFiniteViewsAppendWithoutNewReadersPlcsOrArtOwners() throws Exception {
         var f = retail(); var a = f.assets();
-        assertEquals(100, CdR11bAssets.Asset.values().length);
+        assertEquals(107, CdR11bAssets.Asset.values().length);
         assertEquals(TABLES, Arrays.asList(CdR11bAssets.Asset.values()).subList(95, 100));
         assertEquals(92, ANI_PATA_BATA.ordinal()); assertEquals(94, MAP_SPR_PATA_BATA2.ordinal());
         String[] labels = {"Ani_Tamabboh1", "Ani_Tamabboh2", "MapSpr_Tamabboh1/MapSpr_Tamabboh2",

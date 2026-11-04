@@ -38,10 +38,12 @@ final class SonicCdPastLoadingVisit {
     private final CdRing ring;
     private final CdSpring spring;
     private final CdPlatform platform;
+    private final CdCollapsePlatform collapsePlatform;
     private final CdFloatBlock floatBlock;
     private final CdAnimal animal;
     private final CdPataBata pataBata;
     private final CdTamabboh tamabboh;
+    private final CdBoulder boulder;
     private final CdTunnelDoor tunnelDoor;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
@@ -53,9 +55,11 @@ final class SonicCdPastLoadingVisit {
     private transient RingInvocation activeRing;
     private transient SpringInvocation activeSpring;
     private transient PlatformInvocation activePlatform;
+    private transient CollapseInvocation activeCollapse;
     private transient FloatInvocation activeFloat;
     private transient PataInvocation activePata;
     private transient TamabbohInvocation activeTamabboh;
+    private transient BoulderInvocation activeBoulder;
     private transient TunnelDoorInvocation activeTunnelDoor;
     private transient MonitorInvocation activeMonitor;
     private transient DrainInvocation activeDrain;
@@ -67,6 +71,8 @@ final class SonicCdPastLoadingVisit {
     private boolean drawingRing;
     private boolean springPort;
     private boolean drawingSpring;
+    private boolean collapsePort;
+    private boolean drawingCollapse;
     private boolean platformPort;
     private boolean drawingPlatform;
     private boolean floatPort;
@@ -74,6 +80,8 @@ final class SonicCdPastLoadingVisit {
     private boolean drawingPata;
     private boolean tamabbohPort;
     private boolean drawingTamabboh;
+    private boolean boulderPort;
+    private boolean drawingBoulder;
     private boolean tunnelDoorPort;
     private boolean drawingTunnelDoor;
     private boolean monitorPort;
@@ -207,11 +215,14 @@ final class SonicCdPastLoadingVisit {
         var sharedTerrain = CdPlayerTerrain.fromStageTerrain(assets.terrain());
         tamabboh = CdTamabboh.fromPastAssets(placement, assets, sharedTerrain, this::commitTamabbohPrimaryAngle,
                 this::readTamabbohPlayerWord, this::playTamabbohFm, this::drawTamabboh);
+        boulder = CdBoulder.fromPastAssets(placement, assets, sharedSolid, this::commitBoulderSolid, this::drawBoulder);
         spring = new CdSpring(placement, CdSpring.Assets.fromPastAssets(assets), new CdPlayerMath(assets.player()),
                 sharedSolid, this::commitSpringSolid, this::commitSpringLaunch, this::drawSpring, this::playSpringFm);
         platform = new CdPlatform(placement, CdPlatform.Assets.fromPastAssets(assets), new CdPlayerMath(assets.player()),
                 sharedTerrain, sharedSolid,
                 this::commitPlatformSolid, this::commitPlatformPrimaryAngle, this::drawPlatform);
+        collapsePlatform = new CdCollapsePlatform(placement, CdCollapsePlatform.Assets.fromPastAssets(assets), sharedSolid,
+                this::commitCollapseSolid, this::drawCollapse, this::playCollapseFm);
         floatBlock = CdFloatBlock.fromPastAssets(placement, assets, sharedSolid, this::commitFloatSolid, this::drawFloatBlock);
         tunnelDoor = CdTunnelDoor.withPrefixOwner(placement, this::readTunnelDoorSecondary,
                 CdTunnelDoor.Assets.fromPastAssets(assets), sharedSolid, new CdTunnelDoor.PrefixSolidOwner() {
@@ -285,13 +296,13 @@ final class SonicCdPastLoadingVisit {
     }
     private void requireCurrent() {
         module.requirePastLoadingVisit(this);
-        if (servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || drawQueue != null)
+        if (servicing || loadingSaved || runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || drawQueue != null)
             throw new IllegalStateException("Past loading operation or pending object pass is active");
         frame.captureShared();
     }
     private void requireCallback() {
         module.requirePastLoadingVisit(this);
-        if (!servicing || loadingSaved || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat) throw new IllegalStateException("No actual Past selectorC callback");
+        if (!servicing || loadingSaved || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat) throw new IllegalStateException("No actual Past selectorC callback");
     }
     private void call(SonicCdGameModule.PastLoadCall call) {
         var calls = new ArrayList<>(values.calls()); calls.add(call);
@@ -406,7 +417,7 @@ final class SonicCdPastLoadingVisit {
      * with its native pointer prefix retained and no finishAfterCamera call.
      */
     private void runObjects(int levelFrame) {
-        if (runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || drawQueue != null)
+        if (runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || drawQueue != null)
             throw new IllegalStateException("Past object pass cannot be repeated or reentered");
         runningObjects = true;
         try {
@@ -449,8 +460,12 @@ final class SonicCdPastLoadingVisit {
                     runPataBata(whole); call(PATA_BATA_BODY);
                 } else if (id == CdTamabboh.OBJECT_ID) {
                     runTamabboh(whole); call(TAMABBOH_BODY);
+                } else if (id == CdBoulder.OBJECT_ID) {
+                    runBoulder(whole); call(BOULDER_BODY);
                 } else if (id == CdSpring.OBJECT_ID) {
                     runSpring(whole); call(SPRING_BODY);
+                } else if (id == CdCollapsePlatform.OBJECT_ID) {
+                    runCollapse(whole); call(COLLAPSE_PLATFORM_BODY);
                 } else if (id == CdPlatform.OBJECT_ID) {
                     runPlatform(whole); call(PLATFORM_BODY);
                 } else if (id == CdTunnelDoor.OBJECT_ID) {
@@ -530,7 +545,7 @@ final class SonicCdPastLoadingVisit {
     private void runPrimaryMain(int levelFrame) {
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || reservedPort || drawingReserved
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || reservedPort || drawingReserved
                 || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
                 || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -690,7 +705,7 @@ final class SonicCdPastLoadingVisit {
         if (invocation == null || activePrimary != invocation || invocation.owner != this
                 || !runningObjects || servicing || loadingSaved || activeDrain != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
-                || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
                 || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -806,7 +821,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
-                || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor
                 || monitorPort || drawingMonitor || queuePort || drawQueue == null
                 || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
@@ -905,7 +920,7 @@ final class SonicCdPastLoadingVisit {
         var actual = placement.capture();
         if (!runningObjects || servicing || loadingSaved || invocation == null || activeDrain != invocation
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort
                 || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort
                 || drawingTunnelDoor || monitorPort || drawingMonitor || invocation.queue != drawQueue
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -976,11 +991,16 @@ final class SonicCdPastLoadingVisit {
         var ringView = assets.view(CdR11bAssets.Asset.MAP_SPR_RING);
         var springView = assets.view(CdR11bAssets.Asset.MAP_SPRING);
         var platformView = assets.view(CdR11bAssets.Asset.PLATFORM_MAPPINGS);
+        var collapse1 = assets.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_1);
+        var collapse2 = assets.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_2);
+        var collapse3 = assets.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_3);
+        var collapse4 = assets.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_4);
         var floatView = assets.view(CdR11bAssets.Asset.MAP_SPR_FLOAT_BLOCK);
         var pataNormalView = assets.view(CdR11bAssets.Asset.MAP_SPR_PATA_BATA1);
         var pataDamagedView = assets.view(CdR11bAssets.Asset.MAP_SPR_PATA_BATA2);
         var tamabbohView = assets.view(CdR11bAssets.Asset.MAP_SPR_TAMABBOH);
         var tamabbohMissileView = assets.view(CdR11bAssets.Asset.MAP_SPR_TAMABBOH_MISSILE);
+        var boulderView = assets.view(CdR11bAssets.Asset.MAP_SPR_BOULDER);
         var tunnelDoorView = assets.view(CdR11bAssets.Asset.MAP_SPR_TUNNEL_DOOR);
         var sonicView = assets.view(CdR11bAssets.Asset.MAP_SPR_SONIC);
         var sonic = assets.sonic();
@@ -1000,12 +1020,17 @@ final class SonicCdPastLoadingVisit {
                 new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 6, 3),
                 new CdObjectMappings.DeclaredTable(springView.range().nativeAddress(), springView.bytes(), 80, 3),
                 new CdObjectMappings.DeclaredTable(platformView.range().nativeAddress(), platformView.bytes(), 0, 3),
+                new CdObjectMappings.DeclaredTable(collapse1.range().nativeAddress(), collapse1.bytes(), 0, 2),
+                new CdObjectMappings.DeclaredTable(collapse2.range().nativeAddress(), collapse2.bytes(), 0, 6),
+                new CdObjectMappings.DeclaredTable(collapse3.range().nativeAddress(), collapse3.bytes(), 0, 7),
+                new CdObjectMappings.DeclaredTable(collapse4.range().nativeAddress(), collapse4.bytes(), 0, 7),
                 new CdObjectMappings.DeclaredTable(floatView.range().nativeAddress(), floatView.bytes(), 0, 6),
                 new CdObjectMappings.DeclaredTable(pataNormalView.range().nativeAddress(), pataNormalView.bytes(), 0, 3),
                 new CdObjectMappings.DeclaredTable(pataDamagedView.range().nativeAddress(), pataDamagedView.bytes(), 0, 3),
                 new CdObjectMappings.DeclaredTable(tamabbohView.range().nativeAddress(), tamabbohView.bytes(), 0, 3),
                 new CdObjectMappings.DeclaredTable(tamabbohView.range().nativeAddress(), tamabbohView.bytes(), 22, 3),
                 new CdObjectMappings.DeclaredTable(tamabbohMissileView.range().nativeAddress(), tamabbohMissileView.bytes(), 0, 4),
+                new CdObjectMappings.DeclaredTable(boulderView.range().nativeAddress(), boulderView.bytes(), 0, 1),
                 new CdObjectMappings.DeclaredTable(tunnelDoorView.range().nativeAddress(), tunnelDoorView.bytes(), 0, 2)),
                 List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
@@ -1015,10 +1040,12 @@ final class SonicCdPastLoadingVisit {
                     throw new IllegalStateException("Primary live pointer reads belong to the actual drain");
                 return Objects.requireNonNull(ref).wholeIndex() < 32 ? readReservedDrawSlot(ref)
                         : activeSpring != null ? readSpringDrawSlot(ref)
+                        : activeCollapse != null ? readCollapseDrawSlot(ref)
                         : activePlatform != null ? readPlatformDrawSlot(ref)
                         : activeFloat != null ? readFloatDrawSlot(ref)
                         : activePata != null ? readPataDrawSlot(ref)
-                        : activeTamabboh != null ? readTamabbohDrawSlot(ref)
+                        : activeTamabboh != null || activeCollapse != null ? readTamabbohDrawSlot(ref)
+                        : activeBoulder != null ? readBoulderDrawSlot(ref)
                         : activeTunnelDoor != null ? readTunnelDoorDrawSlot(ref)
                         : activeMonitor != null ? readMonitorDrawSlot(ref) : readRingDrawSlot(ref);
             }
@@ -1027,10 +1054,12 @@ final class SonicCdPastLoadingVisit {
                 if (Objects.requireNonNull(ref).wholeIndex() == 0) { writePrimaryOnScreen(ref, onScreen); return; }
                 if (Objects.requireNonNull(ref).wholeIndex() < 32) writeReservedOnScreen(ref, onScreen);
                 else if (activeSpring != null) writeSpringOnScreen(ref, onScreen);
+                else if (activeCollapse != null) writeCollapseOnScreen(ref, onScreen);
                 else if (activePlatform != null) writePlatformOnScreen(ref, onScreen);
                 else if (activeFloat != null) writeFloatOnScreen(ref, onScreen);
                 else if (activePata != null) writePataOnScreen(ref, onScreen);
-                else if (activeTamabboh != null) writeTamabbohOnScreen(ref, onScreen);
+                else if (activeTamabboh != null || activeCollapse != null) writeTamabbohOnScreen(ref, onScreen);
+                else if (activeBoulder != null) writeBoulderOnScreen(ref, onScreen);
                 else if (activeTunnelDoor != null) writeTunnelDoorOnScreen(ref, onScreen);
                 else if (activeMonitor != null) writeMonitorOnScreen(ref, onScreen);
                 else writeRingOnScreen(ref, onScreen);
@@ -1079,7 +1108,7 @@ final class SonicCdPastLoadingVisit {
     }
 
     private void runReservedHud(int whole) {
-        if (!runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat
+        if (!runningObjects || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort)
             throw new IllegalStateException("No actual reserved invocation entry");
         var env = frame.environment();
@@ -1107,7 +1136,7 @@ final class SonicCdPastLoadingVisit {
 
     private ReservedInvocation requireReservedInvocation(int whole) {
         var invocation = activeReserved;
-        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
                 || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
@@ -1121,7 +1150,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
-        if (activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+        if (activePrimary != null || activeReserved != invocation || !runningObjects || activeRing != null || ringPort || drawingRing || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || invocation.body != reservedHud
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || mode.getWorldSession() != invocation.world
@@ -1351,7 +1380,7 @@ final class SonicCdPastLoadingVisit {
 
     private void runRing(int whole) {
         module.requirePastLoadingVisit(this);
-        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat
+        if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != 0x10
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -1403,7 +1432,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeRing != invocation || !runningObjects || servicing || loadingSaved
-                || activePrimary != null || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
+                || activePrimary != null || activeReserved != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || reservedPort || drawingReserved
                 || invocation.body != ring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
@@ -1636,7 +1665,7 @@ final class SonicCdPastLoadingVisit {
     private void runSpring(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdSpring.OBJECT_ID || values.phase() != BEGIN_LEVEL
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -1672,7 +1701,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeSpring != invocation || !runningObjects || servicing || loadingSaved
-                || activePrimary != null || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+                || activePrimary != null || activeReserved != null || activeRing != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || reservedPort || drawingReserved || ringPort || drawingRing
                 || invocation.body != spring || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -2031,7 +2060,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || activeTunnelDoor != null || activeMonitor != null
+                || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
                 || monitorPort || drawingMonitor || queuePort || whole < 32 || whole >= 128
@@ -2071,7 +2100,7 @@ final class SonicCdPastLoadingVisit {
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (!invocation.active || invocation.body != animal || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || activeTunnelDoor != null || activeMonitor != null
+                || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
                 || monitorPort || drawingMonitor || queuePort || invocation.pool != placement.pool()
@@ -2119,6 +2148,230 @@ final class SonicCdPastLoadingVisit {
     }
 
 
+    /** One cached Boulder visit; actual producer scope, not public values, authorizes publication. */
+    private final class BoulderInvocation {
+        private final CdBoulder body = boulder;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object stageSource = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Values base = values;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private CdObjectPool.Snapshot currentPool = pool.capture();
+        private CdSolidObject.Outcome adopted;
+        private CdObjectState drawSource;
+        private boolean solidTaken, stopped, drawn, screenCleared;
+        private BoulderInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.pastForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        }
+    }
+
+    private void runBoulder(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null
+                || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || floatPort || drawingFloat || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || drawingCollapse
+                || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || boulderPort || drawingBoulder || queuePort
+                || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdBoulder.OBJECT_ID
+                || values.phase() != BEGIN_LEVEL || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Past Boulder dispatch");
+        var invocation = new BoulderInvocation(whole); activeBoulder = invocation;
+        try {
+            var environment = frame.environment(); var gates = environment.movement().gates();
+            var result = boulder.run(whole, new CdBoulder.Globals(gates.timeZone(), gates.timeWarpDirection(), invocation.camera.xWord()),
+                    new CdBoulder.SolidInputs(springPlayer(), new CdSolidObject.Gates(environment.globals().debugMode(), gates.miniSonic()), springGlobals()));
+            verifyBoulderInvocation(invocation); requireBoulderOtherImages(invocation);
+            if (invocation.stopped || !invocation.drawn || !invocation.screenCleared
+                    || !result.state().equals(invocation.pool.state(whole)))
+                throw new IllegalStateException("Boulder returned without its actual completed Solid/Draw/source cut");
+        } catch (RuntimeException | Error failure) {
+            if (invocation.adopted instanceof CdSolidObject.NativeStopped nativeStop) {
+                var original = nativeStop.stop().originalException();
+                if (failure != original) original.addSuppressed(failure);
+                verifyBoulderFailure(invocation, original); throw original;
+            }
+            verifyBoulderFailure(invocation, failure); throw failure;
+        } finally { activeBoulder = null; }
+    }
+
+    private BoulderInvocation requireBoulderInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeBoulder;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual cached Boulder callback at this physical pointer");
+        verifyBoulderInvocation(invocation); return invocation;
+    }
+    private void verifyBoulderInvocation(BoulderInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeBoulder != invocation || !runningObjects || servicing || loadingSaved
+                || activeDrain != null || activePrimary != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null
+                || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || floatPort || drawingFloat || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || drawingCollapse
+                || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+                || invocation.body != boulder || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.stageSource != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || invocation.world != mode.getWorldSession()
+                || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || invocation.base != values || values.phase() != BEGIN_LEVEL || invocation.expectedSounds != sounds
+                || !placement.status().equals(invocation.status) || !presentation.samePastScroll(invocation.scroll)
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Boulder changed another owner or retained a stale actual World/Frame cut");
+    }
+    private void requireBoulderOtherImages(BoulderInvocation invocation) {
+        for (var source : invocation.currentPool.slots()) if (source.identity().wholeIndex() != invocation.whole
+                && !source.equals(invocation.pool.state(source.identity().wholeIndex())))
+            throw new IllegalStateException("Boulder changed an unrelated physical image");
+    }
+    private void verifyBoulderFailure(BoulderInvocation invocation, Throwable original) {
+        try { verifyBoulderInvocation(invocation); requireBoulderOtherImages(invocation); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /** Prepare every pool/Frame/ledger value before publishing the genuine current plain-Solid outcome. */
+    private void commitBoulderSolid(CdBoulder.PrefixSolidCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requireBoulderInvocation(placement.pool(), activeBoulder == null ? -1 : activeBoulder.whole);
+        if (boulderPort || drawingBoulder || queuePort || invocation.solidTaken || invocation.stopped || invocation.drawn)
+            throw new IllegalStateException("Boulder Solid lacks its actual once-only pre-Draw helper cut");
+        var pool = invocation.pool; var cut = call.callCut(); pool.validateRestore(cut);
+        var source = pool.state(invocation.whole);
+        requireBoulderOtherImages(invocation);
+        if (!pool.capture().slots().equals(cut.slots()) || !source.equals(cut.slots().get(invocation.whole - 32))
+                || source.id() != CdBoulder.OBJECT_ID || source.routine() != 2 || source.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0
+                || !call.expectedPlayer().equals(springPlayer()) || !call.expectedGlobals().equals(springGlobals()))
+            throw new IllegalStateException("Boulder Solid differs from its actual full96/source/player/global cut");
+        CdObjectState object; List<CdObjectState> others; Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests; CdPlayerFrameRuntime.ObjectSolidPublication readyFrame;
+        boolean stopped;
+        if (call.outcome() instanceof CdSolidObject.Completed completed) {
+            var result = completed.completedResult();
+            if (result.entry() != CdSolidObject.Entry.SOLID_OBJECT) throw new IllegalStateException("Boulder completed a different helper");
+            object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+            readyFrame = frame.prepareObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result); stopped = false;
+        } else {
+            var prefix = ((CdSolidObject.NativeStopped) call.outcome()).prefix();
+            if (prefix.entry() != CdSolidObject.Entry.SOLID_OBJECT) throw new IllegalStateException("Boulder stopped a different helper");
+            object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+            readyFrame = frame.prepareObjectSolidPrefix(call.expectedPlayer(), call.expectedGlobals(), prefix); stopped = true;
+        }
+        validateSpringSolidImage(source, object, true, writes);
+        if (writes.contains(CdObjectState.ByteField.SOLID_TYPE)
+                && object.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 0)
+            throw new IllegalStateException("Boulder plain Solid cannot store Top/Bottom type bytes");
+        var images = new ArrayList<CdObjectState>(); images.add(object);
+        if (others.size() > 1) throw new IllegalStateException("Boulder Solid released more than one native stand link");
+        for (var other : others) {
+            int whole = other.identity().wholeIndex();
+            if (whole < 32 || whole >= 128 || whole == invocation.whole || whole != call.expectedPlayer().standObject())
+                throw new IllegalStateException("Boulder stand release lacks its actual dynamic prior link");
+            var beforeOther = cut.slots().get(whole - 32);
+            if (!beforeOther.moveByte(CdObjectState.ByteField.FLAGS, beforeOther.flags() & ~8).equals(other))
+                throw new IllegalStateException("Boulder stand release changed more than its actual linked flag bit");
+            images.add(other);
+        }
+        var readyPool = CdObjectPool.overlay(cut, images); pool.validateRestore(readyPool);
+        var before = placement.capture();
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
+                invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        var ledger = new ArrayList<>(sounds);
+        for (var fm : requests) ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger);
+        boulderPort = true;
+        try {
+            verifyBoulderInvocation(invocation);
+            if (!pool.capture().slots().equals(cut.slots()) || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder source changed before prepared publication");
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            pool.restore(readyPool);
+            frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds = readySounds;
+            invocation.actor = readyActor; invocation.shared = readyShared; invocation.expectedSounds = readySounds;
+            invocation.currentPool = readyPool; invocation.solidTaken = true; invocation.stopped = stopped; invocation.adopted = call.outcome();
+            verifyBoulderInvocation(invocation);
+            if (!pool.capture().slots().equals(readyPool.slots()) || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder Solid did not adopt its complete output96 and saved nonwrites");
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { boulderPort = false; }
+    }
+
+    private void drawBoulder(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireBoulderInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (boulderPort || drawingBoulder || queuePort || invocation.drawn || invocation.stopped
+                || !identity.equals(invocation.entry.identity()) || pool.state(invocation.whole).id() != CdBoulder.OBJECT_ID)
+            throw new IllegalStateException("Boulder DrawObject lacks its genuine live physical source");
+        requireBoulderOtherImages(invocation);
+        invocation.drawSource = pool.state(invocation.whole); invocation.drawn = true; drawingBoulder = true;
+        var current = invocation.drawSource;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(), current.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    current.unsignedByte(CdObjectState.ByteField.WIDTH), current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            verifyBoulderInvocation(invocation);
+            if (!invocation.screenCleared) throw new IllegalStateException("Boulder skipped its actual DrawObject BCLR7");
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { drawingBoulder = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readBoulderDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireBoulderInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingBoulder || boulderPort || queuePort || !invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("No actual Boulder collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var source = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(source.id(), source.spriteFlags(), source.centreX(), source.centreY(),
+                    source.word(CdObjectState.WordField.X_FRACTION), source.longBits(CdObjectState.LongField.MAPPINGS),
+                    source.unsignedByte(CdObjectState.ByteField.MAP_FRAME), source.word(CdObjectState.WordField.TILE));
+            verifyBoulderInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(before.pool().slots())
+                    || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder queue read changed actual full96/saved state");
+            return live;
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+    private void writeBoulderOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireBoulderInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingBoulder || boulderPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("Only actual Boulder DrawObject may clear bit7 once");
+        var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Boulder changed its native Draw source before BCLR7");
+        var next = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(ready);
+        queuePort = true;
+        try {
+            verifyBoulderInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(before.pool().slots())) throw new IllegalStateException("Stale Boulder Draw pool");
+            invocation.pool.write(next); invocation.currentPool = ready; invocation.screenCleared = true;
+            verifyBoulderInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(ready.slots())
+                    || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder Draw changed more than its exact source sprite byte");
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+
     /** One cached native Tamabboh call. Values below guard owners; they never replay its algorithm. */
     private final class TamabbohInvocation {
         private final CdTamabboh body = tamabboh;
@@ -2160,10 +2413,10 @@ final class SonicCdPastLoadingVisit {
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || activeFloat != null || activePata != null || activeTunnelDoor != null || activeMonitor != null
-                || activeTamabboh != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeTamabboh != null || activeCollapse != null || activeBoulder != null || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || floatPort || drawingFloat
                 || drawingPata || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
-                || tamabbohPort || drawingTamabboh || queuePort || whole < 32 || whole >= 128
+                || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdTamabboh.OBJECT_ID || values.phase() != BEGIN_LEVEL
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
             throw new IllegalStateException("No actual cached Past Tamabboh dispatch");
@@ -2194,7 +2447,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyTamabbohInvocation(TamabbohInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeTamabboh != invocation || !runningObjects || servicing || loadingSaved
+        if (activeTamabboh != invocation || activeCollapse != null || activeBoulder != null || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null
                 || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
@@ -2238,7 +2491,7 @@ final class SonicCdPastLoadingVisit {
     /** Every reached floor store uses this exact current primary byte; no player/state aggregate is written. */
     private void commitTamabbohPrimaryAngle(CdTamabboh.PrimaryAngleCall call) {
         Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (tamabbohPort || drawingTamabboh || queuePort || invocation.drawn || invocation.expectedRangeX != null)
+        if (tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || invocation.drawn || invocation.expectedRangeX != null)
             throw new IllegalStateException("Tamabboh angle is outside its genuine floor call");
         var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
         if ((live.subtype() == 1 ? live.routine() != 2 : live.routine() != 2 && live.routine() != 4)
@@ -2259,7 +2512,7 @@ final class SonicCdPastLoadingVisit {
     }
     private int readTamabbohPlayerWord(CdTamabboh.PlayerReadCall call) {
         Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (tamabbohPort || drawingTamabboh || queuePort || invocation.drawn)
+        if (tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || invocation.drawn)
             throw new IllegalStateException("Tamabboh player read is outside its actual range call");
         var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
         if (live.routine() != 4 || live.subtype() != 0 || live.word(CdObjectState.WordField.TAMABBOH_COOLDOWN) != 0
@@ -2284,7 +2537,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void playTamabbohFm(CdTamabboh.FmCall call) {
         Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
-        if (tamabbohPort || drawingTamabboh || queuePort || invocation.drawn || invocation.sounded)
+        if (tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || invocation.drawn || invocation.sounded)
             throw new IllegalStateException("Tamabboh FM lacks its actual first Fire request");
         var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
         if (live.routine() != 4 || live.subtype() != 0 || live.word(CdObjectState.WordField.TAMABBOH_COOLDOWN) != 0x78
@@ -2307,7 +2560,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawTamabboh(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requireTamabbohInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (tamabbohPort || drawingTamabboh || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+        if (tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
             throw new IllegalStateException("Tamabboh DrawObject lacks its actual once-only physical source");
         var current = pool.state(invocation.whole);
         boolean clearedMissile = invocation.entry.subtype() == 1 && invocation.entry.routine() == 2
@@ -2330,7 +2583,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readTamabbohDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requireTamabbohInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (!drawingTamabboh || tamabbohPort || queuePort || !invocation.drawn)
+        if (!drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || tamabbohPort || queuePort || !invocation.drawn)
             throw new IllegalStateException("No actual collecting Tamabboh queue read");
         var before = placement.capture(); queuePort = true;
         try {
@@ -2345,7 +2598,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writeTamabbohOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requireTamabbohInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (!drawingTamabboh || tamabbohPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+        if (!drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || tamabbohPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
             throw new IllegalStateException("Only actual Tamabboh DrawObject may clear bit7 once");
         var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
         if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Tamabboh changed its DrawObject source before BCLR7");
@@ -2406,10 +2659,10 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeFloat != null || activeTunnelDoor != null || activeMonitor != null || activePata != null || activeTamabboh != null
+                || activeFloat != null || activeTunnelDoor != null || activeMonitor != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor
-                || monitorPort || drawingMonitor || drawingPata || tamabbohPort || drawingTamabboh || queuePort || whole < 32 || whole >= 128
+                || monitorPort || drawingMonitor || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || whole < 32 || whole >= 128
                 || placement.pool().state(whole).id() != CdPataBata.OBJECT_ID || values.phase() != BEGIN_LEVEL
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
             throw new IllegalStateException("No actual cached Past Pata-Bata dispatch");
@@ -2674,7 +2927,7 @@ final class SonicCdPastLoadingVisit {
 
     private void drawPataBata(CdObjectPool pool, CdObjectState.Identity identity) {
         var invocation = requirePataInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
-        if (drawingPata || tamabbohPort || drawingTamabboh || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+        if (drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
             throw new IllegalStateException("Pata-Bata DrawObject lacks its actual once-only native source");
         validatePataSource(invocation, PataSite.DRAW);
         var before = placement.capture(); invocation.drawSource = pool.state(invocation.whole);
@@ -2693,7 +2946,7 @@ final class SonicCdPastLoadingVisit {
     }
     private CdObjectDrawQueue.LiveDrawSlot readPataDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
         var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (!drawingPata || tamabbohPort || drawingTamabboh || queuePort || !invocation.drawn) throw new IllegalStateException("No actual Pata-Bata collecting queue read");
+        if (!drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || !invocation.drawn) throw new IllegalStateException("No actual Pata-Bata collecting queue read");
         var before = placement.capture(); queuePort = true;
         try {
             verifyPataCallback(invocation, before); var current = invocation.pool.state(invocation.whole);
@@ -2707,7 +2960,7 @@ final class SonicCdPastLoadingVisit {
     }
     private void writePataOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
         var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
-        if (!drawingPata || tamabbohPort || drawingTamabboh || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+        if (!drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
             throw new IllegalStateException("Only actual Pata-Bata DrawObject may clear bit7 once");
         var before = placement.capture(); verifyPataCallback(invocation, before);
         var next = invocation.drawSource.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.drawSource.spriteFlags() & 0x7F);
@@ -2799,7 +3052,7 @@ final class SonicCdPastLoadingVisit {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
                 || floatPort || drawingFloat || queuePort || whole < 32 || whole >= 128
@@ -2839,7 +3092,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyFloatInvocation(FloatInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeFloat != invocation || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || !runningObjects || servicing || loadingSaved || activeDrain != null
+        if (activeFloat != invocation || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || !runningObjects || servicing || loadingSaved || activeDrain != null
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || activePlatform != null || activeTunnelDoor != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -3266,6 +3519,343 @@ final class SonicCdPastLoadingVisit {
             throw new IllegalStateException("FloatBlock returned a substituted completed helper observation");
     }
 
+    /** One actual cached Collapse20 visit; completed effects remain observations, never commands. */
+    private enum CollapseStep { ENTRY, MAIN_GET_OFF, FM, BREAKUP, CAPACITY_GET_OFF, DELAY_GET_OFF, DRAW, DONE, STOPPED }
+    private final class CollapseInvocation {
+        private final CdCollapsePlatform body = collapsePlatform;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR11bAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.capturePastScroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private CdObjectPool.Snapshot currentPool = pool.capture();
+        private CdObjectPool.Snapshot lastCut;
+        private CdSolidObject.Outcome adopted;
+        private CdObjectState drawSource;
+        private CollapseStep next = CollapseStep.ENTRY;
+        private boolean single, sounded, drawn, screenCleared;
+        private CollapseInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.pastForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        }
+    }
+
+    private void runCollapse(int whole) {
+        module.requirePastLoadingVisit(this);
+        if (!runningObjects || servicing || loadingSaved || activeDrain != null || activePrimary != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null
+                || activeTamabboh != null || activeBoulder != null || activeCollapse != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || floatPort || drawingFloat || drawingPata || tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder
+                || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || collapsePort || drawingCollapse
+                || queuePort || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdCollapsePlatform.OBJECT_ID
+                || values.phase() != BEGIN_LEVEL || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual live Past Collapse invocation entry");
+        var invocation = new CollapseInvocation(whole); activeCollapse = invocation;
+        try {
+            var environment = frame.environment(); var gates = environment.movement().gates();
+            var result = collapsePlatform.run(whole, new CdCollapsePlatform.DespawnGlobals(gates.timeZone(),
+                    gates.timeWarpDirection(), invocation.camera.xWord()), new CdCollapsePlatform.Inputs(springPlayer(),
+                    new CdSolidObject.Gates(environment.globals().debugMode(), gates.miniSonic()), springGlobals()));
+            verifyCollapseInvocation(invocation); validateCollapseReturn(invocation, result);
+        } catch (RuntimeException | Error failure) {
+            verifyCollapseFailure(failure); throw failure;
+        } finally { activeCollapse = null; }
+    }
+
+    private CollapseInvocation requireCollapseInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeCollapse;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Collapse callback at this physical pointer");
+        verifyCollapseInvocation(invocation); return invocation;
+    }
+    private void verifyCollapseInvocation(CollapseInvocation invocation) {
+        module.requirePastLoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeCollapse != invocation || !runningObjects || servicing || loadingSaved || activeDrain != null
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
+                || activePlatform != null || activeFloat != null || activePata != null || activeTamabboh != null || activeBoulder != null
+                || activeTunnelDoor != null || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || floatPort || drawingFloat || drawingPata || tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder
+                || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor
+                || invocation.body != collapsePlatform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !placement.status().equals(invocation.status) || !presentation.samePastScroll(invocation.scroll)
+                || sounds != invocation.expectedSounds || values != invocation.base || values.phase() != BEGIN_LEVEL)
+            throw new IllegalStateException("Collapse changed another owner or retained a stale World/Frame/queue cut");
+    }
+    private void verifyCollapseFailure(Throwable original) {
+        try { if (activeCollapse != null) verifyCollapseInvocation(activeCollapse); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /** The trusted cached body alone can write its own prefix and first-free children between callbacks. */
+    private void acceptCollapseBodyCut(CollapseInvocation invocation, CdObjectPool.Snapshot cut, boolean breakup) {
+        invocation.pool.validateRestore(cut);
+        if (!cut.slots().equals(invocation.pool.capture().slots()) || !sameBytes(placement.capture().savedFlags(), invocation.savedFlags))
+            throw new IllegalStateException("Collapse source cut differs from the actual full96/saved bank");
+        boolean freeGap = false;
+        for (int at = 0; at < 96; at++) {
+            if (at == invocation.whole - 32) continue;
+            var before = invocation.currentPool.slots().get(at); var after = cut.slots().get(at);
+            if (before.equals(after)) { if (breakup && before.id() == 0) freeGap = true; continue; }
+            if (!breakup || freeGap || before.id() != 0) throw new IllegalStateException("Collapse changed a non-child full64 image");
+            validateCollapseChild(invocation, before, after);
+        }
+        invocation.currentPool = cut;
+    }
+    private void validateCollapseChild(CollapseInvocation invocation, CdObjectState before, CdObjectState after) {
+        int map = assets.view(invocation.single ? CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_4
+                : CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_3).range().nativeAddress();
+        int flip = !invocation.single && (invocation.entry.subtype() & 16) != 0 ? 1 : 0;
+        if (!before.identity().equals(after.identity()) || after.id() != CdCollapsePlatform.OBJECT_ID || after.routine() != 4
+                || after.word(CdObjectState.WordField.TILE) != 0x44BE || after.longBits(CdObjectState.LongField.MAPPINGS) != map
+                || after.longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA) != 0x20000
+                || after.unsignedByte(CdObjectState.ByteField.PRIORITY) != 3
+                || after.unsignedByte(CdObjectState.ByteField.MAP_FRAME) >= 7
+                || after.spriteFlags() != (before.spriteFlags() | 4 | flip)
+                || after.flags() != (before.flags() | flip))
+            throw new IllegalStateException("Collapse child lacks its actual family/native header");
+        boolean radii = invocation.single || before.unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER)
+                != after.unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER)
+                || before.unsignedByte(CdObjectState.ByteField.X_RADIUS) != after.unsignedByte(CdObjectState.ByteField.X_RADIUS)
+                || before.unsignedByte(CdObjectState.ByteField.Y_RADIUS) != after.unsignedByte(CdObjectState.ByteField.Y_RADIUS)
+                || before.unsignedByte(CdObjectState.ByteField.WIDTH) != after.unsignedByte(CdObjectState.ByteField.WIDTH);
+        if (radii && (after.unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER) != 255
+                || after.unsignedByte(CdObjectState.ByteField.X_RADIUS) != 8 || after.unsignedByte(CdObjectState.ByteField.WIDTH) != 8
+                || !invocation.single && after.unsignedByte(CdObjectState.ByteField.Y_RADIUS) != 9))
+            throw new IllegalStateException("Collapse child changed radii beyond its native solid-row stores");
+        byte[] old = before.copyBytes(), next = after.copyBytes();
+        for (int at = 0; at < 64; at++) {
+            boolean allowed = at <= 9 || at == 12 || at == 13 || at == 0x18 || at == 0x1A || at == 0x22
+                    || at == 0x24 || at == 0x2A || at == 0x2B || at >= 0x2C && at < 0x30
+                    || radii && (at == 0x16 || at == 0x17 || at == 0x19 || at == 0x3E);
+            if (!allowed && old[at] != next[at]) throw new IllegalStateException("Collapse child changed undeclared byte " + at);
+        }
+    }
+
+    /** Actual instruction sites and prior completed helper determine the next allowed port. */
+    private void validateCollapseSite(CollapseInvocation invocation, CdCollapsePlatform.SolidCall call, CdObjectState source) {
+        boolean top; boolean valid;
+        switch (call.site()) {
+            case MAIN_TOP -> { top = true; valid = invocation.next == CollapseStep.ENTRY && invocation.entry.routine() <= 2 && source.routine() == 2; }
+            case MAIN_GET_OFF -> { top = false; valid = invocation.next == CollapseStep.MAIN_GET_OFF && source.routine() == 2; }
+            case DELAY_TOP -> { top = true; valid = invocation.next == CollapseStep.ENTRY && invocation.entry.routine() == 4
+                    && (source.routine() == 4 || source.routine() == 6) && source.unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER) != 0
+                    && (source.routine() == 6) == (source.word(CdObjectState.WordField.COLLAPSE_DELAY) == 0); }
+            case DELAY_GET_OFF -> { top = false; valid = invocation.next == CollapseStep.DELAY_GET_OFF && source.routine() == 6
+                    && source.word(CdObjectState.WordField.COLLAPSE_DELAY) == 0; }
+            case MULTI_CAPACITY_TOP, SINGLE_CAPACITY_TOP -> { top = true; invocation.single = call.site() == CdCollapsePlatform.Site.SINGLE_CAPACITY_TOP;
+                valid = invocation.next == CollapseStep.BREAKUP && invocation.sounded && source.routine() == 4
+                        && (source.signedByte(CdObjectState.ByteField.SUBTYPE) < 0) == invocation.single
+                        && source.unsignedByte(CdObjectState.ByteField.COLLAPSE_SAVED_SOURCE_ID) == CdCollapsePlatform.OBJECT_ID
+                        && invocation.pool.findObjSlot().isEmpty(); }
+            case MULTI_CAPACITY_GET_OFF, SINGLE_CAPACITY_GET_OFF -> { top = false;
+                valid = invocation.next == CollapseStep.CAPACITY_GET_OFF && source.routine() == 4
+                        && (call.site() == CdCollapsePlatform.Site.SINGLE_CAPACITY_GET_OFF) == invocation.single; }
+            default -> throw new IllegalStateException("Unowned Collapse helper site");
+        }
+        if (!valid || source.id() != CdCollapsePlatform.OBJECT_ID
+                || call.entry() != (top ? CdSolidObject.Entry.TOP_SOLID_OBJECT : CdSolidObject.Entry.GET_OFF_OBJECT))
+            throw new IllegalStateException("Collapse helper differs from its actual private native site/order");
+    }
+    private List<CdObjectState> validateCollapseImages(CollapseInvocation invocation, CdCollapsePlatform.SolidCall call,
+            CdObjectState source, CdObjectState object, List<CdObjectState> others, Set<CdObjectState.ByteField> writes) {
+        if (!source.identity().equals(object.identity())
+                || writes.stream().anyMatch(field -> field != CdObjectState.ByteField.SOLID_TYPE && field != CdObjectState.ByteField.FLAGS)
+                || writes.contains(CdObjectState.ByteField.SOLID_TYPE) != (call.entry() == CdSolidObject.Entry.TOP_SOLID_OBJECT)
+                || writes.contains(CdObjectState.ByteField.SOLID_TYPE) && object.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) > 1
+                || ((object.flags() ^ source.flags()) & ~8) != 0
+                || call.entry() == CdSolidObject.Entry.GET_OFF_OBJECT && (object.flags() & ~source.flags()) != 0)
+            throw new IllegalStateException("Collapse Solid changed identity, native masks or unowned flag bits");
+        byte[] before = source.copyBytes(), after = object.copyBytes();
+        for (int at = 0; at < 64; at++) {
+            if (at == 0x25 && writes.contains(CdObjectState.ByteField.SOLID_TYPE) || at == 0x22 && writes.contains(CdObjectState.ByteField.FLAGS)) continue;
+            if (before[at] != after[at]) throw new IllegalStateException("Collapse Solid changed undeclared source byte " + at);
+        }
+        if (others.size() > 1 || call.entry() == CdSolidObject.Entry.GET_OFF_OBJECT && !others.isEmpty())
+            throw new IllegalStateException("Collapse Solid returned extra stand releases");
+        var images = new ArrayList<CdObjectState>(); images.add(object); var seen = new HashSet<Integer>(); seen.add(invocation.whole);
+        for (var other : others) {
+            int whole = other.identity().wholeIndex();
+            if (whole < 32 || whole >= 128 || !seen.add(whole) || whole != call.expectedPlayer().standObject())
+                throw new IllegalStateException("Collapse release lacks its actual distinct stand identity");
+            var original = call.actualCut().slots().get(whole - 32);
+            if (!original.identity().equals(other.identity()) || !original.moveByte(CdObjectState.ByteField.FLAGS, original.flags() & ~8).equals(other))
+                throw new IllegalStateException("Collapse release changed bytes beyond native BCLR3");
+            images.add(other);
+        }
+        return List.copyOf(images);
+    }
+
+    private void commitCollapseSolid(CdCollapsePlatform.SolidCall call) {
+        Objects.requireNonNull(call); var invocation = requireCollapseInvocation(placement.pool(), activeCollapse == null ? -1 : activeCollapse.whole);
+        if (collapsePort || drawingCollapse || queuePort || invocation.drawn || invocation.next == CollapseStep.STOPPED
+                || call.actualCut() == invocation.lastCut || call.outcome() == invocation.adopted)
+            throw new IllegalStateException("Collapse Solid lacks its next fresh actual call");
+        var cut = call.actualCut(); invocation.pool.validateRestore(cut);
+        var source = cut.slots().get(invocation.whole - 32);
+        validateCollapseSite(invocation, call, source);
+        acceptCollapseBodyCut(invocation, cut, invocation.next == CollapseStep.BREAKUP);
+        if (!call.expectedPlayer().equals(springPlayer()) || !call.expectedGlobals().equals(springGlobals()))
+            throw new IllegalStateException("Collapse Solid differs from the actual complete Frame pair");
+        CdObjectState object; List<CdObjectState> others; Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests; CdPlayerFrameRuntime.ObjectSolidPublication readyFrame; CollapseStep next;
+        if (call.outcome() instanceof CdSolidObject.Completed done) {
+            var result = done.completedResult(); if (result.entry() != call.entry()) throw new IllegalStateException("Wrong Collapse completed helper");
+            object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+            readyFrame = frame.prepareObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+            next = switch (call.site()) {
+                case MAIN_TOP -> result.d0().orElseThrow() == 0 ? CollapseStep.DRAW : CollapseStep.MAIN_GET_OFF;
+                case MAIN_GET_OFF -> CollapseStep.FM;
+                case DELAY_TOP -> result.d0().orElseThrow() != 0 && source.word(CdObjectState.WordField.COLLAPSE_DELAY) == 0 ? CollapseStep.DELAY_GET_OFF : CollapseStep.DRAW;
+                case MULTI_CAPACITY_TOP, SINGLE_CAPACITY_TOP -> result.d0().orElseThrow() != 0 ? CollapseStep.CAPACITY_GET_OFF : CollapseStep.DRAW;
+                default -> CollapseStep.DRAW;
+            };
+        } else {
+            var stopped = (CdSolidObject.NativeStopped) call.outcome(); var prefix = stopped.prefix();
+            if (prefix.entry() != call.entry() || call.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT
+                    || !prefix.otherSlots().isEmpty() || !prefix.fmRequests().isEmpty() || stopped.stop().originalException() == null)
+                throw new IllegalStateException("Collapse stop is not the genuine reached Top prefix");
+            object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+            readyFrame = frame.prepareObjectSolidPrefix(call.expectedPlayer(), call.expectedGlobals(), prefix); next = CollapseStep.STOPPED;
+        }
+        var images = validateCollapseImages(invocation, call, source, object, others, writes);
+        var readyPool = CdObjectPool.overlay(cut, images); invocation.pool.validateRestore(readyPool);
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(), invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        var ledger = new ArrayList<>(sounds); for (var fm : requests) ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger); collapsePort = true;
+        try {
+            verifyCollapseInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(cut.slots())) throw new IllegalStateException("Stale Collapse publication full96");
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            invocation.pool.restore(readyPool); frame.applyPreparedObjectSolidPublication(readyFrame); sounds = readySounds;
+            invocation.actor = readyActor; invocation.shared = readyShared; invocation.expectedSounds = readySounds;
+            invocation.currentPool = readyPool; invocation.lastCut = cut; invocation.adopted = call.outcome(); invocation.next = next;
+            verifyCollapseInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(readyPool.slots())) throw new IllegalStateException("Collapse full output96 was not adopted exactly");
+        } catch (RuntimeException | Error failure) { verifyCollapseFailure(failure); throw failure; }
+        finally { collapsePort = false; }
+    }
+    private void playCollapseFm(int nativeId) {
+        var invocation = requireCollapseInvocation(placement.pool(), activeCollapse == null ? -1 : activeCollapse.whole);
+        if (collapsePort || drawingCollapse || queuePort || invocation.next != CollapseStep.FM || invocation.sounded)
+            throw new IllegalStateException("Collapse A3 is outside its actual post-GetOff/pre-ADDQ cut");
+        var before = placement.capture(); var source = before.pool().slots().get(invocation.whole - 32);
+        if (source.id() != CdCollapsePlatform.OBJECT_ID || source.routine() != 2 || !before.pool().slots().equals(invocation.currentPool.slots())
+                || !sameBytes(before.savedFlags(), invocation.savedFlags)) throw new IllegalStateException("Stale Collapse FM full96 source");
+        var ledger = new ArrayList<>(sounds); ledger.add(new SonicCdGameModule.PastCollapsePlatformFm(nativeId)); var ready = List.copyOf(ledger);
+        collapsePort = true;
+        try {
+            verifyCollapseInvocation(invocation); sounds = ready; invocation.expectedSounds = ready; invocation.sounded = true;
+            invocation.single = source.signedByte(CdObjectState.ByteField.SUBTYPE) < 0; invocation.next = CollapseStep.BREAKUP;
+            verifyCollapseCallback(invocation, before, null);
+        } finally { collapsePort = false; }
+    }
+
+    private void verifyCollapseCallback(CollapseInvocation invocation, CdObjectPlacementRuntime.Snapshot before, CdObjectState cleared) {
+        verifyCollapseInvocation(invocation); var now = placement.capture(); var expected = new ArrayList<>(before.pool().slots());
+        if (cleared != null) expected.set(invocation.whole - 32, cleared);
+        if (!now.status().equals(before.status()) || !sameBytes(now.savedFlags(), before.savedFlags()) || !now.pool().slots().equals(expected))
+            throw new IllegalStateException("Collapse callback changed full96/saved state beyond its actual bit7 clear");
+    }
+    private void verifyCollapseCallbackFailure(CollapseInvocation invocation, CdObjectPlacementRuntime.Snapshot before, CdObjectState cleared, Throwable original) {
+        try { verifyCollapseCallback(invocation, before, cleared); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+    private void drawCollapse(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireCollapseInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        boolean ownOnly = invocation.next == CollapseStep.ENTRY && (invocation.entry.routine() == 4
+                && pool.state(invocation.whole).unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER) == 0 || invocation.entry.routine() == 6);
+        if (collapsePort || drawingCollapse || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity())
+                || !ownOnly && invocation.next != CollapseStep.DRAW && invocation.next != CollapseStep.BREAKUP)
+            throw new IllegalStateException("Collapse DrawObject is outside its actual once-only wrapper cut");
+        acceptCollapseBodyCut(invocation, pool.capture(), invocation.next == CollapseStep.BREAKUP);
+        var before = placement.capture(); var current = pool.state(invocation.whole);
+        if (current.id() != CdCollapsePlatform.OBJECT_ID && !(current.id() == 0 && (invocation.sounded || invocation.entry.routine() == 6)
+                && Arrays.equals(current.copyBytes(), new byte[64]))) throw new IllegalStateException("Collapse Draw lacks live or genuinely cleared source");
+        if (invocation.sounded && current.id() != 0) throw new IllegalStateException("Collapse breakup skipped native parent deletion");
+        var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        invocation.drawSource = cleared; invocation.drawn = true; drawingCollapse = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole), current.spriteFlags(),
+                    current.centreX(), current.centreY(), current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Collapse DrawObject did not clear bit7");
+            verifyCollapseCallback(invocation, before, cleared); invocation.currentPool = pool.capture(); invocation.next = CollapseStep.DONE;
+        } catch (RuntimeException | Error failure) { verifyCollapseCallbackFailure(invocation, before, invocation.screenCleared ? cleared : null, failure); throw failure; }
+        finally { drawingCollapse = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readCollapseDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireCollapseInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingCollapse || collapsePort || queuePort) throw new IllegalStateException("No actual Collapse queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(), current.word(CdObjectState.WordField.X_FRACTION),
+                    current.longBits(CdObjectState.LongField.MAPPINGS), current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyCollapseCallback(invocation, before, null); return live;
+        } catch (RuntimeException | Error failure) { verifyCollapseCallbackFailure(invocation, before, null, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+    private void writeCollapseOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireCollapseInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingCollapse || collapsePort || queuePort || onScreen || invocation.screenCleared) throw new IllegalStateException("Only actual Collapse DrawObject may clear bit7 once");
+        var before = placement.capture(); var current = invocation.pool.state(invocation.whole); var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        queuePort = true;
+        try { invocation.pool.write(next); invocation.screenCleared = true; verifyCollapseCallback(invocation, before, next); }
+        catch (RuntimeException | Error failure) { verifyCollapseCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+
+    private void validateCollapseReturn(CollapseInvocation invocation, CdCollapsePlatform.Result result) {
+        if (!invocation.drawn || invocation.next != CollapseStep.DONE || !result.state().equals(invocation.pool.state(invocation.whole)))
+            throw new IllegalStateException("Incomplete actual Collapse return");
+        var source = invocation.drawSource; var gates = invocation.shared.environment().movement().gates();
+        boolean tail = source.signedByte(CdObjectState.ByteField.ROUTINE) < 4;
+        boolean delete = tail && (((source.centreX() & 0xFF80) - ((invocation.camera.xWord() - 0x80) & 0xFF80) & 0xFFFF) > 0x280 || (gates.timeZone() & 0x80) != 0);
+        var now = invocation.pool.capture();
+        for (int at = 0; at < 96; at++) {
+            var expected = invocation.currentPool.slots().get(at); var actual = now.slots().get(at);
+            if (delete && at == invocation.whole - 32) {
+                if (!actual.identity().equals(expected.identity()) || !Arrays.equals(actual.copyBytes(), new byte[64]))
+                    throw new IllegalStateException("Collapse tail did not clear its actual complete source image");
+            } else if (!expected.equals(actual)) throw new IllegalStateException("Collapse changed full96 beyond its reached tail deletion");
+        }
+        byte[] bank = invocation.savedFlags.copy();
+        if (delete && source.savedFlagsId() != 0) {
+            int period = gates.timeZone() & 0x7F;
+            if ((gates.timeZone() & 0x80) != 0) { int selected = (short) ((period - (byte) gates.timeWarpDirection()) & 0xFFFF); period = selected < 0 ? 0 : Math.min(selected, 2); }
+            int index = 2 + 3 * source.savedFlagsId() + period;
+            if (index >= bank.length) throw new IllegalStateException("Collapse returned past an unavailable saved-byte address");
+            bank[index] &= 0x7F;
+        }
+        if (!Arrays.equals(bank, placement.capture().savedFlags().copy())) throw new IllegalStateException("Collapse changed another saved byte");
+    }
+
     /** Actual cached Platform producer; no captured owner or public value grants this scope. */
     private final class PlatformInvocation {
         private final CdPlatform body = platform;
@@ -3308,7 +3898,7 @@ final class SonicCdPastLoadingVisit {
     private void runPlatform(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -3346,7 +3936,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyPlatformInvocation(PlatformInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
+        if (activePlatform != invocation || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
@@ -3706,7 +4296,7 @@ final class SonicCdPastLoadingVisit {
     private void runTunnelDoor(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdTunnelDoor.OBJECT_ID
@@ -3756,7 +4346,7 @@ final class SonicCdPastLoadingVisit {
         if (activeTunnelDoor != invocation || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
-                || platformPort || drawingPlatform || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || monitorPort || drawingMonitor || invocation.body != tunnelDoor
+                || platformPort || drawingPlatform || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || monitorPort || drawingMonitor || invocation.body != tunnelDoor
                 || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
                 || invocation.queue != drawQueue || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
@@ -4268,7 +4858,7 @@ final class SonicCdPastLoadingVisit {
     private void runMonitor(int whole) {
         module.requirePastLoadingVisit(this);
         if (!runningObjects || servicing || loadingSaved || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat
+                || activeSpring != null || activePlatform != null || activeTunnelDoor != null || activeMonitor != null || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdMonitor.OBJECT_ID
@@ -4316,7 +4906,7 @@ final class SonicCdPastLoadingVisit {
     private void verifyMonitorInvocation(MonitorInvocation invocation) {
         module.requirePastLoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeMonitor != invocation || activeFloat != null || activePata != null || activeTamabboh != null || drawingPata || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || !runningObjects || servicing || loadingSaved
+        if (activeMonitor != invocation || activeFloat != null || activePata != null || activeTamabboh != null || activeCollapse != null || activeBoulder != null || drawingPata || tamabbohPort || drawingTamabboh || collapsePort || boulderPort || drawingCollapse || drawingBoulder || floatPort || drawingFloat || !runningObjects || servicing || loadingSaved
                 || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null || activeTunnelDoor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform || tunnelDoorPort || drawingTunnelDoor

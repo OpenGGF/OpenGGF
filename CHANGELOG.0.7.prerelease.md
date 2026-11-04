@@ -133,6 +133,11 @@ Unreleased. The earlier development themes remain in
   actual selected Sonic pixels and owned GPU retirement are covered in EGL.
   Native state rejects capture, restore, service and recursive draw reentry from
   queued graphics commands without closing the healthy producer.
+  Past Collapse Platforms and Boulders now reuse their shared bodies with genuine
+  Solid/Frame publication and stopped-prefix handling. Fixed standing, breakup,
+  carry and full/course replay checks cover the bindings. The unchanged controller
+  returns through8084; a partial8085 completes new Collapse/Boulder visits before
+  the next unbound Mosqui. Its last completed edge has full/course replay coverage.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;
   they add no Future gameplay, PLC service or World admission. Native visual

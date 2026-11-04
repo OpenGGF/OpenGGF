@@ -184,7 +184,19 @@ public final class CdR11bAssets {
         ANI_TAMABBOH_DAMAGED("Ani_Tamabboh2", 0xB7A6, 26, 0, 0, 0, 0, false),
         MAP_SPR_TAMABBOH("MapSpr_Tamabboh1/MapSpr_Tamabboh2", 0xB7C0, 62, 0, 0, 0, 0, false),
         ANI_TAMABBOH_MISSILE("Ani_TamabbohMissile", 0xB8C0, 8, 0, 0, 0, 0, false),
-        MAP_SPR_TAMABBOH_MISSILE("MapSpr_TamabbohMissile", 0xB8C8, 42, 0, 0, 0, 0, false);
+        MAP_SPR_TAMABBOH_MISSILE("MapSpr_TamabbohMissile", 0xB8C8, 42, 0, 0, 0, 0, false),
+
+        // Original USA B, native pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
+        // Collapsing Platform/Data (Past).asm:7-83; ObjCollapsePlatform_Init (Main.asm:35-41), child stores (:183,:281);
+        // ObjBoulder_Init and MapSpr_Boulder (_Objects/Boulder/Main.asm:30,57-59).
+        // The source even directives retain actual final00 in mapping4 and Boulder; no next-body byte is borrowed.
+        MAP_SPR_COLLAPSE_PLATFORM_1("MapSpr_CollapsePlatform1", 0xC378, 202, 0, 0, 0, 0, false),
+        COLLAPSE_PLATFORM_SIZES_1("ObjCollapsePlatform_Sizes1", 0xC442, 40, 0, 0, 0, 0, false),
+        MAP_SPR_COLLAPSE_PLATFORM_3("MapSpr_CollapsePlatform3", 0xC46A, 62, 0, 0, 0, 0, false),
+        MAP_SPR_COLLAPSE_PLATFORM_2("MapSpr_CollapsePlatform2", 0xC4A8, 782, 0, 0, 0, 0, false),
+        COLLAPSE_PLATFORM_SIZES_2("ObjCollapsePlatform_Sizes2", 0xC7B6, 58, 0, 0, 0, 0, false),
+        MAP_SPR_COLLAPSE_PLATFORM_4("MapSpr_CollapsePlatform4", 0xC7F0, 172, 0, 0, 0, 0, false),
+        MAP_SPR_BOULDER("MapSpr_Boulder", 0x94AC, 14, 0, 0, 0, 0, false);
 
         private final String nativeLabel;
         private final int fileOffset;

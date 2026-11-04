@@ -3,6 +3,11 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -129,6 +134,34 @@ public final class CdCollapsePlatform {
                     objects.view(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2).range().nativeAddress(),
                     objects.view(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3).range().nativeAddress(),
                     objects.view(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4).range().nativeAddress());
+        }
+
+        /**
+         * Named original-USA Past data binding; opens no art bank and creates no current owner.
+         * Act1Past.asm:67-68 includes the same Main (tile44BE at35,182,279) and Data(Past).
+         * Its four complete counted roots have 2/6/7/7 frames; the existing Platform source owns57 tiles.
+         * The raw size scripts and genuine EVEN bytes remain unmodified and are read only when reached.
+         */
+        public static Assets fromPastAssets(CdR11bAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R11B
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R11B.stage())) {
+                throw new IllegalArgumentException("Collapse Past assets require original USA R11B Word RAM");
+            }
+            var map1 = owner.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_1);
+            var map2 = owner.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_2);
+            var map3 = owner.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_3);
+            var map4 = owner.view(CdR11bAssets.Asset.MAP_SPR_COLLAPSE_PLATFORM_4);
+            return new Assets(CdObjectVisualAssets.decodeStatic(map1.bytes().copy(), 2, 57),
+                    CdObjectVisualAssets.decodeStatic(map2.bytes().copy(), 6, 57),
+                    CdObjectVisualAssets.decodeStatic(map3.bytes().copy(), 7, 57),
+                    CdObjectVisualAssets.decodeStatic(map4.bytes().copy(), 7, 57),
+                    owner.view(CdR11bAssets.Asset.COLLAPSE_PLATFORM_SIZES_1).bytes(),
+                    owner.view(CdR11bAssets.Asset.COLLAPSE_PLATFORM_SIZES_2).bytes(),
+                    map1.range().nativeAddress(), map2.range().nativeAddress(),
+                    map3.range().nativeAddress(), map4.range().nativeAddress());
         }
     }
 

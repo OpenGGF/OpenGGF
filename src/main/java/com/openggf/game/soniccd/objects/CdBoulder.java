@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR11bAssets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -137,6 +138,27 @@ public final class CdBoulder {
         void commit(SolidCall call);
     }
 
+    /** Actual opt-in plain-Solid outcome, computed once at this current source/pool/player cut. */
+    public record PrefixSolidCall(CdObjectPool.Snapshot callCut, CdSolidObject.Player expectedPlayer,
+                                  CdSolidObject.Globals expectedGlobals, CdSolidObject.Outcome outcome) {
+        public PrefixSolidCall {
+            Objects.requireNonNull(callCut, "callCut"); Objects.requireNonNull(expectedPlayer, "expectedPlayer");
+            Objects.requireNonNull(expectedGlobals, "expectedGlobals"); Objects.requireNonNull(outcome, "outcome");
+            var entry = outcome instanceof CdSolidObject.Completed done ? done.completedResult().entry()
+                    : ((CdSolidObject.NativeStopped) outcome).prefix().entry();
+            if (entry != CdSolidObject.Entry.SOLID_OBJECT)
+                throw new IllegalArgumentException("Boulder prefixes require genuine plain SolidObject");
+        }
+    }
+
+    /**
+     * Past opt-in: preflight the full actual cut and complete Frame pair, then synchronously publish
+     * the genuine Result or Prefix and ordered requests. Values confer no invocation or Frame authority.
+     * A stopped prefix must be adopted before this body rethrows its identical original exception.
+     */
+    @FunctionalInterface
+    public interface PrefixSolidCommit { void commit(PrefixSolidCall call); }
+
     /**
      * Native DrawObject (Object Functions.asm:137-196), over the actual pool. Its entry clears sprite bit 7;
      * any subsequent live mutations must survive. Root supplies its synchronous phase-guarded shared draw owner;
@@ -177,19 +199,60 @@ public final class CdBoulder {
     }
 
     private final CdObjectPlacementRuntime placement;
-    private final Assets assets;
+    private final NativeAssets assets;
     private final CdSolidObject sharedSolid;
     private final SolidCommit commit;
+    private final PrefixSolidCommit prefixCommit;
     private final DrawObjectCall drawObject;
     private boolean running;
 
     public CdBoulder(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject sharedSolid,
                      SolidCommit commit, DrawObjectCall drawObject) {
         this.placement = Objects.requireNonNull(placement, "placement");
-        this.assets = Objects.requireNonNull(assets, "assets");
+        this.assets = presentAssets(Objects.requireNonNull(assets, "assets"));
         this.sharedSolid = Objects.requireNonNull(sharedSolid, "sharedSolid");
         this.commit = Objects.requireNonNull(commit, "commit");
+        this.prefixCommit = null;
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    @FunctionalInterface
+    private interface TileOperand { int read(int secondary); }
+    /** Explicit format binding; the public A74 Assets3 contract is unchanged. */
+    private record NativeAssets(TileOperand tileOperand, int mappingsAddress) { }
+    private static NativeAssets presentAssets(Assets assets) {
+        return new NativeAssets(secondary -> CdR11aObjectAssets.decodeTileWord(
+                assets.objectTileIds().copy(), TILE_SELECTOR, secondary), assets.mappingsAddress());
+    }
+
+    /**
+     * Actual original-USA B views, without art/PLC ownership or a padded A table. Boulder/Main.asm:27-35
+     * stores B MapSpr_Boulder and reaches selector11 after its Init prefix. The same body/helper algorithm
+     * is used; only this named factory opts into synchronous completed/stopped-Solid publication.
+     */
+    public static CdBoulder fromPastAssets(CdObjectPlacementRuntime placement, CdR11bAssets owner,
+                                           CdSolidObject sharedSolid, PrefixSolidCommit commit, DrawObjectCall drawObject) {
+        return new CdBoulder(placement, pastAssets(owner), sharedSolid, commit, drawObject);
+    }
+    private static NativeAssets pastAssets(CdR11bAssets owner) {
+        Objects.requireNonNull(owner, "owner");
+        var tiles = owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes();
+        if (tiles.length() != 72) throw new IllegalArgumentException("Past Boulder requires the actual72-byte tile directory");
+        var map = owner.view(CdR11bAssets.Asset.MAP_SPR_BOULDER);
+        CdObjectVisualAssets.decodeStatic(map.bytes().copy(), 1, 19);
+        return new NativeAssets(secondary -> readPastTileWord(tiles, secondary), map.range().nativeAddress());
+    }
+    /** Package format seam only: no asset owner, body execution, pool or publication authority. */
+    static int readPastTileWord(CdAssetBytes bytes, int secondary) {
+        Objects.requireNonNull(bytes, "tile bytes"); byteValue(secondary, "secondary");
+        int target = (short) bytes.unsignedWord(TILE_SELECTOR * 2);
+        return bytes.unsignedWord(target + secondary * 2);
+    }
+    private CdBoulder(CdObjectPlacementRuntime placement, NativeAssets assets, CdSolidObject sharedSolid,
+                      PrefixSolidCommit commit, DrawObjectCall drawObject) {
+        this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
+        this.sharedSolid = Objects.requireNonNull(sharedSolid, "sharedSolid"); this.commit = null;
+        this.prefixCommit = Objects.requireNonNull(commit, "commit"); this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
     /**
@@ -223,7 +286,7 @@ public final class CdBoulder {
                     throw new UnsupportedBoulder(UnsupportedBoundary.TILE_ID_SUBTYPE2, wholeIndex,
                             "selector $B / subtype2 $" + Integer.toHexString(state.subtype2()) + " is unreviewed");
                 }
-                int tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), TILE_SELECTOR, state.subtype2());
+                int tile = assets.tileOperand().read(state.subtype2());
                 state = state.moveWord(TILE, tile); // SetObjectTileID:16, only after its bounded reads succeed.
                 pool.write(state);
             }
@@ -232,9 +295,14 @@ public final class CdBoulder {
                 Objects.requireNonNull(inputs, "reached SolidObject inputs");
                 pool.write(state);
                 var cut = pool.capture(); // ONE actual cut, no overlay or synthetic pool.
-                var result = sharedSolid.run(CdSolidObject.Entry.SOLID_OBJECT, state,
-                        inputs.player(), inputs.gates(), inputs.globals(), cut);
-                commit.commit(new SolidCall(cut, inputs.player(), inputs.globals(), result));
+                CdSolidObject.Result result;
+                if (prefixCommit != null) {
+                    result = publishPrefixSolid(state, inputs, cut);
+                } else {
+                    result = sharedSolid.run(CdSolidObject.Entry.SOLID_OBJECT, state,
+                            inputs.player(), inputs.gates(), inputs.globals(), cut);
+                    commit.commit(new SolidCall(cut, inputs.player(), inputs.globals(), result));
+                }
                 if (!pool.state(wholeIndex).equals(result.object())) {
                     throw new IllegalStateException("SolidObject commit did not publish a0's final image");
                 }
@@ -255,6 +323,49 @@ public final class CdBoulder {
             return new Result(pool.state(wholeIndex), effects);
         } finally {
             running = false;
+        }
+    }
+
+    /** One real pure helper invocation, then the synchronous current-cut publication. No outcome replay. */
+    private CdSolidObject.Result publishPrefixSolid(CdObjectState state, SolidInputs inputs, CdObjectPool.Snapshot cut) {
+        var pool = placement.pool();
+        pool.validateRestore(cut);
+        if (!cut.slots().equals(pool.capture().slots()) || !pool.state(state.identity().wholeIndex()).equals(state))
+            throw new IllegalStateException("Past Boulder Solid source differs from its actual full96 cut");
+        var outcome = sharedSolid.runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT, state,
+                inputs.player(), inputs.gates(), inputs.globals(), cut);
+        CdSolidObject.Result completed = null; CdSolidObject.NativeStopped stopped = null;
+        CdObjectState object; List<CdObjectState> others;
+        if (outcome instanceof CdSolidObject.Completed done) {
+            completed = done.completedResult(); object = completed.object(); others = completed.otherSlots();
+        } else {
+            stopped = (CdSolidObject.NativeStopped) outcome; object = stopped.prefix().object(); others = stopped.prefix().otherSlots();
+        }
+        if (!object.identity().equals(state.identity())) throw new IllegalStateException("Solid changed Boulder physical identity");
+        var images = new ArrayList<CdObjectState>(); images.add(object); images.addAll(others);
+        var ready = CdObjectPool.overlay(cut, images); pool.validateRestore(ready);
+        if (!cut.slots().equals(pool.capture().slots()))
+            throw new IllegalStateException("Past Boulder helper changed its pure actual full96 source");
+        try {
+            prefixCommit.commit(new PrefixSolidCall(cut, inputs.player(), inputs.globals(), outcome));
+        } catch (RuntimeException | Error original) {
+            // The publication owner may already have adopted a legitimate partial prefix. Retain it;
+            // report unrelated-slot corruption without replacing the original callback failure.
+            try { requirePrefixNonwrites(pool, cut, images); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        }
+        if (!ready.slots().equals(pool.capture().slots()))
+            throw new IllegalStateException("Past Boulder Solid commit did not publish exactly its full96 output/nonwrites");
+        if (stopped != null) throw stopped.stop().originalException();
+        return completed;
+    }
+    private static void requirePrefixNonwrites(CdObjectPool pool, CdObjectPool.Snapshot before, List<CdObjectState> writes) {
+        for (var source : before.slots()) {
+            boolean written = false;
+            for (var image : writes) if (source.identity().equals(image.identity())) { written = true; break; }
+            if (!written && !source.equals(pool.state(source.identity().wholeIndex())))
+                throw new IllegalStateException("Past Boulder callback changed an unrelated physical image");
         }
     }
 
