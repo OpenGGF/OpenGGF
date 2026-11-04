@@ -285,7 +285,16 @@ public final class S3kSlotBonusStageRuntime {
             bootstrapGameplayMode.getSpriteManager().removeSprite(slotPlayer.getCode());
             if (originalPlayer != null) {
                 bootstrapGameplayMode.getSpriteManager().addSprite(originalPlayer);
-                bootstrapGameplayMode.getCamera().setFocusedSprite(originalPlayer);
+                // Refocus without moving the camera. Camera_X/Y_pos keep the
+                // stage's last sub_4BBF4 track (sonic3k.asm:98988-99004) on
+                // screen until the destination load replaces them; the parked
+                // original player's position is not a camera value.
+                var camera = bootstrapGameplayMode.getCamera();
+                short heldCameraX = camera.getX();
+                short heldCameraY = camera.getY();
+                camera.setFocusedSprite(originalPlayer);
+                camera.setX(heldCameraX);
+                camera.setY(heldCameraY);
                 if (slotArt != null) refreshReturnedPlayerTextures(originalPlayer);
             }
         }
