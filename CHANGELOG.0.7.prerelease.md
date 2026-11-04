@@ -11,6 +11,9 @@ Unreleased. The earlier development themes remain in
   reduction is measured as coverage selection, not a claimed runtime speedup.
   The integration runner can also shorten Maven progress separately from its
   structured result, retaining complete source and fresh JUnit verification.
+  Focused lean checks compile with normal Maven memory before bounded execution,
+  rechecking source and external packet inputs after admission so preparation
+  reports cannot stand in for tests.
   A bounded source census also flags stale simple JUnit test counts before an
   expensive run, leaving parameterized or unresolved discovery explicitly unknown.
   Pinned native-storage queries also expose declared field widths and clear-range

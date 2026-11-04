@@ -76,7 +76,7 @@ class RunFixture(unittest.TestCase):
 
     def invoke(self, action=None, *, code=0, before=None, **kwargs):
         run = self.runner()
-        def queued(args, *, before_run, after_run, maven_stdout):
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
             if before:
                 before()
             before_run()
@@ -178,6 +178,49 @@ class ExecutionTests(RunFixture):
         with self.assertRaises(packet.PacketError):
             self.invoke(before=lambda:self.target.write_text('class Changed {}\n'))
         self.assertFalse((self.root/'target').exists())
+
+    def test_lean_admission_rechecks_external_inputs_before_tests_launch(self):
+        run = self.runner()
+        dep = self.base/'dependency.java'
+        dep.write_text('owned dependency\n'); dep.chmod(0o444)
+        self.value['dependencies'] = [dict(name='body', path=str(dep),
+            sha256=packet.digest(dep.read_bytes()), bytes=dep.stat().st_size, mode='0444')]
+        self.save()
+        original = self.spec.read_bytes()
+        for changed in ('spec', 'dependency'):
+            with self.subTest(changed=changed):
+                self.spec.write_bytes(original)
+                dep.chmod(0o644); dep.write_text('owned dependency\n'); dep.chmod(0o444)
+                launched = []
+                def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
+                    before_run()  # Normal-memory preparation preflight.
+                    if changed == 'spec':
+                        self.spec.write_bytes(original+b' ')
+                    else:
+                        dep.chmod(0o644); dep.write_text('changed dependency\n'); dep.chmod(0o444)
+                    if before_prepared_run is not None:
+                        before_prepared_run()  # Lean admission after the wait.
+                    launched.append('tests')
+                    self.reports(); after_run(0)
+                    return 0
+                with mock.patch.object(run.queue, 'main', queued):
+                    with self.assertRaises(packet.PacketError):
+                        run.run_handoff(self.root, self.spec, execute=True, lane='lean')
+                self.assertEqual([], launched)
+
+    def test_lean_report_cutoff_starts_after_preparation_and_test_admission(self):
+        run = self.runner()
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
+            before_run()
+            self.reports()  # Preparation must not supply this execution's XML.
+            if before_prepared_run is not None:
+                before_prepared_run()
+            after_run(0)
+            return 0
+        with mock.patch.object(run.queue, 'main', queued):
+            result = run.run_handoff(self.root, self.spec, execute=True, lane='lean')
+        self.assertEqual('incomplete', result['status'])
+        self.assertIn('not rewritten', result['evidence_error'])
 
     def test_drift_outside_packet_rejects_result(self):
         other=self.root/'src/Other.java';other.write_text('class Other {}\n')
@@ -412,7 +455,7 @@ class CompactOutputTests(RunFixture):
         run = self.runner()
         stderr = io.StringIO()
         from contextlib import redirect_stderr
-        def queued(args, *, before_run, after_run, maven_stdout):
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
             self.assertEqual(args, ['--normal', '-Dmse=off', '-Dtest=example.TestMain',
                                    '-Dsoniccd.opening.egl=true', 'test', '-B'])
             print('waiting for existing queue admission')
@@ -684,7 +727,7 @@ class ConciseRunTests(RunFixture):
     def test_default_and_explicit_full_pass_the_same_stderr_object_without_metadata(self):
         run = self.runner(); stderr = io.StringIO()
         from contextlib import redirect_stderr
-        def queued(args, *, before_run, after_run, maven_stdout):
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
             self.assertIs(maven_stdout, stderr)
             before_run(); print('unfiltered default text', file=maven_stdout)
             CompactOutputTests.outcome_reports(self, ['passed']); after_run(0); return 0
@@ -702,7 +745,7 @@ class ConciseRunTests(RunFixture):
         expected = ['-Dmse=off', '-Dtest=example.TestMain', '-Dsoniccd.opening.egl=true', 'test', '-B']
         before = sorted(str(p.relative_to(self.root)) for p in self.root.rglob('*'))
         for lane in ('normal', 'lean', 'auto'):
-            def queued(args, *, before_run, after_run, maven_stdout):
+            def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
                 observations.append(args)
                 print('queue notice remains complete '+('q'*5000))
                 before_run()
@@ -731,7 +774,7 @@ class ConciseRunTests(RunFixture):
                                       ('failure', 0, '[INFO] BUILD SUCCESS'),
                                       ('passed', 7, '[INFO] BUILD SUCCESS')):
                 with self.subTest(compact=compact, status=status, code=code):
-                    def queued(args, *, before_run, after_run, maven_stdout):
+                    def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
                         before_run(); os.write(maven_stdout.fileno(), log.encode())
                         CompactOutputTests.outcome_reports(self, [status], message='actual XML diagnostic')
                         after_run(code); return code
@@ -752,7 +795,7 @@ class ConciseRunTests(RunFixture):
         other = self.root/'src/Other.java'; other.write_text('class Other {}\n')
         for mutate in (False, True):
             with self.subTest(mutate=mutate):
-                def queued(args, *, before_run, after_run, maven_stdout):
+                def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
                     before_run(); os.write(maven_stdout.fileno(), b'[INFO] BUILD SUCCESS\n')
                     if mutate:
                         CompactOutputTests.outcome_reports(self, ['passed']); other.write_text('class Changed {}\n')
@@ -767,7 +810,7 @@ class ConciseRunTests(RunFixture):
             def write(self, value): raise OSError('owned stderr failed')
         run = self.runner(); completed = []; previous = Path.cwd(); captured = []
         from contextlib import redirect_stderr
-        def queued(args, *, before_run, after_run, maven_stdout):
+        def queued(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
             captured.append(maven_stdout)
             before_run(); os.write(maven_stdout.fileno(), b'[ERROR] display failed\n')
             CompactOutputTests.outcome_reports(self, ['passed']); after_run(0); completed.append(True); return 0

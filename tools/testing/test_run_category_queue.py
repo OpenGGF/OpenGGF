@@ -793,15 +793,24 @@ with queue.worktree_build_slot(root) as tree_fd:
         import maven_small
         with patch.object(queue, 'maven_slot', return_value=nullcontext(None)) as slot, \
                 patch.object(maven_small, 'automatic_lean', return_value=(['bounded', 'test'], {'SMALL': '1'})) as automatic, \
+                patch('run_categories.tree_state', return_value='source'), \
+                patch('run_categories.validate_preparation_contract'), \
+                patch.object(queue, 'prepared_lean', return_value=0) as prepared, \
                 patch('category_artifacts.stop_process_tree'), \
                 patch.object(queue.subprocess, 'Popen') as popen:
             popen.return_value.__enter__.return_value.wait.return_value = 0
             self.assertEqual(0, queue.main(['-Dtest=One', 'test']))
+            call = prepared.call_args
+            self.assertEqual(['-Dtest=One', 'test-compile'], call.args[2])
+            self.assertEqual(['bounded', 'surefire:test'], call.args[3])
+            self.assertEqual({'SMALL': '1'}, call.args[4])
+            with call.args[5](17):
+                pass
             self.assertTrue(slot.call_args.kwargs['small_job'])
+            self.assertEqual(17, slot.call_args.kwargs['tree_fd'])
             self.assertEqual((4 * 1024 ** 3, 4), slot.call_args.kwargs['reservation'])
             self.assertEqual('focused-auto-lean', slot.call_args.kwargs['kind'])
-            self.assertEqual(['mvn', 'bounded', 'test'], popen.call_args.args[0])
-            self.assertEqual({'SMALL': '1'}, popen.call_args.kwargs['env'])
+            popen.assert_not_called()
             automatic.reset_mock()
             self.assertEqual(0, queue.main(['--normal', '-Dtest=One', 'test']))
             automatic.assert_not_called()
@@ -811,6 +820,8 @@ with queue.worktree_build_slot(root) as tree_fd:
             automatic.return_value = None
             with patch.object(queue, 'lean_command', return_value=(['bounded', 'test'], {'SMALL': '1'})):
                 self.assertEqual(0, queue.main(['--lean', '-Dtest=Heavy', 'test']))
+            with prepared.call_args.args[5](17):
+                pass
             self.assertFalse(slot.call_args.kwargs['small_job'])
             self.assertEqual((4 * 1024 ** 3, 4), slot.call_args.kwargs['reservation'])
             with self.assertRaisesRegex(ValueError, 'mutually exclusive'):
@@ -1054,11 +1065,15 @@ with queue.worktree_build_slot(root) as tree_fd:
         """Run the real CLIs/runner, replacing only the Maven executable with a probe."""
         marker = Path(self.temp.name) / name
         self.addCleanup(marker.with_suffix('.release').touch)
+        if lean:
+            (root or self.linked).joinpath('pom.xml').write_text(
+                '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion></project>')
         fake_maven = r"""
 import json, os, sys, time
 from pathlib import Path
 marker = Path(sys.argv[1])
 if sys.argv[3] == 'yes' and 'test-compile' in sys.argv[4:]:
+    marker.with_suffix('.prepared.args').write_text(json.dumps({'args': sys.argv[4:], 'mavenOpts': os.environ.get('MAVEN_OPTS')}))
     marker.with_suffix('.prepared').touch()
     sys.exit(0)
 marker.with_suffix('.args').write_text(json.dumps({'cwd': str(Path.cwd()), 'args': sys.argv[4:],
@@ -1087,7 +1102,8 @@ original = subprocess.Popen
 marker, fake, code, category, lean, supplied_args = sys.argv[2:]
 def probe(command, *args, **kwargs):
     if command[0] == 'mvn':
-        command = [sys.executable, '-u', '-c', fake, marker, code, category, *command[1:]]
+        command = [sys.executable, '-u', '-c', fake, marker, code,
+                   'yes' if category == 'yes' or lean == 'yes' else 'no', *command[1:]]
     return original(command, *args, **kwargs)
 try:
     with queue.handle_termination(), patch.object(subprocess, 'Popen', probe):
@@ -1216,7 +1232,12 @@ except KeyboardInterrupt:
         from maven_schedule import TOOLING_REVISION
         process, marker = self.launch_command('lean-cli', lean=True)
         self.wait_started(process, marker)
+        prepared = json.loads(marker.with_suffix('.prepared.args').read_text())
+        self.assertIn('test-compile', prepared['args'])
+        self.assertIsNone(prepared['mavenOpts'])
         invoked = json.loads(marker.with_suffix('.args').read_text())
+        self.assertIn('surefire:test', invoked['args'])
+        self.assertNotIn('test', invoked['args'])
         self.assertEqual('-Xmx1g', invoked['mavenOpts'])
         self.assertIn('-Dprobe=spaces and $literal', invoked['args'])
         self.assertIn('-Dsurefire.argLine=--enable-native-access=ALL-UNNAMED ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g', invoked['args'])

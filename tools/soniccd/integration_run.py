@@ -484,7 +484,8 @@ def run_handoff(root, spec_path, *, lane='normal', execute=False, compact_output
         with queue.handle_termination(), redirect_stdout(sys.stderr):
             with progress if progress is not None else nullcontext(sys.stderr) as maven_output:
                 queue.main(([] if lane=='auto' else ['--'+lane])+args,
-                           before_run=before_run, after_run=after_run, maven_stdout=maven_output)
+                           before_run=before_run, before_prepared_run=before_run,
+                           after_run=after_run, maven_stdout=maven_output)
         if progress is not None:
             result['maven_progress'] = progress.metadata()
         packet.require('maven_returncode' in result, 'Queue returned without a terminal Maven observation')

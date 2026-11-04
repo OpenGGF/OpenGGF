@@ -275,6 +275,13 @@ Execution generates only the exact declared class/method selection, allowlisted 
 commit or push. Default lane is normal; `--lane auto`/`lean` retain the existing queue's
 qualification/resource rules. Explicit RED executions remain failed observations.
 
+Lean execution first compiles with normal Maven memory, then retains the worktree
+lease while waiting for bounded test admission. The runner checks the complete
+source/spec/dependency declarations both before preparation and again after that
+wait. Its fresh-report cutoff starts at the second check, before `surefire:test`;
+compilation output alone cannot satisfy the requested test evidence. The queue's
+separate `before_prepared_run` observer leaves existing one-shot observers intact.
+
 The runner fingerprints actual tracked and visible nonignored untracked file bytes
 plus HEAD/index pins before requesting admission. It revalidates source, handoff and
 dependencies after admission, immediately before Maven launch. The existing queue

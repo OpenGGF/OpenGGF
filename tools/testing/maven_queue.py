@@ -3,7 +3,8 @@
 
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
 Build without shared admission: python3 tools/testing/maven_queue.py -DskipTests package
-Qualified focused checks use 1 GiB JVM heaps automatically. Use --normal to opt out.
+Qualified focused checks compile with normal memory, then use 1 GiB test JVM heaps.
+Use --normal to opt out.
 Explicit low-memory lane: add --lean before the Maven arguments.
 The OS owns execution and waiting leases. Short estimated runs are preferred;
 five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
@@ -504,15 +505,17 @@ def needs_exclusive(args):
 
 
 def lean_command(args):
-    """Bound both JVM heaps for explicit focused tests, preserving test agents.
+    """Bound execution JVM heaps for focused tests, preserving test agents.
 
-    Automatic callers qualify classes separately; memory-heavy tests use the
-    normal lane. Never silently retry
-    an OOM as a passing lean run. Unknown shapes cannot borrow its smaller budget.
+    Compilation is prepared separately with normal Maven memory. Automatic
+    callers qualify classes separately; memory-heavy tests use the normal lane.
+    Never silently retry an OOM as passing lean. Goals are exactly [clean] test
+    so the existing preparation-contract check can preserve the split lifecycle.
     """
     from maven_schedule import profiles_of, maven_estimate, FULL_SECONDS
     if (needs_exclusive(args) or profiles_of(args)[0] or maven_estimate(args) == FULL_SECONDS
-            or 'test' not in args or any(not arg.startswith('-') and arg not in ('clean', 'test') for arg in args)
+            or [arg for arg in args if not arg.startswith('-')] not in (['test'], ['clean', 'test'])
+            or any(arg in ('-D', '--define') for arg in args)
             or any(arg.startswith(('-f', '--file', '-s', '--settings', '-gs', '--global-settings',
                                    '-t', '--toolchains', '-Dmaven.compiler.', '-Dmaven.surefire.debug'))
                    or 'reuseForks' in arg for arg in args)
@@ -535,19 +538,76 @@ def lean_command(args):
                 MAVEN_OPTS=(os.environ.get('MAVEN_OPTS', '').strip() + ' -Xmx1g').strip())
 
 
-def main(argv=None, *, before_run=None, after_run=None, maven_stdout=None):
+def run_maven(args, environment=None, inherited=None, *, stdout=None):
+    """One process with unchanged process-tree cleanup, output and inherited leases."""
+    from category_artifacts import stop_process_tree
+    with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'), stdout=stdout,
+                          env=environment, **(inherited or {})) as process:
+        try:
+            return process.wait()
+        finally:
+            stop_process_tree(process)
+
+
+def prepared_lean(root, initial, preparation, execution, environment, admission, *,
+                  before_run=None, before_prepared_run=None, after_run=None, maven_stdout=None):
+    """Prepare with normal memory, retaining the tree lock through bounded tests.
+
+    Compatibility backport of main91151314217a8b2e51c471e93700b766da1e1b68.
+    Compilation holds only the existing tree/build-activity leases; it releases
+    activity before shared 4 GiB/4-core test admission. No scheduler policy changes.
+    Source changes or failed preparation prevent tests. Existing observers fire
+    once: before compilation inside its leases, after the terminal process cleanup
+    inside the retained leases. The optional separate prepared observer rechecks
+    external custody after test admission, before launching the prepared tests.
+    A thrown launch/wait/cleanup/fingerprint fault has
+    no completed callback; no failed phase is retried or converted into a pass.
+    """
+    from maven_activity import build_activity_slot
+    from run_categories import tree_state
+
+    with worktree_build_slot(root) as tree_fd:
+        with build_activity_slot(root) as activity_fds:
+            print('Compiling tests with normal Maven memory before lean execution; '
+                  'no test admission is held.', flush=True)
+            if before_run is not None:
+                before_run()
+            code = run_maven(preparation, None, inherited_slot(tree_fd, activity_fds), stdout=maven_stdout)
+        if code:
+            print('Test preparation failed; no tests launched.', flush=True)
+            if after_run is not None:
+                after_run(code)
+            return code
+        if tree_state(root) != initial:
+            raise ValueError('Working tree changed during test preparation; no tests launched')
+        with admission(tree_fd) as fds:
+            if tree_state(root) != initial:
+                raise ValueError('Working tree changed while waiting for test admission; no tests launched')
+            if before_prepared_run is not None:
+                before_prepared_run()
+            code = run_maven(execution, environment, inherited_slot(fds), stdout=maven_stdout)
+            if after_run is not None:
+                after_run(code)
+            return code
+
+
+def main(argv=None, *, before_run=None, before_prepared_run=None, after_run=None, maven_stdout=None):
     """Run Maven, optionally observing its admitted and terminal boundaries.
 
-    Both callbacks run while this invocation owns its existing leases. A
-    rejected preflight prevents launch; completed observation follows process
+    All callbacks run while this invocation owns its existing leases. Lean
+    observers bracket normal-memory preparation plus bounded test execution;
+    the worktree lease spans both. before_prepared_run is a separate optional
+    lean-only revalidation after test admission; the normal lane already calls
+    before_run at that boundary. A rejected preflight prevents launch;
+    completed observation follows process
     cleanup and is omitted when launch, wait or cleanup raises.
     maven_stdout optionally routes the child process output; Python queue notices
     retain their existing stream. None preserves normal CLI output.
     """
-    from category_artifacts import stop_process_tree
     from maven_schedule import maven_estimate, maven_kind
 
-    for name, callback in (("before_run", before_run), ("after_run", after_run)):
+    for name, callback in (("before_run", before_run), ("before_prepared_run", before_prepared_run),
+                           ("after_run", after_run)):
         if callback is not None and not callable(callback):
             raise ValueError(f'{name} must be callable or None')
     args = list(sys.argv[1:] if argv is None else argv)
@@ -573,40 +633,59 @@ def main(argv=None, *, before_run=None, after_run=None, maven_stdout=None):
         raise ValueError('--lean and --normal are mutually exclusive')
     if not args:
         raise ValueError('Supply Maven arguments after --')
+    requested = list(args)
     # Use the caller's worktree, including when this script lives in another one.
     exclusive = needs_exclusive(args)
     environment = None
     reservation = None
     kind = maven_kind(args, exclusive)
     estimate = maven_estimate(args)
-    automatic = None
+    automatic = bounded = initial = None
     if not normal and not build_only(args):
         from maven_small import automatic_lean
         automatic = automatic_lean(args, root=Path.cwd())
     if lean or automatic is not None:
-        args, environment = lean_command(args) if lean else automatic
+        import xml.etree.ElementTree as ET
+        from run_categories import tree_state, validate_preparation_contract
+        bounded = lean_command(args) if lean else automatic
+        # Fingerprint before checking the POM; later changes invalidate prepared classes.
+        initial = tree_state(Path.cwd())
+        try:
+            validate_preparation_contract(Path.cwd())
+        except (OSError, ValueError, ET.ParseError) as error:
+            if lean:
+                raise ValueError(f'--lean compiles before its bounded tests; {error}') from None
+            print(f'Normal lane: {error}', flush=True)
+            bounded = automatic = None
+    if bounded is not None:
+        args, environment = bounded
         from maven_resources import GIB
         reservation = (4 * GIB, 4)
         kind = 'focused-lean' if lean else 'focused-auto-lean'
         if automatic is not None:
-            print('Qualified small job: 1 GiB JVM heaps; 4 GiB/4-core reservation. '
+            print('Qualified small job: normal-memory compilation, then 1 GiB test JVM heaps; '
+                  '4 GiB/4-core reservation. '
                   'Use --normal if this check needs the larger heap.', flush=True)
     building = not lean and build_only(args)
-    slot = (worktree_build_slot(Path.cwd()) if building else
-            maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
-                       kind=kind, reservation=reservation,
-                       small_job=automatic is not None))
+    def admission(tree_fd=None):
+        return maven_slot(Path.cwd(), exclusive=exclusive, estimate=estimate,
+                          kind=kind, reservation=reservation,
+                          small_job=automatic is not None, tree_fd=tree_fd)
+
+    if bounded is not None:
+        # clean is performed once, before compilation. Tests never repeat lifecycle phases.
+        preparation = ['test-compile' if arg == 'test' else arg for arg in requested]
+        execution = ['surefire:test' if arg == 'test' else arg for arg in args if arg != 'clean']
+        return prepared_lean(Path.cwd(), initial, preparation, execution, environment, admission,
+                             before_run=before_run, before_prepared_run=before_prepared_run,
+                             after_run=after_run, maven_stdout=maven_stdout)
+    slot = worktree_build_slot(Path.cwd()) if building else admission()
     from maven_activity import build_activity_slot
     activity = build_activity_slot(Path.cwd()) if building else nullcontext(())
     with slot as fd, activity as activity_fds:
         if before_run is not None:
             before_run()
-        with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'), stdout=maven_stdout,
-                              env=environment, **inherited_slot(fd, activity_fds)) as process:
-            try:
-                returncode = process.wait()
-            finally:
-                stop_process_tree(process)
+        returncode = run_maven(args, environment, inherited_slot(fd, activity_fds), stdout=maven_stdout)
         if after_run is not None:
             after_run(returncode)
         return returncode

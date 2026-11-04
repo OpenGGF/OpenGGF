@@ -176,7 +176,7 @@ class MethodSelectorTests(RunFixture):
         self.select()
         run = self.runner()
         seen = []
-        def queue(args, *, before_run, after_run, maven_stdout):
+        def queue(args, *, before_run, after_run, maven_stdout, before_prepared_run=None):
             seen.append(list(args))
             before_run()
             self.cases()

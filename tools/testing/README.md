@@ -295,13 +295,28 @@ For other focused tests with known bounded memory needs, explicitly use the lean
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test
 ```
 
-It caps both Maven and the reused test JVM at **1 GiB heap each**, preserving the
-Mockito agent, CDS setting and macOS first-thread flag, and reserves **4 GiB RAM / 4
-cores** rather than the normal 7 GiB / 8 cores. The same headroom, three-run ceiling,
-worktree exclusion and waiting order apply. An out-of-memory result is a failed run;
-rerun that test with `--normal` and report the lean failure. Full suites, wildcard
-selectors, explicit profiles, custom build/JVM overrides and custom `.mvn` launch
-settings are rejected by `--lean`. Explicit lean remains a development option; it
+It first compiles with **normal Maven memory** using `test-compile`, under the
+existing worktree/build-activity leases. It then releases build activity, retains
+the worktree lock, and queues `surefire:test` with **1 GiB heaps for Maven and the
+reused test JVM**, preserving the Mockito agent, CDS setting and macOS first-thread
+flag. Only test execution uses the **4 GiB RAM / 4 cores** reservation; normal
+admission remains 7 GiB / 8 cores. Headroom, concurrency limits and waiting order
+are unchanged. `clean`, when requested, runs once before compilation. Source
+changes during preparation or while waiting prevent execution of stale classes.
+Source-bound callers can supply `before_prepared_run` to recheck external inputs
+after test admission, before launching `surefire:test`. This separate observer
+does not repeat the existing one-shot `before_run`/`after_run` callbacks; normal
+execution uses only its original admitted boundary. Observer rejection releases
+the leases without launching the rejected phase.
+
+The existing preparation-contract check must admit the POM lifecycle: explicit
+lean rejects an unsupported lifecycle, while automatic qualification retains the
+original normal invocation. No test-bound plugin execution is silently dropped.
+Failed compilation launches no tests; a compiler failure alone is not proof of an
+OOM. An out-of-memory result is a failed run; rerun with `--normal` and report the
+lean failure. Full suites, wildcard selectors, explicit profiles, custom build/JVM
+overrides and custom `.mvn` launch settings remain rejected by `--lean`. Explicit
+lean remains a development option; it
 does not qualify an unknown class for the aged-head backfill allowance below.
 Required broad, trace, native and release checks keep their coverage and lanes.
 Ordinary category batches receive the same automatic budget only when every
