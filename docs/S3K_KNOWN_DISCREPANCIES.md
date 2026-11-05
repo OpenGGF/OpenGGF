@@ -1678,6 +1678,14 @@ selection passes29T/0F/0E/0S. This is later event progression, not the CNZ arriv
 at player X=$3640 or a cold Knuckles route/ICZ2 handoff qualification.
 [Source, commands and limits](architecture/validation/levels/s3k-icz-act1.md#knuckles-snow-free-camera-event-progression--2026-10-21).
 
+ICZ tension-platform rider order (2026-11-05): sequential impulses now consume
+native P1 then P2 and the existing extra-sidekick roster, rather than an identity
+map's allocation-dependent traversal. Three deterministic discriminators fail
+before the correction and pass afterward. The canonical ICZ2 replay remains red
+at row483 Y with1,724 grouped errors; the historical1,035 mode swapped the native
+launch velocities. Source-epoch and raw-row limits remain explicit in the
+[rider-order audit](architecture/audits/2026-11-05-icz-rider-order.md).
+
 ICZ2 crushing-column decoration reconstruction (2026-10-21): the ordinary
 partial crossing exposed a strict second-restore mismatch in the child's
 immutable birth spawn. `BottomDecoration.recreateForRewind` now retains the

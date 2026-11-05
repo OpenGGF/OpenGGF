@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -78,6 +80,7 @@ class TestS3kIczTensionPlatformObject {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(spawn(0x1000, 0x1000));
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x0FE0);
         ScriptedSolidServices services = new ScriptedSolidServices(instance, null, null);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
         services.batch = batch(instance, player, true, false, 0x0400);
         setServices(instance, services);
 
@@ -86,6 +89,64 @@ class TestS3kIczTensionPlatformObject {
         assertEquals(0x1008, invokeInt(instance, "getTargetYForTesting"));
         assertEquals(0x0300, invokeInt(instance, "getYVelocityForTesting"));
         assertTrue((Boolean) instance.getClass().getMethod("isSpringActiveForTesting").invoke(instance));
+    }
+
+    @Test
+    void leavingRidersConsumeSharedVelocityInNativeOrderRegardlessOfMapOrder() throws Exception {
+        assertLeavingRiderOrder(2);
+    }
+
+    @Test
+    void extraSidekickConsumesVelocityAfterNativeP1AndP2() throws Exception {
+        assertLeavingRiderOrder(3);
+    }
+
+    @Test
+    void participantMismatchFailsBeforeChangingTheSpring() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(spawn(0x1000, 0x1000));
+        var recorded = new TestablePlayableSprite("sonic", (short) 0x1000, (short) 0x0FE0);
+        var different = new TestablePlayableSprite("tails", (short) 0x1000, (short) 0x0FE0);
+        var services = new ScriptedSolidServices(instance, batch(instance, recorded, true, false, 0x400), null);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> different, List::of));
+        setServices(instance, services);
+        assertThrows(IllegalStateException.class, () -> instance.update(1, different));
+        assertEquals(0x1000, invokeInt(instance, "getTargetYForTesting"));
+        assertEquals(0, invokeInt(instance, "getYVelocityForTesting"));
+        assertEquals(false, instance.getClass().getMethod("isSpringActiveForTesting").invoke(instance));
+    }
+
+    private static void assertLeavingRiderOrder(int count) throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(spawn(0x1000, 0x1000));
+        var contacts = new IdentityHashMap<PlayableEntity, PlayerSolidContactResult>();
+        for (int i = 0; i < count; i++) {
+            var player = new TestablePlayableSprite("player" + i, (short) 0x1000, (short) 0x0FE0);
+            player.setYSpeed((short) -0x400);
+            contacts.put(player, new PlayerSolidContactResult(
+                    ContactKind.NONE, false, true, false, false,
+                    new PreContactState((short) 0, (short) -0x400, false, 0),
+                    new PostContactState((short) 0, (short) -0x400, true, false, false), 0));
+        }
+        var checkpoint = new SolidCheckpointBatch(instance, contacts);
+        var mapOrder = List.copyOf(checkpoint.perPlayer().keySet());
+        // Assign semantic P1/P2 only after the real defensive identity-map copy.
+        // P1 is deliberately last in its traversal: no random allocation search
+        // or assumption about a JVM's identity hashes can make this pass by chance.
+        PlayableEntity p1 = mapOrder.getLast();
+        List<PlayableEntity> sidekicks = mapOrder.subList(0, count - 1);
+        var services = new ScriptedSolidServices(instance, checkpoint, null);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> p1, () -> sidekicks));
+        setServices(instance, services);
+
+        instance.update(1, p1);
+
+        // sub_8BA7E adds the current platform speed, then damps that shared
+        // speed before the next player. Starting at zero gives $300, $540, $6F0.
+        assertEquals((short) -0x400, p1.getYSpeed());
+        assertEquals((short) -0x100, sidekicks.getFirst().getYSpeed());
+        if (count == 3) assertEquals((short) 0x140, sidekicks.get(1).getYSpeed());
+        assertEquals(count == 2 ? 0x540 : 0x6F0, invokeInt(instance, "getYVelocityForTesting"));
+        assertEquals(0x1000, invokeInt(instance, "getTargetYForTesting"));
+        assertEquals(true, instance.getClass().getMethod("isSpringActiveForTesting").invoke(instance));
     }
 
     @Test

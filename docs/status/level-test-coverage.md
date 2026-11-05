@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+ICZ2 rider-order maintenance (2026-11-05): the
+[Act2 matrix](../architecture/validation/levels/s3k-icz-act2.md#native-rider-impulse-order--2026-11-05)
+records deterministic native P1/P2 tension-platform impulses, existing extra
+sidekicks and checkpoint identity checks. The strict route remains red; full
+route, native picture and broader product obligations remain open.
+
 MHZ sanctuary handoff blocker (2026-11-05): the
 [MHZ1 boundary record](../architecture/validation/levels/s3k-mhz-act1.md#run-segment-sanctuary-camera-blocker-2026-11-05)
 separates fresh `Get_LevelSizeStart` camera `$0320` from final native `$0326`
