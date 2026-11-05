@@ -1132,6 +1132,15 @@ native behavior.
 not only inside the helper. Port native player order and thread every mutated
 value through eligibility early returns as well as the active branch.
 
+An identity-keyed contact batch is a lookup, not that dispatch order. ICZ's
+`sub_8BA1C` invokes P1 then P2, while `sub_8BA7E` changes the platform's shared
+Y velocity between riders (`sonic3k.asm:190449-190485`). Iterating the batch's
+`IdentityHashMap` can swap their impulses across allocations or diagnostic
+builds. Consume the semantic player roster in native order, validate that it
+matches the fresh checkpoint, and process engine extensions afterward. A
+regression fixture can assign P1 last in the actual map traversal while keeping
+the declared P1/P2 roster fixed; it must not depend on random identity hashes.
+
 **ROM citation.** HCZ `sub_6B9AC` initializes `d2=+$20000` once, then calls
 `sub_6B9C8` for P1 and P2. A player right of the column negates `d2`, so the
 second player's direction depends on the first call. Its sibling `sub_6B9E2`

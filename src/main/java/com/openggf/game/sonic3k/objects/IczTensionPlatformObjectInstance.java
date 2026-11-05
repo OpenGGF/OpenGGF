@@ -197,16 +197,31 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        // sub_8BA1C calls P1 before P2, and sub_8BA7E changes the shared
+        // platform y_vel between calls (sonic3k.asm:190449-190485). The identity
+        // map is a lookup, not a native dispatch order. Extra engine sidekicks
+        // retain their existing roster order after the native pair.
+        List<PlayableEntity> players = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (players.size() != batch.perPlayer().size()) {
+            throw new IllegalStateException("ICZ tension-platform checkpoint/query participant mismatch");
+        }
+        for (PlayableEntity player : players) {
+            if (batch.perPlayer().get(player) == null) {
+                throw new IllegalStateException("ICZ tension-platform participant has no checkpoint result");
+            }
+        }
+
         targetY = baseY + (standingCount * TARGET_STEP_PER_RIDER);
         springActive = true;
         movingTowardPositiveY = false;
 
-        for (var entry : batch.perPlayer().entrySet()) {
-            PlayerSolidContactResult result = entry.getValue();
-            if (result == null || result.standingNow() == result.standingLastFrame()) {
+        for (PlayableEntity player : players) {
+            PlayerSolidContactResult result = batch.perPlayer().get(player);
+            if (result.standingNow() == result.standingLastFrame()) {
                 continue;
             }
-            applyPlayerImpulse(entry.getKey(), result);
+            applyPlayerImpulse(player, result);
         }
     }
 

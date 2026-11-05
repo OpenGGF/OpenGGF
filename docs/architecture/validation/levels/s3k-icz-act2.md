@@ -1,5 +1,18 @@
 # S3K IceCap Act 2 coverage matrix
 
+## Native rider impulse order — 2026-11-05
+
+The [rider-order audit](../../audits/2026-11-05-icz-rider-order.md) qualifies
+simultaneous tension-platform departures independently of identity-map order,
+including the existing extra-sidekick policy and fail-closed checkpoint identity.
+Three discriminators fail on unchanged production then pass; all seven object
+cases and the selected guards/keep-green controls pass. The complete canonical
+ICZ2 report remains red at row483 Y with1,724 grouped errors. Historical1,035
+uses swapped launch impulses and is not a lower-error native reference. Source
+epochs and actual raw comparisons are explicitly qualified in the audit.
+No new persistent state is added. Full routes, native pictures, donor/viewport
+breadth and broader interaction/rewind products remain inherited gaps.
+
 ## Native sprite submission maintenance (2026-11-02)
 
 The committed 2,292-row solo-Sonic native320 cube/button/bridge movie was replayed

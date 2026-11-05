@@ -124370,3 +124370,37 @@ network-cleanup smoke-only0/1 observation is not reproduced in the matched
 focused base or corrected candidate. Its unchanged source publishes retirement
 before releasing its final one-item reservation; no networking code is changed,
 and the raw smoke observation is not relabelled a passing full sweep.
+
+
+## 2026-11-05 — ICZ tension-platform native rider order
+
+The native-frontiers combined source `a89b85806` reports1,724 groups for
+`TestS3kSonicTailsIcz2SegmentTraceReplay`, versus1,035 in reused93b. Both first
+fail at483 Y, ROM0948/engine094B. The originally named ZoneSlice test is
+unchanged2,430/first11989 X. Correct identity comes from full original XML.
+
+A focused unchanged-develop `eeabd00a7` control also produces the complete1,724
+JSON. Actual preserved1035-mode historical rows and current1724-mode rows
+match6,282 IDs/288,065 fields with no expected-value/coverage changes; all
+shared fields before953 are identical. At953 the historical mode swaps P1/P2
+launch speeds, while1724 has native speeds. ERROR observations144,314->102,597,
+130,008 value tuples removed/88,291 added,0 additions on483 baseline-clean
+rows. These remain distinct source epochs, not a new pristine current raw pair.
+
+`sub_8BA1C`/`sub_8BA7E` (sonic3k.asm:190449-190485) dispatch P1 then P2 and
+mutate shared platform velocity between them. The unchanged Java owner consumed
+an IdentityHashMap. The bounded object correction uses the existing ordered
+player query, validates fresh checkpoint identities, and retains extra-sidekick
+order. No shared map/API, new captured state, fixture or camera changes. See
+[the audit](../architecture/audits/2026-11-05-icz-rider-order.md).
+
+Queued Java25 Maven, `-Dmse=off`, EGL, one alphabetical fork, verified original
+ROMs: `-Pguards -Dtest=TestS3kIczTensionPlatformObject test` gives7cases/3 expected
+failures before correction, then all7 pass. The explicit trace-segments object/
+ICZ/guard/four-keep-green selection gives168 cases,165pass/3inherited replay
+failures/0errors/0skips. ICZ2 wholeJSON matches1,724 canonical control, ICZ1 stays
+1,824/first3836 animation; ZoneSlice stays2,430/11989 X. A misspelled intended
+Tails selector did not execute; final-composition corrected selection and actual
+rows remain lead-owned before delivery. Full commands/reports/source hashes are
+in `/tmp/trace-native-frontiers-20261105/{icz-order-red,icz-order-green}/`.
+No full-route or original-source-pair parity certificate is claimed here.

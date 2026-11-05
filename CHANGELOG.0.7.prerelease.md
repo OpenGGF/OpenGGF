@@ -177,7 +177,9 @@ Unreleased. The earlier development themes remain in
   buttons share proximity and presentation, including native sprite priority.
   Explosion placement now uses the ROM’s high random word for Y, and failed
   ICZ explosion allocation consumes no RNG or sound. Teleporter swing arithmetic
-  also uses its common transition without changing rewind storage.
+  also uses its common transition without changing rewind storage. ICZ tension
+  platforms apply rider impulses in native player order, keeping their shared
+  spring velocity independent of object identity-map traversal.
 
 - HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
 
