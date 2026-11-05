@@ -251,3 +251,52 @@ Requirements: Python 3 with numpy and Pillow, and ffmpeg. Keep fonts,
 captures, frames and renders in the task directory; never commit them.
 Archive the edit file and its sources in OpenGGF-Media per the
 gameplay-highlights skill.
+
+# Website hero reels
+
+`hero_reels.py` regenerates the muted looping videos behind each game's
+title-card hero on the website (`promo-s1.mp4`, `promo-s2.mp4`,
+`promo-s3k.mp4`) from the current engine, with no hand editing. Each game has
+a committed manifest in [`hero-reels/`](hero-reels/) that lists its shots in
+order. A shot names its source, its start frame, its length in frames, a
+label and, where it differs from the source's own team, the characters:
+
+- `"source": "trace"` replays a committed trace fixture under
+  `src/test/resources/traces/<game>/` through `TraceCaptureTool`, the
+  sanctioned replay bootstrap. `start` is a trace row. Gameplay comes from the
+  fixture's BK2; trace rows are only compared, never applied.
+- `"source": "capture"` boots `zone`/`act` directly with `GameplayCaptureTool`
+  and drives it from a committed BK2 or input log (`input`, `input_start`).
+  `start` is the frame within the capture. `expect_mode` and the optional
+  `setup` keys (`x`, `y`, `rings`, `emeralds`, `star_post`, ...) map to the
+  tool's flags. Author any new inputs with the
+  [bk2-input-authoring](../../.agents/skills/bk2-input-authoring/SKILL.md) or
+  Stageplay route planner workflows, never by hand.
+
+```bash
+python3 tools/media/hero_reels.py validate                 # manifests and inputs; no ROM or JVM
+python3 tools/media/hero_reels.py build --game all --out /task/hero-reels
+python3 tools/media/hero_reels.py sheet /task/hero-reels/promo-s2.mp4 /task/s2-sheet.png
+python3 -m unittest tools/media/test_hero_reels.py
+```
+
+`build` compiles through the Maven queue (`--skip-compile` reuses
+`target/classes`). It finds the original ROMs by SHA-1, the same way the test
+wrapper does, and runs one display-free surfaceless-EGL JVM per shot, one
+after another, in a private configuration directory. The checkout's
+`config.yaml` is never read or written. Shots are joined with hard cuts, or
+optional `dip_in`/`dip_out` frames, then scaled 2x with nearest-neighbour,
+faded at the loop ends and encoded as silent 640x448 60 fps H.264 with
+faststart. Each game writes its reel, a poster PNG and WebP, a contact sheet
+(one frame every 4 s) and `<name>.provenance.json`. The provenance records the
+engine commit, the manifest hash, the ROM SHA-1, input hashes, every shot's
+source and reel frame ranges, and the exact tool arguments.
+
+The build stops before publishing anything to `--out` if any of these happen:
+a ROM is missing, a JVM fails, a shot comes back with zero frames or too few,
+the leader dies inside a capture window, the game mode is unexpected, a
+black or frozen run appears inside a shot, or the encode misses its frame
+count, size, rate or byte budget. After engine changes, re-render and read
+the contact sheets: a shot that still passes these checks can still drift
+into dull footage. Move its window, or substitute a nearby shot and say why
+in its `note`.

@@ -39,6 +39,11 @@ preparing the release. See [release rollover](release-rollover.md).
    [release rollover](release-rollover.md). Read the version from that commit's
    `pom.xml`. [Rebuild, review and commit the project atlas](#refresh-the-project-atlas-for-a-release)
    before fixing the final candidate SHA and running its release qualification.
+   Regenerate the website hero reels from that candidate with
+   `python3 tools/media/hero_reels.py build --game all --out <task-dir>`
+   ([hero reels](../../tools/media/README.md#website-hero-reels)), review the
+   contact sheets, then copy the reels and posters to OpenGGF-WebZone
+   `public/media/` on a website branch.
    Run the full ordinary suite explicitly with
    `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
    separate guards and required ROM/trace checks. Full suites are reserved for
