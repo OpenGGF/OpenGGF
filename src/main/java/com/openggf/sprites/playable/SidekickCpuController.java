@@ -1031,6 +1031,13 @@ public class SidekickCpuController {
             return;
         }
 
+        // Setup can precede the checkpoint bind. The live routine-0 decision
+        // above owns whether loc_13A10 enters the dormant intro; its starpost
+        // branch bypasses that intro (sonic3k.asm:26429-26437,26498-26511).
+        // Retire only our setup suppression when that branch is no longer
+        // admitted, retaining the caller's original hidden state.
+        restoreInitialLevelEventPresentation();
+
         if (preservesAssembledSpawnState()) {
             // The game-owned routine-zero branch skips placement, kinematic,
             // and object-control writes. Initial Process_Sprites already owns
@@ -2471,6 +2478,13 @@ public class SidekickCpuController {
         clearRecoveryGroundingCache();
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
+        // Shipped FixBugs=0 loc_13B78 clears invulnerability_timer at the
+        // catch-up teleport (sonic3k.asm:26540-26571). A retained hurt blink
+        // skips Draw_Sprite, leaving the previous render_flags bit cached and
+        // incorrectly extending the next routine-4 off-screen timer.
+        if (usesS3kCatchUpMarker()) {
+            sidekick.setInvulnerableFrames(0);
+        }
         // loc_13B50 clears the complete tumble selector before installing the
         // recovery flight state. A later object may write flip_angle without
         // writing flip_type, so retaining an old barber-pole type changes its

@@ -141,7 +141,10 @@ Unreleased. The earlier development themes remain in
 
 - S3K HCZ2 renders the preceding screen-shake setup result, and LRZ big doors
   finish opening off screen before unloading. Both corrections preserve Tails CPU
-  respawn timing at the native visibility boundary.
+  respawn timing at the native visibility boundary. S3K catch-up teleports also
+  clear the inherited hurt blink before sprite submission, keeping the cached
+  on-screen flag and recovery-flight timer native. Checkpoint entry retires
+  setup-only sidekick hiding when the native CPU skips its arrival intro.
 
 - MGZ Bubbles waits until the next object pass after its offscreen continuation
   resumes, preserving native movement and collision timing. This restores Tails'
