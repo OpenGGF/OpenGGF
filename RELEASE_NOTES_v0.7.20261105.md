@@ -1,6 +1,6 @@
-# OpenGGF {{RELEASE_VERSION}} release notes
+# OpenGGF 0.7.20261105 release notes
 
-The release copy for `{{RELEASE_VERSION}}` lives in
+The release copy for `0.7.20261105` lives in
 [docs/changelog/v0.7-release-summary.md](docs/changelog/v0.7-release-summary.md).
 It carries the highlights, the validation status (stamped with the commit and
 date it was taken), and the accepted limitations: the 0.7 roadmap's complete

@@ -15,13 +15,13 @@ own physics, so you give it directions and it walks, jumps, skids and lands the
 way it does in the game. You can also pose characters exactly, frame by frame,
 when a moment calls for it.
 
-This guide follows the **0.7.prerelease development line**. Stageplay is not
-part of the published 0.6 release; use a current development build of the
-engine and, if you want it, the desktop editor.
+This guide follows the **0.7.20261105 release**, the first to include Stageplay. It is
+experimental; use a 0.7 build of the engine and, if you want it, the desktop
+editor.
 
 ## What you need
 
-- A development build of OpenGGF (0.7.prerelease).
+- OpenGGF 0.7.20261105 or later.
 - Your own ROMs for each game you use. OpenGGF reads all art, music and
   sounds from them; scene files contain none.
 - For films: FFmpeg on your `PATH`.

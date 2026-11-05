@@ -1,6 +1,6 @@
 # OpenGGF v0.7 Changelog
 
-## v{{RELEASE_VERSION}}
+## v0.7.20261105
 
 Analysis range: `v0.6.20260911..develop` at `0d8ffdcd6` (`6303` commits, `4592` non-merge
 commits, `11820` files changed, `2319889` insertions, `104228` deletions). Most of the line

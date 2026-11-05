@@ -84,7 +84,7 @@ syntax, link, mirror, policy and example checks. Full Maven logs are enabled by 
 Run the built jar (on macOS, add `-XstartOnFirstThread` before `-jar`):
 
 ```bash
-java -jar target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar
+java -jar target/OpenGGF-0.7.20261105-jar-with-dependencies.jar
 ```
 
 ## Accuracy Rules
@@ -191,10 +191,11 @@ A `feat`, `fix`, or `perf` commit that touches `src/main/` must either update
 [`CHANGELOG.md`](CHANGELOG.md) or justify the skip, for example:
 
 ```text
-Changelog: n/a: release note recorded in CHANGELOG.0.7.prerelease.md
+Changelog: n/a: release note recorded in CHANGELOG.0.8.prerelease.md
 ```
 
-New development release notes belong in `CHANGELOG.0.7.prerelease.md`; the root
+New development release notes belong in the `CHANGELOG.<version>.md` named by
+the branch's `pom.xml` (develop: `CHANGELOG.0.8.prerelease.md`); the root
 `CHANGELOG.md` is the release index and alone owns the `Changelog` trailer mapping.
 End AI-assisted commit messages with a `Co-authored-by` line for each contributing
 model, after the documentation trailers.

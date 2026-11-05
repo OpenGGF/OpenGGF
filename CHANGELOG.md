@@ -5,7 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Release files
 
-- [{{RELEASE_VERSION}}](CHANGELOG.0.7.md)
+- [0.7.20261105](CHANGELOG.0.7.md)
 - [0.6.20260917](CHANGELOG.0.6.md)
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)
@@ -27,7 +27,7 @@ separate.
 
 - [Release summary](docs/changelog/v0.7-release-summary.md) — copy for the
   website and GitHub release page, including validation status and the accepted
-  limitations moved to 0.8. `RELEASE_NOTES_v{{RELEASE_VERSION}}.md` is a pointer to it.
+  limitations moved to 0.8. `RELEASE_NOTES_v0.7.20261105.md` is a pointer to it.
 - [Development ledger](docs/changelog/v0.7-prerelease-detailed.md) — integration
   and validation evidence.
 - [Release-7 trace scope](docs/status/trace-scope-release-7.md) — the
