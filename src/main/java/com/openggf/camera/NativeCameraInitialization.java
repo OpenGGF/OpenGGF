@@ -16,9 +16,12 @@ public final class NativeCameraInitialization {
      *
      * <p>The admitted stock Level assembly owns this call. It respects scroll lock,
      * uses the ordinary movement math and leaves bounds, copy words and X fraction
-     * intact. No pending permission can leak into a gameplay frame or rewind.
+     * intact. Actorless resource loads have no native Player_1 to follow and
+     * retain their camera state. No pending permission can leak into a gameplay
+     * frame or rewind.
      */
     public static void moveBeforeLevelSetup(Camera camera) {
+        if (camera.getFocusedSprite() == null) return;
         camera.moveBeforeLevelSetup();
     }
 }

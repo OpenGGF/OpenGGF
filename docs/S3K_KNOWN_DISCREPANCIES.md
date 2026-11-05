@@ -2139,3 +2139,12 @@ compared rows (previously 2,589, first 6443 Y), with no added ERROR tuples or
 changed coverage. Other report payloads are unchanged. The chain still fails
 at segment 8's production ownership closure, movie cursor 25811; missing rows
 and later suffixes remain unknown. See the [bounded AIZ2 matrix](architecture/validation/levels/s3k-aiz2.md#collapsing-slope-landing-during-knuckles-ledge-climb-2026-11-05).
+
+
+Native initial camera admission (2026-11-05): stock Level assembly now runs
+the pre-LevelSetup camera movement, while actorless resource loads retain their
+camera state. The fresh shrine reaches `$326`; results retain `$240`. Checkpoint
+loads also take that native dispatch: FBZ2 starpost5 finishes at `$B06` with
+maxY `$B00`, rather than stopping at the intermediate clamp. The
+[FBZ2 matrix](architecture/validation/levels/s3k-fbz-act2.md#native-checkpoint-initial-camera--2026-11-05)
+records the ROM-backed derivation, retained route assertions and bounded checks.

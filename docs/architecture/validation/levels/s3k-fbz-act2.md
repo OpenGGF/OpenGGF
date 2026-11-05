@@ -443,3 +443,26 @@ independently of SAT bucket 6, so terrain cannot hide the blocking pillar.
 including a single `SpikeBalls` impact sound when displacement reaches zero.
 These bounded checks retain the existing route, viewport/donor and native pixel
 coverage limits above; they do not certify additional routes.
+
+
+## Native checkpoint initial camera — 2026-11-05
+
+The retained starpost5 route still proves actual lower magnetic platform/chain
+materialization and execution. Its synthetic checkpoint bank derives from the
+original ROM placement `$28E8/$B6C` (record401 of the full ROM-backed FBZ2 object
+asset). Native `loc_1BE46` resumes common `Get_LevelSizeStart`: camera `$B0C`
+clamps to `$B00`, then unconditional `Level/loc_6310` initial movement reaches
+`$B06` while maxY remains `$B00` (sonic3k.asm:38187-38193,38285-38312,7788-7796).
+`loc_1C186`/`loc_1C202` supply the six-pixel cap and pre-LevelSetup `$FFFF` wrap
+semantics (sonic3k.asm:38523-38540,38601-38622). The old final `$B00` assertion
+confused this intermediate clamp with the completed load. Only that final
+assertion changes, with maxY separately retained; all saved-bank, player/X and
+actual traversal assertions remain. No FBZ runtime object/event changes.
+
+The composed camera/resource/guard/keep-green focus passes191 existing cases,
+including this corrected route and all14 formerly failing actorless resource
+loads. Its new camera-unit fixture initially used the nonnull focus setter
+incorrectly, then all6 isolated native camera tests pass using the nullable
+presentation restore. The final composed check after the caller's focus gate
+is recorded by the lead. This adds no emulator capture or full-route/native
+pixel certificate; inherited roster/donor/viewport/rewind breadth remains open.

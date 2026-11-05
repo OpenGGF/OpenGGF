@@ -96,6 +96,8 @@ Unreleased. The earlier development themes remain in
   objects (the DDZ fly-in, the shrine) have already moved. Fresh Level assembly
   then runs its native initial camera movement before zone setup; the sanctuary
   starts at `$326`, while its special-stage results backdrop retains `$240`.
+  Actorless resource loads retain their camera state; checkpoint loads retain
+  the same native initial movement before normal gameplay bounds take effect.
 
 - Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
   fly-in: CPU-held flight to the right until landing.

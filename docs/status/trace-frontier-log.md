@@ -124343,3 +124343,30 @@ assertion. This is no producer-suite pass. Bank fixes have qualified later mixed
 errors and remain bounded, as do the newly reached DEZ suffix and AIZ2's repaired
 control baseline. The single combined profiles and shared-code smoke remain
 pending; no develop delivery or producer publication is claimed here.
+
+
+### Native-frontiers smoke correction: actorless camera admission
+
+The ONE smoke on frozen `a89b85806` completes4467classes/91ordinary batches and
+guards:37823 cases,33failures/15errors/49allowed skips, no missing ROMs. Raw
+VERDICT FAILED is retained. Full diagnostics were archived and hashed before
+acknowledgment. Fourteen new loading errors share a missing camera focus; the
+new stock initial movement is now admitted only with a player, and its internal
+entry also preserves actorless camera state. Existing nonnull gameplay paths
+retain identical movement. No actorless camera copies are republished.
+
+A matched unchanged-develop five-class control passes25/25 without skips. The
+corrected resource/camera/route/guard/four-keep-green focus executes192 cases:
+191 pass, only the new unit's invalid null setter errors. That fixture is
+corrected to the supported nullable presentation restore; all6 native camera
+unit cases then pass. The final caller admission check and composed verification
+remain lead-owned before delivery. Source and commands are preserved under
+`/tmp/trace-native-frontiers-20261105/smoke-{base-controls,camera-correction-focus,camera-unit-final}`.
+
+The FBZ checkpoint's old final B00 assertion is corrected to native B06 with
+maxY B00 retained; original ROM starpost record and shared native movement prove
+it, independently of the engine result. All original route checks remain. One
+network-cleanup smoke-only0/1 observation is not reproduced in the matched
+focused base or corrected candidate. Its unchanged source publishes retirement
+before releasing its final one-item reservation; no networking code is changed,
+and the raw smoke observation is not relabelled a passing full sweep.

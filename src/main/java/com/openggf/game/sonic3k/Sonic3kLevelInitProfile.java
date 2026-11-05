@@ -503,7 +503,8 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                             && GameServices.level().sanctuaryReentryStage().isPresent();
                     if (!resultsBackdrop) {
                         if (ctx.permitsInitialProcessSpritesRequest()
-                                && Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) {
+                                && Sonic3kLevel.currentLevelHasStockRomZoneIdentity()
+                                && GameServices.camera().getFocusedSprite() != null) {
                             var camera = GameServices.camera();
                             com.openggf.camera.NativeCameraInitialization.moveBeforeLevelSetup(camera);
                             // LevelSetup publishes the resulting words before either

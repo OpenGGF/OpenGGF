@@ -31,6 +31,18 @@ class TestNativeCameraInitialization {
     }
 
     @Test
+    void actorlessResourceLoadRetainsCameraAndDoesNotArmLaterMovement() {
+        var before = camera.capture();
+        var actorless = new Camera(GameServices.configuration());
+        actorless.restorePresentation(before, null);
+        NativeCameraInitialization.moveBeforeLevelSetup(actorless);
+        assertEquals(before, actorless.capture());
+        actorless.restore(before, player);
+        NativeCameraInitialization.moveBeforeLevelSetup(actorless);
+        assertEquals(0x0326, actorless.getY());
+    }
+
+    @Test
     void initialWordSubtractCannotBorrowAndOrdinaryClampIsUnchanged() {
         CameraSubpixelAccess.setXFraction(camera, 0xA400);
         var before = camera.capture();

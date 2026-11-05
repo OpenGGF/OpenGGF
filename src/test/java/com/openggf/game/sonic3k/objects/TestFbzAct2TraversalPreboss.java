@@ -485,9 +485,12 @@ public class TestFbzAct2TraversalPreboss {
         assertEquals(checkpoint.x() - 0xA0, state.getSavedCameraX());
         assertEquals(checkpoint.y() - 0x60, state.getSavedCameraY());
         assertEquals(checkpoint.x() - 0xA0, fixture.camera().getX() & 0xFFFF);
-        assertEquals(Math.min(state.getSavedCameraY(), fixture.camera().getMaxY() & 0xFFFF),
-                fixture.camera().getY() & 0xFFFF,
-                "checkpoint restart camera must use the game-owned FBZ2 vertical clamp");
+        // Starpost5 is $28E8/$B6C: Get_LevelSizeStart clamps $B0C to $B00,
+        // then Level loc_6310's initial MoveCameraY advances the grounded camera
+        // by six with Screen_Y_wrap_value=$FFFF, before LevelSetup installs it.
+        assertEquals(0x0B00, fixture.camera().getMaxY() & 0xFFFF);
+        assertEquals(0x0B06, fixture.camera().getY() & 0xFFFF,
+                "checkpoint restart includes the native initial camera movement");
         LateStarpostMilestones milestones = new LateStarpostMilestones();
         FixedInputRunner runner = new FixedInputRunner(
                 fixture, GameServices.level().getObjectManager(), milestones::observe);
