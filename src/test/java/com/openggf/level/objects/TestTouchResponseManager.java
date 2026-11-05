@@ -161,6 +161,37 @@ public class TestTouchResponseManager {
         assertTrue(multi.wasTouched);
     }
 
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void offscreenSonic2CrawlHurtPhaseStillTouchesSidekick() throws Exception {
+        setupTableSize(0x17, 8, 8);
+        when(objectManager.getObjectServices().camera().getX()).thenReturn((short) 0x1000);
+        when(player.getCentreX()).thenReturn((short) 0x10A0);
+        var tails = mock(AbstractPlayableSprite.class);
+        when(tails.getCentreX()).thenReturn((short) 0x0F98);
+        when(tails.getCentreY()).thenReturn((short) 112);
+        when(tails.getYRadius()).thenReturn((short) 15);
+        when(tails.getGameRules()).thenReturn(GameRules.SONIC_2);
+        var crawl = new com.openggf.game.sonic2.objects.badniks.CrawlBadnikInstance(
+                new ObjectSpawn(0x0FA0, 112, 0xC8, 0, 0, false, 0));
+        objectManager.addDynamicObject(crawl);
+        objectManager.update(0x1000, player, List.of(tails), 1);
+        assertTrue(objectManager.getTouchResponseObjects().contains(crawl));
+        assertFalse(crawl.isDestroyed());
+        var state = crawl.getClass().getDeclaredField("state");
+        state.setAccessible(true);
+        state.set(crawl, Enum.valueOf((Class<Enum>) state.getType(), "ATTACKING"));
+        var flags = crawl.getClass().getDeclaredField("attackingCollisionFlags");
+        flags.setAccessible(true);
+        flags.setInt(crawl, 0x97);
+        assertFalse(crawl.isOnScreenForTouch(), "the object remains outside the camera");
+        clearInvocations(tails);
+
+        new ObjectTouchResponseController(objectManager, table).updateSidekick(tails, 2, false);
+
+        verify(tails).applyHurt(crawl.getCollisionX());
+    }
+
     // ==================== Overlap Detection Tests ====================
 
     private void setupTableSize(int sizeIndex, int width, int height) {

@@ -102,10 +102,13 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     /** Half-height from Touch_Sizes[0x17] — used for ROM-accurate Touch_Special Y threshold. */
     private static final int TOUCH_HEIGHT_RADIUS = 8;
 
+    // Shipped S2 Touch_Loop (s2.asm:85209-85224) tests collision_flags,
+    // without a render_flags visibility gate. Offscreen CPU Tails can still
+    // touch Crawl's native $97 hurt phase after its special-contact dispatch.
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
             TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY,
             false,
-            true,
+            false,
             false,
             TouchShieldDeflectCapability.NONE,
             0,
@@ -504,6 +507,11 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance implements Touch
     @Override
     public boolean usesSonic2TouchSpecialPropertyResponse() {
         return true;
+    }
+
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        return TOUCH_RESPONSE_PROFILE.requiresRenderFlagForTouch();
     }
 
     @Override

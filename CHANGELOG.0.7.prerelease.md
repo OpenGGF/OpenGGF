@@ -38,7 +38,9 @@ Unreleased. The earlier development themes remain in
   results. Hill Top and Mystic Cave events read the level frame counter the
   shipped game reads. Sonic 2 and Knuckles in Sonic 2 reset that counter when
   control returns, so Crawl shield bounces use the original angles and Aquatic
-  Ruin’s rising boss pillars begin colliding on the original frame.
+  Ruin’s rising boss pillars begin colliding on the original frame. Crawl also
+  keeps native touch active beyond the camera, so an off-screen CPU follower
+  receives the shipped game's hurt response.
 
 - S3K bonus-stage entries and returns hold the destination players behind
   the title loop like any fresh level load: the slot is cleared first, the

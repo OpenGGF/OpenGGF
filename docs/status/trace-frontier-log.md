@@ -124282,3 +124282,40 @@ submission, later AIZ physics and Mega ownership. This qualification permits
 bounded integration under the fleet's gate; it certifies neither all newly
 reached rows nor whole-campaign parity. Delivery and cleanup are recorded by
 the lead after the develop push.
+
+
+## 2026-11-05 — Native-frontiers component: S2 off-screen Crawl touch
+
+Lead source is develop `eeabd00a7` plus the bounded Crawl profile/test correction
+in `.worktrees/trace-native-frontiers-integrate`; the wave's combined validation
+and delivery remain pending. `Touch_Loop` (s2.asm:85209-85224) has no render-flag
+gate. The corrected Crawl-specific profile retains all other touch policies and
+its compatibility accessor agrees. No gameplay state, CPU, timing, collision
+extent or fixture input changes. See the
+[CNZ2 matrix](../architecture/validation/levels/s2-cnz2-sonic-tails.md).
+
+Commands use queued Maven, Java25, Lua5.4, surfaceless EGL, seven verified original
+ROM properties, one alphabetical fork. A real resident off-screen controller
+fixture fails on unchanged production, then passes with the policy correction.
+The initial package-access compile error and two invalid geometry/residency
+fixtures are preserved as rejected setup evidence, not native red/green proof.
+
+`-Ptrace-replay -Dtest=TestS2CompleteEmeraldRunChain,TestS2Cnz2LevelSelectTraceReplay,TestTouchResponseManager#offscreenSonic2CrawlHurtPhaseStillTouchesSidekick`
+executes3 cases: the two controls pass, the complete chain remains a strict
+failure. CNZ2 changes276895 raw errors/first2390 sidekick X speed to188220/first
+7849 Y speed (ROM `-$0A58`, engine `$0A58`). Every other complete report is
+identical to the delivered r6 baseline. The ARZ2 first5512 and four gap failures,
+and the unobserved CNZ2 level-advance boundary at movie138828, remain unchanged.
+
+A second run with comparison-only logging reproduces all24 uninstrumented JSON
+payloads exactly. Existing historical actual comparisons reproduce the delivered
+baseline's complete CNZ2 JSON.13045 common rows:146935 ERROR tuples removed,58260
+added; no addition on2390 baseline-clean rows. First added7851 art-edge value
+follows the remaining7849 physics divergence; both old/new Y and Y speed are
+already wrong. Dynamic-art array field sets vary on3193 rows; those coverage
+differences remain explicit, shared expected values are identical, and no row is
+dropped. No grouped span is expanded, missing field inferred or tolerance relaxed.
+The temporary source/compiled logger is restored and removed. Full comparisons,
+controls, commands and failed setup attempts are under
+`/tmp/trace-native-frontiers-20261105/cnz2/`. Clean final focused qualification and
+the combined wave's final gate are recorded by the lead after this checkpoint.
