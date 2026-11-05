@@ -28,6 +28,9 @@ Unreleased. The earlier development themes remain in
   An opt-in project-import preflight checks explicitly pinned Java type sources
   and flags possible missing imports while retaining lexical ambiguity and bounded
   header checks. It does not replace compilation or classpath resolution.
+  Source-census and import-preflight dependency pins now match their approved
+  sibling helpers while retaining exact byte budgets, hash checks and explicit
+  incomplete results for unsupported Java scopes.
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
   experimental Palmtree Panic player, terrain and native-object runtime with

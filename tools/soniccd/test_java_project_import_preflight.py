@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 REV = 'ff5835ef26a1192f94e43a3ca3018bb7a444c675'
 DEPENDENCIES = {
-    'java_declaration_census.py': ('c5bb1af745f5b74d18780f0c520964c0fd83d513dac814b9d448d23272446427', 43439),
+    'java_declaration_census.py': ('10ec54d1e68c76a29a673634315acea0977d31761f3cfa7846b9f85310ed0e2f', 43439),
     'enum_contract_audit.py': ('bc4d7daf1689216391efd423b4628c728a1f0b63395e89398b09930f686a770d', 47279),
 }
 
