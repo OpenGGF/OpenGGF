@@ -55,6 +55,9 @@ final class GameLoopEditorController {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
         beginSuspendedFrame.run();
+        // This branch precedes the ordinary pass's snapshot refresh. Refresh here so the
+        // prompt reads this frame's mapped input, never a press an earlier owner consumed.
+        input.refreshLogicalSnapshot();
         if (projectInputHandler != null) projectInputHandler.test(input);
         input.update();
         // Cancellation may clear modalSuspended above. Its closing input frame still belongs to this prompt.
