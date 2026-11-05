@@ -132,6 +132,83 @@ public final class CdBreakableWall {
     private final DrawObject draw;
     private final PlayFm fm;
     private boolean running;
+    private DispatchCursor dispatch;
+    private DispatchObserver observer;
+
+    /** Synchronous observation of this cached producer, not an effect-replay or capture owner. */
+    public interface DispatchObserver {
+        void published(Object actualOperation);
+        void completed(Result result);
+        void failed(Throwable original);
+    }
+    private final class DispatchCursor {
+        final int whole;
+        final CdObjectPlacementRuntime.Snapshot origin = placement.capture();
+        List<CdObjectState> images = origin.pool().slots();
+        CdAssetBytes saved = origin.savedFlags();
+        Object pending;
+        boolean acknowledged;
+        DispatchCursor(int whole) { this.whole = whole; }
+    }
+    /** Exact pending producer identity; equal public records do not qualify. */
+    public boolean matchesPendingOperation(Object operation) {
+        return operation != null && running && dispatch != null && dispatch.pending == operation;
+    }
+    public void validateCurrentCall(Object call) {
+        if (!running || dispatch == null || dispatch.pending != Objects.requireNonNull(call))
+            throw new IllegalStateException("Wall call is not its actual pending cached producer operation");
+        validateCurrentDispatch();
+    }
+    public void validateCurrentDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (pool != placement.pool() || dispatch == null || identity.wholeIndex() != dispatch.whole)
+            throw new IllegalStateException("Wall Draw has another physical/source pool");
+        validateCurrentCall(identity);
+    }
+    /** Verify the producer's own reached stores; no comparison data is used as gameplay input. */
+    public void validateCurrentDispatch() {
+        if (!running || dispatch == null) throw new IllegalStateException("No actual Wall producer dispatch");
+        placement.validateRestore(dispatch.origin); var now = placement.capture();
+        if (!now.status().equals(dispatch.origin.status()) || !now.pool().slots().equals(dispatch.images)
+                || !Arrays.equals(now.savedFlags().copy(), dispatch.saved.copy()))
+            throw new IllegalStateException("Wall producer full96/status/saved prefix differs from its reached native stores");
+    }
+    /** Called only after the actual World owner adopted/read back this exact operation. */
+    public void acknowledgeCurrentCall(Object call) {
+        if (!running || dispatch == null || dispatch.pending != Objects.requireNonNull(call) || dispatch.acknowledged)
+            throw new IllegalStateException("Wall acknowledgement lacks its unique actual pending call");
+        dispatch.acknowledged = true;
+    }
+    private void pending(Object call, Runnable action) {
+        if (dispatch.pending != null) throw new IllegalStateException("Nested Wall owner publication");
+        dispatch.pending = call; dispatch.acknowledged = false;
+        try {
+            action.run();
+            if (observer != null && (call instanceof SolidCall || call instanceof FmCall
+                    || call instanceof HalveXVelocityCall || call instanceof CdObjectState.Identity) && !dispatch.acknowledged)
+                throw new IllegalStateException("Wall owner omitted its actual pending publication");
+            if (observer != null && (call instanceof SolidCall || call instanceof FmCall
+                    || call instanceof HalveXVelocityCall || call instanceof CdObjectState.Identity)) observer.published(call);
+        } finally { dispatch.pending = null; dispatch.acknowledged = false; }
+    }
+    private void publish(CdObjectState state) {
+        validateCurrentDispatch();
+        var next = new ArrayList<>(dispatch.images); next.set(state.identity().dynamicIndex(), state);
+        var ready = java.util.Collections.unmodifiableList(next);
+        placement.pool().write(state); dispatch.images = ready;
+    }
+    private void deleteNative(int whole) {
+        validateCurrentDispatch();
+        var next = new ArrayList<>(dispatch.images); var ready = java.util.Collections.unmodifiableList(next);
+        placement.pool().deleteObject(whole);
+        next.set(whole - CdObjectPool.FIRST_WHOLE_INDEX, placement.pool().state(whole)); dispatch.images = ready;
+    }
+    private void allowCallbackPrefix(CdObjectPool.Snapshot before, CdObjectPool.Snapshot after) {
+        var actual = placement.pool().capture().slots();
+        if (actual.equals(after.slots())) dispatch.images = after.slots();
+        else if (actual.equals(before.slots())) dispatch.images = before.slots();
+        else throw new IllegalStateException("Wall callback changed an unowned full96 prefix");
+    }
+
 
     /** Constructed component ingress only; it cannot select an authenticated placement by equal bytes. */
     public CdBreakableWall(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject solid,
@@ -146,6 +223,13 @@ public final class CdBreakableWall {
             throw new IllegalArgumentException("Wall requires the same retained original R12A placement/source");
         return new CdBreakableWall(placement, Assets.fromObjectAssets(owner), solid, solidCommit, halve, draw, fm, true);
     }
+    /** Actual World construction retains the same authenticated assets and transient producer cursor. */
+    public static CdBreakableWall fromAssets(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
+                                             CdSolidObject solid, SolidCommit solidCommit, HalveXVelocity halve,
+                                             DrawObject draw, PlayFm fm, DispatchObserver observer) {
+        var body = fromAssets(placement, owner, solid, solidCommit, halve, draw, fm);
+        body.observer = Objects.requireNonNull(observer); return body;
+    }
     private CdBreakableWall(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject solid,
                             SolidCommit solidCommit, HalveXVelocity halve, DrawObject draw, PlayFm fm, boolean authenticated) {
         this.placement = Objects.requireNonNull(placement); this.assets = Objects.requireNonNull(assets);
@@ -159,16 +243,16 @@ public final class CdBreakableWall {
         var pool = placement.pool(); var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Wall requires actual dynamic ID36");
         int routine = state.routine();
-        if ((routine & 1) != 0 || routine > 4) throw new UnsupportedWall(Boundary.ROUTINE);
-        running = true;
+        var preparedDispatch = new DispatchCursor(wholeIndex); running = true; dispatch = preparedDispatch;
         try {
+            if ((routine & 1) != 0 || routine > 4) throw new UnsupportedWall(Boundary.ROUTINE);
             var effects = new ArrayList<Effect>(); effects.add(new RoutineEntered(routine));
             if (routine == 0) {
                 state = state.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, state.spriteFlags() | 4)
                         .moveByte(PRIORITY, 1).moveByte(X_RADIUS, 0x10).moveByte(WIDTH, 0x10)
                         .moveByte(Y_RADIUS, 0x18).moveByte(COLLISION_TYPE, 0xEF).moveWord(TILE, 0x44BE)
                         .moveLong(MAPPINGS, assets.mappingsAddress()).moveByte(MAP_FRAME, state.subtype());
-                pool.write(state); effects.add(new RoutineEntered(2));
+                publish(state); effects.add(new RoutineEntered(2));
             }
             if (routine == 4) fall(wholeIndex, Objects.requireNonNull(inputs).player(), effects);
             else if (state.unsignedByte(COLLISION_STATUS) == 0) {
@@ -178,23 +262,31 @@ public final class CdBreakableWall {
             } else {
                 // Main39 is ONE CLR.W over type/status. Only these two bytes clear.
                 state = state.moveByte(COLLISION_TYPE, 0).moveByte(COLLISION_STATUS, 0).addByte(ROUTINE, 2);
-                pool.write(state);
+                publish(state);
                 var player = Objects.requireNonNull(inputs).player(); var motion = player.actor().motion();
-                state = state.moveWord(SAVED_X_VELOCITY, motion.xVelocity()); pool.write(state);
-                state = state.moveWord(SAVED_Y_VELOCITY, motion.yVelocity()); pool.write(state);
+                state = state.moveWord(SAVED_X_VELOCITY, motion.xVelocity()); publish(state);
+                state = state.moveWord(SAVED_Y_VELOCITY, motion.yVelocity()); publish(state);
                 if (fm == null) throw new UnsupportedWall(Boundary.FM_OWNER);
-                var soundCut = cut(wholeIndex); readOnly(soundCut, () -> fm.play(new FmCall(soundCut, BREAK_FM)));
+                var soundCut = cut(wholeIndex); var soundCall = new FmCall(soundCut, BREAK_FM);
+                pending(soundCall, () -> readOnly(soundCut, () -> fm.play(soundCall)));
                 effects.add(new PlayedFm());
                 if (halve == null) throw new UnsupportedWall(Boundary.HALVE_OWNER);
                 int finalX = motion.xVelocity() >> 1;
                 var halveCut = cut(wholeIndex);
-                readOnly(halveCut, () -> halve.halve(new HalveXVelocityCall(halveCut, player, finalX)));
+                var halveCall = new HalveXVelocityCall(halveCut, player, finalX);
+                pending(halveCall, () -> readOnly(halveCut, () -> halve.halve(halveCall)));
                 effects.add(new VelocityHalved(finalX));
                 breakUp(wholeIndex, finalX, effects);
                 fall(wholeIndex, player, effects);
             }
-            return new Result(pool.state(wholeIndex), effects);
-        } finally { running = false; }
+            validateCurrentDispatch();
+            var result = new Result(pool.state(wholeIndex), effects);
+            if (observer != null) pending(result, () -> observer.completed(result));
+            validateCurrentDispatch(); return result;
+        } catch (RuntimeException | Error original) {
+            if (observer != null) suppress(original, () -> pending(original, () -> observer.failed(original)));
+            throw original;
+        } finally { dispatch = null; running = false; }
     }
 
     private void breakUp(int whole, int finalPlayerX, List<Effect> effects) {
@@ -209,29 +301,29 @@ public final class CdBreakableWall {
                         .moveWord(X, parent.centreX()).moveWord(Y, parent.centreY())
                         .moveByte(SPRITE_FLAGS, parent.spriteFlags()).moveByte(PRIORITY, parent.unsignedByte(PRIORITY))
                         .moveLong(MAPPINGS, parent.longBits(MAPPINGS)).moveWord(TILE, parent.word(TILE));
-                pool.write(child);
+                publish(child);
             }
             var piece = pool.state(selected).moveByte(X_RADIUS, 8).moveByte(WIDTH, 8).moveByte(Y_RADIUS, 8);
-            pool.write(piece);
+            publish(piece);
             int frameAt = pool.state(whole).subtype() * 8 + row;
             if (frameAt >= assets.pieceFrames().length()) throw new UnsupportedWall(Boundary.PIECE_FRAME_READ);
-            piece = piece.moveByte(MAP_FRAME, assets.pieceFrames().unsignedByte(frameAt)); pool.write(piece);
+            piece = piece.moveByte(MAP_FRAME, assets.pieceFrames().unsignedByte(frameAt)); publish(piece);
             int dx = (short) assets.pieceDeltas().unsignedWord(row * 4);
             int dy = (short) assets.pieceDeltas().unsignedWord(row * 4 + 2);
-            piece = piece.addWord(X, dx); pool.write(piece);
-            piece = piece.addWord(Y, dy); pool.write(piece);
+            piece = piece.addWord(X, dx); publish(piece);
+            piece = piece.addWord(Y, dy); publish(piece);
             int xv = (int) assets.pieceSpeeds().unsignedLong(row * 8);
-            piece = piece.moveLong(Y_DELTA, (int) assets.pieceSpeeds().unsignedLong(row * 8 + 4)); pool.write(piece);
-            piece = piece.moveLong(X_DELTA, finalPlayerX < 0 ? -xv : xv); pool.write(piece);
+            piece = piece.moveLong(Y_DELTA, (int) assets.pieceSpeeds().unsignedLong(row * 8 + 4)); publish(piece);
+            piece = piece.moveLong(X_DELTA, finalPlayerX < 0 ? -xv : xv); publish(piece);
             effects.add(new PieceInitialized(row, selected));
         }
     }
     private void fall(int whole, CdSolidObject.Player player, List<Effect> effects) {
-        var pool = placement.pool(); var state = pool.state(whole).addLong(Y_DELTA, 0x4000); pool.write(state);
-        state = state.addLong(X_POSITION, state.longBits(X_DELTA)); pool.write(state);
-        state = state.addLong(Y_POSITION, state.longBits(Y_DELTA)); pool.write(state);
+        var pool = placement.pool(); var state = pool.state(whole).addLong(Y_DELTA, 0x4000); publish(state);
+        state = state.addLong(X_POSITION, state.longBits(X_DELTA)); publish(state);
+        state = state.addLong(Y_POSITION, state.longBits(Y_DELTA)); publish(state);
         int distance = (short) ((player.actor().motion().centreY16_16() >>> 16) - state.centreY());
-        if (distance <= -0xE0) { pool.deleteObject(whole); effects.add(new Deleted()); }
+        if (distance <= -0xE0) { deleteNative(whole); effects.add(new Deleted()); }
         else draw(whole, effects);
     }
 
@@ -244,10 +336,12 @@ public final class CdBreakableWall {
         var images = new ArrayList<CdObjectState>(); images.add(object); images.addAll(others);
         var ready = CdObjectPool.overlay(cut.placement().pool(), images); pool.validateRestore(ready); verify(cut);
         if (solidCommit == null) throw new UnsupportedWall(Boundary.SOLID_OWNER);
-        try { solidCommit.commit(new SolidCall(cut, inputs.player(), inputs.globals(), outcome)); }
+        var call = new SolidCall(cut, inputs.player(), inputs.globals(), outcome);
+        try { pending(call, () -> solidCommit.commit(call)); }
         catch (RuntimeException | Error original) {
             suppress(original, () -> {
                 verifyStatusBank(cut.placement());
+                allowCallbackPrefix(cut.placement().pool(), ready);
                 var actual = pool.capture().slots();
                 if (!actual.equals(cut.placement().pool().slots()) && !actual.equals(ready.slots()))
                     throw new IllegalStateException("Wall failed Solid changed its declared full96 source/output");
@@ -255,6 +349,7 @@ public final class CdBreakableWall {
         }
         verifyStatusBank(cut.placement());
         if (!pool.capture().slots().equals(ready.slots())) throw new IllegalStateException("Wall Solid commit omitted/changed its full96 output");
+        dispatch.images = ready.slots();
         if (stopped != null) throw stopped.stop().originalException();
         effects.add(new SolidReturned(outcome));
     }
@@ -262,16 +357,18 @@ public final class CdBreakableWall {
         if (draw == null) throw new UnsupportedWall(Boundary.DRAW_OWNER);
         var before = cut(whole); var after = before.source().moveByte(SPRITE_FLAGS, before.source().spriteFlags() & 0x7F);
         var ready = CdObjectPool.overlay(before.placement().pool(), List.of(after));
-        try { draw.draw(placement.pool(), before.source().identity()); }
+        try { pending(before.source().identity(), () -> draw.draw(placement.pool(), before.source().identity())); }
         catch (RuntimeException | Error original) {
             suppress(original, () -> {
-                verifyStatusBank(before.placement()); var actual = placement.pool().capture().slots();
+                verifyStatusBank(before.placement()); allowCallbackPrefix(before.placement().pool(), ready);
+                var actual = placement.pool().capture().slots();
                 if (!actual.equals(before.placement().pool().slots()) && !actual.equals(ready.slots()))
                     throw new IllegalStateException("Wall failed Draw changed an unowned full96 byte");
             }); throw original;
         }
         verifyStatusBank(before.placement());
         if (!placement.pool().capture().slots().equals(ready.slots())) throw new IllegalStateException("Wall Draw must only clear its own sprite bit7");
+        dispatch.images = ready.slots();
         effects.add(new DrawReturned());
     }
     /** Object Spawner.asm:385-446; Fall bypasses this helper entirely. */
@@ -292,9 +389,12 @@ public final class CdBreakableWall {
             if (address >= placement.capture().savedFlags().length())
                 throw new UnsupportedWall(Boundary.SAVED_FLAGS_ADDRESS);
             int relative = address - 2;
+            validateCurrentDispatch(); var bank = dispatch.saved.copy(); bank[address] &= 0x7F;
+            var readyBank = CdAssetBytes.copyOf(bank);
             placement.bclrSavedFlag(relative / 3, relative % 3, CdObjectPlacementRuntime.SavedBit.LOADED);
+            dispatch.saved = readyBank;
         }
-        placement.pool().deleteObject(state.identity().wholeIndex()); return true;
+        deleteNative(state.identity().wholeIndex()); return true;
     }
     private SourceCut cut(int whole) { return new SourceCut(placement.pool().state(whole), placement.capture()); }
     private void verifyStatusBank(CdObjectPlacementRuntime.Snapshot cut) {

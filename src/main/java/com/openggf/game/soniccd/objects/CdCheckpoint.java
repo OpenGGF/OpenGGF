@@ -2,6 +2,8 @@ package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 
 import java.util.ArrayList;
@@ -110,6 +112,12 @@ public final class CdCheckpoint {
             }
         }
 
+        /** Original-USA retained Act2 object owner; native live Init/Ball map and Animate operands. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner, CdPlayerMath math) {
+            Objects.requireNonNull(owner,"owner");
+            return new Assets(CdR12aProfile.Asset.MAP_SPR_CHECKPOINT.nativeAddress(),owner.checkpoint(),math);
+        }
+
         public static Assets fromObjectAssets(CdR11aObjectAssets owner, CdPlayerMath math) {
             Objects.requireNonNull(owner, "owner");
             return new Assets(owner.view(CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS).range().nativeAddress(),
@@ -170,6 +178,39 @@ public final class CdCheckpoint {
         void drawObject(CdObjectPool pool, CdObjectState.Identity identity);
     }
 
+    public record CallCut(CdObjectPool.Snapshot pool, CdObjectState source) {
+        public CallCut {
+            Objects.requireNonNull(pool); Objects.requireNonNull(source);
+            if (!pool.slots().get(source.identity().wholeIndex()-CdObjectPool.FIRST_WHOLE_INDEX).equals(source))
+                throw new IllegalArgumentException("Checkpoint source is absent from its full96 cut");
+        }
+    }
+    public sealed interface LiveCall permits LevelReadCall, ParentByteCall, SavedReadCall, GlobalStoreCall, SaveDataCall, FmRequestCall {
+        CallCut cut();
+    }
+    public record LevelReadCall(CallCut cut) implements LiveCall { public LevelReadCall { Objects.requireNonNull(cut); } }
+    public record ParentByteCall(CallCut cut,int rawAddressBits) implements LiveCall { public ParentByteCall { Objects.requireNonNull(cut); } }
+    public record SavedReadCall(CallCut cut) implements LiveCall { public SavedReadCall { Objects.requireNonNull(cut); } }
+    public record GlobalStoreCall(CallCut cut,GlobalCall store) implements LiveCall {
+        public GlobalStoreCall { Objects.requireNonNull(cut); Objects.requireNonNull(store); }
+    }
+    public record SaveDataCall(CallCut cut,SaveCall save) implements LiveCall {
+        public SaveDataCall { Objects.requireNonNull(cut); Objects.requireNonNull(save); }
+    }
+    public record FmRequestCall(CallCut cut,FmSound sound) implements LiveCall {
+        public FmRequestCall { Objects.requireNonNull(cut); Objects.requireNonNull(sound); }
+    }
+    /** Completed callback values; neither a command nor a source/World token. Void callbacks retain null. */
+    public record CompletedLiveCall(LiveCall call,Object value) { public CompletedLiveCall { Objects.requireNonNull(call); } }
+    public interface LivePort {
+        CdLevelGlobals readLevel(LevelReadCall call);
+        int readParent(ParentByteCall call);
+        CdCheckpointSaveData.State readSaved(SavedReadCall call);
+        void store(GlobalStoreCall call);
+        CdCheckpointSaveData.Result save(SaveDataCall call);
+        void fm(FmRequestCall call);
+    }
+
     public record Result(CdObjectState state, List<Effect> effects) {
         public Result { Objects.requireNonNull(state, "state"); effects = List.copyOf(effects); }
         public boolean deleted() { return effects.stream().anyMatch(Deleted.class::isInstance); }
@@ -213,6 +254,61 @@ public final class CdCheckpoint {
     private final FmCall fm;
     private final DrawCall draw;
     private boolean running;
+    private LivePort livePort;
+    private transient Cursor currentCursor;
+    private transient LiveCall pendingLive;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient CdObjectState.Identity pendingDrawIdentity;
+
+    public boolean isCurrentLiveCall(LiveCall call) { return running && call != null && pendingLive == call; }
+    public boolean matchesCurrentLivePrefix(List<CompletedLiveCall> completed) {
+        return running && currentCursor != null && currentCursor.completedLive.equals(completed);
+    }
+    public boolean isCurrentDrawCall(CdObjectPool pool,CdObjectState.Identity identity) {
+        return running && pool == placement.pool() && identity != null && pendingDrawIdentity == identity
+                && pendingDrawCut != null && pool.capture().slots().equals(pendingDrawCut.slots());
+    }
+
+    /** Same native body, with explicit synchronous World calls over the actual retained Act2 placement/source. */
+    public static CdCheckpoint fromAct2Assets(CdObjectPlacementRuntime placement,CdR12aObjectAssets owner,
+                                              CdPlayerMath math,LivePort livePort,DrawCall draw) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2Source(owner)) throw new IllegalArgumentException("Checkpoint requires the same retained R12A placement/source");
+        return new CdCheckpoint(placement,Assets.fromAct2Assets(owner,math),livePort,draw);
+    }
+    private CdCheckpoint(CdObjectPlacementRuntime placement,Assets assets,LivePort livePort,DrawCall draw) {
+        this.placement=Objects.requireNonNull(placement);this.assets=Objects.requireNonNull(assets);
+        this.livePort=Objects.requireNonNull(livePort);this.draw=Objects.requireNonNull(draw);
+        this.global=new GlobalPort() {
+            @Override public CdLevelGlobals current() { var c=new LevelReadCall(liveCut());return invokeLive(c,()->CdCheckpoint.this.livePort.readLevel(c)); }
+            @Override public void commit(GlobalCall store) { var c=new GlobalStoreCall(liveCut(),store);invokeLive(c,()->{CdCheckpoint.this.livePort.store(c);return null;}); }
+            @Override public int readParentByte(int address) { var c=new ParentByteCall(liveCut(),address);return invokeLive(c,()->CdCheckpoint.this.livePort.readParent(c)); }
+        };
+        this.saveData=new SaveDataPort() {
+            @Override public CdCheckpointSaveData.State currentState() { var c=new SavedReadCall(liveCut());return invokeLive(c,()->CdCheckpoint.this.livePort.readSaved(c)); }
+            @Override public CdCheckpointSaveData.Result save(SaveCall save) { var c=new SaveDataCall(liveCut(),save);return invokeLive(c,()->CdCheckpoint.this.livePort.save(c)); }
+        };
+        this.fm=sound->{var c=new FmRequestCall(liveCut(),sound);invokeLive(c,()->{CdCheckpoint.this.livePort.fm(c);return null;});};
+    }
+    private CallCut liveCut() {
+        if (!running || currentCursor==null || pendingLive!=null) throw new IllegalStateException("No actual Checkpoint callback cut");
+        requireSource(currentCursor); return new CallCut(currentCursor.pool.capture(),currentCursor.state);
+    }
+    private <T> T invokeLive(LiveCall call,java.util.function.Supplier<T> action) {
+        pendingLive=call;
+        try {
+            T value=action.get();requireLivePool(call.cut());currentCursor.completedLive.add(new CompletedLiveCall(call,value));return value;
+        } catch (RuntimeException | Error original) {
+            try { requireLivePool(call.cut()); }
+            catch (RuntimeException | Error verification) { if (verification!=original) original.addSuppressed(verification); }
+            throw original;
+        } finally { pendingLive=null; }
+    }
+    private void requireLivePool(CallCut cut) {
+        var pool=placement.pool();pool.validateRestore(cut.pool());
+        if (!pool.capture().slots().equals(cut.pool().slots()) || !pool.state(cut.source().identity().wholeIndex()).equals(cut.source()))
+            throw new IllegalStateException("Checkpoint callback changed its full96 source cut");
+    }
 
     public CdCheckpoint(CdObjectPlacementRuntime placement, Assets assets, GlobalPort global,
                          SaveDataPort saveData, FmCall fm, DrawCall draw) {
@@ -231,7 +327,7 @@ public final class CdCheckpoint {
             Objects.requireNonNull(globals, "globals");
             var pool = placement.pool(); var state = pool.state(wholeIndex);
             if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Checkpoint requires live ID $13");
-            var c = new Cursor(pool, state);
+            var c = new Cursor(pool, state); currentCursor=c;
             int routine = state.routine();
             if ((routine & 1) != 0 || routine > 6) {
                 throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, c, routine);
@@ -242,12 +338,15 @@ public final class CdCheckpoint {
                 case 4 -> ball(c);
                 case 6 -> animate(c);
             }
-            c.publish(); draw.drawObject(c.pool, c.state.identity());
+            c.publish(); pendingDrawCut=c.pool.capture(); pendingDrawIdentity=c.state.identity();
+            try { draw.drawObject(c.pool,pendingDrawIdentity); }
+            finally { pendingDrawCut=null; pendingDrawIdentity=null; }
             c.state = c.pool.state(c.wholeIndex); // Draw owns actual sprite-bit7 and queue output.
             c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
             despawn(c, globals);
             return new Result(c.state, c.effects);
         } finally {
+            currentCursor=null; pendingLive=null;
             running = false; // Root closes a faulted runtime; this is no retry/resume permission.
         }
     }
@@ -467,6 +566,7 @@ public final class CdCheckpoint {
         final CdObjectPool pool;
         final int wholeIndex;
         final List<Effect> effects = new ArrayList<>();
+        final List<CompletedLiveCall> completedLive = new ArrayList<>();
         CdObjectState state;
         Cursor(CdObjectPool pool, CdObjectState state) {
             this.pool = pool; this.state = state; this.wholeIndex = state.identity().wholeIndex();

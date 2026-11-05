@@ -263,6 +263,16 @@ class TestSonicCdAct2ControllerRoute {
         replayNextRight(h, right); // The last measured successful11032->11033 crossing, both replay scopes.
         step(h, right);
         assertLaterRouteOwners(h, frame, source, world, generation);
+        replayNextRight(h, right); // Actual11033->11034 Checkpoint entry, no net extra frame.
+        for (int call = 11034; call <= 11145; call++) {
+            step(h, right);
+            assertLaterRouteOwners(h, frame, source, world, generation);
+            if (call == 11034)
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.CHECKPOINT_BODY));
+        }
+        replayNextRight(h, right); // Positive11145->11146; do not execute the following unowned dispatch.
+        step(h, right);
+        assertLaterRouteOwners(h, frame, source, world, generation);
         assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
         assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
         assertInstanceOf(SonicCdPastDisplay.Ready.class, module.act2SelectedDisplay().projection());
@@ -270,7 +280,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right returned11033; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867 and11032->11033, natural TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right returned11146; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034 and11145->11146, natural TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 

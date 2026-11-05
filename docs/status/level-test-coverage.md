@@ -221,7 +221,7 @@ remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
 The resumed private controller route now completes Act1's Past Results and old
 programme exit, then admits actual Act2 Main10445, completes Title's queued art
-and control release, and returns ordinary Right through11033.
+and control release, and returns ordinary Right through11146.
 The [Act2 partial matrix](../architecture/validation/levels/scd-palmtree-panic-act2-present.md)
 records same-World FULL loading, native normal-load/fade/first-walk ownership,
 full/course replay, actual selected Sonic pixels and488-selected-upload retirement.
@@ -241,7 +241,13 @@ with no skips. The changed positive route method then passes separately through
 or a whole-act certificate. Subsequent57 passes without skips: Act2-specific
 Collapse source116 data56 and actual selected-Sonic EGL/pixel replay1 through
 11033, preserving the10778/10866 checks. No matched native screenshot is claimed.
-Checkpoint saved-data carry, broader object binding, sustained
+The combined264 has261passes,2new test-oracle failures and1observer stop,0skips;
+Wall World16 and legacy Checkpoint/Wall87 pass. Test-only value/phase corrections
+then qualify Checkpoint World20 and the changed positive11146 route method in
+21passing cases, with full/course11033→11034 and11145→11146. Saved31 bytes and
+knowledge cross the actual programme handoffs in existing captured globals.
+The next11147 stop is Collapse20; actual11146 pixels, natural Checkpoint activation,
+Wall contact, death/restart breadth, broader object binding and sustained
 Act2 traversal, later acts and JP/EU parity are unfinished.
 The first-act matrix remains partial as well.
 

@@ -182,9 +182,11 @@ Unreleased. The earlier development themes remain in
   art, terrain, Solid and Frame owners; completed producer prefixes and ordinals
   guard the next publication, including skipped no-op and throwing callbacks.
   Ordinary Right extends through their native entry with full/course replay to
-  the final successful cut. Checkpoint views retain the live native mapping and
-  animation addresses over existing art; Collapse Platform views retain Act 2's
-  distinct frame and size tables. Their World bindings and later Act2 traversal
+  the final successful cut. Checkpoint retains its existing saved bytes and
+  knowledge across programme loads, then uses the real global/save/parent-read
+  owners. Cached Breakable Walls use genuine plain Solid, prepared velocity
+  publication and native dirty-fragment order. Collapse Platform views retain
+  Act 2's distinct frame and size tables; its World binding and later traversal
   remain open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact

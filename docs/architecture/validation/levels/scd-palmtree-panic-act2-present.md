@@ -23,14 +23,14 @@ The retained terrain/player pair,116 raw descriptors,35 finite art readers,
 
 | ID | Observed contract and setup | Tests / limits |
 | --- | --- | --- |
-| ENTRY | Actual controller-only old Results→black fade→FF/IPX→same-World FULL1; genuine normal-load selectors, stage3/std1,22 FromBlack services, Title release and ordinary Right through11033. No actor/global/camera/art/clock/queue seed. | `TestSonicCdAct2ControllerRoute`; fresh World fixtures separately use a labelled Results-object-only trigger. Alternate entries and sustained traversal remain open. |
+| ENTRY | Actual controller-only old Results→black fade→FF/IPX→same-World FULL1; genuine normal-load selectors, stage3/std1,22 FromBlack services, Title release and ordinary Right through11146. No actor/global/camera/art/clock/queue seed. | `TestSonicCdAct2ControllerRoute`; fresh World fixtures separately use a labelled Results-object-only trigger. Alternate entries and sustained traversal remain open. |
 | LOAD | New Frame/source and production generation at actual profile admission; missing optional next pair leaves the old returned Frame/captures healthy. | `TestSonicCdAct2LoadingWorld` four cases. Actual legacy four-argument source exercises absence; no broad after-admission failure exemption. |
-| OBJECT | Six actual Present placements; reserved Title4 allocates fresh children38..45 before placed bodies. Later physical children execute the same pass. Ring/Spring/Animal/Monitor/TimePost/Boulder/Platform/Anton/Pata/Tamabboh/Float and HUD use actual source bindings. | Ordinary Right through11033 includes actual native Init/Main and increasing physical walk; Title children retire naturally. The next11034 stop is an unbound Checkpoint13, identified from the exact source walk and retained partial pool. Broader families remain open. Separate body/source components do not prove later World interactions. |
+| OBJECT | Six actual Present placements; reserved Title4 allocates fresh children38..45 before placed bodies. Later physical children execute the same pass. Ring/Spring/Animal/Monitor/TimePost/Boulder/Platform/Anton/Pata/Tamabboh/Float/Checkpoint and HUD use actual source bindings; Wall has separate labelled World qualification. | Ordinary Right through11146 includes native Checkpoint Init/Main/child visits. The next11147 stop is an unbound Collapse20, identified from the exact source walk and retained partial pool. Broader families remain open; natural Checkpoint activation and Wall contact are not certified by seeded-object tests. |
 | EVENT | Native palette/section/scroll/animation tail completes after the actual128-object walk. Title PLC2 requests eleven descriptors/294 tiles at parent129, drains in22 source-ordered services, then clears locks/deletes at parent151; player0 sees unlocked controls next call. | Actual Title/queued-art/control-release and64 following Right calls checked. No duration proxy, preload or extra service substitutes for source order. Later section events remain unqualified. |
 | CAMERA | Actual centre WORD80/389 and native viewport, PPZ2 foreground event selection, three-cloud BG deformation and physical planes. | Data/scroll/plane components plus initial World. Width sweep, scrolling edges, locks/release and long traversal remain open. |
 | BOSS | No Act2 boss route reached. | Unassessed. |
-| LIFE | Original MAINVARS score/lives/bank carry follows actual writers; normal load clears its own fields. | Initial handoff only. Death, checkpoint capture/respawn, repeated restart and persistence breadth remain open. |
-| REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719, Boulder10763→10764, Anton10778→10779,10865→10866, Tamabboh/Float10866→10867 and11032→11033. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
+| LIFE | Original MAINVARS score/lives/bank carry follows actual writers; normal load clears its own fields. Existing saved31 bytes plus their knowledge survive opening→Past→Act2 in the existing captured globals. | Same saved value/mask and both replay scopes checked. Actual E3 contact, two global writes,18 saved writes and FM are separately qualified through labelled dynamic-object ingress; natural activation/death/respawn/repeated restart remain open. |
+| REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719, Boulder10763→10764, Anton10778→10779,10865→10866, Tamabboh/Float10866→10867,11032→11033, Checkpoint11033→11034 and11145→11146. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
 | DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; actual10778/10866/11033 selected Sonic omission and full/course pixel replay pass on EGL. Matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
 | CLEANUP | Reject queued capture/restore/direct scroll/service/recursive overlay without closing the healthy producer. Rejected active-atlas close retains its ledger; cleanup retry retires all488 actually selected uploads and preserves another producer. | Actual EGL case.488 is selected uploads, not the1597-tile sparse current window or a whole-act completion metric. |
 | EXIT | No Act2 completion or outgoing programme reached. | Open. |
@@ -135,6 +135,41 @@ Production is unchanged. Exact properties/XML hashes inspected;8own reports
 consumed. Neither the earlier157 nor diagnostic165 becomes a green run.
 
 ## Exact qualification
+
+The combined Checkpoint/Wall selection is261passes,2new fixture failures and
+1diagnostic-observer error,0skips, source
+`2d77741c20d1a6d26731f6fd19946315073d40570d00c59c20b4115aa38bb680`,
+04:02:42.829251–04:05:55.355902Z,0s admission/1m43s precompile. Wall World16,
+Checkpoint component66, Wall component21 and all existing regressions pass.
+Root changed no production for the two fixtures: exported known-mask byte arrays
+need value comparison; a later Checkpoint parent read sees HUD sprite bit7 already
+cleared by its earlier Draw, so the odd-address test now uses the native stable
+Score tile-low byte. The source31 carry test retains exact state identity, every
+byte/knowledge read and both replay scopes. All264 exact identities/properties/
+XML hashes inspected;28own reports consumed. The removed observer returned11146,
+then stopped11147 at Collapse20/whole45/routine0/subtypeC0. Failed partial pool
+contents are not earlier closed state; bounded diagnostics state their omissions.
+
+The corrected20 Checkpoint cases plus changed positive route method then pass21
+without failures/errors/skips, source
+`872caf67c4ef2dd918ad55f2d12752f1c7b6b1d882df6a05f64c70dd70d8e43d`,
+04:16:51.328713–04:17:27.681886Z,0s admission/35.109s test precompile. Exact
+identities/properties/two XML hashes inspected;4own reports consumed. The positive
+11146 method adds full/course11033→11034 and11145→11146, finishes healthy/Ready,
+and does not execute the following unsupported dispatch. No green264 or new11146
+pixels follows; the last actual EGL picture remains11033.
+
+Checkpoint's existing saved31 spans FF1523..27,FF152A..2D,FF1530..44,FF1591 are
+below warm flower/WORKRAMFILE clears. The existing globals/Values carry them,
+without a new owner or unknown/default initialization. New live calls require
+exact pending producer identity and completed receipts before later publication;
+actual primary/global/live/saved/reserved/dynamic parent bytes are read only at
+reached addresses. E3, save/FM failures and raw alias cases use actual owners.
+The independent Wall scope retains complete pool/Frame cuts, genuine plain Solid
+completion/stopped prefixes, prebuilt ASR, ordered FM and dirty-fragment scheduling.
+Private publication receipts are checked before native continuation even if a
+wrapper forges a public acknowledgement. Both static source reviews found no
+concrete P1/P2; their execution claims remain separate from the runs above.
 
 The next57 selection passes without failures/errors/skips: Source116 data56 and
 the extended actual-controller EGL1. R12A Collapse metadata selects its own

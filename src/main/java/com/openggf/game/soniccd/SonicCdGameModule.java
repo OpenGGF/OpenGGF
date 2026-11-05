@@ -33,6 +33,7 @@ import com.openggf.game.soniccd.objects.CdRing;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
 import com.openggf.game.soniccd.objects.CdMonitor;
+import com.openggf.game.soniccd.objects.CdBreakableWall;
 import com.openggf.game.soniccd.objects.CdTimePost;
 import com.openggf.game.soniccd.objects.CdSignpost;
 import com.openggf.game.soniccd.objects.CdBigRing;
@@ -134,7 +135,10 @@ public final class SonicCdGameModule implements GameModule {
         BOULDER_BODY, BOULDER_SOLID, PLATFORM_BODY, PLATFORM_SOLID, PLATFORM_PRIMARY_ANGLE,
         ANTON_PRIMARY_ANGLE, ANTON_BODY, PATA_BATA_BODY,
         TAMABBOH_PRIMARY_ANGLE, TAMABBOH_PLAYER_Y, TAMABBOH_PLAYER_X, TAMABBOH_FM, TAMABBOH_BODY,
-        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY
+        FLOAT_BLOCK_SOLID, FLOAT_BLOCK_BODY,
+        CHECKPOINT_LEVEL_READ, CHECKPOINT_PARENT_READ, CHECKPOINT_SAVED_READ, CHECKPOINT_GLOBAL,
+        CHECKPOINT_SAVE_STORE, CHECKPOINT_SAVE, CHECKPOINT_FM, CHECKPOINT_BODY,
+        WALL_BODY, WALL_SOLID, WALL_FM, WALL_HALVE_X
     }
     enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS }
     static final class UnsupportedAct2Loading extends UnsupportedOperationException {
@@ -275,7 +279,10 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm { }
+    record PastCheckpointFm(CdCheckpoint.FmSound sound) implements PastSound {
+        PastCheckpointFm { Objects.requireNonNull(sound); }
+    }
     record PastFrameSound(CdPlayerFrameRuntime.Sound sound) implements PastSound {
         PastFrameSound { Objects.requireNonNull(sound); }
     }
@@ -326,6 +333,9 @@ public final class SonicCdGameModule implements GameModule {
             if (nativeId != CdCollapsePlatform.COLLAPSE_FM) throw new IllegalArgumentException("Collapse requests only FM_A3");
         }
     }
+    record PastWallFm(int nativeId) implements PastSound {
+        PastWallFm { if(nativeId!=CdBreakableWall.BREAK_FM)throw new IllegalArgumentException("Wall emits native FM_B0 only"); }
+    }
     record PastTimePostSubCpu(CdTimePost.SubCpuCommand command) implements PastSound {
         PastTimePostSubCpu { Objects.requireNonNull(command); }
     }
@@ -355,7 +365,7 @@ public final class SonicCdGameModule implements GameModule {
                              CdCheckpointLiveAux.State live, CdPlayerBody.ContactGlobals contact,
                              CdOpeningObjectRuntime.ScoreGlobals score, int displayedVScrollLongBits,
                              long generation, LevelProgramState program, CdAssetBytes savedObjectFlags,
-                             CdOpeningObjectRuntime.DevGlobals retainedDev) { }
+                             CdOpeningObjectRuntime.DevGlobals retainedDev, CdCheckpointSaveData.State checkpointSaved) { }
     private record PastOpeningShared(SonicCdPastLoadingVisit.Snapshot loading, ProgramServicesState services,
                                      LevelProgramState program) { }
 
@@ -640,7 +650,7 @@ public final class SonicCdGameModule implements GameModule {
                 openingObjects.sectionArtState().sectionWord(), b.background().cloudRam(), b.copies(),
                 openingObjects.checkpointState().live(), openingObjects.contactGlobals(), openingObjects.scoreGlobals(),
                 warpState.displayedVscrollBgWord(), mode.getLevelManager().getCompletedProductionLoadGeneration(),
-                levelProgramState(), openingObjects.placement().capture().savedFlags(), openingObjects.devGlobals());
+                levelProgramState(), openingObjects.placement().capture().savedFlags(), openingObjects.devGlobals(), openingObjects.checkpointState().saved());
         stagedPastContext = SonicCdLevelInitProfile.staticStageContext();
         stagedPastContext.setLoadCause(LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY);
         try {
@@ -713,7 +723,7 @@ public final class SonicCdGameModule implements GameModule {
         pastLevel = level; pastLoadGeneration = Math.incrementExact(c.generation());
         pastLoading = new SonicCdPastLoadingVisit(this, c.assets(), playerFrame, playerPresentation,
                 c.saved(), c.ring(), c.level(), c.sectionWord(), video, c.live(), c.contact(), c.score(),
-                c.displayedVScrollLongBits(), c.savedObjectFlags(), c.retainedDev(), runMmdClearedWaterPalette);
+                c.displayedVScrollLongBits(), c.savedObjectFlags(), c.retainedDev(), runMmdClearedWaterPalette, c.checkpointSaved());
         var p = c.program();
         levelProgram = new LevelProgramState(0, p.timeStones(), 0, 0, p.palFadeFlags() | 1,
                 p.gameMode() | 0x80, 0, 0, LevelProgramPhase.PAST_LOADING, p.goodFutureFlags());
@@ -789,7 +799,7 @@ public final class SonicCdGameModule implements GameModule {
             retainedDev = new CdOpeningObjectRuntime.DevGlobals(1, retainedDev.projDestroyed());
         act2Loading = new SonicCdAct2LoadingVisit(this, c.data().terrain(), playerFrame, playerPresentation,
                 c.data().player(), c.ring(), c.level(), c.sectionWord(), video, c.mainvars().live(), c.mainvars().contact(), c.mainvars().score(),
-                c.displayedVScrollLongBits(), c.mainvars().savedFlags(), retainedDev, runMmdClearedWaterPalette, c.mainvars().demoDataIndexWord());
+                c.displayedVScrollLongBits(), c.mainvars().savedFlags(), retainedDev, runMmdClearedWaterPalette, c.mainvars().demoDataIndexWord(), c.mainvars().checkpointSaved());
         var p = c.program();
         levelProgram = new LevelProgramState(0, p.timeStones(), 0, 0, p.palFadeFlags() | 1,
                 0x80, 0, 0, LevelProgramPhase.ACT2_LOADING, p.goodFutureFlags());

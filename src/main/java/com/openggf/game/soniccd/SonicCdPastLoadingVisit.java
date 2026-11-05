@@ -140,9 +140,9 @@ final class SonicCdPastLoadingVisit {
                                   CdOpeningObjectRuntime.ScoreGlobals score, OptionalInt drownTimerWord,
                                   Optional<TailValues> tail, Optional<CdLevelHud.BonusValues> bonus,
                                   Optional<CdAssetBytes> layoutRam, OptionalInt debugBlockWord, OptionalInt pauseMusicBit,
-                                  CdOpeningObjectRuntime.DevGlobals retainedDev) {
+                                  CdOpeningObjectRuntime.DevGlobals retainedDev, CdCheckpointSaveData.State checkpointSaved) {
         private LoadingGlobals {
-            Objects.requireNonNull(live); Objects.requireNonNull(contact);
+            Objects.requireNonNull(checkpointSaved); Objects.requireNonNull(live); Objects.requireNonNull(contact);
             Objects.requireNonNull(score); Objects.requireNonNull(drownTimerWord); Objects.requireNonNull(tail);
             Objects.requireNonNull(bonus); Objects.requireNonNull(layoutRam); Objects.requireNonNull(debugBlockWord);
             Objects.requireNonNull(pauseMusicBit); Objects.requireNonNull(retainedDev);
@@ -150,29 +150,29 @@ final class SonicCdPastLoadingVisit {
                 throw new IllegalArgumentException("Only PauseMusic's bit7 belongs to this projection");
         }
         LoadingGlobals withLive(CdCheckpointLiveAux.State next) {
-            return new LoadingGlobals(next, contact, score, drownTimerWord, tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
+            return new LoadingGlobals(next, contact, score, drownTimerWord, tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
         }
         LoadingGlobals withDrownTimer(int word) {
-            return new LoadingGlobals(live, contact, score, OptionalInt.of(word), tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
+            return new LoadingGlobals(live, contact, score, OptionalInt.of(word), tail, bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
         }
         LoadingGlobals clearBonus() {
             return new LoadingGlobals(live, contact, score, drownTimerWord, tail,
-                    Optional.of(new CdLevelHud.BonusValues(0, 0, 0)), layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
+                    Optional.of(new CdLevelHud.BonusValues(0, 0, 0)), layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
         }
         LoadingGlobals clearDebugBlock() {
-            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam, OptionalInt.of(0), pauseMusicBit, retainedDev);
+            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam, OptionalInt.of(0), pauseMusicBit, retainedDev, checkpointSaved);
         }
         LoadingGlobals withLayout(CdAssetBytes bytes) {
-            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, Optional.of(bytes), debugBlockWord, pauseMusicBit, retainedDev);
+            return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, Optional.of(bytes), debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
         }
         LoadingGlobals withPauseMusicBit(int bit) {
             return new LoadingGlobals(live, contact, score, drownTimerWord, tail, bonus, layoutRam,
-                    debugBlockWord, OptionalInt.of(bit), retainedDev);
+                    debugBlockWord, OptionalInt.of(bit), retainedDev, checkpointSaved);
         }
         LoadingGlobals finishMainStores() {
             return new LoadingGlobals(live, new CdPlayerBody.ContactGlobals(0, 0, contact.combineRing()),
                     new CdOpeningObjectRuntime.ScoreGlobals(score.score(), score.nextLifeScore(), 0x80),
-                    drownTimerWord, Optional.of(new TailValues(0, 0, 0, 0, 0x202F)), bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev);
+                    drownTimerWord, Optional.of(new TailValues(0, 0, 0, 0, 0x202F)), bonus, layoutRam, debugBlockWord, pauseMusicBit, retainedDev, checkpointSaved);
         }
     }
 
@@ -237,7 +237,7 @@ final class SonicCdPastLoadingVisit {
                             SonicCdPlayerPresentation.PastVideoInit video, CdCheckpointLiveAux.State live,
                             CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
                             int displayedVScrollLongBits, CdAssetBytes savedObjectFlags, CdOpeningObjectRuntime.DevGlobals retainedDev,
-                            CdAssetBytes runMmdClearedWaterPalette) {
+                            CdAssetBytes runMmdClearedWaterPalette, CdCheckpointSaveData.State checkpointSaved) {
         this.module = Objects.requireNonNull(module); this.assets = Objects.requireNonNull(assets);
         this.frame = Objects.requireNonNull(frame); this.presentation = Objects.requireNonNull(presentation);
         this.saved = Objects.requireNonNull(saved);
@@ -337,7 +337,7 @@ final class SonicCdPastLoadingVisit {
                         level.powerup(), level.timeOver()),
                 // RunMMD covers the same four water bytes; lower MAINVARS time and its
                 // partial knowledge survive. The helper supplies only that finite projection.
-                new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live), contact, score, OptionalInt.empty(), Optional.empty(), Optional.empty(), Optional.empty(), OptionalInt.empty(), OptionalInt.empty(), retainedDev),
+                new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live), contact, score, OptionalInt.empty(), Optional.empty(), Optional.empty(), Optional.empty(), OptionalInt.empty(), OptionalInt.empty(), retainedDev, checkpointSaved),
                 zero(31 * 64), new FadeProgress(0, video.selection().displayEnabled()),
                 List.of(LOAD_LEVEL_PCM, INIT_VDP, INIT_CONTROLLERS, NORMAL_LOAD), new LoopGlobals(OptionalInt.empty(), Optional.empty(), zero(7), zero(7), Optional.empty(), initialSelection));
     }
@@ -762,7 +762,7 @@ final class SonicCdPastLoadingVisit {
         invocation.pool.validateRestore(pool);
         var g = old.globals();
         var globals = new LoadingGlobals(g.live(), nextContact, nextScore, g.drownTimerWord(), g.tail(),
-                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
+                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved());
         var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(),
                 old.foregroundPlane(), nextRing, nextLevel, globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
@@ -1008,7 +1008,7 @@ final class SonicCdPastLoadingVisit {
         var dev = goodFuture ? new CdOpeningObjectRuntime.DevGlobals(1, g.retainedDev().projDestroyed()) : g.retainedDev();
         var score = reset ? new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, g.score().updateHudScore()) : g.score();
         var nextGlobals = new LoadingGlobals(g.live(), g.contact(), score, g.drownTimerWord(), g.tail(), g.bonus(),
-                g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), dev);
+                g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), dev, g.checkpointSaved());
         var nextLevel = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), reset ? 0 : l.checkpoint(),
                 reset ? 0 : l.spawnMode(), l.plcLoadFlags() | 1, l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
         var nextRing = reset ? new CdRingGlobals(r.rings(), frame.environment().globals().timeAttackMode() == 0 ? 3 : 1,
@@ -1036,7 +1036,7 @@ final class SonicCdPastLoadingVisit {
             var t = g.tail().orElseThrow();
             return new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
                     Optional.of(new TailValues(t.player2ControlsWord(), t.player2BoredWord(), t.unknownLevelByte(),
-                            t.demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
+                            t.demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved());
         });
     }
     private void clearOldExitPalette() {
@@ -2732,7 +2732,7 @@ final class SonicCdPastLoadingVisit {
                 call.field() == CdResults.BonusField.RING_BONUS_WORD ? operand : b.ringBonusWord(),
                 call.field() == CdResults.BonusField.UPDATE_HUD_BONUS_BYTE ? 1 : b.updateHudBonusByte());
         var ready = resultsValues(values.section(), values.ring(), new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
-                g.tail(), Optional.of(readyBonus), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+                g.tail(), Optional.of(readyBonus), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()));
         resultsPort = true;
         try {
             verifyResults(i); validateResultsCut(i, call.actualCut(), call.expectedSource()); values = ready; i.base = ready;
@@ -2753,7 +2753,7 @@ final class SonicCdPastLoadingVisit {
                 old.timeStopTimer(), old.ringAnimationTimer(), old.ringAnimationFrame());
         var ready = resultsValues(values.section(), readyRing, new LoadingGlobals(g.live(), g.contact(),
                 new CdOpeningObjectRuntime.ScoreGlobals(w.score(), w.nextLifeScore(), w.updateHudScore()), g.drownTimerWord(),
-                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()));
         var ledger = new ArrayList<>(sounds);
         result.command().ifPresent(command -> ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactSubCpuCommand(command))));
         var readySounds = List.copyOf(ledger); resultsPort = true;
@@ -2846,10 +2846,10 @@ final class SonicCdPastLoadingVisit {
                 var tail = g.tail().orElseThrow(() -> new UnsupportedResultsRead(ResultsReadBoundary.TAIL_PREIMAGE));
                 globals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
                         Optional.of(new TailValues(tail.player2ControlsWord(), tail.player2BoredWord(), 0, tail.demoS1IndexWord(), tail.paletteFadeInfoWord())),
-                        g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
+                        g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved());
             }
             case PROJ_DESTROYED_BYTE -> globals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(), g.tail(), g.bonus(),
-                    g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), new CdOpeningObjectRuntime.DevGlobals(g.retainedDev().goodFuture(), 0));
+                    g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), new CdOpeningObjectRuntime.DevGlobals(g.retainedDev().goodFuture(), 0), g.checkpointSaved());
             case CHECKPOINT_BYTE -> level = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), 0, l.spawnMode(), l.plcLoadFlags(),
                     l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), l.timeOver());
             case PLC_LOAD_FLAGS_CLEAR_BIT0, PLC_LOAD_FLAGS_CLEAR_BIT1 -> level = new CdLevelGlobals(l.levelRestart(), l.updateHudTime(), l.checkpoint(),
@@ -2859,7 +2859,7 @@ final class SonicCdPastLoadingVisit {
                 readyShared = new CdPlayerFrameRuntime.SharedState(i.shared.owner(), player.finalEnvironment(), i.shared.artState(), i.shared.paused(), i.shared.vIntClock());
             }
             case GOOD_FUTURE_BYTE -> globals = new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(), g.tail(), g.bonus(),
-                    g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), new CdOpeningObjectRuntime.DevGlobals(operand, g.retainedDev().projDestroyed()));
+                    g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), new CdOpeningObjectRuntime.DevGlobals(operand, g.retainedDev().projDestroyed()), g.checkpointSaved());
             case GOOD_FUTURE_FLAGS_CLEAR_BYTE, GOOD_FUTURE_FLAGS_SET_BIT -> {
                 // A literal clear establishes a known BYTE. BSET must first own the complete prior BYTE.
                 int flags = call.field() == CdResults.ProgrammeField.GOOD_FUTURE_FLAGS_CLEAR_BYTE ? 0 : resultsGoodFutureFlags(i) | (1 << operand);
@@ -3644,7 +3644,7 @@ final class SonicCdPastLoadingVisit {
                     call.field() == CdSignpost.StoreField.RING_BONUS_WORD ? call.value() : before.ringBonusWord(),
                     call.field() == CdSignpost.StoreField.UPDATE_HUD_BONUS_BYTE ? call.value() : before.updateHudBonusByte());
             globals = new LoadingGlobals(globals.live(), globals.contact(), globals.score(), globals.drownTimerWord(), globals.tail(),
-                    Optional.of(bonus), globals.layoutRam(), globals.debugBlockWord(), globals.pauseMusicBit(), globals.retainedDev());
+                    Optional.of(bonus), globals.layoutRam(), globals.debugBlockWord(), globals.pauseMusicBit(), globals.retainedDev(), globals.checkpointSaved());
         }
         var ready = signpostValues(level, globals); signpostPort = true;
         try {
@@ -3911,7 +3911,7 @@ final class SonicCdPastLoadingVisit {
         var g = values.globals();
         var readyValues = goalValues(values.section(), new LoadingGlobals(g.live(),
                 new CdPlayerBody.ContactGlobals(0, g.contact().shield(), g.contact().combineRing()), g.score(), g.drownTimerWord(),
-                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()));
         var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
         var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
                 invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
@@ -4223,7 +4223,7 @@ final class SonicCdPastLoadingVisit {
             throw new IllegalStateException("Robot goodFuture omitted its reached collision/timer/frame prefix");
         var g = values.globals(); var ready = machineValues(values.ring(), new LoadingGlobals(g.live(), g.contact(), g.score(),
                 g.drownTimerWord(), g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(),
-                new CdOpeningObjectRuntime.DevGlobals(1, g.retainedDev().projDestroyed())));
+                new CdOpeningObjectRuntime.DevGlobals(1, g.retainedDev().projDestroyed()), g.checkpointSaved()));
         machinePort = true;
         try { verifyMachine(invocation); values = ready; invocation.base = ready; invocation.goodStored = true;
             invocation.site = MachineSite.GOOD_FUTURE; verifyMachine(invocation); validateMachineCut(invocation, call.actualCut(), source, false); }
@@ -4243,7 +4243,7 @@ final class SonicCdPastLoadingVisit {
                 old.timeStopTimer(), old.ringAnimationTimer(), old.ringAnimationFrame());
         var readyValues = machineValues(readyRing, new LoadingGlobals(g.live(), g.contact(),
                 new CdOpeningObjectRuntime.ScoreGlobals(w.score(), w.nextLifeScore(), w.updateHudScore()), g.drownTimerWord(),
-                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+                g.tail(), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()));
         var ledger = new ArrayList<>(sounds);
         result.command().ifPresent(command -> ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactSubCpuCommand(command))));
         var readySounds = List.copyOf(ledger); machinePort = true;
@@ -5162,7 +5162,7 @@ final class SonicCdPastLoadingVisit {
                 invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
         var old = values; var g = old.globals();
         var nextGlobals = new LoadingGlobals(g.live(), nextContact, g.score(), g.drownTimerWord(), g.tail(),
-                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev());
+                g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved());
         // Direct Hurt's world result is required identical above. Ring/score ownership is retained, never defaulted.
         var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(),
@@ -8658,7 +8658,7 @@ final class SonicCdPastLoadingVisit {
         replace(values.phase(), next.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), next.ring(),
                 next.level(), new LoadingGlobals(next.liveTime(), g.contact(), next.score(), g.drownTimerWord(), g.tail(),
-                        next.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()), values.hudObjects(), values.calls());
+                        next.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()), values.hudObjects(), values.calls());
     }
 
     private void representedServiceCompleted() {
@@ -8872,7 +8872,7 @@ final class SonicCdPastLoadingVisit {
         globals(g -> new LoadingGlobals(g.live(), g.contact(), g.score(), g.drownTimerWord(),
                 Optional.of(new TailValues(g.tail().orElseThrow().player2ControlsWord(),
                         g.tail().orElseThrow().player2BoredWord(), g.tail().orElseThrow().unknownLevelByte(),
-                        g.tail().orElseThrow().demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev()));
+                        g.tail().orElseThrow().demoS1IndexWord(), 0x003F)), g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved()));
         byte[] white = new byte[128];
         for (int at = 0; at < white.length; at += 2) { white[at] = 0x0E; white[at + 1] = (byte) 0xEE; }
         replace(FROM_WHITE, values.section(), CdAssetBytes.copyOf(white), values.fadePalette(), values.displayedPalette(),
@@ -9011,13 +9011,13 @@ final class SonicCdPastLoadingVisit {
     /** Retained MAINVARS data only, borrowed at the actual completed old IPX return. */
     record ExitCarry(CdCheckpointLiveAux.State live, CdPlayerBody.ContactGlobals contact,
                      CdOpeningObjectRuntime.ScoreGlobals score, CdOpeningObjectRuntime.DevGlobals retainedDev,
-                     CdAssetBytes savedFlags, int demoDataIndexWord) { }
+                     CdAssetBytes savedFlags, int demoDataIndexWord, CdCheckpointSaveData.State checkpointSaved) { }
     ExitCarry oldIpxReturnCarry() {
         requireCurrent();
         if (values.phase() != OLD_IPX_RETURNED)
             throw new IllegalStateException("MAINVARS carry requires the actual old IPX return");
         var g = values.globals();
-        return new ExitCarry(g.live(), g.contact(), g.score(), g.retainedDev(), placement.capture().savedFlags(), values.loop().demoDataIndexWord().orElseThrow());
+        return new ExitCarry(g.live(), g.contact(), g.score(), g.retainedDev(), placement.capture().savedFlags(), values.loop().demoDataIndexWord().orElseThrow(), g.checkpointSaved());
     }
 
     SonicCdGameModule.PastLoadState observation() {

@@ -1,5 +1,56 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — Checkpoint carry, Wall binding and positive11146
+
+Existing saved31 bytes and knowledge now follow their real opening→Past→Act2
+programme carry inside the existing globals/Values snapshots. Native saved spans
+are FF1523..27,FF152A..2D,FF1530..44,FF1591. Warm flower clearing startsFF1600;
+RunMMD's WORKRAMFILE startsFF2000; object/misc/camera clears are disjoint. Whole
+MAINVARS clearing belongs to cold IPX/MD Init, not these programme handoffs. No
+new saved owner, rewind partition, unknown/default initialization or RAM model
+was introduced. SavedMiniSonic1591 is preserved with the other30 bytes.
+
+The cached Checkpoint uses genuine source/math, raw reached parent-byte owners,
+actual global stores, the existing saved helper's18 stores and ordered FM. Exact
+pending calls and completed receipts precede later publication; clone/no-op/
+fault paths cannot borrow authority from equal records. The independently cached
+Wall uses real plain Solid/stopped prefixes, prepared X-only ASR, FM before the
+halve, native first-free dirty fragments and actual Draw/delete/despawn. A private
+World receipt is checked synchronously before continuation, even if a wrapper
+forges the public acknowledgement. Source algorithms remain in their components.
+Root merged the two additive packets: old78 observations remain a prefix, followed
+by Checkpoint8 then Wall4 (90). Each new scope also excludes its peer. Neither
+review established a concrete P1/P2; compilation/execution remain separate facts.
+
+The combined264 is261pass/2new test-oracle failures/1observer error,0skips at source
+`2d77741c20d1a6d26731f6fd19946315073d40570d00c59c20b4115aa38bb680`,
+04:02:42.829251–04:05:55.355902Z,0s admission/1m43s precompile. Wall16, legacy
+Checkpoint66/Wall21 and all retained regression selections pass. The two new
+fixtures compared exported byte wrappers by identity and sampled pre-call HUD
+sprite bit7 before its earlier physical Draw clears it. Root changed only those
+oracles: compare full mask bytes, and use Score whole2's native odd-address tile
+low byte68 instead of the transient visibility bit. All native checks remain.
+All264 exact identities/properties/14 XML hashes inspected;28own reports consumed.
+
+The corrected20 Checkpoint cases and changed positive controller method pass21
+without failures/errors/skips at source
+`872caf67c4ef2dd918ad55f2d12752f1c7b6b1d882df6a05f64c70dd70d8e43d`,
+04:16:51.328713–04:17:27.681886Z,0s admission/35.109s test precompile. Exact
+identities/properties/XML hashes checked;4own reports consumed. Same saved value,
+all31 knowledge bytes and both replay scopes cross the programme handoffs. Actual
+E3/save/global/FM/child/fault cases use labelled dynamic-object ingress; this does
+not assert a natural route activation or respawn. The permanent ordinary route
+now returns11146 with full/course11033→11034 and11145→11146, retaining prior cuts
+and same healthy source/Frame/World/epoch. Its actual EGL pixels remain11033.
+
+The removed temporary observer returned11146 then stopped11147 at DYNAMIC_OBJECTS;
+the exact source walk/retained partial pool identifies Collapse20/whole45/routine0,
+X0B40/Y0278/subtypeC0. That failed state is not a prior closed-cut oracle. The new
+bounded diagnostics helper was forward-used externally: it preserved the failed
+verdict/source/XML hashes and explicitly marked truncated/omitted text. No green
+264, matched native image, natural Wall contact or whole-act/regional claim follows.
+Collapse source116 is already saved; its actual World binding is the next task.
+
 ## 5 November 2026 — actual11033 pixels and Act2-specific Collapse views
 
 R12A Collapse uses its own complete556B native data blockC348..C574. Actual
