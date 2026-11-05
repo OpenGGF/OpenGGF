@@ -208,6 +208,59 @@ public final class CdTunnelPath {
     private final PlayerOwner playerOwner;
     private final PlayFmCall playFm;
     private boolean running;
+    /** Opt-in actual-World receipts. Public descriptions alone never authenticate origin. */
+    public enum MutationKind { SOURCE, SAVED_BYTE, DELETE }
+    public record Publication(MutationKind kind,NativeCut site,CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source,CdObjectState output,CdAssetBytes savedFlags,
+                              BankSite bankSite,int savedByteIndex,List<DeleteStore> deleteStores) {
+        public Publication { Objects.requireNonNull(kind); Objects.requireNonNull(cut); Objects.requireNonNull(source);
+            Objects.requireNonNull(output); Objects.requireNonNull(savedFlags); deleteStores=List.copyOf(deleteStores); }
+    }
+    public record PlayerReadCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) { }
+    public record WordReadCall(CdObjectPlacementRuntime.Snapshot cut,CdObjectState source,
+                               UnsupportedBoundary site,int addressBits) { }
+    public interface DispatchObserver {
+        void beforeOperation(Object call);
+        void afterOperation(Object call);
+        void failedOperation(Object call,Throwable original);
+    }
+    public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+    private DispatchObserver observer;
+    private ReceiptGuard receiptGuard;
+    private Object pendingOperation,operationResult;
+    private long operationOrdinal;
+    private boolean resultReady;
+    public Assets assets() { return assets; }
+    public boolean isCurrentCall(Object call) { return running && call!=null && call==pendingOperation; }
+    public long currentOrdinal(Object call) {
+        if(!isCurrentCall(call)) throw new IllegalStateException("No original pending Tunnel Path producer");
+        return operationOrdinal;
+    }
+    public Object currentResult(Object call) {
+        if(!isCurrentCall(call) || !resultReady) throw new IllegalStateException("No completed original Tunnel Path result");
+        return operationResult;
+    }
+    /** Legacy constructor remains unobserved; the actual World supplies this opt-in binding. */
+    public static CdTunnelPath withWorldOwner(CdObjectPlacementRuntime placement,Assets assets,PlayerOwner player,
+                                               PlayFmCall fm,DispatchObserver observer,ReceiptGuard guard) {
+        var body=new CdTunnelPath(placement,assets,player,fm);
+        body.observer=Objects.requireNonNull(observer); body.receiptGuard=Objects.requireNonNull(guard); return body;
+    }
+    @FunctionalInterface private interface Operation<T> { T run(); }
+    private <T> T observed(Object call,Operation<T> operation) {
+        if(observer==null) return operation.run();
+        if(pendingOperation!=null) throw new IllegalStateException("Nested Tunnel Path producer");
+        pendingOperation=call; operationOrdinal++; resultReady=false;
+        try {
+            observer.beforeOperation(call); receiptGuard.prepared(call);
+            T result=operation.run(); operationResult=result; resultReady=true;
+            observer.afterOperation(call); receiptGuard.completed(call); return result;
+        } catch(RuntimeException|Error original) {
+            try { observer.failedOperation(call,original); }
+            catch(RuntimeException|Error verification) { if(verification!=original) original.addSuppressed(verification); }
+            throw original;
+        } finally { pendingOperation=null; operationResult=null; resultReady=false; }
+    }
 
     public CdTunnelPath(CdObjectPlacementRuntime placement,Assets assets,PlayerOwner playerOwner,PlayFmCall playFm) {
         this.placement=Objects.requireNonNull(placement); this.assets=Objects.requireNonNull(assets);
@@ -217,7 +270,7 @@ public final class CdTunnelPath {
     /** ObjTunnelPath:119-168. Travel preclear precedes both primary gates and raw dispatch. */
     public Result run(int wholeIndex,Globals globals) {
         if(running) throw new IllegalStateException("Tunnel Path cannot reenter its synchronous physical call");
-        running=true;
+        running=true; operationOrdinal=0;
         try {
             Objects.requireNonNull(globals); var pool=placement.pool(); var source=pool.state(wholeIndex);
             if(source.id()!=OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Tunnel Path ID $07");
@@ -377,7 +430,7 @@ public final class CdTunnelPath {
         var before=readPlayer(c); var cut=captureAndRequire(c);
         var call=new FmCall(cut,c.state,before,site,FmSound.FM_91);
         var observation=new FmPlayed(site,FmSound.FM_91);
-        try { playFm.play(call); }
+        try { observed(call,()->{ playFm.play(call); return null; }); }
         finally {
             requirePool(c,cut,call.expectedSource()); requirePlacement(c);
             requirePair(before,readActualPlayer(c,before));
@@ -400,8 +453,12 @@ public final class CdTunnelPath {
         var observation=new SavedFlagChanged(site,at.byteIndex(),old,value);
         byte[] bytes=c.savedFlags.copy(); bytes[at.byteIndex()]=(byte)value;
         var ready=CdAssetBytes.copyOf(bytes);
-        placement.bclrSavedFlag(at.id(),at.period(),CdObjectPlacementRuntime.SavedBit.LOADED);
-        c.savedFlags=ready; requirePlacement(c); c.effects.add(observation);
+        var publication=new Publication(MutationKind.SAVED_BYTE,null,placement.capture(),c.state,c.state,ready,site,at.byteIndex(),List.of());
+        observed(publication,()->{
+            placement.bclrSavedFlag(at.id(),at.period(),CdObjectPlacementRuntime.SavedBit.LOADED);
+            c.savedFlags=ready; requirePlacement(c); return null;
+        });
+        c.effects.add(observation);
     }
     private static SavedAddress savedAddress(Cursor c,Globals globals) {
         int period=globals.rawTimeZoneByte()&0x7F;
@@ -416,8 +473,11 @@ public final class CdTunnelPath {
     }
     private record SavedAddress(int id,int period,int byteIndex) { }
     private int readWord(Cursor c,UnsupportedBoundary boundary,int addressBits) {
-        if((addressBits&1)!=0) throw unsupported(boundary,StopReason.UNALIGNED_WORD,c,addressBits);
-        return resolveWord(c,boundary,addressBits);
+        var call=new WordReadCall(placement.capture(),c.state,boundary,addressBits);
+        return observed(call,()->{
+            if((addressBits&1)!=0) throw unsupported(boundary,StopReason.UNALIGNED_WORD,c,addressBits);
+            return resolveWord(c,boundary,addressBits);
+        });
     }
     /** Two reached bus bytes, not a script-count whitelist or four-byte pair alignment test. */
     private int resolveWord(Cursor c,UnsupportedBoundary boundary,int addressBits) {
@@ -459,7 +519,8 @@ public final class CdTunnelPath {
     private PlayerCut readActualPlayer(Cursor c,PlayerCut expected) {
         var cut=captureAndRequire(c); var source=c.state;
         try {
-            var value=Objects.requireNonNull(playerOwner.read(),"actual primary State/Environment");
+            var call=new PlayerReadCall(placement.capture(),source);
+            var value=observed(call,()->Objects.requireNonNull(playerOwner.read(),"actual primary State/Environment"));
             if(expected!=null) requirePair(expected,value);
             return value;
         } finally { requirePool(c,cut,source); requirePlacement(c); }
@@ -478,7 +539,7 @@ public final class CdTunnelPath {
         var readyPair=new PlayerCut(result.finalState(),result.finalEnvironment());
         var observation=new StoresCompleted(site,stores);
         boolean returned=false;
-        try { playerOwner.commit(call); returned=true; }
+        try { observed(call,()->{ playerOwner.commit(call); return null; }); returned=true; }
         finally {
             requirePlacement(c);
             var actual=c.pool.capture(); var actualSource=c.pool.state(c.wholeIndex);
@@ -502,8 +563,13 @@ public final class CdTunnelPath {
         }
         var readyPool=CdObjectPool.overlay(cut,List.of(after));
         var observation=new StoresCompleted(site,new ArrayList<NativeStore>(stores));
-        c.pool.write(after); c.state=after; c.expectedPool=readyPool;
-        requirePool(c,readyPool,after); requirePlacement(c); c.effects.add(observation);
+        var output=after;
+        var publication=new Publication(MutationKind.SOURCE,site,placement.capture(),c.state,output,c.savedFlags,null,-1,List.of());
+        observed(publication,()->{
+            c.pool.write(output); c.state=output; c.expectedPool=readyPool;
+            requirePool(c,readyPool,output); requirePlacement(c); return null;
+        });
+        c.effects.add(observation);
     }
     private void delete(Cursor c) {
         var cut=captureAndRequire(c); byte[] before=c.state.copyBytes(); var stores=new ArrayList<DeleteStore>();
@@ -513,11 +579,17 @@ public final class CdTunnelPath {
             stores.add(new DeleteStore(field,value));
         }
         var observation=new Deleted(stores);
-        c.pool.deleteObject(c.wholeIndex); c.state=c.pool.state(c.wholeIndex);
-        if(!Arrays.equals(new byte[CdObjectState.BYTE_SIZE],c.state.copyBytes()))
-            throw new IllegalStateException("DeleteObject did not clear all64 bytes");
-        var readyPool=CdObjectPool.overlay(cut,List.of(c.state)); c.expectedPool=readyPool;
-        requirePool(c,readyPool,c.state); requirePlacement(c); c.effects.add(observation);
+        // The original pool primitive constructs its cleared immutable value before its slot assignment.
+        // World prebuilds the complete raw96 image and sixteen-LONG receipts before entering it.
+        var publication=new Publication(MutationKind.DELETE,null,placement.capture(),c.state,c.state,c.savedFlags,null,-1,stores);
+        observed(publication,()->{
+            c.pool.deleteObject(c.wholeIndex); c.state=c.pool.state(c.wholeIndex);
+            if(!Arrays.equals(new byte[CdObjectState.BYTE_SIZE],c.state.copyBytes()))
+                throw new IllegalStateException("DeleteObject did not clear all64 bytes");
+            var readyPool=CdObjectPool.overlay(cut,List.of(c.state)); c.expectedPool=readyPool;
+            requirePool(c,readyPool,c.state); requirePlacement(c); return null;
+        });
+        c.effects.add(observation);
     }
     private CdObjectPool.Snapshot captureAndRequire(Cursor c) {
         var actual=c.pool.capture(); c.pool.validateRestore(c.expectedPool);

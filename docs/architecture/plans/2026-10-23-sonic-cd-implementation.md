@@ -1,5 +1,50 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual Tunnel Path and positive12884
+
+Cached Act2 ID07 now uses the authenticated source132 Assets and the existing
+Frame's prepared Tunnel Path publication. The shared kernel executes once;
+private producer/operation receipts precede each reached source/read/player/FM
+publication and validate full96, source64, complete State/Environment, Values,
+HUD, saved/status, scroll, queue, ledger and World/generation. No returned effect
+is replayed as a command. Old106 observations retain their ordinals and append
+five Path observations, total111. No new Frame, art, PLC, reader or capture owner.
+The original component constructor and native formulas remain unchanged.
+
+All408focused cases18classes pass0failures/errors/skips, including31new World,
+64legacy Path,73data and all affected Act2/controller/Flower/child groups. Source
+`a6f97e952ac6ff1e26e05f4376ad408042cd44c7d57752440e6f7ec9435661d7`
+is unchanged during07:25:33.156202–07:32:06.598727Z; admission0s, normal precompile
+about90s. Exact identities/properties/18XML hashes checked;36owned reports consumed.
+Independent ten-source combined review finds no actionable P1/P2. Constructed
+World cases qualify acquisition, both speed branches, countdown, integration,
+completion/release, ordered FM and failure/nonwrite guards. They do not establish
+natural acquisition or the native travel-bit7 ingress.
+
+The bounded ordinary-controller observer returns12884 and rethrows the original
+first12885 `RESERVED_TIME_STAR_READ` from normal fast TimeWarp. Retained control0,
+direction255, charge0 and fast ground speed distinguish it from controlled Path.
+The pure planner's timer0→1 prefix is not published by the inherited failed
+Body/Frame call; actual retained timer remains0. All96 partial images are diagnostic
+only, never earlier ingress. The temporary observer and its owned reports were
+removed after custody. Natural Path Init/Main first complete12700; no Path player
+acquisition/FM observation is claimed on this segment.
+
+Permanent positive12884 and nine-cut EGL pass2/0/0/0 separately at source
+`4e5e5cf9fa7cac5ee8fbe388195e5c0b52dd17e1bc742553a872a9ec494c25ec`,
+07:46:35.131387–07:46:49.159172Z. Old cuts remain; full/course12700/12701 and
+12878/12884 crossings compare complete values before forwarding and after replay.
+Actual ENGINE12884 is320×224/15852B/SHA256
+`fa6e57666f85c530cad0183f180d045c7e0c790e2315d2465970f83f95a3bca3`,
+exported after cleanup. Selected Sonic omission and full/course pixel replay pass.
+Exact identities/source equality/Java25/EGL/media/opt-in/XML hash checked;2owned
+reports consumed. These focused scopes are not a full-suite/native/regional pass.
+
+Next is actual reserved TimeStars over the existing31 raw HUD slots, with original
+Powerup metadata and later art/lifetime prerequisites kept separate. No second
+persistent bank, zero seed, padded art or invented native prefix is admitted.
+Main remains untouched; these commits stay private, with no remote operation.
+
 ## 5 November 2026 — Tunnel Path132 data bridge qualified
 
 Three original-MMD views extend the old129 prefix: native speed208BB8/8bytes,

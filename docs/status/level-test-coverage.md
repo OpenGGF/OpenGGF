@@ -276,6 +276,15 @@ Persistent subtype0 flowers, complete-act, native/regional parity remain open.
 TunnelPath source132/raw-pointer Assets prerequisite passes137focused data/legacy
 checks4classes,0skips. Source129prefix/35readers/19PLCs and adjacent address aliases
 remain exact; no new art/current/Frame owner. Actual ID07 World join remains next.
+That join subsequently passes408focused cases18classes,0failures/errors/skips,
+including31new World and64legacy Path cases. Prepared existing Frame publication,
+private receipts and full-owner checks retain old106 observations plus5=111.
+The permanent positive12884/EGL pair passes separately, retaining older cuts and
+adding natural Path Init/Main12700, full/course crossings and the ninth selected
+Sonic image12884. Natural acquisition/FM is not observed in that segment.
+First12885 is normal fastTimeWarp `RESERVED_TIME_STAR_READ`; failed planner timer1
+is not adopted by the retained Frame(timer0). Existing raw HUD-slot ownership is
+the next bridge. No green diagnostic observer, native/regional or whole-act claim.
 The first-act matrix remains partial as well.
 
 ### Historical26October pause checkpoint

@@ -48,6 +48,10 @@ final class SonicCdAct2LoadingVisit {
     private transient TamabbohInvocation activeTamabboh;
     private transient FloatInvocation activeFloat;
     private boolean tamabbohPort, drawingTamabboh, floatPort, drawingFloat;
+    private final CdTunnelPath tunnelPath;
+    private final CdTunnelPath.Assets tunnelPathAssets;
+    private transient TunnelPathInvocation activeTunnelPath;
+    private boolean tunnelPathPort;
     private final CdFlower flower;
     private final CdFlower.Assets flowerAssets;
     private transient FlowerInvocation activeFlower;
@@ -300,6 +304,18 @@ final class SonicCdAct2LoadingVisit {
                 objectAssets.view(CdR12aProfile.Asset.SPRING_SPEEDS), objectAssets.view(CdR12aProfile.Asset.OBJECT_TILE_IDS)),
                 new CdPlayerMath(player.player()), sharedSolid,
                 this::commitSpringSolid, this::commitSpringLaunch, this::drawSpring, this::playSpringFm);
+        tunnelPathAssets=CdTunnelPath.Assets.fromAct2Assets(objectAssets);
+        tunnelPath=CdTunnelPath.withWorldOwner(placement,tunnelPathAssets,new CdTunnelPath.PlayerOwner() {
+            @Override public CdTunnelPath.PlayerCut read() { return readTunnelPathPlayer(); }
+            @Override public void commit(CdTunnelPath.PlayerCall call) { commitTunnelPathPlayer(call); }
+        },this::playTunnelPathFm,new CdTunnelPath.DispatchObserver() {
+            @Override public void beforeOperation(Object call) { beforeTunnelPathOperation(call); }
+            @Override public void afterOperation(Object call) { afterTunnelPathOperation(call); }
+            @Override public void failedOperation(Object call,Throwable original) { failedTunnelPathOperation(call,original); }
+        },new CdTunnelPath.ReceiptGuard() {
+            @Override public void prepared(Object call) { requirePreparedTunnelPathReceipt(call); }
+            @Override public void completed(Object call) { consumeCompletedTunnelPathReceipt(call); }
+        });
         hud=new CdLevelHud.Act2(objectAssets.hudAssets(), art); paletteCycles=objectAssets.paletteCycles();
         reservedHud=new CdReservedHud(new CdReservedHud.Assets(CdR12aProfile.Asset.MAP_SPR_HUD.nativeAddress(),
                 CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME.nativeAddress()), new CdReservedHud.Slots() {
@@ -2125,6 +2141,7 @@ final class SonicCdAct2LoadingVisit {
                 else if(id==CdFlower.OBJECT_ID) { runFlower(whole); call(FLOWER_BODY); }
                 else if(id==CdExplosion.OBJECT_ID) { runExplosion(whole); call(EXPLOSION_BODY); }
                 else if(id==CdPoints.OBJECT_ID) { runPoints(whole); call(POINTS_BODY); }
+                else if(id==CdTunnelPath.OBJECT_ID) {runTunnelPath(whole);call(TUNNEL_PATH_BODY);}
                 else if(id==CdTunnelDoor.OBJECT_ID) {runDoor(whole);call(TUNNEL_DOOR_BODY);}
                 else if(id==CdLogShadow.OBJECT_ID) { runLogShadow(whole); call(LOG_SHADOW_BODY); }
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
@@ -2183,6 +2200,7 @@ final class SonicCdAct2LoadingVisit {
         var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native queue read");
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
                 if(activeDoor!=null) return readDoorDrawSlot(ref);
@@ -2203,6 +2221,7 @@ final class SonicCdAct2LoadingVisit {
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+                if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native Draw flag write");
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
                 if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
@@ -7396,6 +7415,7 @@ final class SonicCdAct2LoadingVisit {
     // Actual Flower source scope; no new capture partition or persistent flower-storage owner.
     private enum FlowerStep { ENTRY, INIT, MOVE, GROW, DONE, ANIMATED, RESET, TIMER, SPEED, BLOCKED }
     private void requireFlowerIdle() {
+        requireTunnelPathIdle();
         if(activeFlower!=null || flowerPort || drawingFlower)throw new IllegalStateException("Actual Flower invocation owns this cut");
     }
     private void requireOtherFlowerScopesIdle() {
@@ -7900,4 +7920,229 @@ final class SonicCdAct2LoadingVisit {
         var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var images=logMosquiImages(pool);queuePort=true;
         try {verifyFlower(i);i.pool.write(next);i.images=images;i.cleared=true;verifyFlower(i);}finally {queuePort=false;}
     }
+    // ID07: the existing path kernel owns every native branch; these are actual private publication receipts.
+    private void requireTunnelPathIdle() {
+        if(activeTunnelPath!=null || tunnelPathPort) throw new IllegalStateException("Actual Tunnel Path owns this cut");
+    }
+    private void requireOtherTunnelPathScopesIdle() {
+        if(activePrimary!=null || activeDrain!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
+                || activeTitle!=null || activeMonitor!=null || activeBoulder!=null || activePlatform!=null
+                || activeAnton!=null || activePata!=null || activeTamabboh!=null || activeFloat!=null || activeCheckpoint!=null
+                || activeWall!=null || activeCollapse!=null || activeLogMosqui!=null || activeChildEffect!=null || activeDoor!=null || activeFlower!=null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || titlePort || drawingTitle || monitorPort || drawingMonitor || boulderPort || drawingBoulder
+                || platformPort || drawingPlatform || antonPort || drawingAnton || drawingPata || tamabbohPort || drawingTamabboh
+                || floatPort || drawingFloat || checkpointPort || drawingCheckpoint || wallPort || drawingWall
+                || collapsePort || drawingCollapse || logMosquiPort || drawingLogMosqui || drawingChildEffect || doorPort || drawingDoor
+                || flowerPort || drawingFlower || queuePort)
+            throw new IllegalStateException("Another actual family owns the Tunnel Path cut");
+    }
+    private final class TunnelPathInvocation {
+        final int whole; final CdTunnelPath body=tunnelPath; final CdTunnelPath.Assets bodyAssets=tunnelPathAssets;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource();
+        final CdR12aTerrainAssets sourceAssets=assets; final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue;
+        final CdObjectPlacementRuntime.Status status=placement.status(); final CdObjectState entry;
+        final CdAssetBytes reserved=values.hudObjects(); final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll();
+        final Object world; final long generation; final CdObjectDrawQueue.CameraWords camera;
+        Values expectedValues=values,readyValues; List<SonicCdGameModule.PastSound> ledger=sounds,readyLedger;
+        CdPlayerBody.State state=frame.state(); CdPlayerBody.Environment environment=frame.environment();
+        CdPlayerFrameRuntime.ActorState actor=frame.captureActor(),readyActor;
+        CdPlayerFrameRuntime.SharedState shared=frame.captureShared(),readyShared;
+        CdAssetBytes saved=placement.capture().savedFlags(),readySaved;
+        List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()),readyImages;
+        CdPlayerFrameRuntime.ObjectSolidPublication readyPlayer;
+        CdObjectPool.Snapshot readyPool;
+        CdTunnelPath.PlayerCut readValue;
+        Object pendingOperation,completedOperation,portReceipt; long ordinal; boolean failed;
+        TunnelPathInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+    }
+    private void runTunnelPath(int whole) {
+        requireTunnelPathIdle();requireOtherTunnelPathScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || placement.pool().state(whole).id()!=CdTunnelPath.OBJECT_ID)
+            throw new IllegalStateException("No actual cached Tunnel Path physical dispatch");
+        var i=new TunnelPathInvocation(whole);activeTunnelPath=i;
+        try {
+            var gates=frame.environment().movement().gates();
+            var result=tunnelPath.run(whole,new CdTunnelPath.Globals(gates.timeZone(),gates.timeWarpDirection(),i.camera.xWord()));
+            verifyTunnelPath(i);
+            if(i.pendingOperation!=null || i.completedOperation!=null || i.portReceipt!=null || i.failed || i.ordinal==0
+                    || !result.state().equals(i.pool.state(whole)))
+                throw new IllegalStateException("Tunnel Path omitted its original native receipts");
+        } catch(RuntimeException|Error original) {
+            try {verifyTunnelPath(i);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        } finally {activeTunnelPath=null;}
+    }
+    private void verifyTunnelPathOwners(TunnelPathInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherTunnelPathScopesIdle();
+        var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(activeTunnelPath!=i || !runningObjects || servicing || i.body!=tunnelPath || i.bodyAssets!=tunnelPathAssets
+                || tunnelPath.assets()!=i.bodyAssets || i.sourceFrame!=frame || i.stageSource!=frame.stageSource() || i.sourceAssets!=assets
+                || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession() || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.state()!=i.state || frame.environment()!=i.environment || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
+                || values!=i.expectedValues || sounds!=i.ledger || !placement.status().equals(i.status)
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Tunnel Path changed actual Frame/World/source/Values/ledger/scroll/queue owners");
+    }
+    private void verifyTunnelPathImages(TunnelPathInvocation i,List<CdAssetBytes> images,CdAssetBytes saved) {
+        var actual=placement.capture();placement.validateRestore(actual);
+        if(images==null || images.size()!=96 || !actual.status().equals(i.status) || !sameBytes(actual.savedFlags(),saved))
+            throw new IllegalStateException("Tunnel Path changed actual status or saved bank");
+        for(int at=0;at<96;at++) if(!Arrays.equals(actual.pool().slots().get(at).copyBytes(),images.get(at).copy()))
+            throw new IllegalStateException("Tunnel Path changed full96/source image at whole "+(at+32));
+    }
+    private void verifyTunnelPath(TunnelPathInvocation i) {verifyTunnelPathOwners(i);verifyTunnelPathImages(i,i.images,i.saved);}
+    private TunnelPathInvocation requireTunnelPath() {
+        var i=activeTunnelPath;if(i==null)throw new IllegalStateException("No actual Tunnel Path invocation");verifyTunnelPath(i);return i;
+    }
+    private void validateTunnelPathCut(TunnelPathInvocation i,CdObjectPool.Snapshot cut,CdObjectState source) {
+        i.pool.validateRestore(cut);
+        if(!source.equals(i.pool.state(i.whole)) || !source.identity().equals(i.entry.identity()) || !cut.slots().equals(i.pool.capture().slots()))
+            throw new IllegalStateException("Tunnel Path stale full96 or source64 cut");
+    }
+    private void beforeTunnelPathOperation(Object operation) {
+        var i=requireTunnelPath();
+        if(!tunnelPath.isCurrentCall(operation) || i.pendingOperation!=null || i.completedOperation!=null || i.portReceipt!=null
+                || tunnelPathPort || tunnelPath.currentOrdinal(operation)!=i.ordinal+1
+                || i.failed && !(operation instanceof CdTunnelPath.PlayerReadCall))
+            throw new IllegalStateException("Tunnel Path operation lacks its exact pending producer/sequence");
+        i.readyImages=i.images;i.readySaved=i.saved;i.readyValues=i.expectedValues;i.readyLedger=i.ledger;
+        i.readyActor=i.actor;i.readyShared=i.shared;i.readyPool=null;i.readyPlayer=null;i.readValue=null;
+        if(operation instanceof CdTunnelPath.Publication c) {
+            placement.validateRestore(c.cut());validateTunnelPathCut(i,c.cut().pool(),c.source());
+            if(!c.cut().status().equals(i.status) || !sameBytes(c.cut().savedFlags(),i.saved))throw new IllegalStateException("Tunnel Path stale placement cut");
+            var images=new ArrayList<>(i.images);
+            switch(c.kind()) {
+                case SOURCE -> {
+                    if(c.site()==null || c.output().identity()!=c.source().identity())throw new IllegalArgumentException("Tunnel Path own store changed identity/site");
+                    i.readyPool=CdObjectPool.overlay(c.cut().pool(),List.of(c.output()));i.pool.validateRestore(i.readyPool);
+                    images.set(i.whole-32,CdAssetBytes.copyOf(c.output().copyBytes()));
+                    if(!sameBytes(c.savedFlags(),i.saved) || !c.deleteStores().isEmpty())throw new IllegalArgumentException("Tunnel own store changed another owner");
+                }
+                case SAVED_BYTE -> {
+                    if(c.bankSite()==null || c.savedByteIndex()<2 || c.savedByteIndex()>=CdObjectPlacementRuntime.SAVED_BANK_BYTES
+                            || !c.output().equals(c.source()) || !c.deleteStores().isEmpty())throw new IllegalArgumentException("Tunnel saved-byte operation shape");
+                    byte[] bank=i.saved.copy();bank[c.savedByteIndex()]&=0x7F;
+                    if(!Arrays.equals(bank,c.savedFlags().copy()))throw new IllegalArgumentException("Tunnel saved operation changes more than native BCLR7");
+                    i.readySaved=c.savedFlags();
+                }
+                case DELETE -> {
+                    if(c.deleteStores().size()!=16 || !sameBytes(c.savedFlags(),i.saved))throw new IllegalArgumentException("Tunnel DeleteObject long shape");
+                    byte[] raw=c.source().copyBytes();
+                    for(int at=0;at<16;at++) {
+                        int bits=0;for(int b=0;b<4;b++)bits=(bits<<8)|Byte.toUnsignedInt(raw[4*at+b]);
+                        var store=c.deleteStores().get(at);
+                        if(store.field()!=CdTunnelPath.DeleteLong.values()[at] || store.expectedBits()!=bits)throw new IllegalArgumentException("Tunnel DeleteObject LONG order/value");
+                    }
+                    images.set(i.whole-32,zero(64));
+                }
+            }
+            i.readyImages=List.copyOf(images);
+        } else if(operation instanceof CdTunnelPath.PlayerReadCall c) {
+            placement.validateRestore(c.cut());validateTunnelPathCut(i,c.cut().pool(),c.source());
+            if(!c.cut().status().equals(i.status) || !sameBytes(c.cut().savedFlags(),i.saved))throw new IllegalStateException("Tunnel player read placement cut");
+            i.readValue=new CdTunnelPath.PlayerCut(i.state,i.environment);
+            if(!i.failed)i.readyValues=preparedMonitorValues(TUNNEL_PATH_PLAYER_READ);
+        } else if(operation instanceof CdTunnelPath.WordReadCall c) {
+            placement.validateRestore(c.cut());validateTunnelPathCut(i,c.cut().pool(),c.source());
+            if(!c.cut().status().equals(i.status) || !sameBytes(c.cut().savedFlags(),i.saved))throw new IllegalStateException("Tunnel source read placement cut");
+            i.readyValues=preparedMonitorValues(TUNNEL_PATH_SOURCE_READ);
+        } else if(operation instanceof CdTunnelPath.PlayerCall c) {
+            validateTunnelPathCut(i,c.actualCut(),c.expectedSource());
+            if(c.expectedPlayer().state()!=i.state || c.expectedPlayer().environment()!=i.environment)throw new IllegalArgumentException("Tunnel player cut is not actual Frame pair");
+            i.readyPlayer=frame.prepareObjectTunnelPathPlayerResult(i.state,i.environment,c.result());
+            i.readyPool=CdObjectPool.overlay(c.actualCut(),List.of(c.finalSource()));i.pool.validateRestore(i.readyPool);
+            var images=new ArrayList<>(i.images);images.set(i.whole-32,CdAssetBytes.copyOf(c.finalSource().copyBytes()));i.readyImages=List.copyOf(images);
+            i.readyActor=new CdPlayerFrameRuntime.ActorState(i.actor.owner(),i.readyPlayer.finalState(),i.actor.display());
+            i.readyShared=new CdPlayerFrameRuntime.SharedState(i.shared.owner(),i.readyPlayer.finalEnvironment(),i.shared.artState(),i.shared.paused(),i.shared.vIntClock());
+            i.readyValues=preparedMonitorValues(TUNNEL_PATH_PLAYER);
+        } else if(operation instanceof CdTunnelPath.FmCall c) {
+            validateTunnelPathCut(i,c.actualCut(),c.expectedSource());
+            if(c.expectedPlayer().state()!=i.state || c.expectedPlayer().environment()!=i.environment || c.sound()!=CdTunnelPath.FmSound.FM_91)
+                throw new IllegalArgumentException("Tunnel FM is not the actual reached Frame/source");
+            var ledger=new ArrayList<>(sounds);ledger.add(new SonicCdGameModule.PastTunnelPathFm(c.sound()));i.readyLedger=List.copyOf(ledger);
+            i.readyValues=preparedMonitorValues(TUNNEL_PATH_FM);
+        } else throw new IllegalArgumentException("Unknown Tunnel Path producer");
+        i.pendingOperation=operation;i.ordinal++;
+    }
+    private void requirePreparedTunnelPathReceipt(Object operation) {
+        var i=requireTunnelPath();
+        if(!tunnelPath.isCurrentCall(operation) || i.pendingOperation!=operation || i.completedOperation!=null || i.readyImages==null)
+            throw new IllegalStateException("Tunnel observer returned without its prepared receipt");
+    }
+    private void afterTunnelPathOperation(Object operation) {
+        var i=activeTunnelPath;
+        if(i==null || !tunnelPath.isCurrentCall(operation) || i.pendingOperation!=operation || i.completedOperation!=null)
+            throw new IllegalStateException("No exact Tunnel Path completed producer");
+        var result=tunnelPath.currentResult(operation);
+        if(operation instanceof CdTunnelPath.Publication) {
+            verifyTunnelPathOwners(i);verifyTunnelPathImages(i,i.readyImages,i.readySaved);i.images=i.readyImages;i.saved=i.readySaved;
+        } else if(operation instanceof CdTunnelPath.WordReadCall) {
+            if(!(result instanceof Integer word) || (word&~65535)!=0)throw new IllegalStateException("No completed Tunnel source WORD");
+            verifyTunnelPath(i);values=i.readyValues;i.expectedValues=i.readyValues;
+        } else {
+            if(i.portReceipt!=operation || operation instanceof CdTunnelPath.PlayerReadCall && result!=i.readValue)
+                throw new IllegalStateException("Tunnel port returned without its private adoption/read receipt");
+            verifyTunnelPath(i);
+        }
+        i.pendingOperation=null;i.portReceipt=null;i.completedOperation=operation;
+    }
+    private void consumeCompletedTunnelPathReceipt(Object operation) {
+        var i=requireTunnelPath();
+        if(!tunnelPath.isCurrentCall(operation) || i.completedOperation!=operation || i.pendingOperation!=null || i.portReceipt!=null)
+            throw new IllegalStateException("Tunnel observer returned without its completed receipt");
+        i.completedOperation=null;i.readyImages=null;i.readySaved=null;i.readyValues=null;i.readyLedger=null;i.readyPlayer=null;i.readyPool=null;
+        i.readyActor=null;i.readyShared=null;i.readValue=null;
+    }
+    private void failedTunnelPathOperation(Object operation,Throwable original) {
+        var i=activeTunnelPath;
+        if(i==null || !tunnelPath.isCurrentCall(operation))throw new IllegalStateException("No original failed Tunnel producer");
+        verifyTunnelPathOwners(i);
+        // A native own primitive can have completed before its callback failed. Preserve only its exact prebuilt image.
+        if(i.pendingOperation==operation && operation instanceof CdTunnelPath.Publication) {
+            var now=placement.capture();
+            boolean ready=sameBytes(now.savedFlags(),i.readySaved);
+            for(int at=0;ready && at<96;at++)ready=Arrays.equals(now.pool().slots().get(at).copyBytes(),i.readyImages.get(at).copy());
+            if(ready){i.images=i.readyImages;i.saved=i.readySaved;}
+        }
+        verifyTunnelPath(i);i.ordinal=tunnelPath.currentOrdinal(operation);i.failed=true;i.pendingOperation=null;i.completedOperation=null;i.portReceipt=null;
+        i.readyImages=null;i.readySaved=null;i.readyValues=null;i.readyLedger=null;i.readyPool=null;i.readyPlayer=null;i.readyActor=null;i.readyShared=null;i.readValue=null;
+    }
+    private CdTunnelPath.PlayerCut readTunnelPathPlayer() {
+        var i=requireTunnelPath();var operation=i.pendingOperation;
+        if(!(operation instanceof CdTunnelPath.PlayerReadCall) || !tunnelPath.isCurrentCall(operation) || i.portReceipt!=null || tunnelPathPort)
+            throw new IllegalStateException("No once-only actual Tunnel player read");
+        tunnelPathPort=true;
+        try {verifyTunnelPath(i);values=i.readyValues;i.expectedValues=i.readyValues;i.portReceipt=operation;return i.readValue;}
+        finally {tunnelPathPort=false;}
+    }
+    private void commitTunnelPathPlayer(CdTunnelPath.PlayerCall call) {
+        var i=requireTunnelPath();
+        if(i.pendingOperation!=call || !tunnelPath.isCurrentCall(call) || i.readyPlayer==null || i.portReceipt!=null || tunnelPathPort || i.failed)
+            throw new IllegalStateException("No actual once-only Tunnel player publication");
+        validateTunnelPathCut(i,call.actualCut(),call.expectedSource());frame.validatePreparedObjectSolidPublication(i.readyPlayer);i.pool.validateRestore(i.readyPool);
+        tunnelPathPort=true;
+        try {
+            verifyTunnelPath(i);
+            i.pool.write(call.finalSource());frame.applyPreparedObjectSolidPublication(i.readyPlayer);
+            i.state=i.readyPlayer.finalState();i.environment=i.readyPlayer.finalEnvironment();i.actor=i.readyActor;i.shared=i.readyShared;
+            i.images=i.readyImages;values=i.readyValues;i.expectedValues=i.readyValues;i.portReceipt=call;verifyTunnelPath(i);
+        } finally {tunnelPathPort=false;}
+    }
+    private void playTunnelPathFm(CdTunnelPath.FmCall call) {
+        var i=requireTunnelPath();
+        if(i.pendingOperation!=call || !tunnelPath.isCurrentCall(call) || i.portReceipt!=null || tunnelPathPort || i.failed)
+            throw new IllegalStateException("No actual once-only Tunnel FM91 publication");
+        tunnelPathPort=true;
+        try {verifyTunnelPath(i);sounds=i.readyLedger;i.ledger=i.readyLedger;values=i.readyValues;i.expectedValues=i.readyValues;i.portReceipt=call;verifyTunnelPath(i);}
+        finally {tunnelPathPort=false;}
+    }
+
 }

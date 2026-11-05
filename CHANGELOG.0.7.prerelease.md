@@ -218,12 +218,15 @@ Unreleased. The earlier development themes remain in
   actual Act2 dispatch also binds collapse platforms, Log Shadow and Mosqui using
   private callback receipts before native continuation. Natural controller steps,
   floor/sound publication and complete replay now cross the horizontal Door
-  through actual primary/secondary Solid publication, with eight selected-Sonic
+  through actual primary/secondary Solid publication, with nine selected-Sonic
   pixel cuts and natural Explosion/Points work. Actual Flower floor/angle,
   growth and draw publication now continue to the Tunnel Path boundary, retaining
   explicit persistent-flower storage limits. Authenticated Tunnel Path speed,
-  coordinates and raw Init-pointer views now prepare its player-publication bridge
-  without admitting a Powerup art owner. Actual Explosion and Points
+  coordinates and raw Init-pointer views now bind its actual player-publication
+  bridge without admitting a Powerup art owner. Native Init/Main, prepared player
+  stores and ordered FM retain private invocation receipts and full-owner checks;
+  controller traversal now reaches the next reserved time-warp-star dependency.
+  Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower
   source views remain preparatory; no new art owner is added.

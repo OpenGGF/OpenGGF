@@ -319,7 +319,7 @@ complete-act and regional certification remain open. No combined fresh371 pass i
 claimed after test-only route promotion. Flower/persistence/reward coverage is next.
 
 
-## Flower and positive12699 — 5 November, latest checkpoint
+## Flower and positive12699 — 5 November, historical checkpoint
 
 Actual source129/currentStd1 Flower uses one real floor call with synchronous
 prezero/raw angle publication, native integer motion/animation/Draw and exact
@@ -352,3 +352,33 @@ without eager mapping/art service. Object51/Player12/Terrain10/legacyPath64 pass
 137focused cases4classes,0failures/errors/skips, exact source/env/IDs/XML checked.
 This qualifies data and existing component behavior, not actual Act2 ID07 World
 publication or a returned12700. That private join is the next measured dependency.
+
+## Actual Tunnel Path and positive12884 — 5 November, latest checkpoint
+
+The cached ID07 bridge now uses source132 and existing Frame prepare/validate/
+apply ports. Complete source/pool/player/Values/HUD/World/queue/ledger checks and
+private operation receipts preserve source order and original failure prefixes.
+The shared kernel is not rerun; old106 observations append5=111. No new art,
+reader, PLC, Frame or rewind owner. Independent combined static review found no
+actionable P1/P2; real travel-bit7 World ingress remains unqualified.
+
+All408focused cases18classes pass0failures/errors/skips, including31new World,
+64legacy Path,73data and affected Act2 families. Exact identities/environment/
+source equality/18fresh XML hashes checked,36owned reports consumed. Source is
+`a6f97e952ac6ff1e26e05f4376ad408042cd44c7d57752440e6f7ec9435661d7`,
+07:25:33.156202–07:32:06.598727Z. The constructed tests qualify acquisition and
+prepared player/FM work; the natural segment reaches only Path Init/Main12700.
+
+Permanent positive12884 and nine selected-Sonic EGL cuts pass2/0/0/0 separately,
+source`4e5e5cf9fa7cac5ee8fbe388195e5c0b52dd17e1bc742553a872a9ec494c25ec`,
+07:46:35.131387–07:46:49.159172Z. Full/course12700/12701 and12878/12884 edges retain
+all older complete-value/pixel checks. Actual after-cleanup ENGINE12884 PNG:
+320×224/15852B/SHA256`fa6e57666f85c530cad0183f180d045c7e0c790e2315d2465970f83f95a3bca3`.
+Exact2identities/environment/source/XML checked; only2owned reports consumed.
+
+The removed observer returned12884 and rethrew first12885 at
+`RESERVED_TIME_STAR_READ`: normal fast TimeWarp, control0/direction255/charge0.
+Live retained timer stays0; planner timer1 is an unadopted failed-call prefix.
+Raw failed partial96 is comparison only. Actual reserved-star publication over
+existing HUD bytes is next; later Powerup/current art, natural Path acquisition,
+complete Act2, native comparison and regional coverage remain open.

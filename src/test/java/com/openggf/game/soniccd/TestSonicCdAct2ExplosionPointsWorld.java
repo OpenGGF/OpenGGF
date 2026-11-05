@@ -35,7 +35,7 @@ class TestSonicCdAct2ExplosionPointsWorld {
         var s=scene();var e=explosion(s);var p=points(s);var before=captureNative(s.h());
         assertSame(s.assets().objects().explosion(),e.assets().explosion());assertSame(s.assets().objects().points(),p.assets().points());
         assertEquals(0x21D714,e.assets().mappingsAddress());assertEquals(0x20AA8C,p.assets().mappingsAddress());
-        assertEquals(106,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(96,SonicCdGameModule.Act2LoadCall.MOSQUI_FM.ordinal());
+        assertEquals(111,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(96,SonicCdGameModule.Act2LoadCall.MOSQUI_FM.ordinal());
         assertEquals(97,SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY.ordinal());assertEquals(98,SonicCdGameModule.Act2LoadCall.POINTS_BODY.ordinal());
         var current=s.h().module().act2LoadState().section().residency();
         assertArrayEquals(s.assets().objects().decode(CdR12aProfile.Asset.ART_EXPLOSIONS).bytes().slice(0,32).copy(),CdR12aCameraArtResidency.readTile(current,0x680).copy());
