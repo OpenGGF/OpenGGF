@@ -723,6 +723,59 @@ observations; the artifact is not a lease, atomic snapshot, pass cache or proof
 that the selected command has terminated. The caller still establishes terminal
 command/source/environment attribution and performs normal diagnostic handling.
 
+## Inspect bounded diagnostics from a source-bound run
+
+For a terminal run whose original `run --execute --evidence` receipt was saved,
+use the read-only [diagnostics companion](../../../tools/soniccd/junit_diagnostics.py)
+before task-owned report cleanup. Supply that explicit receipt and one exact
+fully qualified class; the tool never discovers a run or starts tests:
+
+```bash
+python3 -B tools/soniccd/junit_diagnostics.py \
+  --evidence "$ABSOLUTE_EXISTING_RUN_JSON" --class example.TestRouteObserver \
+  --prefix 'OBSERVER ' --prefix 'FRONTIER ' \
+  --max-lines 32 --max-line-chars 512 --max-output-bytes 32768
+```
+
+Prefixes match literal starts of `system-out`/`system-err` lines, including spaces;
+there is no regex, stripping, gameplay parsing or state inference. Without a
+prefix, all stream lines are selected. Failure/error/skipped message, type and
+text fields remain selected regardless of prefixes. XML character decoding
+normalizes literal CRLF/CR to LF; retained line endings and characters are not
+otherwise rewritten. Case identities and displayed text have explicit truncation
+flags, original character counts and hashes where applicable; XML and receipt
+hashes always identify the full input bytes. Inspect omission/filter/truncation
+counts and `selected_complete`/`all_diagnostics_complete` before quoting output.
+
+Accepted stdout is one JSON object bounded to32KiB by default, including metadata
+and LF. Controls allow0–256 lines,1–4096 code points per line and4096–262144 total
+UTF8 bytes; defaults are32/512/32768. At most16 distinct nonempty prefixes of128
+characters are accepted. Both receipt and selected XML are capped at16MiB (the
+run export can be larger and then requires separate handling), XML depth64,
+50000 total recorded cases and200000 diagnostic input lines. Insufficient metadata
+space or an input limit fails closed; shortened text never claims completeness.
+[Focused synthetic tests](../../../tools/soniccd/test_junit_diagnostics.py) cover
+large reserved-image lines, Unicode, mismatches, races and read-only behavior.
+
+The receipt must declare a completed passed/failed installed run, terminal return
+code and identical recorded before/after source identities. The exact selected
+XML path/hash/size/mtime, class/cases/counts and allowlisted properties must match.
+Missing, stale, changed, incomplete or inconsistent evidence returns2 with bounded
+JSON stderr and no success stdout. A failed run can be inspected with exit0;
+`run_status`, `run_clean`, `maven_returncode`, aggregate `run_counts` and selected
+class `counts` retain its verdict. Exit0 means diagnostic correspondence only.
+
+The companion reuses the existing bounded snapshot/XML reader without invoking
+its Git/report-discovery constructor. It reads no other reports, source, queue,
+process or network and writes/deletes nothing; reads may update access times.
+Parent/file rechecks are non-atomic and change-and-restore can escape observation.
+The receipt is supplied evidence, not independently proven command completion,
+current-source/API/native authenticity, a cache or cleanup authority. Caller-owned
+terminal attribution and cleanup remain separate; no flags execute or clean up.
+
+
+A clean verdict also requires nonempty recorded Java, the recorded worktree as `user.dir`, and every requested allowlisted property to match for every recorded class. Matching XML plus a contradictory clean receipt is rejected; an honestly recorded failed environment remains inspectable as failed. These checks do not independently authenticate the JVM or command.
+
 ## Compare selected matched test evidence
 
 After both task-owned commands are terminal, use `compare-junit` for a bounded
