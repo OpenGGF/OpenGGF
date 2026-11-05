@@ -464,3 +464,14 @@ star tiles changes real pixels, with all other layers/current unchanged. The act
 09:51:59.223627–09:52:14.961752Z; exact2IDs/env/XML checked/two owned reports consumed.
 The new CPU/current union has separate694qualification; the controller pair does
 not certify every region/act/lifetime, native visuals/audio/timing or JP/EU.
+
+## Monitor Item static icon prerequisite — 5 November
+
+The eight exact odd icon pointers now have a source-derived declaration factory
+over the existing450-byte authenticated monitor include. Each is a bounded five-byte
+slice at root+signedWORD+1; no counted-map substitute/address mask/art read or new
+Profile entry. Prior factories/resolver remain exact. Three public-API inventory
+assertions add only the new name. Nine new source/format tests plus52 old mapper
+and56 Act2 asset cases pass117,0failures/errors/skips. Source/case/env/XML checked;
+six owned reports consumed. This factory is not yet bound into the Act2 World:
+first13063 Monitor Item and later reserved Shield/reward execution remain open.

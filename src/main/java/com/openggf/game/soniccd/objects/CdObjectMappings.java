@@ -6,6 +6,8 @@ import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -194,6 +196,27 @@ public final class CdObjectMappings implements CdDrawMappings {
                     monitorView.bytes().slice(firstPiece, 5)));
         }
         return new CdObjectMappings(tables, staticPieces);
+    }
+
+    /**
+     * Eight exact first-icon source views for original USA R12A monitor items (animations 0..7).
+     * The existing authenticated object owner supplies the complete retained monitor mapping include;
+     * no counted registration, art read, visual decode or runtime admission is performed here.
+     * ObjMonitorItem_Init (Monitor and Time Post/Main.asm:451-459, scddisasm 1ecc5f3af) adds
+     * each signed directory WORD to the mapping root, then one byte to skip the piece count.
+     * Retain the resulting odd pointer and exactly five source bytes. Other interiors stay undeclared.
+     * Pass this immutable list to declaredSourceViews alongside the caller's existing counted tables.
+     */
+    public static List<DeclaredStaticPiece> act2MonitorItemStaticPieces(CdR12aObjectAssets objects) {
+        Objects.requireNonNull(objects, "loaded original R12A object assets");
+        var source = objects.view(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME);
+        int root = objects.profile().range(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME).nativeAddress();
+        var pieces = new ArrayList<DeclaredStaticPiece>(8);
+        for (int frame = 0; frame < 8; frame++) {
+            int firstPiece = (short) source.unsignedWord(frame * 2) + 1;
+            pieces.add(new DeclaredStaticPiece(root + firstPiece, source.slice(firstPiece, 5)));
+        }
+        return List.copyOf(pieces);
     }
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {

@@ -2424,7 +2424,7 @@ class TestCdObjectMappings {
         var staticField = CdObjectMappings.class.getDeclaredField("staticPieces"); staticField.setAccessible(true);
         assertEquals(8, ((Map<?, ?>) staticField.get(mappings)).size());
         assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
-        assertEquals(List.of("declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"),
+        assertEquals(List.of("act2MonitorItemStaticPieces/1", "declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"),
                 Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
                         .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                         .map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
@@ -2531,7 +2531,7 @@ class TestCdObjectMappings {
         var getter = CdR11aObjectAssets.class.getDeclaredMethod("logShadow");
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers())); assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
-        assertEquals(List.of("declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"), Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
+        assertEquals(List.of("act2MonitorItemStaticPieces/1", "declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"), Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
         for (int pointer : new int[]{0x89EE, 0xFF2089EE, 0x012089EE, 0x2089FC, LOG_SHADOW_MAP + 4})
             assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
@@ -2658,7 +2658,7 @@ class TestCdObjectMappings {
             var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
             assertNull(field.get(objects), "mapper must not decode or preload art: " + name);
         }
-        assertEquals(List.of("declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"),
+        assertEquals(List.of("act2MonitorItemStaticPieces/1", "declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"),
                 Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
                         .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                         .map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());

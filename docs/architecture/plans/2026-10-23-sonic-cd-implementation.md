@@ -1,5 +1,20 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November — static Monitor Item icon views qualified
+
+The additive act2MonitorItemStaticPieces/1 factory borrows the authenticated
+450-byte R12A monitor mapping owner, deriving eight exact odd five-byte views by
+signed retained directory WORD+1. Existing factories/resolver stay byte-exact;
+no Profile/art/reader/current/World change. Root migrates exactly three existing
+public-method inventories, retaining all older registration/cold-art/bounds checks.
+New9 plus existing52 mapper and56 Act2 asset cases pass117/0/0/0. Source37c76c406b2cbd610e934253209bfbd713979635d94b8bef7949a44a042f9a92
+is unchanged10:20:16.839460–10:20:36.013803Z. Exact117uniqueIDs/env/threefreshXML/
+sourcepins verified;sixownedreports consumed. Preparation109s,admission33s,
+execution19.174s,userwait0/otheroverheadunknown. This prepares metadata only;
+qualified route13062/first13063 MonitorItem1A remains. Item award and reserved
+whole6 Shield components are separate; no new live reward/Shield or parity claim.
+
+
 ## 5 November 2026 — actual Powerup upload, visible stars and positive13062
 
 Authenticated source135 appends only the20-byte ShieldArtIndex, preserving all134
