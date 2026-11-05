@@ -292,7 +292,16 @@ class TestPhase2SampleModIntegration {
                     .toList()) {
                 Path destination = materialized.resolve(source.relativize(file));
                 Files.createDirectories(destination.getParent());
-                Files.copy(file, destination);
+                String name = file.getFileName().toString();
+                if (name.endsWith(".java") || name.endsWith(".xml") || name.endsWith(".yaml")
+                        || name.endsWith(".json") || name.endsWith(".md")) {
+                    // StarterProjects writes the running engine version over the template's
+                    // 0.7.prerelease token, so a release or later-line build differs only there.
+                    Files.writeString(destination, Files.readString(file)
+                            .replace("0.7.prerelease", com.openggf.version.AppVersion.identity().baseVersion()));
+                } else {
+                    Files.copy(file, destination);
+                }
             }
         }
         Path encoded = source.resolve("src/main/mod/level-source/binary-assets.properties");
