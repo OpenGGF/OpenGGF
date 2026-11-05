@@ -361,6 +361,22 @@ endpoints, retaining the old15 and adding an actual Splash13366 omission contras
 An ENGINE320×224 capture was exported after cleanup. The Act2 matrix records exact
 source and execution limits; no native/regional/full-act completion is claimed.
 
+
+Act2 Robot Generator now reuses its existing component with a source-paired factory,
+original publication receipts and the current Withered art owner. Four authenticated
+metadata spans append138→142 without changing the35 readers or19 PLC lists;81 asset
+checks pass. Component/Past/World and exact-consumer qualification totals78 distinct
+passing identities across the original76 passes and two corrected/new fixture passes,
+not one78-test green run. The sole original fixture error selected native static
+mapping mode; production stayed unchanged and that boundary has an explicit negative.
+
+Both refreshed permanent methods pass with zero skips: full/course replay reaches
+13422 and nineteen selected Sonic EGL endpoints preserve the old seventeen. Natural
+Robot47 Init13386/Main13387 onward and the same13386 full64 Splash41 deletion are
+checked. Robot remains offscreen in this route; no Robot-visible pixel claim follows.
+First13423 is the separate unbound Moving Spring0F/whole41 from common placement332,
+not already-bound Animal24. The matrix records exact evidence and remaining gaps.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

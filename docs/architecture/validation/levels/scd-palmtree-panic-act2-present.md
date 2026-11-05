@@ -680,3 +680,62 @@ The optional test-only SONICCD_ACT2_SPLASH_OUTPUT exports an ENGINE13366 PNG onl
 after owned module/session/graphics/context/boot cleanup; its directory must be
 a distinct child of ~/Downloads/Sonic-CD/captures/engine. No coordinate seed, trace hydration, native-image, regional, acoustic or whole-act
 parity is supplied by these observations.
+
+
+## 5 November — Robot Generator and the next Moving Spring boundary
+
+Four original-USA R12A metadata spans append at138–141: Robot animationsE4EE/8,
+mappingsE4F6/574, explosion scheduleE734/64 and base tilesE774/22. All prior138
+ranges,35 readers and19 PLC lists remain. The cached eight-frame/one-script view
+has a full23-tile bound; native Present frame2 uses nine tiles from the existing
+15-tile Withered source. No new art decoder, bank, preload or current owner is added.
+The81 asset checks pass, including full source hashes, original address operands,
+reader identities, caches and the exact older complete-count consumers.
+
+The source-paired factory preserves the existing constructor8/Assets5/Globals5/run3
+component and its four native routines. Its Act2 World adapter deliberately admits
+only the reached ordinary Present Init/Main/Draw/despawn branch. Past active Solid,
+score/FM, explosion and rebuild actions retain explicit unsupported World fences.
+Fresh raw goodFuture/timeZone/act/direction/pre-scroll camera values are read from
+actual owners. Original operation identity, ordinal and private preparation/completion
+receipts guard exact full96/source/saved/status outputs and complete Frame/World
+nonwrites. Real Draw clears bit7 before cull; its signed live routine, unsigned chunk
+and raw warp tail preserve saved-clear/delete order. Returned effects are comparisons.
+
+The combined77-test run passed76 with one new dirty fixture error and zero skips.
+That success fixture preserved native static-mapping bit5 through Init OR4, selecting
+an intentionally unadmitted static pointer. Root corrected it to counted-table mode
+and added the explicit static-mode failure-prefix negative; both cases pass with
+production unchanged. The resulting78 distinct passing obligations span two source
+observations, not a single78 green run. Existing29 component and four Past World
+cases passed. Independent bounded source/native review found no concrete P1/P2.
+
+The unchanged ordinary controller recipe reaches closed13422. Naturally spawned
+Robot47 executes Init13386, then Main13387 onward, retaining the literal complete64
+image: tile0400, mapping20E4F6, frame2, schedule20E734, baseY352, timer4 and floatStep1.
+Each walk has one completed Robot body receipt after Primary and before dynamic
+completion, no Robot FM, raw timeZone1/act1 and cleared player controls. The same
+closed13386 proves Splash41 full64 deletion before Robot47 executes. The first failed
+13423 is the original unowned-ID tail at Moving Spring0F/whole41. Native index and
+original media identify common placement332 at6682/885; this is a placed parent,
+not a Robot child. Already-bound Animal24/whole35 is not the frontier. The failed pool
+is partial, never returned13423 state.
+
+Both permanent long tests pass with zero failures/errors/skips on source fingerprint
+1e1d70a517a5dc143638bc67bf006eb90ce27ebee41a37d5bf557f79b1602881.
+All four cases,196 old assertion-bearing lines, existing helpers, controller recipe,
+seventeen old Sonic endpoints and old exports are preserved. Full/course before-forward
+replay adds13386/13387/13422; selected Sonic current-value/pixel replay adds13386 and
+13422, nineteen endpoints total. Robot is offscreen, so no Robot selected-current,
+visible-pixel or omission claim is made. Existing Stars/Shield/Splash contrasts remain.
+No native-image, regional, acoustic, whole-act or full-suite completion is claimed.
+
+The refresh used21 exact installed Java pins, Java25, original media, surfaceless EGL
+and the opening EGL opt-in. Preparation34.981s, admission0s and execution
+17:02:46.105430–17:03:04.288649Z18.183219s were observed; user wait0 and remaining
+overhead are unmeasured. Exact two case identities and fresh XML hash/length/mtime
+were checked, then both owned reports were consumed under the worktree build lock.
+External Robot reports retain source hashes, first failed fixture attribution,
+structured ordinary observations, native citations and the matched source-bound
+receipts. Moving Spring's missing component/metadata and subsequent actual World
+binding are the next separate obligations.

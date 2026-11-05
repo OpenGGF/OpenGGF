@@ -3,6 +3,12 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,6 +54,20 @@ public final class CdRobotGenerator {
             for (var frame : visual.mappingFrames()) for (var piece : frame.pieces())
                 if (piece.tileOffset() > 23 - piece.tileCount())
                     throw new IllegalArgumentException("Robot Generator mapping exceeds its twenty-three source tiles");
+        }
+        /** Original USA R12A finite source views; this binds metadata, never art decoding or residency. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12A object assets");
+            var identity = Objects.requireNonNull(owner.identity(), "R12A source identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage())) {
+                throw new IllegalArgumentException("Robot Generator requires authenticated original USA R12A Word RAM");
+            }
+            return new Assets(owner.view(CdR12aProfile.Asset.ROBOT_GENERATOR_BASE_TILES), owner.robotGenerator(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_ROBOT_GENERATOR).nativeAddress(),
+                    owner.view(CdR12aProfile.Asset.ROBOT_GENERATOR_EXPLOSION_SCHEDULE),
+                    owner.profile().range(CdR12aProfile.Asset.ROBOT_GENERATOR_EXPLOSION_SCHEDULE).nativeAddress());
         }
         public static Assets fromPastAssets(CdR11bAssets owner) {
             Objects.requireNonNull(owner, "actual Past assets");
@@ -150,6 +170,20 @@ public final class CdRobotGenerator {
         public long value() { return value; }
     }
 
+    /** Completed operation metadata only; equal records carry no authority to invoke or adopt a store. */
+    public enum StoreKind { SOURCE_STORE, CHILD_STORE, SAVED_FLAG_CLEAR, DELETE }
+    public record Publication(long ordinal, StoreKind kind, CdObjectPlacementRuntime.Snapshot actualCut,
+                              CdObjectState expectedSource, CdObjectState before, CdObjectState output,
+                              int savedByteIndex, int previousValue, int value) { }
+    public interface DispatchObserver {
+        void beforePublication(Publication call);
+        void afterPublication(Publication call);
+        void beforeCall(Object call);
+        void afterCall(Object call);
+    }
+    /** The private World checks its prepared/completed receipt identity synchronously. */
+    public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+
     private final CdObjectPlacementRuntime placement;
     private final Assets assets;
     private final CdSolidObject sharedSolid;
@@ -159,6 +193,10 @@ public final class CdRobotGenerator {
     private final FmCall fmCall;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private DispatchObserver observer;
+    private ReceiptGuard receiptGuard;
+    private Object pendingOperation;
+    private long operationOrdinal, pendingOrdinal;
 
     public CdRobotGenerator(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject sharedSolid,
                             SolidCommit solidCommit, GoodFutureStore goodFutureStore, AddPointsCall addPoints,
@@ -168,13 +206,34 @@ public final class CdRobotGenerator {
         this.goodFutureStore = Objects.requireNonNull(goodFutureStore); this.addPoints = Objects.requireNonNull(addPoints);
         this.fmCall = Objects.requireNonNull(fmCall); this.drawObject = Objects.requireNonNull(drawObject);
     }
+    /** Retains the constructor's native kernel and callbacks, with a paired original R12A source. */
+    public static CdRobotGenerator fromAct2Assets(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
+                                                CdSolidObject sharedSolid, SolidCommit solidCommit,
+                                                GoodFutureStore goodFutureStore, AddPointsCall addPoints,
+                                                FmCall fmCall, DrawObjectCall drawObject,
+                                                DispatchObserver observer, ReceiptGuard guard) {
+        Objects.requireNonNull(placement); Objects.requireNonNull(owner);
+        if (!placement.sameAct2Source(owner)) throw new IllegalArgumentException("Robot Generator placement/assets source differs");
+        var body = new CdRobotGenerator(placement, Assets.fromAct2Assets(owner), sharedSolid, solidCommit,
+                goodFutureStore, addPoints, fmCall, drawObject);
+        body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard);
+        return body;
+    }
+    public Assets assets() { return assets; }
+    public boolean isCurrentCall(Object call) { return call != null && running && call == pendingOperation; }
+    /** Positive only for the original operation during its synchronous observation/port lifetime. */
+    public long currentCallOrdinal(Object call) {
+        if (!isCurrentCall(call)) throw new IllegalStateException("Not the original current Robot Generator operation");
+        return pendingOrdinal;
+    }
+
     public Result run(int wholeIndex, Globals globals, Inputs inputs) {
         if (running) throw new IllegalStateException("Reentrant ObjRobotGenerator dispatch");
         var state = placement.pool().state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Robot Generator $2D");
         if ((state.routine() & 1) != 0 || state.routine() > 6)
             throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex, state.routine());
-        running = true;
+        running = true; operationOrdinal = 0;
         try {
             var c = new Cursor(state, globals, inputs);
             switch (state.routine()) {
@@ -186,7 +245,7 @@ public final class CdRobotGenerator {
             draw(c); // ALWAYS after a returned body; signed live routine reload owns the despawn gate.
             if (c.state.signedByte(ROUTINE) <= 2) despawn(c);
             return new Result(placement.pool().state(wholeIndex), c.effects);
-        } finally { running = false; }
+        } finally { running = false; pendingOperation = null; pendingOrdinal = 0; }
     }
     private void init(Cursor c) {
         c.enter(NativeRoutine.INIT);
@@ -219,10 +278,10 @@ public final class CdRobotGenerator {
         c.write(c.state.moveByte(COLLISION_TYPE, 0).moveByte(COLLISION_STATUS, 0)
                 .moveWord(ROBOT_GENERATOR_TIMER, 0).moveByte(MAP_FRAME, 7).addByte(ROUTINE, 2));
         var cut = capture(c); var good = new GoodFutureCall(cut, c.state, c.globals().goodFuture(), 1);
-        readOnly(c, cut, () -> goodFutureStore.store(good));
+        observedCall(good, () -> readOnly(c, good.actualCut(), () -> goodFutureStore.store(good)));
         c.effects.add(new GoodFutureStored(good.expectedGoodFuture(), 1));
         cut = capture(c); var points = new PointsCall(cut, c.state, HIT_POINTS);
-        readOnly(c, cut, () -> addPoints.addPoints(points)); c.effects.add(new PointsAdded(HIT_POINTS));
+        observedCall(points, () -> readOnly(c, points.actualCut(), () -> addPoints.addPoints(points))); c.effects.add(new PointsAdded(HIT_POINTS));
         if (solid(c, Site.HIT_SOLID).d0().orElseThrow() != 0) solid(c, Site.HIT_GET_OFF);
     }
     private void exploding(Cursor c) {
@@ -241,7 +300,7 @@ public final class CdRobotGenerator {
         if (found.isEmpty()) { c.effects.add(new SlotUnavailable()); return; }
         var child = placement.pool().state(found.getAsInt()).moveByte(ID, EXPLOSION_ID).moveByte(ROUTINE_2, 1)
                 .moveWord(X, c.state.centreX()).moveWord(Y, c.state.centreY()).addWord(X, x).addWord(Y, y);
-        placement.pool().write(child); c.effects.add(new ChildCreated(child));
+        nativeStore(c, child, StoreKind.CHILD_STORE); c.effects.add(new ChildCreated(child));
         fm(c, FM_EXPLODE);
     }
     private void rebuild(Cursor c) {
@@ -258,21 +317,23 @@ public final class CdRobotGenerator {
     }
     private void fm(Cursor c, int nativeId) {
         var cut = capture(c); var request = new FmRequest(cut, c.state, nativeId);
-        readOnly(c, cut, () -> fmCall.playFm(request)); c.effects.add(new FmRequested(nativeId));
+        observedCall(request, () -> readOnly(c, cut, () -> fmCall.playFm(request))); c.effects.add(new FmRequested(nativeId));
     }
     private CdSolidObject.Result solid(Cursor c, Site site) {
         c.prepareInputs(); var cut = capture(c);
         var outcome = sharedSolid.runWithPrefix(entryFor(site), c.state, c.player, c.inputs.gates(), c.solidGlobals, cut.pool());
         var output = output(outcome, cut.pool()); validateOutput(c, cut, output); assertPlacement(cut, cut.pool());
         var call = new SolidCall(site, cut, c.state, c.player, c.solidGlobals, outcome);
-        try { solidCommit.commit(call); assertPlacement(cut, output.pool()); }
-        catch (RuntimeException | Error original) {
-            suppress(original, () -> {
-                if (samePlacement(cut, cut.pool())) return;
-                assertPlacement(cut, output.pool());
-            });
-            throw original;
-        }
+        observedCall(call, () -> {
+            try { solidCommit.commit(call); assertPlacement(cut, output.pool()); }
+            catch (RuntimeException | Error original) {
+                suppress(original, () -> {
+                    if (samePlacement(cut, cut.pool())) return;
+                    assertPlacement(cut, output.pool());
+                });
+                throw original;
+            }
+        });
         c.state = placement.pool().state(c.whole); c.player = output.player(); c.solidGlobals = output.globals();
         if (outcome instanceof CdSolidObject.NativeStopped stopped) throw stopped.stop().originalException();
         var result = ((CdSolidObject.Completed) outcome).completedResult();
@@ -349,11 +410,13 @@ public final class CdRobotGenerator {
     private void draw(Cursor c) {
         var cut = capture(c); var call = new DrawCall(cut, c.state);
         var expected = CdObjectPool.overlay(cut.pool(), List.of(c.state.moveByte(SPRITE_FLAGS, c.state.spriteFlags() & 0x7F)));
-        try { drawObject.drawObject(call); assertPlacement(cut, expected); }
-        catch (RuntimeException | Error original) {
-            suppress(original, () -> { if (!samePlacement(cut, cut.pool())) assertPlacement(cut, expected); });
-            throw original;
-        }
+        observedCall(call, () -> {
+            try { drawObject.drawObject(call); assertPlacement(cut, expected); }
+            catch (RuntimeException | Error original) {
+                suppress(original, () -> { if (!samePlacement(cut, cut.pool())) assertPlacement(cut, expected); });
+                throw original;
+            }
+        });
         c.state = placement.pool().state(c.whole); c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
     }
     private void despawn(Cursor c) {
@@ -372,13 +435,60 @@ public final class CdRobotGenerator {
                     throw unsupported(UnsupportedBoundary.SAVED_FLAGS_ADDRESS, c.whole, index);
                 int canonicalId = (index - 2) / 3, canonicalPeriod = (index - 2) % 3;
                 int before = placement.savedFlag(canonicalId, canonicalPeriod);
-                placement.bclrSavedFlag(canonicalId, canonicalPeriod, CdObjectPlacementRuntime.SavedBit.LOADED);
+                nativeSavedClear(c, canonicalId, canonicalPeriod, index, before);
                 c.effects.add(new SavedFlagChanged(index, before, placement.savedFlag(canonicalId, canonicalPeriod)));
             }
-            placement.pool().deleteObject(c.whole); c.state = placement.pool().state(c.whole);
+            nativeDelete(c); c.state = placement.pool().state(c.whole);
         }
         c.effects.add(new DespawnChecked(deleted)); c.effects.add(new CallReturned(NativeCall.CHECK_OBJ_DESPAWN));
     }
+    private void nativeStore(Cursor c, CdObjectState output, StoreKind kind) {
+        if (observer == null) { placement.pool().write(output); return; }
+        var call = new Publication(nextOrdinal(), kind, capture(c), c.state,
+                placement.pool().state(output.identity().wholeIndex()), output, -1, -1, -1);
+        observedPublication(call, () -> placement.pool().write(output));
+    }
+    private void nativeSavedClear(Cursor c, int savedId, int period, int index, int before) {
+        if (observer == null) {
+            placement.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED); return;
+        }
+        var call = new Publication(nextOrdinal(), StoreKind.SAVED_FLAG_CLEAR, capture(c), c.state,
+                null, null, index, before, before & 0x7F);
+        observedPublication(call, () -> placement.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED));
+    }
+    private void nativeDelete(Cursor c) {
+        if (observer == null) { placement.pool().deleteObject(c.whole); return; }
+        var call = new Publication(nextOrdinal(), StoreKind.DELETE, capture(c), c.state, c.state, null, -1, -1, -1);
+        observedPublication(call, () -> placement.pool().deleteObject(c.whole));
+    }
+    private long nextOrdinal() {
+        if (pendingOperation != null) throw new IllegalStateException("Nested Robot Generator producer operation");
+        return ++operationOrdinal;
+    }
+    private void observedPublication(Publication call, Runnable nativeStore) {
+        pendingOperation = call; pendingOrdinal = call.ordinal();
+        try {
+            readOnlyCallback(() -> observer.beforePublication(call)); readOnlyCallback(() -> receiptGuard.prepared(call));
+            nativeStore.run();
+            readOnlyCallback(() -> observer.afterPublication(call)); readOnlyCallback(() -> receiptGuard.completed(call));
+        } finally { pendingOperation = null; pendingOrdinal = 0; }
+    }
+    private void observedCall(Object call, Runnable nativeCall) {
+        if (observer == null) { nativeCall.run(); return; }
+        long ordinal = nextOrdinal(); pendingOperation = call; pendingOrdinal = ordinal;
+        try {
+            readOnlyCallback(() -> observer.beforeCall(call)); readOnlyCallback(() -> receiptGuard.prepared(call));
+            nativeCall.run();
+            readOnlyCallback(() -> observer.afterCall(call)); readOnlyCallback(() -> receiptGuard.completed(call));
+        } finally { pendingOperation = null; pendingOrdinal = 0; }
+    }
+    /** Observer/receipt callbacks preserve every placement byte on both returned and throwing paths. */
+    private void readOnlyCallback(Runnable callback) {
+        var cut = placement.capture();
+        try { callback.run(); assertPlacement(cut, cut.pool()); }
+        catch (RuntimeException | Error original) { suppress(original, () -> assertPlacement(cut, cut.pool())); throw original; }
+    }
+
     private CdObjectPlacementRuntime.Snapshot capture(Cursor c) {
         var cut = placement.capture(); requireSource(cut, c.state); assertPlacement(cut, cut.pool()); return cut;
     }
@@ -421,7 +531,7 @@ public final class CdRobotGenerator {
             if (player == null) { var in = Objects.requireNonNull(inputs, "reached native Solid inputs");
                 player = in.player(); solidGlobals = in.globals(); }
         }
-        void write(CdObjectState next) { placement.pool().write(next); state = next; }
+        void write(CdObjectState next) { nativeStore(this, next, StoreKind.SOURCE_STORE); state = next; }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
     }
     private static void byteValue(int value) { if ((value & ~0xFF) != 0) throw new IllegalArgumentException("Expected native unsigned BYTE"); }

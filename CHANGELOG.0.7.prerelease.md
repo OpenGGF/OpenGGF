@@ -252,8 +252,11 @@ Unreleased. The earlier development themes remain in
   Ring monitors award ten rings through the same ring, life and HUD state, with
   native one-up thresholds and ordered sound requests. Door-created splashes now
   retain native Init, sound, animation, Draw and deletion order over the existing
-  art owner. The ordinary route leaves Tunnel Path control; later Robot Generator
-  admission remains separate.
+  art owner. The ordinary route leaves Tunnel Path control. Act2 Robot Generator
+  Init, Draw and conditional despawn now reuse its existing component, authenticated
+  tables and Withered art owner. Full/course controller replay reaches the next
+  Moving Spring boundary, with nineteen selected Sonic render checkpoints;
+  active Past, explosion and rebuild actions remain outside this Act2 binding.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

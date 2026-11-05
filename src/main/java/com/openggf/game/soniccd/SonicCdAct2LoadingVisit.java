@@ -81,6 +81,10 @@ final class SonicCdAct2LoadingVisit {
     private boolean logMosquiPort, drawingLogMosqui;
     private final CdAnton anton;
     private final CdPataBata pataBata;
+    private final CdRobotGenerator robotGenerator;
+    private final CdRobotGenerator.Assets robotGeneratorAssets;
+    private transient RobotInvocation activeRobotGenerator;
+    private boolean robotPort, drawingRobotGenerator;
     private transient AntonInvocation activeAnton;
     private transient PataInvocation activePata;
     private boolean antonPort, drawingAnton, drawingPata;
@@ -319,6 +323,18 @@ final class SonicCdAct2LoadingVisit {
                 },this::drawMosqui);
         anton=new CdAnton(placement,CdAnton.Assets.fromAct2Assets(objectAssets),sharedTerrain,this::commitAntonPrimaryAngle,this::drawAnton);
         pataBata=new CdPataBata(placement,CdPataBata.Assets.fromAct2Assets(objectAssets,player),this::drawPataBata);
+        robotGenerator=CdRobotGenerator.fromAct2Assets(placement,objectAssets,sharedSolid,
+                this::unownedRobotSolid,this::unownedRobotGoodFuture,this::unownedRobotPoints,this::unownedRobotFm,
+                this::drawRobotGenerator,new CdRobotGenerator.DispatchObserver() {
+                    @Override public void beforePublication(CdRobotGenerator.Publication c) { beforeRobotPublication(c); }
+                    @Override public void afterPublication(CdRobotGenerator.Publication c) { afterRobotPublication(c); }
+                    @Override public void beforeCall(Object c) { beforeRobotCall(c); }
+                    @Override public void afterCall(Object c) { afterRobotCall(c); }
+                },new CdRobotGenerator.ReceiptGuard() {
+                    @Override public void prepared(Object c) { requirePreparedRobotReceipt(c); }
+                    @Override public void completed(Object c) { consumeCompletedRobotReceipt(c); }
+                });
+        robotGeneratorAssets=robotGenerator.assets();
         boulder=CdBoulder.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitBoulderSolid,this::drawBoulder);
         platform=new CdPlatform(placement,CdPlatform.Assets.fromAct2Assets(objectAssets),new CdPlayerMath(player.player()),
                 sharedTerrain,sharedSolid,this::commitPlatformSolid,this::commitPlatformPrimaryAngle,this::drawPlatform);
@@ -2310,6 +2326,7 @@ final class SonicCdAct2LoadingVisit {
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
                 else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
                 else if(id==CdPataBata.OBJECT_ID) { runPataBata(whole); call(PATA_BATA_BODY); }
+                else if(id==CdRobotGenerator.OBJECT_ID) { runRobotGenerator(whole); call(ROBOT_GENERATOR_BODY); }
                 else if(id==CdCollapsePlatform.OBJECT_ID) { runCollapse(whole); call(COLLAPSE_PLATFORM_BODY); }
                 else if(id==CdCheckpoint.OBJECT_ID) { runCheckpoint(whole); call(CHECKPOINT_BODY); }
                 else if(id==CdTamabboh.OBJECT_ID) { runTamabboh(whole); call(TAMABBOH_BODY); }
@@ -2348,6 +2365,7 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ANTON.nativeAddress(),assets.objects().anton().mappings(),0,4));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA1.nativeAddress(),assets.objects().pataBataNormal().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2.nativeAddress(),assets.objects().pataBataDamaged().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ROBOT_GENERATOR.nativeAddress(),assets.objects().robotGenerator().mappings(),0,8));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohNormal().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohDamaged().mappings(),22,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH_MISSILE.nativeAddress(),assets.objects().tamabbohMissile().mappings(),0,4));
@@ -2373,6 +2391,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
                 if(activeTunnelDoorSplash!=null) return readSplashDrawSlot(ref);
+                if(activeRobotGenerator!=null) return readRobotDrawSlot(ref);
                 if(activeDoor!=null) return readDoorDrawSlot(ref);
                 if(activeLogMosqui!=null) return readLogMosquiDrawSlot(ref);
                 if(activeDrain!=null) return readDrainingSlot(ref);
@@ -2397,6 +2416,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
                 if(activeTunnelDoorSplash!=null) {writeSplashOnScreen(ref,value);return;}
+                if(activeRobotGenerator!=null) {writeRobotOnScreen(ref,value);return;}
                 if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
                 if(activeLogMosqui!=null) { writeLogMosquiOnScreen(ref,value); return; }
                 if(activeDrain!=null) { writeDrainingOnScreen(ref,value); return; }
@@ -9152,6 +9172,7 @@ final class SonicCdAct2LoadingVisit {
     // ObjTunnelDoorSplash (native Door135-177): one private physical invocation; no captured owner.
     private enum SplashStep { ENTRY, HEADER, TILE, FM, RESET, TIMER, SPEED, ANIMATED, DONE }
     private void requireSplashIdle() {
+        requireRobotIdle();
         if(activeTunnelDoorSplash!=null || splashPort || drawingSplash)
             throw new IllegalStateException("Actual TunnelDoorSplash invocation owns this cut");
     }
@@ -9394,5 +9415,247 @@ final class SonicCdAct2LoadingVisit {
         var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var ready=logMosquiImages(pool);queuePort=true;
         try {verifySplash(i);i.pool.write(next);i.images=ready;i.cleared=true;verifySplash(i);}
         finally {queuePort=false;}
+    }
+
+    // R12A ObjRobotGenerator: ordinary inactive-Past routine0/2, native25-125 and wrapper tail.
+    // Past collision/animation, Exploding and Rebuild retain their component implementation but no World authority.
+    private enum RobotStep { ENTRY, HEADER, OPERANDS, FRAME, DRAW, SAVED, DONE }
+    private void requireRobotIdle() {
+        if(activeRobotGenerator!=null || robotPort || drawingRobotGenerator)
+            throw new IllegalStateException("Actual Robot Generator owns this source cut");
+    }
+    private void requireOtherRobotScopesIdle() {
+        requireOtherSplashScopesIdle();
+        if(activeTunnelDoorSplash!=null || splashPort || drawingSplash)
+            throw new IllegalStateException("Actual TunnelDoorSplash owns the Robot Generator cut");
+    }
+    private final class RobotInvocation {
+        final int whole; final CdRobotGenerator body=robotGenerator; final CdRobotGenerator.Assets bodyAssets=robotGeneratorAssets;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource(); final CdR12aTerrainAssets sourceAssets=assets;
+        final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue; final CdObjectPlacementRuntime.Status status=placement.status();
+        final CdObjectState entry; final CdPlayerBody.State state=frame.state(); final CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor(); final CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final Optional<CdPlayerBody.DisplayPublication> display=frame.display(); final CdPlayerArtRuntime.State playerArt=frame.artState();
+        final CdPlayerFrameRuntime.VIntClock clock=frame.vIntClock(); final boolean paused=frame.paused();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll(); final Object world; final long generation;
+        final Values ownerValues=values; final List<SonicCdGameModule.PastSound> ledger=sounds; final CdAssetBytes reserved=values.hudObjects();
+        final CdObjectDrawQueue.CameraWords camera; final CdRobotGenerator.Globals globals;
+        CdAssetBytes saved=placement.capture().savedFlags(),readySaved; List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()),readyImages;
+        List<Object> receipts=List.of(),readyReceipts; Object pendingPublication,pendingCall,completedOperation,callReceipt;
+        long ordinal; RobotStep step=RobotStep.ENTRY,readyStep; boolean drawn,cleared,queueFailed; CdObjectState tailSource; int savedByteIndex=-1,savedByteBefore=-1;
+        RobotInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+            var gates=frame.environment().movement().gates();globals=new CdRobotGenerator.Globals(values.globals().retainedDev().goodFuture(),
+                    gates.timeZone(),gates.zoneAct()&0xFF,gates.timeWarpDirection(),camera.xWord());
+        }
+    }
+    private UnsupportedOperationException robotWorldScope() {
+        return new UnsupportedOperationException("R12A Robot Generator World owns only inactive-Past routine0/2 Init/Main/Draw/despawn");
+    }
+    private void runRobotGenerator(int whole) {
+        requireRobotIdle();requireOtherRobotScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || placement.pool().state(whole).id()!=CdRobotGenerator.OBJECT_ID)
+            throw new IllegalStateException("No actual cached Robot Generator physical dispatch");
+        var i=new RobotInvocation(whole);activeRobotGenerator=i;
+        try {
+            if(i.entry.routine()==4 || i.entry.routine()==6 || i.globals.goodFuture()==0 && i.globals.timeZone()==0)throw robotWorldScope();
+            // Null is deliberate: the reached ordinary branch never reads player/Solid inputs.
+            var result=robotGenerator.run(whole,i.globals,null);verifyRobot(i);verifyRobotResult(i,result);
+        } catch(RuntimeException|Error original) {
+            try {verifyRobotFailure(i);}catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}
+            throw original;
+        } finally {activeRobotGenerator=null;}
+    }
+    private void verifyRobotOwners(RobotInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherRobotScopesIdle();var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(i==null || activeRobotGenerator!=i || !runningObjects || servicing || i.body!=robotGenerator || i.bodyAssets!=robotGeneratorAssets
+                || robotGenerator.assets()!=i.bodyAssets || i.bodyAssets.visual()!=assets.objects().robotGenerator()
+                || i.sourceFrame!=frame || i.stageSource!=frame.stageSource() || i.sourceAssets!=assets || !frame.stageSource().ownsAct2(assets,player)
+                || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null
+                || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession() || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.closed() || frame.state()!=i.state || frame.environment()!=i.environment || frame.display()!=i.display
+                || frame.artState()!=i.playerArt || frame.vIntClock()!=i.clock || frame.paused()!=i.paused
+                || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared) || values!=i.ownerValues || sounds!=i.ledger
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Robot Generator changed complete Frame/source/art/display/clock/Values/current/scroll/ledger/World/generation");
+    }
+    private boolean robotImagesEqual(RobotInvocation i,List<CdAssetBytes> images,CdAssetBytes saved) {
+        var cut=placement.capture();placement.validateRestore(cut);
+        if(images==null || saved==null || images.size()!=96 || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),saved))return false;
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),images.get(at).copy()))return false;
+        return true;
+    }
+    private void verifyRobot(RobotInvocation i) {
+        verifyRobotOwners(i);if(!robotImagesEqual(i,i.images,i.saved))throw new IllegalStateException("Robot Generator changed unowned full96/source/status/saved bytes");
+    }
+    private void verifyRobotFailure(RobotInvocation i) {
+        verifyRobotOwners(i);
+        if(!robotImagesEqual(i,i.images,i.saved) && !(i.pendingPublication!=null && robotImagesEqual(i,i.readyImages,i.readySaved)))
+            throw new IllegalStateException("Throwing Robot Generator differs from both exact prebuilt native publication cuts");
+    }
+    private RobotInvocation requireRobot() {
+        var i=activeRobotGenerator;if(i==null)throw new IllegalStateException("No actual Robot Generator invocation");verifyRobot(i);return i;
+    }
+    private void validateRobotCut(RobotInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);
+        if(!cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved) || !source.equals(i.pool.state(i.whole))
+                || !source.identity().equals(i.entry.identity()))throw new IllegalStateException("Foreign Robot Generator source cut");
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),i.images.get(at).copy()))
+            throw new IllegalStateException("Robot Generator supplied full96 cut differs");
+    }
+    private boolean robotTailDeletes(RobotInvocation i,CdObjectState source) {
+        if(!i.drawn || !i.cleared || source.signedByte(CdObjectState.ByteField.ROUTINE)>2)
+            throw new IllegalStateException("Robot Generator despawn tail preceded returned Draw/live signed routine gate");
+        return source.signedByte(CdObjectState.ByteField.SPRITE_FLAGS)>=0
+                && (((source.centreX()&0xFF80)-((i.globals.cameraXWord()-0x80)&0xFF80))&0xFFFF)>0x280
+                || (i.globals.timeZone()&0x80)!=0;
+    }
+    private int robotSavedByteIndex(RobotInvocation i,CdObjectState source) {
+        int period=i.globals.timeZone()&0x7F;
+        if((i.globals.timeZone()&0x80)!=0) {
+            int adjusted=(period-(byte)i.globals.timeWarpDirection())&0xFFFF;
+            period=(short)adjusted<0?0:adjusted<3?adjusted:2;
+        }
+        return 2+(short)((3*source.savedFlagsId()+period)&0xFFFF);
+    }
+    private void beforeRobotPublication(CdRobotGenerator.Publication c) {
+        var i=requireRobot();
+        if(!robotGenerator.isCurrentCall(c) || robotGenerator.currentCallOrdinal(c)!=i.ordinal+1 || c.ordinal()!=i.ordinal+1
+                || robotPort || drawingRobotGenerator || queuePort || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null)
+            throw new IllegalStateException("Robot Generator publication lacks exact original producer/ordinal");
+        validateRobotCut(i,c.actualCut(),c.expectedSource());var source=c.expectedSource();var output=c.output();var images=new ArrayList<>(i.images);
+        CdAssetBytes saved=i.saved;RobotStep next;CdObjectState expected;
+        switch(c.kind()) {
+            case SOURCE_STORE -> {
+                if(!source.equals(c.before()) || c.savedByteIndex()!=-1 || c.previousValue()!=-1 || c.value()!=-1 || i.entry.routine()!=0)
+                    throw new IllegalStateException("Robot Generator source store changed receipt operands");
+                if(i.step==RobotStep.ENTRY) {
+                    expected=source.addByte(CdObjectState.ByteField.ROUTINE,2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4)
+                            .moveByte(CdObjectState.ByteField.PRIORITY,4).moveByte(CdObjectState.ByteField.X_RADIUS,0x22)
+                            .moveByte(CdObjectState.ByteField.WIDTH,0x22).moveByte(CdObjectState.ByteField.Y_RADIUS,0x20);next=RobotStep.HEADER;
+                } else if(i.step==RobotStep.HEADER) {
+                    int d0=i.globals.act()<<2;d0=(d0&0xFF00)|((d0+i.globals.timeZone())&0xFF);int at=(short)((d0+d0)&0xFFFF);
+                    if(at<0 || at>i.bodyAssets.baseTiles().length()-2)throw new IllegalStateException("Robot Generator store preceded its failed finite base read");
+                    expected=source.moveWord(CdObjectState.WordField.TILE,i.bodyAssets.baseTiles().unsignedWord(at))
+                            .moveLong(CdObjectState.LongField.MAPPINGS,i.bodyAssets.mappingsAddress())
+                            .moveLong(CdObjectState.LongField.ROBOT_GENERATOR_SCHEDULE,i.bodyAssets.explosionScheduleAddress())
+                            .moveWord(CdObjectState.WordField.ROBOT_GENERATOR_BASE_Y,source.centreY()).moveWord(CdObjectState.WordField.ROBOT_GENERATOR_TIMER,4)
+                            .moveWord(CdObjectState.WordField.ROBOT_GENERATOR_FLOAT_STEP,1);next=RobotStep.OPERANDS;
+                } else if(i.step==RobotStep.OPERANDS) {
+                    expected=source.moveByte(CdObjectState.ByteField.MAP_FRAME,(i.globals.goodFuture()==0?2:0)+(i.globals.timeZone()==0?1:0));next=RobotStep.FRAME;
+                } else throw robotWorldScope();
+                if(!expected.equals(output))throw new IllegalStateException("Robot Generator source publication changed another native byte");
+                i.pool.validateRestore(CdObjectPool.overlay(c.actualCut().pool(),List.of(output)));images.set(i.whole-32,CdAssetBytes.copyOf(output.copyBytes()));
+            }
+            case SAVED_FLAG_CLEAR -> {
+                if(i.step!=RobotStep.DRAW || !source.equals(i.tailSource) || !robotTailDeletes(i,source) || source.savedFlagsId()==0 || c.before()!=null || output!=null)
+                    throw new IllegalStateException("Robot Generator saved clear lacks its actual Draw/despawn source");
+                int index=robotSavedByteIndex(i,source);
+                if(index<2 || index>=CdObjectPlacementRuntime.SAVED_BANK_BYTES || c.savedByteIndex()!=index || c.previousValue()!=i.saved.unsignedByte(index)
+                        || c.value()!=(c.previousValue()&0x7F))throw new IllegalStateException("Robot Generator saved clear changed raw address/warp clamp/bit");
+                var raw=i.saved.copy();raw[index]=(byte)c.value();saved=CdAssetBytes.copyOf(raw);next=RobotStep.SAVED;
+                i.savedByteIndex=index;i.savedByteBefore=c.previousValue();
+            }
+            case DELETE -> {
+                if((source.savedFlagsId()==0?i.step!=RobotStep.DRAW:i.step!=RobotStep.SAVED) || !source.equals(i.tailSource) || !robotTailDeletes(i,source)
+                        || !source.equals(c.before()) || output!=null || c.savedByteIndex()!=-1 || c.previousValue()!=-1 || c.value()!=-1)
+                    throw new IllegalStateException("Robot Generator DeleteObject omitted actual saved-clear/source tail");
+                images.set(i.whole-32,zero(64));next=RobotStep.DONE;
+            }
+            case CHILD_STORE -> throw robotWorldScope();
+            default -> throw new IllegalArgumentException("Unknown Robot Generator store");
+        }
+        var receipts=new ArrayList<>(i.receipts);receipts.add(c);
+        i.readyImages=List.copyOf(images);i.readySaved=saved;i.readyReceipts=List.copyOf(receipts);i.readyStep=next;i.pendingPublication=c;
+    }
+    private void afterRobotPublication(CdRobotGenerator.Publication c) {
+        var i=activeRobotGenerator;
+        if(i==null || i.pendingPublication!=c || !robotGenerator.isCurrentCall(c) || i.completedOperation!=null)
+            throw new IllegalStateException("No exact Robot Generator publication completion");
+        verifyRobotOwners(i);if(!robotImagesEqual(i,i.readyImages,i.readySaved))throw new IllegalStateException("Robot Generator publication differs from prebuilt full96/saved output");
+        i.images=i.readyImages;i.saved=i.readySaved;i.receipts=i.readyReceipts;i.step=i.readyStep;i.ordinal++;
+        i.readyImages=null;i.readySaved=null;i.readyReceipts=null;i.pendingPublication=null;i.completedOperation=c;
+    }
+    private void beforeRobotCall(Object call) {
+        var i=requireRobot();
+        if(!robotGenerator.isCurrentCall(call) || robotGenerator.currentCallOrdinal(call)!=i.ordinal+1 || robotPort || drawingRobotGenerator || queuePort
+                || i.pendingCall!=null || i.pendingPublication!=null || i.completedOperation!=null)
+            throw new IllegalStateException("No original Robot Generator external producer/ordinal");
+        if(!(call instanceof CdRobotGenerator.DrawCall c))throw robotWorldScope();
+        if(i.drawn || i.cleared || !(i.entry.routine()==0 && i.step==RobotStep.FRAME || i.entry.routine()==2 && i.step==RobotStep.ENTRY))
+            throw new IllegalStateException("Robot Generator Draw omitted exact Init/Main receipts");
+        validateRobotCut(i,c.actualCut(),c.expectedSource());var receipts=new ArrayList<>(i.receipts);receipts.add(call);
+        i.readyReceipts=List.copyOf(receipts);i.pendingCall=call;i.callReceipt=null;
+    }
+    private void afterRobotCall(Object call) {
+        var i=requireRobot();
+        if(!robotGenerator.isCurrentCall(call) || i.pendingCall!=call || i.callReceipt!=call || !i.drawn || !i.cleared || i.step!=RobotStep.DRAW)
+            throw new IllegalStateException("Robot Generator external call returned without its private once-only receipt");
+        i.ordinal++;i.pendingCall=null;i.callReceipt=null;i.completedOperation=call;
+    }
+    private void requirePreparedRobotReceipt(Object call) {
+        var i=requireRobot();
+        if(!robotGenerator.isCurrentCall(call) || i.completedOperation!=null
+                || !(i.pendingPublication==call && i.readyImages!=null && i.readySaved!=null || i.pendingCall==call && i.readyReceipts!=null))
+            throw new IllegalStateException("Robot Generator observer returned without its private prepared receipt");
+    }
+    private void consumeCompletedRobotReceipt(Object call) {
+        var i=activeRobotGenerator;
+        if(i==null || !robotGenerator.isCurrentCall(call) || i.completedOperation!=call || i.pendingPublication!=null || i.pendingCall!=null)
+            throw new IllegalStateException("Robot Generator observer returned without its private completed receipt");
+        verifyRobot(i);i.completedOperation=null;
+    }
+    private void unownedRobotSolid(CdRobotGenerator.SolidCall c) { throw robotWorldScope(); }
+    private void unownedRobotGoodFuture(CdRobotGenerator.GoodFutureCall c) { throw robotWorldScope(); }
+    private void unownedRobotPoints(CdRobotGenerator.PointsCall c) { throw robotWorldScope(); }
+    private void unownedRobotFm(CdRobotGenerator.FmRequest c) { throw robotWorldScope(); }
+    private void drawRobotGenerator(CdRobotGenerator.DrawCall c) {
+        var i=requireRobot();
+        if(!robotGenerator.isCurrentCall(c) || i.pendingCall!=c || i.callReceipt!=null || i.drawn || robotPort || drawingRobotGenerator || queuePort)
+            throw new IllegalStateException("Public/cloned/repeated Robot Generator Draw lacks actual source authority");
+        i.drawn=true;drawingRobotGenerator=true;
+        try {
+            var source=c.expectedSource();drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifyRobot(i);if(!i.cleared)throw new IllegalStateException("Robot Generator Draw omitted actual BCLR7");
+            i.tailSource=i.pool.state(i.whole);i.step=RobotStep.DRAW;i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingRobotGenerator=false;}
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readRobotDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireRobot();
+        if(!drawingRobotGenerator || robotPort || queuePort || !(i.pendingCall instanceof CdRobotGenerator.DrawCall) || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("No actual Robot Generator collecting queue read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var out=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),s.word(CdObjectState.WordField.X_FRACTION),
+                s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));verifyRobot(i);return out;}
+        finally {queuePort=false;}
+    }
+    private void writeRobotOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireRobot();
+        if(!drawingRobotGenerator || robotPort || queuePort || !(i.pendingCall instanceof CdRobotGenerator.DrawCall) || value || i.cleared || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("Only actual Robot Generator Draw clears its source bit7 exactly once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
+        var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var ready=logMosquiImages(pool);queuePort=true;
+        try {verifyRobot(i);i.pool.write(next);i.images=ready;i.cleared=true;verifyRobot(i);}
+        finally {queuePort=false;}
+    }
+    private void verifyRobotResult(RobotInvocation i,CdRobotGenerator.Result result) {
+        boolean deleted=i.step==RobotStep.DONE;
+        if(i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null || i.callReceipt!=null || !i.drawn || !i.cleared
+                || i.step!=RobotStep.DRAW && !deleted || i.tailSource==null || deleted!=robotTailDeletes(i,i.tailSource) || !result.state().equals(i.pool.state(i.whole)))
+            throw new IllegalStateException("Robot Generator omitted exact original native completion receipts");
+        var effects=new ArrayList<CdRobotGenerator.Effect>();
+        if(i.entry.routine()==0)effects.add(new CdRobotGenerator.RoutineEntered(CdRobotGenerator.NativeRoutine.INIT));
+        effects.add(new CdRobotGenerator.RoutineEntered(CdRobotGenerator.NativeRoutine.ACTIVE_PAST));
+        effects.add(new CdRobotGenerator.CallReturned(CdRobotGenerator.NativeCall.DRAW_OBJECT));
+        if(deleted && i.savedByteIndex!=-1)effects.add(new CdRobotGenerator.SavedFlagChanged(i.savedByteIndex,i.savedByteBefore,i.savedByteBefore&0x7F));
+        effects.add(new CdRobotGenerator.DespawnChecked(deleted));effects.add(new CdRobotGenerator.CallReturned(CdRobotGenerator.NativeCall.CHECK_OBJ_DESPAWN));
+        if(!result.effects().equals(effects))throw new IllegalStateException("Robot Generator result differs from completed native observations");
     }
 }

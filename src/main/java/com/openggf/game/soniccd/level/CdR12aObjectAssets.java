@@ -125,6 +125,7 @@ public final class CdR12aObjectAssets {
     private CdR12aPowerupArtSources powerupArtSources;
     private CdObjectVisualAssets spikes;
     private CdObjectVisualAssets tunnelDoorSplash;
+    private CdObjectVisualAssets robotGenerator;
 
     /** Only the actual authenticated terrain owner calls this; no public arbitrary-image ingress. */
     CdR12aObjectAssets(CdR12aTerrainAssets terrain, CdMmdImage image) {
@@ -352,6 +353,14 @@ public final class CdR12aObjectAssets {
         if (tunnelDoorSplash == null) tunnelDoorSplash = CdObjectVisualAssets.decode(view(MAP_SPR_TUNNEL_DOOR_SPLASH).copy(), 7,
                 view(ANI_TUNNEL_DOOR_SPLASH).copy(), 3, 86);
         return tunnelDoorSplash;
+    }
+
+    /** Eight native roots and one script; full shared metadata bound23, not Present current-pattern knowledge.
+     * Selected Present frame2 fits the existing withered15-tile source. No art decode or residency work. */
+    public synchronized CdObjectVisualAssets robotGenerator() {
+        if (robotGenerator == null) robotGenerator = CdObjectVisualAssets.decode(view(MAP_SPR_ROBOT_GENERATOR).copy(), 8,
+                view(ANI_ROBOT_GENERATOR).copy(), 1, 23);
+        return robotGenerator;
     }
 
     /** One counted Spikes frame over the existing eight-tile Std source; no animation or art decode. */

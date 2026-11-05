@@ -423,7 +423,46 @@ class TestSonicCdAct2ControllerRoute {
         var closed13385=captureNative(h);var endFull=registry.capture();var endCourse=registry.captureCourse();
         registry.restore(endFull);assertNativeCapture(closed13385,h);
         registry.restoreCourse(endCourse);assertNativeCapture(closed13385,h);
-        System.out.println("Controller-only Act2 closed13385: Ring13265; Path79 acquire13277/FM91 and Got13278/FM91; Door67 child41 emission13364, Init/FMA2 at13365, selected Splash13366, control release13367 and FC routine4 still Draw13385. Full/course before-forward replay surrounds each edge. Positive execution stops before13386; no returned deletion is asserted.");
+        System.out.println("Controller-only Act2 closed13385: Ring13265; Path79 acquire13277/FM91 and Got13278/FM91; Door67 child41 emission13364, Init/FMA2 at13365, selected Splash13366, control release13367 and FC routine4 still Draw13385. Full/course before-forward replay surrounds each edge. This complete13385 checkpoint is retained before the additional Robot segment below.");
+        // Root facts a73f8f901dc67dcc261256a9c6bc68a46eaa06628b39c12ff2a3cfc158e17bba: comparisons only.
+        // N1ecc5f3 Robot Generator/Main.asm:25-94; raw timeZone1 returns through Draw/despawn without Past activity.
+        assertArrayEquals(new byte[64],module.act2LoadState().placement().pool().slots().get(47-32).copyBytes(),
+                "Last closed13385 has no Robot47; ordinary SpawnObjects admits its source on13386");
+        byte[] expectedRobot47=java.util.HexFormat.of().parseHex("2d0404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000");
+        for(int call=13386;call<=13422;call++) {
+            var input=controller(call);
+            if(call==13386 || call==13387 || call==13422)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            var robotState=module.act2LoadState();var robotCalls=robotState.calls();
+            assertArrayEquals(expectedRobot47,robotState.placement().pool().slots().get(47-32).copyBytes(),
+                    "Complete naturally initialized Robot47 image at closed"+call);
+            assertEquals(1,robotCalls.stream().filter(c->c==SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY).count());
+            assertTrue(robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.PRIMARY_MAIN)
+                    <robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY));
+            assertTrue(robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY)
+                    <robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.DYNAMIC_OBJECTS));
+            assertFalse(robotState.sounds().stream().anyMatch(SonicCdGameModule.PastRobotGeneratorFm.class::isInstance));
+            assertEquals(call==13386,robotCalls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY));
+            if(call==13386) {
+                assertArrayEquals(new byte[64],robotState.placement().pool().slots().get(41-32).copyBytes(),
+                        "The same completed walk returns from Splash41 routine4 with all64 bytes deleted before Robot47");
+                assertTrue(robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY)
+                        <robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY));
+            }
+            assertEquals(1,frame.environment().movement().gates().timeZone(),"Robot reads actual raw timeZone1");
+            assertEquals(1,frame.environment().movement().gates().zoneAct(),"Robot reads actual act1");
+            assertEquals(255,frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(0,frame.state().motion().playerControl());assertEquals(0,frame.environment().controls().controlLocked());
+        }
+        assertEquals(0x18612800,frame.state().motion().centreX16_16());
+        assertEquals(0x004B1700,frame.state().motion().centreY16_16());
+        assertEquals(6241,frame.state().motion().centreX16_16()>>>16);assertEquals(75,frame.state().motion().centreY16_16()>>>16);
+        assertEquals(35,module.act2LoadState().ring().rings());
+        assertInstanceOf(SonicCdPastDisplay.Ready.class,module.act2SelectedDisplay().projection());
+        var closed13422=captureNative(h);var robotEndFull=registry.capture();var robotEndCourse=registry.captureCourse();
+        registry.restore(robotEndFull);assertNativeCapture(closed13422,h);
+        registry.restoreCourse(robotEndCourse);assertNativeCapture(closed13422,h);
+        System.out.println("Controller-only Act2 closed13422: natural Robot47 Init13386 and Main13387..13422 preserve the exact full64 source image, one returned body receipt per walk and no Robot FM. Completed13386 deletes all64 Splash41 bytes. Full/course before-forward replay covers13385->13386,13386->13387 and13421->13422; endpoint X6241/Y75, rings35, raw timeZone1/act1, controls clear. Positive execution stops before failed13423 at separate unbound MovingSpring ID0F/whole41; ID24/whole35 is already-bound Animal.");
     }
 
     // BEGIN later-route EGL case: additive to the three pinned controller cases.
@@ -537,7 +576,45 @@ class TestSonicCdAct2ControllerRoute {
                 assertNaturalDoorSplashCut(h,call);
             }
             assertNotNull(splashImageForExport);
-            System.out.println("ENGINE controller-only Act2 EGL: all fifteen old Sonic endpoints retained at10778,10866,11033,11213,11341,11587,12670,12699,12884,12886,12887,13062,13098,13126,13264; selected Sonic/full-course value and pixel replay also at13366 and13385, seventeen endpoints total. Existing Stars12887/Shield13098 omission contrasts remain. Selected natural Splash41 omission at13366 changes renderer-only pixels with planes/scroll/palette/current versions unchanged. Ring13265, Path acquisition/Got, emission/Init/control release and FC edges have before-forward full/course checkpoints. Positive execution ends at closed13385, before the separate partial failed13386; no returned deletion, native-image or regional parity claim.");
+            System.out.println("ENGINE controller-only Act2 EGL: all fifteen old Sonic endpoints retained at10778,10866,11033,11213,11341,11587,12670,12699,12884,12886,12887,13062,13098,13126,13264; selected Sonic/full-course value and pixel replay also at13366 and13385, seventeen retained endpoints. Existing Stars12887/Shield13098 omission contrasts remain. Selected natural Splash41 omission at13366 changes renderer-only pixels with planes/scroll/palette/current versions unchanged. Ring13265, Path acquisition/Got, emission/Init/control release and FC edges have before-forward full/course checkpoints. The complete13385 checkpoint remains before the additional Robot segment below.");
+            // Only existing selected-Sonic Ready/omission rendering is extended; Robot visibility is not asserted.
+            assertArrayEquals(new byte[64],module.act2LoadState().placement().pool().slots().get(47-32).copyBytes());
+            byte[] expectedRobot47=java.util.HexFormat.of().parseHex("2d0404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000");
+            for(int call=13386;call<=13422;call++) {
+                var input=controller(call);
+                if(call==13386 || call==13422)renderReplayNextRight(h,input,call);
+                else {
+                    if(call==13387)replayNextRight(h,input);
+                    step(h,input);
+                }
+                assertLaterRouteOwners(h,frame,source,world,generation+1);
+                var robotState=module.act2LoadState();var robotCalls=robotState.calls();
+                assertArrayEquals(expectedRobot47,robotState.placement().pool().slots().get(47-32).copyBytes(),
+                        "Complete naturally initialized Robot47 image at closed"+call);
+                assertEquals(1,robotCalls.stream().filter(c->c==SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY).count());
+                assertTrue(robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.PRIMARY_MAIN)
+                        <robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY));
+                assertTrue(robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY)
+                        <robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.DYNAMIC_OBJECTS));
+                assertFalse(robotState.sounds().stream().anyMatch(SonicCdGameModule.PastRobotGeneratorFm.class::isInstance));
+                assertEquals(call==13386,robotCalls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY));
+                if(call==13386) {
+                    assertArrayEquals(new byte[64],robotState.placement().pool().slots().get(41-32).copyBytes(),
+                            "The same completed walk returns from Splash41 routine4 with all64 bytes deleted before Robot47");
+                    assertTrue(robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY)
+                            <robotCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY));
+                }
+                assertEquals(1,frame.environment().movement().gates().timeZone(),"Robot reads actual raw timeZone1");
+                assertEquals(1,frame.environment().movement().gates().zoneAct(),"Robot reads actual act1");
+                assertEquals(255,frame.environment().movement().gates().timeWarpDirection());
+                assertEquals(0,frame.state().motion().playerControl());assertEquals(0,frame.environment().controls().controlLocked());
+            }
+            assertEquals(0x18612800,frame.state().motion().centreX16_16());
+            assertEquals(0x004B1700,frame.state().motion().centreY16_16());
+            assertEquals(6241,frame.state().motion().centreX16_16()>>>16);assertEquals(75,frame.state().motion().centreY16_16()>>>16);
+            assertEquals(35,module.act2LoadState().ring().rings());
+            assertInstanceOf(SonicCdPastDisplay.Ready.class,module.act2SelectedDisplay().projection());
+            System.out.println("ENGINE controller-only Act2 EGL: all seventeen old selected-Sonic endpoints remain, plus13386 and13422, nineteen total with complete-value/full-course and pixel replay through the existing Ready/selected-Sonic omission path. Robot47 is checked by its exact native64 and one returned body receipt, with no Robot selected-current, pixel visibility or omission claim. Old Shield13098 and Splash13366 exports remain unchanged. Positive execution stops at closed13422 before the separate failed13423 MovingSpring ID0F/whole41 prefix; ID24/whole35 is already-bound Animal. No native-image or regional parity claim.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
         writeOptionalSplashCapture(splashImageForExport);

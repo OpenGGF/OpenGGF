@@ -140,7 +140,10 @@ public final class CdR12aProfile {
         // Complete24-byte include retains its literal final00; existing Std art/reader owns eight tiles.
         MAP_SPR_SPIKES(0xC018, 24),
         // Spin Tunnel/Main (Door).asm:149-165: actual R12A STORE/LEA; complete includes retain all real zeros.
-        ANI_TUNNEL_DOOR_SPLASH(0x1D63A, 24), MAP_SPR_TUNNEL_DOOR_SPLASH(0x1D652, 100);
+        ANI_TUNNEL_DOOR_SPLASH(0x1D63A, 24), MAP_SPR_TUNNEL_DOOR_SPLASH(0x1D652, 100),
+        // Robot Generator/Main.asm:49-86,218-254 and PP Tile IDs: actual R12A operands, full includes.
+        ANI_ROBOT_GENERATOR(0xE4EE, 8), MAP_SPR_ROBOT_GENERATOR(0xE4F6, 574),
+        ROBOT_GENERATOR_EXPLOSION_SCHEDULE(0xE734, 64), ROBOT_GENERATOR_BASE_TILES(0xE774, 22);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }
