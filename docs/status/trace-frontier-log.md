@@ -124319,3 +124319,27 @@ The temporary source/compiled logger is restored and removed. Full comparisons,
 controls, commands and failed setup attempts are under
 `/tmp/trace-native-frontiers-20261105/cnz2/`. Clean final focused qualification and
 the combined wave's final gate are recorded by the lead after this checkpoint.
+
+
+### Native-frontiers composition preflight
+
+The six implementations are composed on `3db2c8db9`: scoped initial camera,
+DEZ enemy submissions and eye retirement, Mega collapsing slope, special-stage
+entry input, native continuation bank and the lead's S2 Crawl correction. The
+only integration code adjustment adds an explicit absent bank to the new
+entry-input test's carried-state constructor. No production default is added.
+A compile-only mismatch ran zero tests before that adjustment; the corrected
+composed selection passes **182 cases, zero failures/errors/skips**, including
+committed fixture integrity, exact producer pin, architectural source budgets,
+real initial-camera/loading, continuation-bank and entry-input controls.
+Actual producer checkout and gitlink both equal `e6ea72332b559a4a52519166f0e5c108cb8d5385`.
+
+Both original native movies were recaptured; physics, aux, timing and manifests
+retain identical logical bytes. The133 metadata changes add native Act3 bank
+observations and recording dates. Independent source/provenance review finds no
+actionable defect; the paired923-case producer suites retain60 inherited
+failures and15 identical skips, with the disclosed source-dependent stale-seal
+assertion. This is no producer-suite pass. Bank fixes have qualified later mixed
+errors and remain bounded, as do the newly reached DEZ suffix and AIZ2's repaired
+control baseline. The single combined profiles and shared-code smoke remain
+pending; no develop delivery or producer publication is claimed here.

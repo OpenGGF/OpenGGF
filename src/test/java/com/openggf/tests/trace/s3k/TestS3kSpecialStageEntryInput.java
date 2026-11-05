@@ -127,7 +127,7 @@ class TestS3kSpecialStageEntryInput {
         var movie = new Bk2Movie(Path.of("entry-boundary.bk2"), "", Map.of(), frames, 0);
         var carried = new TraceSegmentCarriedState("declared boundary test", null, 0,
                 List.of(0, 0, 0, 0, 0, 0, 0), 0, List.of(), null, 0, false,
-                null, null, null, null, null, List.of(), List.of());
+                null, null, null, null, null, null, List.of(), List.of());
         return new S3kSpecialStageReplayHarness(movie, OFFSET, carried, provider);
     }
 
