@@ -2665,3 +2665,12 @@ modes across independently surviving scatter emeralds. This closes the stale
 collector graph edge only; full routes, pickup parity, native presentation,
 donor/team/viewport breadth and the positioned replay suffix remain inherited
 gaps.
+
+
+AIZ2 Knuckles collapsing-slope landing (2026-11-05): the
+[AIZ2 matrix](../architecture/validation/levels/s3k-aiz2.md#collapsing-slope-landing-during-knuckles-ledge-climb-2026-11-05)
+records the native slot/code identity, player-before-solid ordering and bounded
+landing window cases. Mega segment 4 removes all 2,589 errors on 7,430 actual
+compared rows with zero added ERROR tuples and unchanged coverage. Segment 8's
+movie-25811 ownership failure remains outside this repair. Existing act-route,
+donor/team/viewport and full-route rewind obligations remain open.

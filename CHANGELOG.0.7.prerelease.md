@@ -182,7 +182,9 @@ Unreleased. The earlier development themes remain in
 
 - S3K top-solid platforms, bonus flippers and curled vines now select the ROM’s
   1–16 pixel landing window on the native helper surface. Flat helpers use their
-  landing radius, and AIZ flipping bridges use their raw signed slope heights.
+  landing radius, and AIZ flipping bridges use their raw signed slope heights. Collapsing
+  slopes also retain that full window while Knuckles uses his smaller climbing
+  radius, so he can land during the ledge-climb animation.
 
 - S3K Lava Reef collapsing bridges and Sky Sanctuary floating platforms now reject
   exact-boundary new landings, matching the ROM’s one-to-sixteen-pixel overlap

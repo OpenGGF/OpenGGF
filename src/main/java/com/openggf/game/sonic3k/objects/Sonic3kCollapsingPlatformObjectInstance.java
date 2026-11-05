@@ -248,6 +248,16 @@ public final class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjec
     }
 
     @Override
+    public Integer getDirectTopLandingOverlapLimit() {
+        // sub_205B6 calls SolidObjectTopSloped2; a fresh contact reaches
+        // SolidObjCheckSloped2 -> loc_1E45A (sonic3k.asm:42116-42139,
+        // 42046-42062). Its signed feet-relative overlap is 1..16, independent
+        // of the current player radius. It has no full-solid bottom branch:
+        // Knuckles can land mid-ledge-climb while still using his 10px radius.
+        return 0x11;
+    }
+
+    @Override
     public boolean rejectsZeroDistanceTopSolidLanding() {
         return true;
     }
