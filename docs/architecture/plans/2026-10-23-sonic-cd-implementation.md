@@ -1,5 +1,52 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual Flower and positive12699
+
+Cached Flower1F now uses the existing source129/Std1/current terrain and art.
+Real floor prezero and every reached raw angle store publish through the same
+Frame before native motion/animation/Draw. Private pending producer/operation
+receipts check full96, complete original State/Environment, Values, saved/status,
+queue, ledger, scroll and World/epoch; original exceptional prefixes are retained.
+Successful shared animation runs once; finite failure-prefix stores are opt-in.
+Legacy constructor/formulas stay qualified. All old104 observations remain,
+then FlowerBody/PrimaryAngle append104/105 (106 total), with mutual Door/child/
+Flower scope exclusions. No new Frame/art/PLC/reader/capture/score/persistent owner.
+Subtype0 retains exact SAVED_FLAGS_INIT or SAVED_FLAGS_LANDING stops before the
+unowned saved/count/position-buffer work; the natural subtype1 avoids both.
+
+The first240 run had235passes/3failures/2errors/0skips. Four new test failures
+were two unmeasured landing prerequisites and two post-failure uses of a guarded
+closed-module accessor; the other was an obsolete expected unbound1F assertion.
+Root corrects tests only: a fixed standing-column pure floor alignment then8px
+penetration (no search/actor/terrain edit), retained raw call-list diagnostics and
+the actual next-pass Flower transition. Production is unchanged. All22newFlower,
+that changed transition and both retained route/render methods then pass inside
+a26-case diagnostic run; its sole remaining error is the actual next12700 native
+boundary. No green240 or26 aggregate is claimed. Independent five-source static
+review found noP1/P2; Root's later fixture changes remain explicitly test-only.
+
+The observer naturally returns12699; first12700 is DYNAMIC_OBJECTS at physical79,
+ID07/routine0/X1630/Y0290/subtype2. Its partial96 is diagnostic only and never
+becomes an earlier closed ingress. Temporary source is removed after custody.
+The promoted permanent positive and EGL case pass2/0/0/0 through12699, including
+full/course12670→12671,12671→12672 and12698→12699, preserving all older crossings.
+Final source fingerprint
+`311b19bf21b1f53a8be5889001353386223792bacd3f2d29d184a7d042898baa`,
+06:50:05.551524–06:50:19.149094Z;0s test admission/33.987s precompile. Exact
+identities, Java25/EGL/I/media/opt-in, source equality and XML hashes checked;
+only owned reports consumed. Earlier mixed-run failures remain in external records.
+
+Eight selected-Sonic EGL cuts now include12699. Actual after-cleanup ENGINE12699
+PNG is320×224/11097B/SHA256
+`80b64818293105b102d53359de1090001d315d43c6f75946a641bfe37980480e`:
+Sonic visible above the green/orange slope. Images certify the selected engine
+render/primary omission/full-course pixel replay, not native/regional/HUD/audio
+parity. A separate static source/image investigation finds all534 opaque native
+font texels in ENGINE12670 match; cloud pixels occur only in transparent digit
+gaps. It establishes no HUD binding defect, proposes no production change and
+does not certify matched native output. Tunnel Path07 data/actual World publication
+is next; complete Act2, persistent flowers and JP/EU remain open.
+
 ## 5 November 2026 — actual horizontal Door, natural kill and positive12670
 
 Two raw horizontal-Door descriptors extend source127 to129, preserving all old

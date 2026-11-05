@@ -317,3 +317,27 @@ omission changes each picture, with exact pixel replay. ENGINE12670 is the actua
 It shows rolling Sonic and current stage imagery; matched native/HUD-art/audio,
 complete-act and regional certification remain open. No combined fresh371 pass is
 claimed after test-only route promotion. Flower/persistence/reward coverage is next.
+
+
+## Flower and positive12699 — 5 November, latest checkpoint
+
+Actual source129/currentStd1 Flower uses one real floor call with synchronous
+prezero/raw angle publication, native integer motion/animation/Draw and exact
+private receipts/full-owner checks. Old104 observations append2=106; existing
+Door/child scopes are preserved. Native subtype0 storage remains a typed prefix
+stop; no saved/count/position buffer is invented. Independent static review found
+noP1/P2. Legacy Flower14 and affected World groups pass in the mixed240; it remains
+235pass/3fixture assertions/2closed-accessor diagnostic errors/0skips. Test-only
+fixed-column floor alignment, raw failed-cut diagnostics and obsolete-boundary
+migration then qualify newFlower22, changedtransition1 and retainedroute/EGL2 in
+26cases whose sole error is the genuine next12700 observer stop. Neither mixed
+run is relabelled green; no production change is made to fit those fixtures.
+
+Permanent positive12699 and eight-cut EGL now pass2/0/0/0 separately, with complete
+full/course values/pixels and primary omission. New cuts12670→12671,12671→12672,
+12698→12699 qualify natural Flower Main/floor/angle and retain older crossings.
+Actual ENGINE12699 is320×224/11097B/SHA256
+`80b64818293105b102d53359de1090001d315d43c6f75946a641bfe37980480e`.
+First12700 is live whole79 ID07/TunnelPath/routine0/subtype2. Failed partial96 is
+not ingress. Its native source/data/publication bridge is next. No persistent
+flower, complete-act, matched native/HUD/audio or regional certificate is implied.

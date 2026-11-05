@@ -267,6 +267,12 @@ pass separately, preserving old cuts and adding full/course Door/kill/final repl
 Seven actual selected-Sonic image cuts include12670. Next12671 is Flower1F,
 subtype1; partial failed state remains diagnostic only. Actual stopped-Top/nonzero
 secondary, complete Act2, matched native imagery and JP/EU remain open.
+Actual Flower subtype1 now publishes its real floor/angle/motion/animation/Draw.
+NewFlower22 and changed transition1 pass after test-only floor/raw-diagnostic/
+obsolete-boundary corrections; original240 and diagnostic26 remain non-green.
+Final permanent12699/EGL2 passes separately, with eight selected-Sonic image cuts
+and complete full/course Flower crossings. Next12700 is Tunnel Path07 at whole79.
+Persistent subtype0 flowers, complete-act, native/regional parity remain open.
 The first-act matrix remains partial as well.
 
 ### Historical26October pause checkpoint

@@ -48,6 +48,10 @@ final class SonicCdAct2LoadingVisit {
     private transient TamabbohInvocation activeTamabboh;
     private transient FloatInvocation activeFloat;
     private boolean tamabbohPort, drawingTamabboh, floatPort, drawingFloat;
+    private final CdFlower flower;
+    private final CdFlower.Assets flowerAssets;
+    private transient FlowerInvocation activeFlower;
+    private boolean flowerPort, drawingFlower;
     private final CdExplosion explosion;
     private final CdPoints points;
     private final CdExplosion.Assets explosionAssets;
@@ -227,6 +231,16 @@ final class SonicCdAct2LoadingVisit {
         tamabboh=CdTamabboh.fromAct2Assets(placement,objectAssets,sharedTerrain,
                 this::commitTamabbohPrimaryAngle,this::readTamabbohPlayerWord,this::playTamabbohFm,this::drawTamabboh);
         floatBlock=CdFloatBlock.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitFloatSolid,this::drawFloatBlock);
+        flower=CdFlower.fromAct2Assets(placement,objectAssets,sharedTerrain,new CdFlower.DispatchObserver() {
+            @Override public void beforePublication(CdFlower.Publication c) { beforeFlowerPublication(c); }
+            @Override public void afterPublication(CdFlower.Publication c) { afterFlowerPublication(c); }
+            @Override public void beforeCall(Object c) { beforeFlowerCall(c); }
+            @Override public void afterCall(Object c) { afterFlowerCall(c); }
+        },this::commitFlowerPrimaryAngle,this::drawFlower,new CdFlower.ReceiptGuard() {
+            @Override public void prepared(Object c) { requirePreparedFlowerReceipt(c); }
+            @Override public void completed(Object c) { consumeCompletedFlowerReceipt(c); }
+        });
+        flowerAssets=flower.assets();
         explosion=CdExplosion.fromAct2Assets(placement,objectAssets,new CdExplosion.DispatchObserver() {
             @Override public void beforePublication(CdExplosion.Publication c) { beforeExplosionPublication(c); }
             @Override public void afterPublication(CdExplosion.Publication c) { afterChildPublication(c); }
@@ -2108,6 +2122,7 @@ final class SonicCdAct2LoadingVisit {
                     boolean post=placement.pool().state(whole).subtype()>=8;
                     runMonitor(whole); call(post ? TIME_POST_BODY : MONITOR_BODY);
                 }
+                else if(id==CdFlower.OBJECT_ID) { runFlower(whole); call(FLOWER_BODY); }
                 else if(id==CdExplosion.OBJECT_ID) { runExplosion(whole); call(EXPLOSION_BODY); }
                 else if(id==CdPoints.OBJECT_ID) { runPoints(whole); call(POINTS_BODY); }
                 else if(id==CdTunnelDoor.OBJECT_ID) {runDoor(whole);call(TUNNEL_DOOR_BODY);}
@@ -2142,6 +2157,7 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.TITLE_CARD_MAPPINGS.nativeAddress(),view(CdR12aProfile.Asset.TITLE_CARD_MAPPINGS).bytes(),0,9));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_BOULDER.nativeAddress(),assets.objects().boulder().mappings(),0,1));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PLATFORM.nativeAddress(),assets.objects().platform().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_FLOWER.nativeAddress(),assets.objects().flower().mappings(),0,8));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_EXPLOSION.nativeAddress(),assets.objects().explosion().mappings(),0,7));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_POINTS.nativeAddress(),assets.objects().points().mappings(),0,6));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TUNNEL_DOOR.nativeAddress(),assets.objects().tunnelDoor().mappings(),0,2));
@@ -2167,6 +2183,7 @@ final class SonicCdAct2LoadingVisit {
         var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
                 if(activeDoor!=null) return readDoorDrawSlot(ref);
                 if(activeLogMosqui!=null) return readLogMosquiDrawSlot(ref);
@@ -2186,6 +2203,7 @@ final class SonicCdAct2LoadingVisit {
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+                if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
                 if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
                 if(activeLogMosqui!=null) { writeLogMosquiOnScreen(ref,value); return; }
@@ -7076,6 +7094,7 @@ final class SonicCdAct2LoadingVisit {
     // Source-only child-effect receipts; no new captured partition or gameplay owner.
     private enum ChildStep { ENTRY, HEADER, CHILD, RESET, TIMER, SPEED, ANIMATED, DONE, POINTS }
     private void requireChildEffectIdle() {
+        requireFlowerIdle();
         if(activeChildEffect!=null || drawingChildEffect) throw new IllegalStateException("Actual child-effect invocation owns this cut");
     }
     private void requireOtherChildScopesIdle() {
@@ -7374,6 +7393,37 @@ final class SonicCdAct2LoadingVisit {
             var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
         }
     }
+    // Actual Flower source scope; no new capture partition or persistent flower-storage owner.
+    private enum FlowerStep { ENTRY, INIT, MOVE, GROW, DONE, ANIMATED, RESET, TIMER, SPEED, BLOCKED }
+    private void requireFlowerIdle() {
+        if(activeFlower!=null || flowerPort || drawingFlower)throw new IllegalStateException("Actual Flower invocation owns this cut");
+    }
+    private void requireOtherFlowerScopesIdle() {
+        if(activeChildEffect!=null || drawingChildEffect)throw new IllegalStateException("Actual child-effect invocation owns this cut");
+        requireOtherChildScopesIdle();
+    }
+    private final class FlowerInvocation {
+        final int whole; final CdFlower body=flower; final CdFlower.Assets bodyAssets=flowerAssets;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource();
+        final CdR12aTerrainAssets sourceAssets=assets; final CdObjectPool pool=placement.pool();
+        final CdObjectDrawQueue queue=drawQueue; final CdObjectPlacementRuntime.Status status=placement.status();
+        final CdObjectState entry; final CdPlayerBody.State state=frame.state();
+        CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor(); CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll();
+        final Object world; final long generation; Values expectedValues=values;
+        final CdAssetBytes reserved=values.hudObjects(),saved=placement.capture().savedFlags();
+        final List<SonicCdGameModule.PastSound> ledger=sounds; final CdObjectDrawQueue.CameraWords camera;
+        List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()),readyImages;
+        Object pendingPublication,pendingCall,pendingFloor,completedOperation,angleReceipt,drawReceipt;
+        long ordinal; int angles; FlowerStep step=FlowerStep.ENTRY,readyStep;
+        CdObjectCollisionCheck.FloorDistance floor; boolean floorCompleted,drawn,cleared,queueFailed;
+        FlowerInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+    }
     private void runDoor(int whole) {
         requireChildEffectIdle();
         requireDoorIdle();requireLogMosquiIdle();requireOtherLogMosquiScopesIdle();module.requireAct2LoadingVisit(this);
@@ -7638,5 +7688,216 @@ final class SonicCdAct2LoadingVisit {
         queuePort=true;
         try {verifyDoor(i);i.pool.write(next);i.images=images;i.cleared=true;verifyDoor(i);}
         finally {queuePort=false;}
+    }
+
+    private void runFlower(int whole) {
+        requireFlowerIdle();requireOtherFlowerScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING || placement.pool().state(whole).id()!=CdFlower.OBJECT_ID)
+            throw new IllegalStateException("No actual cached Flower physical dispatch");
+        var i=new FlowerInvocation(whole);activeFlower=i;
+        try {
+            var result=flower.run(whole);verifyFlower(i);
+            if(i.pendingPublication!=null || i.pendingCall!=null || i.pendingFloor!=null || i.completedOperation!=null
+                    || !result.state().equals(i.pool.state(whole)) || i.step!=FlowerStep.ANIMATED || !i.drawn || !i.cleared)
+                throw new IllegalStateException("Flower omitted an actual completed native receipt");
+        } catch(RuntimeException|Error original) {
+            try {verifyFlowerFailure(i);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        } finally {activeFlower=null;}
+    }
+    private void verifyFlowerOwners(FlowerInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherFlowerScopesIdle();var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(activeFlower!=i || !runningObjects || servicing || flower!=i.body || flowerAssets!=i.bodyAssets || flower.assets()!=i.bodyAssets
+                || flowerAssets.flower()!=assets.objects().flower() || i.sourceFrame!=frame || i.stageSource!=frame.stageSource()
+                || i.sourceAssets!=assets || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null
+                || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || mode.getWorldSession()!=i.world || mode.getLevelManager().getCompletedProductionLoadGeneration()!=i.generation
+                || frame.state()!=i.state || frame.environment()!=i.environment || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
+                || values!=i.expectedValues || sounds!=i.ledger || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Flower changed or borrowed another actual World/Frame/source owner");
+    }
+    private boolean flowerImagesEqual(FlowerInvocation i,List<CdAssetBytes> expected) {
+        var cut=placement.capture();i.pool.validateRestore(cut.pool());
+        if(expected==null || expected.size()!=96 || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved))return false;
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),expected.get(at).copy()))return false;
+        return true;
+    }
+    private void verifyFlower(FlowerInvocation i) {
+        verifyFlowerOwners(i);if(!flowerImagesEqual(i,i.images))throw new IllegalStateException("Flower changed unowned full96/source/saved/status bytes");
+    }
+    private void verifyFlowerFailure(FlowerInvocation i) {
+        verifyFlowerOwners(i);
+        if(!flowerImagesEqual(i,i.images) && !(i.pendingPublication!=null && flowerImagesEqual(i,i.readyImages)))
+            throw new IllegalStateException("Throwing Flower differs from both exact native publication cuts");
+    }
+    private FlowerInvocation requireFlower() {
+        var i=activeFlower;if(i==null)throw new IllegalStateException("No actual Flower invocation");verifyFlower(i);return i;
+    }
+    private void validateFlowerCut(FlowerInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);
+        if(!source.equals(i.pool.state(i.whole)) || !source.identity().equals(i.entry.identity()) || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved))
+            throw new IllegalStateException("Foreign Flower source cut");
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),i.images.get(at).copy()))
+            throw new IllegalStateException("Flower full96 call cut differs");
+    }
+    private CdObjectState flowerInitHeader(CdObjectState source) {
+        return source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4).moveByte(CdObjectState.ByteField.PRIORITY,1)
+                .moveByte(CdObjectState.ByteField.Y_RADIUS,0).moveWord(CdObjectState.WordField.TILE,source.unsignedByte(CdObjectState.ByteField.SUBTYPE2)==0?0xA6D7:0x26D7)
+                .moveLong(CdObjectState.LongField.MAPPINGS,flowerAssets.mappingsAddress());
+    }
+    private boolean flowerAnimationSite(FlowerInvocation i) {
+        return i.entry.routine()==4 && i.step==FlowerStep.ENTRY || i.step==FlowerStep.MOVE && !(i.floor.distance()<0 && i.entry.subtype()==0)
+                || i.step==FlowerStep.GROW || i.step==FlowerStep.DONE;
+    }
+    private void beforeFlowerPublication(CdFlower.Publication c) {
+        var i=requireFlower();
+        if(!flower.isCurrentCall(c) || i.pendingPublication!=null || i.pendingCall!=null || i.pendingFloor!=null || i.completedOperation!=null
+                || flowerPort || drawingFlower || queuePort || c.ordinal()!=i.ordinal+1)
+            throw new IllegalStateException("Flower publication lacks its exact pending producer/ordinal");
+        validateFlowerCut(i,c.cut(),c.source());var source=c.source();var out=c.output();CdObjectState expected;FlowerStep next;
+        switch(c.kind()) {
+            case INIT_BLOCKED -> {
+                if(i.entry.routine()!=0 || i.step!=FlowerStep.ENTRY || source.subtype()!=0)throw new IllegalStateException("Unreached persistent Flower Init");
+                expected=flowerInitHeader(source);next=FlowerStep.BLOCKED;
+            }
+            case SEED_READY -> {
+                if(i.entry.routine()!=0 || i.step!=FlowerStep.ENTRY || source.subtype()==0)throw new IllegalStateException("Unreached respawn-free Flower Init");
+                expected=flowerInitHeader(source).moveWord(CdObjectState.WordField.ANIMATION_WORD,2).moveByte(CdObjectState.ByteField.ROUTINE,2).moveWord(CdObjectState.WordField.TILE,0x6D7);next=FlowerStep.INIT;
+            }
+            case SEED_MOVE -> {
+                if(!i.floorCompleted || i.floor==null || !(i.entry.routine()==0 && i.step==FlowerStep.INIT || i.entry.routine()==2 && i.step==FlowerStep.ENTRY))
+                    throw new IllegalStateException("Flower seed moved without its actual completed floor return");
+                expected=source.addWord(CdObjectState.WordField.Y,i.floor.distance()<0?i.floor.distance():2);
+                if(i.floor.distance()<0 && source.subtype()!=0)expected=expected.moveByte(CdObjectState.ByteField.ROUTINE,4)
+                        .moveByte(CdObjectState.ByteField.ANIMATION,1).moveByte(CdObjectState.ByteField.Y_RADIUS,0x30);
+                next=FlowerStep.MOVE;
+            }
+            case GROW_READY -> {
+                if(i.entry.routine()!=6 || i.step!=FlowerStep.ENTRY)throw new IllegalStateException("Unreached Flower growing prefix");
+                expected=source.moveWord(CdObjectState.WordField.TILE,0x26D7).moveByte(CdObjectState.ByteField.ANIMATION,2);next=FlowerStep.GROW;
+            }
+            case DONE_READY -> {
+                if(i.entry.routine()!=8 || i.step!=FlowerStep.ENTRY)throw new IllegalStateException("Unreached Flower done prefix");
+                expected=source.moveByte(CdObjectState.ByteField.ANIMATION,3).moveByte(CdObjectState.ByteField.ROUTINE,4);next=FlowerStep.DONE;
+            }
+            case ANIMATION_RESULT -> {
+                if(!flowerAnimationSite(i) || out==null)throw new IllegalStateException("Flower animation skipped its source prefix");
+                expected=source.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION,source.unsignedByte(CdObjectState.ByteField.ANIMATION))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_FRAME,out.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_TIME,out.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME))
+                        .moveByte(CdObjectState.ByteField.MAP_FRAME,out.unsignedByte(CdObjectState.ByteField.MAP_FRAME))
+                        .moveByte(CdObjectState.ByteField.SPRITE_FLAGS,out.spriteFlags()).moveByte(CdObjectState.ByteField.ROUTINE,out.routine());
+                if((out.spriteFlags()&~3)!=(source.spriteFlags()&~3) || out.routine()!=source.routine() && out.routine()!=((source.routine()+2)&255))
+                    throw new IllegalStateException("Flower animator changed unowned flags/routine");
+                next=FlowerStep.ANIMATED;
+            }
+            case FAILURE_RESET -> {
+                if(!flowerAnimationSite(i) || source.unsignedByte(CdObjectState.ByteField.ANIMATION)==source.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION))
+                    throw new IllegalStateException("Unreached Flower animation reset failure");
+                expected=source.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION,source.unsignedByte(CdObjectState.ByteField.ANIMATION))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_FRAME,0).moveByte(CdObjectState.ByteField.ANIMATION_TIME,0);next=FlowerStep.RESET;
+            }
+            case FAILURE_TIMER -> {
+                if(!flowerAnimationSite(i) && i.step!=FlowerStep.RESET)throw new IllegalStateException("Unreached Flower timer failure");
+                expected=source.addByte(CdObjectState.ByteField.ANIMATION_TIME,-1);next=FlowerStep.TIMER;
+            }
+            case FAILURE_SPEED -> {
+                if(i.step!=FlowerStep.TIMER)throw new IllegalStateException("Flower speed read before its timer");
+                int animation=source.unsignedByte(CdObjectState.ByteField.ANIMATION);if(animation>=4)throw new IllegalStateException("Unrepresented Flower directory");
+                var table=flowerAssets.flower().animationTable();expected=source.moveByte(CdObjectState.ByteField.ANIMATION_TIME,table.unsignedByte((short)table.unsignedWord(2*animation)));next=FlowerStep.SPEED;
+            }
+            default -> throw new IllegalArgumentException("Unknown Flower publication");
+        }
+        if(!Objects.equals(expected,out))throw new IllegalStateException("Flower publication changed another native full64 byte");
+        i.pool.validateRestore(CdObjectPool.overlay(c.cut().pool(),List.of(out)));var images=new ArrayList<>(i.images);images.set(i.whole-32,CdAssetBytes.copyOf(out.copyBytes()));
+        i.readyImages=List.copyOf(images);i.readyStep=next;i.pendingPublication=c;
+    }
+    private void afterFlowerPublication(CdFlower.Publication c) {
+        var i=activeFlower;if(i==null || !flower.isCurrentCall(c) || i.pendingPublication!=c || i.completedOperation!=null)
+            throw new IllegalStateException("No exact Flower store completion");
+        verifyFlowerOwners(i);if(!flowerImagesEqual(i,i.readyImages))throw new IllegalStateException("Flower store differs from prebuilt full96 output");
+        i.images=i.readyImages;i.step=i.readyStep;i.readyImages=null;i.pendingPublication=null;i.ordinal++;i.completedOperation=c;
+    }
+    private void beforeFlowerCall(Object call) {
+        var i=requireFlower();if(!flower.isCurrentCall(call) || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null || flowerPort || drawingFlower || queuePort)
+            throw new IllegalStateException("No exact pending Flower source call");
+        long ordinal;CdObjectPlacementRuntime.Snapshot cut;CdObjectState source;
+        if(call instanceof CdFlower.FloorCall c) {
+            ordinal=c.ordinal();cut=c.cut();source=c.source();
+            if(i.pendingFloor!=null || i.floorCompleted || !(i.entry.routine()==0 && i.step==FlowerStep.INIT || i.entry.routine()==2 && i.step==FlowerStep.ENTRY))
+                throw new IllegalStateException("Unreached/repeated Flower floor probe");
+        } else if(call instanceof CdFlower.PrimaryAngleCall c) {
+            ordinal=c.ordinal();cut=c.cut();source=c.source();
+            if(i.pendingFloor==null || !flower.isCurrentCall(i.pendingFloor) || i.angles==0 && c.value()!=0 || (c.value()&~255)!=0)
+                throw new IllegalStateException("Flower angle outside its actual floor/prezero");
+        } else if(call instanceof CdFlower.DrawCall c) {
+            ordinal=c.ordinal();cut=c.cut();source=c.source();
+            if(i.pendingFloor!=null || i.step!=FlowerStep.ANIMATED || i.drawn)throw new IllegalStateException("Flower Draw skipped native animation");
+        } else throw new IllegalArgumentException("Wrong Flower call type");
+        if(ordinal!=i.ordinal+1)throw new IllegalStateException("Flower call ordinal differs");validateFlowerCut(i,cut,source);
+        if(call instanceof CdFlower.FloorCall)i.pendingFloor=call;else i.pendingCall=call;i.ordinal++;
+    }
+    private void afterFlowerCall(Object call) {
+        var i=requireFlower();if(!flower.isCurrentCall(call) || i.completedOperation!=null)throw new IllegalStateException("No exact Flower call completion");
+        if(call instanceof CdFlower.FloorCall c) {
+            if(i.pendingFloor!=call || i.pendingCall!=null || i.angles==0 || i.floorCompleted)throw new IllegalStateException("Flower floor omitted its native angle receipts");
+            i.floor=flower.currentFloorResult(c);
+            if(i.environment.movement().globals().primaryAngle()!=i.floor.primaryAngle())throw new IllegalStateException("Flower floor return differs from its completed real angle stores");
+            i.floorCompleted=true;i.pendingFloor=null;
+        } else {
+            if(i.pendingCall!=call || call instanceof CdFlower.PrimaryAngleCall && i.angleReceipt!=call
+                    || call instanceof CdFlower.DrawCall && (i.drawReceipt!=call || !i.drawn || !i.cleared))
+                throw new IllegalStateException("Flower port returned without its private once-only receipt");
+            i.pendingCall=null;
+        }
+        i.completedOperation=call;
+    }
+    private void requirePreparedFlowerReceipt(Object call) {
+        var i=requireFlower();if(!flower.isCurrentCall(call) || i.completedOperation!=null
+                || !(i.pendingPublication==call && i.readyImages!=null || i.pendingCall==call || i.pendingFloor==call))
+            throw new IllegalStateException("Flower observer returned without its prepared receipt");
+    }
+    private void consumeCompletedFlowerReceipt(Object call) {
+        var i=requireFlower();if(!flower.isCurrentCall(call) || i.completedOperation!=call || i.pendingPublication==call || i.pendingCall==call || i.pendingFloor==call)
+            throw new IllegalStateException("Flower observer returned without its completed receipt");
+        i.completedOperation=null;
+    }
+    private void commitFlowerPrimaryAngle(CdFlower.PrimaryAngleCall c) {
+        var i=requireFlower();if(!flower.isCurrentCall(c) || i.pendingCall!=c || i.pendingFloor==null || i.angleReceipt==c || flowerPort || drawingFlower || queuePort)
+            throw new IllegalStateException("No actual once-only Flower angle publication");
+        validateFlowerCut(i,c.cut(),c.source());var readyEnvironment=monitorAngleEnvironment(i.environment,c.value());
+        var readyShared=new CdPlayerFrameRuntime.SharedState(i.shared.owner(),readyEnvironment,i.shared.artState(),i.shared.paused(),i.shared.vIntClock());
+        var readyValues=preparedMonitorValues(FLOWER_PRIMARY_ANGLE);flowerPort=true;
+        try {
+            verifyFlower(i);frame.applyObjectPrimaryAngle(c.value());i.environment=frame.environment();i.shared=readyShared;values=readyValues;i.expectedValues=readyValues;
+            i.angleReceipt=c;i.angles++;verifyFlower(i);
+        } finally {flowerPort=false;}
+    }
+    private void drawFlower(CdFlower.DrawCall c) {
+        var i=requireFlower();if(!flower.isCurrentCall(c) || i.pendingCall!=c || i.drawReceipt!=null || i.drawn || flowerPort || drawingFlower || queuePort)
+            throw new IllegalStateException("No actual once-only Flower Draw");
+        var source=c.source();i.drawn=true;drawingFlower=true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifyFlower(i);if(!i.cleared)throw new IllegalStateException("Flower Draw omitted native BCLR7");i.drawReceipt=c;
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingFlower=false;}
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readFlowerDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireFlower();if(!drawingFlower || flowerPort || queuePort || !(i.pendingCall instanceof CdFlower.DrawCall) || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("No actual Flower queue read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var out=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),s.word(CdObjectState.WordField.X_FRACTION),
+                s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));verifyFlower(i);return out;}
+        finally {queuePort=false;}
+    }
+    private void writeFlowerOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireFlower();if(!drawingFlower || flowerPort || queuePort || !(i.pendingCall instanceof CdFlower.DrawCall) || ref.wholeIndex()!=i.whole || value || i.cleared)
+            throw new IllegalStateException("Only actual Flower Draw clears its bit7 once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
+        var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var images=logMosquiImages(pool);queuePort=true;
+        try {verifyFlower(i);i.pool.write(next);i.images=images;i.cleared=true;verifyFlower(i);}finally {queuePort=false;}
     }
 }

@@ -35,7 +35,7 @@ class TestSonicCdAct2ExplosionPointsWorld {
         var s=scene();var e=explosion(s);var p=points(s);var before=captureNative(s.h());
         assertSame(s.assets().objects().explosion(),e.assets().explosion());assertSame(s.assets().objects().points(),p.assets().points());
         assertEquals(0x21D714,e.assets().mappingsAddress());assertEquals(0x20AA8C,p.assets().mappingsAddress());
-        assertEquals(104,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(96,SonicCdGameModule.Act2LoadCall.MOSQUI_FM.ordinal());
+        assertEquals(106,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(96,SonicCdGameModule.Act2LoadCall.MOSQUI_FM.ordinal());
         assertEquals(97,SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY.ordinal());assertEquals(98,SonicCdGameModule.Act2LoadCall.POINTS_BODY.ordinal());
         var current=s.h().module().act2LoadState().section().residency();
         assertArrayEquals(s.assets().objects().decode(CdR12aProfile.Asset.ART_EXPLOSIONS).bytes().slice(0,32).copy(),CdR12aCameraArtResidency.readTile(current,0x680).copy());
@@ -86,12 +86,12 @@ class TestSonicCdAct2ExplosionPointsWorld {
         replayNext(s);assertArrayEquals(new byte[64],s.placement().pool().state(127).copyBytes());assertEquals(List.of(SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY),familyCalls(s));
     }
 
-    @Test void badnikDoneConvertsOnlyIdAndRoutineAndUnboundFlowerWaitsUntilNextPass() throws Exception {
+    @Test void badnikDoneConvertsOnlyIdAndRoutineAndFlowerWaitsUntilNextPass() throws Exception {
         var s=scene();var source=image(s,127,0x18,4).moveByte(ROUTINE_2,0).moveByte(SUBTYPE,1);seed(s,source);
         replayNext(s);assertEquals(source.moveByte(ID,0x1F).moveByte(ROUTINE,0),s.placement().pool().state(127));
         assertEquals(List.of(SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY),familyCalls(s));beforeForward(s);
-        var failure=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(s.h(),neutral()));
-        assertEquals(SonicCdGameModule.Act2Boundary.DYNAMIC_OBJECTS,failure.boundary());assertEquals(0x1F,s.placement().pool().state(127).id());retired(s);
+        replayNext(s);assertEquals(0x1F,s.placement().pool().state(127).id());assertEquals(2,s.placement().pool().state(127).routine());
+        assertTrue(rawCalls(s).contains(SonicCdGameModule.Act2LoadCall.FLOWER_BODY));assertFalse(familyCalls(s).contains(SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY));retired(s);
     }
 
     @Test void pointsByteTimerWrapAndCountdownUseOnlyNativeWordYAndKeepEveryFraction() throws Exception {
