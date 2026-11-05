@@ -329,7 +329,11 @@ class TestSonic3kLevelLoading {
         assertEquals(0x1640, sprite.getCentreX());
         assertEquals(0x03AC, sprite.getCentreY());
         assertEquals(0x15A0, camera.getX() & 0xFFFF);
-        assertEquals(0x0240, camera.getY() & 0xFFFF);
+        // Fresh Level: Get_LevelSizeStart clamps to $320, then the initial
+        // DeformBgLayer moves the still-grounded body by $6 before LevelSetup.
+        // loc_1C202 (sonic3k.asm:38601-38613) subtracts $FFFF+1 as a word:
+        // zero cannot borrow, so the native final camera is $326, not $320.
+        assertEquals(0x0326, camera.getY() & 0xFFFF);
     }
 
     @Test

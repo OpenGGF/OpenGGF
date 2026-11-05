@@ -1,13 +1,15 @@
 # Level test coverage backlog
 
-MHZ sanctuary handoff blocker (2026-11-05): the
+MHZ sanctuary initial camera (2026-11-05): the
 [MHZ1 boundary record](../architecture/validation/levels/s3k-mhz-act1.md#run-segment-sanctuary-camera-blocker-2026-11-05)
-separates fresh `Get_LevelSizeStart` camera `$0320` from final native `$0326`
-and results-backdrop `$0240`. One bounded ROM observer confirms the fresh
-overwrite and preserved checkpoint/reentry/fraction controls; the corrected
-final-camera discriminator remains red. No runtime patch or replay improvement
-is delivered, and the other ten MHZ run fronts and inherited route/configuration
-obligations remain open.
+separates fresh `Get_LevelSizeStart` camera `$0320`, native initial movement to
+`$0326`, and results-backdrop `$0240`. The scoped native initial dispatch repairs
+that camera error on four recorded shrine handoffs, with no added raw errors or
+coverage changes in the matched five-replay control. All four still stop at the
+existing player-routine mismatch on their entry rows; the MHZ3 camera frontier
+and the other ten MHZ fronts remain separate. Initial-load, lock, copy/fraction,
+checkpoint/results and rewind checks are bounded component evidence; inherited
+route/configuration and native presentation obligations remain open.
 
 DDZ recorded entry (2026-11-04): the [DDZ matrix](../architecture/validation/levels/s3k-ddz.md)
 now records a green strict Sonic+Tails Zone0c replay from the native entry camera
