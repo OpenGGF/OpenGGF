@@ -178,12 +178,13 @@ Unreleased. The earlier development themes remain in
   synchronous publications, including unchanged values and throwing wrappers; Pata
   retains reached animation-fault writes without duplicating successful transitions.
   Actual later-route EGL pictures now retain selected Sonic pixels and full/course
-  pixel replay through10866. Cached Tamabboh and FloatBlock now share existing
+  pixel replay through the later ordinary route. Cached Tamabboh and FloatBlock now share existing
   art, terrain, Solid and Frame owners; completed producer prefixes and ordinals
   guard the next publication, including skipped no-op and throwing callbacks.
   Ordinary Right extends through their native entry with full/course replay to
   the final successful cut. Checkpoint views retain the live native mapping and
-  animation addresses over existing art. Its World binding and later Act2 traversal
+  animation addresses over existing art; Collapse Platform views retain Act 2's
+  distinct frame and size tables. Their World bindings and later Act2 traversal
   remain open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact

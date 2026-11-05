@@ -238,7 +238,10 @@ The next165 selection passes164 cases, including all25 Tamabboh/Float World chec
 and has one diagnostic observer error at the next unbound Checkpoint13/11034,
 with no skips. The changed positive route method then passes separately through
 11033 with full/course10866→10867 and11032→11033 replay. This is not a green165
-or new11033 pixel comparison. Checkpoint saved-data carry, broader object binding, sustained
+or a whole-act certificate. Subsequent57 passes without skips: Act2-specific
+Collapse source116 data56 and actual selected-Sonic EGL/pixel replay1 through
+11033, preserving the10778/10866 checks. No matched native screenshot is claimed.
+Checkpoint saved-data carry, broader object binding, sustained
 Act2 traversal, later acts and JP/EU parity are unfinished.
 The first-act matrix remains partial as well.
 

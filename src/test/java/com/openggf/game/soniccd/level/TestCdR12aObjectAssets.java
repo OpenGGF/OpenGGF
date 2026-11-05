@@ -137,6 +137,12 @@ ANI_FLOAT_BLOCK a204 30 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc3
 MAP_SPR_FLOAT_BLOCK a222 76 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e
 ANI_CHECKPOINT 1d8a6 6 9034c893821cd15055e34cddb2388653690958995d7118f7c78896e6ccb5c551
 MAP_SPR_CHECKPOINT 1d8ac 66 709d0648dfb32425f46281c236ededaef80750fc6250062f3bce77f9427a446f
+MAP_SPR_COLLAPSE_PLATFORM_1 c348 118 e11e6733195a4700631f68f369278f7335279b756d615bd64b1ead95e6dcca12
+COLLAPSE_PLATFORM_SIZES_1 c3be 24 9f05c5080c46f62408a9b56946844ef02d6f5b41cf9e1acb5f6b561cd83aafb1
+MAP_SPR_COLLAPSE_PLATFORM_3 c3d6 62 77e4add5588163b238981a19f8715f1033c2c07ea2e639c223486ecc1c8e7f2c
+MAP_SPR_COLLAPSE_PLATFORM_2 c414 286 be1266acacef995f34fa47ff432a198d5bfeddc6af3484949a0f26348d04cb2b
+COLLAPSE_PLATFORM_SIZES_2 c532 24 c0069f95af27ab8e2b9913aab0991fe10e39feaf4bcaed16e3c7e9595a5b995a
+MAP_SPR_COLLAPSE_PLATFORM_4 c54a 42 076fa0be74347e48024976fe775b0b2bc254fa2a1d8b358588406bf48c23126a
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -206,9 +212,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete110RowManifestPreservesTheOriginal108AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete116RowManifestPreservesTheOriginal110AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(110, CdR12aProfile.Asset.values().length); assertEquals(110, rows.size());
+        assertEquals(116, CdR12aProfile.Asset.values().length); assertEquals(116, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -704,6 +710,87 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_CHECKPOINT).copy(),4,script,1,12));
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_CHECKPOINT).copy(),4,o.view(ANI_CHECKPOINT).copy(),1,11));
         assertThrows(NullPointerException.class,()->o.view(null));
+    }
+
+    @Test void collapseUsesTheActualActTwoDataBlockAndAllParentChildAndSizeOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(110,MAP_SPR_COLLAPSE_PLATFORM_1.ordinal());assertEquals(115,MAP_SPR_COLLAPSE_PLATFORM_4.ordinal());
+        assertEquals(0x20C030,o.view(OBJECT_INDEX).unsignedLong((0x20-1)*4));
+        int[][] pc={{0xC072,0xC348,0x43},{0xC076,0xC3BE,0x45},{0xC080,0xC414,0x43},{0xC084,0xC532,0x45},{0xC164,0xC3BE,0x4D},{0xC25C,0xC532,0x4D}};
+        for(var row:pc) {var raw=CdAssetBytes.copyOf(file.readFile(row[0],4));assertEquals(row[2],raw.unsignedByte(0));assertEquals(0xFA,raw.unsignedByte(1));assertEquals(row[1],row[0]+2+(short)raw.unsignedWord(2));}
+        assertEquals("237c0020c3d60004",hex.formatHex(file.readFile(0xC1D6,8)));
+        assertEquals("237c0020c54a0004",hex.formatHex(file.readFile(0xC2DE,8)));
+        assertEquals("317c44be0002",hex.formatHex(file.readFile(0xC06C,6)));
+        for(int at:new int[]{0xC1D0,0xC2D2})assertEquals("337c44be0002",hex.formatHex(file.readFile(at,6)));
+        var ordered=List.of(MAP_SPR_COLLAPSE_PLATFORM_1,COLLAPSE_PLATFORM_SIZES_1,MAP_SPR_COLLAPSE_PLATFORM_3,MAP_SPR_COLLAPSE_PLATFORM_2,COLLAPSE_PLATFORM_SIZES_2,MAP_SPR_COLLAPSE_PLATFORM_4);
+        int at=0xC348;for(var key:ordered){assertEquals(at,key.fileOffset());at+=key.length();}assertEquals(0xC574,at);
+        assertEquals("2c75d993368d72994b799b1066ab51d710c3b5655ef17cdbb9ea61a6694d4425",CdR11aProfile.sha256(file.readFile(0xC348,556)));
+    }
+
+    @Test void actualActTwoCollapseHasOneTwoSevenTwoStaticRootsAndKeepsOddBodiesAndLiteralPadding() throws Exception {
+        var o=retail().terrain().objects();var visuals=List.of(o.collapsePlatform1(),o.collapsePlatform2(),o.collapsePlatform3(),o.collapsePlatform4());
+        var raw=List.of(MAP_SPR_COLLAPSE_PLATFORM_1,MAP_SPR_COLLAPSE_PLATFORM_2,MAP_SPR_COLLAPSE_PLATFORM_3,MAP_SPR_COLLAPSE_PLATFORM_4);
+        var roots=List.of(List.of(2),List.of(4,165),List.of(14,20,26,32,38,44,50),List.of(4,25));
+        var counts=List.of(List.of(23),List.of(32,24),List.of(1,1,1,1,1,1,2),List.of(4,3));
+        int[] lengths={118,286,62,42},maximum={41,37,41,37};
+        for(int i=0;i<visuals.size();i++) {var visual=visuals.get(i);assertEquals(0,visual.mappingTableOffset());assertTrue(visual.animations().isEmpty());
+            assertEquals(lengths[i],visual.mappings().length());assertArrayEquals(o.view(raw.get(i)).copy(),visual.mappings().copy());
+            assertEquals(roots.get(i),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+            assertEquals(counts.get(i),visual.mappingFrames().stream().map(f->f.pieces().size()).toList());
+            assertEquals(maximum[i],visual.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+            for(var frame:visual.mappingFrames())for(var piece:frame.pieces())assertTrue(piece.tileOffset()+piece.tileCount()<=57);
+        }
+        assertEquals(116,visuals.getFirst().mappingFrames().getFirst().bytes().length());
+        assertEquals(0,visuals.get(2).mappings().unsignedByte(61));assertEquals(0,visuals.get(3).mappings().unsignedByte(41));
+        assertEquals(121,visuals.get(1).mappingFrames().get(1).bytes().length(),"the second wide body starts at the real odd165 root");
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(MAP_SPR_COLLAPSE_PLATFORM_2).copy(),6,57));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(MAP_SPR_COLLAPSE_PLATFORM_4).copy(),6,57));
+    }
+
+    @Test void collapseRawSizeScriptsRetainNegativeEntriesFiniteAliasesAndExactReachedExtents() throws Exception {
+        var o=retail().terrain().objects();var one=o.view(COLLAPSE_PLATFORM_SIZES_1);var two=o.view(COLLAPSE_PLATFORM_SIZES_2);var hex=java.util.HexFormat.of();
+        assertArrayEquals(hex.parseHex("00020403ffff000000010203030400050505050606060606"),one.copy());
+        assertArrayEquals(hex.parseHex("0004000e0702000000000000000007010101010101010101"),two.copy());
+        assertEquals(2,one.unsignedWord(0));assertEquals(4,one.unsignedByte(2));assertEquals(3,one.unsignedByte(3));assertEquals(0xFF,one.unsignedByte(4));assertEquals(0xFF,one.unsignedByte(5));
+        assertEquals(24,2+2+5*4,"native ledge header and its twenty raw piece selectors end at the owned24-byte boundary");
+        assertEquals(List.of(4,14),List.of(two.unsignedWord(0),two.unsignedWord(2)));
+        for(int frame=0;frame<2;frame++) {int body=two.unsignedWord(frame*2);assertEquals(7,two.unsignedByte(body));assertEquals(frame==0?2:1,two.unsignedByte(body+1));
+            for(int column=0;column<8;column++)assertEquals(frame,two.unsignedByte(body+2+column));
+            assertEquals(frame==0?14:24,body+2+8);
+        }
+        assertEquals(24,one.length());assertEquals(24,two.length());
+        assertThrows(IndexOutOfBoundsException.class,()->two.unsignedByte(24));
+    }
+
+    @Test void collapseActTwoFactoryBorrowsCachedVisualsRawScriptsAndOnlyItsOwnValidatedSourceShape() throws Exception {
+        var o=retail().terrain().objects();var readers=o.readerProfiles();var assets=com.openggf.game.soniccd.objects.CdCollapsePlatform.Assets.fromAct2Assets(o);
+        assertSame(o.collapsePlatform1(),assets.collapsePlatform1());assertSame(o.collapsePlatform2(),assets.collapsePlatform2());
+        assertSame(o.collapsePlatform3(),assets.collapsePlatform3());assertSame(o.collapsePlatform4(),assets.collapsePlatform4());
+        assertSame(o.view(COLLAPSE_PLATFORM_SIZES_1),assets.sizes1());assertSame(o.view(COLLAPSE_PLATFORM_SIZES_2),assets.sizes2());
+        assertEquals(0x20C348,assets.mappings1());assertEquals(0x20C414,assets.mappings2());assertEquals(0x20C3D6,assets.mappings3());assertEquals(0x20C54A,assets.mappings4());
+        assertEquals(10,com.openggf.game.soniccd.objects.CdCollapsePlatform.Assets.class.getRecordComponents().length);
+        assertSame(readers,o.readerProfiles());assertEquals(35,readers.size());assertEquals(57*32,o.readerProfile(ART_PLATFORM).outputBytes());
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdCollapsePlatform.Assets.fromAct2Assets(null));
+        var foreign=org.mockito.Mockito.mock(CdR12aObjectAssets.class);org.mockito.Mockito.when(foreign.identity()).thenReturn(o.identity());
+        org.mockito.Mockito.when(foreign.collapsePlatform1()).thenReturn(o.collapsePlatform1());org.mockito.Mockito.when(foreign.collapsePlatform2()).thenReturn(o.collapsePlatform1());
+        org.mockito.Mockito.when(foreign.collapsePlatform3()).thenReturn(o.collapsePlatform3());org.mockito.Mockito.when(foreign.collapsePlatform4()).thenReturn(o.collapsePlatform4());
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdCollapsePlatform.Assets.fromAct2Assets(foreign));
+        org.mockito.Mockito.when(foreign.collapsePlatform2()).thenReturn(o.collapsePlatform2());
+        org.mockito.Mockito.when(foreign.view(COLLAPSE_PLATFORM_SIZES_1)).thenReturn(o.view(COLLAPSE_PLATFORM_SIZES_1));
+        org.mockito.Mockito.when(foreign.view(COLLAPSE_PLATFORM_SIZES_2)).thenReturn(o.view(COLLAPSE_PLATFORM_SIZES_2).slice(0,23));
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdCollapsePlatform.Assets.fromAct2Assets(foreign));
+    }
+
+    @Test void collapseNewViewsRemainDetachedOriginalDataWithoutNewArtReadersOrPaddingRepairs() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();
+        for(var key:new CdR12aProfile.Asset[]{MAP_SPR_COLLAPSE_PLATFORM_1,COLLAPSE_PLATFORM_SIZES_1,MAP_SPR_COLLAPSE_PLATFORM_3,MAP_SPR_COLLAPSE_PLATFORM_2,COLLAPSE_PLATFORM_SIZES_2,MAP_SPR_COLLAPSE_PLATFORM_4}) {
+            var bytes=o.view(key);var before=bytes.copy();var changed=bytes.copy();changed[0]^=1;assertSame(bytes,o.view(key));assertArrayEquals(before,o.view(key).copy());
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(key));byte[] corrupt=file.readFile(0,262144);corrupt[key.fileOffset()]^=1;
+            assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        var map=o.view(MAP_SPR_COLLAPSE_PLATFORM_4).copy();map[41]=1;
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(map,2,57));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(MAP_SPR_COLLAPSE_PLATFORM_3).copy(),7,40));
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }

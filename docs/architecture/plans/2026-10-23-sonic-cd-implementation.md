@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual11033 pixels and Act2-specific Collapse views
+
+R12A Collapse uses its own complete556B native data blockC348..C574. Actual
+mapping frame counts are1/2/7/2, not Act1's1/6/7/6; both size views are24B. The
+six complete views append110→116 in native source order, with cached static
+visuals and a same-source typed Assets factory. The existing generic body,
+decoder,35 art readers,19 PLCs and current windows remain unchanged. Source
+qualification does not admit World dispatch or certify a Collapse interaction.
+
+The existing later-controller EGL case retains10778/10866 and extends to actual
+11032→11033. Complete captured values precede all pixel/forward work and match
+after both full/course replay. Actual selected Sonic omission changes all three
+endpoint images; source/Frame/World/generation, planes/palette/current inputs,
+renderer/atlas and installed entry identities remain intact. No actor/global/art
+seed or runtime call-index branch was added. It does not execute11034 or assert
+a named enemy/Float must be visible.
+
+All57 cases pass without failures/errors/skips (source56+changed EGL1), source
+`4cdfd5e78b56f4b59ca3cdba546e277c75190b6c968636eaf3b58476702eac29`,
+03:38:38.582396–03:38:48.556755Z. Normal precompile1m38s, shared admission223s;
+execution9.974359s, user wait0, other overhead unmeasured. Exact identities,
+properties and four XML hashes inspected;8own reports consumed under lock.
+Actual ENGINE11033 output was exported after complete cleanup and inspected:
+320×224/16251B/36colours, SHA256
+`bd6bb620dff54c4c24d9a9bcdad21ec550630c18b6cbc72718421101da819b07`.
+Sonic is visible in the later orange loop/cave image. It is OpenGGF output, not
+an emulator reference or whole-act/regional/native-image parity claim. Quiet
+visual delivery remains queued for07:00. Checkpoint saved-state carry/World and
+the independently authored Wall binding remain external work.
+
 ## 5 November 2026 — live Checkpoint source views
 
 Original R12A's actual Checkpoint Init/Ball/Animate instructions select mapping

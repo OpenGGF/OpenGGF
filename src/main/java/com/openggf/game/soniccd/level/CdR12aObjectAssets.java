@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint, collapsePlatform1, collapsePlatform2, collapsePlatform3, collapsePlatform4;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -284,6 +284,23 @@ public final class CdR12aObjectAssets {
         if (checkpoint == null) checkpoint = CdObjectVisualAssets.decode(view(MAP_SPR_CHECKPOINT).copy(), 4,
                 view(ANI_CHECKPOINT).copy(), 1, 12);
         return checkpoint;
+    }
+    /** Actual Act2 Present ledge/column/piece data: all four views use the existing57-tile Platform source. */
+    public synchronized CdObjectVisualAssets collapsePlatform1() {
+        if (collapsePlatform1 == null) collapsePlatform1 = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_COLLAPSE_PLATFORM_1).copy(), 1, 57);
+        return collapsePlatform1;
+    }
+    public synchronized CdObjectVisualAssets collapsePlatform2() {
+        if (collapsePlatform2 == null) collapsePlatform2 = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_COLLAPSE_PLATFORM_2).copy(), 2, 57);
+        return collapsePlatform2;
+    }
+    public synchronized CdObjectVisualAssets collapsePlatform3() {
+        if (collapsePlatform3 == null) collapsePlatform3 = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_COLLAPSE_PLATFORM_3).copy(), 7, 57);
+        return collapsePlatform3;
+    }
+    public synchronized CdObjectVisualAssets collapsePlatform4() {
+        if (collapsePlatform4 == null) collapsePlatform4 = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_COLLAPSE_PLATFORM_4).copy(), 2, 57);
+        return collapsePlatform4;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

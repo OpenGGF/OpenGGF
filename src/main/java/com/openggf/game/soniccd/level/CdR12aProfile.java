@@ -115,7 +115,11 @@ public final class CdR12aProfile {
         ANI_TAMABBOH_MISSILE(0xB890, 8), MAP_SPR_TAMABBOH_MISSILE(0xB898, 42),
         ANI_FLOAT_BLOCK(0xA204, 30), MAP_SPR_FLOAT_BLOCK(0xA222, 76),
         // Checkpoint Init/Ball/Animate live operands select these complete original R12A includes, not equal duplicates.
-        ANI_CHECKPOINT(0x1D8A6, 6), MAP_SPR_CHECKPOINT(0x1D8AC, 66);
+        ANI_CHECKPOINT(0x1D8A6, 6), MAP_SPR_CHECKPOINT(0x1D8AC, 66),
+        // Act 2 Present's complete native collapse block: real1/2/7/2 maps, not Act1's1/6/7/6 shape.
+        MAP_SPR_COLLAPSE_PLATFORM_1(0xC348, 118), COLLAPSE_PLATFORM_SIZES_1(0xC3BE, 24),
+        MAP_SPR_COLLAPSE_PLATFORM_3(0xC3D6, 62), MAP_SPR_COLLAPSE_PLATFORM_2(0xC414, 286),
+        COLLAPSE_PLATFORM_SIZES_2(0xC532, 24), MAP_SPR_COLLAPSE_PLATFORM_4(0xC54A, 42);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,110 raw descriptors,35 finite art readers,
+The retained terrain/player pair,116 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -31,7 +31,7 @@ The retained terrain/player pair,110 raw descriptors,35 finite art readers,
 | BOSS | No Act2 boss route reached. | Unassessed. |
 | LIFE | Original MAINVARS score/lives/bank carry follows actual writers; normal load clears its own fields. | Initial handoff only. Death, checkpoint capture/respawn, repeated restart and persistence breadth remain open. |
 | REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719, Boulder10763→10764, Anton10778→10779,10865→10866, Tamabboh/Float10866→10867 and11032→11033. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
-| DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; actual10778/10866 selected Sonic omission and full/course pixel replay pass on EGL. Matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
+| DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; actual10778/10866/11033 selected Sonic omission and full/course pixel replay pass on EGL. Matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
 | CLEANUP | Reject queued capture/restore/direct scroll/service/recursive overlay without closing the healthy producer. Rejected active-atlas close retains its ledger; cleanup retry retires all488 actually selected uploads and preserves another producer. | Actual EGL case.488 is selected uploads, not the1597-tile sparse current window or a whole-act completion metric. |
 | EXIT | No Act2 completion or outgoing programme reached. | Open. |
 
@@ -135,6 +135,23 @@ Production is unchanged. Exact properties/XML hashes inspected;8own reports
 consumed. Neither the earlier157 nor diagnostic165 becomes a green run.
 
 ## Exact qualification
+
+The next57 selection passes without failures/errors/skips: Source116 data56 and
+the extended actual-controller EGL1. R12A Collapse metadata selects its own
+complete556B blockC348..C574: maps1/2/3/4 have1/2/7/2 roots, not Act1's1/6/7/6,
+and both size views are24B. Six views append110→116; existing generic body/decoder,
+35 readers/19 PLCs and current windows remain exact. A typed Assets factory adds
+no World dispatch or new capture owner. Actual Collapse interaction remains open.
+
+The EGL method retains10778/10866 and also crosses11032→11033 with complete
+before/after full/course values and actual pixels. Primary omission changes all
+three endpoint images; no named badnik/Float visibility is inferred. Source is
+`4cdfd5e78b56f4b59ca3cdba546e277c75190b6c968636eaf3b58476702eac29`,
+03:38:38.582396–03:38:48.556755Z,223s admission/1m38s precompile. All57 exact
+identities/properties/four XML hashes inspected;8own reports consumed. Actual
+320×224 ENGINE11033 output was written after complete cleanup and inspected;
+SHA256`bd6bb620dff54c4c24d9a9bcdad21ec550630c18b6cbc72718421101da819b07`.
+No native-image comparison, completed Checkpoint11034 or whole-act parity follows.
 
 Checkpoint's actual Init/Ball/Animate operands independently select complete views
 21D8AC/66B and21D8A6/6B, not equal unreferenced copies. Cached4frame/1script/12tile

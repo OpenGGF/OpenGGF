@@ -7,6 +7,8 @@ import com.openggf.game.soniccd.CdNativeFile;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
@@ -134,6 +136,34 @@ public final class CdCollapsePlatform {
                     objects.view(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2).range().nativeAddress(),
                     objects.view(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3).range().nativeAddress(),
                     objects.view(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4).range().nativeAddress());
+        }
+
+        /** Actual original-USA Act2 data only; no current patterns, Solid execution or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity=Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12A
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("Collapse Act2 assets require authenticated original USA R12A Word RAM");
+            var map1=owner.collapsePlatform1();var map2=owner.collapsePlatform2();
+            var map3=owner.collapsePlatform3();var map4=owner.collapsePlatform4();
+            var maps=List.of(map1,map2,map3,map4);int[] counts={1,2,7,2},lengths={118,286,62,42};
+            for(int i=0;i<maps.size();i++) {
+                var map=maps.get(i);
+                if(map.mappingTableOffset()!=0 || map.mappingFrames().size()!=counts[i]
+                        || map.mappings().length()!=lengths[i] || !map.animations().isEmpty())
+                    throw new IllegalArgumentException("Collapse Act2 requires its complete1/2/7/2 static mapping includes");
+            }
+            var sizes1=owner.view(CdR12aProfile.Asset.COLLAPSE_PLATFORM_SIZES_1);
+            var sizes2=owner.view(CdR12aProfile.Asset.COLLAPSE_PLATFORM_SIZES_2);
+            if(sizes1.length()!=24 || sizes2.length()!=24)
+                throw new IllegalArgumentException("Collapse Act2 requires both actual24-byte size directories/scripts");
+            return new Assets(map1,map2,map3,map4,sizes1,sizes2,
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_COLLAPSE_PLATFORM_1).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_COLLAPSE_PLATFORM_2).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_COLLAPSE_PLATFORM_3).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_COLLAPSE_PLATFORM_4).nativeAddress());
         }
 
         /**

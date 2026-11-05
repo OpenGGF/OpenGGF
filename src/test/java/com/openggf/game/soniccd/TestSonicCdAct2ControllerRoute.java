@@ -297,10 +297,20 @@ class TestSonicCdAct2ControllerRoute {
                 step(h, right);
                 assertLaterRouteOwners(h, frame, source, world, generation + 1);
             }
-            imageForExport = renderReplayNextRight(h, right, 10866).clone();
+            renderReplayNextRight(h, right, 10866);
+            assertLaterRouteOwners(h, frame, source, world, generation + 1);
+            for (int call = 10867; call <= 11032; call++) {
+                step(h, right);
+                assertLaterRouteOwners(h, frame, source, world, generation + 1);
+                if (call == 10867) {
+                    assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TAMABBOH_BODY));
+                    assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.FLOAT_BLOCK_BODY));
+                }
+            }
+            imageForExport = renderReplayNextRight(h, right, 11033).clone();
             assertLaterRouteOwners(h, frame, source, world, generation + 1);
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778 and10866; selected Sonic omission changes both endpoint pictures; no forward call10867.");
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866 and11033; selected Sonic omission changes all three endpoint pictures; no forward call11034.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
     }
@@ -399,10 +409,10 @@ class TestSonicCdAct2ControllerRoute {
             int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
             image.setRGB(x, y, argb);
         }
-        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-10866.png").toFile()))
+        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-11033.png").toFile()))
             throw new java.io.IOException("PNG writer unavailable");
-        Files.writeString(directory.resolve("ENGINE-act2-controller-call-10866.txt"),
-                "ENGINE: OpenGGF original-USA controller-only route, actual completed call10866.\n"
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-11033.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call11033.\n"
                 + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
                 + "Full/course complete-value and pixel replay; selected Sonic renderer-only omission contrast.\n"
                 + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");
