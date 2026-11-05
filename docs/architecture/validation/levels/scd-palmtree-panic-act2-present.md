@@ -585,3 +585,49 @@ eight installed source pins, Java25/environment and fresh XML hashes/mtimes were
 checked; ten owned reports consumed. No live World26 dispatch, selected pixels,
 natural Spikes visit, native/regional parity or route advance is certified. The
 actual route still needs the native mechanism at the local cliff near16C0.
+
+## Ten-ring Monitor Items and lower tunnel approach — 5 November
+
+The same retained `CdRingGlobals` eight-field value now projects the native Monitor
+`.GiveRings` WORD+10 reward. Unsigned 100/200 thresholds, old BSET bit priority,
+at-most-one wrapping life/HUD-life byte, HUD-rings OR1 and unrelated fields match
+`Monitor and Time Post/Main.asm:490–517`. Original single-ring collection and all
+unbound Item constructors retain their earlier behavior. The opt-in RingCall uses
+original producer/preparation/adoption/completion receipts. Public data cannot
+replace an actual current invocation or no-op a publication. Actual World Values
+publish rings before the immutable typed FM_RING/SCMD_YESSFX request; no new Frame,
+mutable bank, capture partition, service, current-art source or audio synthesis.
+
+Original 171-case/nine-class qualification on source `77cf41b0…3968f9f` passes 165,
+with six new World fixture assertions failing before the reward. Native selector8
+HUD had already consumed dirty flags and optionally clamped the requested ring
+refresh. The test-only correction models that earlier owner; the raw WORD-wrap
+fixture explicitly skips HUD refresh. Refreshed identical 20 World cases all pass
+on `0cbbc83e…7f045ca`, with all production and other test pins unchanged. Thus 171
+distinct cases are qualified across these sources, including the 14-case raw
+reward/kernel controls, 104 legacy Item cases, 27 Shield World cases and four
+precise count consumers; there is no single green 171 run or full-suite claim.
+All identities, exact selections, twelve pins, environment, source stability and
+fresh XML were checked. Eighteen original and two refreshed owned reports were
+consumed after custody. Original preparation102s/admission202s/execution203.148s;
+refreshed preparation36.479s/admission0/execution78.334s, user wait0, other overhead
+unmeasured. Static review of seven frozen inputs found no actionable P1/P2.
+
+The same qualified run's two long controller/replay/EGL cases return13264, keep all
+14 earlier Sonic pixel endpoints and add the fifteenth. Full/course complete-state
+replay includes the native backtrack jump edge13194→13195, release13198→13199 and
+last positive edge13263→13264. The original Shield13098 and Stars12887 omissions
+remain. The fixture stops before the later reward; its coordinate assertions are
+comparison only and supply no actor, camera, object, terrain, art or clock state.
+
+A separate ordinary continuation then actually awards 23→33 rings at13265 with the
+typed FM request, acquires Path07/whole79 at13277 (routine2→4, control81, native
+snap with fractions retained, FM91), and reaches its real speed/Got call at13278.
+Controlled travel returns13364 at6096/656. The next13365 stops in DYNAMIC_OBJECTS.
+One read-only failed-loop pool diagnostic identifies the sole unbound ID0B at
+whole41,6096/675,routine0, consistent with Door67's earlier-slot splash allocation.
+These partial failed-loop values are explicitly not a returned cut. Exact native
+splash metadata/body admission is the next target; prepared Spikes26 is not this
+frontier. The observed continuation has no newer full/course or pixel certification
+beyond the qualified13264. No complete-act, native-image, regional or audio/timing
+parity is claimed.

@@ -97,9 +97,9 @@ class TestSonicCdAct2MonitorItemShieldWorld {
     }
 
     @Test void unsupportedRewardKeepsRoutineFourWord29WithoutShieldStores() throws Exception {
-        var s=scene();seedItem(s,127,2,1,0);var before=raw(s);var contact=contact(s);
+        var s=scene();seedItem(s,127,2,3,0);var before=raw(s);var contact=contact(s);
         var failure=assertThrows(CdMonitorItem.UnsupportedMonitorItem.class,()->next(s));
-        assertEquals(CdMonitorItem.UnsupportedBoundary.REWARD_RINGS,failure.boundary());
+        assertEquals(CdMonitorItem.UnsupportedBoundary.REWARD_INVINCIBILITY,failure.boundary());
         assertEquals(4,s.placement().pool().state(127).routine());assertEquals(29,s.placement().pool().state(127).word(MONITOR_ITEM_DELETE));
         assertArrayEquals(before.slice(5*64,64).copy(),raw(s).slice(5*64,64).copy());assertEquals(contact.shield(),contact(s).shield());
         assertTrue(ledger(s).stream().noneMatch(SonicCdGameModule.PastMonitorItemShieldFm.class::isInstance));retired(s);
@@ -254,7 +254,7 @@ class TestSonicCdAct2MonitorItemShieldWorld {
     }
 
     @Test void exactAppendOnlyEnumAndRetiredFacadeCannotCreateASecondOwner() throws Exception {
-        var s=scene();assertEquals(119,SonicCdGameModule.Act2LoadCall.values().length);
+        var s=scene();assertEquals(120,SonicCdGameModule.Act2LoadCall.values().length);
         assertEquals(111,SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT.ordinal());assertEquals(114,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY.ordinal());
         var bank=(CdReservedObjectBank)actualField(s.visit(),"timeStarBank");assertNull(actualField(bank,"slots"));
         assertThrows(IllegalStateException.class,bank::capture);assertSame(actualField(s.visit(),"timeStarsAssets"),shield(s).assets());

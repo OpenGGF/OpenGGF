@@ -346,6 +346,16 @@ prefix factory reuse existing Std art and common Solid/Hurt code. All prior135
 ranges/35readers/19PLCs remain; one new range and two count consumers are reconciled.
 This adds no live World26 dispatch, observed Spikes visit or route advancement.
 
+Act2 ten-ring Monitor Items now use the existing ring-global owner with native
+WORD/byte wrap, BSET threshold priority and original live Item receipts. Original
+171-case selection passed165 with six new earlier-HUD fixture failures; the same20
+World cases pass after a test-only correction, production unchanged. Permanent
+controller/replay and fifteen Sonic EGL endpoints qualify13264. A separate ordinary
+continuation actually awards rings13265 and acquires/travels the lower Tunnel Path
+from13277 through13364; first13365 is unbound door-splash ID0B/whole41. Those later
+observations are not newer pixel/full-course certification. The Act2 matrix records
+exact source and execution limits; no native/regional/full-act completion claim.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

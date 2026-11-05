@@ -311,7 +311,7 @@ final class SonicCdAct2LoadingVisit {
         var monitorAssets=CdMonitor.Assets.fromAct2Assets(objectAssets);
         monitorItemAssets=monitorAssets;
         monitorItem=CdMonitorItem.withWorldOwner(placement,monitorItemAssets,this::unownedItemShoes,
-                this::awardItemShield,this::drawMonitorItem,new CdMonitorItem.DispatchObserver() {
+                this::awardItemShield,this::awardItemRings,this::drawMonitorItem,new CdMonitorItem.DispatchObserver() {
             public void beforeOperation(Object c) { beforeItemShield(c); }
             public void afterOperation(Object c) { afterItemShield(c); }
             public void failedOperation(Object c,Throwable t) { failedItemShield(c,t); }
@@ -8640,12 +8640,13 @@ final class SonicCdAct2LoadingVisit {
         final Object world; final long generation; final CdObjectDrawQueue.CameraWords camera;
         final int entryRoutine,entryAnimation;
         CdObjectPool.Snapshot expectedPool=placed.pool(),readyPool;
-        Values expectedValues=values,readyValues,awardContact,awardReserved,awardObserved;
+        Values expectedValues=values,readyValues,awardContact,awardReserved,awardObserved,awardRing;
         List<SonicCdGameModule.PastSound> ledger=sounds,awardLedger;
         Object pending,completed,preparedReceipt,adoptionReceipt,completionReceipt;
         CdReservedObjectBank.Image awardImage;
         CdMonitorItem.Result itemResult;
         CdMonitorItem.ShieldAwardResult awardResult;
+        CdMonitorItem.RingAwardResult ringAwardResult;
         CdPlayerMovement.RawObjectMoveResult motion;
         long ordinal; int itemStage,nextItemStage,initStores,readStage,awardStage;
         Integer mappingRelative,readValue,lastFieldValue;
@@ -8815,6 +8816,24 @@ final class SonicCdAct2LoadingVisit {
                     a.cpuSat(),a.displayedSat(),a.displayedHScroll(),a.displayedVScrollLongBits(),a.foregroundPlane(),a.ring(),a.level(),
                     a.globals(),a.hudObjects(),a.fadeProgress(),calls,a.loop());
             i.awardResult=new CdMonitorItem.ShieldAwardResult(CdMonitorItem.ShieldSound.FM_SHIELD);
+        } else if(call instanceof CdMonitorItem.RingCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==7 && i.awardStage==0,8);
+            if(c.request().identity()!=c.source().identity() || c.request().rawAnimation()!=1
+                    || c.source().unsignedByte(CdObjectState.ByteField.ANIMATION)!=1 || c.source().routine()!=4
+                    || c.source().word(CdObjectState.WordField.MONITOR_ITEM_DELETE)!=29)
+                throw new IllegalStateException("Ring award is not its actual kind1/routine4/deleteWORD29 cut");
+            // Prepare every allocation and scalar/nonwrite proof before the first external store.
+            var before=i.expectedValues.ring();var projection=before.monitorItemTen();
+            requireItemRingReward(before,projection.globals(),projection.oneUp());
+            i.awardRing=ringValues(i.expectedValues,projection.globals());
+            var sound=projection.oneUp()?CdMonitorItem.RingAwardSound.SCMD_YESSFX:CdMonitorItem.RingAwardSound.FM_RING;
+            var ledger=new ArrayList<>(sounds);ledger.add(new SonicCdGameModule.PastMonitorItemRing(sound));
+            i.awardLedger=List.copyOf(ledger);
+            var a=i.awardRing;var calls=new ArrayList<>(a.calls());calls.add(MONITOR_ITEM_RING_AWARD);
+            i.awardObserved=new Values(a.phase(),a.section(),a.cpuPalette(),a.fadePalette(),a.waterPalette(),a.displayedPalette(),
+                    a.cpuSat(),a.displayedSat(),a.displayedHScroll(),a.displayedVScrollLongBits(),a.foregroundPlane(),a.ring(),a.level(),
+                    a.globals(),a.hudObjects(),a.fadeProgress(),calls,a.loop());
+            i.ringAwardResult=new CdMonitorItem.RingAwardResult(sound);
         } else if(call instanceof CdMonitorItem.ShoesCall c) {
             validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==7,8);
         } else if(call instanceof CdMonitorItem.DeleteCall c) {
@@ -8906,6 +8925,40 @@ final class SonicCdAct2LoadingVisit {
         var i=itemShieldPrimitive(CdMonitorItem.ShoesCall.class);
         if(((CdMonitorItem.ShoesCall)i.pending).request()!=request)throw new IllegalStateException("Foreign shoes request");
         throw module.act2Boundary(SonicCdGameModule.Act2Boundary.MONITOR_ITEM_REWARD);
+    }
+    /**
+     * Monitor .GiveRings (Main.asm:502-517), then .Give1UP (:490-494) only when an old
+     * BSET bit was clear. Independent native-width contract; the pure producer grants no authority.
+     */
+    private static void requireItemRingReward(CdRingGlobals before,CdRingGlobals next,boolean oneUp) {
+        int rings=(before.rings()+10)&0xFFFF,flags=before.livesFlags();boolean life=false;
+        if(rings>=100) {
+            flags|=2;
+            if((before.livesFlags()&2)==0)life=true;
+            else if(rings>=200) {flags|=4;life=(before.livesFlags()&4)==0;}
+        }
+        if(oneUp!=life || next.rings()!=rings || next.livesFlags()!=flags
+                || next.lives()!=((before.lives()+(life?1:0))&255)
+                || next.updateHudRings()!=(before.updateHudRings()|1)
+                || next.updateHudLives()!=((before.updateHudLives()+(life?1:0))&255)
+                || next.timeStopTimer()!=before.timeStopTimer()
+                || next.ringAnimationTimer()!=before.ringAnimationTimer()
+                || next.ringAnimationFrame()!=before.ringAnimationFrame())
+            throw new IllegalStateException("Monitor rings are not the reached native +10/BSET reward and nonwrites");
+    }
+    private CdMonitorItem.RingAwardResult awardItemRings(CdMonitorItem.RingAwardCall request) {
+        var i=itemShieldPrimitive(CdMonitorItem.RingCall.class);
+        if(((CdMonitorItem.RingCall)i.pending).request()!=request || i.awardStage!=0 || itemShieldPort || queuePort || drawingItemShield)
+            throw new IllegalStateException("No original Ring award request");
+        itemShieldPort=true;
+        try {
+            verifyItemShield(i);values=i.awardRing;i.expectedValues=values;i.awardStage=1;verifyItemShield(i);
+            // Typed completed request metadata only; no acoustic or native sound-service timing claim.
+            sounds=i.awardLedger;i.ledger=sounds;i.awardStage=2;verifyItemShield(i);
+            values=i.awardObserved;i.expectedValues=values;i.readyValues=values;i.awardStage=3;
+            i.adoptionReceipt=i.preparedReceipt;verifyItemShield(i);
+            return i.ringAwardResult;
+        } finally {itemShieldPort=false;}
     }
     private CdMonitorItem.ShieldAwardResult awardItemShield(CdMonitorItem.ShieldAwardCall request) {
         var i=itemShieldPrimitive(CdMonitorItem.ShieldCall.class);
@@ -9047,6 +9100,9 @@ final class SonicCdAct2LoadingVisit {
         } else if(call instanceof CdMonitorItem.ShieldCall) {
             if(i.awardStage!=3 || actual!=i.awardResult)
                 throw new IllegalStateException("Item Shield result precedes true ledger adoption");
+        } else if(call instanceof CdMonitorItem.RingCall) {
+            if(i.awardStage!=3 || actual!=i.ringAwardResult)
+                throw new IllegalStateException("Item Ring result precedes true ring/ledger adoption");
         } else if(call instanceof CdShieldPowerup.ReadCall) {
             if(!Objects.equals(actual,i.readValue))throw new IllegalStateException("Shield read did not return actual owner value");
             i.readStage++;

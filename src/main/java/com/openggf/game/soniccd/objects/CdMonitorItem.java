@@ -41,7 +41,7 @@ public final class CdMonitorItem {
     public enum NativeCall { OBJ_MOVE, DRAW_OBJECT }
     public enum AwardSound { SCMD_FADEPCM, SCMD_SHOESMUS }
 
-    public sealed interface Effect permits RoutineEntered, CallReturned, Awarded, Deleted, ShieldAwarded { }
+    public sealed interface Effect permits RoutineEntered, CallReturned, Awarded, Deleted, ShieldAwarded, RingsAwarded { }
     public record RoutineEntered(NativeRoutine routine) implements Effect {
         public RoutineEntered { Objects.requireNonNull(routine); }
     }
@@ -105,6 +105,35 @@ public final class CdMonitorItem {
      */
     @FunctionalInterface public interface ShieldAwardPort { ShieldAwardResult award(ShieldAwardCall call); }
 
+    /**
+     * Finite DEV source-call observations for ObjMonitorItem_Main .CheckRing/.GiveRings/.RingSound
+     * (src/Level/_Objects/Monitor and Time Post/Main.asm:498-517), .Give1UP (:490-494), native pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. These typed names attest neither numeric driver
+     * commands nor audible playback. Root owns actual FM/SubCPU dispatch and sound ordering.
+     */
+    public enum RingAwardSound { FM_RING, SCMD_YESSFX }
+    public record RingAwardCall(CdObjectState.Identity identity, int rawAnimation) {
+        public RingAwardCall {
+            Objects.requireNonNull(identity);
+            if (rawAnimation != 1) throw new IllegalArgumentException("Rings require raw animation BYTE1");
+        }
+    }
+    /** Scalar completion only: no command, mutable bank, source cut or callback authority. */
+    public record RingAwardResult(RingAwardSound sound) {
+        public RingAwardResult { Objects.requireNonNull(sound); }
+    }
+    public record RingsAwarded(RingAwardCall call, RingAwardResult result) implements Effect {
+        public RingsAwarded { Objects.requireNonNull(call); Objects.requireNonNull(result); }
+    }
+    /**
+     * Root projects its actual eight CdRingGlobals fields, calls monitorItemTen, validates/applies
+     * the native write set once, then completes exactly FM_RING or SubCPU SCMD_YESSFX. The latter
+     * returns directly from .Give1UP without FM_RING. Return only after actual ordered completion.
+     * No fabricated source, repeated single-ring collection, retained cut, pool writes or reentry.
+     * This component cannot attest external global stores, sound, Frame/World phase or generation.
+     */
+    @FunctionalInterface public interface RingAwardPort { RingAwardResult award(RingAwardCall call); }
+
     public record Result(CdObjectState state, List<Effect> effects) {
         public Result { Objects.requireNonNull(state); effects = List.copyOf(effects); }
         public boolean deleted() { return effects.stream().anyMatch(Deleted.class::isInstance); }
@@ -137,6 +166,7 @@ public final class CdMonitorItem {
     }
 
     private ShieldAwardPort shieldAward;
+    private RingAwardPort ringAward;
     private DispatchObserver observer;
     private ReceiptGuard receiptGuard;
     private boolean running, primitiveActive, resultReady;
@@ -152,6 +182,7 @@ public final class CdMonitorItem {
                              Optional<PrimarySupport> primarySupport) { }
     public record ShoesCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, AwardCall request) { }
     public record ShieldCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, ShieldAwardCall request) { }
+    public record RingCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, RingAwardCall request) { }
     public record DeleteCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
     public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
     /** The exact Result exposed by currentResult at this cut must be the object returned to Root. */
@@ -193,6 +224,21 @@ public final class CdMonitorItem {
         var body = withShieldAward(runtime, assets, shoes, shield, draw);
         body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard);
         return body;
+    }
+
+    /** Explicit Ring/Shield opt-in; uses the inherited constructor and nonreentry/storage protocol. */
+    public static CdMonitorItem withRingAndShieldAward(CdObjectPlacementRuntime runtime, CdMonitor.Assets assets,
+                                                      AwardPort shoes, ShieldAwardPort shield, RingAwardPort rings,
+                                                      CdMonitor.DrawObjectCall draw) {
+        var body = withShieldAward(runtime, assets, shoes, shield, draw);
+        body.ringAward = Objects.requireNonNull(rings); return body;
+    }
+    /** Same private World receipt binding as the inherited overload; no additional owner protocol. */
+    public static CdMonitorItem withWorldOwner(CdObjectPlacementRuntime runtime, CdMonitor.Assets assets,
+                                              AwardPort shoes, ShieldAwardPort shield, RingAwardPort rings,
+                                              CdMonitor.DrawObjectCall draw, DispatchObserver observer, ReceiptGuard guard) {
+        var body = withWorldOwner(runtime, assets, shoes, shield, draw, observer, guard);
+        body.ringAward = Objects.requireNonNull(rings); return body;
     }
 
     @FunctionalInterface private interface Operation<T> { T run(PrimitiveReceipt receipt); }
@@ -362,6 +408,12 @@ public final class CdMonitorItem {
         c.state = c.state.addByte(ROUTINE, 2).moveWord(MONITOR_ITEM_DELETE, 29);
         publish(c, StoreKind.REWARD_PREFIX);
         int kind = c.state.unsignedByte(ANIMATION);
+        if (kind == 1 && ringAward != null) {
+            var call = new RingAwardCall(c.state.identity(), kind); var cut = callbackCut(c);
+            var completed = observed(new RingCall(cut, c.state, call), cut, c.state,
+                    receipt -> Objects.requireNonNull(ringAward.award(call), "Root must complete the actual Rings award"));
+            c.effects.add(new RingsAwarded(call, completed)); return;
+        }
         if (kind == 2 && shieldAward != null) {
             var call = new ShieldAwardCall(c.state.identity(), kind); var cut = callbackCut(c);
             var completed = observed(new ShieldCall(cut, c.state, call), cut, c.state,

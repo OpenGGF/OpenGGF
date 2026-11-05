@@ -377,12 +377,25 @@ class TestSonicCdAct2ControllerRoute {
         }
         assertNaturalPowerupCurrent(h);
         for(int call=13063;call<=13126;call++) {
-            var input=(call-11214)%128<32?jump:right;
+            var input=call<=13098?((call-11214)%128<32?jump:right):controller(call);
             if(call==13063 || call==13064 || call==13095 || call==13096 || call==13097 || call==13098
                     || call==13099 || call==13125 || call==13126)replayNextRight(h,input);
             step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
             assertNaturalItemShieldCut(h,call);
         }
+        // Keep the old13126 closed cut; it now uses the ordinary Left backtrack after13098.
+        for(int call=13127;call<=13264;call++) {
+            var input=controller(call);
+            if(call==13195 || call==13199 || call==13264)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+        }
+        // Comparison-only reached endpoint; stop before the separately owned Ring reward at13265.
+        assertEquals(5674,frame.state().motion().centreX16_16()>>>16);
+        assertEquals(584,frame.state().motion().centreY16_16()>>>16);
+        assertEquals(0,frame.state().motion().playerControl());
+        assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_BODY));
+        assertFalse(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_PLAYER));
+        assertFalse(module.act2LoadState().sounds().stream().anyMatch(SonicCdGameModule.PastTunnelPathFm.class::isInstance));
         assertNaturalShieldCurrent(h);
         assertEquals(0,frame.environment().globals().timeWarpTimer());
         assertTrue(module.act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream()
@@ -395,7 +408,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right+B returned13126; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886,12886->12887,12887->12888,12890->12891,13061->13062,13062->13063,13063->13064,13094->13095,13095->13096,13096->13097,13097->13098,13098->13099,13124->13125,13125->13126, actual native Item/Shield award/Init/active/upload and Item retirement, CPU/current TimeStars upload and reset/retirement, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 returned13264 after fixed Left96,L+B4,Left66; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886,12886->12887,12887->12888,12890->12891,13061->13062,13062->13063,13063->13064,13094->13095,13095->13096,13096->13097,13097->13098,13098->13099,13124->13125,13125->13126,13194->13195,13198->13199,13263->13264, actual native Item/Shield award/Init/active/upload and Item retirement, CPU/current TimeStars upload and reset/retirement, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 
@@ -471,14 +484,28 @@ class TestSonicCdAct2ControllerRoute {
             imageForExport=renderReplayNextRight(h,(13098-11214)%128<32?jump:right,13098).clone();
             assertNaturalItemShieldCut(h,13098);assertNaturalShieldCurrent(h);
             for(int call=13099;call<=13125;call++) {
-                var input=(call-11214)%128<32?jump:right;
+                var input=controller(call);
                 if(call==13125)replayNextRight(h,input);
                 step(h,input);assertLaterRouteOwners(h,frame,source,world,generation+1);assertNaturalItemShieldCut(h,call);
             }
-            renderReplayNextRight(h,(13126-11214)%128<32?jump:right,13126);
+            renderReplayNextRight(h,controller(13126),13126);
             assertNaturalItemShieldCut(h,13126);assertNaturalShieldCurrent(h);
+            // The old13126 endpoint is retained with the new actual Left input, not its old pose.
+            for(int call=13127;call<=13263;call++) {
+                var input=controller(call);
+                if(call==13195 || call==13199)replayNextRight(h,input);
+                step(h,input);assertLaterRouteOwners(h,frame,source,world,generation+1);
+            }
+            // Fifteenth Sonic endpoint; retain imageForExport from the actual Shield cut13098.
+            renderReplayNextRight(h,controller(13264),13264);
+            assertEquals(5674,frame.state().motion().centreX16_16()>>>16);
+            assertEquals(584,frame.state().motion().centreY16_16()>>>16);
+            assertEquals(0,frame.state().motion().playerControl());
+            assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_BODY));
+            assertFalse(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_PLAYER));
+            assertFalse(module.act2LoadState().sounds().stream().anyMatch(SonicCdGameModule.PastTunnelPathFm.class::isInstance));
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884,12886,12887 and13062,13098,13126; selected Sonic omission changes all fourteen endpoint pictures. Actual12887 TimeStars renderer-only omission changes pixels with planes/palette/current unchanged. Actual natural Shield renderer-only omission at13098 changes pixels; native/regional parity and traversal beyond the local obstacle remain open.");
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884,12886,12887 and13062,13098,13126,13264; selected Sonic omission changes all fifteen endpoint pictures;13126 now uses the new Left backtrack. Full/course replay also checks13194->13195 and13198->13199. Actual12887 TimeStars renderer-only omission changes pixels with planes/palette/current unchanged. Actual natural Shield renderer-only omission at13098 changes pixels; No Ring reward or Path acquisition is asserted; traversal beyond the healthy13264 bound and native/regional parity remain open.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
     }
@@ -724,7 +751,16 @@ class TestSonicCdAct2ControllerRoute {
     }
 
     private static LogicalInputSnapshot controller(int call) {
-        if (call < 1 || call > 10419) throw new IllegalArgumentException("Fixed original recipe ends at programme return10419");
+        if (call < 1 || call > 13550) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..13550; positive qualification stops13264");
+        if (call > 10419) {
+            // Exact old prefix through13098; then Left96, Left+B4, Left96, Right256.
+            // Calls13265 onward are recipe only, not requested by either positive test.
+            int directions = call >= 13099 && call <= 13294 ? 4 : 8;
+            int actions = call <= 13098 ? (call >= 11214 && (call - 11214) % 128 < 32 ? 2 : 0)
+                    : (call >= 13195 && call <= 13198 ? 2 : 0);
+            return LogicalInputSnapshot.ofPlayers(PlayerInputState.of(directions, 0, actions, 0, false, false),
+                    PlayerInputState.neutral());
+        }
         if (call <= 8276) return route(call);
         int directions = 8, actions = call <= 8308 ? 2 : 0;
         if (call >= 9001 && call <= 9203) directions = 4;

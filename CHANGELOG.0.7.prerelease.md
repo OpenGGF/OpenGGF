@@ -248,7 +248,10 @@ Unreleased. The earlier development themes remain in
   ordered FM request through existing owners; its earlier physical slot waits for
   the next pass. Native Init, active animation, subsequent art service and signed
   Item retirement retain full/course replay and selected current-pixel checks.
-  Further traversal needs a controller route past the local obstacle.
+  A short controller backtrack and jump now reaches the lower tunnel approach.
+  Ring monitors award ten rings through the same ring, life and HUD state, with
+  native one-up thresholds and ordered sound requests; native tunnel travel is
+  observed beyond that approach, up to the next unimplemented door splash.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.
