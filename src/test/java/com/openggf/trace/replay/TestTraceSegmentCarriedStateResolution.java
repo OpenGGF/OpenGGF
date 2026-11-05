@@ -56,6 +56,43 @@ class TestTraceSegmentCarriedStateResolution {
     }
 
     @Test
+    void nativeContinuationWithoutRecordedBankDoesNotImportLiveRings() throws Exception {
+        // loc_63C14 saves Act3_ring_count, loc_63B4 clears the live count,
+        // and loc_59B1C consumes that separate bank at ScreenEvents
+        // (sonic3k.asm:131250-131259, 7826-7833, 119410-119424).
+        // The current recorder exports neither the bank nor Act3_flag. Its
+        // PreLevel live count cannot distinguish this from an ordinary fresh
+        // entry, so the importer must not infer a continuation from the zone.
+        for (String run : List.of(SONIC_TAILS, TAILS)) {
+            Path segment = TraceFixtureRoot.resolve(RUNS.resolve(run).resolve("hpz22"));
+            assumeTrue(Files.isDirectory(segment), "fixture not present: " + segment);
+            TraceMetadata meta = TraceMetadata.load(segment.resolve("metadata.json"));
+            assertEquals(0, meta.lastStarPostHit());
+            assertEquals(0, meta.levelEntryRam().get("special_bonus_entry_flag"));
+            assertTrue(meta.levelEntryRam().get("ring_count") > 0, "live count discriminates");
+            TraceSegmentCarriedState state = TraceSegmentCarriedStateImport.resolve(segment, meta);
+            assertNull(state.entryRestore(), run + ": no Saved/Saved2 restore branch");
+            assertNull(state.ringCount(), run + ": live Ring_count is not the missing Act3 bank");
+        }
+        assertNull(resolve(SONIC_TAILS, "mgz").ringCount(),
+                "ordinary fresh entry also discards the previous zone's live rings");
+    }
+
+    @Test
+    void checkpointReturnToTheSameBossActStillImportsItsRecordedSavedBank() throws Exception {
+        // Same destination as hpz22, but a real checkpoint return. Destination
+        // identity cannot stand in for the recorder-observed restore branch.
+        TraceSegmentCarriedState sonicTails = resolve(SONIC_TAILS, "hpz22_2");
+        assertEquals("Saved", sonicTails.entryRestore().block());
+        assertEquals(335, sonicTails.ringCount());
+        assertEquals(1, sonicTails.entryRestore().checkpoint().index());
+        TraceSegmentCarriedState tails = resolve(TAILS, "hpz22_2");
+        assertEquals("Saved", tails.entryRestore().block());
+        assertEquals(68, tails.ringCount());
+        assertEquals(2, tails.entryRestore().checkpoint().index());
+    }
+
+    @Test
     void bonusStageCarriesTheRingsItWasEnteredWith() throws Exception {
         assertEquals(146, resolve(SONIC_TAILS, "gumball").ringCount(), "icz -> gumball rings_before");
     }
