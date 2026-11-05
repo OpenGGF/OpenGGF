@@ -23,28 +23,27 @@ API publication or changing compatibility ranges.
 
 | Branch | Role | Version form | Today |
 |---|---|---|---|
-| `master` | last released | `<major>.<YYYYMMDD>` | `0.6.20260911` |
-| `develop` | in development | `<major>.prerelease` | `0.7.prerelease` |
-| `next` | temporarily tracks `develop` | `<major>.prerelease` | `0.7.prerelease` |
+| `master` | last released | `<major>.<YYYYMMDD>` | `0.7.<YYYYMMDD>` |
+| `develop` | in development | `<major>.prerelease` | `0.8.prerelease` |
+| `next` | the release after `develop` | `<major>.prerelease` | `0.9.prerelease` |
 
 A release stamps the date at the moment it is cut; prerelease branches never
 carry a date.
 
 ## Shared development line
 
-As of 2026-10-20, `develop` and `next` intentionally share one commit and
-`0.7.prerelease`. The descriptor uses `targetBranch=develop` with optional
-`candidateBranchAliases=next`; its ordered line fields reserve 0.8 for a future
-split. Current changes from either branch belong in `CHANGELOG.0.7.prerelease.md`.
-This does not publish the candidate API or move `master`. The integration record
+From 2026-10-20 until the 0.7 release, `develop` and `next` shared one commit and
+`0.7.prerelease`, with `targetBranch=develop` and `candidateBranchAliases=next`.
+The 0.7 promotion ended that arrangement: master carries `targetBranch=master`
+with no alias, and develop (0.8) and next (0.9) resume separate lines with their
+own `targetBranch`. The integration record
 [explains the fixed imported-history boundary](../architecture/validation/2026-10-20-shared-development-line.md#imported-history-audit)
 for old next trailer/API-coupling debt; it never exempts resource checks or later work.
 
-To resume separate release lines, remove the alias from both branch descriptors,
-retain `targetBranch=develop` on develop, and advance next's POM, bundle version,
-examples and `targetBranch=next` together. Update the shared-line guidance at the
-same time. The following rollover describes the separate-line model; a release
-promotion to master must always clear aliases and use its own destination.
+To share a line again, give the follower branch the leader's POM, bundle version
+and examples, keep the leader's `targetBranch`, and name the follower in
+`candidateBranchAliases`. A release promotion to master must always clear aliases
+and use its own destination.
 
 ## Rollover steps
 

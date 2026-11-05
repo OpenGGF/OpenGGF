@@ -44,15 +44,15 @@ do not instruct maintainers to create the version tag before the workflow.
 
 ### Which version am I writing for?
 
-Read the relevant branch's `pom.xml`; it selects the current release line.
-Currently **master is 0.6.20260911, and both develop and next are
-0.7.prerelease**. The development refs intentionally share a commit, with
-`targetBranch=develop` and `candidateBranchAliases=next` in the policy descriptor.
-New prose from either branch belongs in `CHANGELOG.0.7.prerelease.md`; earlier
-0.7 themes remain in `CHANGELOG.0.7.md`. Root `CHANGELOG.md` is the index and
-shared-line pointer. The 0.8 roadmap remains future scope. When next becomes an
-independent line, clear aliases, advance its POM and related metadata, and restore
-its root Unreleased section through [release rollover](../project/release-rollover.md).
+Read the relevant branch's `pom.xml`; it selects the current release line and
+the changelog that receives new prose: `CHANGELOG.<version>.md`. Since the 0.7
+release, **master is 0.7.<date>, develop is 0.8.prerelease and next is
+0.9.prerelease**, each with its own `targetBranch` in the policy descriptor and no
+candidate alias. Develop prose belongs in `CHANGELOG.0.8.prerelease.md` and next
+prose in `CHANGELOG.0.9.prerelease.md`; `CHANGELOG.0.7.md` is the frozen release
+file and changes only for factual corrections or a master hotfix section. Root
+`CHANGELOG.md` is the release index. Promoting the lines at the next release
+follows [release rollover](../project/release-rollover.md).
 
 ### Where each kind of prose goes
 
@@ -119,8 +119,8 @@ supporting artifacts with the task. Do not create loose planning documents.
 ### 3. Changelog — `CHANGELOG.md`  →  trailer `Changelog`
 
 - **REQUIRED** for release-worthy engine changes: use the per-version changelog
-  selected under “Which version am I writing for?” above (currently
-  `CHANGELOG.0.7.prerelease.md`). Keep the existing thematic structure: add a
+  selected under “Which version am I writing for?” above (on develop,
+  `CHANGELOG.0.8.prerelease.md`). Keep the existing thematic structure: add a
   `- **Lead:** ...` bullet under the matching `###`/`####` area section, or refine
   an existing bullet when the change belongs to unreleased work. Do not add a
   dated entry at the top. Keep commit hashes, frame numbers and test tallies in
