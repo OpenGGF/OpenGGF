@@ -8,6 +8,16 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## Mega Chopper shake escape counts held directions, not new presses — 2026-11-05
+
+`Check_LRControllerShake` (sonic3k.asm:179972-179993) counts a change only when
+Left or Right is newly pressed. `MegaChopperBadnikInstance.processShakeEscape`
+reads the held Left/Right state, so an overlapping pattern such as pressing Left
+while Right is still held counts differently from the ROM. Strict alternation,
+as the HCZ1 route controller uses, counts the same in both. Found while fixing
+the HCZ1 first-fan route regression for 0.7. Removal condition: count newly
+pressed directions as the ROM does, with a focused overlap-pattern test.
+
 ## LBZ final boss laser heads skip their Obj_FlickerMove flight — 2026-11-01
 
 `Child_Draw_Sprite_FlickerMove` turns a laser head whose segment detaches into
