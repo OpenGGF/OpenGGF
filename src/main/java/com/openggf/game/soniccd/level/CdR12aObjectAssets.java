@@ -126,6 +126,7 @@ public final class CdR12aObjectAssets {
     private CdObjectVisualAssets spikes;
     private CdObjectVisualAssets tunnelDoorSplash;
     private CdObjectVisualAssets robotGenerator;
+    private CdObjectVisualAssets movingSpring;
 
     /** Only the actual authenticated terrain owner calls this; no public arbitrary-image ingress. */
     CdR12aObjectAssets(CdR12aTerrainAssets terrain, CdMmdImage image) {
@@ -227,6 +228,12 @@ public final class CdR12aObjectAssets {
     public synchronized List<CdR11aObjectAssets.TouchSize> touchDimensions() {
         if (dimensions == null) dimensions = CdR11aObjectAssets.decodeTouchDimensions(view(TOUCH_DIMENSIONS).copy());
         return dimensions;
+    }
+    /** Two counted wheel frames and one script over the existing eight-tile Std source; no art decode. */
+    public synchronized CdObjectVisualAssets movingSpring() {
+        if (movingSpring == null) movingSpring = CdObjectVisualAssets.decode(view(MAP_SPR_MOVING_SPRING).copy(), 2,
+                view(ANI_MOVING_SPRING).copy(), 1, 8);
+        return movingSpring;
     }
     public synchronized CdObjectVisualAssets rings() {
         if (rings == null) rings = CdObjectVisualAssets.decode(view(MAP_SPR_RING).copy(), 9, view(ANI_RING).copy(), 1, 14);

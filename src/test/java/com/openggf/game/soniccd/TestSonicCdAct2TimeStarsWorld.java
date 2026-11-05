@@ -215,7 +215,7 @@ class TestSonicCdAct2TimeStarsWorld {
 
     @Test void genuineFacadeRetiresAtClosedFrameAndHasNoSecondCapturePartition() throws Exception {
         var s=scene();var bank=bank(s);var b=body(s);assertNull(actualField(bank,"slots"));
-        assertEquals(123,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(111,SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT.ordinal());
+        assertEquals(124,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(111,SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT.ordinal());
         var before=captureNative(s.h());assertThrows(IllegalStateException.class,()->bank.capture());
         var foreign=CdReservedObjectBank.backedBy(new RawOwner());assertThrows(IllegalArgumentException.class,()->bank.write(foreign.state(12)));
         assertThrows(IllegalStateException.class,()->b.run(12,new CdTimeStars.Globals(0,0,0,CdAssetBytes.copyOf(new byte[256]),0)));

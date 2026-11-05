@@ -739,3 +739,70 @@ External Robot reports retain source hashes, first failed fixture attribution,
 structured ordinary observations, native citations and the matched source-bound
 receipts. Moving Spring's missing component/metadata and subsequent actual World
 binding are the next separate obligations.
+
+
+## 5 November — Moving Spring and its actual later Spring child
+
+Two original-USA metadata spans append at 142–143: animation 9A90/6 and mappings
+9A96/16. The cached view has two frames, one script and eight tiles; the existing
+Std producer already owns its art at 6700. All 142 previous descriptors, 35 readers,
+19 PLC lists, source/current owners and global selector negatives remain. Selector
+E/0 is consumed locally by the new body, from the actual table WORD 0338. Metadata
+qualification passes 66 checks across seven classes after the intended one-case
+manifest RED (expected 144, actual 142).
+
+`CdMovingSpring` retains native header/tile writes, ID-only dirty allocation, Init
+fallthrough to Align without Draw, synchronous real floor scratch, signed alignment,
+raw WORD time-stop, unsigned turn, shared raw movement and one shared animation
+step. The current helper result is observed during that run; World does not probe
+terrain twice. Original-operation receipts and full source/pool/placement/Frame
+checks authorize prebuilt publications through existing owners. Completed effects
+confer no replay authority. Main Draw and plain anchor deletion preserve reached
+prefixes; child retirement is independent. State adds only overlapping base-Y and
+anchor-X WORD aliases. Module appends MOVING_SPRING_BODY at ordinal 123, total 124,
+without changing the sound family or earlier ordinals.
+
+The combined 63-case selection returned 60 passes, one saved-bank comparison
+failure, one foreign-owner fixture setup error and one required EGL opt-in skip.
+The first two fixtures now compare saved bytes at actual wheel entry, after native
+spawner counters, and construct a foreign image through its genuine foreign owner.
+The required opening-EGL flag is restored. Those two cases and the skipped render
+case pass separately, production unchanged. Thus 63 distinct identities qualify
+across 60+3 observations, not one green combined run. All 26 component, 25 World,
+eight consumer, two old Spring and two old route identities are included. Independent
+bounded source/native review found no P1/P2; it did not execute the tests.
+
+The same ordinary controller recipe returns closed 13450. At 13423, natural parent
+41 Init allocates real later child 71; the existing Spring Init runs in that same
+increasing physical pass. Align sinks through 13441, then the negative adjustment
+enters Main at 13442. First Main is 13443. Through 13450, parent X advances by 1.5
+pixels per call to 6694/Y903; child follows integer X/Y to 6694/Y887 while retaining
+its own fractions. Robot47 remains byte-identical. The permanent tests compare
+all 28 complete parent/child images, actual body-receipt order and completed Main
+CPU values. Expected data are comparisons only, never gameplay input.
+
+Both refreshed long methods pass with zero failures/errors/skips on source
+fingerprint 556a66d0457a3a0ac151c164ccecbcbeebb8901593aadc27b0dfb16bfc61bc6f.
+All four test identities, 236 old assertion-bearing lines, controller inputs,
+helpers, old exports and nineteen Sonic endpoints are retained. Full/course
+before-forward replay adds the allocation, subsequent Align, negative adjustment,
+first Main and terminal cuts. Actual selected-Sonic value/pixel replay adds 13423
+and 13450, twenty-one endpoints total. The wheel and child are offscreen and have
+no watched pieces in these completed CPUs; no wheel/child selected-current, visible
+pixel or omission claim is made. Stars, Shield and Splash contrasts stay unchanged.
+
+The refresh used 25 exact Java pins, Java 25, original media, surfaceless EGL and
+the opening-EGL opt-in. Compilation took 34.893s, admission 0s and execution
+18:32:24.514653–18:32:41.194206Z (16.679553s). User wait was zero; other overhead
+is unmeasured. Exact case identities, all installed pins and fresh XML hash/length/
+mtime/environment were checked; the two owned reports were consumed under the
+worktree lock. Structured source-bound receipts and failure attribution remain in
+the external Moving Spring Root artifact.
+
+First 13451 stops at the original unowned-ID tail on Swinging Platform $29/whole42,
+placement339 at 6816/392/subtype04. Its failed walk is partial: earlier wheel41 has
+moved, while later child71 has not executed. It is not a returned frame or checkpoint.
+The native Swing audit identifies existing art/sine dependencies, missing static
+metadata and a genuine selected-primary/secondary Solid/adoption obligation. No
+secondary actor, collision result or absent-player shortcut is fabricated. Native
+image, regional, whole-act, audio and whole-suite completion remain open.

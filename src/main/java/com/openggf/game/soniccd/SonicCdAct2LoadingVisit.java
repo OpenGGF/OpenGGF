@@ -81,6 +81,10 @@ final class SonicCdAct2LoadingVisit {
     private boolean logMosquiPort, drawingLogMosqui;
     private final CdAnton anton;
     private final CdPataBata pataBata;
+    private final CdMovingSpring movingSpring;
+    private final CdMovingSpring.Assets movingSpringAssets;
+    private transient MovingSpringInvocation activeMovingSpring;
+    private boolean movingSpringPort, drawingMovingSpring;
     private final CdRobotGenerator robotGenerator;
     private final CdRobotGenerator.Assets robotGeneratorAssets;
     private transient RobotInvocation activeRobotGenerator;
@@ -240,6 +244,17 @@ final class SonicCdAct2LoadingVisit {
         var objectAssets=assets.objects();
         var sharedSolid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         var sharedTerrain=CdPlayerTerrain.fromStageTerrain(assets.terrain());
+        movingSpring=CdMovingSpring.fromAct2Assets(placement,objectAssets,sharedTerrain,this::commitMovingSpringPrimaryAngle,this::readMovingSpringSupport,this::drawMovingSpring,
+                new CdMovingSpring.DispatchObserver() {
+                    @Override public void beforePublication(CdMovingSpring.Publication c){beforeMovingSpringPublication(c);}
+                    @Override public void afterPublication(CdMovingSpring.Publication c){afterMovingSpringPublication(c);}
+                    @Override public void beforeCall(Object c){beforeMovingSpringCall(c);}
+                    @Override public void afterCall(Object c){afterMovingSpringCall(c);}
+                },new CdMovingSpring.ReceiptGuard() {
+                    @Override public void prepared(Object c){requirePreparedMovingSpringReceipt(c);}
+                    @Override public void completed(Object c){consumeCompletedMovingSpringReceipt(c);}
+                });
+        movingSpringAssets=movingSpring.assets();
         collapsePlatform=CdCollapsePlatform.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitCollapseSolid,this::drawCollapse,this::playCollapseFm,this::validateCollapsePublication);
         checkpoint=CdCheckpoint.fromAct2Assets(placement,objectAssets,new CdPlayerMath(player.player()),new CdCheckpoint.LivePort() {
             @Override public CdLevelGlobals readLevel(CdCheckpoint.LevelReadCall c){return readCheckpointLevel(c);}
@@ -2326,6 +2341,7 @@ final class SonicCdAct2LoadingVisit {
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
                 else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
                 else if(id==CdPataBata.OBJECT_ID) { runPataBata(whole); call(PATA_BATA_BODY); }
+                else if(id==CdMovingSpring.OBJECT_ID) { runMovingSpring(whole); call(MOVING_SPRING_BODY); }
                 else if(id==CdRobotGenerator.OBJECT_ID) { runRobotGenerator(whole); call(ROBOT_GENERATOR_BODY); }
                 else if(id==CdCollapsePlatform.OBJECT_ID) { runCollapse(whole); call(COLLAPSE_PLATFORM_BODY); }
                 else if(id==CdCheckpoint.OBJECT_ID) { runCheckpoint(whole); call(CHECKPOINT_BODY); }
@@ -2365,6 +2381,7 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ANTON.nativeAddress(),assets.objects().anton().mappings(),0,4));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA1.nativeAddress(),assets.objects().pataBataNormal().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2.nativeAddress(),assets.objects().pataBataDamaged().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOVING_SPRING.nativeAddress(),assets.objects().movingSpring().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ROBOT_GENERATOR.nativeAddress(),assets.objects().robotGenerator().mappings(),0,8));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohNormal().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohDamaged().mappings(),22,3));
@@ -2391,6 +2408,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
                 if(activeTunnelDoorSplash!=null) return readSplashDrawSlot(ref);
+                if(activeMovingSpring!=null) return readMovingSpringDrawSlot(ref);
                 if(activeRobotGenerator!=null) return readRobotDrawSlot(ref);
                 if(activeDoor!=null) return readDoorDrawSlot(ref);
                 if(activeLogMosqui!=null) return readLogMosquiDrawSlot(ref);
@@ -2416,6 +2434,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
                 if(activeTunnelDoorSplash!=null) {writeSplashOnScreen(ref,value);return;}
+                if(activeMovingSpring!=null) {writeMovingSpringOnScreen(ref,value);return;}
                 if(activeRobotGenerator!=null) {writeRobotOnScreen(ref,value);return;}
                 if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
                 if(activeLogMosqui!=null) { writeLogMosquiOnScreen(ref,value); return; }
@@ -9421,6 +9440,7 @@ final class SonicCdAct2LoadingVisit {
     // Past collision/animation, Exploding and Rebuild retain their component implementation but no World authority.
     private enum RobotStep { ENTRY, HEADER, OPERANDS, FRAME, DRAW, SAVED, DONE }
     private void requireRobotIdle() {
+        requireMovingSpringIdle();
         if(activeRobotGenerator!=null || robotPort || drawingRobotGenerator)
             throw new IllegalStateException("Actual Robot Generator owns this source cut");
     }
@@ -9657,5 +9677,291 @@ final class SonicCdAct2LoadingVisit {
         if(deleted && i.savedByteIndex!=-1)effects.add(new CdRobotGenerator.SavedFlagChanged(i.savedByteIndex,i.savedByteBefore,i.savedByteBefore&0x7F));
         effects.add(new CdRobotGenerator.DespawnChecked(deleted));effects.add(new CdRobotGenerator.CallReturned(CdRobotGenerator.NativeCall.CHECK_OBJ_DESPAWN));
         if(!result.effects().equals(effects))throw new IllegalStateException("Robot Generator result differs from completed native observations");
+    }
+
+    // ObjMovingSpring: N Spring/Main.asm:7-96. One cached actual-source owner; effects are observations only.
+    private enum MovingSpringStep { ENTRY, HEADER, TILE, CHILD, ALIGNED, FLOOR_Y, TURNED, MOVED, ANIMATION, DRAW, CAPACITY, DONE }
+    private void requireMovingSpringIdle() {
+        if(activeMovingSpring!=null || movingSpringPort || drawingMovingSpring)
+            throw new IllegalStateException("Actual Moving Spring owns this source cut");
+    }
+    private void requireOtherMovingSpringScopesIdle() {
+        requireOtherRobotScopesIdle();
+        if(activeRobotGenerator!=null || robotPort || drawingRobotGenerator)
+            throw new IllegalStateException("Actual Robot Generator owns the Moving Spring cut");
+    }
+    private final class MovingSpringInvocation {
+        final int whole; final CdMovingSpring body=movingSpring; final CdMovingSpring.Assets bodyAssets=movingSpringAssets;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource(); final CdR12aTerrainAssets sourceAssets=assets;
+        final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue; final CdObjectPlacementRuntime.Status status=placement.status();
+        final CdObjectState entry; final CdPlayerBody.State state=frame.state(); CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor(); CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final Optional<CdPlayerBody.DisplayPublication> display=frame.display(); final CdPlayerArtRuntime.State playerArt=frame.artState();
+        final CdPlayerFrameRuntime.VIntClock clock=frame.vIntClock(); final boolean paused=frame.paused();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll(); final Object world; final long generation;
+        final Values ownerValues=values; final List<SonicCdGameModule.PastSound> ledger=sounds; final CdAssetBytes reserved=values.hudObjects();
+        final CdObjectDrawQueue.CameraWords camera; final CdMovingSpring.Globals globals; final CdAssetBytes saved=placement.capture().savedFlags();
+        CdAssetBytes readySaved; List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()),readyImages;
+        List<Object> receipts=List.of(),readyReceipts; Object pendingPublication,pendingCall,completedOperation,callReceipt;
+        List<Integer> angles=List.of(); CdObjectCollisionCheck.FloorDistance floor; CdMovingSpring.SupportCall supportCall;
+        Optional<CdPlayerMovement.RawObjectSupport> support=Optional.empty(); CdObjectState child,tailSource;
+        List<CdMovingSpring.DeleteSite> deletes=List.of(); long ordinal; MovingSpringStep step=MovingSpringStep.ENTRY,readyStep;
+        boolean drawn,cleared,queueFailed,moved,animated,capacity;
+        MovingSpringInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+            globals=new CdMovingSpring.Globals(camera.xWord(),values.ring().timeStopTimer());
+        }
+    }
+    private void runMovingSpring(int whole) {
+        requireMovingSpringIdle();requireOtherMovingSpringScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING || placement.pool().state(whole).id()!=CdMovingSpring.OBJECT_ID)
+            throw new IllegalStateException("No actual cached Moving Spring physical dispatch");
+        var i=new MovingSpringInvocation(whole);activeMovingSpring=i;
+        try {var result=movingSpring.run(whole,i.globals);verifyMovingSpring(i);verifyMovingSpringResult(i,result);}
+        catch(RuntimeException|Error original) {
+            try {verifyMovingSpringFailure(i);}catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}throw original;
+        } finally {activeMovingSpring=null;}
+    }
+    private void verifyMovingSpringOwners(MovingSpringInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherMovingSpringScopesIdle();var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(i==null || activeMovingSpring!=i || !runningObjects || servicing || i.body!=movingSpring || i.bodyAssets!=movingSpringAssets
+                || movingSpring.assets()!=i.bodyAssets || i.bodyAssets.visual()!=assets.objects().movingSpring()
+                || i.bodyAssets.objectTileIds()!=assets.objects().view(CdR12aProfile.Asset.OBJECT_TILE_IDS)
+                || i.sourceFrame!=frame || i.stageSource!=frame.stageSource() || i.sourceAssets!=assets || !frame.stageSource().ownsAct2(assets,player)
+                || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null
+                || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession() || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.closed() || frame.state()!=i.state || frame.environment()!=i.environment || frame.display()!=i.display
+                || frame.artState()!=i.playerArt || frame.vIntClock()!=i.clock || frame.paused()!=i.paused
+                || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared) || values!=i.ownerValues || sounds!=i.ledger
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Moving Spring changed complete Frame/source/art/display/clock/Values/current/scroll/ledger/World/generation");
+    }
+    private void verifyMovingSpring(MovingSpringInvocation i) {
+        verifyMovingSpringOwners(i);if(!movingSpringImagesEqual(i,i.images,i.saved))throw new IllegalStateException("Moving Spring changed unowned full96/source/status/saved bytes");
+    }
+    private MovingSpringInvocation requireMovingSpring() {
+        var i=activeMovingSpring;if(i==null)throw new IllegalStateException("No actual Moving Spring invocation");verifyMovingSpring(i);return i;
+    }
+    private boolean movingSpringAnchorDeletes(MovingSpringInvocation i,CdObjectState source) {
+        return (((source.word(CdObjectState.WordField.MOVING_SPRING_ANCHOR_X)&0xFF80)-((i.globals.cameraXWord()-0x80)&0xFF80))&0xFFFF)>0x280;
+    }
+    private CdObjectCollisionCheck.FloorDistance movingSpringFloor(MovingSpringInvocation i) {
+        if(i.floor!=null || i.angles.isEmpty())throw new IllegalStateException("Moving Spring floor omitted original angle prefix or repeated");
+        var result=movingSpring.currentFloorResult().orElseThrow(()->new IllegalStateException("Moving Spring has no actual returned floor helper"));
+        if(result.primaryAngle()!=i.environment.movement().globals().primaryAngle())throw new IllegalStateException("Moving Spring floor differs from reached Frame scratch stores");
+        return result;
+    }
+    private void beforeMovingSpringPublication(CdMovingSpring.Publication c) {
+        var i=requireMovingSpring();
+        if(!movingSpring.isCurrentCall(c) || movingSpring.currentCallOrdinal(c)!=i.ordinal+1 || c.ordinal()!=i.ordinal+1
+                || movingSpringPort || drawingMovingSpring || queuePort || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null)
+            throw new IllegalStateException("Moving Spring publication lacks exact original producer/site/ordinal");
+        validateMovingSpringCut(i,c.actualCut(),c.expectedSource());var source=c.expectedSource();var output=c.output();
+        var images=new ArrayList<>(i.images);MovingSpringStep next;CdObjectState expected;
+        switch(c.kind()) {
+            case SOURCE_STORE -> {
+                if(!source.equals(c.before()) || output==null || !output.identity().equals(source.identity()))throw new IllegalStateException("Moving Spring changed source publication identity");
+                if(i.entry.routine()==0 && i.step==MovingSpringStep.ENTRY) {
+                    expected=source.addByte(CdObjectState.ByteField.ROUTINE,2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4)
+                            .moveByte(CdObjectState.ByteField.PRIORITY,4).moveLong(CdObjectState.LongField.MAPPINGS,i.bodyAssets.mappingsAddress())
+                            .moveByte(CdObjectState.ByteField.WIDTH,8).moveByte(CdObjectState.ByteField.Y_RADIUS,7)
+                            .moveWord(CdObjectState.WordField.MOVING_SPRING_ANCHOR_X,source.centreX()).moveWord(CdObjectState.WordField.X_VELOCITY,0x180);next=MovingSpringStep.HEADER;
+                } else if(i.entry.routine()==0 && i.step==MovingSpringStep.HEADER) {
+                    int start=(short)i.bodyAssets.objectTileIds().unsignedWord(0xE*2),end=CdObjectTileIds.endOfBody(i.bodyAssets.objectTileIds(),0xE),at=start+source.subtype2()*2;
+                    if(end-start!=2 || at<start || at>end-2)throw new IllegalStateException("Moving Spring tile store crossed its reached finite selectorE body");
+                    expected=source.moveWord(CdObjectState.WordField.TILE,i.bodyAssets.objectTileIds().unsignedWord(at));next=MovingSpringStep.TILE;
+                } else if((i.entry.routine()==0 && i.step==MovingSpringStep.CHILD) || (i.entry.routine()==2 && i.step==MovingSpringStep.ENTRY)) {
+                    var floor=movingSpringFloor(i);i.floor=floor;expected=floor.distance()<0?source.addWord(CdObjectState.WordField.Y,floor.distance())
+                            .moveWord(CdObjectState.WordField.MOVING_SPRING_BASE_Y,source.centreY()+floor.distance()).addByte(CdObjectState.ByteField.ROUTINE,2)
+                            :source.addWord(CdObjectState.WordField.Y,1);next=MovingSpringStep.ALIGNED;
+                } else if(i.entry.routine()==4 && i.globals.timeStopTimerWord()==0 && i.step==MovingSpringStep.ENTRY) {
+                    i.floor=movingSpringFloor(i);expected=source.addWord(CdObjectState.WordField.Y,i.floor.distance());next=MovingSpringStep.FLOOR_Y;
+                } else if(i.entry.routine()==4 && i.step==MovingSpringStep.FLOOR_Y && ((source.word(CdObjectState.WordField.MOVING_SPRING_BASE_Y)-source.centreY())&0xFFFF)>=12) {
+                    expected=source.moveWord(CdObjectState.WordField.X_VELOCITY,-source.word(CdObjectState.WordField.X_VELOCITY));next=MovingSpringStep.TURNED;
+                } else if(i.entry.routine()==4 && (i.step==MovingSpringStep.TURNED || i.step==MovingSpringStep.FLOOR_Y)) {
+                    if((source.flags()&8)!=0 && (source.unsignedByte(CdObjectState.ByteField.STAND_LINK_3D)==0 || source.unsignedByte(CdObjectState.ByteField.STAND_LINK_3D)>=32 && source.unsignedByte(CdObjectState.ByteField.STAND_LINK_3D)<128) && i.supportCall==null)
+                        throw new IllegalStateException("Moving Spring ObjMove omitted its reached actual support source");
+                    var moved=CdPlayerMovement.moveObject(new CdPlayerMovement.RawObjectMotion(source.longBits(CdObjectState.LongField.X_POSITION),source.longBits(CdObjectState.LongField.Y_POSITION),
+                            source.signedWord(CdObjectState.WordField.X_VELOCITY),source.signedWord(CdObjectState.WordField.Y_VELOCITY),source.flags(),source.unsignedByte(CdObjectState.ByteField.RAW_CONTROL_2C),source.unsignedByte(CdObjectState.ByteField.STAND_LINK_3D)),i.support);
+                    expected=source.moveLong(CdObjectState.LongField.X_POSITION,moved.centreX16_16()).moveLong(CdObjectState.LongField.Y_POSITION,moved.centreY16_16());next=MovingSpringStep.MOVED;i.moved=true;
+                } else if(i.entry.routine()==4 && (i.step==MovingSpringStep.MOVED || i.step==MovingSpringStep.ANIMATION)) {
+                    // Actual shared producer ran once; success and reached failure prefixes may alter only native animation fields.
+                    if((source.spriteFlags()&0xFC)!=(output.spriteFlags()&0xFC))throw new IllegalStateException("Moving Spring animation changed non-flip source flags");
+                    expected=source;for(var field:new CdObjectState.ByteField[]{CdObjectState.ByteField.PREVIOUS_ANIMATION,CdObjectState.ByteField.ANIMATION_FRAME,
+                            CdObjectState.ByteField.ANIMATION_TIME,CdObjectState.ByteField.MAP_FRAME,CdObjectState.ByteField.SPRITE_FLAGS})expected=expected.moveByte(field,output.unsignedByte(field));
+                    next=MovingSpringStep.ANIMATION;i.animated=true;
+                } else throw new IllegalStateException("Unreached Moving Spring source publication site");
+                if(!expected.equals(output))throw new IllegalStateException("Moving Spring source store changed another complete native byte");
+                i.pool.validateRestore(CdObjectPool.overlay(c.actualCut().pool(),List.of(output)));images.set(i.whole-32,CdAssetBytes.copyOf(output.copyBytes()));
+            }
+            case CHILD_STORE -> {
+                if(i.entry.routine()!=0 || i.step!=MovingSpringStep.TILE || i.child!=null || output==null)throw new IllegalStateException("Moving Spring child lacks actual Init tile prefix");
+                var first=c.actualCut().pool().slots().stream().filter(s->s.id()==0).findFirst().orElseThrow();
+                if(!first.equals(c.before()))throw new IllegalStateException("Moving Spring child is not the actual ID-only first-free dirty image");
+                expected=first.moveByte(CdObjectState.ByteField.ID,0x0A).moveWord(CdObjectState.WordField.X,source.centreX()).moveWord(CdObjectState.WordField.Y,source.centreY()-0x10)
+                        .moveByte(CdObjectState.ByteField.SPRING_PARENT_Y_OFFSET,0xF0).moveWord(CdObjectState.WordField.SPRING_PARENT,source.identity().nativeAddress24())
+                        .moveByte(CdObjectState.ByteField.SUBTYPE,source.subtype());
+                if(!expected.equals(output))throw new IllegalStateException("Moving Spring child changed dirty nonwrites, chosen slot or low parent word");
+                i.pool.validateRestore(CdObjectPool.overlay(c.actualCut().pool(),List.of(output)));images.set(output.identity().wholeIndex()-32,CdAssetBytes.copyOf(output.copyBytes()));
+                i.child=output;next=MovingSpringStep.CHILD;
+            }
+            case DELETE -> {
+                if(!source.equals(c.before()) || output!=null)throw new IllegalStateException("Moving Spring DeleteObject changed its actual source cut");
+                CdMovingSpring.DeleteSite site;
+                if(i.entry.routine()==0 && i.step==MovingSpringStep.TILE && c.actualCut().pool().slots().stream().noneMatch(s->s.id()==0)) {
+                    site=CdMovingSpring.DeleteSite.INIT_CAPACITY;i.capacity=true;next=MovingSpringStep.CAPACITY;
+                } else if((i.step==MovingSpringStep.ALIGNED || i.step==MovingSpringStep.DRAW || i.step==MovingSpringStep.CAPACITY) && movingSpringAnchorDeletes(i,source)) {
+                    site=CdMovingSpring.DeleteSite.ANCHOR_DISTANCE;next=MovingSpringStep.DONE;
+                } else throw new IllegalStateException("Moving Spring deletion omitted its capacity/plain live-anchor source");
+                var deletes=new ArrayList<>(i.deletes);deletes.add(site);i.deletes=List.copyOf(deletes);images.set(i.whole-32,zero(64));
+            }
+            default -> throw new IllegalArgumentException("Unknown Moving Spring store");
+        }
+        var receipts=new ArrayList<>(i.receipts);receipts.add(c);i.readyImages=List.copyOf(images);i.readySaved=i.saved;i.readyReceipts=List.copyOf(receipts);i.readyStep=next;i.pendingPublication=c;
+    }
+    private void afterMovingSpringPublication(CdMovingSpring.Publication c) {
+        var i=activeMovingSpring;if(i==null || i.pendingPublication!=c || !movingSpring.isCurrentCall(c) || i.completedOperation!=null)throw new IllegalStateException("No exact Moving Spring publication completion");
+        verifyMovingSpringOwners(i);if(!movingSpringImagesEqual(i,i.readyImages,i.saved))throw new IllegalStateException("Moving Spring differs from its prebuilt full96/status/saved output");
+        i.images=i.readyImages;i.receipts=i.readyReceipts;i.step=i.readyStep;i.ordinal++;i.readyImages=null;i.readySaved=null;i.readyReceipts=null;i.pendingPublication=null;i.completedOperation=c;
+    }
+    private void beforeMovingSpringCall(Object call) {
+        var i=requireMovingSpring();if(!movingSpring.isCurrentCall(call) || movingSpring.currentCallOrdinal(call)!=i.ordinal+1 || movingSpringPort || drawingMovingSpring || queuePort
+                || i.pendingCall!=null || i.pendingPublication!=null || i.completedOperation!=null)throw new IllegalStateException("No original Moving Spring source-port/site/ordinal");
+        CdObjectPlacementRuntime.Snapshot cut;CdObjectState source;
+        if(call instanceof CdMovingSpring.PrimaryAngleCall c) {
+            cut=c.actualCut();source=c.expectedSource();if(i.drawn || i.floor!=null || !(i.entry.routine()==0 && i.step==MovingSpringStep.CHILD || i.entry.routine()==2 && i.step==MovingSpringStep.ENTRY || i.entry.routine()==4 && i.globals.timeStopTimerWord()==0 && i.step==MovingSpringStep.ENTRY)
+                    || i.angles.isEmpty() && c.value()!=0)throw new IllegalStateException("Moving Spring angle omitted actual floor prezero/site");
+        } else if(call instanceof CdMovingSpring.SupportCall c) {
+            cut=c.actualCut();source=c.expectedSource();if(i.entry.routine()!=4 || i.supportCall!=null || i.floor==null || !(i.step==MovingSpringStep.FLOOR_Y || i.step==MovingSpringStep.TURNED)
+                    || i.step==MovingSpringStep.FLOOR_Y && ((source.word(CdObjectState.WordField.MOVING_SPRING_BASE_Y)-source.centreY())&0xFFFF)>=12
+                    || (source.flags()&8)==0 || c.wholeIndex()!=source.unsignedByte(CdObjectState.ByteField.STAND_LINK_3D))throw new IllegalStateException("Moving Spring support was not reached by actual ObjMove");
+        } else if(call instanceof CdMovingSpring.DrawCall c) {
+            cut=c.actualCut();source=c.expectedSource();if(i.entry.routine()!=4 || i.drawn || !(i.globals.timeStopTimerWord()!=0 && i.step==MovingSpringStep.ENTRY || i.globals.timeStopTimerWord()==0 && i.step==MovingSpringStep.ANIMATION && i.moved))
+                throw new IllegalStateException("Moving Spring Draw skipped its native stopped or floor/move/animation path");
+        } else throw new IllegalArgumentException("Wrong Moving Spring original call type");
+        validateMovingSpringCut(i,cut,source);var receipts=new ArrayList<>(i.receipts);receipts.add(call);i.readyReceipts=List.copyOf(receipts);i.pendingCall=call;i.callReceipt=null;
+    }
+    private void afterMovingSpringCall(Object call) {
+        var i=requireMovingSpring();if(!movingSpring.isCurrentCall(call) || i.pendingCall!=call || i.callReceipt!=call || call instanceof CdMovingSpring.DrawCall && (!i.drawn || !i.cleared))
+            throw new IllegalStateException("Moving Spring external call omitted its private once-only completion");
+        i.ordinal++;i.pendingCall=null;i.callReceipt=null;i.completedOperation=call;
+    }
+    private void commitMovingSpringPrimaryAngle(CdMovingSpring.PrimaryAngleCall c) {
+        var i=requireMovingSpring();if(!movingSpring.isCurrentCall(c) || i.pendingCall!=c || i.callReceipt!=null || movingSpringPort || drawingMovingSpring || queuePort)
+            throw new IllegalStateException("Cloned/repeated Moving Spring angle lacks actual source authority");
+        validateMovingSpringCut(i,c.actualCut(),c.expectedSource());var readyEnvironment=monitorAngleEnvironment(i.environment,c.value());
+        var readyShared=new CdPlayerFrameRuntime.SharedState(i.shared.owner(),readyEnvironment,i.shared.artState(),i.shared.paused(),i.shared.vIntClock());
+        var readyValues=i.ownerValues;var angles=new ArrayList<>(i.angles);angles.add(c.value());var readyAngles=List.copyOf(angles);movingSpringPort=true;
+        try {verifyMovingSpring(i);frame.applyObjectPrimaryAngle(c.value());i.environment=frame.environment();i.shared=readyShared;
+            if(values!=readyValues)throw new IllegalStateException("Moving Spring scratch changed unrelated Values");
+            i.angles=readyAngles;i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;verifyMovingSpring(i);
+        } finally {movingSpringPort=false;}
+    }
+    private Optional<CdPlayerMovement.RawObjectSupport> readMovingSpringSupport(CdMovingSpring.SupportCall c) {
+        var i=requireMovingSpring();if(!movingSpring.isCurrentCall(c) || i.pendingCall!=c || i.callReceipt!=null || i.supportCall!=null || movingSpringPort || drawingMovingSpring || queuePort)
+            throw new IllegalStateException("Cloned/repeated Moving Spring support lacks actual source authority");
+        validateMovingSpringCut(i,c.actualCut(),c.expectedSource());int whole=c.wholeIndex();
+        var selected=whole==0?new CdPlayerMovement.RawObjectSupport(0,i.state.header().slotId(),i.state.motion().flags())
+                :new CdPlayerMovement.RawObjectSupport(whole,i.pool.state(whole).id(),i.pool.state(whole).flags());
+        var ready=Optional.of(selected);movingSpringPort=true;
+        try {verifyMovingSpring(i);i.support=ready;i.supportCall=c;i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;verifyMovingSpring(i);return ready;}
+        finally {movingSpringPort=false;}
+    }
+    private void verifyMovingSpringResult(MovingSpringInvocation i,CdMovingSpring.Result result) {
+        if(i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null || i.callReceipt!=null || !result.state().equals(i.pool.state(i.whole)))
+            throw new IllegalStateException("Moving Spring omitted exact original completion receipts");
+        var effects=new ArrayList<CdMovingSpring.Effect>();
+        if(i.entry.routine()==0) {effects.add(new CdMovingSpring.RoutineEntered(CdMovingSpring.NativeRoutine.INIT));
+            if(i.capacity){effects.add(new CdMovingSpring.SlotUnavailable());effects.add(new CdMovingSpring.Deleted(CdMovingSpring.DeleteSite.INIT_CAPACITY));}
+            else {if(i.child==null)throw new IllegalStateException("Moving Spring omitted actual child");effects.add(new CdMovingSpring.ChildCreated(i.child));}}
+        if(!i.capacity) {
+            effects.add(new CdMovingSpring.RoutineEntered(i.entry.routine()==4?CdMovingSpring.NativeRoutine.MAIN:CdMovingSpring.NativeRoutine.ALIGN));
+            if(i.entry.routine()!=4 || i.globals.timeStopTimerWord()==0) {
+                if(i.floor==null || i.angles.isEmpty())throw new IllegalStateException("Moving Spring omitted actual floor result/scratch receipts");
+                for(int angle:i.angles)effects.add(new CdMovingSpring.PrimaryAngleStored(angle));effects.add(new CdMovingSpring.FloorReturned(i.floor));effects.add(new CdMovingSpring.CallReturned(CdMovingSpring.NativeCall.GET_FLOOR_DIST));
+            }
+            if(i.entry.routine()==4) {
+                if(i.globals.timeStopTimerWord()==0) {if(!i.moved || !i.animated)throw new IllegalStateException("Moving Spring omitted native move/animation");
+                    if(i.supportCall!=null)effects.add(new CdMovingSpring.SupportReturned(i.supportCall,i.support));effects.add(new CdMovingSpring.CallReturned(CdMovingSpring.NativeCall.OBJ_MOVE));effects.add(new CdMovingSpring.CallReturned(CdMovingSpring.NativeCall.ANIMATE_OBJECT));}
+                if(!i.drawn || !i.cleared)throw new IllegalStateException("Moving Spring omitted original Draw/BCLR");effects.add(new CdMovingSpring.CallReturned(CdMovingSpring.NativeCall.DRAW_OBJECT));
+            } else if(i.drawn || i.step!=MovingSpringStep.ALIGNED && i.step!=MovingSpringStep.DONE)throw new IllegalStateException("Moving Spring Init/Align borrowed Main Draw");
+        }
+        var tail=i.tailSource!=null?i.tailSource:i.deletes.contains(CdMovingSpring.DeleteSite.ANCHOR_DISTANCE)?null:i.pool.state(i.whole);
+        if(i.deletes.contains(CdMovingSpring.DeleteSite.ANCHOR_DISTANCE))effects.add(new CdMovingSpring.Deleted(CdMovingSpring.DeleteSite.ANCHOR_DISTANCE));
+        else if(tail==null || movingSpringAnchorDeletes(i,tail))throw new IllegalStateException("Moving Spring omitted its plain live-anchor wrapper tail");
+        if(!result.effects().equals(effects))throw new IllegalStateException("Moving Spring result metadata differs from original completed observations");
+    }
+
+    private boolean movingSpringImagesEqual(MovingSpringInvocation i,List<CdAssetBytes> images,CdAssetBytes saved) {
+        var cut=placement.capture();placement.validateRestore(cut);
+        if(images==null || saved==null || images.size()!=96 || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),saved))return false;
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),images.get(at).copy()))return false;
+        return true;
+    }
+
+    private void verifyMovingSpringFailure(MovingSpringInvocation i) {
+        verifyMovingSpringOwners(i);
+        if(!movingSpringImagesEqual(i,i.images,i.saved) && !(i.pendingPublication!=null && movingSpringImagesEqual(i,i.readyImages,i.readySaved)))
+            throw new IllegalStateException("Throwing MovingSpring Generator differs from both exact prebuilt native publication cuts");
+    }
+
+    private void validateMovingSpringCut(MovingSpringInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);
+        if(!cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved) || !source.equals(i.pool.state(i.whole))
+                || !source.identity().equals(i.entry.identity()))throw new IllegalStateException("Foreign MovingSpring Generator source cut");
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),i.images.get(at).copy()))
+            throw new IllegalStateException("MovingSpring Generator supplied full96 cut differs");
+    }
+
+    private void requirePreparedMovingSpringReceipt(Object call) {
+        var i=requireMovingSpring();
+        if(!movingSpring.isCurrentCall(call) || i.completedOperation!=null
+                || !(i.pendingPublication==call && i.readyImages!=null && i.readySaved!=null || i.pendingCall==call && i.readyReceipts!=null))
+            throw new IllegalStateException("MovingSpring Generator observer returned without its private prepared receipt");
+    }
+
+    private void consumeCompletedMovingSpringReceipt(Object call) {
+        var i=activeMovingSpring;
+        if(i==null || !movingSpring.isCurrentCall(call) || i.completedOperation!=call || i.pendingPublication!=null || i.pendingCall!=null)
+            throw new IllegalStateException("MovingSpring Generator observer returned without its private completed receipt");
+        verifyMovingSpring(i);i.completedOperation=null;
+    }
+
+    private void drawMovingSpring(CdMovingSpring.DrawCall c) {
+        var i=requireMovingSpring();
+        if(!movingSpring.isCurrentCall(c) || i.pendingCall!=c || i.callReceipt!=null || i.drawn || movingSpringPort || drawingMovingSpring || queuePort)
+            throw new IllegalStateException("Public/cloned/repeated MovingSpring Generator Draw lacks actual source authority");
+        i.drawn=true;drawingMovingSpring=true;
+        try {
+            var source=c.expectedSource();drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifyMovingSpring(i);if(!i.cleared)throw new IllegalStateException("MovingSpring Generator Draw omitted actual BCLR7");
+            i.tailSource=i.pool.state(i.whole);i.step=MovingSpringStep.DRAW;i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingMovingSpring=false;}
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot readMovingSpringDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireMovingSpring();
+        if(!drawingMovingSpring || movingSpringPort || queuePort || !(i.pendingCall instanceof CdMovingSpring.DrawCall) || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("No actual MovingSpring Generator collecting queue read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var out=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),s.word(CdObjectState.WordField.X_FRACTION),
+                s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));verifyMovingSpring(i);return out;}
+        finally {queuePort=false;}
+    }
+
+    private void writeMovingSpringOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireMovingSpring();
+        if(!drawingMovingSpring || movingSpringPort || queuePort || !(i.pendingCall instanceof CdMovingSpring.DrawCall) || value || i.cleared || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("Only actual MovingSpring Generator Draw clears its source bit7 exactly once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
+        var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var ready=logMosquiImages(pool);queuePort=true;
+        try {verifyMovingSpring(i);i.pool.write(next);i.images=ready;i.cleared=true;verifyMovingSpring(i);}
+        finally {queuePort=false;}
     }
 }

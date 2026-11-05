@@ -143,7 +143,9 @@ public final class CdR12aProfile {
         ANI_TUNNEL_DOOR_SPLASH(0x1D63A, 24), MAP_SPR_TUNNEL_DOOR_SPLASH(0x1D652, 100),
         // Robot Generator/Main.asm:49-86,218-254 and PP Tile IDs: actual R12A operands, full includes.
         ANI_ROBOT_GENERATOR(0xE4EE, 8), MAP_SPR_ROBOT_GENERATOR(0xE4F6, 574),
-        ROBOT_GENERATOR_EXPLOSION_SCHEDULE(0xE734, 64), ROBOT_GENERATOR_BASE_TILES(0xE774, 22);
+        ROBOT_GENERATOR_EXPLOSION_SCHEDULE(0xE734, 64), ROBOT_GENERATOR_BASE_TILES(0xE774, 22),
+        // Spring/Main.asm:33,89: actual original R12A operands; complete finite wheel includes.
+        ANI_MOVING_SPRING(0x9A90, 6), MAP_SPR_MOVING_SPRING(0x9A96, 16);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

@@ -35,7 +35,7 @@ class TestSonicCdAct2DoorSplashWorld {
     @Test void actualCachedSourceAndAppendOnlyCallAndSoundContractsRemainBounded() throws Exception {
         var s=scene();var b=splash(s);var before=captureNative(s.h());
         assertSame(s.assets().objects().tunnelDoorSplash(),b.assets().visual());assertEquals(0x21D652,b.assets().mappingsAddress());
-        assertEquals(123,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(119,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD.ordinal());
+        assertEquals(124,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(119,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD.ordinal());
         assertEquals(120,SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY.ordinal());assertEquals(121,SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_FM.ordinal());
         assertEquals(22,SonicCdGameModule.PastSound.class.getPermittedSubclasses().length);
         assertThrows(IllegalStateException.class,()->invoke(s.visit(),"runTunnelDoorSplash",new Class<?>[]{int.class},127));assertNativeCapture(before,s.h());

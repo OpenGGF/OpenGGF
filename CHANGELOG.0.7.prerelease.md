@@ -254,9 +254,12 @@ Unreleased. The earlier development themes remain in
   retain native Init, sound, animation, Draw and deletion order over the existing
   art owner. The ordinary route leaves Tunnel Path control. Act2 Robot Generator
   Init, Draw and conditional despawn now reuse its existing component, authenticated
-  tables and Withered art owner. Full/course controller replay reaches the next
-  Moving Spring boundary, with nineteen selected Sonic render checkpoints;
-  active Past, explosion and rebuild actions remain outside this Act2 binding.
+  tables and Withered art owner; active Past, explosion and rebuild actions remain
+  outside this Act2 binding. Moving Spring now allocates its ordinary Spring child,
+  aligns to the real floor and moves through the existing terrain, angle, animation
+  and art owners. Full/course controller replay reaches the next Swinging Platform
+  boundary, with twenty-one selected Sonic render checkpoints. The wheel and its
+  child remain offscreen on that route.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

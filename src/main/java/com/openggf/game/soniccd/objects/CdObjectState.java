@@ -104,6 +104,8 @@ public final class CdObjectState {
         TUNNEL_PATH_INDEX_END(0x3A), TUNNEL_PATH_ROUTINE_WORD(0x24),
         // Robot Generator/Main.asm:65-67,98,169,182-193: overlapping native WORD fields only.
         ROBOT_GENERATOR_TIMER(0x2A), ROBOT_GENERATOR_BASE_Y(0x30), ROBOT_GENERATOR_FLOAT_STEP(0x32),
+        // ObjMovingSpring Align/Main and wrapper (Spring/Main.asm:12,63,81): overlapping WORD storage only.
+        MOVING_SPRING_BASE_Y(0x32), MOVING_SPRING_ANCHOR_X(0x36),
         // Results/Main.asm:97,108,136-138,158-173: overlapping native screen-Y/destination/timer WORDs.
         // Init alone SUBQ.B's RESULTS_TIMER at HIGH $32 (:62); preserve its separate BYTE alias.
         RESULTS_SCREEN_Y_WORD(0x0A), RESULTS_DEST_X(0x2A), RESULTS_TIMER_WORD(0x32),

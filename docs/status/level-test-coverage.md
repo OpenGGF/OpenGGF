@@ -377,6 +377,21 @@ checked. Robot remains offscreen in this route; no Robot-visible pixel claim fol
 First13423 is the separate unbound Moving Spring0F/whole41 from common placement332,
 not already-bound Animal24. The matrix records exact evidence and remaining gaps.
 
+Moving Spring now appends two authenticated metadata ranges (142→144), preserving
+all 35 readers, 19 PLC lists and the existing Std art/current owner. Its 66 metadata
+checks pass. Component, World, consumer, existing Spring and old-route obligations
+qualify 63 distinct identities across 60 original passes and three refreshed cases;
+two fixture defects and a missing required EGL opt-in were corrected without a
+production change. This is not a single green 63-test run.
+
+Both extended permanent route tests pass with no skips through closed call 13450,
+including full/course replay and 21 selected Sonic render endpoints. Natural
+parent 41 allocates later child 71 at 13423; the child runs in that same physical
+pass. Align reaches Main at 13442, followed by real parent movement and child
+following. Both remain offscreen, so no wheel/child pixel claim follows. First
+13451 stops at unbound Swinging Platform $29/whole42. The Act2 matrix records
+source, failure attribution and the next primary/secondary collision obligations.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)
