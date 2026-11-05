@@ -390,6 +390,9 @@ and trace evidence in [docs/status/trace-frontier-log.md](docs/status/trace-fron
   exactly the masked scanlines rather than whole 8-pixel tile rows.
   Sprite overlap follows bucket and native slot order independently of terrain
   priority, and golem dust keeps its own priority across the sand boundary.
+  Path swappers seed their crossing latch with the ROM's strict greater-than test and run their first
+  check at once, so SOZ2's seamless entry, which places Sonic exactly on its opening marker, clears the
+  high priority he carried in from Act 1.
   Detached golem parts retain their priority, Rockn eyes follow its walking direction,
   and the rising pyramid shakes terrain and sprites together. Its widescreen source
   window spans the viewport instead of repeating the native 512-pixel cache;

@@ -217,7 +217,7 @@ class TestSozEndBoss {
     }
     @Test void resultsAllocationFailureDoesNotDereferenceMissingSst() throws Exception {
         var capsule=manager.createDynamicObject(()->new SozEndBossEggCapsule(0x5360,0x720));
-        var opened=AbstractS3kUprightEggCapsuleInstance.class.getDeclaredField("opened");
+        var opened=AbstractS3kEggCapsuleInstance.class.getDeclaredField("opened");
         opened.setAccessible(true);opened.setBoolean(capsule,true);
         player.setAir(false);manager.reserveAllButNFreeSlots(0);
         assertDoesNotThrow(()->capsule.update(0,player));
