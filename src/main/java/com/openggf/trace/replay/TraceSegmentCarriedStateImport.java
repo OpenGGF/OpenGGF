@@ -167,7 +167,7 @@ public final class TraceSegmentCarriedStateImport {
         if (located.isEmpty()) {
             return new TraceSegmentCarriedState(
                     null, null, null, null, null, List.of(), null, null, null,
-                    meta.lastStarPostHit(), null, null, null, null, List.of(),
+                    meta.lastStarPostHit(), null, null, null, null, null, List.of(),
                     List.of("no run manifest names this segment"));
         }
         RunContext run = located.get();
@@ -294,7 +294,43 @@ public final class TraceSegmentCarriedStateImport {
                 provenance, rings, chaos, emeraldStates, superCount,
                 ringArray != null ? List.of() : giantRings,
                 null, cursor, superSet, meta.lastStarPostHit(), restore, lives,
-                ringArray, recordedCursor, disagreements, unresolved);
+                ringArray, recordedCursor,
+                "s3k".equals(run.manifest().game()) && "level".equals(segment.kind())
+                        ? recordedNativeContinuation(ram, unresolved) : null,
+                disagreements, unresolved);
+    }
+
+    /**
+     * loc_63C14 (sonic3k.asm:131250-131259) and loc_7F310
+     * (sonic3k.asm:169871-169879) save byte Act3_flag, word Act3_ring_count
+     * and long Act3_timer. The flag is tested by loc_62B6 (sonic3k.asm:7762-7767)
+     * and cleared by loc_62FE (sonic3k.asm:7782-7783). The first PreLevel
+     * sample precedes that clear and the first-screen-event consumers:
+     * loc_59B1C (sonic3k.asm:119410-119424), loc_5A49A (sonic3k.asm:120364-120378).
+     * No destination identity, live counter or recorder provenance can stand
+     * in for this independent bank. Zero flag is an ordinary load, even with
+     * a stale nonzero bank; incomplete observations stay unknown.
+     */
+    static TraceSegmentCarriedState.NativeContinuation recordedNativeContinuation(
+            java.util.Map<String, Integer> ram, List<String> unresolved) {
+        Integer flag = ram == null ? null : ram.get("act3_flag");
+        if (flag != null && flag == 0) return null;
+        Integer rings = ram == null ? null : ram.get("act3_ring_count");
+        Integer timer = ram == null ? null : ram.get("act3_timer");
+        if (flag == null || rings == null || timer == null) {
+            unresolved.add("Act3 continuation: flag/ring/timer bank not fully recorded");
+            return null;
+        }
+        if (flag < 0 || flag > 0xFF || rings < 0 || rings > 0xFFFF
+                || ((timer >>> 8) & 0xFF) >= 60 || (timer & 0xFF) >= 60) {
+            unresolved.add("Act3 continuation: invalid byte/word/timer observation");
+            return null;
+        }
+        // Timer holds a minute word, second byte and frame byte. Unlike the
+        // Saved restore, this bank has no second decrement or frame=59 rewrite.
+        long frames = ((long) (timer >>> 16) * 60 + ((timer >>> 8) & 0xFF)) * 60
+                + (timer & 0xFF);
+        return new TraceSegmentCarriedState.NativeContinuation(rings, frames);
     }
 
     private static List<Integer> recordedEmeraldStates(java.util.Map<String, Integer> ram) {
@@ -630,7 +666,7 @@ public final class TraceSegmentCarriedStateImport {
                 shield, base.specialStageCursor(), base.superEmeraldStageSet(),
                 base.lastStarPostHit(), base.entryRestore(), base.lifeCount(),
                 base.collectedSpecialRingArray(), base.recordedSpecialStageCursor(),
-                base.disagreements(), base.unresolved());
+                base.nativeContinuation(), base.disagreements(), base.unresolved());
     }
 
     // -------------------------------------------------------------------- apply
@@ -713,6 +749,13 @@ public final class TraceSegmentCarriedStateImport {
                 player.setTopSolidBit((byte) restore.topSolidBit());
                 player.setLrbSolidBit((byte) restore.lrbSolidBit());
             }
+        }
+        if (carried.nativeContinuation() != null && level != null) {
+            // Entry restores only the bank. The ordinary destination ScreenEvents
+            // remains the sole live-counter writer/one-shot consumer after entry.
+            var bank = carried.nativeContinuation();
+            com.openggf.level.LevelContinuationCarry.installLoadedCounterBank(
+                    level, bank.ringCount(), bank.timerFrames());
         }
         GameStateManager gameState = GameServices.gameStateOrNull();
         if (gameState != null && carried.lifeCount() != null) {

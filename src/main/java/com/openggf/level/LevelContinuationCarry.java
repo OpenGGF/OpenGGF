@@ -61,6 +61,20 @@ public final class LevelContinuationCarry {
                 ? state.phase(Phase.LOADED) : null;
     }
 
+    /**
+     * Installs a carried bank at an already-loaded standalone entry. The caller
+     * owns the entry observation; this neither submits a load nor writes live
+     * counters. The same production ScreenEvents and rewind state own it from here.
+     */
+    public static void installLoadedCounterBank(LevelManager manager, int rings, long timerFrames) {
+        var transitions = manager.getTransitions();
+        if (transitions.continuationCarry != null) {
+            throw new IllegalStateException("continuation bank already owned");
+        }
+        transitions.continuationCarry = new State(manager.getCurrentZone(), manager.getCurrentAct(),
+                rings, timerFrames, null, Phase.LOADED, true);
+    }
+
     /** One-shot destination screen-event bank, distinct from the fresh-player shield restore. */
     public static void restoreCounters(LevelManager manager) {
         var transitions = manager.getTransitions();
