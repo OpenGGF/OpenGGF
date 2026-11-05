@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TestCdR12aCameraArtResidency {
     private static final int[][] SPANS = {{0x0000,0x6560},{0x6600,0x6800},{0x69C0,0xA1E0},
-            {0xA400,0xA880},{0xAD00,0xB4E0},{0xB500,0xBF40},{0xD000,0xDFC0},{0xF5C0,0xF780}};
+            {0xA400,0xAD00},{0xAD00,0xB4E0},{0xB500,0xBF40},{0xD000,0xDFC0},{0xF5C0,0xF780}};
     private record NativeSpan(String source, int start, int byteLength) { }
     private static final NativeSpan[] PLC = {
             new NativeSpan("Art_Animals",0x71E0,0x280),
@@ -70,12 +70,13 @@ class TestCdR12aCameraArtResidency {
             new NativeSpan("HUD centiseconds",0xB2E0,2*64),
             new NativeSpan("HUD rings",0xB360,3*64),
             new NativeSpan("LoadLifeIcon",0xB420,32*4),
+            new NativeSpan("LoadShieldArt",0xA880,0x480),
             new NativeSpan("HUD lives",0xB4A0,64),
             new NativeSpan("HUD time bonus for act0001",0x8780,5*64),
             new NativeSpan("HUD ring bonus for act0001",0x88C0,5*64)
     };
 
-    @Test void fullNativeMetadataUnionIsExactlyEightDisjointRegions1597TilesAnd51104Bytes() {
+    @Test void fullNativeMetadataUnionIsExactlyEightDisjointRegions1633TilesAnd52256Bytes() {
         assertEquals(36,PLC.length); assertEquals(35,Arrays.stream(PLC).map(NativeSpan::source).distinct().count());
         assertEquals(2,Arrays.stream(PLC).filter(x->x.source().equals("Art_Anton")).count());
         var expected=new BitSet(2048); for(var x:PLC)mark(expected,x.start(),x.byteLength());
@@ -84,10 +85,10 @@ class TestCdR12aCameraArtResidency {
         for(int i=0;i<regions.length;i++) {
             var r=regions[i]; assertEquals(i,r.ordinal()); assertEquals(SPANS[i][0],r.destinationWord());
             assertEquals(SPANS[i][1]-SPANS[i][0],r.byteLength()); assertEquals(r.byteLength()/32,r.tileCount());
-            if(i>0)assertTrue(SPANS[i-1][1]<r.destinationWord());
+            if(i>0)assertTrue(SPANS[i-1][1]<=r.destinationWord());
             mark(actual,r.destinationWord(),r.byteLength()); bytes+=r.byteLength();
         }
-        assertEquals(expected,actual); assertEquals(1597,actual.cardinality()); assertEquals(51104,bytes);
+        assertEquals(expected,actual); assertEquals(1633,actual.cardinality()); assertEquals(52256,bytes);
         assertEquals(0,actual.get(0xF000>>>5,0xF300>>>5).cardinality(),"Existing Sonic owner is excluded");
     }
 

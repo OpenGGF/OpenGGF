@@ -221,7 +221,7 @@ Unreleased. The earlier development themes remain in
   actual Act2 dispatch also binds collapse platforms, Log Shadow and Mosqui using
   private callback receipts before native continuation. Natural controller steps,
   floor/sound publication and complete replay now cross the horizontal Door
-  through actual primary/secondary Solid publication, with ten selected-Sonic
+  through actual primary/secondary Solid publication, with twelve selected-Sonic
   pixel cuts and natural Explosion/Points work. Actual Flower floor/angle,
   growth and draw publication now continue to the Tunnel Path boundary, retaining
   explicit persistent-flower storage limits. Authenticated Tunnel Path speed,
@@ -234,8 +234,12 @@ Unreleased. The earlier development themes remain in
   captured storage without clearing, mirroring or creating another state owner;
   its live Act2 dispatch now publishes actual primary patches and same-pass
   TimeStar Init/active visits with full/course replay. Native history, Powerup
-  stores and reserved Draw retain private completion receipts. Later star-art
-  service remains the next dependency; no visible-star or act completion is implied.
+  stores and reserved Draw retain private completion receipts. The actual normal
+  Main clear now establishes the complete CPU art window; source-ordered star-art
+  service copies authenticated raw bytes, preserves its unwritten tail and
+  publishes current tiles through the existing captured owner. Controller replay
+  reaches13062, with real star pixels and renderer-only omission at12887; the
+  newly reached Monitor Item and complete acts remain separate dependencies.
   Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower

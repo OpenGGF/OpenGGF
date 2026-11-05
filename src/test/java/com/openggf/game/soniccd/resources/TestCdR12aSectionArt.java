@@ -318,7 +318,7 @@ ART_RINGS f5c0
         assertEquals(new SavedDecoder(Writer.CLEARED, 0, 0, 0, 0, 0), plcs.savedDecoder()); assertEquals(0, plcs.remainingTilesWord()); assertEquals(0, plcs.processBudgetWord()); assertEquals(0, plcs.hintWord()); assertEquals(0, plcs.padWord());
         assertSame(before.codeTable(), plcs.codeTable()); assertSame(before.residency(), plcs.residency()); assertEquals(before.sectionWord(), plcs.sectionWord());
         var patterns = owner.clearCurrentPatterns(before); assertQueueFields(before, patterns); assertSame(before.codeTable(), patterns.codeTable());
-        assertEquals(1597, knownTiles(patterns.residency()));
+        assertEquals(1633, knownTiles(patterns.residency()));
     }
 
     @Test void wrongOwnerTerminalAndScalarIngressChecksDoNotResumeOrDefaultAnActualValue() {

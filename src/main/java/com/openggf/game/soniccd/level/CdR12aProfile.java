@@ -133,7 +133,9 @@ public final class CdR12aProfile {
         TUNNEL_PATH_GROUND_SPEEDS(0x8BB8, 8), TUNNEL_PATH_COORDINATES(0x8BC0, 284),
         TUNNEL_PATH_MAPPING_ADDRESS(0x8994, 4),
         // ObjPowerup's actual R12A Init/Shield/ShowStars operands; raw roots overlap, so no eager visual decode.
-        ANI_POWERUP(0x1D400, 296), MAP_SPR_POWERUP(0x1D528, 274);
+        ANI_POWERUP(0x1D400, 296), MAP_SPR_POWERUP(0x1D528, 274),
+        // LoadShieldArt's actual R12A PC-indexed five-pointer source directory; no art reader/current owner.
+        SHIELD_ART_INDEX(0x6452, 20);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

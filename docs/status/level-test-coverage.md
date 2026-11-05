@@ -306,6 +306,19 @@ prefix evidence, not current pixels or replay ingress. Fresh Init creates no
 Draw, so selected12886 image qualification does not certify visible stars. Native
 CPU/tail/current service and complete-act/regional/native parity remain open.
 
+Actual original-USA Act2 Powerup now has authenticated source135, real Main-cleared
+CPU/tail and one36-tile current publication in the existing captured owner.
+Final694/29classes pass0failures/errors/skips; two preparation-only compile failures
+and their small Root repairs remain explicit. Independent static review found no
+concreteP1/P2. A bounded observer returns13062 then rethrows first13063 dynamic1A
+Monitor Item/physical32, with no failed-state ingress. Permanent positive13062 and
+twelve selected-Sonic EGL endpoints pass2 separately; actual12887 stars visibly
+contribute under renderer-only omission and full/course pixels/state replay.
+Current1633-tile sparse knowledge is not a completion metric. Save210/restart230,
+Monitor Item rewards, outgoing lifetime, complete acts and native/regional parity
+remain open. See the Act2 matrix's latest Powerup section; the earlier12886 fence
+above is historical.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

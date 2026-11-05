@@ -358,6 +358,27 @@ class TestSonicCdAct2ControllerRoute {
             assertEquals(call==12885?0:0x86,stars.level().powerup());
             assertEquals(call-12884,frame.environment().globals().timeWarpTimer());
         }
+        for(int call=12887;call<=13062;call++) {
+            var input=(call-11214)%128<32?jump:right;
+            if(call==12887 || call==12888 || call==12891 || call==13062)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            if(call==12887) {
+                assertNaturalPowerupCurrent(h);
+                assertEquals(3,frame.environment().globals().timeWarpTimer());
+                assertTrue(module.act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream()
+                        .anyMatch(p->p.slotRef().wholeIndex()>=12 && p.slotRef().wholeIndex()<16),
+                        "Actual prior star Draw is selected only after the real current upload");
+            }
+            if(call==12891) {
+                assertEquals(0,frame.environment().globals().timeWarpTimer());
+                var raw=module.act2LoadState().reservedObjects();
+                for(int whole=12;whole<16;whole++)assertEquals(0,raw.unsignedByte((whole-1)*64));
+            }
+        }
+        assertNaturalPowerupCurrent(h);
+        assertEquals(0,frame.environment().globals().timeWarpTimer());
+        assertTrue(module.act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream()
+                .noneMatch(p->p.slotRef().wholeIndex()>=12 && p.slotRef().wholeIndex()<16));
         assertTrue((frame.state().motion().centreX16_16()>>>16)>preJumpX,"Controller-only jump advances beyond the observed obstruction");
         assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
         assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
@@ -366,7 +387,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right+B returned12886; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right+B returned13062; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886,12886->12887,12887->12888,12890->12891,13061->13062, actual CPU/current TimeStars upload and reset/retirement, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 
@@ -426,9 +447,16 @@ class TestSonicCdAct2ControllerRoute {
             renderReplayNextRight(h,jump,12884);
             step(h,jump);assertLaterRouteOwners(h,frame,source,world,generation+1);
             assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT));
-            imageForExport=renderReplayNextRight(h,jump,12886).clone();
+            renderReplayNextRight(h,jump,12886);
+            imageForExport=renderReplayNextRight(h,jump,12887).clone();
+            assertNaturalPowerupCurrent(h);
+            for(int call=12888;call<=13061;call++) {
+                step(h,(call-11214)%128<32?jump:right);assertLaterRouteOwners(h,frame,source,world,generation+1);
+            }
+            renderReplayNextRight(h,(13062-11214)%128<32?jump:right,13062);
+            assertNaturalPowerupCurrent(h);
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884 and12886; selected Sonic omission changes all ten endpoint pictures. This last selection precedes star current-art service; no forward call12887 or visible-star claim.");
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884,12886,12887 and13062; selected Sonic omission changes all twelve endpoint pictures. Actual12887 TimeStars renderer-only omission changes pixels with planes/palette/current unchanged. No13063/next-object or native/regional parity claim.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
     }
@@ -499,6 +527,18 @@ class TestSonicCdAct2ControllerRoute {
             assertFalse(Arrays.equals(actual, pixels()), "Selected Sonic contributes engine pixels at actual controller call" + completedCall);
             assertNativeCapture(before, h); assertArrayEquals(actual, draw(h)); assertNativeCapture(before, h);
         }
+        if(provePrimary && completedCall==12887) {
+            var omitted=omitSelectedTimeStars(scene,cpu);
+            assertSame(scene.foreground(),omitted.foreground());assertSame(scene.background(),omitted.background());
+            assertArrayEquals(scene.packedHscroll256(),omitted.packedHscroll256());
+            assertEquals(scene.vscrollLongBits(),omitted.vscrollLongBits());
+            assertArrayEquals(scene.selectedPalette128(),omitted.selectedPalette128());
+            assertEquals(scene.nativePatterns(),omitted.nativePatterns());
+            var camera=h.mode().getCamera();clearPixels();
+            renderer.draw(omitted,camera.getX(),camera.getY(),module::validateAct2LoadingCut);
+            assertFalse(Arrays.equals(actual,pixels()),"Actually selected natural TimeStars contribute visible engine pixels");
+            assertNativeCapture(before,h);assertArrayEquals(actual,draw(h));assertNativeCapture(before,h);
+        }
         assertSame(selected, module.act2SelectedDisplay());
         assertSame(foreground, module.act2SelectedDisplay().inputs().foreground());
         assertSame(background, module.act2SelectedDisplay().inputs().background());
@@ -514,6 +554,35 @@ class TestSonicCdAct2ControllerRoute {
         assertNativeCapture(before, h); return actual;
     }
 
+    /** Actual captured CPU/current values; these expectations are comparison-only, never ingress. */
+    private static void assertNaturalPowerupCurrent(Harness h) throws Exception {
+        var observed=h.module().act2LoadState();
+        var values=actualField(actualField(h.module(),"act2Loading"),"values");
+        var optional=(java.util.Optional<?>)actualField(actualField(values,"loop"),"powerupCpu");
+        var cpu=assertInstanceOf(com.openggf.game.soniccd.level.CdAssetBytes.class,optional.orElseThrow());
+        assertEquals(1152,cpu.length());assertEquals(6,observed.level().powerup());
+        assertArrayEquals(observed.assets().objects().powerupArtSources().copy(2).copy(),cpu.slice(0,1024).copy());
+        assertArrayEquals(new byte[128],cpu.slice(1024,128).copy(),"Real Main clear's unwritten native CPU tail");
+        for(int at=0;at<1152;at+=32)assertArrayEquals(cpu.slice(at,32).copy(),
+                com.openggf.game.soniccd.resources.CdR12aCameraArtResidency.readTile(observed.section().residency(),(0xA880+at)>>>5).copy());
+    }
+
+    /** Omit only actually selected reserved12..15 tiles; preserve all native ordering and other layers. */
+    private static RetainedPlaneSceneRenderer.Scene omitSelectedTimeStars(RetainedPlaneSceneRenderer.Scene scene,
+            com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat cpu) {
+        byte[] raw=cpu.bytes();var tiles=new java.util.ArrayList<SpritePresentation.Tile>();int at=0;
+        for(int index=cpu.spriteCount()-1;index>=0;index--) {
+            int size=raw[index*8+2]&15,count=(((size>>>2)&3)+1)*((size&3)+1);
+            int whole=cpu.provenance().get(index).slotRef().wholeIndex();
+            if(whole<12 || whole>=16)tiles.addAll(scene.sprites().tiles().subList(at,at+count));
+            at+=count;
+        }
+        assertEquals(scene.sprites().tiles().size(),at);assertTrue(tiles.size()<at,"Selected native SAT contains TimeStars");
+        var picture=new SpritePresentation.Frame(tiles,java.util.List.of(),scene.sprites().patternVersions());
+        return new RetainedPlaneSceneRenderer.Scene(scene.foreground(),scene.background(),scene.packedHscroll256(),
+                scene.vscrollLongBits(),scene.selectedPalette128(),scene.displayEnabled(),picture,scene.nativePatterns());
+    }
+
     /** Executed only after module/session/graphics/context/boot fixture cleanup; never a test input. */
     private static void writeOptionalLaterCapture(byte[] rgba) throws Exception {
         String output = System.getenv("SONICCD_ACT2_ROUTE_OUTPUT"); if (output == null || output.isBlank()) return;
@@ -527,12 +596,12 @@ class TestSonicCdAct2ControllerRoute {
             int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
             image.setRGB(x, y, argb);
         }
-        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-12886.png").toFile()))
+        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-12887.png").toFile()))
             throw new java.io.IOException("PNG writer unavailable");
-        Files.writeString(directory.resolve("ENGINE-act2-controller-call-12886.txt"),
-                "ENGINE: OpenGGF original-USA controller-only route, actual completed call12886.\n"
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-12887.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call12887.\n"
                 + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
-                + "Full/course complete-value and pixel replay; selected Sonic renderer-only omission contrast.\n"
+                + "Full/course complete-value and pixel replay; selected Sonic and natural TimeStars renderer-only omission contrasts.\n"
                 + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");
     }
     // END later-route EGL case.

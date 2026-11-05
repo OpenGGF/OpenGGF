@@ -1,5 +1,52 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual Powerup upload, visible stars and positive13062
+
+Authenticated source135 appends only the20-byte ShieldArtIndex, preserving all134
+old descriptors,35 readers and19 PLC lists. The lazy source adapter borrows the
+original-USA R12A image and cached raw views; five finite1024-byte copies include
+TimeStars' real32-byte Spring continuation and TimeOver's real64-byte GameOver
+continuation. Disassembly is research only. No new general media reader or art bank.
+
+The actual Main FF1600..FF1FFF clear establishes all1152 CPU bytes atFF1980,
+including the later unwritten128-byte tail. CPU remains unknown beforehand and
+lives in the existing captured LoopGlobals. Actual BCLR7 publishes first; inactive
+requests inspect no CPU/source/current. One pure active plan copies1024 bytes and
+retains128, then prebuilds36 current tiles before one Values adoption. AT_A400
+widens only toAD00, preserving adjacent-region identity:1633 tiles/52256 bytes.
+Private stack-bound source/Frame/full96/Values/reserved/scroll/World checks retain
+original failures and retire the lease. No hardware simulation or new capture owner.
+
+Initial preparation stopped before tests on unavailable constructor-local owner
+references. Production then compiled; second preparation stopped on two missing
+private fixture helpers. Root corrected those references and added genuine
+controller-to10419/neutral helpers; no native algorithm or assertion was tuned.
+Final694/29classes pass with0failures/errors/skips. Source022b33c662131a360422656d31e99940d5610220e537d365f8443b17cb5193f4
+is unchanged09:32:08.277662–09:40:55.583829Z. Normalpreparation94s, admission0,
+execution527.306s; exact694uniqueIDs, properties,29freshXML and15sourcepins checked;
+58owned reports consumed. Independent static review found no concreteP1/P2 on the
+original15 sources; subsequent small compile/fixture repairs are recorded separately.
+
+One bounded ordinary observer rethrows original first13063 DYNAMIC_OBJECTS after
+lastreturned13062. At12887 the actual upload returns with identical1152-byte CPU
+and current hashes, Ready selected display and12 star pieces. At12891 the timer
+resets and all four raw stars delete; prior selected CPU may still contain their
+last Draw. The next unsupported physical slot32 is ID1A/routine0/animation2,
+identified by source as Monitor Item; later slot37 ID18 is distinct. Failed partial
+bytes remain diagnostics only, never ingress or a resumed Frame.
+
+Permanent healthy13062/full-course replay and twelve selected-Sonic EGL cuts
+separately pass2/0/0/0, including12886→12887,12887→12888,12890→12891 and13061→13062.
+Actual12887 TimeStars-only renderer omission changes pixels while planes/palette/
+current/other sprites remain unchanged. After-cleanup ENGINE12887 PNG is actual
+OpenGGF output, not native comparison. Sourcef546f2777182f196f8d3205b99296008028a9adc8a065119f33e4229776b1c39
+is unchanged09:51:59.223627–09:52:14.961752Z; exact2IDs/env/freshXML checked and two
+owned reports consumed. Preparation36.747s, admission0, execution15.738s. No full-suite,
+complete-act, Save210/restart230/outgoing-lifetime, other powerup awards, native
+visual/audio/timing parity or regional qualification follows. Next: source-ordered
+Monitor Item publication and its reached reward/reserved Shield dependencies.
+
+
 ## 5 November 2026 — actual reserved stars, positive12886 and next art boundary
 
 The real primary call now borrows its post-SpawnObjects reserved snapshot and

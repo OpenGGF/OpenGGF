@@ -23,6 +23,10 @@ public final class CdPowerupArtRuntime {
     public static final int WINDOW_BYTES = 0x480;
     public static final int VRAM_BYTE_ADDRESS = 0xA880;
 
+    /** Pure finite source values only. The selected slot is0..4; each value is exactly1024 bytes.
+     * A supplier grants no dispatch, World, service, CPU-tail or current-pattern authority. */
+    @FunctionalInterface public interface RawSources { CdAssetBytes copy(int nativeSlot); }
+
     /** Cleared byte and previous bit7; copyRequired describes the gate, not an art binding. */
     public record Gate(int powerup, boolean copyRequired) {
         public Gate {
@@ -78,8 +82,14 @@ public final class CdPowerupArtRuntime {
         public int pointerOffset() { return pointerOffset; }
     }
 
-    private final CdShieldArt assets;
-    public CdPowerupArtRuntime(CdShieldArt assets) { this.assets = Objects.requireNonNull(assets, "assets"); }
+    private final RawSources sources;
+    public CdPowerupArtRuntime(CdShieldArt assets) {
+        var actual = Objects.requireNonNull(assets, "assets");
+        this.sources = slot -> actual.copy(slot).bytes();
+    }
+    private CdPowerupArtRuntime(RawSources sources) { this.sources = Objects.requireNonNull(sources, "raw sources"); }
+    /** Named pure-source binding; the legacy public constructor remains unambiguous, including null. */
+    public static CdPowerupArtRuntime fromRawSources(RawSources sources) { return new CdPowerupArtRuntime(sources); }
 
     /**
      * One selected LoadShieldArt call. Low selectors are not inspected unless bit7 was set.
@@ -91,14 +101,29 @@ public final class CdPowerupArtRuntime {
         Gate gate = gate(powerup); // BCLR #7,powerup; the previous bit selects BEQ.
         int cleared = gate.powerup();
         if (!gate.copyRequired()) return new Result(state, cleared, Optional.empty());
+        var request = prepareActiveCopy(state.cpuBuffer(), cleared);
+        var complete = request.bytes();
+        return new Result(new State(complete, complete), cleared, Optional.of(request));
+    }
+
+    /**
+     * Pure active-copy plan after the actual caller has already published BCLR7.
+     * This is not a second gate: clearedPowerup is the retained cleared selector,
+     * not a resampled request. No old resident bank is needed or manufactured.
+     * The caller alone adopts the CPU value and current-pattern upload once.
+     */
+    public DmaRequest prepareActiveCopy(CdAssetBytes actualCpu, int clearedPowerup) {
+        if ((clearedPowerup & ~0x7F) != 0) throw new IllegalArgumentException("powerup must be a cleared native byte");
+        Objects.requireNonNull(actualCpu, "actual CPU buffer");
+        if (actualCpu.length() != WINDOW_BYTES) throw new IllegalArgumentException("Complete $480-byte CPU buffer required");
         // MOVEQ0/MOVE.B, SUBQ.B #2, ADD.W d0,d0: underflow wraps only the low byte.
-        int offset = ((cleared - 2) & 0xFF) * 2;
+        int offset = ((clearedPowerup - 2) & 0xFF) * 2;
         if ((offset & 3) != 0 || offset >= 5 * 4) throw new UnsupportedArt(offset);
-        var source = assets.copy(offset / 4).bytes();
-        byte[] cpu = state.cpuBuffer().copy();
+        var source = Objects.requireNonNull(sources.copy(offset / 4), "selected raw source");
+        if (source.length() != COPY_BYTES) throw new IllegalArgumentException("Powerup source must contain exactly1024 bytes");
+        byte[] cpu = actualCpu.copy();
         source.buffer().get(cpu, 0, COPY_BYTES); // DBF $FF copies exactly $100 longwords.
-        var complete = CdAssetBytes.copyOf(cpu); // Retain all $80 trailing RAM bytes.
-        return new Result(new State(complete, complete), cleared, Optional.of(new DmaRequest(complete)));
+        return new DmaRequest(CdAssetBytes.copyOf(cpu)); // Retain all $80 actual trailing RAM bytes.
     }
 
     private static void byteValue(int value) {

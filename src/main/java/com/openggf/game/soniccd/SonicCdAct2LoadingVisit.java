@@ -167,11 +167,15 @@ final class SonicCdAct2LoadingVisit {
                                Optional<CdGlobalObjectAnimation.Extras> animations,
                                CdAssetBytes paletteSteps7, CdAssetBytes paletteTimers7,
                                Optional<CdObjectDrawQueue.CpuSat> completedDraw,
-                               SonicCdAct2Display.Selection selectedDisplay) {
+                               SonicCdAct2Display.Selection selectedDisplay,
+                               Optional<CdAssetBytes> powerupCpu) {
         private LoopGlobals {
             Objects.requireNonNull(demoDataIndexWord); Objects.requireNonNull(animations);
             Objects.requireNonNull(paletteSteps7); Objects.requireNonNull(paletteTimers7);
             Objects.requireNonNull(completedDraw); Objects.requireNonNull(selectedDisplay);
+            Objects.requireNonNull(powerupCpu);
+            if (powerupCpu.isPresent() && powerupCpu.orElseThrow().length() != CdPowerupArtRuntime.WINDOW_BYTES)
+                throw new IllegalArgumentException("Complete native aniArtBuffer requires1152 bytes");
             if (paletteSteps7.length() != 7 || paletteTimers7.length() != 7)
                 throw new IllegalArgumentException("Native palette allocation has seven timer/step bytes");
             if (demoDataIndexWord.isPresent() && (demoDataIndexWord.getAsInt() & ~0xFFFF) != 0)
@@ -367,7 +371,7 @@ final class SonicCdAct2LoadingVisit {
                 new LoadingGlobals(CdCheckpointLiveAux.clearMiscAtLevelStart(live),contact,score,OptionalInt.empty(),Optional.empty(),
                         Optional.empty(),Optional.empty(),OptionalInt.empty(),OptionalInt.empty(),retainedDev, checkpointSaved),zero(31*64),
                 new FadeProgress(0,false),List.of(LOAD_LEVEL_PCM,INIT_VDP,INIT_CONTROLLERS,NORMAL_LOAD),
-                new LoopGlobals(OptionalInt.of(retainedDemoDataIndexWord),Optional.empty(),zero(7),zero(7),Optional.empty(),initialSelection));
+                new LoopGlobals(OptionalInt.of(retainedDemoDataIndexWord),Optional.empty(),zero(7),zero(7),Optional.empty(),initialSelection, Optional.empty()));
     }
     private static CdAssetBytes zero(int size) { return CdAssetBytes.copyOf(new byte[size]); }
     boolean owns(CdR12aTerrainAssets source,CdPlayerFrameRuntime sourceFrame) { return assets==source && frame==sourceFrame; }
@@ -509,7 +513,7 @@ final class SonicCdAct2LoadingVisit {
         // Expected current/geometry knowledge gaps remain immutable render-only Blocked values.
         var selected = SonicCdAct2Display.project(inputs);
         loop(new LoopGlobals(old.demoDataIndexWord(), old.animations(), old.paletteSteps7(), old.paletteTimers7(),
-                old.completedDraw(), selected));
+                old.completedDraw(), selected, old.powerupCpu()));
     }
 
     SonicCdAct2Display.Selection selectedDisplay() {
@@ -553,7 +557,7 @@ final class SonicCdAct2LoadingVisit {
         } finally { activeDrain = null; }
         var oldLoop = values.loop();
         var readyLoop = new LoopGlobals(oldLoop.demoDataIndexWord(), oldLoop.animations(), oldLoop.paletteSteps7(),
-                oldLoop.paletteTimers7(), Optional.of(completed), oldLoop.selectedDisplay());
+                oldLoop.paletteTimers7(), Optional.of(completed), oldLoop.selectedDisplay(), oldLoop.powerupCpu());
         var readyCpu = CdAssetBytes.copyOf(completed.bytes());
         replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 readyCpu, values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), values.ring(),
@@ -570,7 +574,7 @@ final class SonicCdAct2LoadingVisit {
         var animated = CdGlobalObjectAnimation.step(extras, values.ring());
         var animationLoop = values.loop();
         var readyAnimationLoop = new LoopGlobals(animationLoop.demoDataIndexWord(), Optional.of(animated.extras()),
-                animationLoop.paletteSteps7(), animationLoop.paletteTimers7(), animationLoop.completedDraw(), animationLoop.selectedDisplay());
+                animationLoop.paletteSteps7(), animationLoop.paletteTimers7(), animationLoop.completedDraw(), animationLoop.selectedDisplay(), animationLoop.powerupCpu());
         replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), animated.ring(),
                 values.level(), values.globals(), values.hudObjects(), values.calls());
@@ -585,7 +589,7 @@ final class SonicCdAct2LoadingVisit {
         System.arraycopy(result.state().timers().copy(), 0, timers, 0, 6);
         System.arraycopy(result.state().steps().copy(), 0, steps, 0, 6);
         var readyLoop = new LoopGlobals(old.demoDataIndexWord(), old.animations(), CdAssetBytes.copyOf(steps),
-                CdAssetBytes.copyOf(timers), old.completedDraw(), old.selectedDisplay());
+                CdAssetBytes.copyOf(timers), old.completedDraw(), old.selectedDisplay(), old.powerupCpu());
         // Adopt every reached palette/timer store, including a finite source fault prefix.
         replace(values.phase(), values.section(), result.state().palette(), values.fadePalette(), values.displayedPalette(),
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(), values.ring(),
@@ -1842,11 +1846,100 @@ final class SonicCdAct2LoadingVisit {
                 values.ring(), values.level(), values.globals(), values.hudObjects(), values.calls());
         call(ORDINARY_PUBLICATION);
     }
+    /** A stack-bound service lease, never captured or retained as a CPU/art owner. */
+    private PowerupArtInvocation activePowerupArt;
+    private final class PowerupArtInvocation {
+        final CdPlayerFrameRuntime sourceFrame = frame;
+        final CdR12aTerrainAssets sourceAssets = assets;
+        final CdR12aObjectAssets sourceObjects = assets.objects();
+        final Object stage = frame.stageSource();
+        // V-int is an open Frame operation: read its complete existing partitions,
+        // never call closed-cut capture APIs or manufacture a restore snapshot.
+        final CdPlayerBody.State actor = frame.state();
+        final Optional<CdPlayerBody.DisplayPublication> display = frame.display();
+        final CdPlayerBody.Environment environment = frame.environment();
+        final CdPlayerArtRuntime.State playerArt = frame.artState();
+        final CdPlayerFrameRuntime.VIntClock clock = frame.vIntClock();
+        final boolean paused = frame.paused();
+        final CdObjectPlacementRuntime.Snapshot placed = placement.capture();
+        final CdR11aForegroundScroll.State foreground = presentation.act2ForegroundImage();
+        final CdR11aBackgroundScroll.State background = presentation.act2BackgroundImage();
+        final CdR11aBackgroundPlane.State plane = presentation.act2PlaneImage();
+        final SonicCdPlayerPresentation.DrawCopies copies = presentation.act2DrawCopies();
+        final List<SonicCdGameModule.PastSound> ledger = sounds;
+        final Object world;
+        final long generation;
+        final boolean inService = servicing;
+        Values expectedValues = values;
+        PowerupArtInvocation() {
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+        }
+    }
+    private void verifyPowerupArt(PowerupArtInvocation i) {
+        module.requireAct2LoadingVisit(this);
+        presentation.requirePastRenderIdle();
+        requireOtherTimeStarsScopesIdle();
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        var now = placement.capture();
+        if (i == null || activePowerupArt != i || activeTimeStars != null || timeStarsPort || drawingTimeStars
+                || runningObjects || drawQueue != null || queuePort || servicing != i.inService
+                || frame != i.sourceFrame || frame.closed() || assets != i.sourceAssets || assets.objects() != i.sourceObjects
+                || frame.stageSource() != i.stage
+                || mode.getWorldSession() != i.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != i.generation
+                || frame.state() != i.actor || frame.display() != i.display || frame.environment() != i.environment
+                || frame.artState() != i.playerArt || frame.vIntClock() != i.clock || frame.paused() != i.paused
+                || presentation.act2ForegroundImage() != i.foreground || presentation.act2BackgroundImage() != i.background
+                || presentation.act2PlaneImage() != i.plane || presentation.act2DrawCopies() != i.copies
+                || values != i.expectedValues || sounds != i.ledger
+                || !now.status().equals(i.placed.status()) || !now.pool().slots().equals(i.placed.pool().slots())
+                || !sameBytes(now.savedFlags(), i.placed.savedFlags()))
+            throw new IllegalStateException("LoadShieldArt source/World/Frame/full96/Values/queue/scroll cut changed");
+    }
+    /** Actual native BCLR prefix, then one CPU copy and complete current upload. */
+    private void loadPowerupArt() {
+        requireBoulderPlatformIdle(); requireTimeStarsIdle(); requireOtherTimeStarsScopesIdle();
+        module.requireAct2LoadingVisit(this); presentation.requirePastRenderIdle();
+        boolean ordinary = values.phase() == BEGIN_LEVEL && servicing;
+        boolean begin = values.phase() == SECTION_PLC && !servicing && !values.calls().isEmpty()
+                && values.calls().getLast() == BEGIN_MAIN;
+        if ((!ordinary && !begin) || runningObjects || drawQueue != null || queuePort)
+            throw new IllegalStateException("No actual R12A LoadShieldArt service cut");
+        var gate = CdPowerupArtRuntime.gate(values.level().powerup());
+        levelFadeAndPowerup(values.level().fadeEnableDisplay(), gate.powerup()); // Actual BCLR7 first.
+        if (!gate.copyRequired()) return; // No CPU, source or current-pattern inspection on BEQ.
+        var i = new PowerupArtInvocation(); activePowerupArt = i;
+        try {
+            verifyPowerupArt(i);
+            var cpu = values.loop().powerupCpu().orElseThrow(
+                    () -> module.act2Boundary(SonicCdGameModule.Act2Boundary.POWERUP_ART));
+            // Lazy original-USA authenticated raw sources, only on this reached active branch.
+            var kernel = CdPowerupArtRuntime.fromRawSources(i.sourceObjects.powerupArtSources());
+            var request = kernel.prepareActiveCopy(cpu, gate.powerup());
+            verifyPowerupArt(i);
+            var nextSection = values.section();
+            for (int at = 0; at < request.bytes().length(); at += 32)
+                nextSection = art.writeCurrentTile(nextSection, request.vramByteAddress() + at, request.bytes().slice(at, 32));
+            var v = values; var old = v.loop();
+            var nextLoop = new LoopGlobals(old.demoDataIndexWord(), old.animations(), old.paletteSteps7(), old.paletteTimers7(),
+                    old.completedDraw(), old.selectedDisplay(), Optional.of(request.bytes()));
+            var ready = new Values(v.phase(), nextSection, v.cpuPalette(), v.fadePalette(), v.waterPalette(), v.displayedPalette(),
+                    v.cpuSat(), v.displayedSat(), v.displayedHScroll(), v.displayedVScrollLongBits(), v.foregroundPlane(),
+                    v.ring(), v.level(), v.globals(), v.hudObjects(), v.fadeProgress(), v.calls(), nextLoop);
+            verifyPowerupArt(i);
+            values = ready; i.expectedValues = ready; // One actual CPU/current publication; no resident-bank fiction.
+            verifyPowerupArt(i);
+        } catch (RuntimeException | Error original) {
+            try { verifyPowerupArt(i); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { activePowerupArt = null; }
+    }
+
     private void serviceLevelArtAndHud() {
         requireCallback();
-        var gate = CdPowerupArtRuntime.gate(values.level().powerup());
-        levelFadeAndPowerup(values.level().fadeEnableDisplay(), gate.powerup());
-        if (gate.copyRequired()) throw module.act2Boundary(SonicCdGameModule.Act2Boundary.POWERUP_ART);
+        loadPowerupArt();
         call(UPDATE_ANIMATED_TILES);
         copyAndDraw(); call(ORDINARY_DRAW_LEVEL);
         section(s -> art.serviceSlow(s, presentation.act2ForegroundImage().scrollLock())); call(ORDINARY_SLOW_PLC);
@@ -1941,11 +2034,13 @@ final class SonicCdAct2LoadingVisit {
                 values.cpuSat(), values.displayedSat(), values.displayedHScroll(), values.foregroundPlane(),
                 new CdRingGlobals(r.rings(), r.lives(), r.livesFlags(), r.updateHudRings(), r.updateHudLives(), 0, 0, 0),
                 values.level(), values.globals(), values.hudObjects(), values.calls());
-        // Main178-184 actually clears FF1600..FF1FFF, including ALL global animations.
+        // Main178-184 actually clears FF1600..FF1FFF, including ALL global animations
+        // and aniArtBuffer FF1980..FF1DFF. PPZ2 Present UpdateAnimTiles7-8 jumps
+        // only to LoadShieldArt; its1024-byte copy cannot write the final128 bytes.
         var loop = values.loop();
         loop(new LoopGlobals(loop.demoDataIndexWord(), Optional.of(new CdGlobalObjectAnimation.Extras(
                 0, 0, 0, 0, new CdRingSpillGlobals(0, 0, 0))),
-                loop.paletteSteps7(), loop.paletteTimers7(), loop.completedDraw(), loop.selectedDisplay()));
+                loop.paletteSteps7(), loop.paletteTimers7(), loop.completedDraw(), loop.selectedDisplay(), Optional.of(zero(CdPowerupArtRuntime.WINDOW_BYTES))));
         presentation.clearAct2FlowersImages(); globals(LoadingGlobals::clearDebugBlock); call(CLEAR_FLOWERS);
         // The actual complete object clear includes primary slot0; its fresh RunMMD
         // image is already zero and has had no native object writer before this cut.
@@ -1961,12 +2056,12 @@ final class SonicCdAct2LoadingVisit {
         // RunMMD's FF2000..FFFAFF clear already established these zero bytes;
         // Main210-216 re-clears the FFF7B0..FFF7BD palette allocation.
         var cameraLoop = values.loop();
-        loop(new LoopGlobals(cameraLoop.demoDataIndexWord(), cameraLoop.animations(), zero(7), zero(7), cameraLoop.completedDraw(), cameraLoop.selectedDisplay()));
+        loop(new LoopGlobals(cameraLoop.demoDataIndexWord(), cameraLoop.animations(), zero(7), zero(7), cameraLoop.completedDraw(), cameraLoop.selectedDisplay(), cameraLoop.powerupCpu()));
         globals(LoadingGlobals::clearBonus); call(CLEAR_CAMERA);
         // Main223, after the real camera clear and before ClearScreen. Never borrow demoS1Index/F790.
         var demoLoop = values.loop();
         loop(new LoopGlobals(OptionalInt.of(0), demoLoop.animations(), demoLoop.paletteSteps7(),
-                demoLoop.paletteTimers7(), demoLoop.completedDraw(), demoLoop.selectedDisplay())); call(CLEAR_DEMO_INDEX);
+                demoLoop.paletteTimers7(), demoLoop.completedDraw(), demoLoop.selectedDisplay(), demoLoop.powerupCpu())); call(CLEAR_DEMO_INDEX);
         presentation.clearAct2ScreenImages();
         replace(values.phase(), values.section(), values.cpuPalette(), values.fadePalette(), values.displayedPalette(),
                 zero(CdObjectDrawQueue.SAT_BYTE_SIZE), values.displayedSat(), values.displayedHScroll(),
@@ -2115,9 +2210,7 @@ final class SonicCdAct2LoadingVisit {
 
 
     private void beginFromBlack() {
-        var gate=CdPowerupArtRuntime.gate(values.level().powerup());
-        levelFadeAndPowerup(values.level().fadeEnableDisplay(),gate.powerup());
-        if (gate.copyRequired()) throw module.act2Boundary(SonicCdGameModule.Act2Boundary.POWERUP_ART);
+        loadPowerupArt();
         call(UPDATE_ANIMATED_TILES); levelFadeAndPowerup(1,values.level().powerup());
         if (frame.clearLevelStartTimeZoneMarker()) throw module.act2Boundary(SonicCdGameModule.Act2Boundary.ENTRY);
         module.clearAct2PaletteFlag(this);
@@ -3560,6 +3653,7 @@ final class SonicCdAct2LoadingVisit {
 
 
     private void requireCheckpointIdle() {
+        if (activePowerupArt != null) throw new IllegalStateException("Actual LoadShieldArt owns this cut");
         if(activeCheckpoint!=null || checkpointPort || drawingCheckpoint) throw new IllegalStateException("Actual Checkpoint owns this cut");
     }
     private void requireTamabbohFloatIdle() {
@@ -8218,6 +8312,7 @@ final class SonicCdAct2LoadingVisit {
 
     // Actual reserved ID03: one facade, one cached native kernel, no extra rewind/storage owner.
     private void requireTimeStarsIdle() {
+        if (activePowerupArt != null) throw new IllegalStateException("Actual LoadShieldArt owns this cut");
         if(activeTimeStars!=null || timeStarsPort || drawingTimeStars)
             throw new IllegalStateException("Actual reserved TimeStars invocation owns this source cut");
     }

@@ -10,8 +10,9 @@ import java.util.OptionalInt;
  * Immutable finite original-USA PPZ2 Present non-player current-pattern value.
  * Source pin1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Palmtree Panic/Graphics Lists
  * (Act 2 Present).asm, all35 authentic PLC art outputs/36 distinct destination spans;
+ * LoadShieldArt (Powerup/Main.asm:157-173) adds exactly36 tiles at A880..AD00;
  * shared Main.asm:599-614 and HUD and Points/Main.asm:197-716 select the direct writers.
- * Exact sorted union: eight disjoint spans,1597 tiles/51104 bytes. Complete output
+ * Exact sorted union: eight disjoint spans,1633 tiles/52256 bytes. Complete output
  * lengths determine destinations; compressed blobs and reader lookahead are not output.
  * Sonic F000..F300 stays in its existing player-art owner. Unknown construction never
  * establishes pixels. This facade shares the existing package-private value kernel;
@@ -26,7 +27,7 @@ public final class CdR12aCameraArtResidency {
         AT_0000(0x0000, 0x6560),
         AT_6600(0x6600, 0x0200),
         AT_69C0(0x69C0, 0x3820),
-        AT_A400(0xA400, 0x0480),
+        AT_A400(0xA400, 0x0900),
         AT_AD00(0xAD00, 0x07E0),
         AT_B500(0xB500, 0x0A40),
         AT_D000(0xD000, 0x0FC0),

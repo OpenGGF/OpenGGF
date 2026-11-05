@@ -122,6 +122,7 @@ public final class CdR12aObjectAssets {
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
+    private CdR12aPowerupArtSources powerupArtSources;
 
     /** Only the actual authenticated terrain owner calls this; no public arbitrary-image ingress. */
     CdR12aObjectAssets(CdR12aTerrainAssets terrain, CdMmdImage image) {
@@ -133,6 +134,11 @@ public final class CdR12aObjectAssets {
     public synchronized CdAssetBytes view(CdR12aProfile.Asset asset) {
         Objects.requireNonNull(asset, "asset");
         return views.computeIfAbsent(asset, a -> profile().range(a).read(image));
+    }
+    /** Lazy pure raw sources only; no copy service, CPU buffer, current pattern or programme admission. */
+    public synchronized CdR12aPowerupArtSources powerupArtSources() {
+        if (powerupArtSources == null) powerupArtSources = CdR12aPowerupArtSources.fromOwner(this, image);
+        return powerupArtSources;
     }
     public List<ReaderProfile> readerProfiles() { return READERS; }
     public ReaderProfile readerProfile(CdR12aProfile.Asset asset) {
