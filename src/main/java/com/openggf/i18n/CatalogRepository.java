@@ -41,7 +41,7 @@ final class CatalogRepository {
     static CatalogRepository bundled() {
         ClassLoader loader = CatalogRepository.class.getClassLoader();
         try (InputStream index = loader.getResourceAsStream("i18n/catalogs.list")) {
-            if (index == null) throw new IOException("Missing generated i18n/catalogs.list; run Maven compile");
+            if (index == null) return unindexedDirectory(loader);
             Map<String, String> documents = new TreeMap<>();
             for (String item : new String(index.readAllBytes(), StandardCharsets.UTF_8).lines().toList()) {
                 String name = item.strip().replace('\\', '/');
@@ -56,6 +56,16 @@ final class CatalogRepository {
             }
             return fromDocuments(documents);
         } catch (IOException e) { throw new UncheckedIOException("Unable to load UI catalogs", e); }
+    }
+
+    /** IDE launches skip Maven's generate-resources step, so read the catalog tree directly. */
+    private static CatalogRepository unindexedDirectory(ClassLoader loader) throws IOException {
+        java.net.URL url = loader.getResource("i18n/source");
+        if (url == null || !"file".equals(url.getProtocol()))
+            throw new IOException("Missing generated i18n/catalogs.list; run Maven compile");
+        try {
+            return directory(Path.of(url.toURI()).getParent());
+        } catch (java.net.URISyntaxException e) { throw new IOException(e); }
     }
 
     static CatalogRepository directory(Path root) throws IOException {
