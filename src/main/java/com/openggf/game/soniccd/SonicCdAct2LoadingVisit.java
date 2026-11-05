@@ -54,6 +54,9 @@ final class SonicCdAct2LoadingVisit {
     private final CdPoints.Assets pointsAssets;
     private transient ChildEffectInvocation activeChildEffect;
     private boolean drawingChildEffect;
+    private final CdTunnelDoor tunnelDoor;
+    private transient DoorInvocation activeDoor;
+    private boolean doorPort, drawingDoor;
     private final CdLogShadow logShadow;
     private final CdMosqui mosqui;
     private transient LogMosquiInvocation activeLogMosqui;
@@ -243,6 +246,17 @@ final class SonicCdAct2LoadingVisit {
             @Override public void completed(Object c) { consumeCompletedChildReceipt(c); }
         });
         explosionAssets=explosion.assets(); pointsAssets=points.assets();
+        tunnelDoor=CdTunnelDoor.withPrefixOwner(placement,this::readDoorSecondary,CdTunnelDoor.Assets.fromAct2Assets(objectAssets),
+                sharedSolid,new CdTunnelDoor.PrefixSolidOwner() {
+                    @Override public CdTunnelDoor.LiveSolid preflight(CdTunnelDoor.PrefixSolidCut c) {return preflightDoor(c);}
+                    @Override public CdTunnelDoor.LiveSolid commit(CdTunnelDoor.PrefixSolidCall c) {return commitDoor(c);}
+                },this::drawDoor,this::playDoorFm,new CdTunnelDoor.DispatchObserver() {
+                    @Override public void beforePublication(CdTunnelDoor.Publication c) {beforeDoorPublication(c);}
+                    @Override public void afterPublication(CdTunnelDoor.Publication c) {afterDoorPublication(c);}
+                    @Override public void beforeCall(Object c) {beforeDoorCall(c);}
+                    @Override public void afterCall(Object c,Object returned) {afterDoorCall(c,returned);}
+                    @Override public void failedCall(Object c,Throwable original) {failedDoorCall(c);}
+                });
         logShadow=CdLogShadow.fromAct2Assets(placement,objectAssets,new CdLogShadow.DispatchObserver() {
             @Override public void beforePublication(CdLogShadow.Publication c) { beforeLogPublication(c); }
             @Override public void afterPublication(CdLogShadow.Publication c) { afterLogMosquiPublication(c); }
@@ -656,6 +670,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runReservedHud(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
@@ -930,6 +945,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runRing(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
@@ -1218,6 +1234,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runSpring(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
@@ -1616,6 +1633,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runAnimal(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
@@ -2092,6 +2110,7 @@ final class SonicCdAct2LoadingVisit {
                 }
                 else if(id==CdExplosion.OBJECT_ID) { runExplosion(whole); call(EXPLOSION_BODY); }
                 else if(id==CdPoints.OBJECT_ID) { runPoints(whole); call(POINTS_BODY); }
+                else if(id==CdTunnelDoor.OBJECT_ID) {runDoor(whole);call(TUNNEL_DOOR_BODY);}
                 else if(id==CdLogShadow.OBJECT_ID) { runLogShadow(whole); call(LOG_SHADOW_BODY); }
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
                 else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
@@ -2125,6 +2144,7 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PLATFORM.nativeAddress(),assets.objects().platform().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_EXPLOSION.nativeAddress(),assets.objects().explosion().mappings(),0,7));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_POINTS.nativeAddress(),assets.objects().points().mappings(),0,6));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TUNNEL_DOOR.nativeAddress(),assets.objects().tunnelDoor().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_LOG_SHADOW.nativeAddress(),assets.objects().logShadow().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOSQUI_NORMAL.nativeAddress(),assets.objects().normalMosqui().mappings(),0,5));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOSQUI_DAMAGED.nativeAddress(),assets.objects().damagedMosqui().mappings(),0,5));
@@ -2148,6 +2168,7 @@ final class SonicCdAct2LoadingVisit {
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
+                if(activeDoor!=null) return readDoorDrawSlot(ref);
                 if(activeLogMosqui!=null) return readLogMosquiDrawSlot(ref);
                 if(activeDrain!=null) return readDrainingSlot(ref);
                 if(activeTitle!=null) return readTitleDrawSlot(ref);
@@ -2166,6 +2187,7 @@ final class SonicCdAct2LoadingVisit {
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
+                if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
                 if(activeLogMosqui!=null) { writeLogMosquiOnScreen(ref,value); return; }
                 if(activeDrain!=null) { writeDrainingOnScreen(ref,value); return; }
                 if(ref.wholeIndex()==0) { writePrimaryOnScreen(ref,value); return; }
@@ -2322,6 +2344,7 @@ final class SonicCdAct2LoadingVisit {
             throw new IllegalStateException("Stale Title selected64/full96/source cut");
     }
     private void runTitle(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
@@ -2509,6 +2532,7 @@ final class SonicCdAct2LoadingVisit {
                                 Optional<CdPlayerBody.DisplayEligibility> display) { }
 
     private void runPrimaryMain(int levelFrame) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
@@ -2775,6 +2799,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runMonitor(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
@@ -3481,6 +3506,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runBoulder(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireAntonPataIdle();
         module.requireAct2LoadingVisit(this);
@@ -3843,6 +3869,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runPlatform(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireAntonPataIdle();
         module.requireAct2LoadingVisit(this);
@@ -4258,6 +4285,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runAnton(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeTitle!=null || titlePort || drawingTitle) throw new IllegalStateException("Title owns this Act2 source cut");
@@ -4506,6 +4534,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runPataBata(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();
         if(activeTitle!=null || titlePort || drawingTitle) throw new IllegalStateException("Title owns this Act2 source cut");
@@ -4910,6 +4939,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runTamabboh(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireWallIdle();
         module.requireAct2LoadingVisit(this);
@@ -5281,6 +5311,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runFloatBlock(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireWallIdle();
         module.requireAct2LoadingVisit(this);
@@ -5794,6 +5825,7 @@ final class SonicCdAct2LoadingVisit {
         }
     }
     private void runCheckpoint(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle();module.requireAct2LoadingVisit(this);
         if(!runningObjects || servicing || activePrimary!=null || activeDrain!=null || activeTitle!=null || titlePort || drawingTitle
@@ -6254,6 +6286,7 @@ final class SonicCdAct2LoadingVisit {
     }
     private WallInvocation currentWall() { var i=activeWall; verifyWallScope(i); return i; }
     private void runWall(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         requireBoulderPlatformIdle(); module.requireAct2LoadingVisit(this);
         if (!runningObjects || servicing || activePrimary!=null || activeDrain!=null || activeTitle!=null || activeReserved!=null
@@ -6464,6 +6497,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runCollapse(int whole) {
+        requireDoorIdle();
         requireLogMosquiIdle();
         module.requireAct2LoadingVisit(this);
         if(activeCheckpoint!=null || checkpointPort || drawingCheckpoint || activeWall!=null || wallPort || drawingWall
@@ -6851,6 +6885,7 @@ final class SonicCdAct2LoadingVisit {
     private void runLogShadow(int whole) { runLogMosqui(whole,false); }
     private void runMosqui(int whole) { runLogMosqui(whole,true); }
     private void runLogMosqui(int whole,boolean mosquito) {
+        requireDoorIdle();
         requireLogMosquiIdle();requireOtherLogMosquiScopesIdle();module.requireAct2LoadingVisit(this);
         if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
                 || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
@@ -7044,6 +7079,7 @@ final class SonicCdAct2LoadingVisit {
         if(activeChildEffect!=null || drawingChildEffect) throw new IllegalStateException("Actual child-effect invocation owns this cut");
     }
     private void requireOtherChildScopesIdle() {
+        requireDoorIdle();
         if(activeLogMosqui!=null || logMosquiPort || drawingLogMosqui) throw new IllegalStateException("Actual Log/Mosqui owns this cut");
         requireOtherLogMosquiScopesIdle();
     }
@@ -7308,6 +7344,299 @@ final class SonicCdAct2LoadingVisit {
         var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
         var ready=logMosquiImages(CdObjectPool.overlay(placement.capture().pool(),List.of(next)));queuePort=true;
         try {verifyChildEffect(i);i.pool.write(next);i.images=ready;i.cleared=true;verifyChildEffect(i);}
+        finally {queuePort=false;}
+    }
+
+    // Horizontal Door: one actual cached dispatch, not another Frame/bank/queue/current owner.
+    private void requireDoorIdle() {
+        if(activeDoor!=null || doorPort || drawingDoor)throw new IllegalStateException("Actual Door owns this source cut");
+    }
+    private final class DoorInvocation {
+        final int whole; final CdTunnelDoor body=tunnelDoor; final CdPlayerFrameRuntime sourceFrame=frame;
+        final Object stageSource=frame.stageSource(); final CdR12aTerrainAssets sourceAssets=assets;
+        final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue;
+        final CdObjectPlacementRuntime.Status status=placement.status(); final CdObjectState entry;
+        final Object world; final long generation; final CdObjectDrawQueue.CameraWords camera;
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll();
+        final CdAssetBytes reserved=values.hudObjects();
+        CdPlayerBody.State state=frame.state(); CdPlayerFrameRuntime.ActorState actor=frame.captureActor();
+        CdPlayerFrameRuntime.SharedState shared=frame.captureShared(); Values expectedValues=values;
+        List<SonicCdGameModule.PastSound> ledger=sounds; CdAssetBytes saved=placement.capture().savedFlags();
+        List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()), readyImages;
+        CdAssetBytes readySaved, secondary; List<Object> receipts=List.of(), readyReceipts;
+        CdTunnelDoor.Publication pendingPublication; Object pendingCall, completedCall, completedReturn, lastReturnedCall;
+        CdTunnelDoor.PrefixSolidCut pendingCut; CdSolidObject.Outcome pendingOutcome;
+        long ordinal; boolean primaryPreflight, primaryDone, opened, secondaryRead, secondaryPreflight, secondaryDone;
+        boolean child, fm, drawn, cleared, stopped, queueFailed, failed;
+        DoorInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+    }
+    private void runDoor(int whole) {
+        requireChildEffectIdle();
+        requireDoorIdle();requireLogMosquiIdle();requireOtherLogMosquiScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || placement.pool().state(whole).id()!=CdTunnelDoor.OBJECT_ID)
+            throw new IllegalStateException("No actual cached horizontal Door dispatch");
+        var i=new DoorInvocation(whole);activeDoor=i;
+        try {
+            var gates=frame.environment().movement().gates();
+            var result=tunnelDoor.run(whole,new CdTunnelDoor.Globals(gates.timeZone(),gates.timeWarpDirection(),i.camera.xWord()),
+                    new CdTunnelDoor.SolidInputs(springPlayer(),new CdSolidObject.Gates(frame.environment().globals().debugMode(),gates.miniSonic()),springGlobals()));
+            verifyDoor(i);
+            if(i.pendingCall!=null || i.pendingPublication!=null || i.pendingCut!=null || i.stopped || i.failed || !i.drawn || !i.cleared
+                    || (i.entry.routine()==0 || i.entry.routine()==2) && !i.secondaryDone
+                    || !result.state().equals(i.pool.state(whole)) || !result.finalPrimary().equals(springPlayer())
+                    || !result.finalGlobals().equals(springGlobals()))
+                throw new IllegalStateException("Door omitted actual helper/return/Draw receipts");
+        } catch(RuntimeException|Error original) {
+            try {verifyDoor(i);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        } finally {activeDoor=null;}
+    }
+    private void verifyDoorOwners(DoorInvocation i) {
+        requireChildEffectIdle();
+        module.requireAct2LoadingVisit(this);requireLogMosquiIdle();requireOtherLogMosquiScopesIdle();
+        var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(activeDoor!=i || !runningObjects || servicing || i.body!=tunnelDoor || i.sourceFrame!=frame || i.stageSource!=frame.stageSource()
+                || i.sourceAssets!=assets || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null
+                || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession()
+                || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.state()!=i.state || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
+                || values!=i.expectedValues || sounds!=i.ledger || !placement.status().equals(i.status)
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Door changed or borrowed another actual World/Frame/source owner");
+    }
+    private void verifyDoorImages(DoorInvocation i,List<CdAssetBytes> images,CdAssetBytes saved) {
+        var actual=placement.capture();placement.validateRestore(actual);
+        if(images.size()!=96 || !actual.status().equals(i.status) || !sameBytes(actual.savedFlags(),saved))
+            throw new IllegalStateException("Door changed status or complete saved bank");
+        for(int at=0;at<96;at++)if(!Arrays.equals(actual.pool().slots().get(at).copyBytes(),images.get(at).copy()))
+            throw new IllegalStateException("Door full96 output differs at physical "+(at+32));
+    }
+    private void verifyDoor(DoorInvocation i) {verifyDoorOwners(i);verifyDoorImages(i,i.images,i.saved);}
+    private DoorInvocation requireDoor() {
+        var i=activeDoor;if(i==null)throw new IllegalStateException("No actual Door invocation");verifyDoor(i);return i;
+    }
+    private void doorCut(DoorInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);verifyDoorImages(i,logMosquiImages(cut.pool()),cut.savedFlags());
+        if(!cut.status().equals(i.status) || !source.equals(i.pool.state(i.whole)))throw new IllegalStateException("Stale Door source cut");
+    }
+    private void beforeDoorPublication(CdTunnelDoor.Publication c) {
+        var i=requireDoor();
+        if(!tunnelDoor.isCurrentCall(c) || i.pendingPublication!=null || i.pendingCall!=null || doorPort || drawingDoor || queuePort
+                || i.failed || c.ordinal()!=i.ordinal+1 || !c.source().identity().equals(i.entry.identity()))
+            throw new IllegalStateException("Door store lacks its exact pending producer/sequence");
+        doorCut(i,c.cut(),c.source());var next=new ArrayList<>(i.images);var saved=i.saved;
+        switch(c.kind()) {
+            case SOURCE -> {
+                var out=Objects.requireNonNull(c.output());i.pool.validateRestore(CdObjectPool.overlay(c.cut().pool(),List.of(out)));
+                if(!out.identity().equals(i.entry.identity()))throw new IllegalArgumentException("Door source store changed identity");
+                byte[] before=c.source().copyBytes(),after=out.copyBytes();
+                for(int at=0;at<64;at++) {
+                    int mask=at==1?7:at>=2&&at<=7 || at==0x16 || at>=0x18&&at<=0x1E || at==0x24 || at==0x25?255:0;
+                    if(((before[at]^after[at])&~mask&255)!=0)throw new IllegalArgumentException("Door changed unowned source byte "+at);
+                }
+                next.set(i.whole-32,CdAssetBytes.copyOf(after));
+            }
+            case CHILD -> {
+                var out=Objects.requireNonNull(c.output());i.pool.validateRestore(CdObjectPool.overlay(c.cut().pool(),List.of(out)));
+                int whole=out.identity().wholeIndex();var before=c.cut().pool().slots().get(whole-32);
+                if(i.child || !i.opened || i.entry.subtype()!=0 || before.id()!=0 || out.id()!=0x0B || whole==i.whole
+                        || !before.moveByte(CdObjectState.ByteField.ID,0x0B).moveWord(CdObjectState.WordField.X,c.source().centreX())
+                        .moveWord(CdObjectState.WordField.Y,c.source().centreY()-4).equals(out))
+                    throw new IllegalStateException("Door child differs from actual dirty ID/X/Y allocation prefix");
+                next.set(whole-32,CdAssetBytes.copyOf(out.copyBytes()));
+            }
+            case SAVED -> {
+                if(!i.drawn || !i.cleared || c.output()!=c.source() || c.savedIndex()<2 || c.savedIndex()>=saved.length())
+                    throw new IllegalStateException("Door saved clear lacks the reached Draw/tail source");
+                byte[] raw=saved.copy();raw[c.savedIndex()]&=0x7F;saved=CdAssetBytes.copyOf(raw);
+            }
+            case DELETE -> {
+                if(!i.drawn || !i.cleared || c.output()!=null)throw new IllegalStateException("Door delete precedes actual Draw");
+                next.set(i.whole-32,CdAssetBytes.copyOf(new byte[64]));
+            }
+        }
+        var receipts=new ArrayList<>(i.receipts);receipts.add(c);
+        i.readyImages=List.copyOf(next);i.readySaved=saved;i.readyReceipts=List.copyOf(receipts);i.pendingPublication=c;
+    }
+    private void afterDoorPublication(CdTunnelDoor.Publication c) {
+        var i=activeDoor;if(i==null || i.pendingPublication!=c || !tunnelDoor.isCurrentCall(c))throw new IllegalStateException("No exact Door store receipt");
+        verifyDoorOwners(i);verifyDoorImages(i,i.readyImages,i.readySaved);
+        if(c.kind()==CdTunnelDoor.MutationKind.SOURCE && (i.entry.routine()==0 || i.entry.routine()==2)
+                && c.source().routine()==2 && c.output().routine()==4 && !i.primaryDone)i.opened=true;
+        if(c.kind()==CdTunnelDoor.MutationKind.CHILD)i.child=true;
+        i.images=i.readyImages;i.saved=i.readySaved;i.receipts=i.readyReceipts;i.ordinal++;
+        i.readyImages=null;i.readySaved=null;i.readyReceipts=null;i.pendingPublication=null;
+    }
+    private void beforeDoorCall(Object call) {
+        var i=requireDoor();
+        if(!tunnelDoor.isCurrentCall(call) || i.pendingCall!=null || i.pendingPublication!=null || doorPort || drawingDoor || queuePort || i.stopped
+                || i.failed && !(call instanceof CdTunnelDoor.SecondaryReadCall))
+            throw new IllegalStateException("No actual pending Door external producer");
+        if(call instanceof CdTunnelDoor.SecondaryReadCall c) {
+            doorCut(i,c.cut(),c.source());
+            if(i.entry.routine()!=0 && i.entry.routine()!=2 || !i.primaryDone && !i.opened || i.drawn || i.child && !i.fm)
+                throw new IllegalStateException("Door secondary read precedes actual primary completion");
+        } else if(call instanceof CdTunnelDoor.PrefixSolidCut c) {
+            i.pool.validateRestore(c.callCut());verifyDoorImages(i,logMosquiImages(c.callCut()),i.saved);
+            if(i.pendingCut!=null || !c.objectIdentity().equals(i.entry.identity()) || !c.expectedPrimary().equals(springPlayer())
+                    || !c.expectedGlobals().equals(springGlobals()) || !c.expectedGates().equals(doorGates()))
+                throw new IllegalStateException("Door pre-Top cut differs from actual post-prefix full Frame/source");
+            if(c.participant()==CdTunnelDoor.Participant.PRIMARY) {
+                if(i.primaryPreflight || i.primaryDone || i.opened || i.secondaryRead || c.secondary().isPresent()
+                        || i.pool.state(i.whole).routine()!=2)throw new IllegalStateException("Door primary Top is not its first participant");
+            } else if(!i.secondaryRead || !i.primaryDone && !i.opened || i.secondaryPreflight || i.secondaryDone || c.secondary().isEmpty()
+                    || !sameBytes(c.secondary().orElseThrow(),reservedImage(1)) || !sameBytes(c.secondary().orElseThrow(),i.secondary))
+                throw new IllegalStateException("Door secondary Top lacks actual reached whole1 bytes");
+        } else if(call instanceof CdTunnelDoor.PrefixSolidCall c) {
+            if(c.cut()!=i.pendingCut || i.pendingOutcome!=null)throw new IllegalStateException("Door outcome lacks actual preflight");
+            i.pendingOutcome=c.outcome();
+        } else if(call instanceof CdTunnelDoor.FmCall c) {
+            doorCut(i,c.cut(),c.source());
+            if(!i.opened || !i.child || i.fm || i.entry.subtype()!=0 || i.secondaryRead || i.drawn || c.sound()!=CdTunnelDoor.FmSound.FM_A4)
+                throw new IllegalStateException("Door FM_A4 precedes its actual successful child prefix");
+        } else if(call instanceof CdTunnelDoor.DrawCall c) {
+            doorCut(i,c.cut(),c.source());
+            if(i.drawn || (i.entry.routine()==0 || i.entry.routine()==2) && !i.secondaryDone)
+                throw new IllegalStateException("Door Draw skipped its native participants");
+        } else throw new IllegalArgumentException("Unknown Door producer call");
+        i.pendingCall=call;i.completedCall=null;i.completedReturn=null;i.lastReturnedCall=null;
+    }
+    private void afterDoorCall(Object call,Object returned) {
+        var i=requireDoor();
+        if(!tunnelDoor.isCurrentCall(call) || i.pendingCall!=call || i.completedCall!=call || returned!=i.completedReturn)
+            throw new IllegalStateException("Door returned without its exact private adoption/readback receipt");
+        i.lastReturnedCall=call;i.pendingCall=null;i.completedCall=null;i.completedReturn=null;
+    }
+    /** A throw permits only genuine read-only secondary verification, never later native gameplay work. */
+    private void failedDoorCall(Object call) {
+        var i=activeDoor;
+        if(i==null || !tunnelDoor.isCurrentCall(call) || i.pendingCall!=call && i.lastReturnedCall!=call)return;
+        verifyDoor(i);i.failed=true;i.pendingCall=null;i.completedCall=null;i.completedReturn=null;i.lastReturnedCall=null;
+    }
+    private DoorInvocation requireDoorCall(Object call) {
+        var i=requireDoor();
+        if(call==null || !tunnelDoor.isCurrentCall(call) || i.pendingCall!=call || i.completedCall!=null || doorPort || drawingDoor || queuePort)
+            throw new IllegalStateException("Public/cloned/repeated Door values grant no actual invocation authority");return i;
+    }
+    private CdSolidObject.Gates doorGates() {return new CdSolidObject.Gates(frame.environment().globals().debugMode(),frame.environment().movement().gates().miniSonic());}
+    private CdAssetBytes readDoorSecondary() {
+        var i=activeDoor;if(i==null || !(i.pendingCall instanceof CdTunnelDoor.SecondaryReadCall call))throw new IllegalStateException("No reached actual Door whole1 read");
+        requireDoorCall(call);var image=reservedImage(1);
+        if(i.secondary!=null && !sameBytes(image,i.secondary))throw new IllegalStateException("Actual Door secondary source changed");
+        var readyValues=i.failed?values:preparedMonitorValues(TUNNEL_DOOR_SECONDARY_READ);
+        doorPort=true;
+        try {verifyDoor(i);values=readyValues;i.expectedValues=readyValues;i.secondary=image;i.secondaryRead=true;verifyDoor(i);
+            i.completedReturn=image;i.completedCall=call;return image;}
+        finally {doorPort=false;}
+    }
+    private CdTunnelDoor.LiveSolid preflightDoor(CdTunnelDoor.PrefixSolidCut call) {
+        var i=requireDoorCall(call);var live=new CdTunnelDoor.LiveSolid(springPlayer(),doorGates(),springGlobals());
+        doorPort=true;
+        try {verifyDoor(i);i.pendingCut=call;
+            if(call.participant()==CdTunnelDoor.Participant.PRIMARY)i.primaryPreflight=true;else i.secondaryPreflight=true;
+            verifyDoor(i);i.completedReturn=live;i.completedCall=call;return live;}
+        finally {doorPort=false;}
+    }
+    private CdTunnelDoor.LiveSolid commitDoor(CdTunnelDoor.PrefixSolidCall call) {
+        var i=requireDoorCall(call);var cut=call.cut();
+        if(cut!=i.pendingCut || call.outcome()!=i.pendingOutcome || !cut.expectedPrimary().equals(springPlayer())
+                || !cut.expectedGlobals().equals(springGlobals()) || !cut.expectedGates().equals(doorGates()))
+            throw new IllegalStateException("Door commit lacks its exact actual helper outcome/Frame cut");
+        boolean primary=cut.participant()==CdTunnelDoor.Participant.PRIMARY,stopped;
+        CdObjectState object;List<CdObjectState> others;Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests;CdSolidObject.Player helper;CdSolidObject.Globals globals;
+        CdPlayerFrameRuntime.ObjectSolidPublication readyFrame=null;
+        if(call.outcome() instanceof CdSolidObject.Completed done) {
+            var result=done.completedResult();if(result.entry()!=CdSolidObject.Entry.TOP_SOLID_OBJECT)throw new IllegalArgumentException("Door helper entry changed");
+            object=result.object();others=result.otherSlots();writes=result.objectWrites();requests=result.fmRequests();helper=result.player();globals=result.globals();stopped=false;
+            if(primary)readyFrame=frame.prepareObjectSolidResult(cut.expectedPrimary(),cut.expectedGlobals(),result);
+            else if(!result.playerWrites().isEmpty() || !result.globalWrites().isEmpty() || !others.isEmpty() || !requests.isEmpty()
+                    || result.path()!=CdSolidObject.Path.GET_OFF || result.getOffReason().orElse(null)!=CdSolidObject.GetOffReason.PLAYER_ABSENT
+                    || result.d0().orElse(-1)!=0 || !writes.equals(Set.of(CdObjectState.ByteField.SOLID_TYPE))
+                    || !i.pool.state(i.whole).moveByte(CdObjectState.ByteField.SOLID_TYPE,0).equals(object)
+                    || !globals.equals(cut.expectedGlobals()))throw new IllegalArgumentException("Door inactive secondary exceeded its exact no-primary-write return");
+        } else {
+            if(!primary)throw new IllegalStateException("Actual cleared secondary cannot reach a native stop");
+            var prefix=((CdSolidObject.NativeStopped)call.outcome()).prefix();
+            if(prefix.entry()!=CdSolidObject.Entry.TOP_SOLID_OBJECT)throw new IllegalArgumentException("Door stopped at another entry");
+            object=prefix.object();others=prefix.otherSlots();writes=prefix.objectWrites();requests=prefix.fmRequests();helper=prefix.player();globals=prefix.globals();stopped=true;
+            readyFrame=frame.prepareObjectSolidPrefix(cut.expectedPrimary(),cut.expectedGlobals(),prefix);
+        }
+        var source=i.pool.state(i.whole);var before=source.copyBytes();var after=object.copyBytes();
+        if(!object.identity().equals(source.identity()) || !Set.of(CdObjectState.ByteField.FLAGS,CdObjectState.ByteField.SOLID_TYPE).containsAll(writes))
+            throw new IllegalArgumentException("Door Top changed identity or declared unowned object stores");
+        for(int at=0;at<64;at++) {
+            int mask=at==0x22&&writes.contains(CdObjectState.ByteField.FLAGS)?0x28:at==0x25&&writes.contains(CdObjectState.ByteField.SOLID_TYPE)?255:0;
+            if(((before[at]^after[at])&~mask&255)!=0)throw new IllegalArgumentException("Door Top changed unowned full64 byte "+at);
+        }
+        var images=new ArrayList<CdObjectState>();images.add(object);var seen=new HashSet<Integer>();seen.add(i.whole);
+        for(var other:others) {
+            int whole=other.identity().wholeIndex();
+            if(whole<32 || whole>=128 || !seen.add(whole) || whole!=cut.expectedPrimary().standObject()
+                    || !cut.callCut().slots().get(whole-32).moveByte(CdObjectState.ByteField.FLAGS,
+                    cut.callCut().slots().get(whole-32).flags()&~8).equals(other))throw new IllegalArgumentException("Door Top altered an unowned other image");
+            images.add(other);
+        }
+        var readyPool=CdObjectPool.overlay(cut.callCut(),images);i.pool.validateRestore(readyPool);var readyImages=logMosquiImages(readyPool);
+        var readyState=primary?readyFrame.finalState():i.state;
+        var readyActor=primary?new CdPlayerFrameRuntime.ActorState(i.actor.owner(),readyState,i.actor.display()):i.actor;
+        var readyShared=primary?new CdPlayerFrameRuntime.SharedState(i.shared.owner(),readyFrame.finalEnvironment(),i.shared.artState(),i.shared.paused(),i.shared.vIntClock()):i.shared;
+        var ledger=new ArrayList<>(sounds);for(var fm:requests)ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readyLedger=List.copyOf(ledger);var readyValues=preparedMonitorValues(primary?TUNNEL_DOOR_PRIMARY_TOP:TUNNEL_DOOR_SECONDARY_TOP);
+        var readyLive=new CdTunnelDoor.LiveSolid(primary?helper:cut.expectedPrimary(),cut.expectedGates(),globals);
+        doorPort=true;
+        try {
+            verifyDoor(i);if(primary)frame.validatePreparedObjectSolidPublication(readyFrame);
+            i.pool.restore(readyPool);if(primary)frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds=readyLedger;values=readyValues;i.ledger=readyLedger;i.expectedValues=readyValues;i.images=readyImages;
+            i.state=readyState;i.actor=readyActor;i.shared=readyShared;i.stopped=stopped;
+            if(primary)i.primaryDone=true;else i.secondaryDone=true;i.pendingCut=null;i.pendingOutcome=null;
+            verifyDoor(i);i.completedReturn=readyLive;i.completedCall=call;return readyLive;
+        } finally {doorPort=false;}
+    }
+    private void playDoorFm(CdTunnelDoor.FmSound sound) {
+        var i=activeDoor;if(i==null || !(i.pendingCall instanceof CdTunnelDoor.FmCall call) || call.sound()!=sound)
+            throw new IllegalStateException("No actual Door FM producer");requireDoorCall(call);
+        var ledger=new ArrayList<>(sounds);ledger.add(new SonicCdGameModule.PastTunnelDoorFm(sound));var readyLedger=List.copyOf(ledger);
+        var readyValues=preparedMonitorValues(TUNNEL_DOOR_FM);doorPort=true;
+        try {verifyDoor(i);sounds=readyLedger;values=readyValues;i.ledger=readyLedger;i.expectedValues=readyValues;i.fm=true;verifyDoor(i);
+            i.completedReturn=null;i.completedCall=call;}
+        finally {doorPort=false;}
+    }
+    private void drawDoor(CdObjectPool pool,CdObjectState.Identity identity) {
+        var i=activeDoor;if(i==null || !(i.pendingCall instanceof CdTunnelDoor.DrawCall call))throw new IllegalStateException("No actual Door Draw producer");
+        requireDoorCall(call);
+        if(pool!=i.pool || identity!=call.source().identity() || i.drawn)throw new IllegalStateException("Foreign/repeated Door Draw pointer");
+        var source=pool.state(i.whole);i.drawn=true;drawingDoor=true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifyDoor(i);if(!i.cleared)throw new IllegalStateException("Door Draw omitted actual BCLR7");i.completedReturn=null;i.completedCall=call;
+        } catch(RuntimeException|Error original) {i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingDoor=false;}
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readDoorDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireDoor();if(!drawingDoor || doorPort || queuePort || ref.wholeIndex()!=i.whole)throw new IllegalStateException("No actual Door collecting read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var result=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),
+                s.word(CdObjectState.WordField.X_FRACTION),s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));
+            verifyDoor(i);return result;}
+        finally {queuePort=false;}
+    }
+    private void writeDoorOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireDoor();if(!drawingDoor || doorPort || queuePort || value || i.cleared || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("Only actual Door Draw clears its own bit7 once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
+        var readyPool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(readyPool);var images=logMosquiImages(readyPool);
+        queuePort=true;
+        try {verifyDoor(i);i.pool.write(next);i.images=images;i.cleared=true;verifyDoor(i);}
         finally {queuePort=false;}
     }
 }

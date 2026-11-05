@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint, collapsePlatform1, collapsePlatform2, collapsePlatform3, collapsePlatform4, logShadow, normalMosqui, damagedMosqui, explosion, points, flower;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint, collapsePlatform1, collapsePlatform2, collapsePlatform3, collapsePlatform4, logShadow, normalMosqui, damagedMosqui, explosion, points, flower, tunnelDoor;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -333,6 +333,12 @@ public final class CdR12aObjectAssets {
                 view(ANI_FLOWER).copy(), 4, 39);
         return flower;
     }
+    public synchronized CdObjectVisualAssets tunnelDoor() {
+        if (tunnelDoor == null) tunnelDoor = CdObjectVisualAssets.decode(view(MAP_SPR_TUNNEL_DOOR).copy(), 2,
+                view(ANI_TUNNEL_DOOR).copy(), 1, 12);
+        return tunnelDoor;
+    }
+
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);
         return monitorTime;

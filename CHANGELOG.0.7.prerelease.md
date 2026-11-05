@@ -217,8 +217,9 @@ Unreleased. The earlier development themes remain in
   Its fixed player X-velocity halve prepares only the existing Frame value pair;
   actual Act2 dispatch also binds collapse platforms, Log Shadow and Mosqui using
   private callback receipts before native continuation. Natural controller steps,
-  floor/sound publication and complete replay now reach the horizontal Door
-  boundary, with six selected-Sonic pixel cuts. Actual Explosion and Points
+  floor/sound publication and complete replay now cross the horizontal Door
+  through actual primary/secondary Solid publication, with seven selected-Sonic
+  pixel cuts and natural Explosion/Points work before the Flower boundary. Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower
   source views remain preparatory; no new art owner is added.

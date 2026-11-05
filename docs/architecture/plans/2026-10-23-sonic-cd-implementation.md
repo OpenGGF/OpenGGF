@@ -1,5 +1,48 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual horizontal Door, natural kill and positive12670
+
+Two raw horizontal-Door descriptors extend source127 to129, preserving all old
+ordinals/bytes,35 readers,19 PLCs and existing Std1/current art. Cached Door0D
+uses actual primary then the reached raw whole1 reservation, genuine Top outcomes,
+prepared Frame/pool/Values/ledger adoption, source-ordered animation/fault prefixes
+and Draw/reload/despawn. No zero secondary image, completed helper or successful
+animation is fabricated. Private actual pending-operation receipts precede later
+native work, including same-value writes, no-op/clone/throw/reentry checks. Root
+merges the independent child and Door blocks with mutual scope exclusions;
+old99 observations append only Door5=104. Native subtype0 can create dirty Splash0B
+and request A4; its later unbound visit remains honest. No new Frame, art/current,
+source reader, capture partition or Powerup owner is introduced.
+
+All371focused cases16classes pass0failures/errors/skips: newDoor25, legacyDoor95,
+PastDoor3, data69, child24 and all affected Act2World/controller groups. The actual
+stopped-Top and naturally nonzero whole1 prerequisites remain unqualified; no
+forged fixture fills those limits. Independent ten-file static review found no
+P1/P2 and did not inspect results. Source fingerprint
+`7dad7592272fa6952d093c529275bf7e0151323e8a9487e069f97badcf63242d`
+remained unchanged in06:18:25.309001–06:23:46.561907Z. Exact identities, properties
+and fresh XML hashes were checked; only32owned reports consumed.
+
+A separate ordinary-input observer naturally completed Door primary/secondary/body
+at11588, then Explosion and Points at12649. It rethrows the original first12671
+DYNAMIC_OBJECTS failure on actual physical50/Flower1F/routine0/subtype1. All96
+partial images are comparison-only evidence, not a prior closed ingress. The
+observer was removed after custody. The permanent positive stops12670, retaining
+all earlier cuts and adding full/course DoorInit/Main, kill/child and final
+12669→12670 replay. Both changed route and EGL cases pass separately,0skips, at
+source `ec48acbbb0d91209a08e6099745754e6917e6a0087c6970e038d825144064626`,
+06:28:40.995385–06:28:54.345970Z (0s test admission,33.824s precompile). No fresh
+combined371 or full-suite claim follows from the test-only promotion.
+
+Actual seven selected-Sonic EGL cuts are10778/10866/11033/11213/11341/11587/12670,
+with complete full/course state before pixel/forward work, exact replay pixels
+and primary-only omission. ENGINE12670 PNG,320×224/9456B, SHA256
+`1ab1b79ab864e20079fba45558cca5ce660a3c55ea7ee69a85e0b7672d177f9b`,
+is exported after full cleanup and inspected: rolling Sonic is visible above
+orange/green terrain. This is actual OpenGGF output, not native-image/HUD-art,
+audio, complete-act or regional parity. Flower is now the measured next owner;
+subtype0 flower persistence/count/buffer ownership remains explicitly separate.
+
 ## 5 November 2026 — actual Act2 Explosion and Points publication
 
 Cached Explosion18 and subtype-bit7 Points1C now execute on the existing Act2

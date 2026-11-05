@@ -293,3 +293,27 @@ unchanged between those runs; no fresh combined236 or whole-suite claim follows.
 The preceding compile-only fixture failure and independent static review limits
 are preserved in the implementation record. Natural enemy kills, Flower/rewards,
 new selected-child pixel proof and natural frontier advancement remain open.
+
+
+## Door and natural child route qualification — 5 November, later checkpoint
+
+Source129 appends only Door ani/map, retaining the source127 prefix,35readers,
+19PLCs and existing art/current owners. DoorWorld25, legacyDoor95, PastDoor3,
+data69 and all affected World/controller groups pass in371focused cases16classes,
+0failures/errors/skips. The root merge retains old99 observations then Door5=104
+and explicit child/Door scope exclusions. Independent static review found noP1/P2.
+Actual stopped-Top and naturally nonzero whole1 remain unqualified prerequisites.
+
+The fixed controller now naturally crosses Door11588 and Explosion/Points12649.
+First12671 is unbound Flower1F/routine0/subtype1 at physical50; the temporary
+observer rethrows and its partial96 is never used as ingress. Permanent positive
+12670 and the changed selected-Sonic EGL case pass2/0/0/0 separately. Both full
+and course captures compare complete values before forwarding and after replay at
+11587→11588,11588→11589,12648→12649,12649→12650,12669→12670, retaining all old cuts.
+The seven real selected-image cuts add12670 to the six retained endpoints; primary
+omission changes each picture, with exact pixel replay. ENGINE12670 is the actual
+320×224/9456-byte after-cleanup image, SHA256
+`1ab1b79ab864e20079fba45558cca5ce660a3c55ea7ee69a85e0b7672d177f9b`.
+It shows rolling Sonic and current stage imagery; matched native/HUD-art/audio,
+complete-act and regional certification remain open. No combined fresh371 pass is
+claimed after test-only route promotion. Flower/persistence/reward coverage is next.

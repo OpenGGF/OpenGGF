@@ -126,7 +126,9 @@ public final class CdR12aProfile {
         MAP_SPR_MOSQUI_NORMAL(0xB50E, 60), MAP_SPR_MOSQUI_DAMAGED(0xB54A, 66),
         // Actual R12A Explosion/Points and selected PP Flower source operands; full tables retain padding.
         ANI_EXPLOSION(0x1D700, 20), MAP_SPR_EXPLOSION(0x1D714, 146), MAP_SPR_POINTS(0xAA8C, 82),
-        ANI_FLOWER(0x36A94, 28), MAP_SPR_FLOWER(0x36AB0, 90);
+        ANI_FLOWER(0x36A94, 28), MAP_SPR_FLOWER(0x36AB0, 90),
+        // Horizontal Door's actual absolute Init/Animate operands, not equal vertical-script copies.
+        ANI_TUNNEL_DOOR(0x1D6B6, 14), MAP_SPR_TUNNEL_DOOR(0x1D6C4, 28);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

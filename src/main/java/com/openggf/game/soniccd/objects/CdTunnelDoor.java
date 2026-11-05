@@ -8,6 +8,8 @@ import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
@@ -127,6 +129,13 @@ public final class CdTunnelDoor {
                     owner.view(CdR11bAssets.Asset.OBJECT_TILE_IDS).bytes());
         }
 
+        /** Actual original USA R12A source views; no art, queue or runtime authority is created. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12A object assets");
+            return new Assets(owner.tunnelDoor(), owner.profile().range(CdR12aProfile.Asset.MAP_SPR_TUNNEL_DOOR).nativeAddress(),
+                    owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS));
+        }
+
         /** Only reached selectorC/subtype2 zero; the strict public A74 facade remains unchanged. */
         private int tileWord() {
             if (objectTileIds.length() == 74) {
@@ -234,7 +243,7 @@ public final class CdTunnelDoor {
         public boolean deleted() { return effects.stream().anyMatch(Deleted.class::isInstance); }
     }
 
-    public enum UnsupportedBoundary { ROUTINE_DISPATCH, TILE_ID_SUBTYPE2, SECONDARY_PLAYER_OWNER, SECONDARY_SOLID_OWNER }
+    public enum UnsupportedBoundary { ROUTINE_DISPATCH, TILE_ID_SUBTYPE2, SECONDARY_PLAYER_OWNER, SECONDARY_SOLID_OWNER, SAVED_FLAGS_ADDRESS }
     public static final class UnsupportedTunnelDoor extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
         private final int wholeIndex, value;
@@ -271,6 +280,74 @@ public final class CdTunnelDoor {
     }
 
 
+    /** Pending values describe actual producer work; equality never confers invocation authority. */
+    public enum MutationKind { SOURCE, CHILD, SAVED, DELETE }
+    public record Publication(long ordinal, MutationKind kind, CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source, CdObjectState output, int savedIndex) { }
+    public record SecondaryReadCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public record FmCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, FmSound sound) { }
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public interface DispatchObserver {
+        void beforePublication(Publication call);
+        void afterPublication(Publication call);
+        void beforeCall(Object call);
+        void afterCall(Object call, Object actualReturn);
+        default void failedCall(Object call, Throwable original) { }
+    }
+    private DispatchObserver observer;
+    private Object pendingCall;
+    private Publication pendingPublication;
+    private int activeWhole=-1;
+    private long publicationOrdinal;
+    public boolean isCurrentCall(Object call) {
+        return call!=null && prefixRunning && (pendingCall==call || pendingPublication==call);
+    }
+    private <T> T observedCall(Object call, java.util.function.Supplier<T> action) {
+        if(observer==null)return action.get();
+        if(pendingCall!=null || pendingPublication!=null)throw new IllegalStateException("Nested Door producer operation");
+        pendingCall=call;
+        try {observer.beforeCall(call);T result=action.get();observer.afterCall(call,result);return result;}
+        catch(RuntimeException|Error original) {
+            try {observer.failedCall(call,original);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        } finally {pendingCall=null;}
+    }
+    private void observedPublication(MutationKind kind,CdObjectState output,int savedIndex,Runnable store) {
+        if(observer==null) {store.run();return;}
+        if(pendingCall!=null || pendingPublication!=null)throw new IllegalStateException("Door store inside another pending producer call");
+        var call=new Publication(++publicationOrdinal,kind,runtime.capture(),runtime.pool().state(activeWhole),output,savedIndex);
+        pendingPublication=call;
+        try {observer.beforePublication(call);store.run();observer.afterPublication(call);}
+        finally {pendingPublication=null;}
+    }
+    private void publishSource(CdObjectState output) {
+        observedPublication(MutationKind.SOURCE,output,-1,()->runtime.pool().write(output));
+    }
+    private void publishChild(CdObjectState child) {
+        observedPublication(MutationKind.CHILD,child,-1,()->runtime.pool().write(child));
+    }
+    private void clearSaved(CdObjectState source,int savedId,int period) {
+        if(observer==null) {runtime.bclrSavedFlag(savedId,period,CdObjectPlacementRuntime.SavedBit.LOADED);return;}
+        // Native computes the complete reached byte address before the public period-sized bank primitive.
+        int index=2+3*savedId+period;
+        if(index<2 || index>=CdObjectPlacementRuntime.SAVED_BANK_BYTES)
+            throw new UnsupportedTunnelDoor(UnsupportedBoundary.SAVED_FLAGS_ADDRESS,activeWhole,index);
+        int offset=index-2;
+        observedPublication(MutationKind.SAVED,source,index,
+                ()->runtime.bclrSavedFlag(offset/3,offset%3,CdObjectPlacementRuntime.SavedBit.LOADED));
+    }
+    private void deleteSource(int whole) {
+        observedPublication(MutationKind.DELETE,null,-1,()->runtime.pool().deleteObject(whole));
+    }
+
+    /** Same kernel and old constructor7; only this opt-in has actual World operation receipts. */
+    public static CdTunnelDoor withPrefixOwner(CdObjectPlacementRuntime runtime, SecondarySource secondary,
+                                               Assets assets, CdSolidObject sharedSolid, PrefixSolidOwner solidOwner,
+                                               DrawObjectCall drawObject, PlayFmCall playFm, DispatchObserver observer) {
+        var body=withPrefixOwner(runtime,secondary,assets,sharedSolid,solidOwner,drawObject,playFm);
+        body.observer=Objects.requireNonNull(observer);return body;
+    }
+
     /**
      * Named read-only-secondary/prefix ingress; this does not authenticate a Stage or create a bank.
      * Retain the source lazily: only native Main's reached secondary read may dereference it.
@@ -299,9 +376,9 @@ public final class CdTunnelDoor {
     public Result run(int wholeIndex, Globals globals, SolidInputs inputs) {
         if (prefixSolidOwner == null) return runNative(wholeIndex, globals, inputs);
         if (prefixRunning) throw new IllegalStateException("Reentrant prefix Tunnel Door invocation");
-        prefixRunning = true;
+        prefixRunning = true; activeWhole=wholeIndex; publicationOrdinal=0;
         try { return runNative(wholeIndex, globals, inputs); }
-        finally { prefixRunning = false; }
+        finally { prefixRunning = false; activeWhole=-1; }
     }
 
     /** ObjTunnelDoor (:7-20): the selected routine returns before DrawObject -> CheckObjDespawn. */
@@ -375,7 +452,7 @@ public final class CdTunnelDoor {
                     int childWhole = free.getAsInt();
                     var child = c.pool.state(childWhole).moveByte(ID, SPLASH_ID)
                             .moveWord(X, c.state.centreX()).moveWord(Y, c.state.centreY()).addWord(Y, -4);
-                    c.pool.write(child);
+                    if(observer==null)c.pool.write(child);else publishChild(child);
                     c.effects.add(new SplashCreated(child, childWhole > c.wholeIndex));
                     playOpeningFm(c);
                     c.effects.add(new PlayedFm(FmSound.FM_A4));
@@ -468,14 +545,42 @@ public final class CdTunnelDoor {
     private void animate(Cursor c) {
         c.enter(NativeRoutine.ANIMATE);
         var before = c.state;
-        var next = CdObjectAnimation.step(new CdObjectAnimation.State(before.unsignedByte(ANIMATION),
+        CdObjectAnimation.State next;
+        try {next = CdObjectAnimation.step(new CdObjectAnimation.State(before.unsignedByte(ANIMATION),
                 before.unsignedByte(PREVIOUS_ANIMATION), before.unsignedByte(ANIMATION_FRAME), before.unsignedByte(ANIMATION_TIME),
-                before.unsignedByte(MAP_FRAME), before.spriteFlags(), before.flags(), before.routine(), before.unsignedByte(ROUTINE_2)), animation);
+                before.unsignedByte(MAP_FRAME), before.spriteFlags(), before.flags(), before.routine(), before.unsignedByte(ROUTINE_2)), animation);}
+        catch(UnsupportedOperationException original) {
+            if(observer!=null) {
+                try {animationFailurePrefix(c,before);}
+                catch(RuntimeException|Error verification) {if(verification!=original)original.addSuppressed(verification);}
+            }
+            throw original;
+        }
         c.state = before.moveByte(ANIMATION, next.animationId()).moveByte(PREVIOUS_ANIMATION, next.previousId())
                 .moveByte(ANIMATION_FRAME, next.scriptIndex()).moveByte(ANIMATION_TIME, next.timer())
                 .moveByte(MAP_FRAME, next.mapFrame()).moveByte(SPRITE_FLAGS, next.spriteFlags())
                 .moveByte(FLAGS, next.statusFlags()).moveByte(ROUTINE, next.routine()).moveByte(ROUTINE_2, next.routine2());
     }
+
+    /** Only reached native stores before a failed shared read; never another successful animation step. */
+    private void animationFailurePrefix(Cursor c,CdObjectState source) {
+        c.state=source;
+        if(source.unsignedByte(ANIMATION)!=source.unsignedByte(PREVIOUS_ANIMATION)) {
+            c.state=c.state.moveByte(PREVIOUS_ANIMATION,source.unsignedByte(ANIMATION)).moveByte(ANIMATION_FRAME,0).moveByte(ANIMATION_TIME,0);c.publish();
+        }
+        c.state=c.state.addByte(ANIMATION_TIME,-1);c.publish();
+        int id=c.state.unsignedByte(ANIMATION);if(id>=animation.scriptCount())return;
+        int script=animation.tableOffset()+(short)animation.bytes().unsignedWord(animation.tableOffset()+2*id);
+        if(!animationByteOwned(script))return;
+        c.state=c.state.moveByte(ANIMATION_TIME,animation.bytes().unsignedByte(script));c.publish();
+        int index=c.state.unsignedByte(ANIMATION_FRAME);if(!animationByteOwned(script+1+index))return;
+        int frame=animation.bytes().unsignedByte(script+1+index);
+        if(frame==0xFF) {c.state=c.state.moveByte(ANIMATION_FRAME,0);c.publish();}
+        else if(frame==0xFE && animationByteOwned(script+2+index)) {
+            c.state=c.state.moveByte(ANIMATION_FRAME,index-animation.bytes().unsignedByte(script+2+index));c.publish();
+        }
+    }
+    private boolean animationByteOwned(int offset) {return offset>=0 && offset<animation.bytes().length();}
 
     /** Reset (:89-93) returns after three byte stores; Main waits for the next dispatch. */
     private static void reset(Cursor c) {
@@ -501,10 +606,10 @@ public final class CdTunnelDoor {
                     int d1 = (period - (byte) globals.rawTimeWarpDirection()) & 0xFFFF;
                     period = (short) d1 < 0 ? 0 : d1 >= 3 ? 2 : d1;
                 }
-                runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED);
+                clearSaved(c.state,savedId,period);
                 c.effects.add(new LoadedCleared(savedId, period));
             }
-            c.pool.deleteObject(c.wholeIndex);
+            deleteSource(c.wholeIndex);
             c.state = c.pool.state(c.wholeIndex);
             c.effects.add(new Deleted());
         }
@@ -519,7 +624,7 @@ public final class CdTunnelDoor {
         var cut = new PrefixSolidCut(participant, c.state.identity(), c.pool.capture(),
                 c.primary, c.gates, c.globals, secondary);
         try {
-            requireLive(c.primary, c.gates, c.globals, prefixSolidOwner.preflight(cut));
+            requireLive(c.primary, c.gates, c.globals, observedCall(cut,()->prefixSolidOwner.preflight(cut)));
             requireDynamicCut(c.pool, cut.callCut());
             if (secondary.isPresent()) requireRawSecondaryUnchanged(c, secondary.orElseThrow());
         } catch (RuntimeException | Error failure) {
@@ -560,7 +665,8 @@ public final class CdTunnelDoor {
         var expectedPrimary = participant == Participant.PRIMARY ? helperFinal : c.primary;
         LiveSolid live;
         try {
-            live = prefixSolidOwner.commit(new PrefixSolidCall(cut, outcome));
+            var actualCall=new PrefixSolidCall(cut,outcome);
+            live = observedCall(actualCall,()->prefixSolidOwner.commit(actualCall));
             requireLive(expectedPrimary, c.gates, finalGlobals, live);
             requireDynamicCut(c.pool, readyPool); // ALL outputs and nonwritten images, not just listed images.
             if (secondary.isPresent()) requireRawSecondaryUnchanged(c, secondary.orElseThrow());
@@ -580,7 +686,8 @@ public final class CdTunnelDoor {
     private CdAssetBytes requireClearedRawSecondary(Cursor c) {
         var before = c.pool.capture();
         try {
-            var image = Objects.requireNonNull(secondarySource.readSecondary(), "actual reserved whole1 bytes");
+            var call=new SecondaryReadCall(runtime.capture(),c.pool.state(c.wholeIndex));
+            var image = Objects.requireNonNull(observedCall(call,secondarySource::readSecondary), "actual reserved whole1 bytes");
             if (image.length() != CdReservedObjectBank.BYTE_SIZE) {
                 throw new IllegalArgumentException("Door raw secondary must contain exactly64 actual bytes");
             }
@@ -645,7 +752,8 @@ public final class CdTunnelDoor {
         if (prefixSolidOwner == null) { playFm.playFm(FmSound.FM_A4); return; }
         var cut = c.pool.capture();
         try {
-            playFm.playFm(FmSound.FM_A4);
+            var call=new FmCall(runtime.capture(),c.pool.state(c.wholeIndex),FmSound.FM_A4);
+            observedCall(call,()->{playFm.playFm(FmSound.FM_A4);return null;});
             requireDynamicCut(c.pool, cut);
         } catch (RuntimeException | Error failure) {
             verifySuppressed(failure, () -> requireDynamicCut(c.pool, cut));
@@ -657,7 +765,8 @@ public final class CdTunnelDoor {
     private void drawPrefix(Cursor c, CdObjectState.Identity identity) {
         var before = c.pool.capture();
         try {
-            drawObject.drawObject(c.pool, identity);
+            var call=new DrawCall(runtime.capture(),c.pool.state(c.wholeIndex));
+            observedCall(call,()->{drawObject.drawObject(c.pool,identity);return null;});
             requireDrawNonwrites(c.pool, before, c.wholeIndex);
         } catch (RuntimeException | Error failure) {
             verifySuppressed(failure, () -> requireDrawNonwrites(c.pool, before, c.wholeIndex));
@@ -694,7 +803,7 @@ public final class CdTunnelDoor {
             throw new IllegalStateException("Door dynamic call cut changed during preflight");
         }
     }
-    private static final class Cursor {
+    private final class Cursor {
         final CdObjectPool pool;
         final int wholeIndex;
         final CdSolidObject.Gates gates;
@@ -707,7 +816,7 @@ public final class CdTunnelDoor {
             primary = inputs.primary(); gates = inputs.gates(); globals = inputs.globals();
         }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
-        void publish() { pool.write(state); }
+        void publish() { publishSource(state); }
     }
     private static void byteValue(int value) {
         if ((value & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native byte");

@@ -306,8 +306,23 @@ class TestSonicCdAct2ControllerRoute {
             if(call==11544)assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.MOSQUI_PRIMARY_ANGLE));
             if(call==11554)assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.MOSQUI_FM));
         }
-        replayNextRight(h,right); // Positive11586->11587; do not execute the unowned Door11588.
+        replayNextRight(h,right); // Retain the earlier positive11586->11587 before the admitted Door.
         step(h,right);assertLaterRouteOwners(h,frame,source,world,generation);
+        for(int call=11588;call<=12670;call++) {
+            var input=(call-11214)%128<32?jump:right;
+            if(call==11588 || call==11589 || call==12649 || call==12650 || call==12670)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            if(call==11588 || call==11589) {
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_BODY));
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SECONDARY_TOP));
+            }
+            if(call==12649) {
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY));
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.POINTS_BODY));
+            }
+        }
+        var livePlacement=(com.openggf.game.soniccd.objects.CdObjectPlacementRuntime)actualField(actualField(module,"act2Loading"),"placement");
+        assertTrue(livePlacement.pool().capture().slots().stream().anyMatch(row->row.id()==0x1F && row.routine()==0),"Actual Explosion converted to Flower before the next unbound visit");
         assertTrue((frame.state().motion().centreX16_16()>>>16)>preJumpX,"Controller-only jump advances beyond the observed obstruction");
         assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
         assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
@@ -316,7 +331,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right+B returned11587; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587, natural TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right+B returned12670; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670, natural Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 
@@ -365,9 +380,13 @@ class TestSonicCdAct2ControllerRoute {
             for(int call=11342;call<=11586;call++) {
                 step(h,(call-11214)%128<32?jump:right);assertLaterRouteOwners(h,frame,source,world,generation+1);
             }
-            imageForExport=renderReplayNextRight(h,right,11587).clone();
+            renderReplayNextRight(h,right,11587);
+            for(int call=11588;call<=12669;call++) {
+                step(h,(call-11214)%128<32?jump:right);assertLaterRouteOwners(h,frame,source,world,generation+1);
+            }
+            imageForExport=renderReplayNextRight(h,right,12670).clone();
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 and11587; selected Sonic omission changes all six endpoint pictures; no forward call11588.");
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587 and12670; selected Sonic omission changes all seven endpoint pictures; no forward call12671.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
     }
@@ -466,10 +485,10 @@ class TestSonicCdAct2ControllerRoute {
             int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
             image.setRGB(x, y, argb);
         }
-        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-11587.png").toFile()))
+        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-12670.png").toFile()))
             throw new java.io.IOException("PNG writer unavailable");
-        Files.writeString(directory.resolve("ENGINE-act2-controller-call-11587.txt"),
-                "ENGINE: OpenGGF original-USA controller-only route, actual completed call11587.\n"
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-12670.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call12670.\n"
                 + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
                 + "Full/course complete-value and pixel replay; selected Sonic renderer-only omission contrast.\n"
                 + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");

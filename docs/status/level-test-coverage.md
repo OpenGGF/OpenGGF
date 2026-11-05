@@ -260,6 +260,13 @@ case without a production change. Flower remains unbound and no fresh combined
 Next11588 is Door0D; its failed partial image is not an earlier closed ingress.
 No green325 or whole-act claim. Natural Checkpoint activation, Wall contact,
 death/restart breadth, later acts and JP/EU parity are unfinished.
+Later Door data/body/World qualification passes371focused cases16classes,0skips,
+retaining all old source127/35readers/19PLCs. Real controller Door11588 and natural
+Explosion/Points12649 now precede positive12670; the two changed route/EGL cases
+pass separately, preserving old cuts and adding full/course Door/kill/final replay.
+Seven actual selected-Sonic image cuts include12670. Next12671 is Flower1F,
+subtype1; partial failed state remains diagnostic only. Actual stopped-Top/nonzero
+secondary, complete Act2, matched native imagery and JP/EU remain open.
 The first-act matrix remains partial as well.
 
 ### Historical26October pause checkpoint
