@@ -123,6 +123,11 @@ MAP_SPR_BOULDER 947c 14 f1613b80dc72cd1d153d190f3a660e3990f92648d54e65c989aed93b
 MAP_SPR_PLATFORM c9f2 132 a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7
 PLATFORM_WIDTHS c66a 4 87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3
 PLATFORM_RANGES c66e 4 ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a
+ANI_ANTON b1c6 12 623c70ccd1429002e1d4e85929b53064bf0a1d7e0e56537d8d86c0bc94a7785d
+MAP_SPR_ANTON b1d2 112 898f3a56606b9c82c0c0a4c2197b0860353cbce320baf1026bd7f717b300e808
+ANI_PATA_BATA b344 18 a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3
+MAP_SPR_PATA_BATA1 b356 34 9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b
+MAP_SPR_PATA_BATA2 b378 40 96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -192,9 +197,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete96RowManifestPreservesTheOriginal92AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete101RowManifestPreservesTheOriginal96AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(96, CdR12aProfile.Asset.values().length); assertEquals(96, rows.size());
+        assertEquals(101, CdR12aProfile.Asset.values().length); assertEquals(101, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -452,6 +457,103 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         }
         assertThrows(UnsupportedOperationException.class,()->CdR12aProfile.forStage(CdReleaseVariant.USA,com.openggf.game.soniccd.CdStagePayload.R11A.stage()));
         assertThrows(UnsupportedOperationException.class,()->CdR12aProfile.forStage(CdReleaseVariant.EUROPE,a.identity().stage()));
+    }
+
+    @Test void antonAndPataDataAreSelectedByTheirActualActTwoInitAndAnimationOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(96,ANI_ANTON.ordinal());assertEquals(100,MAP_SPR_PATA_BATA2.ordinal());
+        assertEquals(0x20B0DC,o.view(OBJECT_INDEX).unsignedLong((0x3F-1)*4));
+        assertEquals(0x20B242,o.view(OBJECT_INDEX).unsignedLong((0x3E-1)*4));
+        assertEquals("217c0020b1d20004",hex.formatHex(file.readFile(0xB112,8)));
+        assertEquals("70024eb90020cc50",hex.formatHex(file.readFile(0xB138,8)));
+        assertEquals("70014eb90020cc50",hex.formatHex(file.readFile(0xB28A,8)));
+        assertEquals("43fa001a",hex.formatHex(file.readFile(0xB1AA,4)));
+        assertEquals("43fa00ae",hex.formatHex(file.readFile(0xB2A6,4)));
+        assertEquals("43fa00bc",hex.formatHex(file.readFile(0xB2BA,4)));
+        assertEquals("43fa0018",hex.formatHex(file.readFile(0xB32A,4)));
+        assertEquals(ANI_ANTON.fileOffset(),0xB1AC+(short)CdAssetBytes.copyOf(file.readFile(0xB1AC,2)).unsignedWord(0));
+        assertEquals(MAP_SPR_PATA_BATA1.fileOffset(),0xB2A8+(short)CdAssetBytes.copyOf(file.readFile(0xB2A8,2)).unsignedWord(0));
+        assertEquals(MAP_SPR_PATA_BATA2.fileOffset(),0xB2BC+(short)CdAssetBytes.copyOf(file.readFile(0xB2BC,2)).unsignedWord(0));
+        assertEquals(ANI_PATA_BATA.fileOffset(),0xB32C+(short)CdAssetBytes.copyOf(file.readFile(0xB32C,2)).unsignedWord(0));
+        assertEquals("4eb90020085a",hex.formatHex(file.readFile(0xB314,6)),"CalcSine remains the existing source math call");
+    }
+
+    @Test void completeAntonAndBothPataMappingIncludesKeepOddRootsAllPiecesAndTheSharedRawScripts() throws Exception {
+        var o=retail().terrain().objects();var anton=o.anton();var normal=o.pataBataNormal();var damaged=o.pataBataDamaged();
+        assertEquals(List.of(8,34,60,86),anton.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(5,5,5,5),anton.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        for(var visual:List.of(normal,damaged))assertEquals(List.of(6,17,28),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(2,2,1),normal.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(2,2,2),damaged.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(3,7),anton.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(0,1),List.of(2,3)),anton.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        for(var visual:List.of(normal,damaged)) {
+            assertEquals(List.of(4,11),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+            assertEquals(List.of(7,3),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+            assertEquals(List.of(List.of(0,0,1,2,1),List.of(0,0,1,2,1)),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+            assertArrayEquals(o.view(ANI_PATA_BATA).copy(),visual.animationTable().copy());
+        }
+        assertArrayEquals(o.view(ANI_ANTON).copy(),anton.animationTable().copy());
+        assertArrayEquals(o.view(MAP_SPR_ANTON).copy(),anton.mappings().copy());
+        assertArrayEquals(o.view(MAP_SPR_PATA_BATA1).copy(),normal.mappings().copy());
+        assertArrayEquals(o.view(MAP_SPR_PATA_BATA2).copy(),damaged.mappings().copy());
+        assertEquals(112,anton.mappings().length());assertEquals(34,normal.mappings().length());assertEquals(40,damaged.mappings().length());
+        assertEquals(List.of(26,26,26,26),anton.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        assertEquals(List.of(14,18,14,18),anton.mappingFrames().stream().map(f->f.bytes().unsignedByte(25)).toList(),"last Anton bytes are counted piece X values, not padding");
+        assertEquals(0,damaged.mappings().unsignedByte(39),"the damaged include retains its actual literal trailing zero");
+        assertEquals(22,anton.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(v->v.tileOffset()+v.tileCount()).max().orElseThrow());
+        assertEquals(41,normal.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(v->v.tileOffset()+v.tileCount()).max().orElseThrow());
+        assertEquals(50,damaged.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(v->v.tileOffset()+v.tileCount()).max().orElseThrow());
+        for(var visual:List.of(anton,normal,damaged))for(var script:visual.animations())assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,script.terminal());
+    }
+
+    @Test void actTwoAntonAndPataFactoriesBorrowCachedViewsOnePataScriptRootAndTheActualActTwoMathBytes() throws Exception {
+        var o=retail().terrain().objects();var player=retail().player();var readers=o.readerProfiles();
+        var anton=com.openggf.game.soniccd.objects.CdAnton.Assets.fromAct2Assets(o);
+        var pata=com.openggf.game.soniccd.objects.CdPataBata.Assets.fromAct2Assets(o,player);
+        assertSame(o.anton(),anton.visual());assertSame(o.anton(),o.anton());assertEquals(0x20B1D2,anton.mappingsAddress());
+        assertSame(o.view(OBJECT_TILE_IDS),anton.objectTileIds());assertSame(anton.objectTileIds(),pata.objectTileIds());
+        assertSame(o.pataBataNormal(),pata.normal());assertSame(o.pataBataDamaged(),pata.damaged());assertNotSame(pata.normal(),pata.damaged());
+        assertSame(o.view(ANI_PATA_BATA),pata.animations().bytes());assertEquals(0,pata.animations().tableOffset());assertEquals(2,pata.animations().scriptCount());
+        assertEquals(0x20B356,pata.normalMappingsAddress());assertEquals(0x20B378,pata.damagedMappingsAddress());
+        assertEquals(o.identity(),player.identity());assertSame(player.sonic(),player.player().sonic());
+        for(int angle=0;angle<256;angle++) {
+            var actual=pata.math().calcSine(angle);var bytes=o.view(SINE_TABLE);
+            assertEquals((short)bytes.unsignedWord(angle*2),actual.sine());
+            assertEquals((short)bytes.unsignedWord((angle+64)*2),actual.cosine());
+        }
+        assertEquals(0x2400,CdR11aObjectAssets.decodeTileWord(anton.objectTileIds().copy(),2,0));
+        assertEquals(0x23DB,CdR11aObjectAssets.decodeTileWord(anton.objectTileIds().copy(),2,1));
+        assertEquals(0x23A7,CdR11aObjectAssets.decodeTileWord(pata.objectTileIds().copy(),1,0));
+        assertSame(readers,o.readerProfiles());assertEquals(35,readers.size());
+        assertEquals(22*32,o.readerProfile(ART_ANTON).outputBytes());assertEquals(50*32,o.readerProfile(ART_PATA_BATA).outputBytes());
+        assertEquals(3,com.openggf.game.soniccd.objects.CdAnton.Assets.class.getRecordComponents().length);
+        assertEquals(7,com.openggf.game.soniccd.objects.CdPataBata.Assets.class.getRecordComponents().length);
+    }
+
+    @Test void newEnemyViewsRejectChangedOriginalSourceForeignMathLineageAndUnrepresentedReadsWithoutAnArtReader() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();var player=retail().player();
+        for(var raw:new CdR12aProfile.Asset[]{ANI_ANTON,MAP_SPR_ANTON,ANI_PATA_BATA,MAP_SPR_PATA_BATA1,MAP_SPR_PATA_BATA2}) {
+            var bytes=o.view(raw);var before=bytes.copy();var changed=bytes.copy();changed[0]^=1;
+            assertArrayEquals(before,o.view(raw).copy());assertSame(bytes,o.view(raw));
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(raw));
+            byte[] corrupt=file.readFile(0,262144);corrupt[raw.fileOffset()]^=1;
+            assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdAnton.Assets.fromAct2Assets(null));
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdPataBata.Assets.fromAct2Assets(null,player));
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdPataBata.Assets.fromAct2Assets(o,null));
+        var foreign=org.mockito.Mockito.mock(CdR12aPlayerAssets.class);var identity=player.identity();
+        org.mockito.Mockito.when(foreign.identity()).thenReturn(new CdR12aTerrainAssets.Identity(identity.variant(),identity.stage(),identity.file(),identity.domain(),identity.mmdSha256(),"foreign-disc"));
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdPataBata.Assets.fromAct2Assets(o,foreign));
+        // Matching scalar identity cannot substitute a different borrowed Sonic/player relation.
+        org.mockito.Mockito.when(foreign.identity()).thenReturn(identity);org.mockito.Mockito.when(foreign.player()).thenReturn(player.player());
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdPataBata.Assets.fromAct2Assets(o,foreign));
+        assertThrows(UnsupportedOperationException.class,()->CdR11aObjectAssets.decodeTileWord(o.view(OBJECT_TILE_IDS).copy(),1,1));
+        assertThrows(UnsupportedOperationException.class,()->CdR11aObjectAssets.decodeTileWord(o.view(OBJECT_TILE_IDS).copy(),2,2));
+        var table=new com.openggf.game.soniccd.objects.CdObjectAnimation.AnimationTable(o.view(ANI_PATA_BATA),0,2);
+        assertThrows(UnsupportedOperationException.class,()->com.openggf.game.soniccd.objects.CdObjectAnimation.step(
+                new com.openggf.game.soniccd.objects.CdObjectAnimation.State(2,2,0,0,0,4,0,2,0),table));
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }

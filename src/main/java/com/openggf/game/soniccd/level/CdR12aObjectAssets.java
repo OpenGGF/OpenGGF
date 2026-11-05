@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -242,6 +242,20 @@ public final class CdR12aObjectAssets {
     public synchronized CdObjectVisualAssets platform() {
         if (platform == null) platform = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_PLATFORM).copy(), 3, 57);
         return platform;
+    }
+    /** Complete four-frame/two-script Anton data over the existing twenty-two-tile art source. */
+    public synchronized CdObjectVisualAssets anton() {
+        if (anton == null) anton = CdObjectVisualAssets.decode(view(MAP_SPR_ANTON).copy(), 4, view(ANI_ANTON).copy(), 2, 22);
+        return anton;
+    }
+    /** Normal and damaged three-root views share the same actual raw Ani_PataBata source. */
+    public synchronized CdObjectVisualAssets pataBataNormal() {
+        if (pataBataNormal == null) pataBataNormal = CdObjectVisualAssets.decode(view(MAP_SPR_PATA_BATA1).copy(), 3, view(ANI_PATA_BATA).copy(), 2, 50);
+        return pataBataNormal;
+    }
+    public synchronized CdObjectVisualAssets pataBataDamaged() {
+        if (pataBataDamaged == null) pataBataDamaged = CdObjectVisualAssets.decode(view(MAP_SPR_PATA_BATA2).copy(), 3, view(ANI_PATA_BATA).copy(), 2, 50);
+        return pataBataDamaged;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

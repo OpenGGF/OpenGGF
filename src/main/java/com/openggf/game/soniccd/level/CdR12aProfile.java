@@ -106,7 +106,10 @@ public final class CdR12aProfile {
         BREAKABLE_WALL_PIECE_SPEEDS(0xF068, 48),
         // Boulder/Main.asm:30 and Platform/Main.asm:37-55: actual original R12A operands.
         MAP_SPR_BOULDER(0x947C, 14), MAP_SPR_PLATFORM(0xC9F2, 132),
-        PLATFORM_WIDTHS(0xC66A, 4), PLATFORM_RANGES(0xC66E, 4);
+        PLATFORM_WIDTHS(0xC66A, 4), PLATFORM_RANGES(0xC66E, 4),
+        // Anton/Pata-Bata Main.asm actual original R12A Init and animation operands, retaining literal include padding.
+        ANI_ANTON(0xB1C6, 12), MAP_SPR_ANTON(0xB1D2, 112),
+        ANI_PATA_BATA(0xB344, 18), MAP_SPR_PATA_BATA1(0xB356, 34), MAP_SPR_PATA_BATA2(0xB378, 40);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

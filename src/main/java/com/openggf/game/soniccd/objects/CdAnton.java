@@ -1,9 +1,15 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 
 import java.util.ArrayList;
@@ -96,6 +102,18 @@ public final class CdAnton {
             Objects.requireNonNull(owner, "owner");
             return new Assets(owner.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(), owner.anton(),
                     CdR11aObjectAssets.Table.ANTON_MAPPINGS.range().nativeAddress());
+        }
+
+        /** Original-USA Act2 data relation only; no current patterns, body or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("Anton Act2 assets require the same authenticated original USA R12A source");
+            return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.anton(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_ANTON).nativeAddress());
         }
     }
 

@@ -1,10 +1,17 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.level.CdR12aPlayerAssets;
 import com.openggf.game.soniccd.player.CdPlayerMath;
 
 import java.util.ArrayList;
@@ -109,6 +116,23 @@ public final class CdPataBata {
                     objects.view(CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS).range().nativeAddress(),
                     objects.view(CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS).range().nativeAddress(),
                     new CdPlayerMath(playerAssets));
+        }
+
+        /** Original-USA Act2 data relation only; no current patterns, body or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner, CdR12aPlayerAssets playerAssets) {
+            Objects.requireNonNull(owner, "owner");
+            Objects.requireNonNull(playerAssets, "playerAssets");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage())
+                    || !identity.equals(playerAssets.identity())
+                    || playerAssets.sonic() != playerAssets.player().sonic())
+                throw new IllegalArgumentException("PataBata Act2 assets require the same authenticated original USA R12A source");
+            return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.pataBataNormal(), owner.pataBataDamaged(),
+                    new CdObjectAnimation.AnimationTable(owner.view(CdR12aProfile.Asset.ANI_PATA_BATA), 0, 2),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_PATA_BATA1).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2).nativeAddress(), new CdPlayerMath(playerAssets.player()));
         }
 
         /**

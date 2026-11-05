@@ -1,5 +1,30 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — authenticated Act2 Anton/Pata metadata
+
+The detached original-USA R12A inventory appends five complete raw views96→101:
+Anton animation/map atB1C6/B1D2 and Pata animation/normal/damaged maps atB344/B356/
+B378. Native dispatch and actual absolute/PC-relative operands select these spans;
+complete bytes, odd roots and literal padding are retained. Cached visuals and
+same-source Assets factories reuse the existing math and35 art-reader owners.
+No preload, art/current bank, decoder, World dispatch or gameplay algorithm is
+introduced by this data change.
+
+All43 selected data cases pass (Object21/Player12/Terrain10) at source
+`caee9020412c214efe9fb73121a88881064d4fd026d80213f9c8527430acefb7`,
+02:08:18.852582–02:09:29.912969Z on5November. This is the metadata subset of a
+nonpassing82-case run:80 passes, one Platform carry fixture assertion and one
+observer error, zero skips. Its source remained unchanged; all82 literal source
+method identities, properties and XML hashes were inspected, then14 owned reports
+were consumed under the build lock. Normal-memory compilation took1m38s before
+lean admission; test queue wait was 8357s, distinct from71s execution.
+No green82 or full-suite result follows from the data qualification.
+
+The separate ordinary observer returns10778, then reaches unbound Anton3F at10779,
+whole34/X043B/Y01A2/subtype0/saved08; Boulder43 is already genuine routine2.
+Qualified permanent10763 remains unchanged until a new positive route/replay is
+promoted. Live four-family binding fixes remain separate unqualified source work.
+
 ## 4 November 2026 — live Act2 Monitor/Post and qualified ordinary10763
 
 The cached shared Monitor/TimePost components now borrow actual R12A mappings,

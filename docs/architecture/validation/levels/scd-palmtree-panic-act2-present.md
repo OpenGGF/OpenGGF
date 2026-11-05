@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,96 raw descriptors,35 finite art readers,
+The retained terrain/player pair,101 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -42,6 +42,14 @@ correction; nine Act2 Frame-port and796 legacy Frame cases passed in the earlier
 863 scope, alongside35 asset cases and controller3. These are separate scopes;
 the original863 run was nonpassing. Actual Wall World dispatch, pixels and a
 measured wall contact are unqualified. Its source inventory is preparatory.
+
+The later detached Anton/Pata metadata extends96→101 with five raw source views,
+cached visuals and same-source component factories. All43 data checks pass in the
+nonpassing82 run at source`caee9020412c214efe9fb73121a88881064d4fd026d80213f9c8527430acefb7`,
+5November02:08:18.852582–02:09:29.912969Z. Complete source identities/properties/XML
+hashes were inspected. The run has80passes/one carry assertion/one diagnostic
+observer error, zero skips; no combined green82 or new World qualification is
+claimed. The diagnostic route returns10778 and next reaches Anton3F at10779.
 
 ## Exact qualification
 
