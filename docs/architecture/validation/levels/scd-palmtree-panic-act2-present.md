@@ -631,3 +631,52 @@ splash metadata/body admission is the next target; prepared Spikes26 is not this
 frontier. The observed continuation has no newer full/course or pixel certification
 beyond the qualified13264. No complete-act, native-image, regional or audio/timing
 parity is claimed.
+
+
+## 5 November — native Door Splash and tunnel exit
+
+The next two R12A descriptors append ANI1D63A/24 and MAP1D652/100 at ordinals136/137.
+The cached view retains seven frames, three scripts and the exact86-tile bound.
+All35 canonical art readers,19 PLC lists and existing current residency remain
+the same owners; cache availability supplies no resident-pattern fallback.
+Actual PLC5/A already target the splash source at74E0.
+
+The live physical ID0B dispatch uses the real placement/source, cached body,
+private invocation/ordinal/preparation/completion receipts, typed A1/A2 request,
+shared animator and actual Draw queue. Init overwrites flags4 and preserves
+native nonwrites; its header precedes the one-WORD tile selection and FM. FC
+advances routine4 but still draws; only the next dispatch deletes64 bytes.
+There is no movement, despawn, allocation, saved-bank, bank or Frame owner added.
+
+126 distinct focused checks qualify across two sources: original126 passed125
+with one foreign-owner fixture expecting the wrong exception class; the same
+case passes after matching the existing validator's exact IllegalArgumentException
+and message. Production is unchanged. These cover67 asset checks,21 component
+invocations,27 World methods, nine precise consumer checks and the two previous
+controller/EGL methods. Earlier compilation stopped before tests at two fixture
+references; the long-field qualifier and missing import were corrected separately.
+This is not a single126 green run or full-suite certification.
+
+The ordinary controller-only continuation observes Ring13265, Path79 acquisition
+13277 and Got13278, Door67 emission of earlier child41 at13364, Splash Init/FM_A2
+13365, two selected splash pieces13366, control81-to-zero release13367 and FC
+routine4 at closed13385. The endpoint is6112/366 with33 rings and controls clear.
+First13386 stops at the existing unbound-ID tail on RobotGenerator2D/whole47.
+The separately labelled failed-loop inventory has no ID41; this is not a closed
+13386 deletion proof. Native/source/media research confirms that the generator's
+Present path still performs Init, Draw and conditional despawn.
+
+Both permanent long tests now pass with zero skips on sourceb2437f42…eba2cd4:
+full/course complete-state replay reaches13385; all15 old Sonic EGL endpoints
+remain and13366/13385 add two more. The actual Splash13366 renderer-only omission
+changes pixels while planes, scroll, palette, current versions and gameplay
+captures remain unchanged. The new320×224 ENGINE capture has38 colors; it is
+exported only after teardown and is separate from any native emulator reference.
+No returned13386 deletion is asserted. New preparation37.657s/admission0/
+execution17.311885s, two exact case identities and all19 installed pins checked;
+the two owned reports were consumed under lock. This refresh replaces the earlier
+13264 bound; the earlier15 endpoints and omission contrasts are retained.
+The optional test-only SONICCD_ACT2_SPLASH_OUTPUT exports an ENGINE13366 PNG only
+after owned module/session/graphics/context/boot cleanup; its directory must be
+a distinct child of ~/Downloads/Sonic-CD/captures/engine. No coordinate seed, trace hydration, native-image, regional, acoustic or whole-act
+parity is supplied by these observations.

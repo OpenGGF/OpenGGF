@@ -32,6 +32,7 @@ import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdRing;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
+import com.openggf.game.soniccd.objects.CdTunnelDoorSplash;
 import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdMonitor;
 import com.openggf.game.soniccd.objects.CdMonitorItem;
@@ -149,7 +150,8 @@ public final class SonicCdGameModule implements GameModule {
         TUNNEL_PATH_BODY, TUNNEL_PATH_PLAYER_READ, TUNNEL_PATH_SOURCE_READ, TUNNEL_PATH_PLAYER, TUNNEL_PATH_FM,
         TIME_STARS_INIT, TIME_STARS_ACTIVE, TIME_STARS_BODY,
         MONITOR_ITEM_BODY, MONITOR_ITEM_SHIELD_AWARD, SHIELD_BODY, SHIELD_INIT, SHIELD_ACTIVE,
-        MONITOR_ITEM_RING_AWARD
+        MONITOR_ITEM_RING_AWARD,
+        TUNNEL_DOOR_SPLASH_BODY, TUNNEL_DOOR_SPLASH_FM
     }
     enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER }
     static final class UnsupportedAct2Loading extends UnsupportedOperationException {
@@ -292,7 +294,7 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm, PastMonitorItemRing, PastTunnelDoorSplashFm { }
     public record PastMonitorItemRing(CdMonitorItem.RingAwardSound sound) implements PastSound {
         public PastMonitorItemRing { Objects.requireNonNull(sound); }
     }
@@ -320,6 +322,9 @@ public final class SonicCdGameModule implements GameModule {
     }
     record PastSpringFm(CdSpring.FmSound sound) implements PastSound {
         PastSpringFm { Objects.requireNonNull(sound); }
+    }
+    record PastTunnelDoorSplashFm(CdTunnelDoorSplash.FmSound sound) implements PastSound {
+        PastTunnelDoorSplashFm { Objects.requireNonNull(sound); }
     }
     record PastTunnelDoorFm(CdTunnelDoor.FmSound sound) implements PastSound {
         PastTunnelDoorFm { Objects.requireNonNull(sound); }

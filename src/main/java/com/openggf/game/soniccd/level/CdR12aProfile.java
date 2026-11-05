@@ -138,7 +138,9 @@ public final class CdR12aProfile {
         SHIELD_ART_INDEX(0x6452, 20),
         // Spikes/Main.asm:19-25,87-89; actual R12A absolute STORE at$20BF58 selects$20C018.
         // Complete24-byte include retains its literal final00; existing Std art/reader owns eight tiles.
-        MAP_SPR_SPIKES(0xC018, 24);
+        MAP_SPR_SPIKES(0xC018, 24),
+        // Spin Tunnel/Main (Door).asm:149-165: actual R12A STORE/LEA; complete includes retain all real zeros.
+        ANI_TUNNEL_DOOR_SPLASH(0x1D63A, 24), MAP_SPR_TUNNEL_DOOR_SPLASH(0x1D652, 100);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

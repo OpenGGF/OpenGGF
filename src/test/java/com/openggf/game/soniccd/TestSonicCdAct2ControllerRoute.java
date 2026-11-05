@@ -389,7 +389,7 @@ class TestSonicCdAct2ControllerRoute {
             if(call==13195 || call==13199 || call==13264)replayNextRight(h,input);
             step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
         }
-        // Comparison-only reached endpoint; stop before the separately owned Ring reward at13265.
+        // Retain comparison-only closed13264 checkpoint before the newly measured Ring reward at13265.
         assertEquals(5674,frame.state().motion().centreX16_16()>>>16);
         assertEquals(584,frame.state().motion().centreY16_16()>>>16);
         assertEquals(0,frame.state().motion().playerControl());
@@ -410,11 +410,26 @@ class TestSonicCdAct2ControllerRoute {
         registry.restoreCourse(course); assertNativeCapture(before, h);
         System.out.printf("Controller-only Act2 returned13264 after fixed Left96,L+B4,Left66; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886,12886->12887,12887->12888,12890->12891,13061->13062,13062->13063,13063->13064,13094->13095,13095->13096,13096->13097,13097->13098,13098->13099,13124->13125,13125->13126,13194->13195,13198->13199,13263->13264, actual native Item/Shield award/Init/active/upload and Item retirement, CPU/current TimeStars upload and reset/retirement, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
+        // Keep the complete13264 checkpoint above; the same controller recipe now reaches closed13385.
+        assertEquals(23,module.act2LoadState().ring().rings());
+        for(int call=13265;call<=13385;call++) {
+            var input=controller(call);
+            if(call==13265 || call==13266 || call==13277 || call==13278 || call==13279
+                    || call==13363 || call==13364 || call==13365 || call==13366 || call==13367
+                    || call==13368 || call==13384 || call==13385)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            assertNaturalDoorSplashCut(h,call);
+        }
+        var closed13385=captureNative(h);var endFull=registry.capture();var endCourse=registry.captureCourse();
+        registry.restore(endFull);assertNativeCapture(closed13385,h);
+        registry.restoreCourse(endCourse);assertNativeCapture(closed13385,h);
+        System.out.println("Controller-only Act2 closed13385: Ring13265; Path79 acquire13277/FM91 and Got13278/FM91; Door67 child41 emission13364, Init/FMA2 at13365, selected Splash13366, control release13367 and FC routine4 still Draw13385. Full/course before-forward replay surrounds each edge. Positive execution stops before13386; no returned deletion is asserted.");
     }
 
     // BEGIN later-route EGL case: additive to the three pinned controller cases.
     @Test void actualLaterAct2ControllerCutsRenderSelectedSonicAndReplayTheirCompleteValuesAndPixels() throws Exception {
         byte[] imageForExport;
+        byte[] splashImageForExport=null;
         try (var egl = TestSonicCdPastResultsRoute.Egl.open()) {
             assertInstanceOf(NullAudioBackend.class, GameServices.audio().getBackend());
             var old = ready(); var h = old.harness(); var module = h.module();
@@ -505,9 +520,27 @@ class TestSonicCdAct2ControllerRoute {
             assertFalse(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_PLAYER));
             assertFalse(module.act2LoadState().sounds().stream().anyMatch(SonicCdGameModule.PastTunnelPathFm.class::isInstance));
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884,12886,12887 and13062,13098,13126,13264; selected Sonic omission changes all fifteen endpoint pictures;13126 now uses the new Left backtrack. Full/course replay also checks13194->13195 and13198->13199. Actual12887 TimeStars renderer-only omission changes pixels with planes/palette/current unchanged. Actual natural Shield renderer-only omission at13098 changes pixels; No Ring reward or Path acquisition is asserted; traversal beyond the healthy13264 bound and native/regional parity remain open.");
+            // Two additive Sonic endpoints; imageForExport remains the old Shield13098 picture.
+            assertEquals(23,module.act2LoadState().ring().rings());
+            for(int call=13265;call<=13385;call++) {
+                var input=controller(call);
+                if(call==13366 || call==13385) {
+                    var image=renderReplayNextRight(h,input,call);
+                    if(call==13366)splashImageForExport=image.clone();
+                } else {
+                    if(call==13265 || call==13266 || call==13277 || call==13278 || call==13279
+                            || call==13363 || call==13364 || call==13365 || call==13367
+                            || call==13368 || call==13384)replayNextRight(h,input);
+                    step(h,input);assertLaterRouteOwners(h,frame,source,world,generation+1);
+                }
+                assertLaterRouteOwners(h,frame,source,world,generation+1);
+                assertNaturalDoorSplashCut(h,call);
+            }
+            assertNotNull(splashImageForExport);
+            System.out.println("ENGINE controller-only Act2 EGL: all fifteen old Sonic endpoints retained at10778,10866,11033,11213,11341,11587,12670,12699,12884,12886,12887,13062,13098,13126,13264; selected Sonic/full-course value and pixel replay also at13366 and13385, seventeen endpoints total. Existing Stars12887/Shield13098 omission contrasts remain. Selected natural Splash41 omission at13366 changes renderer-only pixels with planes/scroll/palette/current versions unchanged. Ring13265, Path acquisition/Got, emission/Init/control release and FC edges have before-forward full/course checkpoints. Positive execution ends at closed13385, before the separate partial failed13386; no returned deletion, native-image or regional parity claim.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
+        writeOptionalSplashCapture(splashImageForExport);
     }
 
     /** Captures precede both pixel work and the one real forward call; each replay leaves the same endpoint. */
@@ -601,6 +634,23 @@ class TestSonicCdAct2ControllerRoute {
             assertFalse(Arrays.equals(actual,pixels()),"Actually selected natural Shield contributes engine pixels");
             assertNativeCapture(before,h);assertArrayEquals(actual,draw(h));assertNativeCapture(before,h);
         }
+        if(provePrimary && completedCall==13366) {
+            assertEquals(java.util.List.of(0,1),cpu.provenance().stream()
+                    .filter(p->p.slotRef().wholeIndex()==41).map(p->p.mappingPieceOrdinal()).toList(),
+                    "The selected prior CPU contains the two actual Splash41 mapping pieces only after Init");
+            var omitted=TestSonicCdPastResultsRoute.omitWhole(scene,cpu,41);
+            assertSame(scene.foreground(),omitted.foreground());assertSame(scene.background(),omitted.background());
+            assertArrayEquals(scene.packedHscroll256(),omitted.packedHscroll256());
+            assertEquals(scene.vscrollLongBits(),omitted.vscrollLongBits());
+            assertArrayEquals(scene.selectedPalette128(),omitted.selectedPalette128());
+            assertEquals(scene.displayEnabled(),omitted.displayEnabled());
+            assertEquals(scene.nativePatterns(),omitted.nativePatterns());
+            assertEquals(scene.sprites().patternVersions(),omitted.sprites().patternVersions());
+            var camera=h.mode().getCamera();clearPixels();
+            renderer.draw(omitted,camera.getX(),camera.getY(),module::validateAct2LoadingCut);
+            assertFalse(Arrays.equals(actual,pixels()),"Actually selected natural Splash41 contributes engine pixels at13366");
+            assertNativeCapture(before,h);assertArrayEquals(actual,draw(h));assertNativeCapture(before,h);
+        }
         assertSame(selected, module.act2SelectedDisplay());
         assertSame(foreground, module.act2SelectedDisplay().inputs().foreground());
         assertSame(background, module.act2SelectedDisplay().inputs().background());
@@ -667,6 +717,111 @@ class TestSonicCdAct2ControllerRoute {
         if(completedCall==13126)assertFalse(state.calls().contains(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY));
     }
 
+    /**
+     * Comparison-only closed observations supplied by Root (facts SHA-256
+     * f33cf98df54588011030c7992a95b199603de9ed267fb1c88af67dd925e24d4e).
+     * N1ecc5f3: Tunnel Path/Main.asm:200-253,257-299; Main (Door).asm:23-38,149-177;
+     * Animations (Door Splash).asm:1-9. No expected byte is an input or restore source.
+     */
+    private static void assertNaturalDoorSplashCut(Harness h,int completedCall) {
+        assertTrue(completedCall>=13265 && completedCall<=13385,"Only measured completed cuts are positive endpoints");
+        var module=h.module();var state=module.act2LoadState();var frame=module.requirePlayerFrame();
+        var calls=state.calls();var pool=state.placement().pool();
+        assertEquals(33,state.ring().rings());assertEquals(3,state.ring().lives());assertEquals(0,state.ring().livesFlags());
+        assertEquals(0,frame.environment().controls().controlLocked());
+        assertEquals(completedCall>=13277 && completedCall<=13366?0x81:0,frame.state().motion().playerControl());
+        assertEquals(completedCall==13265,calls.contains(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD));
+        assertEquals(completedCall>=13277 && completedCall<=13367,calls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_PLAYER));
+        assertEquals(completedCall==13277 || completedCall==13278,calls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_FM));
+        assertEquals(completedCall>=13365,calls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY));
+        assertEquals(completedCall==13365,calls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_FM));
+        assertEquals(completedCall==13265?java.util.List.of(com.openggf.game.soniccd.objects.CdMonitorItem.RingAwardSound.FM_RING):java.util.List.of(),
+                state.sounds().stream().filter(SonicCdGameModule.PastMonitorItemRing.class::isInstance)
+                        .map(SonicCdGameModule.PastMonitorItemRing.class::cast).map(SonicCdGameModule.PastMonitorItemRing::sound).toList());
+        assertEquals(completedCall==13277 || completedCall==13278?java.util.List.of(com.openggf.game.soniccd.objects.CdTunnelPath.FmSound.FM_91):java.util.List.of(),
+                state.sounds().stream().filter(SonicCdGameModule.PastTunnelPathFm.class::isInstance)
+                        .map(SonicCdGameModule.PastTunnelPathFm.class::cast).map(SonicCdGameModule.PastTunnelPathFm::sound).toList());
+        assertEquals(completedCall==13365?java.util.List.of(com.openggf.game.soniccd.objects.CdTunnelDoorSplash.FmSound.FM_A2):java.util.List.of(),
+                state.sounds().stream().filter(SonicCdGameModule.PastTunnelDoorSplashFm.class::isInstance)
+                        .map(SonicCdGameModule.PastTunnelDoorSplashFm.class::cast).map(SonicCdGameModule.PastTunnelDoorSplashFm::sound).toList());
+        if(completedCall==13265) {
+            assertEquals(1,state.ring().updateHudRings(),"Actual ten-ring reward changes23 to33");
+            assertTrue(calls.indexOf(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD)
+                    <calls.indexOf(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY));
+        }
+        if(completedCall==13277 || completedCall==13278)assertTrue(calls.indexOf(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_FM)
+                <calls.indexOf(SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_BODY));
+        if(completedCall==13365)assertTrue(calls.indexOf(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_FM)
+                <calls.indexOf(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY));
+        String pathImage=switch(completedCall) {
+            case 13265 -> "070405410021d5281630000002900000000000000000000001100000000000000000000002000000020000000000000000000000000016300290004400208c98";
+            case 13276 -> "070405410021d5281630000002900000000000000000000001100000000000000000000002000000020000000000000000000000000016300290004400208c98";
+            case 13277 -> "070405410021d5281630000002900000000000000000000001100000000000000000000004000000020000000000000000000000000016300290004400208c98";
+            case 13278 -> "070405410021d5281630000002900000000000000000000001100000000000000000000006000000020000000000000000000000000016300290004400208c98";
+            case 13279 -> "070405410021d5281630000002900000000000000000000001100000000000000000000006000000020000000000088000000000000016300318044400208c98";
+            case 13363 -> "070405410021d5281630000002900000000000000000000001100000000000000000000006000000020000000000038000000000000017d00268404400208c98";
+            case 13364 -> "070405410021d5281630000002900000000000000000000001100000000000000000000006000000020000000000028000000000000017d00268404400208c98";
+            case 13365 -> "070405410021d5281630000002900000000000000000000001100000000000000000000006000000020000000000018000000000000017d00268404400208c98";
+            case 13366 -> "070405410021d5281630000002900000000000000000000001100000000000000000000006000000020000000000008000000000000017d00268404400208c98";
+            case 13367 -> "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+            default -> null;
+        };
+        if(pathImage!=null)assertArrayEquals(java.util.HexFormat.of().parseHex(pathImage),pool.slots().get(79-32).copyBytes(),
+                "Complete natural Path79 image at closed"+completedCall);
+        String splashImage=switch(completedCall) {
+            case 13363 -> "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+            case 13364 -> "0b0000000000000017d0000002a30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+            case 13365 -> "0b8403a70021d65217d0000002a30000000000000000000001000001000003000000000002000000000000000000000000000000000000000000000000000000";
+            case 13366 -> "0b8403a70021d65217d0000002a30000000000000000000001000001000002000000000002000000000000000000000000000000000000000000000000000000";
+            case 13367 -> "0b8403a70021d65217d0000002a30000000000000000000001000001000001000000000002000000000000000000000000000000000000000000000000000000";
+            case 13368 -> "0b8403a70021d65217d0000002a30000000000000000000001000001000000000000000002000000000000000000000000000000000000000000000000000000";
+            case 13369 -> "0b8403a70021d65217d0000002a30000000000000000000001000402000003000000000002000000000000000000000000000000000000000000000000000000";
+            case 13370 -> "0b8403a70021d65217d0000002a30000000000000000000001000402000002000000000002000000000000000000000000000000000000000000000000000000";
+            case 13371 -> "0b8403a70021d65217d0000002a30000000000000000000001000402000001000000000002000000000000000000000000000000000000000000000000000000";
+            case 13372 -> "0b8403a70021d65217d0000002a30000000000000000000001000402000000000000000002000000000000000000000000000000000000000000000000000000";
+            case 13373 -> "0b8403a70021d65217d0000002a30000000000000000000001000303000003000000000002000000000000000000000000000000000000000000000000000000";
+            case 13374 -> "0b8403a70021d65217d0000002a30000000000000000000001000303000002000000000002000000000000000000000000000000000000000000000000000000";
+            case 13375 -> "0b0403a70021d65217d0000002a30000000000000000000001000303000001000000000002000000000000000000000000000000000000000000000000000000";
+            case 13376 -> "0b0403a70021d65217d0000002a30000000000000000000001000303000000000000000002000000000000000000000000000000000000000000000000000000";
+            case 13377 -> "0b0403a70021d65217d0000002a30000000000000000000001000104000003000000000002000000000000000000000000000000000000000000000000000000";
+            case 13378 -> "0b0403a70021d65217d0000002a30000000000000000000001000104000002000000000002000000000000000000000000000000000000000000000000000000";
+            case 13379 -> "0b0403a70021d65217d0000002a30000000000000000000001000104000001000000000002000000000000000000000000000000000000000000000000000000";
+            case 13380 -> "0b0403a70021d65217d0000002a30000000000000000000001000104000000000000000002000000000000000000000000000000000000000000000000000000";
+            case 13381 -> "0b0403a70021d65217d0000002a30000000000000000000001000205000003000000000002000000000000000000000000000000000000000000000000000000";
+            case 13382 -> "0b0403a70021d65217d0000002a30000000000000000000001000205000002000000000002000000000000000000000000000000000000000000000000000000";
+            case 13383 -> "0b0403a70021d65217d0000002a30000000000000000000001000205000001000000000002000000000000000000000000000000000000000000000000000000";
+            case 13384 -> "0b0403a70021d65217d0000002a30000000000000000000001000205000000000000000002000000000000000000000000000000000000000000000000000000";
+            case 13385 -> "0b0403a70021d65217d0000002a30000000000000000000001000205000003000000000004000000000000000000000000000000000000000000000000000000";
+            default -> null;
+        };
+        var splash=pool.slots().get(41-32);
+        if(splashImage!=null)assertArrayEquals(java.util.HexFormat.of().parseHex(splashImage),splash.copyBytes(),
+                "Complete natural Splash41 image at closed"+completedCall);
+        if(completedCall==13364) {
+            var door=pool.slots().get(67-32);
+            assertEquals(0x0D,door.id());assertEquals(4,door.routine());
+            assertEquals(0,splash.routine(),"Door67 emits into the already visited earlier41; Init waits for the next physical pass");
+            assertFalse(calls.contains(SonicCdGameModule.Act2LoadCall.TUNNEL_DOOR_SPLASH_BODY));
+        }
+        if(completedCall>=13365) {
+            int[] expectedFlags={0x84,0x84,0x84,0x84,0x84,0x84,0x84,0x84,0x84,0x84,0x04,0x04,0x04,0x04,0x04,0x04,0x04,0x04,0x04,0x04,0x04};
+            assertEquals(expectedFlags[completedCall-13365],splash.spriteFlags(),"Actual Draw/BSET script at closed"+completedCall);
+            assertEquals(0x0B,splash.id());assertEquals(0x03A7,splash.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+            assertEquals(0x21D652,splash.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+            var selected=module.act2SelectedDisplay().inputs().selectedCpu().orElseThrow();
+            java.util.List<Integer> expectedPieces=completedCall==13365 || completedCall>=13376?java.util.List.of()
+                    :completedCall<13370?java.util.List.of(0,1):java.util.List.of(0,1,2,3);
+            assertEquals(expectedPieces,selected.provenance().stream().filter(p->p.slotRef().wholeIndex()==41)
+                    .map(p->p.mappingPieceOrdinal()).toList(),"Actual prior CPU selection at closed"+completedCall);
+        }
+        if(completedCall==13385) {
+            assertEquals(4,splash.routine(),"FC advances the routine but still returns through Draw; deletion is a later dispatch");
+            assertEquals(0x17E0F900,frame.state().motion().centreX16_16());
+            assertEquals(0x016E7700,frame.state().motion().centreY16_16());
+            assertEquals(6112,frame.state().motion().centreX16_16()>>>16);assertEquals(366,frame.state().motion().centreY16_16()>>>16);
+        }
+    }
+
     /** Native selector2 copies source0 only at the subsequent actual Vint, preserving the real128-byte tail. */
     private static void assertNaturalShieldCurrent(Harness h) throws Exception {
         var state=h.module().act2LoadState();var values=actualField(actualField(h.module(),"act2Loading"),"values");
@@ -701,19 +856,42 @@ class TestSonicCdAct2ControllerRoute {
         var owned = Path.of(System.getProperty("user.home"), "Downloads", "Sonic-CD", "captures", "engine").toAbsolutePath().normalize();
         assertTrue(directory.startsWith(owned) && !directory.equals(owned), "Actual ENGINE route export needs its own directory under the engine capture root");
         assertEquals(320 * 224 * 4, rgba.length); Files.createDirectories(directory);
+        writeEngineCapturePng(rgba,directory.resolve("ENGINE-act2-controller-call-13098.png"));
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-13098.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call13098.\n"
+                + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
+                + "Full/course complete-value and pixel replay; selected Sonic and natural Shield renderer-only omission contrasts; earlier12887 Stars contrast retained.\n"
+                + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");
+    }
+    /** Both optional engine exports use the old bottom-up RGBA conversion after every live owner closes. */
+    private static void writeEngineCapturePng(byte[] rgba,Path output) throws Exception {
+        assertEquals(320*224*4,rgba.length);
         var image = new java.awt.image.BufferedImage(320, 224, java.awt.image.BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < 224; y++) for (int x = 0; x < 320; x++) {
             int at = ((223 - y) * 320 + x) * 4;
             int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
             image.setRGB(x, y, argb);
         }
-        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-13098.png").toFile()))
-            throw new java.io.IOException("PNG writer unavailable");
-        Files.writeString(directory.resolve("ENGINE-act2-controller-call-13098.txt"),
-                "ENGINE: OpenGGF original-USA controller-only route, actual completed call13098.\n"
-                + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
-                + "Full/course complete-value and pixel replay; selected Sonic and natural Shield renderer-only omission contrasts; earlier12887 Stars contrast retained.\n"
-                + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");
+        if (!javax.imageio.ImageIO.write(image,"png",output.toFile()))throw new java.io.IOException("PNG writer unavailable");
+    }
+
+    /** A separate opt-in, executed after session/module/graphics/EGL/boot fixture cleanup; output only. */
+    private static void writeOptionalSplashCapture(byte[] rgba) throws Exception {
+        String output=System.getenv("SONICCD_ACT2_SPLASH_OUTPUT");if(output==null || output.isBlank())return;
+        var directory=Path.of(output).toAbsolutePath().normalize();
+        var owned=Path.of(System.getProperty("user.home"),"Downloads","Sonic-CD","captures","engine").toAbsolutePath().normalize();
+        assertTrue(directory.startsWith(owned) && !directory.equals(owned),"Actual ENGINE Splash export needs its own directory under the engine capture root");
+        String shieldOutput=System.getenv("SONICCD_ACT2_ROUTE_OUTPUT");
+        if(shieldOutput!=null && !shieldOutput.isBlank())assertNotEquals(Path.of(shieldOutput).toAbsolutePath().normalize(),directory,
+                "Splash and the existing Shield export use separate directories");
+        assertEquals(320*224*4,rgba.length);Files.createDirectories(directory);
+        writeEngineCapturePng(rgba,directory.resolve("ENGINE-act2-controller-call-13366.png"));
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-13366.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call13366.\n"
+                + "320x224 RGBA from actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
+                + "Selected Sonic and natural Splash41 renderer-only omission; full/course complete-value and pixel replay.\n"
+                + "Written after module/session/graphics/EGL/boot fixture cleanup. No native-image, parity or atlas-retirement claim.\n"
+                + "Positive route ends at closed13385;13386 is outside this test and has no completed deletion claim.\n");
     }
     // END later-route EGL case.
 
@@ -751,10 +929,10 @@ class TestSonicCdAct2ControllerRoute {
     }
 
     private static LogicalInputSnapshot controller(int call) {
-        if (call < 1 || call > 13550) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..13550; positive qualification stops13264");
+        if (call < 1 || call > 13550) throw new IllegalArgumentException("Fixed ordinary controller recipe is1..13550; positive qualification stops13385");
         if (call > 10419) {
             // Exact old prefix through13098; then Left96, Left+B4, Left96, Right256.
-            // Calls13265 onward are recipe only, not requested by either positive test.
+            // Positive tests stop at completed13385; calls13386..13550 remain recipe only.
             int directions = call >= 13099 && call <= 13294 ? 4 : 8;
             int actions = call <= 13098 ? (call >= 11214 && (call - 11214) % 128 < 32 ? 2 : 0)
                     : (call >= 13195 && call <= 13198 ? 2 : 0);

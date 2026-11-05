@@ -250,8 +250,10 @@ Unreleased. The earlier development themes remain in
   Item retirement retain full/course replay and selected current-pixel checks.
   A short controller backtrack and jump now reaches the lower tunnel approach.
   Ring monitors award ten rings through the same ring, life and HUD state, with
-  native one-up thresholds and ordered sound requests; native tunnel travel is
-  observed beyond that approach, up to the next unimplemented door splash.
+  native one-up thresholds and ordered sound requests. Door-created splashes now
+  retain native Init, sound, animation, Draw and deletion order over the existing
+  art owner. The ordinary route leaves Tunnel Path control; later Robot Generator
+  admission remains separate.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

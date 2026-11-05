@@ -351,10 +351,15 @@ WORD/byte wrap, BSET threshold priority and original live Item receipts. Origina
 171-case selection passed165 with six new earlier-HUD fixture failures; the same20
 World cases pass after a test-only correction, production unchanged. Permanent
 controller/replay and fifteen Sonic EGL endpoints qualify13264. A separate ordinary
-continuation actually awards rings13265 and acquires/travels the lower Tunnel Path
-from13277 through13364; first13365 is unbound door-splash ID0B/whole41. Those later
-observations are not newer pixel/full-course certification. The Act2 matrix records
-exact source and execution limits; no native/regional/full-act completion claim.
+continuation now executes the actual Door Splash0B Init/FM/animation/Draw path,
+releases Tunnel Path control13367 and returns13385; first13386 is the separate
+unbound RobotGenerator2D/whole47. Its126 source checks qualify across125 original
+passes plus one exact foreign-exception fixture correction, with no production
+change; this is not a single green126 run. Both refreshed permanent tests pass
+with zero skips: full/course complete-state replay through13385 and17 Sonic EGL
+endpoints, retaining the old15 and adding an actual Splash13366 omission contrast.
+An ENGINE320×224 capture was exported after cleanup. The Act2 matrix records exact
+source and execution limits; no native/regional/full-act completion is claimed.
 
 ### Historical26October pause checkpoint
 

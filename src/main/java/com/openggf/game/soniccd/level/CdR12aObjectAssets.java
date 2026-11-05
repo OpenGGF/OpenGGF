@@ -124,6 +124,7 @@ public final class CdR12aObjectAssets {
     private CdLevelHud.Assets hud;
     private CdR12aPowerupArtSources powerupArtSources;
     private CdObjectVisualAssets spikes;
+    private CdObjectVisualAssets tunnelDoorSplash;
 
     /** Only the actual authenticated terrain owner calls this; no public arbitrary-image ingress. */
     CdR12aObjectAssets(CdR12aTerrainAssets terrain, CdMmdImage image) {
@@ -344,6 +345,13 @@ public final class CdR12aObjectAssets {
         if (tunnelDoor == null) tunnelDoor = CdObjectVisualAssets.decode(view(MAP_SPR_TUNNEL_DOOR).copy(), 2,
                 view(ANI_TUNNEL_DOOR).copy(), 1, 12);
         return tunnelDoor;
+    }
+
+    /** Seven counted roots and three FC scripts over the existing86-tile splash source; no art/current work. */
+    public synchronized CdObjectVisualAssets tunnelDoorSplash() {
+        if (tunnelDoorSplash == null) tunnelDoorSplash = CdObjectVisualAssets.decode(view(MAP_SPR_TUNNEL_DOOR_SPLASH).copy(), 7,
+                view(ANI_TUNNEL_DOOR_SPLASH).copy(), 3, 86);
+        return tunnelDoorSplash;
     }
 
     /** One counted Spikes frame over the existing eight-tile Std source; no animation or art decode. */

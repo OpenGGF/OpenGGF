@@ -34,7 +34,7 @@ class TestSonicCdAct2FlowerWorld {
     @Test void cachedFlowerUsesSelectedOriginalRootAndExistingCurrentStdArt() throws Exception {
         var s=scene();var body=flower(s);var before=captureNative(s.h());
         assertSame(s.assets().objects().flower(),body.assets().flower());assertEquals(0x236AB0,body.assets().mappingsAddress());
-        assertEquals(120,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(98,SonicCdGameModule.Act2LoadCall.POINTS_BODY.ordinal());
+        assertEquals(122,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(98,SonicCdGameModule.Act2LoadCall.POINTS_BODY.ordinal());
         assertEquals(104,SonicCdGameModule.Act2LoadCall.FLOWER_BODY.ordinal());assertEquals(105,SonicCdGameModule.Act2LoadCall.FLOWER_PRIMARY_ANGLE.ordinal());
         assertArrayEquals(s.assets().objects().decode(CdR12aProfile.Asset.ART_FLOWER).bytes().slice(0,32).copy(),
                 CdR12aCameraArtResidency.readTile(s.h().module().act2LoadState().section().residency(),0x6D7).copy());

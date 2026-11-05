@@ -254,7 +254,7 @@ class TestSonicCdAct2MonitorItemShieldWorld {
     }
 
     @Test void exactAppendOnlyEnumAndRetiredFacadeCannotCreateASecondOwner() throws Exception {
-        var s=scene();assertEquals(120,SonicCdGameModule.Act2LoadCall.values().length);
+        var s=scene();assertEquals(122,SonicCdGameModule.Act2LoadCall.values().length);
         assertEquals(111,SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT.ordinal());assertEquals(114,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY.ordinal());
         var bank=(CdReservedObjectBank)actualField(s.visit(),"timeStarBank");assertNull(actualField(bank,"slots"));
         assertThrows(IllegalStateException.class,bank::capture);assertSame(actualField(s.visit(),"timeStarsAssets"),shield(s).assets());

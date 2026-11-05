@@ -68,6 +68,10 @@ final class SonicCdAct2LoadingVisit {
     private final CdPoints.Assets pointsAssets;
     private transient ChildEffectInvocation activeChildEffect;
     private boolean drawingChildEffect;
+    private final CdTunnelDoorSplash tunnelDoorSplash;
+    private final CdTunnelDoorSplash.Assets tunnelDoorSplashAssets;
+    private transient SplashInvocation activeTunnelDoorSplash;
+    private boolean splashPort, drawingSplash;
     private final CdTunnelDoor tunnelDoor;
     private transient DoorInvocation activeDoor;
     private boolean doorPort, drawingDoor;
@@ -279,6 +283,16 @@ final class SonicCdAct2LoadingVisit {
             @Override public void completed(Object c) { consumeCompletedChildReceipt(c); }
         });
         explosionAssets=explosion.assets(); pointsAssets=points.assets();
+        tunnelDoorSplash=CdTunnelDoorSplash.fromAct2Assets(placement,objectAssets,new CdTunnelDoorSplash.DispatchObserver() {
+            @Override public void beforePublication(CdTunnelDoorSplash.Publication c) { beforeSplashPublication(c); }
+            @Override public void afterPublication(CdTunnelDoorSplash.Publication c) { afterSplashPublication(c); }
+            @Override public void beforeCall(Object c) { beforeSplashCall(c); }
+            @Override public void afterCall(Object c) { afterSplashCall(c); }
+        },this::drawSplash,this::playSplashFm,new CdTunnelDoorSplash.ReceiptGuard() {
+            @Override public void prepared(Object c) { requirePreparedSplashReceipt(c); }
+            @Override public void completed(Object c) { consumeCompletedSplashReceipt(c); }
+        });
+        tunnelDoorSplashAssets=tunnelDoorSplash.assets();
         tunnelDoor=CdTunnelDoor.withPrefixOwner(placement,this::readDoorSecondary,CdTunnelDoor.Assets.fromAct2Assets(objectAssets),
                 sharedSolid,new CdTunnelDoor.PrefixSolidOwner() {
                     @Override public CdTunnelDoor.LiveSolid preflight(CdTunnelDoor.PrefixSolidCut c) {return preflightDoor(c);}
@@ -2290,6 +2304,7 @@ final class SonicCdAct2LoadingVisit {
                 else if(id==CdExplosion.OBJECT_ID) { runExplosion(whole); call(EXPLOSION_BODY); }
                 else if(id==CdPoints.OBJECT_ID) { runPoints(whole); call(POINTS_BODY); }
                 else if(id==CdTunnelPath.OBJECT_ID) {runTunnelPath(whole);call(TUNNEL_PATH_BODY);}
+                else if(id==CdTunnelDoorSplash.OBJECT_ID) {runTunnelDoorSplash(whole);call(TUNNEL_DOOR_SPLASH_BODY);}
                 else if(id==CdTunnelDoor.OBJECT_ID) {runDoor(whole);call(TUNNEL_DOOR_BODY);}
                 else if(id==CdLogShadow.OBJECT_ID) { runLogShadow(whole); call(LOG_SHADOW_BODY); }
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
@@ -2325,6 +2340,7 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_FLOWER.nativeAddress(),assets.objects().flower().mappings(),0,8));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_EXPLOSION.nativeAddress(),assets.objects().explosion().mappings(),0,7));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_POINTS.nativeAddress(),assets.objects().points().mappings(),0,6));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TUNNEL_DOOR_SPLASH.nativeAddress(),assets.objects().tunnelDoorSplash().mappings(),0,7));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TUNNEL_DOOR.nativeAddress(),assets.objects().tunnelDoor().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_LOG_SHADOW.nativeAddress(),assets.objects().logShadow().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOSQUI_NORMAL.nativeAddress(),assets.objects().normalMosqui().mappings(),0,5));
@@ -2356,6 +2372,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native queue read");
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
+                if(activeTunnelDoorSplash!=null) return readSplashDrawSlot(ref);
                 if(activeDoor!=null) return readDoorDrawSlot(ref);
                 if(activeLogMosqui!=null) return readLogMosquiDrawSlot(ref);
                 if(activeDrain!=null) return readDrainingSlot(ref);
@@ -2379,6 +2396,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native Draw flag write");
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
+                if(activeTunnelDoorSplash!=null) {writeSplashOnScreen(ref,value);return;}
                 if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
                 if(activeLogMosqui!=null) { writeLogMosquiOnScreen(ref,value); return; }
                 if(activeDrain!=null) { writeDrainingOnScreen(ref,value); return; }
@@ -8604,6 +8622,7 @@ final class SonicCdAct2LoadingVisit {
     // Item and Shield share only a transient invocation guard, never storage or a capture owner.
     void requireItemShieldServiceIdle() { requireItemShieldIdle(); }
     private void requireItemShieldIdle() {
+        requireSplashIdle();
         if(activeItemShield!=null || itemShieldPort || drawingItemShield)
             throw new IllegalStateException("Actual MonitorItem/Shield owns this source cut");
     }
@@ -9128,5 +9147,252 @@ final class SonicCdAct2LoadingVisit {
             if(!i.current(call) || i.pending!=null && i.pending!=call)throw new IllegalStateException("Foreign failed Item/Shield producer");
             verifyItemShield(i);
         } catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}
+    }
+
+    // ObjTunnelDoorSplash (native Door135-177): one private physical invocation; no captured owner.
+    private enum SplashStep { ENTRY, HEADER, TILE, FM, RESET, TIMER, SPEED, ANIMATED, DONE }
+    private void requireSplashIdle() {
+        if(activeTunnelDoorSplash!=null || splashPort || drawingSplash)
+            throw new IllegalStateException("Actual TunnelDoorSplash invocation owns this cut");
+    }
+    private void requireOtherSplashScopesIdle() {
+        if(activePowerupArt!=null || activeItemShield!=null || activeTimeStars!=null || activeTunnelPath!=null || activeFlower!=null
+                || activeChildEffect!=null || activeDoor!=null || activeLogMosqui!=null || activeCollapse!=null
+                || activePrimary!=null || activeDrain!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
+                || activeTitle!=null || activeMonitor!=null || activeBoulder!=null || activePlatform!=null
+                || activeAnton!=null || activePata!=null || activeTamabboh!=null || activeFloat!=null || activeCheckpoint!=null || activeWall!=null
+                || itemShieldPort || drawingItemShield || timeStarsPort || drawingTimeStars || tunnelPathPort || flowerPort || drawingFlower
+                || drawingChildEffect || doorPort || drawingDoor || logMosquiPort || drawingLogMosqui || collapsePort || drawingCollapse
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || titlePort || drawingTitle || monitorPort || drawingMonitor || boulderPort || drawingBoulder
+                || platformPort || drawingPlatform || antonPort || drawingAnton || drawingPata
+                || tamabbohPort || drawingTamabboh || floatPort || drawingFloat || checkpointPort || drawingCheckpoint || wallPort || drawingWall)
+            throw new IllegalStateException("Another actual native family owns the TunnelDoorSplash cut");
+    }
+    private final class SplashInvocation {
+        final int whole; final CdTunnelDoorSplash body=tunnelDoorSplash; final CdTunnelDoorSplash.Assets bodyAssets=tunnelDoorSplashAssets;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource(); final CdR12aTerrainAssets sourceAssets=assets;
+        final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue; final CdObjectPlacementRuntime.Status status=placement.status();
+        final CdObjectState entry; final CdPlayerBody.State state=frame.state(); final CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor(); final CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll(); final Object world; final long generation;
+        final CdAssetBytes reserved=values.hudObjects(), saved=placement.capture().savedFlags(); final CdObjectDrawQueue.CameraWords camera;
+        Values expectedValues=values, readyValues; List<SonicCdGameModule.PastSound> ledger=sounds, readyLedger;
+        List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()), readyImages;
+        List<Object> receipts=List.of(), readyReceipts; Object pendingPublication,pendingCall,completedOperation,callReceipt;
+        long ordinal; SplashStep step=SplashStep.ENTRY,readyStep; boolean drawn,cleared,queueFailed;
+        SplashInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+    }
+    private void runTunnelDoorSplash(int whole) {
+        requireSplashIdle();requireBoulderPlatformIdle();requireDoorIdle();requireOtherSplashScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || placement.pool().state(whole).id()!=CdTunnelDoorSplash.OBJECT_ID)
+            throw new IllegalStateException("No actual cached TunnelDoorSplash physical dispatch");
+        var i=new SplashInvocation(whole);activeTunnelDoorSplash=i;
+        try {
+            var result=tunnelDoorSplash.run(whole);verifySplash(i);boolean done=i.entry.routine()==4;
+            if(i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null || !result.state().equals(i.pool.state(whole))
+                    || done && (i.step!=SplashStep.DONE || i.drawn || i.cleared)
+                    || !done && (i.step!=SplashStep.ANIMATED || !i.drawn || !i.cleared))
+                throw new IllegalStateException("TunnelDoorSplash omitted its actual completed native receipts");
+        } catch(RuntimeException|Error original) {
+            try {verifySplashFailure(i);}catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}
+            throw original;
+        } finally {activeTunnelDoorSplash=null;}
+    }
+    private void verifySplashOwners(SplashInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherSplashScopesIdle();var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(activeTunnelDoorSplash!=i || !runningObjects || servicing || i.body!=tunnelDoorSplash || i.bodyAssets!=tunnelDoorSplashAssets
+                || tunnelDoorSplash.assets()!=i.bodyAssets || i.bodyAssets.visual()!=assets.objects().tunnelDoorSplash()
+                || i.sourceFrame!=frame || i.stageSource!=frame.stageSource() || i.sourceAssets!=assets || i.pool!=placement.pool()
+                || i.queue!=drawQueue || drawQueue==null || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING
+                    || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession()
+                || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.state()!=i.state || frame.environment()!=i.environment || !frame.captureActor().equals(i.actor)
+                || !frame.captureShared().equals(i.shared) || values!=i.expectedValues || sounds!=i.ledger
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("TunnelDoorSplash changed or borrowed another actual World/Frame/source owner");
+    }
+    private boolean splashImagesEqual(SplashInvocation i,List<CdAssetBytes> images) {
+        var cut=placement.capture();placement.validateRestore(cut);
+        if(images==null || images.size()!=96 || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved))return false;
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),images.get(at).copy()))return false;
+        return true;
+    }
+    private void verifySplash(SplashInvocation i) {
+        verifySplashOwners(i);if(!splashImagesEqual(i,i.images))throw new IllegalStateException("TunnelDoorSplash changed unowned full96/source/saved/status bytes");
+    }
+    private void verifySplashFailure(SplashInvocation i) {
+        verifySplashOwners(i);
+        if(!splashImagesEqual(i,i.images) && !(i.pendingPublication!=null && splashImagesEqual(i,i.readyImages)))
+            throw new IllegalStateException("Throwing TunnelDoorSplash differs from both exact native publication cuts");
+    }
+    private SplashInvocation requireSplash() {
+        var i=activeTunnelDoorSplash;if(i==null)throw new IllegalStateException("No actual TunnelDoorSplash invocation");verifySplash(i);return i;
+    }
+    private void validateSplashCut(SplashInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);
+        if(!cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved) || !source.equals(i.pool.state(i.whole))
+                || !source.identity().equals(i.entry.identity()))throw new IllegalStateException("Foreign TunnelDoorSplash source cut");
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),i.images.get(at).copy()))
+            throw new IllegalStateException("TunnelDoorSplash supplied full96 cut differs");
+    }
+    private boolean splashAnimationSite(SplashInvocation i) {
+        return i.entry.routine()==2 && i.step==SplashStep.ENTRY || i.entry.routine()==0 && i.step==SplashStep.FM;
+    }
+    private void beforeSplashPublication(CdTunnelDoorSplash.Publication c) {
+        var i=requireSplash();
+        if(!tunnelDoorSplash.isCurrentCall(c) || splashPort || drawingSplash || queuePort || i.pendingPublication!=null || i.pendingCall!=null
+                || i.completedOperation!=null || c.ordinal()!=i.ordinal+1 || !c.before().equals(c.source()))
+            throw new IllegalStateException("TunnelDoorSplash publication lacks exact pending producer/ordinal/source");
+        validateSplashCut(i,c.cut(),c.source());var source=c.source();var output=c.output();CdObjectState expected;SplashStep next;
+        switch(c.kind()) {
+            case INIT_HEADER -> {
+                if(i.entry.routine()!=0 || i.step!=SplashStep.ENTRY)throw new IllegalStateException("Repeated/late TunnelDoorSplash Init");
+                expected=source.addByte(CdObjectState.ByteField.ROUTINE,2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS,4)
+                        .moveByte(CdObjectState.ByteField.PRIORITY,1).moveLong(CdObjectState.LongField.MAPPINGS,i.bodyAssets.mappingsAddress())
+                        .moveByte(CdObjectState.ByteField.ANIMATION,source.subtype());next=SplashStep.HEADER;
+            }
+            case INIT_TILE -> {
+                if(i.entry.routine()!=0 || i.step!=SplashStep.HEADER || source.subtype2()!=0)
+                    throw new IllegalStateException("TunnelDoorSplash tile store omitted its header or crossed the declared one-WORD body");
+                var table=i.bodyAssets.objectTileIds();int offset=(short)table.unsignedWord(0x0D*2);
+                if(offset+2!=CdObjectTileIds.endOfBody(table,0x0D))throw new IllegalStateException("TunnelDoorSplash tile body extent changed");
+                expected=source.moveWord(CdObjectState.WordField.TILE,table.unsignedWord(offset));next=SplashStep.TILE;
+            }
+            case ANIMATION_RESULT -> {
+                if(!splashAnimationSite(i) || output==null)throw new IllegalStateException("TunnelDoorSplash animation omitted actual Init/tile/FM receipts");
+                expected=source.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION,source.unsignedByte(CdObjectState.ByteField.ANIMATION))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_FRAME,output.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_TIME,output.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME))
+                        .moveByte(CdObjectState.ByteField.MAP_FRAME,output.unsignedByte(CdObjectState.ByteField.MAP_FRAME))
+                        .moveByte(CdObjectState.ByteField.SPRITE_FLAGS,output.spriteFlags()).moveByte(CdObjectState.ByteField.ROUTINE,output.routine());
+                if((output.spriteFlags()&~3)!=(source.spriteFlags()&~3) || output.routine()!=2 && output.routine()!=4)
+                    throw new IllegalStateException("TunnelDoorSplash animation changed unowned flags/routine");
+                // The original cached producer ran the animator once; this guard never replays successful script reads.
+                next=SplashStep.ANIMATED;
+            }
+            case FAILURE_RESET -> {
+                if(!splashAnimationSite(i) || source.unsignedByte(CdObjectState.ByteField.ANIMATION)==source.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION))
+                    throw new IllegalStateException("Unreached TunnelDoorSplash animation reset failure prefix");
+                expected=source.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION,source.unsignedByte(CdObjectState.ByteField.ANIMATION))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_FRAME,0).moveByte(CdObjectState.ByteField.ANIMATION_TIME,0);next=SplashStep.RESET;
+            }
+            case FAILURE_TIMER -> {
+                if(!splashAnimationSite(i) && i.step!=SplashStep.RESET)throw new IllegalStateException("Unreached TunnelDoorSplash timer failure prefix");
+                expected=source.addByte(CdObjectState.ByteField.ANIMATION_TIME,-1);next=SplashStep.TIMER;
+            }
+            case FAILURE_SPEED -> {
+                if(i.step!=SplashStep.TIMER)throw new IllegalStateException("TunnelDoorSplash delay read before its actual timer prefix");
+                int animation=source.unsignedByte(CdObjectState.ByteField.ANIMATION);if(animation>=3)throw new IllegalStateException("Unrepresented TunnelDoorSplash animation directory");
+                var table=i.bodyAssets.visual().animationTable();expected=source.moveByte(CdObjectState.ByteField.ANIMATION_TIME,table.unsignedByte((short)table.unsignedWord(animation*2)));next=SplashStep.SPEED;
+            }
+            case DELETE -> {
+                if(i.entry.routine()!=4 || i.step!=SplashStep.ENTRY || output!=null)throw new IllegalStateException("Unreached TunnelDoorSplash DeleteObject");
+                expected=null;next=SplashStep.DONE;
+            }
+            default -> throw new IllegalArgumentException("Unknown TunnelDoorSplash store");
+        }
+        if(!Objects.equals(expected,output))throw new IllegalStateException("TunnelDoorSplash publication changed another native byte");
+        if(output!=null) {
+            if(!output.identity().equals(source.identity()))throw new IllegalArgumentException("TunnelDoorSplash publication changed physical identity");
+            i.pool.validateRestore(CdObjectPool.overlay(c.cut().pool(),List.of(output)));
+        }
+        var images=new ArrayList<>(i.images);images.set(i.whole-32,CdAssetBytes.copyOf(output==null?new byte[64]:output.copyBytes()));
+        var receipts=new ArrayList<>(i.receipts);receipts.add(c);
+        i.readyImages=List.copyOf(images);i.readyReceipts=List.copyOf(receipts);i.readyStep=next;i.pendingPublication=c;
+    }
+    private void afterSplashPublication(CdTunnelDoorSplash.Publication c) {
+        var i=activeTunnelDoorSplash;
+        if(i==null || i.pendingPublication!=c || !tunnelDoorSplash.isCurrentCall(c) || i.completedOperation!=null)
+            throw new IllegalStateException("No exact TunnelDoorSplash publication completion");
+        verifySplashOwners(i);if(!splashImagesEqual(i,i.readyImages))throw new IllegalStateException("Native TunnelDoorSplash publication differs from prebuilt full96 output");
+        i.images=i.readyImages;i.receipts=i.readyReceipts;i.step=i.readyStep;i.ordinal++;
+        i.readyImages=null;i.readyReceipts=null;i.pendingPublication=null;i.completedOperation=c;
+    }
+    private void beforeSplashCall(Object call) {
+        var i=requireSplash();CdObjectState source;CdObjectPlacementRuntime.Snapshot cut;
+        if(!tunnelDoorSplash.isCurrentCall(call) || splashPort || drawingSplash || queuePort || i.pendingCall!=null || i.pendingPublication!=null || i.completedOperation!=null)
+            throw new IllegalStateException("No original TunnelDoorSplash external producer");
+        if(call instanceof CdTunnelDoorSplash.FmCall c) {
+            source=c.source();cut=c.cut();
+            if(i.entry.routine()!=0 || i.step!=SplashStep.TILE || c.sound()!=(source.subtype()<2?CdTunnelDoorSplash.FmSound.FM_A2:CdTunnelDoorSplash.FmSound.FM_A1))
+                throw new IllegalStateException("TunnelDoorSplash FM omitted actual header/tile or changed unsigned subtype selection");
+            // Prepare the complete real ledger and Values before assigning either owner.
+            var ledger=new ArrayList<>(sounds);ledger.add(new SonicCdGameModule.PastTunnelDoorSplashFm(c.sound()));
+            i.readyLedger=List.copyOf(ledger);i.readyValues=preparedMonitorValues(TUNNEL_DOOR_SPLASH_FM);
+        } else if(call instanceof CdTunnelDoorSplash.DrawCall c) {
+            source=c.source();cut=c.cut();
+            if(i.step!=SplashStep.ANIMATED || i.drawn || i.cleared)throw new IllegalStateException("TunnelDoorSplash Draw omitted its actual animator return");
+        } else throw new IllegalArgumentException("Unknown TunnelDoorSplash external call");
+        validateSplashCut(i,cut,source);var receipts=new ArrayList<>(i.receipts);receipts.add(call);
+        i.readyReceipts=List.copyOf(receipts);i.pendingCall=call;i.callReceipt=null;
+    }
+    private void afterSplashCall(Object call) {
+        var i=requireSplash();
+        if(!tunnelDoorSplash.isCurrentCall(call) || i.pendingCall!=call || i.callReceipt!=call
+                || call instanceof CdTunnelDoorSplash.DrawCall && (!i.drawn || !i.cleared)
+                || call instanceof CdTunnelDoorSplash.FmCall && i.step!=SplashStep.FM)
+            throw new IllegalStateException("TunnelDoorSplash external call returned without its private once-only receipt");
+        i.pendingCall=null;i.callReceipt=null;i.completedOperation=call;
+    }
+    private void requirePreparedSplashReceipt(Object call) {
+        var i=requireSplash();
+        if(!tunnelDoorSplash.isCurrentCall(call) || i.completedOperation!=null
+                || !(i.pendingPublication==call && i.readyImages!=null || i.pendingCall==call && i.readyReceipts!=null))
+            throw new IllegalStateException("TunnelDoorSplash observer returned without its private prepared receipt");
+    }
+    private void consumeCompletedSplashReceipt(Object call) {
+        var i=activeTunnelDoorSplash;
+        if(i==null || !tunnelDoorSplash.isCurrentCall(call) || i.completedOperation!=call || i.pendingPublication!=null || i.pendingCall!=null)
+            throw new IllegalStateException("TunnelDoorSplash observer returned without its private completed receipt");
+        verifySplash(i);i.completedOperation=null;
+    }
+    private void playSplashFm(CdTunnelDoorSplash.FmCall c) {
+        var i=requireSplash();
+        if(!tunnelDoorSplash.isCurrentCall(c) || i.pendingCall!=c || i.callReceipt!=null || i.readyLedger==null || i.readyValues==null
+                || i.step!=SplashStep.TILE || splashPort || drawingSplash || queuePort)
+            throw new IllegalStateException("Public/cloned/repeated TunnelDoorSplash FM lacks actual source authority");
+        splashPort=true;
+        try {
+            verifySplash(i);sounds=i.readyLedger;values=i.readyValues;i.ledger=sounds;i.expectedValues=values;i.step=SplashStep.FM;
+            i.receipts=i.readyReceipts;i.readyLedger=null;i.readyValues=null;i.readyReceipts=null;i.callReceipt=c;verifySplash(i);
+        } finally {splashPort=false;}
+    }
+    private void drawSplash(CdTunnelDoorSplash.DrawCall c) {
+        var i=requireSplash();
+        if(!tunnelDoorSplash.isCurrentCall(c) || i.pendingCall!=c || i.callReceipt!=null || i.drawn || splashPort || drawingSplash || queuePort)
+            throw new IllegalStateException("Public/cloned/repeated TunnelDoorSplash Draw lacks actual source authority");
+        i.drawn=true;drawingSplash=true;
+        try {
+            var source=c.source();drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifySplash(i);if(!i.cleared)throw new IllegalStateException("TunnelDoorSplash Draw omitted actual BCLR7");
+            i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingSplash=false;}
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readSplashDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireSplash();if(!drawingSplash || splashPort || queuePort || !(i.pendingCall instanceof CdTunnelDoorSplash.DrawCall) || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("No actual TunnelDoorSplash collecting queue read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var out=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),s.word(CdObjectState.WordField.X_FRACTION),
+                s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));verifySplash(i);return out;}
+        finally {queuePort=false;}
+    }
+    private void writeSplashOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireSplash();
+        if(!drawingSplash || splashPort || queuePort || !(i.pendingCall instanceof CdTunnelDoorSplash.DrawCall) || value || i.cleared || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("Only actual TunnelDoorSplash Draw clears its source bit7 exactly once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
+        var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var ready=logMosquiImages(pool);queuePort=true;
+        try {verifySplash(i);i.pool.write(next);i.images=ready;i.cleared=true;verifySplash(i);}
+        finally {queuePort=false;}
     }
 }
