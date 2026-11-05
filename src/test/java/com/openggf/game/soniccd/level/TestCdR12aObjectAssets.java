@@ -135,6 +135,8 @@ ANI_TAMABBOH_MISSILE b890 8 764bc1e99533aeb906c6b6ecf4627f5fc11904307d477b1827a4
 MAP_SPR_TAMABBOH_MISSILE b898 42 10cba8d961bb868885a64ddb360f0182e18b4b5256eebac3665363c984e992cb
 ANI_FLOAT_BLOCK a204 30 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9
 MAP_SPR_FLOAT_BLOCK a222 76 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e
+ANI_CHECKPOINT 1d8a6 6 9034c893821cd15055e34cddb2388653690958995d7118f7c78896e6ccb5c551
+MAP_SPR_CHECKPOINT 1d8ac 66 709d0648dfb32425f46281c236ededaef80750fc6250062f3bce77f9427a446f
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -204,9 +206,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete108RowManifestPreservesTheOriginal101AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete110RowManifestPreservesTheOriginal108AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(108, CdR12aProfile.Asset.values().length); assertEquals(108, rows.size());
+        assertEquals(110, CdR12aProfile.Asset.values().length); assertEquals(110, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -655,6 +657,53 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeIndexed(o.view(MAP_SPR_TAMABBOH).copy(),22,3,28,60,o.view(ANI_TAMABBOH_DAMAGED).copy(),2,59));
         var scripts=o.view(ANI_FLOAT_BLOCK).copy();scripts[9]=1;
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_FLOAT_BLOCK).copy(),6,scripts,3,15));
+    }
+
+    @Test void checkpointUsesItsActualInitBallAndAnimationOperandsInsteadOfEqualLegacyCopies() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(108,ANI_CHECKPOINT.ordinal());assertEquals(109,MAP_SPR_CHECKPOINT.ordinal());
+        assertEquals(0x205CE2,o.view(OBJECT_INDEX).unsignedLong((0x13-1)*4));
+        assertEquals("217c0021d8ac0004",hex.formatHex(file.readFile(0x5D08,8)));
+        assertEquals("237c0021d8ac0004",hex.formatHex(file.readFile(0x5D64,8)));
+        assertEquals("43f90021d8a6",hex.formatHex(file.readFile(0x5E48,6)));
+        assertEquals("317c06cb0002",hex.formatHex(file.readFile(0x5D10,6)));
+        assertEquals("337c06cb0002",hex.formatHex(file.readFile(0x5D6C,6)));
+        assertEquals(0x21D8A6,o.profile().range(ANI_CHECKPOINT).nativeAddress());assertEquals(0x21D8AC,o.profile().range(MAP_SPR_CHECKPOINT).nativeAddress());
+        assertArrayEquals(file.readFile(0x1DCA6,6),o.view(ANI_CHECKPOINT).copy(),"equal data does not select the live animation root");
+        assertArrayEquals(file.readFile(0x1DCAC,66),o.view(MAP_SPR_CHECKPOINT).copy(),"Init and Ball select the shared live mapping root");
+    }
+
+    @Test void checkpointCachesEveryCountedPieceScriptAndLiteralPaddingUsingItsExistingTwelveTileSource() throws Exception {
+        var o=retail().terrain().objects();var readers=o.readerProfiles();var visual=o.checkpoint();assertSame(visual,o.checkpoint());
+        assertEquals(0,visual.mappingTableOffset());assertEquals(66,visual.mappings().length());assertEquals(6,visual.animationTable().length());
+        assertArrayEquals(o.view(MAP_SPR_CHECKPOINT).copy(),visual.mappings().copy());assertArrayEquals(o.view(ANI_CHECKPOINT).copy(),visual.animationTable().copy());
+        assertEquals(List.of(8,30,42,54),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(4,2,2,2),visual.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(21,11,11,11),visual.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        for(int padding:new int[]{29,41,53,65})assertEquals(0,visual.mappings().unsignedByte(padding));
+        assertEquals(1,visual.animations().size());var script=visual.animations().getFirst();assertEquals(2,script.relativeOffset());assertEquals(3,script.delay());
+        assertEquals(List.of(2,3),script.frameBytes());assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,script.terminal());
+        assertArrayEquals(java.util.HexFormat.of().parseHex("0002030203ff"),visual.animationTable().copy());
+        assertEquals(12,visual.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertSame(readers,o.readerProfiles());assertEquals(35,readers.size());assertEquals(12*32,o.readerProfile(ART_CHECKPOINT).outputBytes());
+        var before=visual.mappings().copy();var changed=visual.mappings().copy();changed[0]^=1;assertArrayEquals(before,o.checkpoint().mappings().copy());
+        assertThrows(UnsupportedOperationException.class,()->visual.mappingFrames().clear());assertThrows(UnsupportedOperationException.class,()->script.frameBytes().clear());
+    }
+
+    @Test void checkpointViewsRejectChangedOriginalBytesNewArtReadersAndMalformedCompleteTables() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();
+        for(var raw:new CdR12aProfile.Asset[]{ANI_CHECKPOINT,MAP_SPR_CHECKPOINT}) {
+            var before=o.view(raw);assertSame(before,o.view(raw));var copy=before.copy();copy[0]^=1;assertArrayEquals(file.readFile(raw.fileOffset(),raw.length()),o.view(raw).copy());
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(raw));assertThrows(IllegalArgumentException.class,()->o.readerView(raw,CdR12aObjectAssets.ReaderKind.JAVA));
+            byte[] corrupt=file.readFile(0,262144);corrupt[raw.fileOffset()]^=1;
+            assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        var maps=o.view(MAP_SPR_CHECKPOINT).copy();maps[65]=1;
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(maps,4,o.view(ANI_CHECKPOINT).copy(),1,12));
+        var script=o.view(ANI_CHECKPOINT).copy();script[4]=4;
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_CHECKPOINT).copy(),4,script,1,12));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_CHECKPOINT).copy(),4,o.view(ANI_CHECKPOINT).copy(),1,11));
+        assertThrows(NullPointerException.class,()->o.view(null));
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }

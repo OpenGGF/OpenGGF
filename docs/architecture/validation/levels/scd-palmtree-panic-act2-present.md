@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,108 raw descriptors,35 finite art readers,
+The retained terrain/player pair,110 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -123,7 +123,27 @@ no new11033 pixel or matched native comparison is inferred. Static review found
 no concrete P1/P2 in the new binding. Checkpoint saved-data carry and binding,
 death/restart breadth, later traversal and regional parity remain open.
 
+Shared-component/older-Past qualification separately passes157 cases without
+failures/errors/skips (Tamabboh110,Float42,Past5), source
+`acedf5f40da51823971e02d2f3d70d83652f7ac22dfb6929cbdfb1a5323b0069`,
+03:26:35.303545–03:26:45.987185Z,259s admission/35.273s test precompile. All
+expanded identities match the preceding156pass/1failure selection. That stale
+test expected a verification violation to replace the callback's original fault;
+it now requires original identity plus the suppressed violation and retained
+native nonwrites across all three read-only ports and two mutation sites.
+Production is unchanged. Exact properties/XML hashes inspected;8own reports
+consumed. Neither the earlier157 nor diagnostic165 becomes a green run.
+
 ## Exact qualification
+
+Checkpoint's actual Init/Ball/Animate operands independently select complete views
+21D8AC/66B and21D8A6/6B, not equal unreferenced copies. Cached4frame/1script/12tile
+visual and descriptor count108→110 reuse the existing art/decoder/current owners.
+All51 source cases pass without failures/errors/skips, source
+`5b3090dca2c1ff9ae29260061c398c838d2979bd81157af343794e406fe18dd2`,
+03:16:29.723814–03:16:35.001772Z. Admission0s, precompile1m34s; exact identities,
+properties/XML hashes inspected and6own reports consumed. No actual Checkpoint
+World or completed11034 claim follows from these data checks.
 
 The entry source-bound selection passes15 cases over three classes with zero
 failures/errors/skips: controller/EGL1, loading4 and existing Past selected-World10.

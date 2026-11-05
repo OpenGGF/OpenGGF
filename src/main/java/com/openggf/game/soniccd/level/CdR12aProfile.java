@@ -113,7 +113,9 @@ public final class CdR12aProfile {
         // Tamabboh/Floating Block actual original R12A Init/animation operands and complete source includes.
         ANI_TAMABBOH_NORMAL(0xB76A, 12), ANI_TAMABBOH_DAMAGED(0xB776, 26), MAP_SPR_TAMABBOH(0xB790, 62),
         ANI_TAMABBOH_MISSILE(0xB890, 8), MAP_SPR_TAMABBOH_MISSILE(0xB898, 42),
-        ANI_FLOAT_BLOCK(0xA204, 30), MAP_SPR_FLOAT_BLOCK(0xA222, 76);
+        ANI_FLOAT_BLOCK(0xA204, 30), MAP_SPR_FLOAT_BLOCK(0xA222, 76),
+        // Checkpoint Init/Ball/Animate live operands select these complete original R12A includes, not equal duplicates.
+        ANI_CHECKPOINT(0x1D8A6, 6), MAP_SPR_CHECKPOINT(0x1D8AC, 66);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

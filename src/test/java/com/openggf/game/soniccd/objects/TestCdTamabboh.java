@@ -540,8 +540,18 @@ class TestCdTamabboh {
     }
 
     @Test void portMutationOnThrowIsStillDetectedAndDrawFaultKeepsChildrenAndOwnCompletedWrites() {
-        var h = portHarness("FM"); h.attackPort = "FM"; h.mutation = 2; h.throwAfterAttack = true;
-        assertThrows(IllegalStateException.class, h::run); assertEquals(0xA6, h.pool().state(42).id()); assertEquals(0, h.pool().state(33).id());
+        for (String port : List.of("ANGLE", "PLAYER", "FM")) for (int mutation : new int[]{1, 2}) {
+            var h = portHarness(port); h.attackPort = port; h.mutation = mutation; h.throwAfterAttack = true;
+            // A host callback's original failure owns the exit; verification still detects the mutation.
+            assertSame(h.fault, assertThrows(Fault.class, h::run));
+            assertEquals(1, h.fault.getSuppressed().length);
+            assertInstanceOf(IllegalStateException.class, h.fault.getSuppressed()[0]);
+            assertEquals("Tamabboh read-only port changed its actual full96 pool or source cut",
+                    h.fault.getSuppressed()[0].getMessage());
+            if (mutation == 1) assertEquals(0xA5, h.slot().flags());
+            else assertEquals(0xA6, h.pool().state(42).id());
+            assertEquals(0, h.pool().state(33).id()); assertTrue(h.draws.isEmpty());
+        }
         var draw = portHarness("FM"); draw.rejectDraw = true;
         assertSame(draw.fault, assertThrows(Fault.class, draw::run)); assertEquals(0x22, draw.pool().state(33).id());
         assertEquals(0x22, draw.pool().state(41).id()); assertEquals(4, draw.slot().spriteFlags()); assertEquals(1, draw.fmCalls.size());

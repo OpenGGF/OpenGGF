@@ -182,7 +182,8 @@ Unreleased. The earlier development themes remain in
   art, terrain, Solid and Frame owners; completed producer prefixes and ordinals
   guard the next publication, including skipped no-op and throwing callbacks.
   Ordinary Right extends through their native entry with full/course replay to
-  the final successful cut. Checkpoint binding and later Act2 traversal
+  the final successful cut. Checkpoint views retain the live native mapping and
+  animation addresses over existing art. Its World binding and later Act2 traversal
   remain open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact

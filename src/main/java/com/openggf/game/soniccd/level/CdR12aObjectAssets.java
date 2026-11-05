@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -278,6 +278,12 @@ public final class CdR12aObjectAssets {
         if (floatBlock == null) floatBlock = CdObjectVisualAssets.decode(view(MAP_SPR_FLOAT_BLOCK).copy(), 6,
                 view(ANI_FLOAT_BLOCK).copy(), 3, 15);
         return floatBlock;
+    }
+    /** Four counted roots and one complete FF script over the existing twelve-tile Checkpoint source. */
+    public synchronized CdObjectVisualAssets checkpoint() {
+        if (checkpoint == null) checkpoint = CdObjectVisualAssets.decode(view(MAP_SPR_CHECKPOINT).copy(), 4,
+                view(ANI_CHECKPOINT).copy(), 1, 12);
+        return checkpoint;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

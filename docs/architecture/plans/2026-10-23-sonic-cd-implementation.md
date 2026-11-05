@@ -1,5 +1,34 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — live Checkpoint source views
+
+Original R12A's actual Checkpoint Init/Ball/Animate instructions select mapping
+21D8AC/66B and animation21D8A6/6B, not the equal unreferenced copies1DCAC/1DCA6.
+Two complete views append108→110. The cached four-frame/one-script/twelve-tile
+visual uses the existing decoder and source; old108 descriptors,35 art readers,
+19 PLCs and all current-art owners remain unchanged. Literal Init tile06CB is a
+direct native immediate, not a new tile-table admission.
+
+All51 source cases pass without failures/errors/skips at source
+`5b3090dca2c1ff9ae29260061c398c838d2979bd81157af343794e406fe18dd2`,
+03:16:29.723814–03:16:35.001772Z,0s admission/1m34s precompile. All literal
+identities, requested properties and three fresh XML hashes inspected; only6own
+reports consumed under lock. This is source qualification, not actual Checkpoint
+execution or a completed11034. Its native saved-data programme carry and World
+binding remain separate work over existing owners.
+
+The shared Tamabboh/Float legacy selection initially had156passes/one stale test
+exception expectation,0errors/skips. Root changed no production: the older test
+now requires the exact original callback fault plus its suppressed full96/source
+verification violation, retained mutated bytes and no later children/Draw, across
+all three read-only ports and both source/other-slot mutations. Its existing Draw
+failure prefix checks remain. The157 rerun passes without failures/errors/skips,
+source`acedf5f40da51823971e02d2f3d70d83652f7ac22dfb6929cbdfb1a5323b0069`,
+03:26:35.303545–03:26:45.987185Z,259s admission/35.273s test precompile.
+All157 expanded identities match the earlier selection; properties and four XML
+hashes inspected,8own reports consumed. Existing components110+42 and Past5 are
+qualified; the earlier157 and diagnostic165 are not relabelled green.
+
 ## 5 November 2026 — live Tamabboh/Float and positive11033
 
 The genuine original-USA Act2 walk now includes cached Tamabboh22 and Float12
