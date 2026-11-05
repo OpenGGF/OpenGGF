@@ -79,6 +79,7 @@ covered by the 2026-09-26 follow-up below; other lifecycle obligations remain op
 | TRAVERSAL: SKL `$56` curved energy bridge | `loc_47F2C`–`sub_47F9C`: phase timer, P1/P2 collision paths, expiry air bit | native contact-edge tests; actual `$880,$920` at 320/800 | `TestS3kDezCurvedEnergyBridgeObjectInstance`, `TestS3kDezCurvedEnergyBridgeHeadless` | implemented after `33e6b66d5` | timer/path transitions, forced recreation/300-frame replay, and controller-driven curve-to-carrier approach/replay at 320/800 | native comparison, cold route and donor/character breadth remain open |
 | TRAVERSAL: SKL `$4B` tilting bridge | `loc_46E1C`–`loc_46F54`, signed ROM `byte_46ED8`, prior-standing aggregate, long velocity and delayed free fall | all eight standing rows, P1/P2 sum/cancellation, exhausted forward allocation; DEZ1 320/800; inverted DEZ2 declared entry | `TestS3kDezTiltingBridgeHeadless`, census, PLC registry | implemented after `6b7055cea` | nine focused checks: real landing/carry/collapse/floor release, complete graph recreation and forward replay; inverted carry/replay | Cold route, native comparison and donor/roster breadth remain open |
 | BOSS: `$A6` miniboss | `word_7DDA4` range Y `$18C`-`$38C` X `$3400`-`$3780`; arena `$28C,$28C,$3680,$36C0`; two eight-hit phases | native Sonic 320/800 entry; isolated graph at 320 | `TestDezMinibossEncounter`, `TestDezMinibossTransport`, component suites | implemented in development | both eight-hit phases, real placed entry and graph replay pass; continuous transition under validation | Cold route, native comparison, allocation prefixes and roster/donor breadth remain open |
+| BOSS: eye retirement graph | `loc_7E768` → `loc_849D8` → `Obj_FlickerMove`; independent debris before parent sign-flow transfer | native 320 declared components and positioned encounter | `TestDezMinibossEyeRetirement`, `TestDezMinibossEncounter#fatalEyeConversionReplaysThroughTheActualParentSlotTransferWithStrictWorldCapture` | implemented | focused graph replay passes; see [eye retirement](#miniboss-eye-retirement-2026-11-05) | Native route parity, wider/team/donor breadth remain separate |
 | ROUTE (Sonic + Tails cold): `$B00` entry → results | Complete-run BK2 from movie frame 468982 (segment directory `ssz`, `zone_id 11`) | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | ROUTE (Tails cold) | `runs/s3k-tails-full-chain-all-emeralds` `ssz`, offset 444059 | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | REWIND: cycle counters, event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` (2 tests) | implemented | pass, `4e7655bf9` | Entry, object and load-boundary spots not started |
@@ -1107,3 +1108,38 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+### Miniboss eye retirement (2026-11-05)
+
+`loc_7E768` (sonic3k.asm:168653-168660) runs the eye routine before
+`Child_Draw_Sprite_FlickerMove`. On parent status bit 7, `loc_849D8`
+(sonic3k.asm:178213-178219) changes the eye's code to `Obj_FlickerMove`, clears
+collision, selects velocity and draws the final tracked pose. Subsequent
+`Obj_FlickerMove` (sonic3k.asm:179086-179102) updates only the debris's own
+position, velocity, culling and flicker state. There is no later parent read or
+FixBugs alternative in this shipped `FixBugs=0` path. The Java parent link now
+ends at that routine conversion; the eye remains alive until its own deferred
+delete. Parent retirement and sign-flow publication are unchanged.
+
+The three focused classes `TestDezMinibossEyeRetirement`, `TestDezMinibossEye`
+and `TestDezMinibossEncounter` pass 22 cases with no skips on the composed
+`658e7fa4b` base plus this correction. Controls cover both horizontal directions,
+final tracking/draw before movement, first hidden debris pass, actual parent
+slot transfer after both eight-hit phases, strict whole-world capture, forced
+recreation and repeated forward replay. A decoy in the old parent slot cannot
+retarget debris; a still-live eye pointing to an unregistered owner still fails
+strict capture. Culling retains the marked slot until the following dispatch,
+with capture/restore on both sides. These declared native320 checks do not
+certify cold-route parity or extend inherited viewport, roster or donor coverage.
+
+The unchanged r7 `TestS3kSonicTailsSszSegmentTraceReplay` (frozen `ssz` label,
+actual DEZ zone 11 act 0) now reaches its final comparison assertion instead of
+the row18378 eye-parent closure error. Uninstrumented and observed reports are
+byte-identical: 3,038 grouped errors, zero warnings, first row0 `camera_x`
+expected `0x0040`, actual `0x0028`; 39,988 actual comparisons from 40,049 planned
+rows. All 18,376 common rows match the composed submission control exactly,
+including every compared field and all 1,896 raw ERROR tuples. The 21,612 newly
+observed rows have no pre-fix comparison control; 478,699 raw ERROR tuples in
+that suffix remain unqualified. Its first errors are Tails state at row19519;
+this correction does not investigate them. Missing row IDs are not synthesized,
+and reaching the final assertion is not a parity pass.

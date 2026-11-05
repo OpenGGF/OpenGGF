@@ -1501,7 +1501,9 @@ Unreleased. The earlier development themes remain in
 - **S3K objects:** Death Egg bosses are admitted only by their stock runtime
   context, while Carnival Night and stateless custom-zone aliases retain their
   own factories. Boss initialization waits for its typed zone state before
-  publishing encounter side effects. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
+  publishing encounter side effects. Death Egg's miniboss eye finishes its last
+  tracking pass before becoming independent debris, preserving movement and
+  rewind after the boss retires. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
   job before the cards initialize or GAME saves lives/continues; ordinary level
   service and partial-work rewind retain the native queue ordering. Hydrocity 2
   cutscene Knuckles probes actual terrain, retaining penetration and facing on
