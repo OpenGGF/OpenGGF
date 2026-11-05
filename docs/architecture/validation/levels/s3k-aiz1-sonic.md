@@ -1,5 +1,34 @@
 # S3K AIZ act 1 — Sonic route matrix
 
+## Scatter collector retirement (2026-11-04)
+
+The intro emeralds retain the exact managed Knuckles collector while it is
+live. When that identity leaves the object manager, only its references are
+detached; surviving emerald slots remain alive. The ROM's
+`AIZPlaneIntro_EmeraldChildWaitForPlane` (sonic3k.asm:135936-135960) tests
+collector proximity and velocity, while `loc_61F44` (sonic3k.asm:128809-128814)
+deletes Knuckles independently. The engine's existing no-pickup behavior for a
+destroyed collector is retained without keeping an unregistered rewind edge.
+
+`TestS3kAizIntroGraphRewind` exercises the production retirement dispatch,
+independent survivors, another collector's untouched reference, capture before
+and after retirement, and restore/forward replay with both in-place and fresh
+reconstruction. Existing exact-collector/nearby-decoy coverage and an unmanaged
+collector negative control keep live identities strict. This bounded lifetime
+check does not certify the positioned AIZ2 replay's newly reached suffix, intro
+pickup accuracy, full routes, native pixels, donor/team or viewport products.
+Those remain inherited obligations.
+
+The bounded follow-up passes all 11 intro graph cases and 215 related object,
+rewind, architectural/timing/trace guard and S3K keep-green cases, without skips.
+The positioned AIZ2 trace crosses the former row-996 closure abort and compares
+4,015 rows, retaining 1,072 strict divergence groups (first at row 84, X speed).
+All 45,816 field observations on the common rows 0–995 equal the archived
+current-base control, including all 21,803 ERROR tuples. The 3,019 newly reached
+compared rows have no baseline; eight suffix rows have no serialized comparison.
+This certifies the reference lifetime and unchanged observed prefix, not suffix
+parity or a whole route.
+
 ## Native sprite producer maintenance (2026-11-01)
 
 The follow-up investigates disappearing parts with sprite limits disabled.

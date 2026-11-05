@@ -392,6 +392,10 @@ Unreleased. The earlier development themes remain in
   incomplete or mismatched observations fail the replay.
   Fresh bonus cards also reclaim child updates from a preceding in-level title.
 
+- **Angel Island intro rewind:** Surviving scattered emeralds release their
+  collector reference when cutscene Knuckles retires, so they no longer keep an
+  invalid object reference in rewind snapshots.
+
 - **Marble Zone burning platforms:** Flames are retired from their native object
   slots immediately when their platform cleans them up, preventing an orphan
   flame from spawning after its parent disappears and preserving rewind closure.

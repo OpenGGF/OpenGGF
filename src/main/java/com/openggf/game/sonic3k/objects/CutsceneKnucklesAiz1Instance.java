@@ -634,6 +634,20 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance impleme
     // -----------------------------------------------------------------------
 
     @Override
+    protected void onRemovedFromObjectManager() {
+        // loc_61F44 deletes Knuckles independently of the emerald slots
+        // (sonic3k.asm:128809-128814). AIZPlaneIntro_EmeraldChildWaitForPlane
+        // (sonic3k.asm:135936-135960) only reads the collector for pickup; it
+        // does not give the emerald the collector's lifetime. End the Java
+        // identity edge here, including when the emerald ran earlier in the
+        // object pass. Keep the existing no-pickup behavior after retirement,
+        // without retaining a dead actor or adopting a reused native slot.
+        for (var emerald : services().objectQuery().activeObjectsOfType(AizEmeraldScatterInstance.class)) {
+            emerald.detachCollector(this);
+        }
+    }
+
+    @Override
     public void onUnload() {
         // Knuckles is the last intro object to destroy itself (routine 12),
         // so it owns cleanup of the shared intro art cache.
