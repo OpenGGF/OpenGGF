@@ -1923,6 +1923,12 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- `AGENTS.md` is now the only project instruction file. Claude Code loads it
+  because the repository has no `CLAUDE.md`, and the commit hook rejects one.
+  Skills are edited only under `.agents/skills/`; `tools/git/sync_skills.py`
+  regenerates the `.claude/skills/` copy, and the hook rejects a staged copy that
+  differs from the source tree.
+
 - **Shared route planner:** Reference-path authoring, Stageplay player routes
   and the SSZ and DEZ boss input authors now share one planner. A route is a
   frozen list of controller rows with a manifest (`.route.json` and `.script`);

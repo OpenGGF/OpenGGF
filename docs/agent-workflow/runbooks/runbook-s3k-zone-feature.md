@@ -107,5 +107,5 @@ Cite `sonic3k.asm` labels + verified S&K-side offsets for each table. Note when 
 
 - `CHANGELOG.md` + `Changelog: updated`.
 - `docs/S3K_KNOWN_DISCREPANCIES.md` + `S3K-Known-Discrepancies: updated` for parity gaps.
-- Skill changes mirrored across `.agents/skills/` and `.claude/skills/`, `Skills: updated`.
+- Skill changes made in `.agents/skills/` and synced with `python3 tools/git/sync_skills.py`, `Skills: updated`.
 - Fill all trailers; never `--no-verify`.

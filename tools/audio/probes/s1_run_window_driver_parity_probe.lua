@@ -1131,7 +1131,7 @@ addHook({
         -- a real Go_SpecSoundIndex entry; anything else here would already
         -- have crashed the ROM before reaching this hook, so the range is
         -- asserted defensively rather than narrowed to $D0 -- see
-        -- CLAUDE.md's FixBugs guidance).
+        -- AGENTS.md's FixBugs guidance).
         assert(soundId >= 0xD0 and soundId <= 0xDF,
             string.format("Sound_PlaySpecial dispatched a non-special-SFX id $%02X", soundId))
         assert(invocationLifecycle:isActive() and currentDispatches ~= nil,

@@ -1,12 +1,17 @@
-"""Enforce queued Maven examples in maintained trace skills through Python CI."""
+"""Enforce queued Maven examples and the generated skill mirror through Python CI."""
 from pathlib import Path
+import importlib.util
 import shlex
+import tempfile
 import unittest
 from unittest.mock import patch
 
 from maven_queue import build_only
 
 ROOT = Path(__file__).resolve().parents[2]
+_SPEC = importlib.util.spec_from_file_location('sync_skills', ROOT / 'tools/git/sync_skills.py')
+sync_skills = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(sync_skills)
 
 
 def unqueued_examples(text):
@@ -73,15 +78,51 @@ class TraceSkillExampleTests(unittest.TestCase):
             'Use `mvn test` as a negative example.\n> ```bash\n> mvn test\n> ```\n'
             '```text\nmvn test\n```'))
 
-    def test_maintained_trace_skill_examples_and_mirrors(self):
+    def test_maintained_trace_skill_examples(self):
         skills = sorted((ROOT / '.agents/skills').glob('*trace*/SKILL.md'))
         self.assertGreaterEqual(len(skills), 2)
         for skill in skills:
             with self.subTest(skill=str(skill.relative_to(ROOT))):
-                mirror = ROOT / '.claude/skills' / skill.parent.name / skill.name
-                self.assertEqual(skill.read_bytes(), mirror.read_bytes())
                 self.assertEqual([], unqueued_examples(skill.read_text()),
                                  'Use python3 tools/testing/maven_queue.py for tests')
+
+
+class SkillMirrorTest(unittest.TestCase):
+    def test_committed_mirror_matches_canonical_tree(self):
+        self.assertEqual([], sync_skills.drift(ROOT),
+                         'run python3 tools/git/sync_skills.py')
+
+    def test_sync_repairs_every_drift_kind(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.agents/skills/a').mkdir(parents=True)
+            (root / '.agents/skills/a/SKILL.md').write_text('new')
+            (root / '.agents/skills/a/ref.md').write_text('ref')
+            (root / '.claude/skills/a').mkdir(parents=True)
+            (root / '.claude/skills/a/SKILL.md').write_text('old')
+            (root / '.claude/skills/stale').mkdir()
+            (root / '.claude/skills/stale/SKILL.md').write_text('gone')
+            self.assertEqual(['missing .claude/skills/a/ref.md',
+                              'extra .claude/skills/stale/SKILL.md',
+                              'differs .claude/skills/a/SKILL.md'],
+                             sync_skills.drift(root))
+            self.assertEqual(1, sync_skills.main(['--check', '--root', str(root)]))
+            sync_skills.sync(root)
+            self.assertEqual([], sync_skills.drift(root))
+            self.assertEqual('new', (root / '.claude/skills/a/SKILL.md').read_text())
+            self.assertFalse((root / '.claude/skills/stale').exists())
+
+    def test_symlinked_mirror_is_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / '.agents/skills/a').mkdir(parents=True)
+            (root / '.agents/skills/a/SKILL.md').write_text('x')
+            (root / '.claude').mkdir()
+            (root / '.claude/skills').symlink_to('../.agents/skills')
+            self.assertEqual(1, len(sync_skills.drift(root)))
+            sync_skills.sync(root)
+            self.assertFalse((root / '.claude/skills').is_symlink())
+            self.assertEqual([], sync_skills.drift(root))
 
 
 if __name__ == '__main__':

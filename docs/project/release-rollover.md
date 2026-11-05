@@ -120,10 +120,9 @@ Confirm the GitHub release and all four downloads before promoting branches.
 
 ### 6. Update the stated mapping
 
-The following files describe the current branch topology. Update them,
-keeping `CLAUDE.md` and `AGENTS.md` byte-identical:
+The following files describe the current branch topology. Update them:
 
-- `CLAUDE.md` and `AGENTS.md` — delivery and documentation section.
+- `AGENTS.md` — delivery and documentation section.
 - `docs/agent-workflow/documentation-obligation-checklist.md` — "Which version
   am I writing for?".
 - This guide, the README, and the current roadmap.

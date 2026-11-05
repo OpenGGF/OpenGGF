@@ -79,7 +79,7 @@ class TestS1S2PlcComparisonOnlyGuard {
      * The registry is closed, but no longer to S3K alone. The hardware-timing
      * exception is cross-game: recorded timing may drive a delay in the art
      * pipelines of all three games -- S1 PLC, S2 DPLC and S3K Kosinski queues
-     * (CLAUDE.md hard rule 4, and
+     * (AGENTS.md hard rule 4, and
      * docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md).
      * What stays forbidden is a kind that carries PLC <em>payload</em>: S1's
      * entry releases only the {@code RunPLC} arming edge, and every pattern it

@@ -63,7 +63,6 @@ class TestExternalContentPolicy {
                 .contains("no creator contract has been published yet"));
         assertTrue(manifest.contains("current unpublished candidate is Mod API `0.7.0`"));
         assertTrue(Files.readString(Path.of("AGENTS.md")).contains(directive));
-        assertTrue(Files.readString(Path.of("CLAUDE.md")).contains(directive));
     }
 
     @Test

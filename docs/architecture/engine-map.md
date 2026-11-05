@@ -1,6 +1,6 @@
 # Engine map
 
-On-demand reference for how the runtime is organised. `CLAUDE.md` / `AGENTS.md` keep
+On-demand reference for how the runtime is organised. `AGENTS.md` keeps
 only the load-bearing rules and gotchas; this file holds the structural detail you
 need when you are actually working inside one of these subsystems.
 

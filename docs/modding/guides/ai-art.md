@@ -155,7 +155,7 @@ More frames and larger per-frame pixel dimensions cost more VRAM linearly; a
 generated sheet with many painted frames can quickly cost far more bank space than
 a compact hand-tuned equivalent covering the same visual ground. The engine reserves
 separate fixed-size virtual pattern banks for mains, sidekicks, and duplicate
-character kinds (see `CLAUDE.md`'s "Virtual Pattern ID System"), and rejects a
+character kinds (see `AGENTS.md`'s "Virtual Pattern ID System"), and rejects a
 capacity overflow before installing any art — so a sheet that's too generous with
 frame count/size fails loudly at launch, not silently at render time. Keep AI-generated
 sheets to the frame counts you actually need.

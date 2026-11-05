@@ -188,7 +188,7 @@ Create a short checklist that agents run before finalizing object, level, or tra
 It should ask:
 
 - Did a trace frontier move, regress, or get used for target selection? If yes, update `docs/status/trace-frontier-log.md`.
-- Did an object/badnik trace fix reveal a reusable pitfall? If yes, update the relevant `.agents/skills/.../rom-pitfalls.md` and mirrored `.claude/skills/.../rom-pitfalls.md`.
+- Did an object/badnik trace fix reveal a reusable pitfall? If yes, update the relevant `.agents/skills/.../rom-pitfalls.md` and run `python3 tools/git/sync_skills.py`.
 - Did engine behavior under `src/main/` change in a changelog-worthy way? If yes, update `CHANGELOG.md`; otherwise justify the skip in the commit trailer.
 - Did known discrepancies change? If yes, update the relevant discrepancies doc.
 - Did configuration behavior change? If yes, update `CONFIGURATION.md`.
@@ -272,7 +272,7 @@ Status values:
 - Do not mark an item `Done` without review or a clear acceptance note.
 - If an option changes scope, update its acceptance criteria below before implementation continues.
 - If a task produces a new reusable workflow rule, update the relevant runbook, checklist, or pitfall index instead of leaving the knowledge only in a chat.
-- If implementation touches agent skills, mirror required changes between `.agents/skills/` and `.claude/skills/` where the project already keeps mirrored skill files.
+- If implementation touches agent skills, edit `.agents/skills/` and regenerate `.claude/skills/` with `python3 tools/git/sync_skills.py`.
 
 ## Acceptance Criteria By Option
 

@@ -19,7 +19,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * mid-level state ({@code v_rings}, camera, bottom boundary, water height)
  * that those constants alone don't apply.
  *
- * <p><b>Trace-replay invariant.</b> Per CLAUDE.md "Trace Replay Tests" the
+ * <p><b>Trace-replay invariant.</b> Per AGENTS.md "Trace Replay Tests" the
  * comparison-only invariant requires that engine state be derived from ROM
  * defaults, never hydrated from {@code TraceEvent.StateSnapshot} events. All
  * values written here come from the {@code EndDemo_LampVar} table in the

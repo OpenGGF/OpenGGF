@@ -168,7 +168,7 @@ public class TestBreakableBlockDespawn {
         logState("After block broken");
 
         // Move Sonic far away to trigger despawn (>400px from block X)
-        // Use centre coordinates for correct alignment (CLAUDE.md)
+        // Use centre coordinates for correct alignment (AGENTS.md)
         sprite.setCentreX((short) (blockX + 500));
         sprite.setCentreY((short) blockSpawn.y());
         sprite.setAir(false);

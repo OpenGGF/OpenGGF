@@ -541,7 +541,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
             return;
         }
 
-        // Keep player attached to vine (using center coordinates per CLAUDE.md).
+        // Keep player attached to vine (using center coordinates per AGENTS.md).
         // ROM loc_29B50 only refreshes y_pos while grabbed; x_pos is written on
         // initial grab at loc_29BC8 and then left alone.
         // ROM: move.w y_pos(a0),y_pos(a1) / addi.w #$94,y_pos(a1)
@@ -611,7 +611,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
 
-        // Position player on vine (using center coordinates per CLAUDE.md).
+        // Position player on vine (using center coordinates per AGENTS.md).
         // The ROM uses move.w x_pos/y_pos, so x_sub/y_sub are preserved.
         // ROM: move.w x_pos(a0),x_pos(a1) / move.w y_pos(a0),y_pos(a1) / addi.w #$94,y_pos(a1)
         player.setCentreXPreserveSubpixel((short) spawn.x());

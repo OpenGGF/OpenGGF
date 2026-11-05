@@ -5,8 +5,8 @@ running in BizHawk. They are the highest-signal tests in the repo for physics, o
 spawn timing, and collision parity work.
 
 > **Workflow skill.** When investigating or fixing a `*TraceReplay` test failure, invoke the
-> `trace-replay-bug-fixing` skill (mirrored at `.claude/skills/trace-replay-bug-fixing/skill.md`
-> and `.agents/skills/trace-replay-bug-fixing/SKILL.md`). It codifies the comparison-only
+> `trace-replay-bug-fixing` skill
+> (`.agents/skills/trace-replay-bug-fixing/SKILL.md`). It codifies the comparison-only
 > invariant, the four mission rules, the diagnose-fix-regen-loop workflow, recorder extension
 > recipe, and pointers to disassembly and process skills.
 
@@ -617,9 +617,9 @@ Trace payload tooling:
 
 Skills:
 
-- [`trace-replay-bug-fixing`](../../../.claude/skills/trace-replay-bug-fixing/SKILL.md) — the
+- [`trace-replay-bug-fixing`](../../../.agents/skills/trace-replay-bug-fixing/SKILL.md) — the
   canonical workflow for any `*TraceReplay` test failure.
-- [`s1-trace-replay`](../../../.claude/skills/s1-trace-replay/) — Sonic 1 replay
+- [`s1-trace-replay`](../../../.agents/skills/s1-trace-replay/) — Sonic 1 replay
   specifics.
 - **`bizhawk-headless-trace`** — canonical native capture and publication,
   including S1 credits demos; the maintained protocol is
@@ -649,7 +649,7 @@ ride-bridge hypothesis: the suspected `interact` slot was
 `destroyed=true` for ~50 frames before the divergent frame, ruling out
 any `Solid_Object_Detach`-style release as the cause. Skipping this
 check would have produced an engine fix targeted at the wrong root
-cause — a hack by the repo policy in `CLAUDE.md`. Documented in
+cause — a hack by the repo policy in `AGENTS.md`. Documented in
 `docs/status/s3k-known-bugs.md` under the AIZ F7552 entry.
 
 For the AIZ F8927 case (round 1, diagnosis-only) the same check

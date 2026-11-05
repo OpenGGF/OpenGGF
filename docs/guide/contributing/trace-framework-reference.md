@@ -1078,7 +1078,7 @@ For any given trace divergence, the agent has:
 
 ### 10.3 The skills that drive iteration
 
-Project skills are mirrored in `.agents/skills/` and `.claude/skills/`:
+Project skills live in `.agents/skills/` (`.claude/skills/` is a generated copy):
 
 - `trace-replay-bug-fixing` owns divergence diagnosis and ROM-backed fixes.
 - `s1-trace-replay` covers running and adding Sonic 1 replay fixtures.
@@ -1179,13 +1179,13 @@ gameplay and the HCZ handoff without failing on the fundamentally-unavoidable in
 
 ### 10.8 Branch policy feedback into the loop
 
-The repo's trailer policy (see `CLAUDE.md` §"Branch Documentation Policy") closes the loop:
+The repo's trailer policy (see `AGENTS.md` §"Delivery and documentation") closes the loop:
 every trace-related commit must stage:
 
 - `CHANGELOG.md` — what changed, visible in the trace section of the changelog
 - `docs/status/known-discrepancies.md` / `docs/S3K_KNOWN_DISCREPANCIES.md` — intentional deviations
 - `docs/guide/*` — keep the guide truthful
-- `AGENTS.md` + `CLAUDE.md` — keep agent guidance truthful
+- `AGENTS.md` — keep agent guidance truthful
 - `CONFIGURATION.md` — if a new env var was added (`OGGF_S3K_TRACE_PROFILE`,
   `BIZHAWK_EXE`, etc.)
 
@@ -1362,6 +1362,6 @@ None of these predecessor versions is a current compatibility target.
 
 **Skills:**
 
-- `.claude/skills/s1-trace-replay/SKILL.md`
-- `.claude/skills/trace-replay-bug-fixing/SKILL.md`
-- `.claude/skills/bizhawk-headless-trace/SKILL.md`
+- `.agents/skills/s1-trace-replay/SKILL.md`
+- `.agents/skills/trace-replay-bug-fixing/SKILL.md`
+- `.agents/skills/bizhawk-headless-trace/SKILL.md`

@@ -131,7 +131,7 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
             // 3a. Demo-specific state: LZ (credit 3) needs lamppost/water setup.
             //     Uses ROM-derived constants from Sonic1CreditsDemoData ONLY;
             //     no trace data is read here per the trace-replay
-            //     comparison-only invariant (see CLAUDE.md "Trace Replay Tests").
+            //     comparison-only invariant (see AGENTS.md "Trace Replay Tests").
             if (idx == 3) {
                 Sonic1CreditsDemoBootstrap.applyLzLampostState(
                         fixture.sprite(), fixture.camera());

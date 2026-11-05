@@ -2,7 +2,7 @@
 
 **Primary runbook.** S3K object work has the most hidden integration steps and the highest chance of late art/PLC/lifecycle/trace failures. Read this fully before writing code.
 
-Companion skill: [`.agents/skills/s3k-implement-object/SKILL.md`](../../../.agents/skills/s3k-implement-object/SKILL.md) (+ mirrored `.claude/skills/...`) and its [`rom-pitfalls.md`](../../../.agents/skills/s3k-implement-object/rom-pitfalls.md). This runbook is the operational checklist; the skill is the reference.
+Companion skill: [`.agents/skills/s3k-implement-object/SKILL.md`](../../../.agents/skills/s3k-implement-object/SKILL.md) and its [`rom-pitfalls.md`](../../../.agents/skills/s3k-implement-object/rom-pitfalls.md). This runbook is the operational checklist; the skill is the reference.
 
 ---
 
@@ -130,7 +130,7 @@ mvn "-Dtest=TestConstructionContextGuard" test                # new-call sites w
 mvn "-Dtest=TestSonic3kPlcArtRegistry" test                   # if art/mapping/PLC touched
 mvn "-Dtest=TestPatternSpriteRendererCorruptionGuard" test    # if art/mapping touched
 
-# Keep-green S3K baseline (CLAUDE.md):
+# Keep-green S3K baseline (AGENTS.md):
 mvn "-Dtest=TestS3kAiz1SkipHeadless" test
 mvn "-Dtest=TestSonic3kLevelLoading" test
 mvn "-Dtest=TestSonic3kBootstrapResolver" test
@@ -170,6 +170,6 @@ Tests must be JUnit 5 / Jupiter only (no `org.junit.*`). Prefer `@ExtendWith(Sin
 
 - `CHANGELOG.md` + `Changelog: updated` (engine `src/main/` change). A bare `Changelog: n/a` on a `feat`/`fix` touching `src/main/` is rejected.
 - `docs/S3K_KNOWN_DISCREPANCIES.md` + `S3K-Known-Discrepancies: updated` if you introduce/resolve an S3K parity gap.
-- If a trace fix revealed a reusable pitfall: update `.agents/skills/s3k-implement-object/rom-pitfalls.md` AND the mirrored `.claude/skills/s3k-implement-object/rom-pitfalls.md`, set `Skills: updated`.
+- If a trace fix revealed a reusable pitfall: update `.agents/skills/s3k-implement-object/rom-pitfalls.md`, run `python3 tools/git/sync_skills.py`, set `Skills: updated`.
 - Fill all trailers (`Guide`, `Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`) with `updated` or `n/a`. Do not `--no-verify`.
 - Run `git config core.hooksPath .githooks` once if you commit without building first.
