@@ -27,7 +27,9 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * <p>Stores precede their reached reads and synchronous calls. A failed call keeps
  * those published prefixes; no rollback or replay is performed. Callback guards
  * observe full-bank values, not atomic custody or an ABA/exact-once certificate.
- * Effects describe completed operations only and must never be executed as commands.</p>
+ * Effects describe completed operations only and must never be executed as commands.
+ * The opt-in World binding adds original-pending/primitive/completion receipts; the
+ * legacy constructor retains its value-only callback contract.</p>
  */
 public final class CdTimeStars {
     public static final int OBJECT_ID = 3;
@@ -115,6 +117,64 @@ public final class CdTimeStars {
         this.powerup = Objects.requireNonNull(powerup); this.draw = Objects.requireNonNull(draw);
     }
 
+    /** Immutable descriptions, never producer or adoption authority by themselves. */
+    public record Publication(CdReservedObjectBank.Snapshot cut, CdReservedObjectBank.Image source,
+                              CdReservedObjectBank.Image output) { }
+    public record PowerupReadCall(CdReservedObjectBank.Snapshot cut, CdReservedObjectBank.Image source) { }
+    public record PowerupWriteCall(CdReservedObjectBank.Snapshot cut, CdReservedObjectBank.Image source,
+                                   int previousValue, int value) { }
+    public record DrawCall(CdReservedObjectBank.Snapshot cut, CdReservedObjectBank.Image source) { }
+    public interface DispatchObserver {
+        void beforeOperation(Object call);
+        void afterOperation(Object call);
+        void failedOperation(Object call, Throwable original);
+    }
+    public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+    private DispatchObserver observer;
+    private ReceiptGuard receiptGuard;
+    private Object pendingOperation, operationResult;
+    private long operationOrdinal;
+    private boolean primitiveActive, resultReady;
+    public Assets assets() { return assets; }
+    public boolean isCurrentCall(Object call) { return running && call != null && call == pendingOperation; }
+    /** True only inside the original primitive, never during either public observer callback. */
+    public boolean isCurrentPrimitive(Object call) { return isCurrentCall(call) && primitiveActive; }
+    public long currentOrdinal(Object call) {
+        if (!isCurrentCall(call)) throw new IllegalStateException("No original pending TimeStars operation");
+        return operationOrdinal;
+    }
+    public Object currentResult(Object call) {
+        if (!isCurrentCall(call) || !resultReady || primitiveActive)
+            throw new IllegalStateException("No completed original TimeStars operation");
+        return operationResult;
+    }
+    public static CdTimeStars withWorldOwner(CdReservedObjectBank bank, Assets assets, PowerupPort powerup,
+                                             DrawReserved draw, DispatchObserver observer, ReceiptGuard guard) {
+        var body = new CdTimeStars(bank, assets, powerup, draw);
+        body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard);
+        return body;
+    }
+    @FunctionalInterface private interface Operation<T> { T run(); }
+    private <T> T observed(Object call, Operation<T> operation) {
+        if (observer == null) return operation.run();
+        if (pendingOperation != null) throw new IllegalStateException("Nested TimeStars producer");
+        pendingOperation = call; operationOrdinal++; resultReady = false;
+        try {
+            observer.beforeOperation(call); receiptGuard.prepared(call);
+            T result;
+            primitiveActive = true;
+            try { result = operation.run(); } finally { primitiveActive = false; }
+            operationResult = result; resultReady = true;
+            observer.afterOperation(call); receiptGuard.completed(call); return result;
+        } catch (RuntimeException | Error original) {
+            try { observer.failedOperation(call, original); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally {
+            primitiveActive = false; pendingOperation = null; operationResult = null; resultReady = false;
+        }
+    }
+
     /** One real ID3 physical visit. Only the four native time-star slots are admitted. */
     public Result run(int wholeIndex, Globals globals) {
         Objects.requireNonNull(globals);
@@ -123,7 +183,7 @@ public final class CdTimeStars {
             throw new IllegalArgumentException("TimeStars requires reserved whole12..15");
         var source = bank.state(wholeIndex);
         if (source.unsignedByte(ID) != OBJECT_ID) throw new IllegalArgumentException("TimeStars requires actual ID3");
-        running = true;
+        running = true; operationOrdinal = 0;
         try {
             var c = new Cursor(source);
             switch (source.unsignedByte(ROUTINE)) {
@@ -238,29 +298,42 @@ public final class CdTimeStars {
     }
 
     private int readPowerup(Cursor c) {
-        var cut = callbackCut(c); Throwable original = null;
-        try {
-            int value = powerup.read(); byteValue(value); return value;
-        } catch (RuntimeException | Error failure) { original = failure; throw failure; }
-        finally { verifyCallback(c, cut, false, original); }
+        var cut = callbackCut(c);
+        return observed(new PowerupReadCall(cut, c.state), () -> {
+            Throwable original = null;
+            try { int value = powerup.read(); byteValue(value); return value; }
+            catch (RuntimeException | Error failure) { original = failure; throw failure; }
+            finally { verifyCallback(c, cut, false, original); }
+        });
     }
 
     private void writePowerup(Cursor c, int previousValue, int value) {
-        var cut = callbackCut(c); Throwable original = null;
-        try { powerup.write(value); }
-        catch (RuntimeException | Error failure) { original = failure; throw failure; }
-        finally { verifyCallback(c, cut, false, original); }
+        var cut = callbackCut(c);
+        observed(new PowerupWriteCall(cut, c.state, previousValue, value), () -> {
+            Throwable original = null;
+            try { powerup.write(value); }
+            catch (RuntimeException | Error failure) { original = failure; throw failure; }
+            finally { verifyCallback(c, cut, false, original); }
+            return null;
+        });
         c.effects.add(new PowerupWritten(previousValue, value));
     }
 
     private void draw(Cursor c) {
-        var cut = callbackCut(c); Throwable original = null;
-        try { draw.drawObject(bank, c.state.identity()); }
-        catch (RuntimeException | Error failure) { original = failure; throw failure; }
-        finally {
-            c.state = bank.state(c.wholeIndex);
-            verifyCallback(c, cut, true, original);
-        }
+        var cut = callbackCut(c);
+        observed(new DrawCall(cut, c.state), () -> {
+            Throwable original = null;
+            try { draw.drawObject(bank, c.state.identity()); }
+            catch (RuntimeException | Error failure) { original = failure; throw failure; }
+            finally {
+                try { c.state = bank.state(c.wholeIndex); verifyCallback(c, cut, true, original); }
+                catch (RuntimeException | Error verification) {
+                    if (original != null) { if (verification != original) original.addSuppressed(verification); }
+                    else throw verification;
+                }
+            }
+            return null;
+        });
         c.effects.add(new DrawReturned());
     }
 
@@ -286,7 +359,17 @@ public final class CdTimeStars {
         }
     }
 
-    private void publish(Cursor c) { bank.write(c.state); }
+    private void publish(Cursor c) {
+        if (observer == null) { bank.write(c.state); return; }
+        var cut = bank.capture(); var output = c.state;
+        var source = cut.slots().get(c.wholeIndex - 1);
+        observed(new Publication(cut, source, output), () -> {
+            bank.write(output);
+            if (!bank.state(c.wholeIndex).equals(output))
+                throw new IllegalStateException("TimeStars original bank primitive omitted its complete image");
+            return null;
+        });
+    }
     private static UnsupportedTimeStars unsupported(UnsupportedBoundary boundary, Cursor c, int value) {
         return new UnsupportedTimeStars(boundary, c.wholeIndex, value);
     }

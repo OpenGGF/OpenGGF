@@ -1,5 +1,51 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual reserved stars, positive12886 and next art boundary
+
+The real primary call now borrows its post-SpawnObjects reserved snapshot and
+folds only its completed TimeWarp patches into existing Values. All four native
+ID/animation patches are visible before whole12..15 Init in the same physical
+pass. One cached raw facade and the existing captured HUD bytes remain the sole
+storage; Frame/Body/TimeWarp algorithms and failure atomicity are unchanged.
+The cached star kernel has original-pending/primitive/adoption/completion receipts
+before later work. Actual post-Body history, Powerup MOVE6/readback/BSET7 and
+reserved Draw preserve full-owner guards. Raw13-root mapping keeps its interior
+empty alias. Old111 observations append Init/Active/Body, total114.
+
+Original609 preparation compiled production but launched zero tests because one
+new test callback used a checked reflection helper. Root wraps that assertion
+only. R2 then has608passes/one active-Draw failure/zero errors/skips. Independent
+static review identifies the same P2: the Act2 queue's reserved list omitted
+12..15. Root adds exactly those four refs at one construction; shared queue
+ownership and native/private guards stay intact. Corrected18 World plus4 existing
+controller/render cases pass22/0/0/0 at source
+`9a81cdb8de20800a2e46dbd0fa590180e42043a3c05015cfb531c67e0fbb2ec2`,
+08:49:35.701717–08:51:04.665993Z. Admission97s, normal precompile100s; exact
+identities/environment/source/two XML hashes verified, four owned reports consumed.
+Neither original609 run is relabelled green; no repeated static review was needed
+for the small verified fix.
+
+The separate bounded ordinary observer returns12886 and rethrows original first
+12887 `POWERUP_ART`. Init/Body first complete12885, Active12886. Failed partial
+level powerup6 shows the actual BCLR prefix; all four stars are ID3/routine6,
+animations5..8/mapframe8, three marked onscreen. Those retained partial values
+are comparison only. Original failure remains a one-error non-green observation;
+temporary source and two owned reports were removed after exact custody.
+
+Permanent positive12886 and ten selected-Sonic EGL cuts pass2/0/0/0 separately,
+source`7a225117104afb33f54e76a46f8d8102ed5c9aec4f2170db89a43e086d4fb0dd`,
+09:07:51.030198–09:08:06.291542Z, admission0s/precompile40.960s. Complete full/course
+12884→12885 and12885→12886 extend every older state/pixel edge. Exact identities,
+environment/source/XML checked; two owned reports consumed. No optional new PNG
+was exported. The12886 selection uses prior12885 CPU, whose fresh Init had no Draw;
+this is selected Sonic/replay evidence, not visible-star/current-art qualification.
+
+Next is the measured Powerup service: genuine Main-cleared CPU window/tail,
+1024-byte source copy and1152-byte current publication atA880..AD00. Authenticated
+source135 and CPU/current packets were prepared independently outside I, all
+Java still UNRUN. Save210, outgoing lifetime, whole Act2, audible output and
+native/regional parity remain separate. Main untouched, no remote operation.
+
 ## 5 November 2026 — original Powerup data and reserved storage qualified
 
 Source134 appends only the complete original-MMD Powerup animation296 and raw

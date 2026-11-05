@@ -34,7 +34,7 @@ class TestSonicCdAct2TunnelPathWorld {
         assertSame(actualField(s.visit(),"tunnelPathAssets"),a);
         assertEquals(0x208BB8,a.groundSpeedsAddressBits());assertEquals(0x208BC0,a.pathsAddressBits());assertEquals(0x21D528,a.mappingAddressBits());
         assertEquals(8,a.groundSpeeds().length());assertEquals(284,a.paths().length());
-        assertEquals(111,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(104,SonicCdGameModule.Act2LoadCall.FLOWER_BODY.ordinal());
+        assertEquals(114,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(104,SonicCdGameModule.Act2LoadCall.FLOWER_BODY.ordinal());
         assertEquals(106,SonicCdGameModule.Act2LoadCall.TUNNEL_PATH_BODY.ordinal());
         assertFalse(body.isCurrentCall(new Object()));assertThrows(IllegalStateException.class,()->body.currentOrdinal(new Object()));
         assertThrows(IllegalStateException.class,()->invoke(s.visit(),"runTunnelPath",new Class<?>[]{int.class},127));

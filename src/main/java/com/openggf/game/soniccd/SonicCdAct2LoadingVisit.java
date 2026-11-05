@@ -31,6 +31,12 @@ final class SonicCdAct2LoadingVisit {
     private final CdLevelHud.Act2 hud;
     private final CdObjectPlacementRuntime placement;
     private final CdReservedHud reservedHud;
+    // A facade only: Values.hudObjects remains the one live/captured reserved owner.
+    private final CdReservedObjectBank timeStarBank;
+    private final CdTimeStars.Assets timeStarsAssets;
+    private final CdTimeStars timeStars;
+    private transient TimeStarsInvocation activeTimeStars;
+    private boolean timeStarsPort, drawingTimeStars;
     private final CdRing ring;
     private final CdSpring spring;
     private final CdAnimal animal;
@@ -322,6 +328,24 @@ final class SonicCdAct2LoadingVisit {
             @Override public CdAssetBytes read(int whole) { return readReservedHud(whole); }
             @Override public void write(int whole,CdAssetBytes expected,CdAssetBytes next) { writeReservedHud(whole,expected,next); }
         },this::drawReservedHud);
+        timeStarBank=CdReservedObjectBank.backedBy(new CdReservedObjectBank.RawBacking() {
+            @Override public CdAssetBytes read() { return readTimeStarsReserved(); }
+            @Override public boolean compareAndSet(CdAssetBytes expected,CdAssetBytes next) {
+                return adoptTimeStarsReserved(expected,next);
+            }
+        }); // Construction must not read the not-yet-initialized Values owner.
+        timeStarsAssets=CdTimeStars.Assets.fromAct2Assets(objectAssets);
+        timeStars=CdTimeStars.withWorldOwner(timeStarBank,timeStarsAssets,new CdTimeStars.PowerupPort() {
+            @Override public int read() { return readTimeStarsPowerup(); }
+            @Override public void write(int value) { writeTimeStarsPowerup(value); }
+        },this::drawTimeStar,new CdTimeStars.DispatchObserver() {
+            @Override public void beforeOperation(Object call) { beforeTimeStarsOperation(call); }
+            @Override public void afterOperation(Object call) { afterTimeStarsOperation(call); }
+            @Override public void failedOperation(Object call,Throwable original) { failedTimeStarsOperation(call,original); }
+        },new CdTimeStars.ReceiptGuard() {
+            @Override public void prepared(Object call) { requirePreparedTimeStarsReceipt(call); }
+            @Override public void completed(Object call) { consumeTimeStarsReceipt(call); }
+        });
         title=new CdTitleCard(placement,new CdTitleCard.Assets(objectAssets.view(CdR12aProfile.Asset.TITLE_CARD_DATA),
                 CdR12aProfile.Asset.TITLE_CARD_MAPPINGS.nativeAddress()),new CdTitleCard.ReservedSlots() {
             @Override public CdAssetBytes read(int whole) { return readTitleReserved(whole); }
@@ -2127,6 +2151,8 @@ final class SonicCdAct2LoadingVisit {
                 int id=whole<32 ? reservedImage(whole).unsignedByte(0) : placement.pool().state(whole).id();
                 if(id==0) continue;
                 if(id==CdTitleCard.OBJECT_ID) { runTitle(whole); call(TITLE_CARD_BODY); }
+                else if(whole>=CdTimeStars.FIRST_WHOLE_INDEX && whole<CdTimeStars.END_WHOLE_INDEX
+                        && id==CdTimeStars.OBJECT_ID) { runTimeStar(whole); call(TIME_STARS_BODY); }
                 else if(whole<32) {
                     if((whole!=2 && whole!=3 && whole!=5 && whole!=31) || (id!=0x1C && id!=0x19))
                         throw module.act2Boundary(SonicCdGameModule.Act2Boundary.RESERVED_HUD);
@@ -2197,9 +2223,13 @@ final class SonicCdAct2LoadingVisit {
                 CdR12aProfile.Asset.MAP_SPRING.nativeAddress(),assets.objects().springMappings(),root,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_BREAKABLE_WALL.nativeAddress(),
                 assets.objects().breakableWall().mappings(),0,14));
+        // Native empty root0 overlaps frame1's body. Resolve only reached frames from all13 raw roots.
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_POWERUP.nativeAddress(),
+                view(CdR12aProfile.Asset.MAP_SPR_POWERUP).bytes(),0,13));
         var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                if(activeTimeStars!=null)throw new IllegalStateException("Collecting TimeStars DrawObject has no live queue read");
                 if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native queue read");
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
@@ -2221,6 +2251,7 @@ final class SonicCdAct2LoadingVisit {
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+                if(activeTimeStars!=null) { writeTimeStarsOnScreen(ref,value); return; }
                 if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native Draw flag write");
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
@@ -2243,7 +2274,9 @@ final class SonicCdAct2LoadingVisit {
                 else if(activeSpring!=null) writeSpringOnScreen(ref,value); else writeRingOnScreen(ref,value);
             }
         },mappings,values.cpuSat().copy(),List.of(new CdObjectDrawQueue.CdSlotRef(2),new CdObjectDrawQueue.CdSlotRef(3),
-                new CdObjectDrawQueue.CdSlotRef(4),new CdObjectDrawQueue.CdSlotRef(5),new CdObjectDrawQueue.CdSlotRef(31)));
+                new CdObjectDrawQueue.CdSlotRef(4),new CdObjectDrawQueue.CdSlotRef(5),
+                new CdObjectDrawQueue.CdSlotRef(12),new CdObjectDrawQueue.CdSlotRef(13),
+                new CdObjectDrawQueue.CdSlotRef(14),new CdObjectDrawQueue.CdSlotRef(15),new CdObjectDrawQueue.CdSlotRef(31)));
     }
 
     /** Private synchronous source scope. Public component cuts/effects never create this authority. */
@@ -2550,6 +2583,8 @@ final class SonicCdAct2LoadingVisit {
         private CdPlayerFrameRuntime.SharedState expectedShared;
         private CdObjectPool.Snapshot expectedPool = placed.pool();
         private Values expectedValues = base;
+        private CdAssetBytes expectedReserved = base.hudObjects();
+        private CdReservedObjectBank.Snapshot reservedCut;
         private List<SonicCdGameModule.PastSound> expectedSounds = originalSounds;
         private Optional<CdPlayerBody.DisplayEligibility> displayCut = Optional.empty();
         private boolean enqueued;
@@ -2593,10 +2628,12 @@ final class SonicCdAct2LoadingVisit {
             var player = invocation.originalState;
             var support = new CdPlayerMovement.ObjectContext(cut, player.objectLinks().standObject(),
                     player.header().slotId(), player.header().width());
-            // The HUD image has one existing owner. No raw-bank import or save-lock owner
-            // exists here; absent reads retain TimeWarp's reached, typed native boundary.
+            // Borrow the original post-SpawnObjects reserved cut from the existing Values owner.
+            // Save/scroll-lock ownership remains absent; no failed helper prefix is published.
+            invocation.reservedCut = timeStarBank.capture();
+            verifyPrimary(invocation);
             var warp = new CdPlayerTimeWarp.Context(OptionalInt.of(v.level().spawnMode()),
-                    Optional.empty(), Optional.empty(), OptionalInt.of(v.level().levelRestart()));
+                    Optional.of(invocation.reservedCut), Optional.empty(), OptionalInt.of(v.level().levelRestart()));
             var publication = frame.runBody(levelFrame,
                     Optional.of(new CdPlayerBody.TouchContext(primaryScanner, cut, response)),
                     Optional.of(new CdPlayerBody.LevelContext(cut, v.ring(), v.level())),
@@ -2613,7 +2650,8 @@ final class SonicCdAct2LoadingVisit {
             invocation.pool.restore(ready.pool());
             values = ready.values(); sounds = ready.sounds();
             invocation.expectedPool = ready.pool();
-            invocation.expectedValues = ready.values(); invocation.expectedSounds = ready.sounds();
+            invocation.expectedValues = ready.values(); invocation.expectedReserved = ready.values().hudObjects();
+            invocation.expectedSounds = ready.sounds();
             invocation.expectedActor = ready.actor(); invocation.expectedShared = ready.shared();
             invocation.displayCut = ready.display();
             verifyPrimary(invocation);
@@ -2647,6 +2685,7 @@ final class SonicCdAct2LoadingVisit {
         var changed = new LinkedHashMap<Integer, CdObjectState>();
         var old = invocation.base;
         var nextRing = old.ring(); var nextLevel = old.level();
+        var nextReserved = old.hudObjects();
         var nextScore = old.globals().score(); var nextContact = old.globals().contact();
         Optional<CdPlayerBody.DisplayEligibility> display = Optional.empty();
         boolean touchSeen = false, warpSeen = false;
@@ -2669,8 +2708,9 @@ final class SonicCdAct2LoadingVisit {
                 if (warpSeen) throw new IllegalStateException("Primary returned multiple TimeWarp calls");
                 warpSeen = true;
                 var warped = warp.result();
-                if (warped.saveResult().isPresent() || !warped.reservedPatches().isEmpty())
-                    throw new IllegalStateException("Primary produced an output for an absent warp owner");
+                if (warped.saveResult().isPresent())
+                    throw new IllegalStateException("Primary produced an output for an absent warp save owner");
+                nextReserved = preparePrimaryReserved(invocation, warped);
                 nextContact = new CdPlayerBody.ContactGlobals(warped.state().timeWarp(),
                         nextContact.shield(), nextContact.combineRing());
                 if (warped.restartResult().isPresent()) {
@@ -2719,12 +2759,41 @@ final class SonicCdAct2LoadingVisit {
                 g.bonus(), g.layoutRam(), g.debugBlockWord(), g.pauseMusicBit(), g.retainedDev(), g.checkpointSaved());
         var readyValues = new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(),
                 old.cpuSat(), old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(),
-                old.foregroundPlane(), nextRing, nextLevel, globals, old.hudObjects(), old.fadeProgress(), old.calls(), old.loop());
+                old.foregroundPlane(), nextRing, nextLevel, globals, nextReserved, old.fadeProgress(), old.calls(), old.loop());
         var ledger = new ArrayList<SonicCdGameModule.PastSound>(invocation.originalSounds);
         for (var sound : publication.sounds()) ledger.add(new SonicCdGameModule.PastFrameSound(sound));
         var readySounds = List.copyOf(ledger);
         verifyPrimary(invocation);
         return new PrimaryReady(actor, shared, pool, readyValues, readySounds, display);
+    }
+
+    /** Validate returned metadata; never execute the helper or its eight Store records again. */
+    private CdAssetBytes preparePrimaryReserved(PrimaryInvocation i, CdPlayerTimeWarp.Result result) {
+        verifyPrimary(i);
+        if (i.reservedCut == null) throw new IllegalStateException("Primary omitted its original reserved cut");
+        timeStarBank.validateRestore(i.reservedCut);
+        var writes=result.stores().stream().filter(CdPlayerTimeWarp.ReservedWrite.class::isInstance)
+                .map(CdPlayerTimeWarp.ReservedWrite.class::cast).toList();
+        var patches=result.reservedPatches();
+        if (patches.isEmpty()) {
+            if (!writes.isEmpty()) throw new IllegalStateException("Reserved stores omitted their full64 outputs");
+            return i.expectedReserved; // Native whole12 occupied and unreached branches both retain all31.
+        }
+        if (patches.size()!=4 || writes.size()!=8 || i.reservedCut.slots().get(11).byteAt(0)!=0)
+            throw new IllegalStateException("Primary MakeTimeWarpStars did not retain its four native publications");
+        byte[] next=i.expectedReserved.copy();
+        for(int at=0;at<4;at++) {
+            int whole=12+at; var before=i.reservedCut.slots().get(whole-1); var patch=patches.get(at);
+            var id=writes.get(2*at); var animation=writes.get(2*at+1);
+            if(patch.before()!=before || !patch.after().equals(before.moveByteAt(0,3).moveByteAt(0x1C,whole-7))
+                    || id.wholeIndex()!=whole || id.field()!=CdPlayerTimeWarp.ReservedField.ID
+                    || id.expectedValue()!=before.byteAt(0) || id.value()!=3
+                    || animation.wholeIndex()!=whole || animation.field()!=CdPlayerTimeWarp.ReservedField.ANIMATION
+                    || animation.expectedValue()!=before.byteAt(0x1C) || animation.value()!=whole-7)
+                throw new IllegalStateException("Primary reserved token/full64/nonwrite/native order differs");
+            System.arraycopy(patch.after().copyBytes(),0,next,(whole-1)*64,64);
+        }
+        verifyPrimary(i); return CdAssetBytes.copyOf(next);
     }
 
     private void verifyPrimary(PrimaryInvocation invocation) {
@@ -2751,7 +2820,7 @@ final class SonicCdAct2LoadingVisit {
                 || !now.status().equals(invocation.placed.status()) || !now.pool().slots().equals(invocation.expectedPool.slots())
                 || !sameBytes(now.savedFlags(), invocation.placed.savedFlags())
                 || values != invocation.expectedValues || sounds != invocation.expectedSounds
-                || !sameBytes(values.hudObjects(), invocation.base.hudObjects()))
+                || !sameBytes(values.hudObjects(), invocation.expectedReserved))
             throw new IllegalStateException("Primary source/World/Frame/full96/Values/scroll cut changed");
         if (invocation.expectedActor != null && (!frame.captureActor().equals(invocation.expectedActor)
                 || !frame.captureShared().equals(invocation.expectedShared)))
@@ -7387,6 +7456,7 @@ final class SonicCdAct2LoadingVisit {
 
     // Horizontal Door: one actual cached dispatch, not another Frame/bank/queue/current owner.
     private void requireDoorIdle() {
+        requireTimeStarsIdle();
         if(activeDoor!=null || doorPort || drawingDoor)throw new IllegalStateException("Actual Door owns this source cut");
     }
     private final class DoorInvocation {
@@ -7922,6 +7992,7 @@ final class SonicCdAct2LoadingVisit {
     }
     // ID07: the existing path kernel owns every native branch; these are actual private publication receipts.
     private void requireTunnelPathIdle() {
+        requireTimeStarsIdle();
         if(activeTunnelPath!=null || tunnelPathPort) throw new IllegalStateException("Actual Tunnel Path owns this cut");
     }
     private void requireOtherTunnelPathScopesIdle() {
@@ -8143,6 +8214,259 @@ final class SonicCdAct2LoadingVisit {
         tunnelPathPort=true;
         try {verifyTunnelPath(i);sounds=i.readyLedger;i.ledger=i.readyLedger;values=i.readyValues;i.expectedValues=i.readyValues;i.portReceipt=call;verifyTunnelPath(i);}
         finally {tunnelPathPort=false;}
+    }
+
+    // Actual reserved ID03: one facade, one cached native kernel, no extra rewind/storage owner.
+    private void requireTimeStarsIdle() {
+        if(activeTimeStars!=null || timeStarsPort || drawingTimeStars)
+            throw new IllegalStateException("Actual reserved TimeStars invocation owns this source cut");
+    }
+    private void requireOtherTimeStarsScopesIdle() {
+        if(activePrimary!=null || activeDrain!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
+                || activeTitle!=null || activeMonitor!=null || activeBoulder!=null || activePlatform!=null
+                || activeAnton!=null || activePata!=null || activeTamabboh!=null || activeFloat!=null || activeCheckpoint!=null
+                || activeWall!=null || activeCollapse!=null || activeLogMosqui!=null || activeChildEffect!=null
+                || activeDoor!=null || activeFlower!=null || activeTunnelPath!=null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || titlePort || drawingTitle || monitorPort || drawingMonitor || boulderPort || drawingBoulder
+                || platformPort || drawingPlatform || antonPort || drawingAnton || drawingPata || tamabbohPort || drawingTamabboh
+                || floatPort || drawingFloat || checkpointPort || drawingCheckpoint || wallPort || drawingWall
+                || collapsePort || drawingCollapse || logMosquiPort || drawingLogMosqui || drawingChildEffect
+                || doorPort || drawingDoor || flowerPort || drawingFlower || tunnelPathPort)
+            throw new IllegalStateException("Another native family owns the reserved TimeStars cut");
+    }
+    private final class TimeStarsInvocation {
+        final int whole; final CdTimeStars body=timeStars; final CdTimeStars.Assets bodyAssets=timeStarsAssets;
+        final CdReservedObjectBank bank=timeStarBank; final CdPlayerFrameRuntime sourceFrame=frame;
+        final CdR12aTerrainAssets sourceAssets=assets; final Object stage=frame.stageSource();
+        final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue;
+        final CdObjectPlacementRuntime.Snapshot placed=placement.capture();
+        final CdPlayerBody.State state=frame.state(); final CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor();
+        final CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll();
+        final List<SonicCdGameModule.PastSound> ledger=sounds;
+        final Object world; final long generation; final CdObjectDrawQueue.CameraWords camera;
+        Values expectedValues=values,readyValues; CdAssetBytes expectedReserved=values.hudObjects();
+        Object pending,completed,preparedReceipt,adoptionReceipt,completedReceipt;
+        long ordinal; boolean prepared,drawn,cleared,queueFailed;
+        TimeStarsInvocation(int whole) {
+            this.whole=whole; var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+    }
+    private void runTimeStar(int whole) {
+        requireTimeStarsIdle();requireOtherTimeStarsScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<12 || whole>=16 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || reservedImage(whole).unsignedByte(0)!=CdTimeStars.OBJECT_ID)
+            throw new IllegalStateException("No actual increasing reserved TimeStars physical dispatch");
+        var i=new TimeStarsInvocation(whole);activeTimeStars=i;
+        CdTimeStars.Result result;
+        try {
+            var player=frame.state();
+            result=timeStars.run(whole,new CdTimeStars.Globals(frame.environment().movement().gates().zoneAct()>>>8,
+                    values.globals().contact().timeWarp(),player.motion().flags(),player.history().bytes(),player.history().index()));
+            verifyTimeStars(i);
+            if(i.pending!=null || i.completed!=null || i.preparedReceipt!=null || i.adoptionReceipt!=null
+                    || i.completedReceipt!=null || !result.state().equals(timeStarBank.state(whole)))
+                throw new IllegalStateException("TimeStars omitted its original primitive/adoption/completion receipts");
+            // Fresh Init has one native publication and never reaches history, animation, Powerup or Draw.
+            if(result.effects().getFirst() instanceof CdTimeStars.RoutineEntered entered
+                    && entered.routine()==CdTimeStars.NativeRoutine.INIT
+                    && (i.ordinal!=1 || i.drawn || result.effects().size()!=1))
+                throw new IllegalStateException("Fresh TimeStars Init reached an unowned synchronous call");
+        } catch(RuntimeException|Error original) {
+            try {verifyTimeStars(i);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        } finally {
+            activeTimeStars=null;timeStarsPort=false;drawingTimeStars=false;
+        }
+        var entered=(CdTimeStars.RoutineEntered)result.effects().getFirst();
+        call(entered.routine()==CdTimeStars.NativeRoutine.INIT?TIME_STARS_INIT:TIME_STARS_ACTIVE);
+    }
+    private void verifyTimeStars(TimeStarsInvocation i) {
+        if(i==null)throw new IllegalStateException("No actual reserved TimeStars invocation");
+        module.requireAct2LoadingVisit(this);requireOtherTimeStarsScopesIdle();
+        var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();var now=placement.capture();
+        if(activeTimeStars!=i || !runningObjects || servicing || i.body!=timeStars || i.bodyAssets!=timeStarsAssets
+                || timeStars.assets()!=i.bodyAssets || i.bank!=timeStarBank || i.sourceFrame!=frame || i.sourceAssets!=assets
+                || i.stage!=frame.stageSource() || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null
+                || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING
+                    || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession()
+                || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.state()!=i.state || frame.environment()!=i.environment || frame.closed()
+                || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
+                || values!=i.expectedValues || sounds!=i.ledger || !sameBytes(values.hudObjects(),i.expectedReserved)
+                || !now.status().equals(i.placed.status()) || !now.pool().slots().equals(i.placed.pool().slots())
+                || !sameBytes(now.savedFlags(),i.placed.savedFlags()) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("TimeStars changed Frame/full96/full31/status/saved/Values/HUD/scroll/queue/ledger/World/generation");
+    }
+    private TimeStarsInvocation requireTimeStars() {
+        var i=activeTimeStars;verifyTimeStars(i);return i;
+    }
+    /** No factory read, raw import, default bank or public mutation authority. */
+    private CdAssetBytes readTimeStarsReserved() {
+        if(activePrimary!=null) {
+            verifyPrimary(activePrimary);return values.hudObjects();
+        }
+        requireTimeStars();return values.hudObjects();
+    }
+    private void validateTimeStarsCut(TimeStarsInvocation i,CdReservedObjectBank.Snapshot cut,
+                                      CdReservedObjectBank.Image source) {
+        timeStarBank.validateRestore(cut);
+        if(source==null || source.identity().wholeIndex()!=i.whole || !source.equals(cut.slots().get(i.whole-1)))
+            throw new IllegalStateException("TimeStars omitted its actual selected source64");
+        for(int whole=1;whole<32;whole++) {
+            var image=cut.slots().get(whole-1);
+            if(!Arrays.equals(image.copyBytes(),i.expectedReserved.slice((whole-1)*64,64).copy()))
+                throw new IllegalStateException("TimeStars stale complete31 source at whole "+whole);
+        }
+    }
+    private static CdAssetBytes replaceTimeStar(CdAssetBytes all,int whole,CdReservedObjectBank.Image image) {
+        byte[] ready=all.copy();System.arraycopy(image.copyBytes(),0,ready,(whole-1)*64,64);return CdAssetBytes.copyOf(ready);
+    }
+    private static Values timeStarsPowerupValues(Values v,int powerup) {
+        var l=v.level();var next=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),l.checkpoint(),l.spawnMode(),
+                l.plcLoadFlags(),l.flowerCount(),l.fadeEnableDisplay(),powerup,l.timeOver());
+        return new Values(v.phase(),v.section(),v.cpuPalette(),v.fadePalette(),v.waterPalette(),v.displayedPalette(),
+                v.cpuSat(),v.displayedSat(),v.displayedHScroll(),v.displayedVScrollLongBits(),v.foregroundPlane(),
+                v.ring(),next,v.globals(),v.hudObjects(),v.fadeProgress(),v.calls(),v.loop());
+    }
+    private void beforeTimeStarsOperation(Object call) {
+        var i=requireTimeStars();
+        if(!timeStars.isCurrentCall(call) || timeStars.isCurrentPrimitive(call) || i.pending!=null || i.completed!=null
+                || i.preparedReceipt!=null || i.adoptionReceipt!=null || i.completedReceipt!=null
+                || timeStarsPort || drawingTimeStars || queuePort || timeStars.currentOrdinal(call)!=i.ordinal+1)
+            throw new IllegalStateException("TimeStars operation lacks the original pending producer/ordinal");
+        i.readyValues=i.expectedValues;
+        if(call instanceof CdTimeStars.Publication c) {
+            validateTimeStarsCut(i,c.cut(),c.source());
+            if(c.output()==null || !c.output().equals(c.source().withBytes(c.output().copyBytes())))
+                throw new IllegalStateException("TimeStars publication changed facade token/physical identity");
+            i.readyValues=reservedValues(i.expectedValues,replaceTimeStar(i.expectedReserved,i.whole,c.output()));
+        } else if(call instanceof CdTimeStars.PowerupReadCall c) {
+            validateTimeStarsCut(i,c.cut(),c.source());
+        } else if(call instanceof CdTimeStars.PowerupWriteCall c) {
+            validateTimeStarsCut(i,c.cut(),c.source());int routine=c.source().byteAt(0x24);
+            if(c.previousValue()!=values.level().powerup() || routine!=6
+                    || !(c.value()==routine && (c.previousValue()&15)<8 && (c.previousValue()&15)!=routine
+                        || c.previousValue()==routine && c.value()==(routine|0x80)))
+                throw new IllegalStateException("TimeStars Powerup write differs from reached MOVE6/BSET7");
+            i.readyValues=timeStarsPowerupValues(i.expectedValues,c.value());
+        } else if(call instanceof CdTimeStars.DrawCall c) {
+            validateTimeStarsCut(i,c.cut(),c.source());
+            if(i.drawn || i.cleared)throw new IllegalStateException("Duplicate native reserved star DrawObject");
+            var image=c.source().moveByteAt(1,c.source().byteAt(1)&0x7F);
+            i.readyValues=reservedValues(i.expectedValues,replaceTimeStar(i.expectedReserved,i.whole,image));
+        } else throw new IllegalStateException("Foreign TimeStars operation family");
+        verifyTimeStars(i);i.pending=call;i.preparedReceipt=new Object();i.prepared=false;
+        i.ordinal=timeStars.currentOrdinal(call);
+    }
+    private void requirePreparedTimeStarsReceipt(Object call) {
+        var i=requireTimeStars();
+        if(i.pending!=call || i.prepared || i.preparedReceipt==null || i.adoptionReceipt!=null
+                || !timeStars.isCurrentCall(call) || timeStars.isCurrentPrimitive(call))
+            throw new IllegalStateException("Missing/duplicate original TimeStars preflight receipt");
+        i.prepared=true;
+    }
+    private TimeStarsInvocation requireTimeStarsPrimitive(Class<?> kind) {
+        var i=requireTimeStars();
+        if(i.pending==null || !kind.isInstance(i.pending) || !i.prepared || i.preparedReceipt==null
+                || i.adoptionReceipt!=null || i.completed!=null || !timeStars.isCurrentPrimitive(i.pending))
+            throw new IllegalStateException("No genuine once-only TimeStars primitive-active receipt");
+        return i;
+    }
+    private boolean adoptTimeStarsReserved(CdAssetBytes expected,CdAssetBytes next) {
+        var i=requireTimeStarsPrimitive(CdTimeStars.Publication.class);
+        if(timeStarsPort || drawingTimeStars || queuePort || expected==null || next==null
+                || expected.length()!=31*64 || next.length()!=31*64)
+            throw new IllegalStateException("TimeStars reserved CAS is outside its actual primitive");
+        if(!sameBytes(expected,i.expectedReserved))return false;
+        if(!sameBytes(next,i.readyValues.hudObjects()))throw new IllegalStateException("TimeStars CAS changed prepared full31/nonwrites");
+        timeStarsPort=true;
+        try {
+            verifyTimeStars(i);values=i.readyValues;i.expectedValues=i.readyValues;i.expectedReserved=i.readyValues.hudObjects();
+            i.adoptionReceipt=i.preparedReceipt;
+            verifyTimeStars(i);
+            if(!sameBytes(values.hudObjects(),next))throw new IllegalStateException("TimeStars CAS omitted actual full31 adoption");
+            return true;
+        } finally {timeStarsPort=false;}
+    }
+    private int readTimeStarsPowerup() {
+        var i=requireTimeStarsPrimitive(CdTimeStars.PowerupReadCall.class);
+        if(timeStarsPort || drawingTimeStars || queuePort)throw new IllegalStateException("TimeStars Powerup read reentry");
+        timeStarsPort=true;
+        try {int value=values.level().powerup();i.adoptionReceipt=i.preparedReceipt;verifyTimeStars(i);return value;}
+        finally {timeStarsPort=false;}
+    }
+    private void writeTimeStarsPowerup(int value) {
+        var i=requireTimeStarsPrimitive(CdTimeStars.PowerupWriteCall.class);
+        if(timeStarsPort || drawingTimeStars || queuePort || value!=((CdTimeStars.PowerupWriteCall)i.pending).value())
+            throw new IllegalStateException("TimeStars Powerup write lacks its prepared actual value");
+        timeStarsPort=true;
+        try {
+            verifyTimeStars(i);values=i.readyValues;i.expectedValues=i.readyValues;i.adoptionReceipt=i.preparedReceipt;
+            verifyTimeStars(i);
+            if(values.level().powerup()!=value)throw new IllegalStateException("TimeStars Powerup primitive omitted readback");
+        } finally {timeStarsPort=false;}
+    }
+    private void drawTimeStar(CdReservedObjectBank bank,CdReservedObjectBank.Identity identity) {
+        var i=requireTimeStarsPrimitive(CdTimeStars.DrawCall.class);
+        if(bank!=timeStarBank || identity==null || identity.wholeIndex()!=i.whole || i.drawn || i.cleared
+                || timeStarsPort || drawingTimeStars || queuePort)
+            throw new IllegalStateException("No actual selected once-only reserved TimeStars DrawObject");
+        i.drawn=true;drawingTimeStars=true;
+        try {
+            var image=reservedImage(i.whole);
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),
+                    image.unsignedByte(1),image.unsignedWord(8),image.unsignedWord(0x0C),image.unsignedByte(0x16),
+                    image.unsignedByte(0x19),image.unsignedByte(0x18)),i.camera);
+            if(!i.cleared)throw new IllegalStateException("TimeStars DrawObject omitted its actual entry bit clear");
+            i.adoptionReceipt=i.preparedReceipt;verifyTimeStars(i);
+        } catch(RuntimeException|Error original) {
+            i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;
+        } finally {drawingTimeStars=false;}
+    }
+    private void writeTimeStarsOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean onScreen) {
+        var i=requireTimeStarsPrimitive(CdTimeStars.DrawCall.class);
+        if(ref==null || ref.wholeIndex()!=i.whole || onScreen || !drawingTimeStars || timeStarsPort || queuePort
+                || !i.drawn || i.cleared)throw new IllegalStateException("Only actual TimeStars DrawObject clears bit7 once");
+        queuePort=true;
+        try {
+            verifyTimeStars(i);values=i.readyValues;i.expectedValues=i.readyValues;i.expectedReserved=i.readyValues.hudObjects();
+            i.cleared=true;verifyTimeStars(i);
+        } finally {queuePort=false;}
+    }
+    private void afterTimeStarsOperation(Object call) {
+        var i=requireTimeStars();
+        if(i.pending!=call || !timeStars.isCurrentCall(call) || timeStars.isCurrentPrimitive(call) || !i.prepared
+                || i.preparedReceipt==null || i.adoptionReceipt!=i.preparedReceipt || i.completed!=null
+                || values!=i.readyValues || timeStarsPort || drawingTimeStars || queuePort)
+            throw new IllegalStateException("TimeStars original primitive omitted/duplicated its adoption receipt");
+        var actual=timeStars.currentResult(call);
+        if(call instanceof CdTimeStars.PowerupReadCall && !Objects.equals(actual,values.level().powerup()))
+            throw new IllegalStateException("TimeStars actual Powerup read result differs");
+        i.completed=call;i.completedReceipt=i.adoptionReceipt;verifyTimeStars(i);
+    }
+    private void consumeTimeStarsReceipt(Object call) {
+        var i=requireTimeStars();
+        if(i.pending!=call || i.completed!=call || i.completedReceipt!=i.preparedReceipt || i.preparedReceipt==null
+                || i.adoptionReceipt!=i.preparedReceipt || !timeStars.isCurrentCall(call) || timeStars.isCurrentPrimitive(call))
+            throw new IllegalStateException("Missing/clone/no-op/duplicate TimeStars completion receipt");
+        timeStars.currentResult(call); // Original primitive completed before the next native read/store.
+        i.pending=null;i.completed=null;i.preparedReceipt=null;i.adoptionReceipt=null;i.completedReceipt=null;
+        i.readyValues=null;i.prepared=false;
+    }
+    private void failedTimeStarsOperation(Object call,Throwable original) {
+        try {
+            var i=requireTimeStars();
+            if(!timeStars.isCurrentCall(call) || i.pending!=null && i.pending!=call)
+                throw new IllegalStateException("Foreign failed TimeStars producer");
+            verifyTimeStars(i);
+        } catch(RuntimeException|Error verification) {if(verification!=original)original.addSuppressed(verification);}
     }
 
 }

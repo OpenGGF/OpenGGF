@@ -344,6 +344,20 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(0,frame.environment().globals().timeWarpTimer());
         assertEquals(255,frame.environment().movement().gates().timeWarpDirection());
         assertTrue(Math.abs((short)frame.state().motion().groundVelocity())>=0x600,"The next reached fast-warp reserved read remains a separate owner");
+        for(int call=12885;call<=12886;call++) {
+            replayNextRight(h,jump);
+            step(h,jump);assertLaterRouteOwners(h,frame,source,world,generation);
+            var stars=module.act2LoadState();
+            assertTrue(stars.calls().contains(SonicCdGameModule.Act2LoadCall.TIME_STARS_BODY));
+            assertTrue(stars.calls().contains(call==12885?SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT:SonicCdGameModule.Act2LoadCall.TIME_STARS_ACTIVE));
+            for(int whole=12;whole<16;whole++) {
+                var image=stars.reservedObjects().slice((whole-1)*64,64);
+                assertEquals(3,image.unsignedByte(0));assertEquals(6,image.unsignedByte(0x24));
+                assertEquals(whole-7,image.unsignedByte(0x1C));assertEquals(0x21D528,image.unsignedLong(4));
+            }
+            assertEquals(call==12885?0:0x86,stars.level().powerup());
+            assertEquals(call-12884,frame.environment().globals().timeWarpTimer());
+        }
         assertTrue((frame.state().motion().centreX16_16()>>>16)>preJumpX,"Controller-only jump advances beyond the observed obstruction");
         assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
         assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
@@ -352,7 +366,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right+B returned12884; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884, native PathInit/Main and natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right+B returned12886; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 
@@ -409,9 +423,12 @@ class TestSonicCdAct2ControllerRoute {
             for(int call=12671;call<=12698;call++) {step(h,right);assertLaterRouteOwners(h,frame,source,world,generation+1);}
             renderReplayNextRight(h,right,12699);
             for(int call=12700;call<=12883;call++) {step(h,(call-11214)%128<32?jump:right);assertLaterRouteOwners(h,frame,source,world,generation+1);}
-            imageForExport=renderReplayNextRight(h,jump,12884).clone();
+            renderReplayNextRight(h,jump,12884);
+            step(h,jump);assertLaterRouteOwners(h,frame,source,world,generation+1);
+            assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TIME_STARS_INIT));
+            imageForExport=renderReplayNextRight(h,jump,12886).clone();
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699 and12884; selected Sonic omission changes all nine endpoint pictures; no forward call12885.");
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884 and12886; selected Sonic omission changes all ten endpoint pictures. This last selection precedes star current-art service; no forward call12887 or visible-star claim.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
     }
@@ -510,10 +527,10 @@ class TestSonicCdAct2ControllerRoute {
             int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
             image.setRGB(x, y, argb);
         }
-        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-12884.png").toFile()))
+        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-12886.png").toFile()))
             throw new java.io.IOException("PNG writer unavailable");
-        Files.writeString(directory.resolve("ENGINE-act2-controller-call-12884.txt"),
-                "ENGINE: OpenGGF original-USA controller-only route, actual completed call12884.\n"
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-12886.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call12886.\n"
                 + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
                 + "Full/course complete-value and pixel replay; selected Sonic renderer-only omission contrast.\n"
                 + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");

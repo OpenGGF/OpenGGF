@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,127 raw descriptors,35 finite art readers,
+The retained terrain/player pair,134 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -402,3 +402,30 @@ across five classes with zero failures/errors/skips. Source is
 checked; ten owned reports consumed. Independent combined static review found no
 actionable P1/P2. Actual Act2 private backing, primary patches, same-pass star
 Init and active/current-art qualification remain next; first12885 is unchanged.
+
+## Actual TimeStars and positive12886 — 5 November, latest checkpoint
+
+Actual completed primary patches now join existing Values, then fresh whole12..15
+Init in the same physical pass. The cached raw bank has no live mirror/capture
+partition. Original-pending/primitive/adoption/completion receipts guard reached
+history, source writes, Powerup and Draw; native helper/effects are never replayed.
+Old111 observations append three=114. The original609 test-compile attempt runs
+zero cases; one checked callback assertion is adapted only. Its R2 runs608passes,
+one actual queue-admission failure, zero errors/skips. Independent review reports
+the same P2. Root adds exactly four admitted reserved refs12..15 to Act2's queue,
+keeping its global guard intact. Corrected18World+4Controller pass22/0/0/0; the
+original609 aggregate remains non-green. Exact IDs/source/properties/XML checked.
+
+The bounded ordinary observer returns12886, first12887 `POWERUP_ART`. Real Init
+first12885 and Active12886; retained failed level powerup6 reflects actual BCLR.
+Failed raw96/reserved images are diagnostics only. Observer rethrows the original
+failure and is removed after custody. Permanent positive12886 and ten selected
+Sonic EGL cuts separately pass2/0/0/0, including full/course12884→12885→12886 and
+all older edges. Source`7a225117104afb33f54e76a46f8d8102ed5c9aec4f2170db89a43e086d4fb0dd`,
+09:07:51.030198–09:08:06.291542Z; exact IDs/environment/source/XML checked and only
+two owned reports consumed. No optional PNG exported. Selected12886 uses prior
+12885 CPU: fresh star Init had no Draw, so this does not certify visible stars.
+
+Next: original Powerup source, genuine Main-cleared CPU/tail and current-art
+publication. No natural12887, active-star pixels, save210/outgoing lifetime,
+complete-act, native or regional parity is certified by the scopes above.

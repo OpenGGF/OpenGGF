@@ -295,6 +295,17 @@ or capture partition. Same-value/native receipt limits remain with the private
 World bridge. This prerequisite does not advance12884/first12885 or certify star
 pixels, current-art service, complete Act2 or regional parity.
 
+Actual primary reserved patches and same-pass TimeStar Init/Active now execute.
+Original609 preparation has zero tests; R2 has608passes/one queue-admission
+failure/zero errors/skips. The independently identified missing12..15 admission
+is corrected locally;18newWorld+4Controller pass22 separately, with original609
+non-green. The permanent positive12886/ten-cut EGL pair passes2 separately,
+preserving every older full/course edge and adding12884→12885→12886. A bounded
+observer rethrows first12887 `POWERUP_ART`; retained request-bit clear is native
+prefix evidence, not current pixels or replay ingress. Fresh Init creates no
+Draw, so selected12886 image qualification does not certify visible stars. Native
+CPU/tail/current service and complete-act/regional/native parity remain open.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)
