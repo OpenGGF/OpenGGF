@@ -1,5 +1,49 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — live four-family Act2 binding and positive10866
+
+The same ordinary controller now reaches10866, with natural Boulder1B, Platform21,
+Anton3F and normal/damaged Pata3E bodies in the real increasing physical walk.
+Full/course crossings10763→10764,10778→10779 and10865→10866 extend the existing
+post crossing10718→10719. No actor/global/camera/art/bank/queue seed or extra service
+is used. The next actual10867 stop is unbound Tamabboh22, physical54/X064F/Y0246,
+subtype0/saved14, followed by Float12. That failed step's partial pool remains
+external diagnostic evidence, never a preceding closed-cut oracle.
+
+Cached bodies retain existing source data/algorithms. Private adapters prebuild
+actual Solid pool/Frame/ledger outputs, pin full96/source/current owner values,
+and consume exact producer-held pending calls, including no-op raw angle writes.
+Cloned public records and equal same-owner snapshots cannot mint another store
+inside a real callback. Completed observations validate receipts but never drive
+work. Completed Init parent/first-free child images cannot regress during Draw.
+Pata preserves native animation failure reset/decrement/speed/FF-FE index prefixes;
+the successful shared transition still receives its original image exactly once.
+No new art, PLC, phase or capture owner was added.
+
+The134 run is132pass/one stale test sprite-bit expectation/one observer error,
+0skips at source8c79fc44…ad072e,02:21:47.848822–02:23:17.535204Z,0s admission and
+1m32s precompile. Anton/Pata15 and Pata36 pass. Source-backed carry now genuinely
+raises the player one16px terrain block through shared Top and passes actual room/
+floor checks; the original ground-height setup is retained as native FLOOR_UNDER_OBJECT
+detach. That new negative initially compared helper sprite bit7 before DrawObjects
+with its later selected state; Root now compares every other motion field and
+derives the native late bit from actual CPU provenance. No production tuning.
+
+Next25 is24pass/one Root route-oracle failure,0skips at source0b35bee6…d91c07,
+02:29:45.097534–02:30:25.831916Z,0s admission/35.536s precompile; all22 World cases
+pass. Root had copied platform-slot presence from failed10867's already-reached
+spawner into earlier10865. Corrected positive10866 inspects its own completed pool
+and all live platform map/tile/routine values. The exact permanent method passes
+1T/0F/0E/0S at source6d839421…0223e5,02:34:16.840547–02:34:23.724780Z,
+0s admission/35.255s precompile. All134,25 and1 literal identities/properties/XML
+hashes were inspected;18,4 and2 owned reports consumed under the build lock.
+These scopes remain distinct, with no green134/25/full-suite/native parity claim.
+
+The method, not an expected future failure, now maintains the positive route.
+Source reviews and their bounded Root fixes remain recorded externally. Later
+route EGL capture is a separate pending source packet, not proof inferred from
+Ready. The current actual screenshot still belongs to first Act2 call10448.
+
 ## 5 November 2026 — authenticated Act2 Anton/Pata metadata
 
 The detached original-USA R12A inventory appends five complete raw views96→101:

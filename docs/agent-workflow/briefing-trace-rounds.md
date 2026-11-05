@@ -71,6 +71,24 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A failed step's partial images are not the previous closed cut (2026-11-05, CD
+Act2 receiving). Native placement can spawn/reuse slots before the later dynamic
+owner stops; do not promote that partial occupancy into a positive earlier route
+assertion. Pin the completed endpoint itself and compare full captures at the
+same phase. A helper result is likewise earlier than the final draw pass: native
+DrawObjects may legitimately change sprite bit7 after collision. Derive that
+late write from its real selected occurrence while checking every other field.
+The [Act2 record](../architecture/plans/2026-10-23-sonic-cd-implementation.md#5-november-2026--live-four-family-act2-binding-and-positive10866)
+retains both rejected oracles and their separate run evidence.
+
+Equal values and a live invocation do not authenticate a callback occurrence
+(2026-11-05, CD native angle/Solid ports). A wrapper can submit a fresh public
+record with a same-owner equal snapshot and then throw; end-of-return receipt
+comparison happens too late to prevent a forged retained prefix. Bind adoption to
+the cached producer's exact currently pending call, consume it once, and preserve
+later genuine same-value calls. Keep full-source/Frame/phase validation as well.
+Completed effects remain observations and never supply replay authority.
+
 Submodule display settings can hide intended reference changes (2026-10-27,
 CD integration). Local `submodule.docs/scddisasm.ignore=all` omitted the CD gitlink
 from ordinary and cached diff/stat output even when it was staged or committed.

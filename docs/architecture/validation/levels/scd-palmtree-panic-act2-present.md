@@ -23,14 +23,14 @@ The retained terrain/player pair,101 raw descriptors,35 finite art readers,
 
 | ID | Observed contract and setup | Tests / limits |
 | --- | --- | --- |
-| ENTRY | Actual controller-only old Results→black fade→FF/IPX→same-World FULL1; genuine normal-load selectors, stage3/std1,22 FromBlack services, Title release and ordinary Right through10763. No actor/global/camera/art/clock/queue seed. | `TestSonicCdAct2ControllerRoute`; fresh World fixtures separately use a labelled Results-object-only trigger. Alternate entries and sustained traversal remain open. |
+| ENTRY | Actual controller-only old Results→black fade→FF/IPX→same-World FULL1; genuine normal-load selectors, stage3/std1,22 FromBlack services, Title release and ordinary Right through10866. No actor/global/camera/art/clock/queue seed. | `TestSonicCdAct2ControllerRoute`; fresh World fixtures separately use a labelled Results-object-only trigger. Alternate entries and sustained traversal remain open. |
 | LOAD | New Frame/source and production generation at actual profile admission; missing optional next pair leaves the old returned Frame/captures healthy. | `TestSonicCdAct2LoadingWorld` four cases. Actual legacy four-argument source exercises absence; no broad after-admission failure exemption. |
-| OBJECT | Six actual Present placements; reserved Title4 allocates fresh children38..45 before placed bodies. Later physical children execute the same pass. Ring/Spring/Animal/Monitor/TimePost and HUD use actual source bindings. | Ordinary Right through10763 includes natural subtype8/9 post Init/Main; Title children retire naturally. First10764 unbound ID1B is Boulder; broader families remain open. Separate body/source components do not prove later World interactions. |
+| OBJECT | Six actual Present placements; reserved Title4 allocates fresh children38..45 before placed bodies. Later physical children execute the same pass. Ring/Spring/Animal/Monitor/TimePost/Boulder/Platform/Anton/Pata and HUD use actual source bindings. | Ordinary Right through10866 includes actual native Init/Main and increasing physical walk; Title children retire naturally. First10867 unbound ID22 is Tamabboh; broader families remain open. Separate body/source components do not prove later World interactions. |
 | EVENT | Native palette/section/scroll/animation tail completes after the actual128-object walk. Title PLC2 requests eleven descriptors/294 tiles at parent129, drains in22 source-ordered services, then clears locks/deletes at parent151; player0 sees unlocked controls next call. | Actual Title/queued-art/control-release and64 following Right calls checked. No duration proxy, preload or extra service substitutes for source order. Later section events remain unqualified. |
 | CAMERA | Actual centre WORD80/389 and native viewport, PPZ2 foreground event selection, three-cloud BG deformation and physical planes. | Data/scroll/plane components plus initial World. Width sweep, scrolling edges, locks/release and long traversal remain open. |
 | BOSS | No Act2 boss route reached. | Unassessed. |
 | LIFE | Original MAINVARS score/lives/bank carry follows actual writers; normal load clears its own fields. | Initial handoff only. Death, checkpoint capture/respawn, repeated restart and persistence breadth remain open. |
-| REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719 and10762→10763. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
+| REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719, Boulder10763→10764, Anton10778→10779 and10865→10866. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
 | DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
 | CLEANUP | Reject queued capture/restore/direct scroll/service/recursive overlay without closing the healthy producer. Rejected active-atlas close retains its ledger; cleanup retry retires all488 actually selected uploads and preserves another producer. | Actual EGL case.488 is selected uploads, not the1597-tile sparse current window or a whole-act completion metric. |
 | EXIT | No Act2 completion or outgoing programme reached. | Open. |
@@ -50,6 +50,27 @@ nonpassing82 run at source`caee9020412c214efe9fb73121a88881064d4fd026d80213f9c85
 hashes were inspected. The run has80passes/one carry assertion/one diagnostic
 observer error, zero skips; no combined green82 or new World qualification is
 claimed. The diagnostic route returns10778 and next reaches Anton3F at10779.
+
+Live Boulder/Platform and Anton/Pata bindings now reuse their cached native
+components on the real loaded World. Full96/source/State/Environment/queue/ledger
+checks retain exact completed/stopped helper output; pending producer identities
+reject cloned public call values before publication, including thrown-wrapper paths.
+Completed Init/child images stay pinned through Draw. Pata's successful shared
+animator runs once on its original image; finite-read faults retain the caller's
+reached reset/decrement/speed/index stores. These are local contracts, not a new
+capture owner or replay of effects as commands.
+
+The134 selection had132passes/one test-only stale end-of-frame sprite-bit assertion/
+one diagnostic observer error,0skips. Anton/Pata15 and Pata36 passed. The next25
+selection had24passes and one newly authored fixed-slot assertion; Boulder/Platform22
+passed. Root fixed that route oracle to inspect completed10866, not slot occupancy
+from a later failed-spawn prefix. The final exact method passes1T/0F/0E/0S at
+source`6d839421bc3e2c6c0913d57668e80ec6c9554fea534e6a310dc9d71ee60223e5`,
+02:34:16.840547–02:34:23.724780Z on5November,0s admission,35.255s test precompile.
+All literal identities/properties/XML hashes were inspected; owned reports consumed.
+No combined green134/25 follows. Current positive10866 and all four crossing scopes
+are qualified; first failed10867 Tamabboh remains a separate diagnostic. No later
+GPU capture or matched native screenshot is claimed here.
 
 ## Exact qualification
 
@@ -93,8 +114,8 @@ parity or region certificate.
 
 ## Next concrete route
 
-Bind the measured Boulder1B World path and existing Platform family using their
-qualified R12A views, then continue ordinary controls to the next real stop.
+Bind the measured Tamabboh22 World path and the following FloatBlock12 family
+using their actual R12A views, then continue ordinary controls to the next real stop.
 Source inventory identifies Breakable Wall36 as the first new algorithm family;
 existing-but-unbound families occur earlier. Its source location is not a measured
 route frontier. Extend lifecycle/configuration and rewind obligations as their

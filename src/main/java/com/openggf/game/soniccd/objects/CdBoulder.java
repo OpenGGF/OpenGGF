@@ -223,6 +223,12 @@ public final class CdBoulder {
     private final PrefixSolidCommit prefixCommit;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private transient PrefixSolidCall pendingPrefixSolidCall;
+
+    /** Value-equal public records cannot replace the actual pending synchronous helper call. */
+    public boolean isCurrentPrefixSolidCall(PrefixSolidCall call) {
+        return running && call != null && pendingPrefixSolidCall == call;
+    }
 
     public CdBoulder(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject sharedSolid,
                      SolidCommit commit, DrawObjectCall drawObject) {
@@ -251,6 +257,16 @@ public final class CdBoulder {
     public static CdBoulder fromPastAssets(CdObjectPlacementRuntime placement, CdR11bAssets owner,
                                            CdSolidObject sharedSolid, PrefixSolidCommit commit, DrawObjectCall drawObject) {
         return new CdBoulder(placement, pastAssets(owner), sharedSolid, commit, drawObject);
+    }
+    /** Same retained R12A placement/source, opting into the existing plain-Solid prefix publication. */
+    public static CdBoulder fromAct2Assets(CdObjectPlacementRuntime placement,
+                                           com.openggf.game.soniccd.level.CdR12aObjectAssets owner,
+                                           CdSolidObject sharedSolid, PrefixSolidCommit commit,
+                                           DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement, "actual placement"); Objects.requireNonNull(owner, "actual R12A source");
+        if (!placement.sameAct2Source(owner))
+            throw new IllegalArgumentException("Boulder requires the same retained R12A placement/source");
+        return new CdBoulder(placement, presentAssets(Assets.fromAct2Assets(owner)), sharedSolid, commit, drawObject);
     }
     private static NativeAssets pastAssets(CdR11bAssets owner) {
         Objects.requireNonNull(owner, "owner");
@@ -364,15 +380,17 @@ public final class CdBoulder {
         var ready = CdObjectPool.overlay(cut, images); pool.validateRestore(ready);
         if (!cut.slots().equals(pool.capture().slots()))
             throw new IllegalStateException("Past Boulder helper changed its pure actual full96 source");
+        var call = new PrefixSolidCall(cut, inputs.player(), inputs.globals(), outcome);
+        pendingPrefixSolidCall = call;
         try {
-            prefixCommit.commit(new PrefixSolidCall(cut, inputs.player(), inputs.globals(), outcome));
+            prefixCommit.commit(call);
         } catch (RuntimeException | Error original) {
             // The publication owner may already have adopted a legitimate partial prefix. Retain it;
             // report unrelated-slot corruption without replacing the original callback failure.
             try { requirePrefixNonwrites(pool, cut, images); }
             catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
             throw original;
-        }
+        } finally { pendingPrefixSolidCall = null; }
         if (!ready.slots().equals(pool.capture().slots()))
             throw new IllegalStateException("Past Boulder Solid commit did not publish exactly its full96 output/nonwrites");
         if (stopped != null) throw stopped.stop().originalException();

@@ -172,9 +172,12 @@ Unreleased. The earlier development themes remain in
   retirement are checked in EGL. The real Title slide-out queues and services its
   art before releasing controls. Cached Monitor/Time Post bodies now use genuine
   shared Solid, floor-angle, direction and ordered voice publications; ordinary
-  Right returns through10763 with full/course replay across both natural posts.
-  Boulder/Platform and Anton/Pata-Bata metadata reuses existing art and math;
-  their further World binding qualification and later Act2 traversal remain open.
+  Right returns through10866 with full/course replay across natural post, Boulder
+  and Anton admissions. Cached Boulder, Platform, Anton and Pata-Bata bodies share
+  existing art, math, terrain and Frame owners. Exact pending-call identities guard
+  synchronous publications, including unchanged values and throwing wrappers; Pata
+  retains reached animation-fault writes without duplicating successful transitions.
+  Tamabboh is the next measured unbound family; later Act2 traversal remains open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
   goal-bound and warp clears. Live Signpost and Results bindings preserve native

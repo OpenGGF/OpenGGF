@@ -172,6 +172,12 @@ public final class CdAnton {
     private final PrimaryAngleCommit angleCommit;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private transient PrimaryAngleCall pendingPrimaryAngleCall;
+
+    /** True only for the cached body's currently suspended synchronous floor-store call. */
+    public boolean isCurrentPrimaryAngleCall(PrimaryAngleCall call) {
+        return running && call != null && pendingPrimaryAngleCall == call;
+    }
 
     public CdAnton(CdObjectPlacementRuntime placement, Assets assets, CdPlayerTerrain terrain,
                    PrimaryAngleCommit angleCommit, DrawObjectCall drawObject) {
@@ -320,7 +326,9 @@ public final class CdAnton {
         var cut = c.pool.capture();
         var call = new PrimaryAngleCall(cut, c.state, c.primaryAngle, value);
         requireCurrentCut(c, call);
-        angleCommit.commit(call); // Root performs one actual existing Frame store synchronously.
+        pendingPrimaryAngleCall = call;
+        try { angleCommit.commit(call); }
+        finally { pendingPrimaryAngleCall = null; }
         requireCurrentCut(c, call); // Never adopt/overwrite any unexpected callback pool image.
         c.primaryAngle = value; // Invocation-local expected byte for the NEXT reached store only.
         c.effects.add(new PrimaryAngleCommitted(call));

@@ -326,14 +326,54 @@ public final class CdPataBata {
     private void animate(int wholeIndex) {
         var pool = runtime.pool();
         var s = pool.state(wholeIndex);
-        var out = CdObjectAnimation.step(new CdObjectAnimation.State(
-                s.unsignedByte(ANIMATION), s.unsignedByte(PREVIOUS_ANIMATION),
-                s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME), s.unsignedByte(MAP_FRAME),
-                s.spriteFlags(), s.flags(), s.routine(), s.unsignedByte(ROUTINE_2)), assets.animations());
+        CdObjectAnimation.State out;
+        try {
+            out = CdObjectAnimation.step(new CdObjectAnimation.State(
+                    s.unsignedByte(ANIMATION), s.unsignedByte(PREVIOUS_ANIMATION),
+                    s.unsignedByte(ANIMATION_FRAME), s.unsignedByte(ANIMATION_TIME), s.unsignedByte(MAP_FRAME),
+                    s.spriteFlags(), s.flags(), s.routine(), s.unsignedByte(ROUTINE_2)), assets.animations());
+        } catch (UnsupportedOperationException original) {
+            // The successful pure transition is invoked exactly once on its original image.
+            // On a selected finite-read fault, preserve only native writes already reached.
+            try { publishAnimationReadFailurePrefixes(wholeIndex,s); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        }
         pool.write(s.moveByte(ANIMATION, out.animationId()).moveByte(PREVIOUS_ANIMATION, out.previousId())
                 .moveByte(ANIMATION_FRAME, out.scriptIndex()).moveByte(ANIMATION_TIME, out.timer())
                 .moveByte(MAP_FRAME, out.mapFrame()).moveByte(SPRITE_FLAGS, out.spriteFlags())
                 .moveByte(FLAGS, out.statusFlags()).moveByte(ROUTINE, out.routine()).moveByte(ROUTINE_2, out.routine2()));
+    }
+
+    /** Object Animate.asm:20-33,59-76: caller-owned prefix writes at the failing read only. */
+    private void publishAnimationReadFailurePrefixes(int wholeIndex,CdObjectState original) {
+        var pool=runtime.pool();
+        if (!pool.state(wholeIndex).equals(original)) throw new IllegalStateException("Animation changed its pure source before failure");
+        var state=original;int animation=state.unsignedByte(ANIMATION);
+        if (animation!=state.unsignedByte(PREVIOUS_ANIMATION))
+            state=state.moveByte(PREVIOUS_ANIMATION,animation).moveByte(ANIMATION_FRAME,0).moveByte(ANIMATION_TIME,0);
+        state=state.addByte(ANIMATION_TIME,-1);pool.write(state);
+        if (state.signedByte(ANIMATION_TIME)>=0) return;
+        var table=assets.animations();var bytes=table.bytes();
+        if (animation>=table.scriptCount()) return;
+        long script=(long)table.tableOffset()+(short)bytes.unsignedWord(table.tableOffset()+2*animation);
+        int speed=animationPrefixByte(bytes,script);if(speed<0)return;
+        state=state.moveByte(ANIMATION_TIME,speed);pool.write(state);
+        int index=state.unsignedByte(ANIMATION_FRAME),frame=animationPrefixByte(bytes,script+1+index);
+        if(frame<0)return;
+        if(frame==0xFF) {
+            state=state.moveByte(ANIMATION_FRAME,0);pool.write(state);
+            animationPrefixByte(bytes,script+1);
+        } else if(frame==0xFE) {
+            int back=animationPrefixByte(bytes,script+2+index);if(back<0)return;
+            index=(index-back)&255;state=state.moveByte(ANIMATION_FRAME,index);pool.write(state);
+            animationPrefixByte(bytes,script+1+index);
+        } else if(frame==0xFD) {
+            animationPrefixByte(bytes,script+2+index);
+        }
+    }
+    private static int animationPrefixByte(CdAssetBytes bytes,long address) {
+        return address<0 || address>=bytes.length() ? -1 : bytes.unsignedByte((int)address);
     }
 
     /** Object Spawner.asm:388-399,442-446, d0.w = LIVE anchor X. Entry bit 7 comes from the actual draw port. */

@@ -34,6 +34,16 @@ final class SonicCdAct2LoadingVisit {
     private final CdRing ring;
     private final CdSpring spring;
     private final CdAnimal animal;
+    private final CdAnton anton;
+    private final CdPataBata pataBata;
+    private transient AntonInvocation activeAnton;
+    private transient PataInvocation activePata;
+    private boolean antonPort, drawingAnton, drawingPata;
+    private final CdBoulder boulder;
+    private final CdPlatform platform;
+    private transient BoulderInvocation activeBoulder;
+    private transient PlatformInvocation activePlatform;
+    private boolean boulderPort, drawingBoulder, platformPort, drawingPlatform;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
     private transient MonitorInvocation activeMonitor;
@@ -169,6 +179,11 @@ final class SonicCdAct2LoadingVisit {
         var objectAssets=assets.objects();
         var sharedSolid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         var sharedTerrain=CdPlayerTerrain.fromStageTerrain(assets.terrain());
+        anton=new CdAnton(placement,CdAnton.Assets.fromAct2Assets(objectAssets),sharedTerrain,this::commitAntonPrimaryAngle,this::drawAnton);
+        pataBata=new CdPataBata(placement,CdPataBata.Assets.fromAct2Assets(objectAssets,player),this::drawPataBata);
+        boulder=CdBoulder.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitBoulderSolid,this::drawBoulder);
+        platform=new CdPlatform(placement,CdPlatform.Assets.fromAct2Assets(objectAssets),new CdPlayerMath(player.player()),
+                sharedTerrain,sharedSolid,this::commitPlatformSolid,this::commitPlatformPrimaryAngle,this::drawPlatform);
         var monitorAssets=CdMonitor.Assets.fromAct2Assets(objectAssets);
         monitor=CdMonitor.withPastOwner(placement,monitorAssets,sharedSolid,sharedTerrain,new CdMonitor.PrefixSolidOwner() {
             @Override public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut cut) { return preflightMonitorSolid(cut); }
@@ -217,6 +232,7 @@ final class SonicCdAct2LoadingVisit {
     }
     /** Read-only renderer revalidation can observe the retained selection during its own draw. */
     private void requireIdleOwners() {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         if (activeMonitor!=null || monitorPort || drawingMonitor || servicing || runningObjects || drawQueue!=null || activePrimary!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
                 || activeDrain!=null || activeTitle!=null || reservedPort || ringPort || springPort || queuePort || titlePort
@@ -225,6 +241,7 @@ final class SonicCdAct2LoadingVisit {
         frame.captureShared();
     }
     private void requireCallback() {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         if (activeMonitor!=null || monitorPort || drawingMonitor || !servicing || runningObjects || activeTitle!=null || activeRing!=null || activeSpring!=null || activeReserved!=null)
             throw new IllegalStateException("No actual Act2 V-int callback");
@@ -357,6 +374,7 @@ final class SonicCdAct2LoadingVisit {
 
     /** Native Main405-432. Only the actual completed physical pass can reach this continuation. */
     private void finishOrdinaryMain() {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         if (activeMonitor != null || monitorPort || drawingMonitor || !runningObjects || servicing || activeDrain != null || activeReserved != null
                 || activeRing != null || activeSpring != null || reservedPort || drawingReserved || ringPort || drawingRing
@@ -454,6 +472,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void verifyDrain(DrainInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var actual = placement.capture();
@@ -560,6 +579,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runReservedHud(int whole) {
+        requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
             throw new IllegalStateException("Actual Monitor/Post invocation owns this object cut");
         if (!runningObjects || activeReserved != null || activeRing != null || activeSpring != null || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || queuePort)
@@ -588,6 +608,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private ReservedInvocation requireReservedInvocation(int whole) {
+        requireBoulderPlatformIdle();
         var invocation = activeReserved;
         if (!runningObjects || servicing || activeRing != null || ringPort || drawingRing || activeSpring != null || springPort || drawingSpring || invocation == null || invocation.whole != whole
                 || invocation.body != reservedHud || invocation.sourceFrame != frame
@@ -599,6 +620,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void verifyReservedInvocation(ReservedInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
@@ -830,6 +852,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runRing(int whole) {
+        requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
             throw new IllegalStateException("Actual Monitor/Post invocation owns this object cut");
         module.requireAct2LoadingVisit(this);
@@ -872,6 +895,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private RingInvocation requireRingInvocation(RingInvocation invocation, CdObjectPool pool, int whole) {
+        requireBoulderPlatformIdle();
         if (invocation == null || activeRing != invocation || invocation.pool != pool || pool != placement.pool()
                 || invocation.whole != whole || whole < 32 || whole >= 128 || pool.state(whole).id() != 0x10
                 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -881,6 +905,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void verifyRingInvocation(RingInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeRing != invocation || !runningObjects || servicing || activeReserved != null || activeSpring != null || springPort || drawingSpring || reservedPort || drawingReserved
@@ -1114,6 +1139,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runSpring(int whole) {
+        requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
             throw new IllegalStateException("Actual Monitor/Post invocation owns this object cut");
         module.requireAct2LoadingVisit(this);
@@ -1141,6 +1167,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private SpringInvocation requireSpringInvocation(CdObjectPool pool, int whole) {
+        requireBoulderPlatformIdle();
         var invocation = activeSpring;
         if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
                 || whole < 32 || whole >= 128 || pool.state(whole).id() != CdSpring.OBJECT_ID
@@ -1151,6 +1178,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void verifySpringInvocation(SpringInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeSpring != invocation || !runningObjects || servicing || activeReserved != null || activeRing != null || reservedPort || drawingReserved || ringPort || drawingRing
@@ -1508,6 +1536,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runAnimal(int whole) {
+        requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
             throw new IllegalStateException("Actual Monitor/Post invocation owns this object cut");
         module.requireAct2LoadingVisit(this);
@@ -1546,6 +1575,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void verifyAnimalContext(AnimalInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (!invocation.active || invocation.body != animal || !runningObjects || servicing || activeDrain != null || activeReserved != null || activeRing != null
@@ -1946,6 +1976,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runObjects(int levelFrame) {
+        requireBoulderPlatformIdle();
         if (runningObjects || drawQueue!=null || activeTitle!=null) throw new IllegalStateException("Act2 physical walk reentry");
         runningObjects=true;
         try {
@@ -1978,6 +2009,10 @@ final class SonicCdAct2LoadingVisit {
                     boolean post=placement.pool().state(whole).subtype()>=8;
                     runMonitor(whole); call(post ? TIME_POST_BODY : MONITOR_BODY);
                 }
+                else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
+                else if(id==CdPataBata.OBJECT_ID) { runPataBata(whole); call(PATA_BATA_BODY); }
+                else if(id==CdBoulder.OBJECT_ID) { runBoulder(whole); call(BOULDER_BODY); }
+                else if(id==CdPlatform.OBJECT_ID) { runPlatform(whole); call(PLATFORM_BODY); }
                 else throw module.act2Boundary(SonicCdGameModule.Act2Boundary.DYNAMIC_OBJECTS);
                 if(whole==31) call(RESERVED_OBJECTS);
             }
@@ -1996,6 +2031,11 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME.nativeAddress(),view(CdR12aProfile.Asset.MAP_SPR_MONITOR_TIME).bytes(),0,20));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_RING.nativeAddress(),view(CdR12aProfile.Asset.MAP_SPR_RING).bytes(),0,9));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.TITLE_CARD_MAPPINGS.nativeAddress(),view(CdR12aProfile.Asset.TITLE_CARD_MAPPINGS).bytes(),0,9));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_BOULDER.nativeAddress(),assets.objects().boulder().mappings(),0,1));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PLATFORM.nativeAddress(),assets.objects().platform().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ANTON.nativeAddress(),assets.objects().anton().mappings(),0,4));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA1.nativeAddress(),assets.objects().pataBataNormal().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2.nativeAddress(),assets.objects().pataBataDamaged().mappings(),0,3));
         for(int root:new int[]{0,6,80}) roots.add(new CdObjectMappings.DeclaredTable(
                 CdR12aProfile.Asset.MAP_SPRING.nativeAddress(),assets.objects().springMappings(),root,3));
         var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
@@ -2003,6 +2043,10 @@ final class SonicCdAct2LoadingVisit {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
                 if(activeDrain!=null) return readDrainingSlot(ref);
                 if(activeTitle!=null) return readTitleDrawSlot(ref);
+                if(activeBoulder!=null) return readBoulderDrawSlot(ref);
+                if(activePlatform!=null) return readPlatformDrawSlot(ref);
+                if(activeAnton!=null) return readAntonDrawSlot(ref);
+                if(activePata!=null) return readPataDrawSlot(ref);
                 if(activeMonitor!=null) return readMonitorDrawSlot(ref);
                 return ref.wholeIndex()<32 ? readReservedDrawSlot(ref)
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
@@ -2011,6 +2055,10 @@ final class SonicCdAct2LoadingVisit {
                 if(activeDrain!=null) { writeDrainingOnScreen(ref,value); return; }
                 if(ref.wholeIndex()==0) { writePrimaryOnScreen(ref,value); return; }
                 if(activeTitle!=null) { writeTitleOnScreen(ref,value); return; }
+                if(activeBoulder!=null) { writeBoulderOnScreen(ref,value); return; }
+                if(activePlatform!=null) { writePlatformOnScreen(ref,value); return; }
+                if(activeAnton!=null) { writeAntonOnScreen(ref,value); return; }
+                if(activePata!=null) { writePataOnScreen(ref,value); return; }
                 if(activeMonitor!=null) { writeMonitorOnScreen(ref,value); return; }
                 if(ref.wholeIndex()<32) writeReservedOnScreen(ref,value);
                 else if(activeSpring!=null) writeSpringOnScreen(ref,value); else writeRingOnScreen(ref,value);
@@ -2119,6 +2167,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private TitleInvocation requireTitle() {
+        requireBoulderPlatformIdle();
         var i=activeTitle; module.requireAct2LoadingVisit(this);
         var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if(i==null || !runningObjects || servicing || titlePort || activePrimary!=null || activeRing!=null || activeSpring!=null || activeReserved!=null
@@ -2153,6 +2202,7 @@ final class SonicCdAct2LoadingVisit {
             throw new IllegalStateException("Stale Title selected64/full96/source cut");
     }
     private void runTitle(int whole) {
+        requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
             throw new IllegalStateException("Actual Monitor/Post invocation owns this object cut");
         if(activeTitle!=null || activeRing!=null || activeSpring!=null || activeReserved!=null || activeDrain!=null)
@@ -2338,6 +2388,7 @@ final class SonicCdAct2LoadingVisit {
                                 Optional<CdPlayerBody.DisplayEligibility> display) { }
 
     private void runPrimaryMain(int levelFrame) {
+        requireBoulderPlatformIdle();
         if(activeMonitor!=null || monitorPort || drawingMonitor)
             throw new IllegalStateException("Actual Monitor/Post invocation owns this object cut");
         if (!runningObjects || servicing || activePrimary != null || activeDrain != null
@@ -2494,6 +2545,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void verifyPrimary(PrimaryInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         var now = placement.capture();
@@ -2601,6 +2653,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private void runMonitor(int whole) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         if (activeTitle != null || titlePort || drawingTitle || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -2638,6 +2691,7 @@ final class SonicCdAct2LoadingVisit {
     }
 
     private MonitorInvocation requireMonitorInvocation(CdObjectPool pool, int whole) {
+        requireBoulderPlatformIdle();
         var invocation = activeMonitor;
         if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
                 || whole < 32 || whole >= 128 || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
@@ -2648,6 +2702,7 @@ final class SonicCdAct2LoadingVisit {
         return requireMonitorInvocation(placement.pool(), activeMonitor == null ? -1 : activeMonitor.whole);
     }
     private void verifyMonitorInvocation(MonitorInvocation invocation) {
+        requireBoulderPlatformIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (activeMonitor != invocation || activeTitle != null || titlePort || drawingTitle || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
@@ -3246,6 +3301,1431 @@ final class SonicCdAct2LoadingVisit {
         } catch (RuntimeException | Error failure) {
             verifyMonitorCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure); throw failure;
         } finally { queuePort = false; }
+    }
+
+
+
+    private void requireAntonPataIdle() {
+        if(activeAnton!=null || activePata!=null || antonPort || drawingAnton || drawingPata)
+            throw new IllegalStateException("Another actual Act2 enemy source scope is active");
+    }
+    private void requireBoulderPlatformIdle() {
+        requireAntonPataIdle();
+        if (activeBoulder!=null || activePlatform!=null || boulderPort || drawingBoulder || platformPort || drawingPlatform)
+            throw new IllegalStateException("Another actual Act2 family scope is active");
+    }
+    private final class BoulderInvocation {
+        private final CdBoulder body = boulder;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR12aTerrainAssets sourceAssets = assets;
+        private final Object stageSource = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Values base = values;
+        private Values expectedValues = base;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.captureAct2Scroll();
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private CdObjectPool.Snapshot currentPool = pool.capture();
+        private CdSolidObject.Outcome adopted;
+        private CdObjectState drawSource;
+        private boolean solidTaken, stopped, drawn, screenCleared;
+        private BoulderInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.act2ForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        }
+    }
+
+    private void runBoulder(int whole) {
+        requireAntonPataIdle();
+        module.requireAct2LoadingVisit(this);
+        if (activeTitle != null || titlePort || drawingTitle || !runningObjects || servicing || activeDrain != null || activePrimary != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeBoulder != null || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || monitorPort || drawingMonitor || boulderPort || drawingBoulder || queuePort
+                || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdBoulder.OBJECT_ID
+                || values.phase() != BEGIN_LEVEL || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Act2 Boulder dispatch");
+        var invocation = new BoulderInvocation(whole); activeBoulder = invocation;
+        try {
+            var environment = frame.environment(); var gates = environment.movement().gates();
+            var result = boulder.run(whole, new CdBoulder.Globals(gates.timeZone(), gates.timeWarpDirection(), invocation.camera.xWord()),
+                    new CdBoulder.SolidInputs(springPlayer(), new CdSolidObject.Gates(environment.globals().debugMode(), gates.miniSonic()), springGlobals()));
+            verifyBoulderInvocation(invocation); requireBoulderOtherImages(invocation);
+            var observedSolid = result.effects().stream().filter(CdBoulder.Solid.class::isInstance)
+                    .map(CdBoulder.Solid.class::cast).toList();
+            boolean needsSolid = (invocation.entry.spriteFlags() & 0x80) != 0;
+            if (invocation.solidTaken != needsSolid || observedSolid.size() != (needsSolid ? 1 : 0)
+                    || needsSolid && (!(invocation.adopted instanceof CdSolidObject.Completed completed)
+                    || observedSolid.getFirst().result() != completed.completedResult()))
+                throw new IllegalStateException("Boulder lacks its exact reached native Solid receipt");
+            if (invocation.stopped || !invocation.drawn || !invocation.screenCleared
+                    || !result.state().equals(invocation.pool.state(whole)))
+                throw new IllegalStateException("Boulder returned without its actual completed Solid/Draw/source cut");
+        } catch (RuntimeException | Error failure) {
+            if (invocation.adopted instanceof CdSolidObject.NativeStopped nativeStop) {
+                var original = nativeStop.stop().originalException();
+                if (failure != original) original.addSuppressed(failure);
+                verifyBoulderFailure(invocation, original); throw original;
+            }
+            verifyBoulderFailure(invocation, failure); throw failure;
+        } finally { activeBoulder = null; }
+    }
+
+    private BoulderInvocation requireBoulderInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeBoulder;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual cached Boulder callback at this physical pointer");
+        verifyBoulderInvocation(invocation); return invocation;
+    }
+    private void verifyBoulderInvocation(BoulderInvocation invocation) {
+        requireAntonPataIdle();
+        module.requireAct2LoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeTitle != null || titlePort || drawingTitle || activeBoulder != invocation || !runningObjects || servicing || activeDrain != null || activePrimary != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || monitorPort || drawingMonitor
+                || invocation.body != boulder || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.stageSource != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || invocation.world != mode.getWorldSession()
+                || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || invocation.expectedValues != values || values.phase() != BEGIN_LEVEL || invocation.expectedSounds != sounds
+                || !placement.status().equals(invocation.status) || !presentation.sameAct2Scroll(invocation.scroll)
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Boulder changed another owner or retained a stale actual World/Frame cut");
+        requireBoulderOtherImages(invocation);
+    }
+    private void requireBoulderOtherImages(BoulderInvocation invocation) {
+        var actual = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        for (var row : invocation.currentPool.slots()) if (row.identity().wholeIndex() != invocation.whole
+                && !row.equals(invocation.pool.state(row.identity().wholeIndex())))
+            throw new IllegalStateException("Boulder changed an unrelated complete physical image");
+        var expected = invocation.currentPool.slots().get(invocation.whole-32);
+        boolean nativeSource = source.equals(expected);
+        if (!invocation.drawn && !invocation.solidTaken && invocation.entry.routine()==0) {
+            var init = boulderInitHeader(invocation.entry);
+            nativeSource |= source.equals(init);
+            if (invocation.entry.subtype2()==0) nativeSource |= source.equals(init.moveWord(CdObjectState.WordField.TILE,
+                    CdR11aObjectAssets.decodeTileWord(assets.objects().view(CdR12aProfile.Asset.OBJECT_TILE_IDS).copy(),CdBoulder.TILE_SELECTOR,0)));
+        }
+        boolean deleted=invocation.drawn && invocation.screenCleared && invocation.drawSource!=null
+                && boulderWouldDespawn(invocation,invocation.drawSource.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,invocation.drawSource.spriteFlags()&0x7F))
+                && Arrays.equals(source.copyBytes(),new byte[64]);
+        if (!nativeSource && !deleted) throw new IllegalStateException("Boulder selected full64 is outside its native Init/Solid/Draw/despawn prefix");
+        byte[] saved=invocation.savedFlags.copy();
+        if (deleted && invocation.drawSource.savedFlagsId()!=0) {
+            int period=invocation.shared.environment().movement().gates().timeZone()&0x7F;
+            if ((invocation.shared.environment().movement().gates().timeZone()&0x80)!=0) {
+                int remapped=(period-(byte)invocation.shared.environment().movement().gates().timeWarpDirection())&0xFFFF;
+                period=(short)remapped<0?0:remapped<3?remapped:2;
+            }
+            saved[2+3*invocation.drawSource.savedFlagsId()+period]&=0x7F;
+        }
+        if (!sameBytes(actual.savedFlags(),CdAssetBytes.copyOf(saved))) throw new IllegalStateException("Boulder changed another saved byte");
+    }
+    private CdObjectState boulderInitHeader(CdObjectState source) {
+        return source.addByte(CdObjectState.ByteField.ROUTINE,2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4)
+                .moveByte(CdObjectState.ByteField.PRIORITY,4).moveLong(CdObjectState.LongField.MAPPINGS,CdR12aProfile.Asset.MAP_SPR_BOULDER.nativeAddress())
+                .moveByte(CdObjectState.ByteField.WIDTH,16).moveByte(CdObjectState.ByteField.Y_RADIUS,16).moveByte(CdObjectState.ByteField.MAP_FRAME,0);
+    }
+    private boolean boulderWouldDespawn(BoulderInvocation invocation,CdObjectState source) {
+        return (invocation.shared.environment().movement().gates().timeZone()&0x80)!=0
+                || (source.spriteFlags()&0x80)==0 && (((source.centreX()&0xFF80)-((invocation.camera.xWord()-0x80)&0xFF80))&0xFFFF)>0x280;
+    }
+    private void verifyBoulderFailure(BoulderInvocation invocation, Throwable original) {
+        try { verifyBoulderInvocation(invocation); requireBoulderOtherImages(invocation); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /** Prepare every pool/Frame/ledger value before publishing the genuine current plain-Solid outcome. */
+    private void commitBoulderSolid(CdBoulder.PrefixSolidCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requireBoulderInvocation(placement.pool(), activeBoulder == null ? -1 : activeBoulder.whole);
+        if (!boulder.isCurrentPrefixSolidCall(call)) throw new IllegalStateException("Boulder lacks its actual pending producer call");
+        if (boulderPort || drawingBoulder || queuePort || invocation.solidTaken || invocation.stopped || invocation.drawn)
+            throw new IllegalStateException("Boulder Solid lacks its actual once-only pre-Draw helper cut");
+        var pool = invocation.pool; var cut = call.callCut(); pool.validateRestore(cut);
+        var source = pool.state(invocation.whole);
+        requireBoulderOtherImages(invocation);
+        if (!pool.capture().slots().equals(cut.slots()) || !source.equals(cut.slots().get(invocation.whole - 32))
+                || source.id() != CdBoulder.OBJECT_ID || source.routine() != 2 || source.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0
+                || !call.expectedPlayer().equals(springPlayer()) || !call.expectedGlobals().equals(springGlobals()))
+            throw new IllegalStateException("Boulder Solid differs from its actual full96/source/player/global cut");
+        CdObjectState object; List<CdObjectState> others; Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests; CdPlayerFrameRuntime.ObjectSolidPublication readyFrame;
+        boolean stopped;
+        if (call.outcome() instanceof CdSolidObject.Completed completed) {
+            var result = completed.completedResult();
+            if (result.entry() != CdSolidObject.Entry.SOLID_OBJECT) throw new IllegalStateException("Boulder completed a different helper");
+            object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+            readyFrame = frame.prepareObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result); stopped = false;
+        } else {
+            var prefix = ((CdSolidObject.NativeStopped) call.outcome()).prefix();
+            if (prefix.entry() != CdSolidObject.Entry.SOLID_OBJECT) throw new IllegalStateException("Boulder stopped a different helper");
+            object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+            readyFrame = frame.prepareObjectSolidPrefix(call.expectedPlayer(), call.expectedGlobals(), prefix); stopped = true;
+        }
+        validateSpringSolidImage(source, object, true, writes);
+        if (writes.contains(CdObjectState.ByteField.SOLID_TYPE)
+                && object.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 0)
+            throw new IllegalStateException("Boulder plain Solid cannot store Top/Bottom type bytes");
+        var images = new ArrayList<CdObjectState>(); images.add(object);
+        if (others.size() > 1) throw new IllegalStateException("Boulder Solid released more than one native stand link");
+        for (var other : others) {
+            int whole = other.identity().wholeIndex();
+            if (whole < 32 || whole >= 128 || whole == invocation.whole || whole != call.expectedPlayer().standObject())
+                throw new IllegalStateException("Boulder stand release lacks its actual dynamic prior link");
+            var beforeOther = cut.slots().get(whole - 32);
+            if (!beforeOther.moveByte(CdObjectState.ByteField.FLAGS, beforeOther.flags() & ~8).equals(other))
+                throw new IllegalStateException("Boulder stand release changed more than its actual linked flag bit");
+            images.add(other);
+        }
+        var readyPool = CdObjectPool.overlay(cut, images); pool.validateRestore(readyPool);
+        var before = placement.capture();
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
+                invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        var ledger = new ArrayList<>(sounds);
+        for (var fm : requests) ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger);
+        var readyValues = preparedMonitorValues(BOULDER_SOLID);
+        boulderPort = true;
+        try {
+            verifyBoulderInvocation(invocation);
+            if (!pool.capture().slots().equals(cut.slots()) || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder source changed before prepared publication");
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            pool.restore(readyPool);
+            frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds = readySounds; values = readyValues; invocation.expectedValues = readyValues;
+            invocation.actor = readyActor; invocation.shared = readyShared; invocation.expectedSounds = readySounds;
+            invocation.currentPool = readyPool; invocation.solidTaken = true; invocation.stopped = stopped; invocation.adopted = call.outcome();
+            verifyBoulderInvocation(invocation);
+            if (!pool.capture().slots().equals(readyPool.slots()) || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder Solid did not adopt its complete output96 and saved nonwrites");
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { boulderPort = false; }
+    }
+
+    private void drawBoulder(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireBoulderInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (boulderPort || drawingBoulder || queuePort || invocation.drawn || invocation.stopped
+                || !identity.equals(invocation.entry.identity()) || pool.state(invocation.whole).id() != CdBoulder.OBJECT_ID)
+            throw new IllegalStateException("Boulder DrawObject lacks its genuine live physical source");
+        requireBoulderOtherImages(invocation);
+        boolean needsSolid = (invocation.entry.spriteFlags() & 0x80) != 0;
+        if (invocation.solidTaken != needsSolid)
+            throw new IllegalStateException("Boulder skipped its reached Solid publication before Draw");
+        if (invocation.entry.routine() == 0 && !needsSolid) {
+            var completedInit = boulderInitHeader(invocation.entry).moveWord(CdObjectState.WordField.TILE,
+                    CdR11aObjectAssets.decodeTileWord(assets.objects().view(CdR12aProfile.Asset.OBJECT_TILE_IDS).copy(),CdBoulder.TILE_SELECTOR,0));
+            if (!pool.state(invocation.whole).equals(completedInit))
+                throw new IllegalStateException("Boulder Draw regressed its completed Init image");
+        }
+        invocation.drawSource = pool.state(invocation.whole);
+        invocation.currentPool=CdObjectPool.overlay(invocation.currentPool,List.of(invocation.drawSource));
+        invocation.drawn = true; drawingBoulder = true;
+        var current = invocation.drawSource;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(), current.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    current.unsignedByte(CdObjectState.ByteField.WIDTH), current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            verifyBoulderInvocation(invocation);
+            if (!invocation.screenCleared) throw new IllegalStateException("Boulder skipped its actual DrawObject BCLR7");
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { drawingBoulder = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readBoulderDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireBoulderInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingBoulder || boulderPort || queuePort || !invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("No actual Boulder collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var source = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(source.id(), source.spriteFlags(), source.centreX(), source.centreY(),
+                    source.word(CdObjectState.WordField.X_FRACTION), source.longBits(CdObjectState.LongField.MAPPINGS),
+                    source.unsignedByte(CdObjectState.ByteField.MAP_FRAME), source.word(CdObjectState.WordField.TILE));
+            verifyBoulderInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(before.pool().slots())
+                    || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder queue read changed actual full96/saved state");
+            return live;
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+    private void writeBoulderOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireBoulderInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingBoulder || boulderPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("Only actual Boulder DrawObject may clear bit7 once");
+        var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Boulder changed its native Draw source before BCLR7");
+        var next = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(ready);
+        queuePort = true;
+        try {
+            verifyBoulderInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(before.pool().slots())) throw new IllegalStateException("Stale Boulder Draw pool");
+            invocation.pool.write(next); invocation.currentPool = ready; invocation.screenCleared = true;
+            verifyBoulderInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(ready.slots())
+                    || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Boulder Draw changed more than its exact source sprite byte");
+        } catch (RuntimeException | Error failure) { verifyBoulderFailure(invocation, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+
+
+    private final class PlatformInvocation {
+        private final CdPlatform body = platform;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR12aTerrainAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private Values expectedValues = base;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private CdObjectPool.Snapshot currentPool=pool.capture();
+        private final List<CdObjectState> initSources=new ArrayList<>(), childPrefixes=new ArrayList<>();
+        private List<CdPlatform.SolidCall> solidReceipts = List.of();
+        private List<CdPlatform.PrimaryAngleCall> angleReceipts = List.of();
+        private int childWhole=-1;
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.captureAct2Scroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private final boolean capacityDelete;
+        private CdObjectState destroySource;
+        private boolean directDeleteArmed;
+        private boolean stopped;
+        private boolean drawn;
+        private boolean screenCleared;
+
+        private PlatformInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            capacityDelete = entry.routine() == 0 && entry.subtype2() != 0
+                    && pool.capture().slots().stream().noneMatch(image -> image.id() == 0);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession();
+            generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.act2ForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+            preparePlatformInitPrefixes(this);
+        }
+    }
+
+    /** Literal Init stores and first-free child prefixes only; no movement/Solid algorithm is replayed. */
+    private void preparePlatformInitPrefixes(PlatformInvocation i) {
+        if(i.entry.routine()!=0) return;
+        var source=i.entry; i.initSources.add(source);
+        source=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4).moveWord(CdObjectState.WordField.TILE,CdPlatform.TILE_WORD)
+                .moveByte(CdObjectState.ByteField.PRIORITY,2).moveWord(CdObjectState.WordField.PLATFORM_ANCHOR_X,source.centreX())
+                .moveWord(CdObjectState.WordField.PLATFORM_ANCHOR_Y,source.centreY()).moveWord(CdObjectState.WordField.PLATFORM_INITIAL_Y,source.centreY());
+        i.initSources.add(source);
+        source=source.moveLong(CdObjectState.LongField.MAPPINGS,CdR12aProfile.Asset.MAP_SPR_PLATFORM.nativeAddress());i.initSources.add(source);
+        int subtype=source.subtype(); source=source.moveByte(CdObjectState.ByteField.MAP_FRAME,subtype&3);i.initSources.add(source);
+        source=source.moveByte(CdObjectState.ByteField.WIDTH,assets.objects().view(CdR12aProfile.Asset.PLATFORM_WIDTHS).unsignedByte(subtype&3));i.initSources.add(source);
+        source=source.moveByte(CdObjectState.ByteField.Y_RADIUS,8);i.initSources.add(source);
+        source=source.moveByte(CdObjectState.ByteField.PLATFORM_RANGE,assets.objects().view(CdR12aProfile.Asset.PLATFORM_RANGES).unsignedByte((subtype>>>2)&3));i.initSources.add(source);
+        if(source.subtype2()!=0) {
+            var free=i.currentPool.slots().stream().filter(row->row.id()==0).findFirst();
+            if(free.isPresent()) {
+                var child=free.orElseThrow(); i.childWhole=child.identity().wholeIndex();i.childPrefixes.add(child);
+                child=child.moveByte(CdObjectState.ByteField.ID,0x0A);i.childPrefixes.add(child);
+                child=child.moveWord(CdObjectState.WordField.X,source.centreX());i.childPrefixes.add(child);
+                child=child.moveWord(CdObjectState.WordField.Y,source.centreY());i.childPrefixes.add(child);
+                child=child.addWord(CdObjectState.WordField.Y,-16);i.childPrefixes.add(child);
+                child=child.moveByte(CdObjectState.ByteField.SPRING_PARENT_Y_OFFSET,0xF0);i.childPrefixes.add(child);
+                child=child.moveWord(CdObjectState.WordField.SPRING_PARENT,source.identity().nativeAddress24());i.childPrefixes.add(child);
+                child=child.moveByte(CdObjectState.ByteField.SUBTYPE,source.subtype2()&2);i.childPrefixes.add(child);
+                child=child.moveByte(CdObjectState.ByteField.SPRING_PARENT_X_OFFSET,source.subtype2()&0xF8);i.childPrefixes.add(child);
+                child=child.addWord(CdObjectState.WordField.X,source.subtype2()&0xF8);i.childPrefixes.add(child);
+            }
+        }
+        i.initSources.add(source.addByte(CdObjectState.ByteField.ROUTINE,2));
+    }
+    private void validatePlatformPool(PlatformInvocation i) {
+        var actual=i.pool.capture();var source=i.pool.state(i.whole);
+        for(var before:i.currentPool.slots()) {
+            int whole=before.identity().wholeIndex(); if(whole==i.whole) continue;
+            var live=i.pool.state(whole);
+            if(whole==i.childWhole && i.entry.routine()==0 && !i.drawn) {
+                if(i.childPrefixes.stream().noneMatch(live::equals)) throw new IllegalStateException("Platform changed its actual found child outside native full64 prefixes");
+            } else if(!before.equals(live)) throw new IllegalStateException("Platform changed another complete native physical image");
+        }
+        var expected=i.currentPool.slots().get(i.whole-32);
+        if(i.stopped) {
+            if(!actual.slots().equals(i.currentPool.slots())) throw new IllegalStateException("Stopped Platform advanced beyond its exact adopted native prefix");
+            return;
+        }
+        if(platformDeletedSource(i,source)) return;
+        if(i.entry.routine()==0) {
+            if (i.drawn) {
+                var completed = i.screenCleared ? expected.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,expected.spriteFlags()&0x7F) : expected;
+                if (!source.equals(completed)) throw new IllegalStateException("Platform regressed its completed Init source");
+                return;
+            }
+            boolean match=i.initSources.stream().anyMatch(row->source.equals(row) || i.screenCleared
+                    && source.equals(row.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,row.spriteFlags()&0x7F)));
+            if(!match) throw new IllegalStateException("Platform Init selected full64 differs from literal native stores");
+            return;
+        }
+        // Actual movement stays in the cached body. Pin every native nonwrite between its declared helper cuts.
+        boolean[] allowed=new boolean[64];int family=i.entry.subtype()>>>4;
+        if(family<=9) {
+            for(int at:new int[]{0x2A,0x2B,0x2C,0x2E,0x38,0x39,0x3A,0x3B}) allowed[at]=true;
+            if(family==1 || family==2 || family==3 || family==7 || family==8 || family==9) {allowed[8]=allowed[9]=true;}
+            allowed[12]=allowed[13]=true;
+            if(family==7) {allowed[10]=allowed[11]=allowed[14]=allowed[15]=true;}
+            if(family==5) {allowed[14]=allowed[15]=true;}
+            if(family==1 || family==2 || family==3 || family==8 || family==9) {allowed[16]=allowed[17]=true;}
+            if(family==5 || family==7) {allowed[18]=allowed[19]=true;}
+        }
+        if(i.screenCleared) expected=expected.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,expected.spriteFlags()&0x7F);
+        byte[] before=expected.copyBytes(),after=source.copyBytes();
+        for(int at=0;at<64;at++) if(!allowed[at] && before[at]!=after[at])
+            throw new IllegalStateException("Platform native movement changed full64 nonwrite byte "+at);
+    }
+
+    private void runPlatform(int whole) {
+        requireAntonPataIdle();
+        module.requireAct2LoadingVisit(this);
+        if (activeTitle != null || titlePort || drawingTitle || activeDrain != null || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeMonitor != null || activeBoulder != null || boulderPort || drawingBoulder || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || platformPort || drawingPlatform || monitorPort || drawingMonitor || queuePort
+                || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
+                || values.phase() != BEGIN_LEVEL || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual live Act2 Platform invocation entry");
+        var invocation = new PlatformInvocation(whole);
+        activePlatform = invocation;
+        try {
+            var env = frame.environment(); var gates = env.movement().gates();
+            var result = platform.run(whole, new CdPlatform.Globals(gates.zoneAct(), values.ring().timeStopTimer(),
+                            invocation.camera.xWord(), invocation.camera.yWord(), gates.timeZone()),
+                    new CdPlatform.Inputs(springPlayer(), new CdSolidObject.Gates(
+                            env.globals().debugMode(), gates.miniSonic()), springGlobals()));
+            verifyPlatformInvocation(invocation);
+            // Completed observations authenticate receipts only; never replay helper work or effects.
+            var solidObservations = result.effects().stream().filter(CdPlatform.Solid.class::isInstance)
+                    .map(CdPlatform.Solid.class::cast).toList();
+            var angleObservations = result.effects().stream().filter(CdPlatform.PrimaryAngleCommitted.class::isInstance)
+                    .map(CdPlatform.PrimaryAngleCommitted.class::cast).toList();
+            if (solidObservations.size() != invocation.solidReceipts.size() || angleObservations.size() != invocation.angleReceipts.size())
+                throw new IllegalStateException("Platform omitted or duplicated a reached native publication");
+            for (int at=0; at<solidObservations.size(); at++) {
+                var observed=solidObservations.get(at); var receipt=invocation.solidReceipts.get(at);
+                if (observed.site()!=receipt.site() || !(receipt.outcome() instanceof CdSolidObject.Completed completed)
+                        || observed.result()!=completed.completedResult())
+                    throw new IllegalStateException("Platform Solid observation differs from its accepted current occurrence");
+            }
+            for (int at=0; at<angleObservations.size(); at++)
+                if (angleObservations.get(at).call()!=invocation.angleReceipts.get(at))
+                    throw new IllegalStateException("Platform angle observation differs from its accepted current occurrence");
+            if (!invocation.drawn || invocation.stopped || !result.state().equals(placement.pool().state(whole)))
+                throw new IllegalStateException("Incomplete actual Platform return");
+        } catch (RuntimeException | Error failure) {
+            verifyPlatformFailure(failure); throw failure;
+        } finally { activePlatform = null; }
+    }
+
+    private PlatformInvocation requirePlatformInvocation(CdObjectPool pool, int whole) {
+        var invocation = activePlatform;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Platform callback at this physical pointer");
+        var source = pool.state(whole);
+        if (source.id() != CdPlatform.OBJECT_ID && !platformDeletedSource(invocation, source))
+            throw new IllegalStateException("Platform callback lost its live or genuinely deleted native source");
+        verifyPlatformInvocation(invocation);
+        return invocation;
+    }
+
+    private void verifyPlatformInvocation(PlatformInvocation invocation) {
+        requireAntonPataIdle();
+        module.requireAct2LoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeTitle != null || titlePort || drawingTitle || activeDrain != null || activePlatform != invocation || activeMonitor != null || activeBoulder != null || boulderPort || drawingBoulder || monitorPort || drawingMonitor || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !placement.status().equals(invocation.status) || !presentation.sameAct2Scroll(invocation.scroll)
+                || sounds != invocation.expectedSounds || values != invocation.expectedValues)
+            throw new IllegalStateException("Platform changed another owner or retained a stale actual cut");
+        validatePlatformSavedFlags(invocation, invocation.pool.state(invocation.whole));
+        validatePlatformPool(invocation);
+    }
+
+    private void verifyPlatformFailure(Throwable original) {
+        try { if (activePlatform != null) verifyPlatformInvocation(activePlatform); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    /** ID0 is admitted only after an actual private native deletion path, never by image equality alone. */
+    private boolean platformDeletedSource(PlatformInvocation invocation, CdObjectState source) {
+        return (invocation.capacityDelete || invocation.directDeleteArmed || invocation.destroySource != null)
+                && source.identity().equals(invocation.entry.identity())
+                && Arrays.equals(source.copyBytes(), new byte[CdObjectState.BYTE_SIZE]);
+    }
+
+    /** Destroy changes exactly one addressed membership bit; direct vertical DeleteObject changes none. */
+    private void validatePlatformSavedFlags(PlatformInvocation invocation, CdObjectState source) {
+        var current = placement.capture().savedFlags();
+        if (sameBytes(current, invocation.savedFlags)) return;
+        var destroyed = invocation.capacityDelete ? invocation.entry : invocation.destroySource;
+        if (!platformDeletedSource(invocation, source) || destroyed == null || destroyed.savedFlagsId() == 0)
+            throw new IllegalStateException("Platform changed its saved bank before a genuine Destroy");
+        int index = 2 + 3 * destroyed.savedFlagsId() + invocation.shared.environment().movement().gates().timeZone();
+        if (index < 2 || index >= CdObjectPlacementRuntime.SAVED_BANK_BYTES)
+            throw new IllegalStateException("Platform Destroy did not reach an in-bounds raw saved byte");
+        byte[] expected = invocation.savedFlags.copy(); expected[index] &= 0x7F;
+        if (!Arrays.equals(expected, current.copy()))
+            throw new IllegalStateException("Platform changed saved bytes beyond its exact native BCLR7");
+    }
+
+    /** Native post-instruction cuts, including repeated Tops, timer1->0 and deleted5X anchor tails. */
+    private void validatePlatformSite(PlatformInvocation invocation, CdPlatform.SolidCall call, CdObjectState source) {
+        boolean deleted = call.site() == CdPlatform.Site.ANCHOR_GET_OFF && platformDeletedSource(invocation, source);
+        if (!deleted && (source.id() != CdPlatform.OBJECT_ID || source.routine() != 2))
+            throw new IllegalStateException("Platform helper requires live ID21/routine2 or its actual cleared anchor tail");
+        int stop = values.ring().timeStopTimer();
+        if (call.site() == CdPlatform.Site.TIME_STOP_TOP) {
+            if (stop == 0 || deleted || call.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT)
+                throw new IllegalStateException("Platform time-stop helper requires its nonzero WORD/direct Top");
+            return;
+        }
+        if (stop != 0) throw new IllegalStateException("Platform ordinary helper cannot run under native time-stop");
+        int family = source.subtype() >>> 4;
+        int state = source.unsignedByte(CdObjectState.ByteField.PLATFORM_SUBSTATE);
+        int timer = source.unsignedByte(CdObjectState.ByteField.PLATFORM_TIMER);
+        int phase = source.unsignedByte(CdObjectState.ByteField.PLATFORM_PHASE);
+        boolean top = true;
+        boolean valid = switch (call.site()) {
+            case SUBTYPE_0_TOP -> family == 0;
+            case SUBTYPE_1_TOP -> family == 1;
+            case SUBTYPE_2_TOP -> family == 2;
+            case SUBTYPE_3_TOP -> family == 3;
+            case SUBTYPE_4_TOP -> family == 4;
+            case SUBTYPE_5_STATIONARY_TOP -> family == 5 && state == 0;
+            case SUBTYPE_5_TIMER_TOP -> family == 5 && state != 0 && timer != 0xFF;
+            case SUBTYPE_5_DROP_TOP -> family == 5 && state != 0 && timer == 0;
+            case SUBTYPE_5_DELETE_GET_OFF -> {
+                top = false;
+                yield family == 5 && state != 0 && timer == 0
+                        && ((invocation.camera.yWord() + 0x100) & 0xFFFF) < source.centreY();
+            }
+            case SUBTYPE_6_STATIONARY_1_TOP -> family == 6 && state == 0;
+            case SUBTYPE_6_MOVE_DOWN_TOP -> family == 6 && state == 2 && phase >= 2 && phase <= 0x41;
+            case SUBTYPE_6_STATIONARY_2_TOP -> family == 6 && state == 4;
+            case SUBTYPE_7_STATIONARY_1_TOP -> family == 7 && state == 0;
+            case SUBTYPE_7_TIMER_TOP -> family == 7 && state == 2 && timer != 0xFF;
+            case SUBTYPE_7_RISING_TOP -> family == 7 && state == 2 && timer == 0;
+            case SUBTYPE_7_STATIONARY_2_TOP -> family == 7 && state == 4;
+            case SUBTYPE_8_STATIONARY_1_TOP -> family == 8 && state == 0;
+            case SUBTYPE_8_TIMER_TOP -> family == 8 && state == 2 && timer != 0xFF;
+            case SUBTYPE_8_MOVE_X_TOP -> family == 8 && state == 2 && timer == 0 && phase >= 1 && phase <= 0x40;
+            case SUBTYPE_8_STATIONARY_2_TOP -> family == 8 && state == 4;
+            case SUBTYPE_9_STATIONARY_1_TOP -> family == 9 && state == 0;
+            case SUBTYPE_9_TIMER_TOP -> family == 9 && state == 2 && timer != 0xFF;
+            case SUBTYPE_9_MOVE_X_TOP -> family == 9 && state == 2 && timer == 0 && phase >= 1 && phase <= 0x40;
+            case SUBTYPE_9_STATIONARY_2_TOP -> family == 9 && state == 4;
+            case ANCHOR_GET_OFF -> {
+                top = false;
+                int difference = ((source.word(CdObjectState.WordField.PLATFORM_ANCHOR_X) & 0xFF80)
+                        - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF;
+                yield difference > 0x280 && (deleted || family <= 9
+                        && (family < 6 || state == 0 || state == 2 || state == 4));
+            }
+            case TIME_STOP_TOP -> false;
+        };
+        if (!valid || call.entry() != (top ? CdSolidObject.Entry.TOP_SOLID_OBJECT : CdSolidObject.Entry.GET_OFF_OBJECT))
+            throw new IllegalStateException("Platform helper differs from its actual native instruction site/cut");
+    }
+
+    private List<CdObjectState> validatePlatformImages(PlatformInvocation invocation, CdPlatform.SolidCall call,
+            CdObjectState source, CdObjectState object, List<CdObjectState> others, Set<CdObjectState.ByteField> writes) {
+        if (!source.identity().equals(object.identity())
+                || writes.stream().anyMatch(field -> field != CdObjectState.ByteField.SOLID_TYPE && field != CdObjectState.ByteField.FLAGS)
+                || writes.contains(CdObjectState.ByteField.SOLID_TYPE) != (call.entry() == CdSolidObject.Entry.TOP_SOLID_OBJECT)
+                || writes.contains(CdObjectState.ByteField.SOLID_TYPE) && object.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) > 1
+                || ((object.flags() ^ source.flags()) & ~8) != 0
+                || call.entry() == CdSolidObject.Entry.GET_OFF_OBJECT && (object.flags() & ~source.flags()) != 0)
+            throw new IllegalStateException("Platform Solid changed identity, canonical masks or unowned flag bits");
+        byte[] before = source.copyBytes(), after = object.copyBytes();
+        for (int at = 0; at < CdObjectState.BYTE_SIZE; at++) {
+            if (at == 0x25 && writes.contains(CdObjectState.ByteField.SOLID_TYPE)
+                    || at == 0x22 && writes.contains(CdObjectState.ByteField.FLAGS)) continue;
+            if (before[at] != after[at]) throw new IllegalStateException("Platform Solid changed undeclared a0 byte " + at);
+        }
+        if (others.size() > 1 || call.entry() == CdSolidObject.Entry.GET_OFF_OBJECT && !others.isEmpty())
+            throw new IllegalStateException("Platform helper returned extra dynamic releases");
+        var images = new ArrayList<CdObjectState>(1 + others.size()); images.add(object);
+        var seen = new HashSet<Integer>(); seen.add(invocation.whole);
+        for (var other : others) {
+            int whole = other.identity().wholeIndex();
+            if (whole < 32 || whole >= 128 || !seen.add(whole) || whole != call.expectedPlayer().standObject())
+                throw new IllegalStateException("Platform release lacks its actual distinct dynamic stand identity");
+            var original = call.actualCut().slots().get(whole - 32);
+            if (!original.identity().equals(other.identity())
+                    || !original.moveByte(CdObjectState.ByteField.FLAGS, original.flags() & ~8).equals(other))
+                throw new IllegalStateException("Platform release changed bytes beyond native BCLR3");
+            images.add(other);
+        }
+        return List.copyOf(images);
+    }
+
+    /** All pool/Frame/ledger values and expected full pairs are ready before the first owner assignment. */
+    private void commitPlatformSolid(CdPlatform.SolidCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requirePlatformInvocation(placement.pool(), activePlatform == null ? -1 : activePlatform.whole);
+        if (!platform.isCurrentSolidCall(call)) throw new IllegalStateException("Platform Solid lacks its actual pending producer call");
+        if (platformPort || drawingPlatform || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("Platform Solid lacks its current actual helper cut");
+        for (var prior : invocation.solidReceipts)
+            if (prior==call || prior.outcome()==call.outcome()
+                    || prior.outcome() instanceof CdSolidObject.Completed before && call.outcome() instanceof CdSolidObject.Completed next
+                    && before.completedResult()==next.completedResult())
+                throw new IllegalStateException("Platform reused one native Solid callback occurrence");
+        var pool = invocation.pool; var cut = call.actualCut();
+        pool.validateRestore(cut);
+        if (!pool.capture().slots().equals(cut.slots())
+                || !call.expectedPlayer().equals(springPlayer()) || !call.expectedGlobals().equals(springGlobals()))
+            throw new IllegalStateException("Platform Solid differs from its actual full96/player/global cut");
+        var source = cut.slots().get(invocation.whole - 32);
+        validatePlatformSite(invocation, call, source);
+        CdObjectState object; List<CdObjectState> others; Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests;
+        CdPlayerFrameRuntime.ObjectSolidPublication readyFrame;
+        boolean stopped;
+        if (call.outcome() instanceof CdSolidObject.Completed done) {
+            var result = done.completedResult();
+            if (result.entry() != call.entry()) throw new IllegalStateException("Platform completed entry mismatch");
+            object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+            readyFrame = frame.prepareObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+            stopped = false;
+        } else {
+            var prefix = ((CdSolidObject.NativeStopped) call.outcome()).prefix();
+            if (prefix.entry() != call.entry() || call.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT
+                    || !prefix.fmRequests().isEmpty() || !prefix.otherSlots().isEmpty())
+                throw new IllegalStateException("Platform stopped Top acquired a completed FM/release or wrong entry");
+            object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+            readyFrame = frame.prepareObjectSolidPrefix(call.expectedPlayer(), call.expectedGlobals(), prefix);
+            stopped = true;
+        }
+        var images = validatePlatformImages(invocation, call, source, object, others, writes);
+        var readyPool = CdObjectPool.overlay(cut, images); pool.validateRestore(readyPool);
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
+                invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        var ledger = new ArrayList<>(sounds);
+        for (var fm : requests) ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger);
+        var readyValues = preparedMonitorValues(PLATFORM_SOLID);
+        var receipts = new ArrayList<>(invocation.solidReceipts); receipts.add(call);
+        var readyReceipts = List.copyOf(receipts);
+        platformPort = true;
+        try {
+            verifyPlatformInvocation(invocation);
+            if (!pool.capture().slots().equals(cut.slots())) throw new IllegalStateException("Stale Platform publication pool");
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            pool.restore(readyPool);
+            frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds = readySounds; values = readyValues; invocation.expectedValues = readyValues;
+            invocation.actor = readyActor; invocation.shared = readyShared; invocation.expectedSounds = readySounds;
+            invocation.stopped = stopped; invocation.currentPool=readyPool; invocation.solidReceipts=readyReceipts;
+            if (!stopped && call.site() == CdPlatform.Site.SUBTYPE_5_DELETE_GET_OFF) invocation.directDeleteArmed = true;
+            if (!stopped && call.site() == CdPlatform.Site.ANCHOR_GET_OFF) invocation.destroySource = source;
+            verifyPlatformInvocation(invocation);
+            if (!pool.capture().slots().equals(readyPool.slots()))
+                throw new IllegalStateException("Platform Solid output images were not adopted exactly");
+        } catch (RuntimeException | Error failure) {
+            verifyPlatformFailure(failure); throw failure;
+        } finally { platformPort = false; }
+    }
+
+    /** Each reached raw ceiling byte, with no preclear and no change to any physical object image. */
+    private void commitPlatformPrimaryAngle(CdPlatform.PrimaryAngleCall call) {
+        Objects.requireNonNull(call);
+        var invocation=requirePlatformInvocation(placement.pool(),call.expectedSource().identity().wholeIndex());
+        if (!platform.isCurrentPrimaryAngleCall(call)) throw new IllegalStateException("Platform angle lacks its actual pending producer call");
+        if(platformPort || drawingPlatform || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("Platform angle is outside its actual rising callback");
+        if (invocation.angleReceipts.stream().anyMatch(prior->prior==call))
+            throw new IllegalStateException("Platform reused one native primary-angle callback occurrence");
+        var pool=invocation.pool;var cut=call.actualCut();var source=pool.state(invocation.whole);pool.validateRestore(cut);
+        if(source.id()!=CdPlatform.OBJECT_ID || source.routine()!=2 || source.subtype()>>>4!=7
+                || source.unsignedByte(CdObjectState.ByteField.PLATFORM_SUBSTATE)!=2
+                || source.unsignedByte(CdObjectState.ByteField.PLATFORM_TIMER)!=0 || values.ring().timeStopTimer()!=0
+                || !source.equals(call.expectedSource()) || !pool.capture().slots().equals(cut.slots())
+                || !cut.slots().get(invocation.whole-32).equals(source)
+                || frame.environment().movement().globals().primaryAngle()!=call.expectedPrimaryAngle() || (call.value()&~255)!=0)
+            throw new IllegalStateException("Platform angle changed its genuine full96/source/Frame preimage");
+        var before=placement.capture();
+        var readyShared=new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(),
+                monitorAngleEnvironment(invocation.shared.environment(),call.value()),invocation.shared.artState(),
+                invocation.shared.paused(),invocation.shared.vIntClock());
+        var readyValues=preparedMonitorValues(PLATFORM_PRIMARY_ANGLE);
+        var receipts=new ArrayList<>(invocation.angleReceipts);receipts.add(call);var readyReceipts=List.copyOf(receipts);
+        platformPort=true;
+        try {
+            verifyPlatformCallback(invocation,before,null);
+            frame.applyObjectPrimaryAngle(call.value()); values=readyValues; invocation.expectedValues=readyValues;
+            invocation.shared=readyShared; invocation.currentPool=before.pool();invocation.angleReceipts=readyReceipts;
+            verifyPlatformCallback(invocation,before,null);
+        } catch(RuntimeException|Error failure) { verifyPlatformCallbackFailure(invocation,before,null,failure);throw failure; }
+        finally { platformPort=false; }
+    }
+
+    private void verifyPlatformCallback(PlatformInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                        CdObjectState cleared) {
+        verifyPlatformInvocation(invocation);
+        var now = placement.capture(); var expected = new ArrayList<>(before.pool().slots());
+        if (cleared != null) expected.set(invocation.whole - 32, cleared);
+        if (!now.status().equals(before.status()) || !now.pool().slots().equals(expected)
+                || !sameBytes(now.savedFlags(), before.savedFlags()))
+            throw new IllegalStateException("Platform callback changed pool/bank outside the actual bit7 clear");
+    }
+
+    private void verifyPlatformCallbackFailure(PlatformInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                               CdObjectState cleared, Throwable original) {
+        try { verifyPlatformCallback(invocation, before, cleared); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private void drawPlatform(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requirePlatformInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (platformPort || drawingPlatform || monitorPort || drawingMonitor || queuePort || invocation.drawn || invocation.stopped)
+            throw new IllegalStateException("Platform DrawObject is not its actual once-only normal return");
+        var before = placement.capture(); var current = pool.state(invocation.whole);
+        if (invocation.entry.routine()==0 && !invocation.capacityDelete) {
+            if (!current.equals(invocation.initSources.getLast()))
+                throw new IllegalStateException("Platform Draw regressed its completed Init parent");
+            if (invocation.childWhole>=0 && !pool.state(invocation.childWhole).equals(invocation.childPrefixes.getLast()))
+                throw new IllegalStateException("Platform Draw regressed its completed first-free child");
+        }
+        if (invocation.entry.routine()==2 && invocation.solidReceipts.isEmpty())
+            throw new IllegalStateException("Platform Draw skipped its reached native Solid publication");
+        var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        invocation.currentPool=before.pool();
+        invocation.drawn = true; drawingPlatform = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Platform DrawObject did not clear bit7");
+            verifyPlatformCallback(invocation, before, cleared);
+        } catch (RuntimeException | Error failure) {
+            verifyPlatformCallbackFailure(invocation, before, invocation.screenCleared ? cleared : null, failure); throw failure;
+        } finally { drawingPlatform = false; }
+    }
+
+    private CdObjectDrawQueue.LiveDrawSlot readPlatformDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requirePlatformInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingPlatform || platformPort || queuePort) throw new IllegalStateException("No actual Platform queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyPlatformCallback(invocation, before, null); return live;
+        } catch (RuntimeException | Error failure) {
+            verifyPlatformCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    private void writePlatformOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requirePlatformInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingPlatform || platformPort || queuePort || onScreen || invocation.screenCleared)
+            throw new IllegalStateException("Only actual Platform DrawObject may clear bit7 once");
+        var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
+        var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        queuePort = true;
+        try {
+            invocation.pool.write(next); invocation.screenCleared = true;
+            verifyPlatformCallback(invocation, before, next);
+        } catch (RuntimeException | Error failure) {
+            verifyPlatformCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+
+
+
+    /** One real cached ID3F call. This scope validates owners; Anton retains its native algorithm. */
+    private final class AntonInvocation {
+        private final CdAnton body = anton;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR12aTerrainAssets sourceAssets = assets;
+        private final Object stageSource = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final CdObjectPool.Snapshot initialPool = pool.capture();
+        private final CdPlayerBody.State player = frame.state();
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final Values base = values;
+        private Values expectedValues = base;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes reserved = values.hudObjects();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.captureAct2Scroll();
+        private final List<SonicCdGameModule.PastSound> ledger = sounds;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final CdObjectDrawQueue.CameraWords camera;
+        private final CdAnton.Globals globals;
+        private CdObjectState drawSource;
+        private List<CdAnton.PrimaryAngleCall> angleReceipts=List.of();
+        private boolean angleSeen, drawn, screenCleared;
+        private AntonInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.act2ForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+            var gates = frame.environment().movement().gates();
+            globals = new CdAnton.Globals(values.globals().retainedDev().goodFuture(), gates.timeZone(), gates.timeWarpDirection(),
+                    camera.xWord(), frame.environment().movement().globals().primaryAngle());
+        }
+    }
+
+    private void runAnton(int whole) {
+        requireBoulderPlatformIdle();
+        if(activeTitle!=null || titlePort || drawingTitle) throw new IllegalStateException("Title owns this Act2 source cut");
+        module.requireAct2LoadingVisit(this);
+        if (!runningObjects || servicing || activePrimary != null || activeDrain != null || activeReserved != null
+                || activeRing != null || activeSpring != null || activePlatform != null || activePata != null
+                || activeBoulder != null || activeAnton != null
+                || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || platformPort || drawingPlatform || drawingPata
+                || boulderPort || drawingBoulder
+                || monitorPort || drawingMonitor || antonPort || drawingAnton || queuePort
+                || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdAnton.OBJECT_ID
+                || values.phase() != BEGIN_LEVEL || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Act2 Anton dispatch");
+        var invocation = new AntonInvocation(whole); activeAnton = invocation;
+        try {
+            var result = anton.run(whole, invocation.globals);
+            verifyAntonInvocation(invocation); requireAntonOtherImages(invocation); validateAntonTail(invocation,false);
+            var observed=result.effects().stream().filter(e->e instanceof CdAnton.PrimaryAngleCommitted)
+                    .map(e->((CdAnton.PrimaryAngleCommitted)e).call()).toList();
+            if(!observed.equals(invocation.angleReceipts))
+                throw new IllegalStateException("Anton angle observations differ from actual once-only publication receipts");
+            boolean conversion = invocation.globals.goodFuture() != 0
+                    && (invocation.globals.timeZone() != 1 || invocation.entry.subtype() != 0);
+            if (!result.state().equals(invocation.pool.state(whole))
+                    || result.primaryAngle() != frame.environment().movement().globals().primaryAngle()
+                    || (conversion ? invocation.drawn : !invocation.angleSeen || !invocation.drawn || !invocation.screenCleared))
+                throw new IllegalStateException("Anton returned without its actual angle/Draw/source publications");
+        } catch (RuntimeException | Error failure) { verifyAntonFailure(invocation, failure); throw failure; }
+        finally { activeAnton = null; }
+    }
+    private AntonInvocation requireAntonInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeAnton;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual cached Anton callback at this physical pointer");
+        verifyAntonInvocation(invocation); return invocation;
+    }
+    private void verifyAntonInvocation(AntonInvocation invocation) {
+        module.requireAct2LoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeTitle != null || titlePort || drawingTitle || activeAnton != invocation || !runningObjects || servicing
+                || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null || activeSpring != null
+                || activePlatform != null || activePata != null
+                || activeBoulder != null || activeMonitor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || drawingPata
+                || boulderPort || drawingBoulder || monitorPort || drawingMonitor
+                || invocation.body != anton || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.stageSource != frame.stageSource() || invocation.pool != placement.pool() || invocation.queue != drawQueue
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || invocation.world != mode.getWorldSession()
+                || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || invocation.expectedValues != values || values.phase() != BEGIN_LEVEL || invocation.ledger != sounds
+                || !placement.status().equals(invocation.status) || !sameBytes(values.hudObjects(),invocation.reserved)
+                || !presentation.sameAct2Scroll(invocation.scroll)
+                || frame.state() != invocation.player || !frame.captureActor().equals(invocation.actor)
+                || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Anton changed another owner or retained a stale actual World/Frame cut");
+    }
+    private void requireAntonOtherImages(AntonInvocation invocation) {
+        for (var source : invocation.initialPool.slots()) if (source.identity().wholeIndex() != invocation.whole
+                && !source.equals(invocation.pool.state(source.identity().wholeIndex())))
+            throw new IllegalStateException("Anton changed an unrelated physical image");
+    }
+    private void verifyAntonReadOnly(AntonInvocation invocation, CdObjectPlacementRuntime.Snapshot before) {
+        verifyAntonInvocation(invocation);
+        var now = placement.capture();
+        if (!now.pool().slots().equals(before.pool().slots()) || !now.status().equals(before.status())
+                || !sameBytes(now.savedFlags(), before.savedFlags()))
+            throw new IllegalStateException("Anton scalar callback changed actual full96/source/saved state");
+    }
+    private void verifyAntonFailure(AntonInvocation invocation, Throwable original) {
+        try { verifyAntonInvocation(invocation); requireAntonOtherImages(invocation); validateAntonTail(invocation,true); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /** Full source/bank ownership, including exact native conversion/despawn prefixes; no effects execute here. */
+    private void validateAntonTail(AntonInvocation i,boolean failure) {
+        var actual=i.pool.state(i.whole);var bank=placement.capture().savedFlags();
+        boolean conversion=i.globals.goodFuture()!=0 && (i.globals.timeZone()!=1 || i.entry.subtype()!=0);
+        if(conversion) {
+            byte[] deleted=new byte[CdObjectState.BYTE_SIZE],x=deleted.clone();
+            x[8]=(byte)(i.entry.centreX()>>>8);x[9]=(byte)i.entry.centreX();
+            byte[] xy=x.clone();xy[12]=(byte)(i.entry.centreY()>>>8);xy[13]=(byte)i.entry.centreY();
+            byte[] converted=xy.clone();converted[0]=0x18;
+            boolean prefix=failure && List.of(i.entry.copyBytes(),deleted,x,xy).stream().anyMatch(b->Arrays.equals(b,actual.copyBytes()));
+            if(!sameBytes(bank,i.savedFlags) || i.drawn || (!Arrays.equals(actual.copyBytes(),converted) && !prefix))
+                throw new IllegalStateException("Anton conversion exceeded actual Delete64/X/Y/ID18 prefix");
+            return;
+        }
+        if(!i.drawn) {
+            if(!sameBytes(bank,i.savedFlags))throw new IllegalStateException("Anton pre-Draw changed saved bank");
+            validateAntonBodyNonwrites(i,actual);return;
+        }
+        var live=i.drawSource;
+        boolean outside=(live.spriteFlags()&0x80)==0 && (((live.word(CdObjectState.WordField.ANTON_ANCHOR_X)&0xFF80)
+                -((i.camera.xWord()-0x80)&0xFF80))&0xFFFF)>0x280;
+        boolean delete=outside || (i.globals.timeZone()&0x80)!=0;
+        byte[] ready=i.savedFlags.copy();boolean owned=true;
+        if(delete && live.savedFlagsId()!=0) {
+            int period=i.globals.timeZone()&0x7F;
+            if((i.globals.timeZone()&0x80)!=0) {period=(short)((period-(byte)i.globals.timeWarpDirection())&65535);period=period<0?0:Math.min(period,2);}
+            int at=2+3*live.savedFlagsId()+period;owned=at>=0 && at<ready.length;
+            if(owned)ready[at]&=0x7F;
+        }
+        byte[] expected=delete && owned?new byte[CdObjectState.BYTE_SIZE]:live.copyBytes();
+        if(failure && actual.equals(live) && sameBytes(bank,i.savedFlags))return;
+        if(failure && owned && actual.equals(live) && Arrays.equals(bank.copy(),ready))return;
+        if(!owned && !failure || !Arrays.equals(actual.copyBytes(),expected) || !Arrays.equals(bank.copy(),ready))
+            throw new IllegalStateException("Anton return/failure differs from actual full64/saved despawn prefix");
+    }
+    private void validateAntonBodyNonwrites(AntonInvocation i,CdObjectState source) {
+        byte[] before=i.entry.copyBytes(),after=source.copyBytes();
+        for(int at=0;at<64;at++) {
+            int mask=(at>=2 && at<=0xF || at>=0x16 && at<=0x1E || at==0x20 || at==0x24 || at>=0x2A && at<=0x2F)?255
+                    :at==1?0x87:at==0x22?1:0;
+            if(((before[at]^after[at])&~mask&255)!=0)
+                throw new IllegalStateException("Anton changed unowned full-source byte "+at);
+        }
+    }
+
+    /** Every genuine raw floor store, including same-value pre-zero, goes through the existing Frame owner once. */
+    private void commitAntonPrimaryAngle(CdAnton.PrimaryAngleCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requireAntonInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
+        if (!anton.isCurrentPrimaryAngleCall(call)) throw new IllegalStateException("Anton angle lacks its actual pending producer call");
+        if (antonPort || drawingAnton || queuePort || invocation.drawn || invocation.angleReceipts.contains(call)
+                || !invocation.angleSeen && call.value()!=0)
+            throw new IllegalStateException("Anton angle is outside its actual pre-Draw floor call");
+        var pool = invocation.pool; var cut = call.callCut(); pool.validateRestore(cut);
+        var source = pool.state(invocation.whole); requireAntonOtherImages(invocation);
+        validateAntonBodyNonwrites(invocation,source);
+        if (source.id() != CdAnton.OBJECT_ID || source.routine() != 0 && source.routine() != 2 && source.routine() != 4
+                || !source.equals(call.expectedSource()) || !cut.slots().get(invocation.whole - 32).equals(source)
+                || !pool.capture().slots().equals(cut.slots())
+                || frame.environment().movement().globals().primaryAngle() != call.expectedPrimaryAngle())
+            throw new IllegalStateException("Anton angle differs from its actual full96/source/current Frame byte");
+        var before = placement.capture();
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(),
+                monitorAngleEnvironment(invocation.shared.environment(), call.value()), invocation.shared.artState(),
+                invocation.shared.paused(), invocation.shared.vIntClock());
+        var readyValues=preparedMonitorValues(ANTON_PRIMARY_ANGLE);
+        var receipts=new ArrayList<>(invocation.angleReceipts);receipts.add(call);var readyReceipts=List.copyOf(receipts);
+        antonPort = true;
+        try {
+            verifyAntonReadOnly(invocation, before);
+            frame.applyObjectPrimaryAngle(call.value()); values=readyValues; invocation.expectedValues=readyValues;
+            invocation.shared = readyShared; invocation.angleSeen = true; invocation.angleReceipts=readyReceipts;
+            verifyAntonReadOnly(invocation, before);
+        } catch (RuntimeException | Error original) {
+            try { verifyAntonReadOnly(invocation, before); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { antonPort = false; }
+    }
+
+    private void drawAnton(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireAntonInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (antonPort || drawingAnton || queuePort || invocation.drawn || !invocation.angleSeen
+                || !identity.equals(invocation.entry.identity()) || pool.state(invocation.whole).id() != CdAnton.OBJECT_ID)
+            throw new IllegalStateException("Anton DrawObject lacks its genuine live physical source");
+        requireAntonOtherImages(invocation);
+        validateAntonBodyNonwrites(invocation,pool.state(invocation.whole));
+        if(!sameBytes(placement.capture().savedFlags(),invocation.savedFlags))
+            throw new IllegalStateException("Anton reached Draw after an unowned saved-bank change");
+        invocation.drawSource = pool.state(invocation.whole); invocation.drawn = true; drawingAnton = true;
+        var current = invocation.drawSource;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(), current.unsignedByte(CdObjectState.ByteField.Y_RADIUS),
+                    current.unsignedByte(CdObjectState.ByteField.WIDTH), current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            verifyAntonInvocation(invocation);
+            if (!invocation.screenCleared) throw new IllegalStateException("Anton skipped its actual DrawObject BCLR7");
+        } catch (RuntimeException | Error failure) { verifyAntonFailure(invocation, failure); throw failure; }
+        finally { drawingAnton = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readAntonDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireAntonInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingAnton || antonPort || queuePort || !invocation.drawn)
+            throw new IllegalStateException("No actual Anton collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var source = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(source.id(), source.spriteFlags(), source.centreX(), source.centreY(),
+                    source.word(CdObjectState.WordField.X_FRACTION), source.longBits(CdObjectState.LongField.MAPPINGS),
+                    source.unsignedByte(CdObjectState.ByteField.MAP_FRAME), source.word(CdObjectState.WordField.TILE));
+            verifyAntonReadOnly(invocation, before); return live;
+        } catch (RuntimeException | Error failure) { verifyAntonFailure(invocation, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+    private void writeAntonOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireAntonInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingAnton || antonPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+            throw new IllegalStateException("Only actual Anton DrawObject may clear bit7 once");
+        var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Anton changed its Draw source before BCLR7");
+        var next = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(ready);
+        queuePort = true;
+        try {
+            verifyAntonReadOnly(invocation, before);
+            invocation.pool.write(next); invocation.screenCleared = true; invocation.drawSource=next;
+            verifyAntonInvocation(invocation);
+            if (!invocation.pool.capture().slots().equals(ready.slots())
+                    || !sameBytes(placement.capture().savedFlags(), before.savedFlags()))
+                throw new IllegalStateException("Anton Draw changed more than its actual source sprite byte");
+        } catch (RuntimeException | Error failure) { verifyAntonFailure(invocation, failure); throw failure; }
+        finally { queuePort = false; }
+    }
+
+
+    private enum PataSite { DRAW, RETURN, FAILURE }
+    private final class PataInvocation {
+        private final CdPataBata body = pataBata;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR12aTerrainAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final List<SonicCdGameModule.PastSound> ledger = sounds;
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.captureAct2Scroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private final CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final CdPataBata.Globals inputs;
+        private CdObjectState drawSource;
+        private boolean drawn, screenCleared, tailArmed, bodyReady;
+        private CdPataBata.UnsupportedBoundary expectedStop;
+        private PataInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.act2ForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+            var gates = frame.environment().movement().gates();
+            inputs = new CdPataBata.Globals(values.globals().retainedDev().goodFuture(),
+                    gates.timeZone(), gates.timeWarpDirection(), camera.xWord());
+        }
+    }
+
+    private void runPataBata(int whole) {
+        requireBoulderPlatformIdle();
+        if(activeTitle!=null || titlePort || drawingTitle) throw new IllegalStateException("Title owns this Act2 source cut");
+        module.requireAct2LoadingVisit(this);
+        if (!runningObjects || servicing || activePrimary != null || activeDrain != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeMonitor != null || activePata != null || activeBoulder != null || activeAnton != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform
+                || monitorPort || drawingMonitor || drawingPata || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || whole < 32 || whole >= 128
+                || placement.pool().state(whole).id() != CdPataBata.OBJECT_ID || values.phase() != BEGIN_LEVEL
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Act2 Pata-Bata dispatch");
+        var invocation = new PataInvocation(whole); activePata = invocation;
+        try {
+            var result = pataBata.run(whole, invocation.inputs);
+            verifyPataInvocation(invocation); validatePataSource(invocation, PataSite.RETURN);
+            verifyPataResult(invocation, result);
+        } catch (RuntimeException | Error original) {
+            verifyPataFailure(invocation, original); throw original;
+        } finally { activePata = null; }
+    }
+
+    private PataInvocation requirePataInvocation(CdObjectPool pool, int whole) {
+        var invocation = activePata;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Pata-Bata callback at this physical pointer");
+        verifyPataInvocation(invocation); return invocation;
+    }
+    private void verifyPataInvocation(PataInvocation invocation) {
+        module.requireAct2LoadingVisit(this);
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeAnton!=null || antonPort || drawingAnton || activeBoulder!=null || boulderPort || drawingBoulder
+                || activeTitle != null || titlePort || drawingTitle || invocation == null || activePata != invocation || !runningObjects || servicing
+                || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeMonitor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform
+                || monitorPort || drawingMonitor || invocation.body != pataBata || invocation.sourceFrame != frame
+                || invocation.sourceAssets != assets || invocation.sourceStage != frame.stageSource()
+                || invocation.pool != placement.pool() || invocation.queue != drawQueue || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || values != invocation.base || values.phase() != BEGIN_LEVEL || sounds != invocation.ledger
+                || !placement.status().equals(invocation.before.status()) || !presentation.sameAct2Scroll(invocation.scroll)
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Pata-Bata changed another owner or retained a stale actual World/Frame cut");
+        invocation.pool.validateRestore(invocation.before.pool());
+    }
+    private void verifyPataFailure(PataInvocation invocation, Throwable original) {
+        try {
+            verifyPataInvocation(invocation); validatePataSource(invocation, PataSite.FAILURE);
+            if (original instanceof CdPataBata.UnsupportedPataBata stopped) {
+                var effects = new ArrayList<CdPataBata.Effect>();
+                effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DESTROY_ON_GOOD_FUTURE));
+                var boundary = stopped.boundary();
+                if (boundary == CdPataBata.UnsupportedBoundary.SET_OBJECT_TILE_ID
+                        || boundary == CdPataBata.UnsupportedBoundary.ANIMATE_OBJECT) {
+                    var prefixes = pataBodyPrefixes(invocation);
+                    if (invocation.drawn || invocation.expectedStop != boundary
+                            || !prefixes.getLast().equals(invocation.pool.state(invocation.whole)))
+                        throw new IllegalStateException("Pata-Bata read fault lacks its exact committed native prefix");
+                } else {
+                    if (!invocation.bodyReady || !invocation.drawn)
+                        throw new IllegalStateException("Pata-Bata callback/tail fault preceded its actual body");
+                    effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.ANIMATE_OBJECT));
+                    if (boundary == CdPataBata.UnsupportedBoundary.CHECK_OBJ_DESPAWN2) {
+                        if (!invocation.tailArmed) throw new IllegalStateException("Pata-Bata tail fault preceded returned DrawObject");
+                        effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DRAW_OBJECT));
+                    }
+                }
+                if (stopped.wholeIndex() != invocation.whole || !stopped.completedEffects().equals(effects))
+                    throw new IllegalStateException("Pata-Bata fault metadata changed its physical source/completed calls");
+            }
+        } catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /**
+     * Literal observations of the cached body's committed source images, N ObjPataBata:11-77.
+     * Never invokes run, AnimateObject, CalcSine or a gameplay publication. Failed selected
+     * animation reads retain the caller-owned reset/decrement/speed/reached-index stores.
+     */
+    private List<CdObjectState> pataBodyPrefixes(PataInvocation invocation) {
+        var prefixes = new ArrayList<CdObjectState>(); var source = invocation.entry;
+        prefixes.add(source); invocation.bodyReady = false; invocation.expectedStop = null;
+        if (source.routine() == 0) {
+            source = source.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                    .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() | 4)
+                    .moveByte(CdObjectState.ByteField.PRIORITY, 3).moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0x2A)
+                    .moveByte(CdObjectState.ByteField.X_RADIUS, 0x10).moveByte(CdObjectState.ByteField.WIDTH, 0x10)
+                    .moveByte(CdObjectState.ByteField.Y_RADIUS, 0x10)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_ANCHOR_X, source.centreX())
+                    .moveLong(CdObjectState.LongField.PATA_BATA_ANCHOR_Y, (source.centreY() << 16) | 0x8000);
+            prefixes.add(source);
+            var tiles = view(CdR12aProfile.Asset.OBJECT_TILE_IDS).bytes();
+            int selected = (short) tiles.unsignedWord(2) + (source.subtype2() << 1);
+            if ((selected & 1) != 0 || selected < 0 || selected > tiles.length() - 2) {
+                invocation.expectedStop = CdPataBata.UnsupportedBoundary.SET_OBJECT_TILE_ID; return prefixes;
+            }
+            source = source.moveWord(CdObjectState.WordField.TILE, tiles.unsignedWord(selected)); prefixes.add(source);
+            boolean damaged = source.subtype() != 0;
+            source = source.moveLong(CdObjectState.LongField.PATA_BATA_X_DELTA, damaged ? -0x4000 : -0x8000)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_PHASE_SPEED, damaged ? -0x100 : -0x200)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_SHIFT, damaged ? 4 : 3)
+                    .moveByte(CdObjectState.ByteField.ANIMATION, damaged ? 1 : 0)
+                    .moveLong(CdObjectState.LongField.MAPPINGS, view(damaged
+                            ? CdR12aProfile.Asset.MAP_SPR_PATA_BATA2 : CdR12aProfile.Asset.MAP_SPR_PATA_BATA1).range().nativeAddress());
+            prefixes.add(source);
+        }
+        // Every nonzero routine enters Main, including odd/FF. No time-stop, player or proximity gate.
+        int delta = source.longBits(CdObjectState.LongField.PATA_BATA_X_DELTA);
+        source = source.addLong(CdObjectState.LongField.X_POSITION, delta); prefixes.add(source);
+        int distance = (source.centreX() - source.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X)) & 0xFFFF;
+        if ((short) distance < 0) distance = (-distance) & 0xFFFF;
+        if ((short) distance >= 0x80) {
+            delta = -delta;
+            source = source.moveLong(CdObjectState.LongField.PATA_BATA_X_DELTA, delta); prefixes.add(source);
+            source = source.addLong(CdObjectState.LongField.X_POSITION, delta); prefixes.add(source);
+            source = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() ^ 1)
+                    .moveByte(CdObjectState.ByteField.FLAGS, source.flags() ^ 1)
+                    .moveWord(CdObjectState.WordField.PATA_BATA_PHASE, 0); prefixes.add(source);
+        }
+        source = source.addWord(CdObjectState.WordField.PATA_BATA_PHASE,
+                source.signedWord(CdObjectState.WordField.PATA_BATA_PHASE_SPEED)); prefixes.add(source);
+        int angle = source.word(CdObjectState.WordField.PATA_BATA_PHASE) >>> 8;
+        // Observe the original R12A source WORD, not a second CalcSine helper invocation.
+        int sine = (short) player.player().sineTable().unsignedWord(angle * 2);
+        int swapped = ((sine & 0xFFFF) << 16) | (delta >>> 16);
+        int count = source.word(CdObjectState.WordField.PATA_BATA_SHIFT) & 63;
+        source = source.moveLong(CdObjectState.LongField.Y_POSITION,
+                source.longBits(CdObjectState.LongField.PATA_BATA_ANCHOR_Y) + (count >= 32 ? swapped >> 31 : swapped >> count));
+        prefixes.add(source);
+        var animated = pataAnimationImage(source,prefixes);
+        if (animated == null) { invocation.expectedStop = CdPataBata.UnsupportedBoundary.ANIMATE_OBJECT; return prefixes; }
+        prefixes.add(animated); invocation.bodyReady = true; return prefixes;
+    }
+
+    /** Read-only scalar Object Animate:14-95 observation over this one shared 18-byte table. */
+    private CdObjectState pataAnimationImage(CdObjectState source,List<CdObjectState> prefixes) {
+        var expected = source;
+        int animation = source.unsignedByte(CdObjectState.ByteField.ANIMATION);
+        int index = source.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME);
+        if (animation != source.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION)) {
+            index = 0;
+            expected = expected.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, animation)
+                    .moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0).moveByte(CdObjectState.ByteField.ANIMATION_TIME, 0);
+        }
+        expected = expected.addByte(CdObjectState.ByteField.ANIMATION_TIME, -1);prefixes.add(expected);
+        if (expected.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME) < 0x80) return expected;
+        var bytes = view(CdR12aProfile.Asset.ANI_PATA_BATA).bytes();
+        if (animation >= 2) return null;
+        int script = (short) bytes.unsignedWord(animation * 2);
+        int timer=pataAnimationByte(bytes,script,0);if(timer<0)return null;
+        expected=expected.moveByte(CdObjectState.ByteField.ANIMATION_TIME,timer);prefixes.add(expected);
+        int raw=pataAnimationByte(bytes,script,1+index);if(raw<0)return null;
+        if (raw == 0xFF) {
+            index = 0;expected=expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME,0);prefixes.add(expected);
+            raw = pataAnimationByte(bytes, script, 1); if (raw < 0) return null;
+        } else if (raw == 0xFE) {
+            int back = pataAnimationByte(bytes, script, 2 + index); if (back < 0) return null;
+            index = (index - back) & 0xFF;expected=expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME,index);prefixes.add(expected);
+            raw = pataAnimationByte(bytes, script, 1 + index); if (raw < 0) return null;
+        } else if (raw >= 0x80) {
+            if (raw == 0xFD) {
+                int next = pataAnimationByte(bytes, script, 2 + index); if (next < 0) return null;
+                expected = expected.moveByte(CdObjectState.ByteField.ANIMATION, next);
+            } else if (raw == 0xFC) expected = expected.addByte(CdObjectState.ByteField.ROUTINE, 2);
+            else if (raw == 0xFB) expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0)
+                    .moveByte(CdObjectState.ByteField.ROUTINE_2, 0);
+            else if (raw == 0xFA) expected = expected.addByte(CdObjectState.ByteField.ROUTINE_2, 2);
+            return expected;
+        }
+        int rotated = ((raw << 3) | (raw >>> 5)) & 0xFF;
+        return expected.moveByte(CdObjectState.ByteField.MAP_FRAME, raw & 0x1F)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, (source.spriteFlags() & 0xFC) | ((rotated ^ source.flags()) & 3))
+                .moveByte(CdObjectState.ByteField.ANIMATION_FRAME, (index + 1) & 0xFF);
+    }
+    private static int pataAnimationByte(CdAssetBytes bytes, int script, int offset) {
+        long address = (long) script + offset;
+        return address < 0 || address >= bytes.length() ? -1 : bytes.unsignedByte((int) address);
+    }
+
+    private void validatePataSource(PataInvocation invocation, PataSite site) {
+        boolean failure = site == PataSite.FAILURE;
+        var actual = invocation.pool.state(invocation.whole); var bank = invocation.before.savedFlags();
+        boolean conversion = invocation.inputs.goodFuture() != 0
+                && (invocation.inputs.timeZone() != 1 || invocation.entry.subtype() != 0);
+        if (conversion) {
+            if (invocation.drawn || site == PataSite.DRAW) throw new IllegalStateException("Converted Pata-Bata reached DrawObject");
+            byte[] deleted = new byte[CdObjectState.BYTE_SIZE], x = deleted.clone();
+            x[8] = (byte) (invocation.entry.centreX() >>> 8); x[9] = (byte) invocation.entry.centreX();
+            byte[] xy = x.clone(); xy[12] = (byte) (invocation.entry.centreY() >>> 8); xy[13] = (byte) invocation.entry.centreY();
+            byte[] converted = xy.clone(); converted[0] = 0x18;
+            byte[] chosen = converted;
+            if (failure) {
+                chosen = null;
+                for (var prefix : List.of(invocation.entry.copyBytes(), deleted, x, xy, converted))
+                    if (Arrays.equals(actual.copyBytes(), prefix)) { chosen = prefix; break; }
+                if (chosen == null) throw new IllegalStateException("Pata-Bata conversion exceeded Delete64/X/Y/ID18");
+            }
+            verifyPataImages(invocation, chosen, bank); return;
+        }
+        if (!invocation.drawn) {
+            var prefixes = pataBodyPrefixes(invocation);
+            byte[] chosen = null;
+            if (failure) {
+                for (var prefix : prefixes) if (prefix.equals(actual)) { chosen = prefix.copyBytes(); break; }
+            } else if (site == PataSite.DRAW && invocation.bodyReady) chosen = prefixes.getLast().copyBytes();
+            if (chosen == null) throw new IllegalStateException("Pata-Bata source is outside its actual Init/motion/animation prefix");
+            verifyPataImages(invocation, chosen, bank); return;
+        }
+        if (site == PataSite.DRAW || invocation.drawSource == null)
+            throw new IllegalStateException("Pata-Bata repeated or lost its native DrawObject source");
+        var source = invocation.drawSource;
+        if (!invocation.tailArmed) {
+            if (!failure) throw new IllegalStateException("Pata-Bata returned before its actual DrawObject returned");
+            verifyPataImages(invocation, source.copyBytes(), bank); return;
+        }
+        // N CheckObjDespawn2:388-446 reloads the live post-Draw anchor and saved ID.
+        boolean outside = (source.spriteFlags() & 0x80) == 0
+                && (((source.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X) & 0xFF80)
+                - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
+        boolean delete = outside || (invocation.inputs.timeZone() & 0x80) != 0;
+        byte[] expectedBank = bank.copy(); boolean owned = true;
+        if (delete && source.savedFlagsId() != 0) {
+            int period = invocation.inputs.timeZone() & 0x7F;
+            if ((invocation.inputs.timeZone() & 0x80) != 0) {
+                period = (short) ((period - (byte) invocation.inputs.timeWarpDir()) & 0xFFFF);
+                period = period < 0 ? 0 : Math.min(period, 2);
+            }
+            int at = 2 + 3 * source.savedFlagsId() + period;
+            owned = period >= 0 && period <= 2 && at >= 0 && at < expectedBank.length;
+            if (owned) expectedBank[at] &= 0x7F;
+        }
+        byte[] expectedSource = delete && owned ? new byte[CdObjectState.BYTE_SIZE] : source.copyBytes();
+        var actualBank = placement.capture().savedFlags();
+        if (failure && Arrays.equals(actual.copyBytes(), source.copyBytes()) && sameBytes(actualBank, bank)) {
+            verifyPataImages(invocation, source.copyBytes(), bank); return;
+        }
+        if (failure && owned && Arrays.equals(actual.copyBytes(), source.copyBytes())
+                && Arrays.equals(actualBank.copy(), expectedBank)) {
+            verifyPataImages(invocation, source.copyBytes(), CdAssetBytes.copyOf(expectedBank)); return;
+        }
+        if (!owned && !failure) throw new IllegalStateException("Pata-Bata returned beyond an unowned native saved-period address");
+        verifyPataImages(invocation, expectedSource, CdAssetBytes.copyOf(expectedBank));
+    }
+
+    private void verifyPataImages(PataInvocation invocation, byte[] source, CdAssetBytes bank) {
+        verifyPataInvocation(invocation);
+        var now = placement.capture();
+        if (!sameBytes(now.savedFlags(), bank) || !now.status().equals(invocation.before.status()))
+            throw new IllegalStateException("Pata-Bata changed unowned saved-bank bits or placement cursors");
+        for (int i = 0; i < 96; i++) {
+            var image = now.pool().slots().get(i);
+            if (i == invocation.whole - 32) {
+                if (!image.identity().equals(invocation.entry.identity()) || !Arrays.equals(image.copyBytes(), source))
+                    throw new IllegalStateException("Pata-Bata changed its actual source identity/full64 prefix");
+            } else if (!image.equals(invocation.before.pool().slots().get(i)))
+                throw new IllegalStateException("Pata-Bata changed another physical image");
+        }
+    }
+    private void verifyPataCallback(PataInvocation invocation, CdObjectPlacementRuntime.Snapshot before) {
+        verifyPataImages(invocation, invocation.drawSource.copyBytes(), before.savedFlags());
+        if (!before.status().equals(invocation.before.status())
+                || !before.pool().slots().get(invocation.whole - 32).identity().equals(invocation.entry.identity()))
+            throw new IllegalStateException("Pata-Bata callback lost its actual pre-call source cut");
+    }
+    private void verifyPataCallbackFailure(PataInvocation invocation, CdObjectPlacementRuntime.Snapshot before, Throwable original) {
+        try { verifyPataCallback(invocation, before); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    private void drawPataBata(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requirePataInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (drawingPata || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+            throw new IllegalStateException("Pata-Bata DrawObject lacks its actual once-only native source");
+        validatePataSource(invocation, PataSite.DRAW);
+        var before = placement.capture(); invocation.drawSource = pool.state(invocation.whole);
+        invocation.drawn = true; drawingPata = true;
+        try {
+            var current = invocation.drawSource;
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Pata-Bata DrawObject did not clear bit7 once");
+            verifyPataCallback(invocation, before); invocation.tailArmed = true;
+        } catch (RuntimeException | Error original) {
+            verifyPataCallbackFailure(invocation, before, original); throw original;
+        } finally { drawingPata = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readPataDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingPata || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || !invocation.drawn) throw new IllegalStateException("No actual Pata-Bata collecting queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            verifyPataCallback(invocation, before); var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyPataCallback(invocation, before); return live;
+        } catch (RuntimeException | Error original) {
+            verifyPataCallbackFailure(invocation, before, original); throw original;
+        } finally { queuePort = false; }
+    }
+    private void writePataOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requirePataInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingPata || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+            throw new IllegalStateException("Only actual Pata-Bata DrawObject may clear bit7 once");
+        var before = placement.capture(); verifyPataCallback(invocation, before);
+        var next = invocation.drawSource.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.drawSource.spriteFlags() & 0x7F);
+        queuePort = true;
+        try {
+            invocation.pool.write(next); invocation.drawSource = next; invocation.screenCleared = true;
+            verifyPataCallback(invocation, before);
+        } catch (RuntimeException | Error original) {
+            verifyPataCallbackFailure(invocation, before, original); throw original;
+        } finally { queuePort = false; }
+    }
+
+    /** Returned effects are checked observations only: no effect grants writes, drawing or another dispatch. */
+    private void verifyPataResult(PataInvocation invocation, CdPataBata.Result result) {
+        var effects = new ArrayList<CdPataBata.Effect>();
+        boolean conversion = invocation.inputs.goodFuture() != 0
+                && (invocation.inputs.timeZone() != 1 || invocation.entry.subtype() != 0);
+        boolean delete = false;
+        if (conversion) effects.add(new CdPataBata.ExplosionConversion(invocation.entry.centreX(), invocation.entry.centreY()));
+        else {
+            if (!invocation.drawn || !invocation.screenCleared || !invocation.tailArmed || !invocation.bodyReady)
+                throw new IllegalStateException("Pata-Bata returned without its complete actual body/Draw cut");
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DESTROY_ON_GOOD_FUTURE));
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.ANIMATE_OBJECT));
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.DRAW_OBJECT));
+            var source = invocation.drawSource;
+            boolean outside = (source.spriteFlags() & 0x80) == 0
+                    && (((source.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X) & 0xFF80)
+                    - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
+            delete = outside || (invocation.inputs.timeZone() & 0x80) != 0;
+            if (delete) {
+                int period = -1;
+                if (source.savedFlagsId() != 0) {
+                    period = invocation.inputs.timeZone() & 0x7F;
+                    if ((invocation.inputs.timeZone() & 0x80) != 0) {
+                        period = (short) ((period - (byte) invocation.inputs.timeWarpDir()) & 0xFFFF);
+                        period = period < 0 ? 0 : Math.min(period, 2);
+                    }
+                }
+                effects.add(new CdPataBata.Despawn(outside ? CdPataBata.DespawnEntry.ANCHOR_OFFSCREEN
+                        : CdPataBata.DespawnEntry.TIME_WARP, source.savedFlagsId(), period));
+            }
+            effects.add(new CdPataBata.CallReturned(CdPataBata.NativeCall.CHECK_OBJ_DESPAWN2));
+        }
+        if (!result.state().equals(invocation.pool.state(invocation.whole)) || !result.effects().equals(effects)
+                || result.converted() != conversion || result.deleted() != delete)
+            throw new IllegalStateException("Pata-Bata returned metadata disagrees with its actual completed native branch");
     }
 
 

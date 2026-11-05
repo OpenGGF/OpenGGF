@@ -541,7 +541,7 @@ class TestCdPataBata {
     }
 
     @Test
-    void malformedAnimationFailureOccursAfterMotionButPublishesNoPartialAnimatorImage() {
+    void malformedAnimationFailureRetainsOnlyReachedResetAndTimerWritesAfterMotion() {
         var a = assets(new MathFixture().owner());
         var bad = new CdObjectAnimation.AnimationTable(CdAssetBytes.copyOf(bytes(0, 4, 0, 100, 7, 0, 0xFF)), 0, 2);
         var h = new Harness(0, withAnimations(a, bad));
@@ -554,11 +554,36 @@ class TestCdPataBata {
         assertEquals(List.of(call(DESTROY_ON_GOOD_FUTURE)), failure.completedEffects());
         assertEquals(0x00FF8000, h.state().longBits(X_POSITION));
         assertEquals(0x02077FFF, h.state().longBits(Y_POSITION));
-        assertEquals(0x77, h.state().unsignedByte(PREVIOUS_ANIMATION));
-        assertEquals(0x55, h.state().unsignedByte(ANIMATION_TIME));
-        assertEquals(0x66, h.state().unsignedByte(ANIMATION_FRAME));
+        assertEquals(1, h.state().unsignedByte(PREVIOUS_ANIMATION));
+        assertEquals(255, h.state().unsignedByte(ANIMATION_TIME));
+        assertEquals(0, h.state().unsignedByte(ANIMATION_FRAME));
         assertEquals(0xEE, h.state().unsignedByte(MAP_FRAME));
         assertTrue(h.draw.observed.isEmpty());
+    }
+
+    @Test
+    void boundedAnimationReadFaultsRetainNativeDecrementSpeedAndReachedFeIndexStores() {
+        record Vector(byte[] raw,int animation,int expectedTimer,int expectedIndex) { }
+        var vectors=List.of(
+                new Vector(bytes(0,4,0,0,7),2,255,0),
+                new Vector(bytes(0,4,0,0,7),0,7,0),
+                new Vector(bytes(0,4,0,0,7,0xFE),0,7,0),
+                new Vector(bytes(0,4,0,0,7,0xFE,1),0,7,255),
+                new Vector(bytes(0,4,0,0,7,0xFD),0,7,0));
+        for(var vector:vectors) {
+            var a=assets(new MathFixture().owner());
+            var table=new CdObjectAnimation.AnimationTable(CdAssetBytes.copyOf(vector.raw()),0,1);
+            var h=new Harness(0,withAnimations(a,table));
+            h.put(main(h.state()).moveByte(ANIMATION,vector.animation()).moveByte(PREVIOUS_ANIMATION,vector.animation())
+                    .moveByte(ANIMATION_TIME,0).moveByte(ANIMATION_FRAME,0).moveByte(MAP_FRAME,0xEE));
+            var failure=assertThrows(CdPataBata.UnsupportedPataBata.class,h::run);
+            assertEquals(CdPataBata.UnsupportedBoundary.ANIMATE_OBJECT,failure.boundary());
+            assertEquals(List.of(call(DESTROY_ON_GOOD_FUTURE)),failure.completedEffects());
+            assertEquals(vector.animation(),h.state().unsignedByte(PREVIOUS_ANIMATION));
+            assertEquals(vector.expectedTimer(),h.state().unsignedByte(ANIMATION_TIME));
+            assertEquals(vector.expectedIndex(),h.state().unsignedByte(ANIMATION_FRAME));
+            assertEquals(0xEE,h.state().unsignedByte(MAP_FRAME));assertTrue(h.draw.observed.isEmpty());
+        }
     }
 
     @Test

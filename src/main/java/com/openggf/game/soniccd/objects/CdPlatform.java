@@ -224,6 +224,16 @@ public final class CdPlatform {
     private final PrimaryAngleCommit primaryAngleCommit;
     private final DrawObjectCall draw;
     private boolean running;
+    private transient SolidCall pendingSolidCall;
+    private transient PrimaryAngleCall pendingPrimaryAngleCall;
+
+    /** Private World consumers may authenticate this one actual synchronous producer occurrence. */
+    public boolean isCurrentSolidCall(SolidCall call) {
+        return running && call != null && pendingSolidCall == call;
+    }
+    public boolean isCurrentPrimaryAngleCall(PrimaryAngleCall call) {
+        return running && call != null && pendingPrimaryAngleCall == call;
+    }
 
     public CdPlatform(CdObjectPlacementRuntime placement, Assets assets, CdPlayerMath math, CdPlayerTerrain terrain,
                       CdSolidObject sharedSolid, SolidCommit solidCommit, PrimaryAngleCommit primaryAngleCommit, DrawObjectCall draw) {
@@ -493,7 +503,9 @@ public final class CdPlatform {
         c.prepareGlobals();
         var cut = c.pool.capture(); var call = new PrimaryAngleCall(cut, c.state, c.solidGlobals.primaryAngle(), value);
         c.pool.validateRestore(cut); assertSourceCut(c.pool, cut);
-        primaryAngleCommit.commit(call);
+        pendingPrimaryAngleCall = call;
+        try { primaryAngleCommit.commit(call); }
+        finally { pendingPrimaryAngleCall = null; }
         assertSourceCut(c.pool, cut);
         c.solidGlobals = new CdSolidObject.Globals(c.solidGlobals.invincible(), c.solidGlobals.scoreChain(), value, c.solidGlobals.secondaryAngle());
         c.effects.add(new PrimaryAngleCommitted(call));
@@ -515,7 +527,10 @@ public final class CdPlatform {
             object = prefix.object(); others = prefix.otherSlots(); player = prefix.player(); globals = prefix.globals();
         }
         validateImages(c, cut, object, others); assertSourceCut(c.pool, cut);
-        solidCommit.commit(new SolidCall(site, entry, cut, expectedPlayer, expectedGlobals, outcome));
+        var call = new SolidCall(site, entry, cut, expectedPlayer, expectedGlobals, outcome);
+        pendingSolidCall = call;
+        try { solidCommit.commit(call); }
+        finally { pendingSolidCall = null; }
         assertPublished(c.pool, cut, object, others);
         c.state = c.pool.state(c.wholeIndex); c.player = player; c.solidGlobals = globals;
         if (stopped != null) throw stopped.stop().originalException();
