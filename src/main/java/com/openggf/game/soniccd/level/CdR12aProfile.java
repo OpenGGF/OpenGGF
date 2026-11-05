@@ -119,7 +119,14 @@ public final class CdR12aProfile {
         // Act 2 Present's complete native collapse block: real1/2/7/2 maps, not Act1's1/6/7/6 shape.
         MAP_SPR_COLLAPSE_PLATFORM_1(0xC348, 118), COLLAPSE_PLATFORM_SIZES_1(0xC3BE, 24),
         MAP_SPR_COLLAPSE_PLATFORM_3(0xC3D6, 62), MAP_SPR_COLLAPSE_PLATFORM_2(0xC414, 286),
-        COLLAPSE_PLATFORM_SIZES_2(0xC532, 24), MAP_SPR_COLLAPSE_PLATFORM_4(0xC54A, 42);
+        COLLAPSE_PLATFORM_SIZES_2(0xC532, 24), MAP_SPR_COLLAPSE_PLATFORM_4(0xC54A, 42),
+        // Log Shadow/Mosqui actual R12A Init operands; includes retain literal and parent EVEN padding.
+        LOG_SHADOW_BASE_TILES(0x8806, 16), MAP_SPR_LOG_SHADOW(0x8816, 16),
+        ANI_MOSQUI_NORMAL(0xB4F2, 14), ANI_MOSQUI_DAMAGED(0xB500, 14),
+        MAP_SPR_MOSQUI_NORMAL(0xB50E, 60), MAP_SPR_MOSQUI_DAMAGED(0xB54A, 66),
+        // Actual R12A Explosion/Points and selected PP Flower source operands; full tables retain padding.
+        ANI_EXPLOSION(0x1D700, 20), MAP_SPR_EXPLOSION(0x1D714, 146), MAP_SPR_POINTS(0xAA8C, 82),
+        ANI_FLOWER(0x36A94, 28), MAP_SPR_FLOWER(0x36AB0, 90);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

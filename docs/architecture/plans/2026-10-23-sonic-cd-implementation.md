@@ -1,5 +1,59 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — Collapse, Log/Mosqui, source127 and positive11587
+
+Actual R12A dispatch now binds the cached Collapse20, LogShadow33 and Mosqui3D
+components over their original source views and existing World owners. Collapse
+uses genuine Top/GetOff outcomes, prepared Frame/pool/ledger publication, native
+dirty first-free breakup and unconditional Draw/tails. A returning substituted
+FM or Draw initially allowed native stores before the missing receipt was rejected.
+Two genuine-World tests reproduced that defect. The Act2 construction now observes
+the exact pending operation synchronously, consuming only the private receipt set
+after actual World adoption/readback, before another native read/store. Legacy
+constructors and native kernels remain unchanged.
+
+Log/Mosqui reuse raw native pointers, real floor prezero/every scratch store,
+ordered A7, actual Draw and saved/full64 tails. Private pending and completed
+references reject no-op/equal/duplicate callbacks; full96, Frame, Values, bank,
+status, scroll, queue, ledger, World and generation remain guarded. Root unions
+the independent family blocks: old93 observations plus Log/Mosqui4=97, with
+mutual scope exclusions. Independent static review found no P1/P2 on that source.
+
+Raw source116 grows to127: six Log/Mosqui descriptors, then five selected
+Explosion/Points/Flower views. The three child cache/factories only prepare data;
+child World/persistence/Powerup service is not thereby admitted. All old descriptor
+bytes/ordinals,35 readers and19 PLCs remain exact. Mosqui's preserved finite
+reader is Java846/native847/cursor846; a new test had reversed those extents.
+
+Qualification is deliberately separate. The239 run was237passes/2new test-oracle
+failures/0errors/skips; the bank wrapper comparison becomes full-byte equality,
+and the reversed reader literals are corrected without changing production.
+The first325 attempt stopped in test compilation at one missing resources import;
+no tests launched. Its corrected rerun was322passes/3landing-prerequisite
+failures/0errors/skips. Those three fixtures placed the object above an unmeasured
+column. Root now aligns one labelled object at the genuine standing column to its
+real floor, then selects native8px penetration without search, actor/terrain edits
+or a fabricated probe. All20Log/Mosqui plus two changed route/pixel cases and
+one observer then pass23/0/0/0. All19Collapse,99shared legacy component and66data
+cases passed in the earlier mixed325; no green325 is claimed. The existing Past
+Mosqui World4 also passes separately on the same production source.
+
+Controller inputs preserve all prior steps, then holdRight+B32/release96 from
+11214. Natural first Log/Mosqui returns are11261/11292; actual floor/A7 are
+11544/11554. The final positive route and actual EGL method pass2/0/0/0 through
+11587 with full/course Init/Main, jump, floor/FM and final11586→11587 cuts.
+Selected-primary omission and complete value/pixel replay pass at10778,10866,
+11033,11213,11341,11587. New ENGINE11587 PNG is actual320×224 OpenGGF output,
+exported only after full cleanup; no native-image or named-enemy pixel claim.
+
+The observer's next11588 call rethrows the original DYNAMIC_OBJECTS stop.
+Exact source walk and retained partial pool identify first unbound whole32,
+ID0D/routine0/X1130/Y0218/subtype1. Failed partial state is not a prior closed
+occupancy/ingress oracle. The temporary observer is removed from the tree;
+its exact source, receipts and finite facts remain under external Downloads custody.
+Horizontal Door binding is next. Natural Checkpoint save/respawn, Wall contact,
+complete Act2/next programme, native audio/pixel parity and JP/EU remain open.
+
 ## 5 November 2026 — Checkpoint carry, Wall binding and positive11146
 
 Existing saved31 bytes and knowledge now follow their real opening→Past→Act2

@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -77,6 +83,18 @@ public final class CdLogShadow {
             }
         }
 
+        /** Retains actual original USA R12A source values only; grants no producer or World authority. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("LogShadow Act2 assets require the authenticated original USA R12A source");
+            return new Assets(owner.view(CdR12aProfile.Asset.LOG_SHADOW_BASE_TILES), owner.logShadow(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_LOG_SHADOW).nativeAddress());
+        }
+
         /** Retains the authenticated owner's raw base view and actual mapping-view native address. */
         public static Assets fromObjectAssets(CdR11aObjectAssets objects) {
             Objects.requireNonNull(objects, "objects");
@@ -140,10 +158,72 @@ public final class CdLogShadow {
     private final DrawObjectCall drawObject;
     private boolean running;
 
+    /** Narrow producer provenance for one actual World dispatch; values alone grant no invocation. */
+    public record Publication(long ordinal, CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source, CdObjectState output, int savedIndex) { }
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public interface DispatchObserver {
+        void beforePublication(Publication call);
+        void afterPublication(Publication call);
+        void beforeCall(Object call);
+        void afterCall(Object call);
+    }
+    @FunctionalInterface public interface SourceDraw { void draw(DrawCall call); }
+    private DispatchObserver observer;
+    private SourceDraw sourceDraw;
+    private Publication pendingPublication;
+    private DrawCall pendingDraw;
+    private long publicationOrdinal;
+
+    /** Identity of the producer's currently pending operation, never equality of public records. */
+    public boolean isCurrentCall(Object call) {
+        return call != null && running && (call == pendingPublication || call == pendingDraw);
+    }
+    private void observedWrite(CdObjectState output) {
+        if (observer == null) { placement.pool().write(output); return; }
+        var call = new Publication(++publicationOrdinal, placement.capture(),
+                placement.pool().state(output.identity().wholeIndex()), output, -1);
+        observePublication(call, () -> placement.pool().write(output));
+    }
+    private void observedDelete(CdObjectState source) {
+        if (observer == null) { placement.pool().deleteObject(source.identity().wholeIndex()); return; }
+        var call = new Publication(++publicationOrdinal, placement.capture(), source, null, -1);
+        observePublication(call, () -> placement.pool().deleteObject(source.identity().wholeIndex()));
+    }
+    private void observedSaved(CdObjectState source, int savedId, int period, int index) {
+        if (observer == null) { placement.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED); return; }
+        var call = new Publication(++publicationOrdinal, placement.capture(), source, source, index);
+        observePublication(call, () -> placement.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED));
+    }
+    private void observePublication(Publication call, Runnable nativeStore) {
+        if (pendingPublication != null) throw new IllegalStateException("Nested family publication");
+        pendingPublication = call;
+        try { observer.beforePublication(call); nativeStore.run(); observer.afterPublication(call); }
+        finally { pendingPublication = null; }
+    }
+    private void observedDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (observer == null) { drawObject.drawObject(pool, identity); return; }
+        var call = new DrawCall(placement.capture(), pool.state(identity.wholeIndex()));
+        if (pendingDraw != null) throw new IllegalStateException("Nested family DrawObject");
+        pendingDraw = call;
+        try { observer.beforeCall(call); sourceDraw.draw(call); observer.afterCall(call); }
+        finally { pendingDraw = null; }
+    }
+
+
     public CdLogShadow(CdObjectPlacementRuntime placement, Assets assets, DrawObjectCall draw) {
         this.placement = Objects.requireNonNull(placement, "placement");
         this.assets = Objects.requireNonNull(assets, "assets");
         this.drawObject = Objects.requireNonNull(draw, "draw");
+    }
+
+    /** Same generic algorithm with authenticated R12A data and actual synchronous source observations. */
+    public static CdLogShadow fromAct2Assets(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
+                                           DispatchObserver observer, SourceDraw draw) {
+        var body = new CdLogShadow(placement, Assets.fromAct2Assets(owner), (pool, identity) -> {
+            throw new IllegalStateException("R12A Log requires its actual source Draw");
+        });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw); return body;
     }
 
     /** One RunObjects physical dynamic-slot visit; globals retain native widths without period/act normalization. */
@@ -159,7 +239,7 @@ public final class CdLogShadow {
         if (routine != 0 && routine != 2) {
             throw new UnsupportedLogShadow(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex, routine);
         }
-        running = true;
+        running = true; publicationOrdinal = 0;
         try {
             var effects = new ArrayList<Effect>();
             if (routine == 0) {
@@ -168,15 +248,15 @@ public final class CdLogShadow {
                 state = state.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, state.spriteFlags() | 4)
                         .moveByte(PRIORITY, 6).moveLong(MAPPINGS, assets.mappingsAddressBits())
                         .moveByte(MAP_FRAME, state.subtype()).moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 0x10);
-                pool.write(state); // All seven stores precede even a selected short-view fault.
+                observedWrite(state); // All seven stores precede even a selected short-view fault.
                 int tile = selectedBaseWord(wholeIndex, globals);
                 state = state.moveWord(TILE, tile); // MOVE.W, :53.
-                pool.write(state);
+                observedWrite(state);
                 state = state.moveWord(TILE, state.word(TILE) | 0x4000); // ORI.W, :54.
-                pool.write(state);
+                observedWrite(state);
             }
             effects.add(new RoutineEntered(NativeRoutine.MAIN)); // Init falls through into the RTS (:35-36).
-            drawObject.drawObject(pool, state.identity()); // Wrapper ALWAYS calls exactly once (:12).
+            observedDraw(pool, state.identity()); // Wrapper ALWAYS calls exactly once (:12).
             state = pool.state(wholeIndex); // Never repair ID or overwrite the callback's live image.
             effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
             boolean deleted = checkObjDespawn(state, globals); // Wrapper tail JMP (:13).
@@ -232,9 +312,9 @@ public final class CdLogShadow {
             }
             // Translate the COMPLETED native byte address to existing public bank primitives, not the raw period.
             int bodyOffset = index - 2;
-            placement.bclrSavedFlag(bodyOffset / 3, bodyOffset % 3, CdObjectPlacementRuntime.SavedBit.LOADED);
+            observedSaved(state, bodyOffset / 3, bodyOffset % 3, index);
         }
-        placement.pool().deleteObject(state.identity().wholeIndex()); // DeleteObject:228-237, all sixteen LONGs.
+        observedDelete(state); // DeleteObject:228-237, all sixteen LONGs.
         return true;
     }
 

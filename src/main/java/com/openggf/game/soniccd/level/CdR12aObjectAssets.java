@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint, collapsePlatform1, collapsePlatform2, collapsePlatform3, collapsePlatform4;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock, checkpoint, collapsePlatform1, collapsePlatform2, collapsePlatform3, collapsePlatform4, logShadow, normalMosqui, damagedMosqui, explosion, points, flower;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -301,6 +301,37 @@ public final class CdR12aObjectAssets {
     public synchronized CdObjectVisualAssets collapsePlatform4() {
         if (collapsePlatform4 == null) collapsePlatform4 = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_COLLAPSE_PLATFORM_4).copy(), 2, 57);
         return collapsePlatform4;
+    }
+    /** Two static counted frames selected by ObjLogShadow_Init; no animation or art decode. */
+    public synchronized CdObjectVisualAssets logShadow() {
+        if (logShadow == null) logShadow = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_LOG_SHADOW).copy(), 2, 16);
+        return logShadow;
+    }
+    /** Both Init variants select the same existing seventy-tile art source through selector0. */
+    public synchronized CdObjectVisualAssets normalMosqui() {
+        if (normalMosqui == null) normalMosqui = CdObjectVisualAssets.decode(view(MAP_SPR_MOSQUI_NORMAL).copy(), 5,
+                view(ANI_MOSQUI_NORMAL).copy(), 2, 70);
+        return normalMosqui;
+    }
+    public synchronized CdObjectVisualAssets damagedMosqui() {
+        if (damagedMosqui == null) damagedMosqui = CdObjectVisualAssets.decode(view(MAP_SPR_MOSQUI_DAMAGED).copy(), 5,
+                view(ANI_MOSQUI_DAMAGED).copy(), 2, 70);
+        return damagedMosqui;
+    }
+    /** Source-only child-effect visuals; existing Std art/current owners remain separate. */
+    public synchronized CdObjectVisualAssets explosion() {
+        if (explosion == null) explosion = CdObjectVisualAssets.decode(view(MAP_SPR_EXPLOSION).copy(), 7,
+                view(ANI_EXPLOSION).copy(), 2, 70);
+        return explosion;
+    }
+    public synchronized CdObjectVisualAssets points() {
+        if (points == null) points = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_POINTS).copy(), 6, 5);
+        return points;
+    }
+    public synchronized CdObjectVisualAssets flower() {
+        if (flower == null) flower = CdObjectVisualAssets.decode(view(MAP_SPR_FLOWER).copy(), 8,
+                view(ANI_FLOWER).copy(), 4, 39);
+        return flower;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

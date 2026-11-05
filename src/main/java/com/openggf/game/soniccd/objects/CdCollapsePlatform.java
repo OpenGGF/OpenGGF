@@ -222,6 +222,17 @@ public final class CdCollapsePlatform {
     /** One direct PlayFMSound request at the Main source edge. Shared Solid requests belong to SolidCommit. */
     @FunctionalInterface public interface FmCall { void playFm(int soundId); }
 
+    public record FmRequest(CdObjectPool.Snapshot actualCut,CdObjectState expectedSource,int soundId) {
+        public FmRequest {
+            Objects.requireNonNull(actualCut);Objects.requireNonNull(expectedSource);
+            if(soundId!=COLLAPSE_FM || !actualCut.slots().get(expectedSource.identity().wholeIndex()-32).equals(expectedSource))
+                throw new IllegalArgumentException("Collapse FM requires its actual full96/source/A3 values");
+        }
+    }
+    @FunctionalInterface public interface FmCommit { void play(FmRequest call); }
+    /** Synchronous actual-owner receipt; checked before the next native store, never replayed. */
+    @FunctionalInterface public interface PublicationObserver { void published(Object actualOperation); }
+
     public record Result(CdObjectState state, List<Effect> effects) {
         public Result { Objects.requireNonNull(state, "state"); effects = List.copyOf(effects); }
         public boolean deleted() {
@@ -256,12 +267,49 @@ public final class CdCollapsePlatform {
     private final DrawObjectCall drawObject;
     private final FmCall fmCall;
     private boolean running;
+    private FmCommit act2Fm;
+    private final PublicationObserver publicationObserver;
+    private transient Cursor currentCursor;
+    private transient SolidCall pendingSolid;
+    private transient FmRequest pendingFm;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient CdObjectState.Identity pendingDrawIdentity;
+
+    /** Actual pending identity and completed prefix are separate from plain public call values. */
+    public boolean isCurrentSolidCall(SolidCall call){return running&&call!=null&&pendingSolid==call;}
+    public boolean isCurrentFmRequest(FmRequest call){return running&&call!=null&&pendingFm==call;}
+    public boolean matchesCurrentPrefix(List<Solid> completed,boolean fmPlayed){
+        return running&&currentCursor!=null&&currentCursor.effects.stream().filter(Solid.class::isInstance).toList().equals(completed)
+                &&currentCursor.effects.stream().anyMatch(FmRequested.class::isInstance)==fmPlayed;
+    }
+    public boolean isCurrentDrawCall(CdObjectPool pool,CdObjectState.Identity identity){
+        return running&&pool==placement.pool()&&identity!=null&&pendingDrawIdentity==identity&&pendingDrawCut!=null
+                &&pool.capture().slots().equals(pendingDrawCut.slots());
+    }
+    public boolean isCurrentOperation(Object operation) {
+        return running && operation != null && (pendingSolid == operation || pendingFm == operation || pendingDrawIdentity == operation);
+    }
+    private void observePublication(Object operation) {
+        if (publicationObserver != null) publicationObserver.published(operation);
+    }
+    public static CdCollapsePlatform fromAct2Assets(CdObjectPlacementRuntime placement,CdR12aObjectAssets owner,
+                                                    CdSolidObject solid,SolidCommit commit,DrawObjectCall draw,FmCommit fm,PublicationObserver observer){
+        Objects.requireNonNull(placement);Objects.requireNonNull(owner);
+        if(!placement.sameAct2Source(owner))throw new IllegalArgumentException("Collapse requires the same retained R12A placement/source");
+        return new CdCollapsePlatform(placement,Assets.fromAct2Assets(owner),solid,commit,draw,fm,observer);
+    }
+    private CdCollapsePlatform(CdObjectPlacementRuntime placement,Assets assets,CdSolidObject sharedSolid,
+                               SolidCommit commit,DrawObjectCall draw,FmCommit fm,PublicationObserver observer){
+        this.placement=Objects.requireNonNull(placement);this.assets=Objects.requireNonNull(assets);this.sharedSolid=Objects.requireNonNull(sharedSolid);
+        this.commit=Objects.requireNonNull(commit);this.drawObject=Objects.requireNonNull(draw);this.fmCall=null;this.act2Fm=Objects.requireNonNull(fm);this.publicationObserver=Objects.requireNonNull(observer);
+    }
 
     public CdCollapsePlatform(CdObjectPlacementRuntime placement, Assets assets, CdSolidObject sharedSolid,
                               SolidCommit commit, DrawObjectCall drawObject, FmCall fmCall) {
         this.placement = Objects.requireNonNull(placement, "placement"); this.assets = Objects.requireNonNull(assets, "assets");
         this.sharedSolid = Objects.requireNonNull(sharedSolid, "sharedSolid"); this.commit = Objects.requireNonNull(commit, "commit");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject"); this.fmCall = Objects.requireNonNull(fmCall, "fmCall");
+        this.publicationObserver = null;
     }
 
     /** No blanket Inputs/DespawnGlobals dereference: each belongs only to the source instruction that reads it. */
@@ -275,7 +323,7 @@ public final class CdCollapsePlatform {
         }
         running = true;
         try {
-            var c = new Cursor(pool, state, inputs);
+            var c = new Cursor(pool, state, inputs);currentCursor=c;
             switch (routine) {
                 case 0 -> { init(c); main(c); }
                 case 2 -> main(c);
@@ -283,11 +331,12 @@ public final class CdCollapsePlatform {
                 case 6 -> fall(c);
             }
             // ObjCollapsePlatform:12-16: ALWAYS Draw, including after DeleteObject, then reload signed BYTE.
-            drawObject.drawObject(pool, c.state.identity());
+            pendingDrawCut=pool.capture();pendingDrawIdentity=c.state.identity();
+            try{drawObject.drawObject(pool,pendingDrawIdentity);observePublication(pendingDrawIdentity);}finally{pendingDrawCut=null;pendingDrawIdentity=null;}
             c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT)); c.state = pool.state(wholeIndex);
             if (c.state.signedByte(ROUTINE) < 4) c.effects.add(new DespawnChecked(checkObjDespawn(c.state, globals)));
             return new Result(pool.state(wholeIndex), c.effects);
-        } finally { running = false; }
+        } finally {currentCursor=null;running = false;}
     }
 
     /** Init:31-69. Every prefix before a reached size read is already in the real pool. */
@@ -318,11 +367,19 @@ public final class CdCollapsePlatform {
         c.enter(NativeRoutine.MAIN);
         if (solid(c, Site.MAIN_TOP).d0().orElseThrow() == 0) return;
         solid(c, Site.MAIN_GET_OFF); // GetOffObject defines NO d0.
-        fmCall.playFm(COLLAPSE_FM);
+        requestFm(c);
         c.effects.add(new FmRequested(COLLAPSE_FM));
         c.state = c.pool.state(c.wholeIndex); // Native ADDQ and subtype test use current memory after PlayFMSound.
         c.write(c.state.addByte(ROUTINE, 2));
         if (c.state.signedByte(SUBTYPE) >= 0) multiRow(c); else singleRow(c);
+    }
+
+    private void requestFm(Cursor c){
+        if(act2Fm==null){fmCall.playFm(COLLAPSE_FM);return;}
+        var cut=c.pool.capture();var call=new FmRequest(cut,c.state,COLLAPSE_FM);pendingFm=call;
+        try{act2Fm.play(call);assertSourceCut(c.pool,cut);observePublication(call);}
+        catch(RuntimeException|Error original){try{assertSourceCut(c.pool,cut);}catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;}
+        finally{pendingFm=null;}
     }
 
     /** Delay:93-109. The transition visit remains Delay and may call Top/GetOff with routine6. */
@@ -453,7 +510,12 @@ public final class CdCollapsePlatform {
         }
         validateImages(c, cut, object, others);
         assertSourceCut(c.pool, cut); // Pure shared owner must not have changed ANY live source image.
-        commit.commit(new SolidCall(site, entry, cut, expectedPlayer, expectedGlobals, outcome));
+        var call=new SolidCall(site,entry,cut,expectedPlayer,expectedGlobals,outcome);pendingSolid=call;
+        try{commit.commit(call);assertPublished(c.pool,cut,object,others);observePublication(call);}
+        catch(RuntimeException|Error original){
+            try{if(!c.pool.capture().slots().equals(cut.slots()))assertPublished(c.pool,cut,object,others);}
+            catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}throw original;
+        }finally{pendingSolid=null;}
         assertPublished(c.pool, cut, object, others); // Includes unchanged ID-zero images and all 64 bytes.
         c.state = c.pool.state(c.wholeIndex); c.player = player; c.solidGlobals = globals;
         if (stopped != null) throw stopped.stop().originalException();

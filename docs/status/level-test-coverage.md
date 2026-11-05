@@ -221,7 +221,7 @@ remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
 The resumed private controller route now completes Act1's Past Results and old
 programme exit, then admits actual Act2 Main10445, completes Title's queued art
-and control release, and returns ordinary Right through11146.
+and control release, and returns through11587 with fixed Right/jump inputs.
 The [Act2 partial matrix](../architecture/validation/levels/scd-palmtree-panic-act2-present.md)
 records same-World FULL loading, native normal-load/fade/first-walk ownership,
 full/course replay, actual selected Sonic pixels and488-selected-upload retirement.
@@ -246,9 +246,16 @@ Wall World16 and legacy Checkpoint/Wall87 pass. Test-only value/phase correction
 then qualify Checkpoint World20 and the changed positive11146 route method in
 21passing cases, with full/course11033→11034 and11145→11146. Saved31 bytes and
 knowledge cross the actual programme handoffs in existing captured globals.
-The next11147 stop is Collapse20; actual11146 pixels, natural Checkpoint activation,
-Wall contact, death/restart breadth, broader object binding and sustained
-Act2 traversal, later acts and JP/EU parity are unfinished.
+Later Collapse/Log/Mosqui bindings and source127 preserve all old readers/PLCs.
+The mixed325 has322passes/3landing-fixture prerequisites,0errors/skips; source66,
+Collapse19 and shared legacy99 pass. A test-only real-floor contact aligns the
+unmeasured fixture; Log/Mosqui20 and the changed route/pixel pair pass in23,
+then final positive11587/EGL passes2 separately. Natural Log/Mosqui Init/Main,
+floor/A7 and jump/final cuts replay through full and course captures. Six selected
+Sonic EGL cuts now include11213/11341/11587, with actual after-cleanup ENGINE PNG.
+Next11588 is Door0D; its failed partial image is not an earlier closed ingress.
+No green325 or whole-act claim. Natural Checkpoint activation, Wall contact,
+death/restart breadth, later acts and JP/EU parity are unfinished.
 The first-act matrix remains partial as well.
 
 ### Historical26October pause checkpoint

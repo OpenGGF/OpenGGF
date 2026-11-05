@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
@@ -119,6 +125,21 @@ public final class CdMosqui {
             }
         }
 
+        /** Retains actual original USA R12A source values only; grants no producer or World authority. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("Mosqui Act2 assets require the authenticated original USA R12A source");
+            return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.normalMosqui(), owner.damagedMosqui(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_MOSQUI_NORMAL).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.ANI_MOSQUI_NORMAL).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_MOSQUI_DAMAGED).nativeAddress(),
+                    owner.profile().range(CdR12aProfile.Asset.ANI_MOSQUI_DAMAGED).nativeAddress());
+        }
+
         /** Original Word RAM addresses of the authenticated views; these are the stored native longs. */
         public static Assets fromObjectAssets(CdR11aObjectAssets assets) {
             Objects.requireNonNull(assets, "assets");
@@ -209,6 +230,61 @@ public final class CdMosqui {
     private final PlayFmSound playFm;
     private final boolean prefixMode;
     private boolean running;
+    private PrimaryAngleCall pendingAngle;
+    private FmCall pendingFm;
+
+    /** Narrow producer provenance for one actual World dispatch; values alone grant no invocation. */
+    public record Publication(long ordinal, CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source, CdObjectState output, int savedIndex) { }
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public interface DispatchObserver {
+        void beforePublication(Publication call);
+        void afterPublication(Publication call);
+        void beforeCall(Object call);
+        void afterCall(Object call);
+    }
+    @FunctionalInterface public interface SourceDraw { void draw(DrawCall call); }
+    private DispatchObserver observer;
+    private SourceDraw sourceDraw;
+    private Publication pendingPublication;
+    private DrawCall pendingDraw;
+    private long publicationOrdinal;
+
+    /** Identity of the producer's currently pending operation, never equality of public records. */
+    public boolean isCurrentCall(Object call) {
+        return call != null && running && (call == pendingPublication || call == pendingDraw || call == pendingAngle || call == pendingFm);
+    }
+    private void observedWrite(CdObjectState output) {
+        if (observer == null) { runtime.pool().write(output); return; }
+        var call = new Publication(++publicationOrdinal, runtime.capture(),
+                runtime.pool().state(output.identity().wholeIndex()), output, -1);
+        observePublication(call, () -> runtime.pool().write(output));
+    }
+    private void observedDelete(CdObjectState source) {
+        if (observer == null) { runtime.pool().deleteObject(source.identity().wholeIndex()); return; }
+        var call = new Publication(++publicationOrdinal, runtime.capture(), source, null, -1);
+        observePublication(call, () -> runtime.pool().deleteObject(source.identity().wholeIndex()));
+    }
+    private void observedSaved(CdObjectState source, int savedId, int period, int index) {
+        if (observer == null) { runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED); return; }
+        var call = new Publication(++publicationOrdinal, runtime.capture(), source, source, index);
+        observePublication(call, () -> runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED));
+    }
+    private void observePublication(Publication call, Runnable nativeStore) {
+        if (pendingPublication != null) throw new IllegalStateException("Nested family publication");
+        pendingPublication = call;
+        try { observer.beforePublication(call); nativeStore.run(); observer.afterPublication(call); }
+        finally { pendingPublication = null; }
+    }
+    private void observedDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (observer == null) { drawObject.drawObject(pool, identity); return; }
+        var call = new DrawCall(runtime.capture(), pool.state(identity.wholeIndex()));
+        if (pendingDraw != null) throw new IllegalStateException("Nested family DrawObject");
+        pendingDraw = call;
+        try { observer.beforeCall(call); sourceDraw.draw(call); observer.afterCall(call); }
+        finally { pendingDraw = null; }
+    }
+
 
     /** The runtime supplies the single live pool and saved bank; the terrain is the production floor owner. */
     public CdMosqui(CdObjectPlacementRuntime runtime, Assets assets, CdPlayerTerrain terrain, DrawObjectCall drawObject) {
@@ -230,6 +306,20 @@ public final class CdMosqui {
         this.angleCommit = Objects.requireNonNull(angleCommit, "angleCommit");
         this.playFm = Objects.requireNonNull(playFm, "playFm");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject"); this.prefixMode = true;
+    }
+
+    /** A74 R12A source views, reusing the existing synchronous-prefix algorithm and terrain owner. */
+    public static CdMosqui fromAct2Assets(CdObjectPlacementRuntime runtime, CdR12aObjectAssets owner,
+                                         CdPlayerTerrain terrain, PrimaryAngleCommit angle, PlayFmSound fm,
+                                         DispatchObserver observer, SourceDraw draw) {
+        var a = Assets.fromAct2Assets(owner);
+        var nativeAssets = new NativeAssets(secondary -> CdR11aObjectAssets.decodeTileWord(a.objectTileIds().copy(), 0, secondary),
+                a.normal(), a.damaged(), a.normalMappingsAddress(), a.normalScriptAddress(),
+                a.damagedMappingsAddress(), a.damagedScriptAddress());
+        var body = new CdMosqui(runtime, nativeAssets, terrain, angle, fm, (pool, identity) -> {
+            throw new IllegalStateException("R12A Mosqui requires its actual source Draw");
+        });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw); return body;
     }
 
     /** Actual B72 tile selector and the four complete B views; no new art or reader owner. */
@@ -260,7 +350,7 @@ public final class CdMosqui {
     public Result run(int wholeIndex, Globals globals) {
         if (!prefixMode) return execute(wholeIndex, globals);
         if (running) throw new IllegalStateException("Named Past Mosqui cannot reenter its active dispatch");
-        running = true;
+        running = true; publicationOrdinal = 0;
         try { return execute(wholeIndex, globals); }
         finally { running = false; }
     }
@@ -306,7 +396,7 @@ public final class CdMosqui {
             default -> throw new UnsupportedMosqui(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex,
                     "oRoutine " + state.routine() + " indexes past ObjMosqui_Index");
         }
-        drawObject.drawObject(pool, state.identity());
+        observedDraw(pool, state.identity());
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
         // MOVE.W oVar2A(a0),d0 / JMP CheckObjDespawn2 read the live slot after DrawObject, including a zeroed one.
         var reloaded = pool.state(wholeIndex);
@@ -462,9 +552,9 @@ public final class CdMosqui {
         int period = -1;
         if (savedId != 0) {
             period = despawnPeriod(globals);
-            runtime.bclrSavedFlag(savedId, period, CdObjectPlacementRuntime.SavedBit.LOADED); // BCLR #7,2(a1,d0.w)
+            observedSaved(state, savedId, period, 2 + 3 * savedId + period); // BCLR #7,2(a1,d0.w)
         }
-        runtime.pool().deleteObject(state.identity().wholeIndex());        // JSR DeleteObject
+        observedDelete(state);                                           // JSR DeleteObject
         effects.add(new Despawn(entry, savedId, period));
     }
 
@@ -478,7 +568,7 @@ public final class CdMosqui {
     }
 
     private void publish(CdObjectState state) {
-        if (prefixMode) runtime.pool().write(state);
+        if (prefixMode) observedWrite(state);
     }
 
     /** Values only. The actual private World invocation must authenticate the producer and complete Frame CAS. */
@@ -509,10 +599,20 @@ public final class CdMosqui {
         }
     }
     private void commitPastAngle(CdObjectState source, int value) {
-        readOnlyPastPort(source, cut -> angleCommit.commit(new PrimaryAngleCall(cut, source, value)));
+        readOnlyPastPort(source, cut -> {
+            var call = new PrimaryAngleCall(cut, source, value); pendingAngle = call;
+            try { if (observer != null) observer.beforeCall(call); angleCommit.commit(call);
+                if (observer != null) observer.afterCall(call); }
+            finally { pendingAngle = null; }
+        });
     }
     private void playPastFm(CdObjectState source) {
-        readOnlyPastPort(source, cut -> playFm.play(new FmCall(cut, source, Sound.FM_A7)));
+        readOnlyPastPort(source, cut -> {
+            var call = new FmCall(cut, source, Sound.FM_A7); pendingFm = call;
+            try { if (observer != null) observer.beforeCall(call); playFm.play(call);
+                if (observer != null) observer.afterCall(call); }
+            finally { pendingFm = null; }
+        });
     }
 
     /** Only the genuine shared owner computes successful animation, once on the original full image. */

@@ -143,6 +143,17 @@ MAP_SPR_COLLAPSE_PLATFORM_3 c3d6 62 77e4add5588163b238981a19f8715f1033c2c07ea2e6
 MAP_SPR_COLLAPSE_PLATFORM_2 c414 286 be1266acacef995f34fa47ff432a198d5bfeddc6af3484949a0f26348d04cb2b
 COLLAPSE_PLATFORM_SIZES_2 c532 24 c0069f95af27ab8e2b9913aab0991fe10e39feaf4bcaed16e3c7e9595a5b995a
 MAP_SPR_COLLAPSE_PLATFORM_4 c54a 42 076fa0be74347e48024976fe775b0b2bc254fa2a1d8b358588406bf48c23126a
+LOG_SHADOW_BASE_TILES 8806 16 b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637
+MAP_SPR_LOG_SHADOW 8816 16 bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b
+ANI_MOSQUI_NORMAL b4f2 14 24b00d5597a3482b4bf9f5e692be5ea38534c1f5265408b8c7273d672949c1a2
+ANI_MOSQUI_DAMAGED b500 14 cf64e547e8082aac25e26ac28799500505b45169aababaed6d42e9b144990408
+MAP_SPR_MOSQUI_NORMAL b50e 60 5a10487e5e92e1c60e5885d832b90239c22d45f3c84bb49cd8886c590d8aba2e
+MAP_SPR_MOSQUI_DAMAGED b54a 66 23f8799c277fc89e4f94ccf75e0b488de9fca30a05a658cde5eaf0be8fec7313
+ANI_EXPLOSION 1d700 20 9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649
+MAP_SPR_EXPLOSION 1d714 146 0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44
+MAP_SPR_POINTS aa8c 82 24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e
+ANI_FLOWER 36a94 28 74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9
+MAP_SPR_FLOWER 36ab0 90 48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -212,9 +223,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete116RowManifestPreservesTheOriginal110AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete127RowManifestPreservesTheOriginal122AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(116, CdR12aProfile.Asset.values().length); assertEquals(116, rows.size());
+        assertEquals(127, CdR12aProfile.Asset.values().length); assertEquals(127, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -791,6 +802,204 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         var map=o.view(MAP_SPR_COLLAPSE_PLATFORM_4).copy();map[41]=1;
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(map,2,57));
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(MAP_SPR_COLLAPSE_PLATFORM_3).copy(),7,40));
+    }
+
+    @Test void logShadowAndMosquiViewsFollowTheirActualDispatchInitAndAnimationOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(116,LOG_SHADOW_BASE_TILES.ordinal());assertEquals(121,MAP_SPR_MOSQUI_DAMAGED.ordinal());
+        assertEquals(0x208788,o.view(OBJECT_INDEX).unsignedLong((0x33-1)*4));
+        assertEquals(0x20B3A0,o.view(OBJECT_INDEX).unsignedLong((0x3D-1)*4));
+        assertEquals("217c002088160004",hex.formatHex(file.readFile(0x87B6,8)));
+        assertEquals("317b000c0002",hex.formatHex(file.readFile(0x87F8,6)));
+        assertEquals(LOG_SHADOW_BASE_TILES.fileOffset(),0x87FA+(byte)file.readFile(0x87FB,1)[0]);
+        assertEquals("70004eb90020cc50",hex.formatHex(file.readFile(0xB3FC,8)),"both native variants use existing selector0");
+        int[][] pc={{0xB40A,0xB50E,0x43},{0xB40E,0xB4F2,0x45},{0xB41A,0xB54A,0x43},{0xB41E,0xB500,0x45}};
+        for(var row:pc) {var raw=CdAssetBytes.copyOf(file.readFile(row[0],4));assertEquals(row[2],raw.unsignedByte(0));assertEquals(0xFA,raw.unsignedByte(1));assertEquals(row[1],row[0]+2+(short)raw.unsignedWord(2));}
+        assertEquals("21490004214a00302140002c",hex.formatHex(file.readFile(0xB428,12)),"selected map/script pointers remain full native stored LONGs");
+        for(int call:new int[]{0xB470,0xB4AC})assertEquals("226800304ef900205b8e",hex.formatHex(file.readFile(call,10)),"AnimateObject uses the retained oVar30 pointer");
+        assertEquals(0x208816,o.profile().range(MAP_SPR_LOG_SHADOW).nativeAddress());
+        assertEquals(0x20B50E,o.profile().range(MAP_SPR_MOSQUI_NORMAL).nativeAddress());
+        assertEquals(0x20B54A,o.profile().range(MAP_SPR_MOSQUI_DAMAGED).nativeAddress());
+    }
+
+    @Test void logShadowKeepsAllEightBaseWordsAndBothCompleteStaticCountedFrames() throws Exception {
+        var o=retail().terrain().objects();var visual=o.logShadow();var hex=java.util.HexFormat.of();
+        assertEquals("03cb045e041803f00428038f0428037f",hex.formatHex(o.view(LOG_SHADOW_BASE_TILES).copy()));
+        assertEquals("0004000a01f00f0000f001f80d0000f0",hex.formatHex(o.view(MAP_SPR_LOG_SHADOW).copy()));
+        assertEquals(List.of(0x3CB,0x45E,0x418,0x3F0,0x428,0x38F,0x428,0x37F),
+                java.util.stream.IntStream.range(0,8).map(i->o.view(LOG_SHADOW_BASE_TILES).unsignedWord(i*2)).boxed().toList());
+        assertEquals(0x43F0,o.view(LOG_SHADOW_BASE_TILES).unsignedWord(2*(2*1+1))|0x4000,"SetBaseTile raw ordinary period1/act1 selects offset6, not Act1's offset4");
+        assertEquals(List.of(4,10),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(1,1),visual.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(6,6),visual.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-16,15,0,-16),new CdObjectVisualAssets.Piece(-8,13,0,-16)),
+                visual.mappingFrames().stream().map(f->f.pieces().getFirst()).toList());
+        assertTrue(visual.animations().isEmpty());assertEquals(0,visual.animationTable().length());assertEquals(0,visual.mappingTableOffset());
+        assertEquals(16,visual.mappings().length());assertArrayEquals(o.view(MAP_SPR_LOG_SHADOW).copy(),visual.mappings().copy());
+        assertEquals(16,visual.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertThrows(IndexOutOfBoundsException.class,()->o.view(LOG_SHADOW_BASE_TILES).unsignedWord(16));
+    }
+
+    @Test void bothCompleteMosquiIncludesKeepOddRootsAllPiecesFfFcScriptsAndDistinctPaddingOrigins() throws Exception {
+        var o=retail().terrain().objects();var normal=o.normalMosqui();var damaged=o.damagedMosqui();var hex=java.util.HexFormat.of();
+        assertEquals("00040008010001ff06020304fc00",hex.formatHex(o.view(ANI_MOSQUI_NORMAL).copy()));
+        assertEquals("00040008040001ff0e020304fc00",hex.formatHex(o.view(ANI_MOSQUI_DAMAGED).copy()));
+        assertEquals("000a001a00250030003603f4080000f8fc050003f0fc0500070002fc050003f0fc05000b0002f00a000ff808040018f001f00b001af801f00b0026f4",hex.formatHex(o.view(MAP_SPR_MOSQUI_NORMAL).copy()));
+        assertEquals("000a001a00250030003603f4080000f8fc050032f0fc0500070002fc050032f0fc05000b0002f00a000ff808040036f001f00b0038f80200010044fcf00b0026f400",hex.formatHex(o.view(MAP_SPR_MOSQUI_DAMAGED).copy()));
+        for(var visual:List.of(normal,damaged)) {
+            assertEquals(0,visual.mappingTableOffset());assertEquals(5,visual.mappingFrames().size());assertEquals(2,visual.animations().size());
+            assertEquals(List.of(10,26,37,48,54),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+            assertEquals(List.of(4,8),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+            assertEquals(List.of(List.of(0,1),List.of(2,3,4)),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+            assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF,CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+            assertEquals(List.of(4,6),visual.animations().stream().map(a->a.bytes().length()).toList());
+            assertEquals(0,visual.animationTable().unsignedByte(13),"normal literal final00 versus damaged parent EVEN byte, both actual source bytes");
+        }
+        assertEquals(List.of(1,6),normal.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(4,14),damaged.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(3,2,2,1,1),normal.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(3,2,2,1,2),damaged.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(16,11,11,6,6),normal.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        assertEquals(List.of(16,11,11,6,11),damaged.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        assertEquals(60,normal.mappings().length());assertEquals(66,damaged.mappings().length());assertEquals(0,damaged.mappings().unsignedByte(65),"literal mapping include byte after the final counted piece");
+        assertEquals(50,normal.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertEquals(70,damaged.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertArrayEquals(o.view(MAP_SPR_MOSQUI_NORMAL).copy(),normal.mappings().copy());assertArrayEquals(o.view(ANI_MOSQUI_NORMAL).copy(),normal.animationTable().copy());
+        assertArrayEquals(o.view(MAP_SPR_MOSQUI_DAMAGED).copy(),damaged.mappings().copy());assertArrayEquals(o.view(ANI_MOSQUI_DAMAGED).copy(),damaged.animationTable().copy());
+    }
+
+    @Test void actTwoLogShadowAndMosquiFactoriesBorrowOnlyTheirCachedSourceViewsAndExistingReaderPlcValues() throws Exception {
+        var o=retail().terrain().objects();var readers=o.readerProfiles();var lists=o.plcLists();
+        var shadow=com.openggf.game.soniccd.objects.CdLogShadow.Assets.fromAct2Assets(o);
+        var mosqui=com.openggf.game.soniccd.objects.CdMosqui.Assets.fromAct2Assets(o);
+        assertSame(o.logShadow(),o.logShadow());assertSame(o.normalMosqui(),o.normalMosqui());assertSame(o.damagedMosqui(),o.damagedMosqui());assertNotSame(mosqui.normal(),mosqui.damaged());
+        assertSame(o.view(LOG_SHADOW_BASE_TILES),shadow.baseTileWords());assertSame(o.logShadow(),shadow.visual());assertEquals(0x208816,shadow.mappingsAddressBits());
+        assertSame(o.view(OBJECT_TILE_IDS),mosqui.objectTileIds());assertSame(o.normalMosqui(),mosqui.normal());assertSame(o.damagedMosqui(),mosqui.damaged());
+        assertEquals(0x20B50E,mosqui.normalMappingsAddress());assertEquals(0x20B4F2,mosqui.normalScriptAddress());assertEquals(0x20B54A,mosqui.damagedMappingsAddress());assertEquals(0x20B500,mosqui.damagedScriptAddress());
+        assertEquals(0x23A7,CdR11aObjectAssets.decodeTileWord(mosqui.objectTileIds().copy(),0,0));
+        assertThrows(UnsupportedOperationException.class,()->CdR11aObjectAssets.decodeTileWord(mosqui.objectTileIds().copy(),0,1));
+        assertSame(readers,o.readerProfiles());assertSame(lists,o.plcLists());assertEquals(35,readers.size());assertEquals(19,lists.size());
+        assertEquals(16*32,o.readerProfile(ART_LOG_SHADOW).outputBytes());assertEquals(70*32,o.readerProfile(ART_MOSQUI).outputBytes());
+        assertEquals(24,o.readerProfile(ART_LOG_SHADOW).sourceBlobRange().length());assertEquals(23,o.readerProfile(ART_LOG_SHADOW).javaConsumedInputBytes());
+        assertEquals(846,o.readerProfile(ART_MOSQUI).sourceBlobRange().length());assertEquals(846,o.readerProfile(ART_MOSQUI).javaInputRange().length());assertEquals(847,o.readerProfile(ART_MOSQUI).nativeInputRange().length());
+        for(int id:new int[]{4,9}) {
+            assertEquals(0x74E0,lists.get(id).entries().stream().filter(e->e.source()==ART_MOSQUI).findFirst().orElseThrow().destinationWord());
+            assertEquals(0x7E00,lists.get(id).entries().stream().filter(e->e.source()==ART_LOG_SHADOW).findFirst().orElseThrow().destinationWord());
+        }
+        assertEquals(3,com.openggf.game.soniccd.objects.CdLogShadow.Assets.class.getRecordComponents().length);assertEquals(7,com.openggf.game.soniccd.objects.CdMosqui.Assets.class.getRecordComponents().length);
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdLogShadow.Assets.fromAct2Assets(null));
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdMosqui.Assets.fromAct2Assets(null));
+        // Constructed negative only: an invalid declared identity is not an actual source admission.
+        var foreign=org.mockito.Mockito.mock(CdR12aObjectAssets.class);var identity=org.mockito.Mockito.mock(CdR12aTerrainAssets.Identity.class);
+        org.mockito.Mockito.when(identity.variant()).thenReturn(CdReleaseVariant.EUROPE);org.mockito.Mockito.when(foreign.identity()).thenReturn(identity);
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdLogShadow.Assets.fromAct2Assets(foreign));
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdMosqui.Assets.fromAct2Assets(foreign));
+    }
+
+    @Test void newLogShadowMosquiViewsStayDetachedAndRejectChangedOriginalsUnrepresentedReadsAndMalformedTables() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();
+        for(var key:new CdR12aProfile.Asset[]{LOG_SHADOW_BASE_TILES,MAP_SPR_LOG_SHADOW,ANI_MOSQUI_NORMAL,ANI_MOSQUI_DAMAGED,MAP_SPR_MOSQUI_NORMAL,MAP_SPR_MOSQUI_DAMAGED}) {
+            var bytes=o.view(key);var before=bytes.copy();var changed=bytes.copy();changed[0]^=1;assertSame(bytes,o.view(key));assertArrayEquals(before,o.view(key).copy());
+            assertArrayEquals(file.readFile(key.fileOffset(),key.length()),o.view(key).copy());assertThrows(IndexOutOfBoundsException.class,()->bytes.unsignedByte(bytes.length()));
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(key));assertThrows(IllegalArgumentException.class,()->o.readerView(key,CdR12aObjectAssets.ReaderKind.NATIVE));
+            byte[] corrupt=file.readFile(0,262144);corrupt[key.fileOffset()]^=1;assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        var shadow=o.view(MAP_SPR_LOG_SHADOW).copy();shadow[1]=5;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(shadow,2,16));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(MAP_SPR_LOG_SHADOW).copy(),2,15));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_MOSQUI_NORMAL).copy(),5,o.view(ANI_MOSQUI_NORMAL).copy(),2,49));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_MOSQUI_DAMAGED).copy(),5,o.view(ANI_MOSQUI_DAMAGED).copy(),2,69));
+        var maps=o.view(MAP_SPR_MOSQUI_DAMAGED).copy();maps[65]=1;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(maps,5,o.view(ANI_MOSQUI_DAMAGED).copy(),2,70));
+        var script=o.view(ANI_MOSQUI_DAMAGED).copy();script[13]=1;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_MOSQUI_DAMAGED).copy(),5,script,2,70));
+        var table=new com.openggf.game.soniccd.objects.CdObjectAnimation.AnimationTable(o.view(ANI_MOSQUI_NORMAL),0,2);
+        assertThrows(UnsupportedOperationException.class,()->com.openggf.game.soniccd.objects.CdObjectAnimation.step(new com.openggf.game.soniccd.objects.CdObjectAnimation.State(2,2,0,0,0,4,0,2,0),table));
+    }
+
+    @Test void childEffectViewsUseActualActTwoDispatchMappingAnimationAndTileOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(122,ANI_EXPLOSION.ordinal());assertEquals(123,MAP_SPR_EXPLOSION.ordinal());assertEquals(124,MAP_SPR_POINTS.ordinal());assertEquals(125,ANI_FLOWER.ordinal());assertEquals(126,MAP_SPR_FLOWER.ordinal());
+        assertEquals(0x205EFA,o.view(OBJECT_INDEX).unsignedLong((0x18-1)*4));assertEquals(0x20AADE,o.view(OBJECT_INDEX).unsignedLong((0x1C-1)*4));assertEquals(0x205F88,o.view(OBJECT_INDEX).unsignedLong((0x1F-1)*4));
+        assertEquals("217c0021d7140004",hex.formatHex(file.readFile(0x5F30,8)));assertEquals("43f90021d700",hex.formatHex(file.readFile(0x5F5E,6)));
+        assertEquals("217c0020aa8c0004",hex.formatHex(file.readFile(0xAA60,8)));
+        assertEquals("217c00236ab00004",hex.formatHex(file.readFile(0x5FCA,8)));assertEquals("43f900236a94",hex.formatHex(file.readFile(0x6052,6)));
+        assertEquals("317c86800002",hex.formatHex(file.readFile(0x5F1E,6)));assertEquals("317c06c60002",hex.formatHex(file.readFile(0xAA5A,6)));assertEquals("317ca6d70002",hex.formatHex(file.readFile(0x5FB8,6)));
+        assertEquals(0x21D714,o.profile().range(MAP_SPR_EXPLOSION).nativeAddress());assertEquals(0x20AA8C,o.profile().range(MAP_SPR_POINTS).nativeAddress());assertEquals(0x236AB0,o.profile().range(MAP_SPR_FLOWER).nativeAddress());
+        // Equal legacy Flower includes exist, but its reached actual operands select the later source.
+        assertArrayEquals(file.readFile(0x1DF76,28),o.view(ANI_FLOWER).copy());assertArrayEquals(file.readFile(0x1DF92,90),o.view(MAP_SPR_FLOWER).copy());
+        assertNotEquals(0x21DF76,o.profile().range(ANI_FLOWER).nativeAddress());assertNotEquals(0x21DF92,o.profile().range(MAP_SPR_FLOWER).nativeAddress());
+    }
+
+    @Test void completeExplosionAndPointsTablesRetainEveryBodyScriptRootAndRealPaddingByte() throws Exception {
+        var o=retail().terrain().objects();var explosion=o.explosion();var points=o.points();var hex=java.util.HexFormat.of();
+        assertEquals("0004000c030005060304fc00030001020304fc00",hex.formatHex(o.view(ANI_EXPLOSION).copy()));
+        assertEquals("000e001a002a00400056006c007c02f8050000f0f8050800000003f00d0004f00005000cf00005080c0004f0050010f0f00500140000050018f000051810000004e80a001ce8e80a081c00000a101ce8000a181c000004e80a0025e8e80a082500000a1025e8000a1825000003f00d002ef000050036f0000508360004f005003af0f005003e0000050042f00005183a0000",hex.formatHex(o.view(MAP_SPR_EXPLOSION).copy()));
+        assertEquals("000c001800240030003c00420200000000f80000000300000200000001f80000000300000200000002f80000000300000200000004f80000000300000100000004fc0300000000f400000003fc0000000304",hex.formatHex(o.view(MAP_SPR_POINTS).copy()));
+        assertEquals(List.of(14,26,42,64,86,108,124),explosion.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(2,3,4,4,4,3,4),explosion.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(11,16,21,21,21,16,21),explosion.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        assertEquals(List.of(4,12),explosion.animations().stream().map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+        assertEquals(List.of(3,3),explosion.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(0,5,6,3,4),List.of(0,1,2,3,4)),explosion.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        for(var script:explosion.animations()) {assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,script.terminal());assertEquals(8,script.bytes().length());assertEquals(0,script.bytes().unsignedByte(7));}
+        for(int at:new int[]{25,63,85,107,145})assertEquals(0,explosion.mappings().unsignedByte(at));
+        assertEquals(List.of(12,24,36,48,60,66),points.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(2,2,2,2,1,3),points.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(11,11,11,11,6,16),points.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        for(int at:new int[]{23,35,47,59})assertEquals(0,points.mappings().unsignedByte(at));
+        assertTrue(points.animations().isEmpty());assertEquals(0,points.animationTable().length());assertEquals(0,points.mappingTableOffset());
+        assertEquals(146,explosion.mappings().length());assertEquals(20,explosion.animationTable().length());assertEquals(82,points.mappings().length());
+        assertEquals(70,explosion.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertEquals(5,points.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertArrayEquals(o.view(MAP_SPR_EXPLOSION).copy(),explosion.mappings().copy());assertArrayEquals(o.view(ANI_EXPLOSION).copy(),explosion.animationTable().copy());assertArrayEquals(o.view(MAP_SPR_POINTS).copy(),points.mappings().copy());
+    }
+
+    @Test void completeSelectedFlowerIncludesKeepEightFramesFourScriptsAndAllCountedTiles() throws Exception {
+        var o=retail().terrain().objects();var flower=o.flower();var hex=java.util.HexFormat.of();
+        assertEquals("0008000c00120018030001ff0302030203fc0105050406fc130607ff",hex.formatHex(o.view(ANI_FLOWER).copy()));
+        assertEquals("00100016001c002200280034003a004a01f0010000fc01f0010800fc01f0050002f801f0050006f802e809001cf4f8000022fc0001f0050023f803d00a000af4e809001cf4f8000022fc03d00a0013f4e809001cf4f8000022fc",hex.formatHex(o.view(MAP_SPR_FLOWER).copy()));
+        assertEquals(List.of(16,22,28,34,40,52,58,74),flower.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(1,1,1,1,2,1,3,3),flower.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(6,6,6,6,11,6,16,16),flower.mappingFrames().stream().map(f->f.bytes().length()).toList());
+        assertEquals(List.of(8,12,18,24),flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+        assertEquals(List.of(3,3,1,19),flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(0,1),List.of(2,3,2,3),List.of(5,5,4,6),List.of(6,7)),flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF,CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,CdObjectVisualAssets.Terminal.LOOP_FF),flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+        assertEquals(List.of(4,6,6,4),flower.animations().stream().map(a->a.bytes().length()).toList());
+        assertEquals(0,flower.mappings().unsignedByte(51));assertEquals(90,flower.mappings().length());assertEquals(28,flower.animationTable().length());assertEquals(0,flower.mappingTableOffset());
+        assertEquals(39,flower.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        assertArrayEquals(o.view(MAP_SPR_FLOWER).copy(),flower.mappings().copy());assertArrayEquals(o.view(ANI_FLOWER).copy(),flower.animationTable().copy());
+    }
+
+    @Test void actualChildEffectFactoriesBorrowCachedVisualsAndKeepExistingStdArtReaderPlcOwners() throws Exception {
+        var o=retail().terrain().objects();var readers=o.readerProfiles();var lists=o.plcLists();
+        var explosion=com.openggf.game.soniccd.objects.CdExplosion.Assets.fromAct2Assets(o);var points=com.openggf.game.soniccd.objects.CdPoints.Assets.fromAct2Assets(o);var flower=com.openggf.game.soniccd.objects.CdFlower.Assets.fromAct2Assets(o);
+        assertSame(o.explosion(),explosion.explosion());assertSame(o.points(),points.points());assertSame(o.flower(),flower.flower());assertSame(o.explosion(),o.explosion());assertSame(o.points(),o.points());assertSame(o.flower(),o.flower());
+        assertEquals(0x21D714,explosion.mappingsAddress());assertEquals(0x20AA8C,points.mappingsAddress());assertEquals(0x236AB0,flower.mappingsAddress());
+        assertEquals(2,com.openggf.game.soniccd.objects.CdExplosion.Assets.class.getRecordComponents().length);assertEquals(2,com.openggf.game.soniccd.objects.CdPoints.Assets.class.getRecordComponents().length);assertEquals(2,com.openggf.game.soniccd.objects.CdFlower.Assets.class.getRecordComponents().length);
+        assertSame(readers,o.readerProfiles());assertSame(lists,o.plcLists());assertEquals(35,readers.size());assertEquals(19,lists.size());
+        assertEquals(70*32,o.readerProfile(ART_EXPLOSIONS).outputBytes());assertEquals(5*32,o.readerProfile(ART_POINTS).outputBytes());assertEquals(39*32,o.readerProfile(ART_FLOWER).outputBytes());
+        assertEquals(0xD000,lists.get(1).entries().stream().filter(e->e.source()==ART_EXPLOSIONS).findFirst().orElseThrow().destinationWord());
+        assertEquals(0xD8C0,lists.get(1).entries().stream().filter(e->e.source()==ART_POINTS).findFirst().orElseThrow().destinationWord());
+        assertEquals(0xDAE0,lists.get(1).entries().stream().filter(e->e.source()==ART_FLOWER).findFirst().orElseThrow().destinationWord());
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdExplosion.Assets.fromAct2Assets(null));assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdPoints.Assets.fromAct2Assets(null));assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdFlower.Assets.fromAct2Assets(null));
+        // Constructed negatives exercise typed source rejection; they are not a World or actual media admission.
+        var foreign=org.mockito.Mockito.mock(CdR12aObjectAssets.class);var identity=org.mockito.Mockito.mock(CdR12aTerrainAssets.Identity.class);org.mockito.Mockito.when(identity.variant()).thenReturn(CdReleaseVariant.EUROPE);org.mockito.Mockito.when(foreign.identity()).thenReturn(identity);
+        assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdExplosion.Assets.fromAct2Assets(foreign));assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdPoints.Assets.fromAct2Assets(foreign));assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdFlower.Assets.fromAct2Assets(foreign));
+    }
+
+    @Test void childEffectRawViewsRejectChangedOriginalSourcesNewReadersFiniteOverreadsAndMalformedTables() throws Exception {
+        var a=retail().terrain();var o=a.objects();var file=retail().original();
+        for(var key:new CdR12aProfile.Asset[]{ANI_EXPLOSION,MAP_SPR_EXPLOSION,MAP_SPR_POINTS,ANI_FLOWER,MAP_SPR_FLOWER}) {
+            var bytes=o.view(key);var before=bytes.copy();var changed=bytes.copy();changed[0]^=1;assertSame(bytes,o.view(key));assertArrayEquals(before,o.view(key).copy());assertArrayEquals(file.readFile(key.fileOffset(),key.length()),o.view(key).copy());
+            assertThrows(IndexOutOfBoundsException.class,()->bytes.unsignedByte(bytes.length()));assertThrows(IllegalArgumentException.class,()->o.readerProfile(key));assertThrows(IllegalArgumentException.class,()->o.readerView(key,CdR12aObjectAssets.ReaderKind.JAVA));
+            byte[] corrupt=file.readFile(0,262144);corrupt[key.fileOffset()]^=1;assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        var explosion=o.view(MAP_SPR_EXPLOSION).copy();explosion[145]=1;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(explosion,7,o.view(ANI_EXPLOSION).copy(),2,70));
+        var points=o.view(MAP_SPR_POINTS).copy();points[1]=13;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(points,6,5));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_EXPLOSION).copy(),7,o.view(ANI_EXPLOSION).copy(),2,69));assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(o.view(MAP_SPR_POINTS).copy(),6,4));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_FLOWER).copy(),8,o.view(ANI_FLOWER).copy(),4,38));
+        var script=o.view(ANI_EXPLOSION).copy();script[11]=1;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_EXPLOSION).copy(),7,script,2,70));
+        var flower=o.view(ANI_FLOWER).copy();flower[26]=8;assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_FLOWER).copy(),8,flower,4,39));
+        assertThrows(IllegalArgumentException.class,()->new com.openggf.game.soniccd.objects.CdExplosion.Assets(o.flower(),0x21D714));assertThrows(IllegalArgumentException.class,()->new com.openggf.game.soniccd.objects.CdPoints.Assets(o.explosion(),0x20AA8C));assertThrows(IllegalArgumentException.class,()->new com.openggf.game.soniccd.objects.CdFlower.Assets(o.explosion(),0x236AB0));
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }
