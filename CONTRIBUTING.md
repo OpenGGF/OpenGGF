@@ -84,7 +84,7 @@ syntax, link, mirror, policy and example checks. Full Maven logs are enabled by 
 Run the built jar (on macOS, add `-XstartOnFirstThread` before `-jar`):
 
 ```bash
-java -jar target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar
+java -jar target/OpenGGF-0.9.prerelease-jar-with-dependencies.jar
 ```
 
 ## Accuracy Rules

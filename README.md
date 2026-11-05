@@ -5,7 +5,7 @@ Genesis games *Sonic the Hedgehog*, *Sonic the Hedgehog 2* and *Sonic 3 & Knuckl
 It is written in Java. You bring your own copies of the games, and OpenGGF does the rest.
 
 > [!NOTE]
-> OpenGGF is still in development. This branch holds the next version, 0.8. The
+> OpenGGF is still in development. This branch holds version 0.9, after 0.8 on `develop`. The
 > latest release is [0.7.20261105](https://github.com/OpenGGF/OpenGGF/releases/tag/v0.7.20261105).
 > [Game status](docs/guide/playing/game-status.md) lists what works and what doesn't yet.
 
@@ -117,7 +117,7 @@ You need JDK 25 and Maven.
 git clone --branch develop https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
 mvn -Dmse=off -DskipTests package
-java -jar target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar
+java -jar target/OpenGGF-0.9.prerelease-jar-with-dependencies.jar
 ```
 
 On macOS, add `-XstartOnFirstThread` before `-jar`. If you plan to contribute, follow

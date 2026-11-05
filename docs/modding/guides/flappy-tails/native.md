@@ -20,8 +20,8 @@ from the same checkout:
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
 src/test/resources/mods/sample-flappy-src/build.sh \
-  "$PWD/target/OpenGGF-0.8.prerelease.jar" \
-  "$PWD/target/OpenGGF-0.8.prerelease-openggf-mod-sdk.jar" \
+  "$PWD/target/OpenGGF-0.9.prerelease.jar" \
+  "$PWD/target/OpenGGF-0.9.prerelease-openggf-mod-sdk.jar" \
   /tmp/sample-flappy
 cp /tmp/sample-flappy/target/sample-flappy-mod.jar mods/
 ```

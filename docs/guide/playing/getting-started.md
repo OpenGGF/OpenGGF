@@ -96,7 +96,7 @@ Linux terminal example:
 3. Place your ROM files in the project root directory (next to `pom.xml`); any filename works.
 4. Run:
    ```
-   java -jar target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar
+   java -jar target/OpenGGF-0.9.prerelease-jar-with-dependencies.jar
    ```
    On macOS, add `-XstartOnFirstThread` before `-jar`. The filename follows the
    version in `pom.xml`; use the artifact produced by your checkout.

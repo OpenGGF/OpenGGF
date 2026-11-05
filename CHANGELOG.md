@@ -5,6 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Release files
 
+- [0.9 prerelease](CHANGELOG.0.9.prerelease.md) — the 0.9 line on `next`.
 - [0.8 prerelease / current development snapshot](CHANGELOG.0.8.prerelease.md) — the 0.8 development line on `develop`.
 - [0.7.20261105](CHANGELOG.0.7.md)
 - [0.6.20260917](CHANGELOG.0.6.md)
