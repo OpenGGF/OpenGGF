@@ -57,9 +57,10 @@ import java.util.Objects;
  *       ({@link TraceSegmentCarriedStateImport#importAtSpecialStageEntry}) and
  *       the ROM's {@code sub_85B0} search selects the stage and layout set;
  *       {@code provider.initializeStage(index, FAST, reward)} then loads it
- *       (manager reset + layout/art from ROM), followed by
- *       {@code manager.advanceThroughEntryFade()} because the comparator never
- *       steps the entry {@code Pal_FadeToWhite} rows.</li>
+ *       (manager reset + layout/art from ROM). The harness then samples the
+ *       entry BK2 rows while the provider's native {@code Pal_FadeToWhite}
+ *       lifetime is active, preserving the last polled input across the
+ *       masked-interrupt load. These rows do not enter the comparator.</li>
  * </ol>
  *
  * <h2>Input injection</h2>
@@ -82,9 +83,10 @@ import java.util.Objects;
  *
  * <h2>VBlank pacing only</h2>
  * <p>Unlike the S2 SS harness, this harness exposes ONLY
- * {@link #stepFrame(int)}: there is no ROM {@code RunObjects}-pass binder to
- * model, so the test loop simply skips lag rows (they advance nothing
- * engine-side) and steps every other row through {@code update()}.
+ * {@link #stepFrame(int)}: after constructor-owned entry sampling there is no
+ * ROM {@code RunObjects}-pass binder to model, so the comparator skips the
+ * masked-load rows and subsequent lag rows, and steps interactive non-lag rows
+ * through {@code update()}.
  */
 final class S3kSpecialStageReplayHarness {
 
@@ -102,6 +104,14 @@ final class S3kSpecialStageReplayHarness {
      */
     S3kSpecialStageReplayHarness(Path bk2, int bk2FrameOffset, TraceSegmentCarriedState carried)
             throws IOException {
+        this(new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2")),
+                bk2FrameOffset, carried, new Sonic3kSpecialStageProvider());
+    }
+
+    /** In-memory movie/provider seam for native input-boundary controls. */
+    S3kSpecialStageReplayHarness(Bk2Movie movie, int bk2FrameOffset,
+                                TraceSegmentCarriedState carried,
+                                Sonic3kSpecialStageProvider provider) throws IOException {
         // Recorded blue-spheres runs are captured solo (Sonic). Set the
         // standard team config before initializeStage() runs
         // resolvePlayerCharacter().
@@ -110,10 +120,9 @@ final class S3kSpecialStageReplayHarness {
         GameServices.configuration()
                 .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 
-        Bk2Movie movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
         this.recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
         this.inputHandler = new InputHandler();
-        this.provider = new Sonic3kSpecialStageProvider();
+        this.provider = Objects.requireNonNull(provider, "provider");
         // The stage identity is carried state, not a fixture constant: the
         // segment-entry import restores Collected_emeralds_array and the
         // counters, then sub_85B0's own search (loc_85E4-loc_8630) chooses the
@@ -122,13 +131,19 @@ final class S3kSpecialStageReplayHarness {
         this.provider.initializeStage(entry.stageIndex(), SpecialStageStartupPolicy.FAST,
                 entry.superEmeraldSet() ? EmeraldRewardKind.SUPER_EMERALD
                         : EmeraldRewardKind.CHAOS_EMERALD);
-        // The comparator starts at the first interactive row after the ROM's
-        // masked-interrupt load (AbstractS3kSpecialStageTraceReplayTest#
-        // firstInteractiveFrame), so the entry Pal_FadeToWhite rows that
-        // precede it are never stepped here: retire the manager's hold for
-        // them, which live play and the GameLoop-driven run chains step for
-        // real.
-        this.provider.getManager().advanceThroughEntryFade();
+        // SpecialStage polls controllers during Pal_FadeToWhite, then masks
+        // interrupts (SpecialStage, sonic3k.asm:10621-10628). The boot pass at
+        // loc_8454 (sonic3k.asm:10750-10761) runs Process_Sprites before its
+        // first input-polled Wait_VSync,
+        // so the manager needs the final fade poll for that boot pass. Sample
+        // only the native fade lifetime, starting at this segment's BK2 offset;
+        // do not step the masked load or move the comparator's first row.
+        // Timing admission is installed after construction and remains owned
+        // by the interactive stepFrame boundaries below.
+        int entryRow = 0;
+        while (this.provider.isEntryFadeToWhiteActive()) {
+            recordedInputs.withLogicalOverride(entryRow++, inputHandler, this::updateWithInput);
+        }
     }
 
     /**
@@ -145,14 +160,15 @@ final class S3kSpecialStageReplayHarness {
         recordedInputs.withLogicalOverride(traceFrame, inputHandler, () ->
                 LevelFrameTestStep.executeHardwareTimedObjectScan(
                         LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
-                        () -> {
-                            SpecialStageInputMapper.MappedInput mapped =
-                                    SpecialStageInputMapper.map(inputHandler.logical());
-                            provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
-                            provider.handlePlayer2Input(
-                                    mapped.p2Held(), mapped.p2Logical());
-                            provider.update();
-                        }));
+                        this::updateWithInput));
+    }
+
+    private void updateWithInput() {
+        SpecialStageInputMapper.MappedInput mapped =
+                SpecialStageInputMapper.map(inputHandler.logical());
+        provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
+        provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+        provider.update();
     }
 
     /**
