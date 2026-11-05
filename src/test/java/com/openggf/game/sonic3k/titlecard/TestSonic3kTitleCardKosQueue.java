@@ -415,26 +415,34 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
-    void sszTitleRetirementRetainsOnePhysicalRequestAndRewindsItsPublicationIntent(boolean cached)
+    @org.junit.jupiter.params.provider.CsvSource({
+            "10, 0, false", "10, 0, true",
+            "11, 0, false", "11, 0, true", "11, 1, false", "11, 1, true"
+    })
+    void titleRetirementRetainsPhysicalEnemyBatchAndRewindsItsPublicationIntent(
+            int zone, int act, boolean cached)
             throws Exception {
-        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
         timing = GameServices.hardwareTiming();
         var provider = (Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider();
-        provider.prepareRuntimeArtForActTransition(10, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        provider.prepareRuntimeArtForActTransition(zone, RuntimeArtAdmissionPolicy.TITLE_OWNER);
         var physical = fixture.gameplayMode().getKosinskiModuleQueue();
         assertTrue(moduleHandles().isEmpty());
         assertTrue(physical.isIdle());
         var prepared = provider.capture();
-        assertEquals(List.of(new PlcProgressSnapshot.PendingKosModule(
-                0x17B17E, 0x500, true)), prepared.pendingKosModules());
+        var expected = zone == 10
+                ? List.of(new PlcProgressSnapshot.PendingKosModule(0x17B17E, 0x500, true))
+                : List.of(new PlcProgressSnapshot.PendingKosModule(0x18008C, 0x500, true),
+                        new PlcProgressSnapshot.PendingKosModule(0x1803EE, 0x542, true));
+        assertEquals(expected, prepared.pendingKosModules());
         provider.restore(prepared);
         assertEquals(prepared, provider.capture(), "pre-submission rewind retains physical intent and lease");
         if (cached) {
             installCachedTitleArt();
-            setField(manager, "lastLoadedZone", 10);
+            setField(manager, "lastLoadedZone", zone);
+            setField(manager, "lastLoadedAct", act);
         }
-        manager.initializeInLevel(10, 0);
+        manager.initializeInLevel(zone, act);
         var titleHandles = moduleHandles();
         for (int frame = 0; frame < 4096 && readyCount(titleHandles) < titleHandles.size(); frame++) {
             service(HardwareServiceBoundary.POST_OBJECTS);
@@ -462,16 +470,19 @@ class TestSonic3kTitleCardKosQueue {
         physical.clear();
         provider.processRuntimeArtQueue();
         var handles = moduleHandles();
-        assertEquals(1, handles.size());
+        assertEquals(expected.size(), handles.size());
         assertEquals(handles.stream().map(HardwareWorkHandle::ordinal).toList(),
                 provider.capture().pendingKosOrdinals());
-        var descriptor = S3kRuntimeArtCoordinator.current().moduleQueue().descriptor(handles.getFirst());
-        assertEquals(0x17B17E, descriptor.sourceAddress());
-        assertEquals(0xA000, descriptor.destinationAddress());
-        assertEquals(2528, descriptor.destinationLength());
-        assertEquals(1, descriptor.moduleCount());
-        assertEquals(1, physical.queuedArchiveCount());
-        assertEquals(0x4F0, physical.capture().archives().getFirst().lastModuleWords());
+        for (int i = 0; i < handles.size(); i++) {
+            var descriptor = S3kRuntimeArtCoordinator.current().moduleQueue().descriptor(handles.get(i));
+            assertEquals(expected.get(i).sourceAddress(), descriptor.sourceAddress());
+            assertEquals(expected.get(i).destinationTile() * 32, descriptor.destinationAddress());
+            assertEquals(zone == 10 ? 2528 : (i == 0 ? 2112 : 768), descriptor.destinationLength());
+            assertEquals(1, descriptor.moduleCount());
+        }
+        assertEquals(expected.size(), physical.queuedArchiveCount());
+        assertEquals(zone == 10 ? 0x4F0 : 0x420,
+                physical.capture().archives().getFirst().lastModuleWords());
         var registry = fixture.gameplayMode().getRewindRegistry();
         var submitted = registry.capture();
         service(HardwareServiceBoundary.POST_OBJECTS);
@@ -484,13 +495,13 @@ class TestSonic3kTitleCardKosQueue {
         }
         provider.processRuntimeArtQueue();
         assertEquals(handles, moduleHandles(), "restored ordinals rebind without another submission");
-        assertEquals(1, physical.queuedArchiveCount());
-        for (int frame = 0; frame < 4096 && !timing.isReady(handles.getFirst()); frame++) {
+        assertEquals(expected.size(), physical.queuedArchiveCount());
+        for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
             service(HardwareServiceBoundary.POST_OBJECTS);
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             physical.processNativeFrame();
         }
-        assertTrue(timing.isReady(handles.getFirst()));
+        assertEquals(handles.size(), readyCount(handles));
         assertEquals(handles, moduleHandles(), "retained provider handle has no automatic claim owner");
         provider.processRuntimeArtQueue();
         assertTrue(moduleHandles().isEmpty());

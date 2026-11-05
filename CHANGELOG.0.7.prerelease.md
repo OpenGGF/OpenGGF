@@ -1450,7 +1450,8 @@ Unreleased. The earlier development themes remain in
   bit-7 contact rejection preserved.
   Title retirement and departing EggRobo fly-bys submit the native enemy-art
   restoration requests, with physical publication and rewind ownership retained
-  after the producer disappears. Incidental art producers preserve blocked
+  after the producer disappears. Death Egg's title owner likewise submits the
+  native Spikebonker and Chainspike art batch in both acts. Incidental art producers preserve blocked
   title work and respect both FIFO limits. Scaled fly-by pixels remain incomplete.
   Teleporter beams retain the selected ROM art bank through recreation,
   including SSZ transport priority and whole-sky rewind publication.
