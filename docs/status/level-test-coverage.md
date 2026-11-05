@@ -329,6 +329,17 @@ nonwrites and exceptional visibility permission are covered. The live contact /
 reserved ID-only / FM97 World award and subsequent Shield/current-art execution
 remain open; no new controller endpoint or current-pixel claim follows.
 
+The live Act2 Item/Shield binding now has27 refreshed World passes after a951-case
+run with950 passes and one test-only adversary-lifetime correction. A separate
+controller observer returns14445 at a finite bound; repeated inputs stall nearX5813,
+so this is not additional spatial traversal. Permanent positive13126 and14 selected
+Sonic EGL cuts pass two existing methods, including native Item award/retirement,
+reserved Shield Init/active, actual subsequent upload, full/course state/pixel
+replay and Shield-only renderer omission13098. Existing18 Explosion remains bound;
+26 Spikes is separate preparation. No completeact, native/regional/audio parity
+is claimed. Earlier13062/first13063 fences above are historical; the Act2 matrix
+records exact tested sources, original preparation/fixture failures and corrections.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

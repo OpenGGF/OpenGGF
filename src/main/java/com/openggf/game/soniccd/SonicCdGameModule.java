@@ -34,6 +34,7 @@ import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdTunnelDoor;
 import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdMonitor;
+import com.openggf.game.soniccd.objects.CdMonitorItem;
 import com.openggf.game.soniccd.objects.CdBreakableWall;
 import com.openggf.game.soniccd.objects.CdTimePost;
 import com.openggf.game.soniccd.objects.CdSignpost;
@@ -146,9 +147,10 @@ public final class SonicCdGameModule implements GameModule {
         TUNNEL_DOOR_BODY, TUNNEL_DOOR_PRIMARY_TOP, TUNNEL_DOOR_SECONDARY_TOP, TUNNEL_DOOR_SECONDARY_READ, TUNNEL_DOOR_FM,
         FLOWER_BODY, FLOWER_PRIMARY_ANGLE,
         TUNNEL_PATH_BODY, TUNNEL_PATH_PLAYER_READ, TUNNEL_PATH_SOURCE_READ, TUNNEL_PATH_PLAYER, TUNNEL_PATH_FM,
-        TIME_STARS_INIT, TIME_STARS_ACTIVE, TIME_STARS_BODY
+        TIME_STARS_INIT, TIME_STARS_ACTIVE, TIME_STARS_BODY,
+        MONITOR_ITEM_BODY, MONITOR_ITEM_SHIELD_AWARD, SHIELD_BODY, SHIELD_INIT, SHIELD_ACTIVE
     }
-    enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS }
+    enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER }
     static final class UnsupportedAct2Loading extends UnsupportedOperationException {
         private final Act2Boundary boundary;
         UnsupportedAct2Loading(Act2Boundary boundary) { super("Actual R12A stopped at " + boundary); this.boundary = boundary; }
@@ -199,6 +201,8 @@ public final class SonicCdGameModule implements GameModule {
     SonicCdAct2Display.Selection act2SelectedDisplay() { validateAct2LoadingCut(); return act2Loading.selectedDisplay(); }
     void serviceAct2Loading(int held) {
         playerPresentation.requirePastRenderIdle();
+        // Reject nested public ingress before the terminal failure owner is entered.
+        if (act2Loading != null) act2Loading.requireItemShieldServiceIdle();
         try { validateAct2LoadingCut(); act2Loading.service(held); playerPresentation.projectAct2Loading(); }
         catch (RuntimeException | Error failure) { closePlayerCycleAfterFailure(failure); throw failure; }
     }
@@ -287,7 +291,10 @@ public final class SonicCdGameModule implements GameModule {
         PastLoadBoundary boundary() { return boundary; }
     }
     // Typed request metadata and one native music-latch projection; no audio synthesis.
-    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm { }
+    sealed interface PastSound permits PastCheckpointFm, PastFrameSound, PastSubCpuSound, PastRingFm, PastRingSubCpu, PastSpringFm, PastTunnelDoorFm, PastMonitorFm, PastTimePostSubCpu, PastTamabbohFm, PastCollapsePlatformFm, PastMosquiFm, PastRobotGeneratorFm, PastSignpostSound, PastBigRingFm, PastResultsSound, PastProgrammeSound, PastWallFm, PastTunnelPathFm, PastMonitorItemShieldFm { }
+    record PastMonitorItemShieldFm(CdMonitorItem.ShieldSound sound) implements PastSound {
+        PastMonitorItemShieldFm { Objects.requireNonNull(sound); }
+    }
     record PastTunnelPathFm(CdTunnelPath.FmSound sound) implements PastSound {
         PastTunnelPathFm { Objects.requireNonNull(sound); }
     }

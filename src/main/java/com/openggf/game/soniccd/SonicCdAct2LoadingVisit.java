@@ -87,6 +87,11 @@ final class SonicCdAct2LoadingVisit {
     private boolean boulderPort, drawingBoulder, platformPort, drawingPlatform;
     private final CdMonitor monitor;
     private final CdTimePost timePost;
+    private final CdMonitor.Assets monitorItemAssets;
+    private final CdMonitorItem monitorItem;
+    private final CdShieldPowerup shield;
+    private transient ItemShieldInvocation activeItemShield;
+    private transient boolean itemShieldPort, drawingItemShield;
     private transient MonitorInvocation activeMonitor;
     private boolean monitorPort, drawingMonitor;
     private final CdTitleCard title;
@@ -304,6 +309,16 @@ final class SonicCdAct2LoadingVisit {
         platform=new CdPlatform(placement,CdPlatform.Assets.fromAct2Assets(objectAssets),new CdPlayerMath(player.player()),
                 sharedTerrain,sharedSolid,this::commitPlatformSolid,this::commitPlatformPrimaryAngle,this::drawPlatform);
         var monitorAssets=CdMonitor.Assets.fromAct2Assets(objectAssets);
+        monitorItemAssets=monitorAssets;
+        monitorItem=CdMonitorItem.withWorldOwner(placement,monitorItemAssets,this::unownedItemShoes,
+                this::awardItemShield,this::drawMonitorItem,new CdMonitorItem.DispatchObserver() {
+            public void beforeOperation(Object c) { beforeItemShield(c); }
+            public void afterOperation(Object c) { afterItemShield(c); }
+            public void failedOperation(Object c,Throwable t) { failedItemShield(c,t); }
+        },new CdMonitorItem.ReceiptGuard() {
+            public void prepared(Object c) { prepareItemShield(c); }
+            public void completed(Object c) { completeItemShield(c); }
+        });
         monitor=CdMonitor.withPastOwner(placement,monitorAssets,sharedSolid,sharedTerrain,new CdMonitor.PrefixSolidOwner() {
             @Override public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut cut) { return preflightMonitorSolid(cut); }
             @Override public CdMonitor.LiveSolid commit(CdMonitor.PrefixSolidCall call) { return commitMonitorSolid(call); }
@@ -349,6 +364,18 @@ final class SonicCdAct2LoadingVisit {
         },new CdTimeStars.ReceiptGuard() {
             @Override public void prepared(Object call) { requirePreparedTimeStarsReceipt(call); }
             @Override public void completed(Object call) { consumeTimeStarsReceipt(call); }
+        });
+        shield=CdShieldPowerup.withWorldOwner(timeStarBank,timeStarsAssets,this::readShieldField,
+                new CdShieldPowerup.PowerupPort() {
+            public int read() { return readShieldPowerup(); }
+            public void write(int value) { writeShieldPowerup(value); }
+        },this::drawShield,new CdShieldPowerup.DispatchObserver() {
+            public void beforeOperation(CdShieldPowerup.Call c) { beforeItemShield(c); }
+            public void afterOperation(CdShieldPowerup.Call c) { afterItemShield(c); }
+            public void failedOperation(CdShieldPowerup.Call c,Throwable t) { failedItemShield(c,t); }
+        },new CdShieldPowerup.ReceiptGuard() {
+            public void prepared(CdShieldPowerup.Call c) { prepareItemShield(c); }
+            public void completed(CdShieldPowerup.Call c) { completeItemShield(c); }
         });
         title=new CdTitleCard(placement,new CdTitleCard.Assets(objectAssets.view(CdR12aProfile.Asset.TITLE_CARD_DATA),
                 CdR12aProfile.Asset.TITLE_CARD_MAPPINGS.nativeAddress()),new CdTitleCard.ReservedSlots() {
@@ -2244,6 +2271,7 @@ final class SonicCdAct2LoadingVisit {
                 int id=whole<32 ? reservedImage(whole).unsignedByte(0) : placement.pool().state(whole).id();
                 if(id==0) continue;
                 if(id==CdTitleCard.OBJECT_ID) { runTitle(whole); call(TITLE_CARD_BODY); }
+                else if(whole==6 && id==CdShieldPowerup.OBJECT_ID) { runItemShield(whole,true); call(SHIELD_BODY); }
                 else if(whole>=CdTimeStars.FIRST_WHOLE_INDEX && whole<CdTimeStars.END_WHOLE_INDEX
                         && id==CdTimeStars.OBJECT_ID) { runTimeStar(whole); call(TIME_STARS_BODY); }
                 else if(whole<32) {
@@ -2257,6 +2285,7 @@ final class SonicCdAct2LoadingVisit {
                     boolean post=placement.pool().state(whole).subtype()>=8;
                     runMonitor(whole); call(post ? TIME_POST_BODY : MONITOR_BODY);
                 }
+                else if(id==CdMonitorItem.OBJECT_ID) { runItemShield(whole,false); call(MONITOR_ITEM_BODY); }
                 else if(id==CdFlower.OBJECT_ID) { runFlower(whole); call(FLOWER_BODY); }
                 else if(id==CdExplosion.OBJECT_ID) { runExplosion(whole); call(EXPLOSION_BODY); }
                 else if(id==CdPoints.OBJECT_ID) { runPoints(whole); call(POINTS_BODY); }
@@ -2319,9 +2348,10 @@ final class SonicCdAct2LoadingVisit {
         // Native empty root0 overlaps frame1's body. Resolve only reached frames from all13 raw roots.
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_POWERUP.nativeAddress(),
                 view(CdR12aProfile.Asset.MAP_SPR_POWERUP).bytes(),0,13));
-        var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
+        var mappings=CdObjectMappings.declaredSourceViews(roots,CdObjectMappings.act2MonitorItemStaticPieces(assets.objects()));
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                if(activeItemShield!=null)throw new IllegalStateException("Collecting Item/Shield has no live queue read");
                 if(activeTimeStars!=null)throw new IllegalStateException("Collecting TimeStars DrawObject has no live queue read");
                 if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native queue read");
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
@@ -2344,6 +2374,7 @@ final class SonicCdAct2LoadingVisit {
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+                if(activeItemShield!=null) { writeItemShieldOnScreen(ref,value); return; }
                 if(activeTimeStars!=null) { writeTimeStarsOnScreen(ref,value); return; }
                 if(activeTunnelPath!=null)throw new IllegalStateException("Tunnel Path has no native Draw flag write");
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
@@ -2367,7 +2398,7 @@ final class SonicCdAct2LoadingVisit {
                 else if(activeSpring!=null) writeSpringOnScreen(ref,value); else writeRingOnScreen(ref,value);
             }
         },mappings,values.cpuSat().copy(),List.of(new CdObjectDrawQueue.CdSlotRef(2),new CdObjectDrawQueue.CdSlotRef(3),
-                new CdObjectDrawQueue.CdSlotRef(4),new CdObjectDrawQueue.CdSlotRef(5),
+                new CdObjectDrawQueue.CdSlotRef(4),new CdObjectDrawQueue.CdSlotRef(5),new CdObjectDrawQueue.CdSlotRef(6),
                 new CdObjectDrawQueue.CdSlotRef(12),new CdObjectDrawQueue.CdSlotRef(13),
                 new CdObjectDrawQueue.CdSlotRef(14),new CdObjectDrawQueue.CdSlotRef(15),new CdObjectDrawQueue.CdSlotRef(31)));
     }
@@ -3653,6 +3684,7 @@ final class SonicCdAct2LoadingVisit {
 
 
     private void requireCheckpointIdle() {
+        requireItemShieldIdle();
         if (activePowerupArt != null) throw new IllegalStateException("Actual LoadShieldArt owns this cut");
         if(activeCheckpoint!=null || checkpointPort || drawingCheckpoint) throw new IllegalStateException("Actual Checkpoint owns this cut");
     }
@@ -8312,11 +8344,13 @@ final class SonicCdAct2LoadingVisit {
 
     // Actual reserved ID03: one facade, one cached native kernel, no extra rewind/storage owner.
     private void requireTimeStarsIdle() {
+        requireItemShieldIdle();
         if (activePowerupArt != null) throw new IllegalStateException("Actual LoadShieldArt owns this cut");
         if(activeTimeStars!=null || timeStarsPort || drawingTimeStars)
             throw new IllegalStateException("Actual reserved TimeStars invocation owns this source cut");
     }
     private void requireOtherTimeStarsScopesIdle() {
+        requireItemShieldIdle();
         if(activePrimary!=null || activeDrain!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
                 || activeTitle!=null || activeMonitor!=null || activeBoulder!=null || activePlatform!=null
                 || activeAnton!=null || activePata!=null || activeTamabboh!=null || activeFloat!=null || activeCheckpoint!=null
@@ -8404,6 +8438,7 @@ final class SonicCdAct2LoadingVisit {
     }
     /** No factory read, raw import, default bank or public mutation authority. */
     private CdAssetBytes readTimeStarsReserved() {
+        if(activeItemShield!=null) { verifyItemShield(activeItemShield); return values.hudObjects(); }
         if(activePrimary!=null) {
             verifyPrimary(activePrimary);return values.hudObjects();
         }
@@ -8475,6 +8510,7 @@ final class SonicCdAct2LoadingVisit {
         return i;
     }
     private boolean adoptTimeStarsReserved(CdAssetBytes expected,CdAssetBytes next) {
+        if(activeItemShield!=null) return adoptItemShieldReserved(expected,next);
         var i=requireTimeStarsPrimitive(CdTimeStars.Publication.class);
         if(timeStarsPort || drawingTimeStars || queuePort || expected==null || next==null
                 || expected.length()!=31*64 || next.length()!=31*64)
@@ -8564,4 +8600,477 @@ final class SonicCdAct2LoadingVisit {
         } catch(RuntimeException|Error verification) {if(verification!=original)original.addSuppressed(verification);}
     }
 
+
+    // Item and Shield share only a transient invocation guard, never storage or a capture owner.
+    void requireItemShieldServiceIdle() { requireItemShieldIdle(); }
+    private void requireItemShieldIdle() {
+        if(activeItemShield!=null || itemShieldPort || drawingItemShield)
+            throw new IllegalStateException("Actual MonitorItem/Shield owns this source cut");
+    }
+    private void requireEarlierItemShieldIdle() {
+        if(activeTimeStars!=null || timeStarsPort || drawingTimeStars || activePowerupArt!=null
+                || activePrimary!=null || activeDrain!=null || activeReserved!=null || activeRing!=null || activeSpring!=null
+                || activeTitle!=null || activeMonitor!=null || activeBoulder!=null || activePlatform!=null
+                || activeAnton!=null || activePata!=null || activeTamabboh!=null || activeFloat!=null || activeCheckpoint!=null
+                || activeWall!=null || activeCollapse!=null || activeLogMosqui!=null || activeChildEffect!=null
+                || activeDoor!=null || activeFlower!=null || activeTunnelPath!=null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || titlePort || drawingTitle || monitorPort || drawingMonitor || boulderPort || drawingBoulder
+                || platformPort || drawingPlatform || antonPort || drawingAnton || drawingPata || tamabbohPort || drawingTamabboh
+                || floatPort || drawingFloat || checkpointPort || drawingCheckpoint || wallPort || drawingWall
+                || collapsePort || drawingCollapse || logMosquiPort || drawingLogMosqui || drawingChildEffect
+                || doorPort || drawingDoor || flowerPort || drawingFlower || tunnelPathPort)
+            throw new IllegalStateException("Another actual family owns this Item/Shield cut");
+    }
+    private final class ItemShieldInvocation {
+        final int whole; final boolean reserved;
+        final CdMonitorItem itemBody=monitorItem; final CdShieldPowerup shieldBody=shield;
+        final CdMonitor.Assets itemAssets=monitorItemAssets; final CdTimeStars.Assets shieldAssets=timeStarsAssets;
+        final CdReservedObjectBank bank=timeStarBank; final CdObjectPool pool=placement.pool();
+        final CdPlayerFrameRuntime sourceFrame=frame; final CdR12aTerrainAssets sourceAssets=assets;
+        final Object stage=frame.stageSource(); final CdObjectDrawQueue queue=drawQueue;
+        final CdPlayerBody.State state=frame.state(); final CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor();
+        final CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll();
+        final Optional<CdPlayerBody.DisplayPublication> display=frame.display();
+        final CdPlayerArtRuntime.State playerArt=frame.artState();
+        final CdPlayerFrameRuntime.VIntClock clock=frame.vIntClock(); final boolean paused=frame.paused();
+        final CdObjectPlacementRuntime.Snapshot placed=placement.capture();
+        final Object world; final long generation; final CdObjectDrawQueue.CameraWords camera;
+        final int entryRoutine,entryAnimation;
+        CdObjectPool.Snapshot expectedPool=placed.pool(),readyPool;
+        Values expectedValues=values,readyValues,awardContact,awardReserved,awardObserved;
+        List<SonicCdGameModule.PastSound> ledger=sounds,awardLedger;
+        Object pending,completed,preparedReceipt,adoptionReceipt,completionReceipt;
+        CdReservedObjectBank.Image awardImage;
+        CdMonitorItem.Result itemResult;
+        CdMonitorItem.ShieldAwardResult awardResult;
+        CdPlayerMovement.RawObjectMoveResult motion;
+        long ordinal; int itemStage,nextItemStage,initStores,readStage,awardStage;
+        Integer mappingRelative,readValue,lastFieldValue;
+        boolean prepared,drawn,cleared,queueFailed;
+        ItemShieldInvocation(int whole,boolean reserved) {
+            this.whole=whole;this.reserved=reserved;
+            entryRoutine=reserved?reservedImage(whole).unsignedByte(0x24):pool.state(whole).routine();
+            entryAnimation=reserved?reservedImage(whole).unsignedByte(0x1C):pool.state(whole).unsignedByte(CdObjectState.ByteField.ANIMATION);
+            var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+        boolean current(Object c) { return reserved?shieldBody.isCurrentCall(c):itemBody.isCurrentCall(c); }
+        boolean primitive(Object c) { return reserved?shieldBody.isCurrentPrimitive(c):itemBody.isCurrentPrimitive(c); }
+        long sequence(Object c) { return reserved?shieldBody.currentOrdinal(c):itemBody.currentOrdinal(c); }
+        Object result(Object c) { return reserved?shieldBody.currentResult(c):itemBody.currentResult(c); }
+    }
+    private void runItemShield(int whole,boolean reserved) {
+        requireItemShieldIdle();requireEarlierItemShieldIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || values.phase()!=BEGIN_LEVEL || drawQueue==null
+                || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || (reserved ? whole!=6 || reservedImage(whole).unsignedByte(0)!=3
+                    : whole<32 || whole>=128 || placement.pool().state(whole).id()!=CdMonitorItem.OBJECT_ID))
+            throw new IllegalStateException("No actual increasing physical Item/Shield dispatch");
+        var i=new ItemShieldInvocation(whole,reserved);activeItemShield=i;
+        try {
+            if(reserved) {
+                var result=shield.run(whole);verifyItemShield(i);
+                if(!result.state().equals(timeStarBank.state(whole)))
+                    throw new IllegalStateException("Shield return differs from its actual live source");
+                if(i.entryRoutine==0 && (i.drawn || i.readStage!=0 || i.initStores!=6+(i.entryAnimation!=0?1:0)+(i.entryAnimation>=5?1:0)))
+                    throw new IllegalStateException("Shield Init reached a fallthrough/Draw/read");
+            } else {
+                // Actual primary bytes, not a diagnostic position or normalized missing support.
+                var primary=frame.state();
+                var result=monitorItem.run(whole,Optional.of(new CdMonitorItem.PrimarySupport(
+                        primary.header().slotId(),primary.motion().flags())));
+                verifyItemShield(i);
+                if(result!=i.itemResult || i.itemStage!=13 || !i.drawn || !i.cleared
+                        || !result.state().equals(i.pool.state(whole)))
+                    throw new IllegalStateException("Item return omitted its EXACT original CompletionCall Result");
+            }
+            if(i.pending!=null || i.completed!=null || i.preparedReceipt!=null || i.adoptionReceipt!=null || i.completionReceipt!=null)
+                throw new IllegalStateException("Item/Shield omitted an original completion receipt");
+        } catch(RuntimeException|Error original) {
+            try {verifyItemShield(i);}catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}
+            throw original;
+        } finally {activeItemShield=null;itemShieldPort=false;drawingItemShield=false;}
+        if(reserved)call(i.entryRoutine==0?SHIELD_INIT:SHIELD_ACTIVE);
+    }
+    private void verifyItemShield(ItemShieldInvocation i) {
+        if(i==null)throw new IllegalStateException("No actual Item/Shield invocation");
+        module.requireAct2LoadingVisit(this);presentation.requirePastRenderIdle();requireEarlierItemShieldIdle();
+        var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();var now=placement.capture();
+        if(activeItemShield!=i || !runningObjects || servicing || i.itemBody!=monitorItem || i.shieldBody!=shield
+                || i.itemAssets!=monitorItemAssets || monitorItem.assets()!=i.itemAssets
+                || i.shieldAssets!=timeStarsAssets || shield.assets()!=i.shieldAssets || i.bank!=timeStarBank
+                || i.pool!=placement.pool() || i.sourceFrame!=frame || i.sourceAssets!=assets || i.stage!=frame.stageSource()
+                || i.queue!=drawQueue || drawQueue==null || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING
+                    || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || mode.getWorldSession()!=i.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration()!=i.generation
+                || frame.closed() || frame.state()!=i.state || frame.environment()!=i.environment
+                || frame.display()!=i.display || frame.artState()!=i.playerArt || frame.vIntClock()!=i.clock || frame.paused()!=i.paused
+                || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared)
+                || values!=i.expectedValues || sounds!=i.ledger || !now.status().equals(i.placed.status())
+                || !now.pool().slots().equals(i.expectedPool.slots()) || !sameBytes(now.savedFlags(),i.placed.savedFlags())
+                || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Item/Shield changed complete Frame/art/display/clock/full96/status/saved766/full31/Values/HUD/sounds/scroll/World/generation/queue");
+    }
+    private ItemShieldInvocation requireItemShield() {var i=activeItemShield;verifyItemShield(i);return i;}
+    private ItemShieldInvocation itemShieldPrimitive(Class<?> kind) {
+        var i=requireItemShield();
+        if(i.pending==null || !kind.isInstance(i.pending) || !i.primitive(i.pending) || !i.prepared
+                || i.preparedReceipt==null || i.adoptionReceipt!=null || i.completed!=null)
+            throw new IllegalStateException("No genuine once-only Item/Shield primitive receipt");
+        return i;
+    }
+    private void validateItemCut(ItemShieldInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);
+        if(source==null || source.identity().wholeIndex()!=i.whole || !source.equals(i.pool.state(i.whole))
+                || !cut.status().equals(i.placed.status()) || !sameBytes(cut.savedFlags(),i.placed.savedFlags())
+                || !cut.pool().slots().equals(i.expectedPool.slots()))
+            throw new IllegalStateException("Item stale full96/status/saved source cut");
+    }
+    private void validateShieldCut(ItemShieldInvocation i,CdShieldPowerup.Call c) {
+        timeStarBank.validateRestore(c.cut());
+        if(c.source()==null || c.source().identity().wholeIndex()!=6 || !c.source().equals(c.cut().slots().get(5)))
+            throw new IllegalStateException("Shield omitted actual source64");
+        for(int whole=1;whole<32;whole++)
+            if(!Arrays.equals(c.cut().slots().get(whole-1).copyBytes(),i.expectedValues.hudObjects().slice((whole-1)*64,64).copy()))
+                throw new IllegalStateException("Shield stale full31 cut at "+whole);
+    }
+    private void beforeItemShield(Object call) {
+        var i=requireItemShield();
+        if(!i.current(call) || i.primitive(call) || i.pending!=null || i.completed!=null || i.preparedReceipt!=null
+                || i.adoptionReceipt!=null || i.completionReceipt!=null || itemShieldPort || drawingItemShield || queuePort
+                || i.sequence(call)!=i.ordinal+1)
+            throw new IllegalStateException("Item/Shield lacks original pending producer and monotone sequence");
+        i.readyValues=i.expectedValues;i.readyPool=i.expectedPool;i.nextItemStage=i.itemStage;i.readValue=null;
+        if(i.reserved)prepareShieldOperation(i,(CdShieldPowerup.Call)call);
+        else prepareItemOperation(i,call);
+        verifyItemShield(i);i.pending=call;i.ordinal=i.sequence(call);i.preparedReceipt=new Object();i.prepared=false;
+    }
+    private void prepareItemOperation(ItemShieldInvocation i,Object call) {
+        if(call instanceof CdMonitorItem.Publication c) {
+            validateItemCut(i,c.cut(),c.source());var s=c.source();CdObjectState expected;
+            switch(c.kind()) {
+                case INIT_PREFIX -> {
+                    itemStage(i,i.entryRoutine==0 && i.itemStage==0,1);
+                    expected=s.addByte(CdObjectState.ByteField.ROUTINE,2).moveWord(CdObjectState.WordField.TILE,
+                            s.unsignedByte(CdObjectState.ByteField.LAYER)==0?0x85A8:0x05A8)
+                            .moveByte(CdObjectState.ByteField.SPRITE_FLAGS,0x24).moveByte(CdObjectState.ByteField.PRIORITY,3)
+                            .moveByte(CdObjectState.ByteField.WIDTH,8).moveWord(CdObjectState.WordField.Y_VELOCITY,-0x300)
+                            .moveByte(CdObjectState.ByteField.MAP_FRAME,s.unsignedByte(CdObjectState.ByteField.ANIMATION));
+                }
+                case MAPPING_POINTER -> {
+                    itemStage(i,i.itemStage==2 && i.mappingRelative!=null,3);
+                    expected=s.moveLong(CdObjectState.LongField.MAPPINGS,i.itemAssets.mappingsAddress()+i.mappingRelative+1);
+                }
+                case MOVE_READY -> {itemStage(i,(i.itemStage==0 && i.entryRoutine==2 || i.itemStage==3)
+                        && s.signedWord(CdObjectState.WordField.Y_VELOCITY)<0,4);expected=s;}
+                case MOVE_RESULT -> {
+                    itemStage(i,i.itemStage==5 && i.motion!=null,6);
+                    expected=s.moveLong(CdObjectState.LongField.X_POSITION,i.motion.centreX16_16())
+                            .moveLong(CdObjectState.LongField.Y_POSITION,i.motion.centreY16_16()).addWord(CdObjectState.WordField.Y_VELOCITY,0x18);
+                }
+                case REWARD_PREFIX -> {
+                    itemStage(i,i.itemStage==0 && i.entryRoutine==2 && s.signedWord(CdObjectState.WordField.Y_VELOCITY)>=0,7);
+                    expected=s.addByte(CdObjectState.ByteField.ROUTINE,2).moveWord(CdObjectState.WordField.MONITOR_ITEM_DELETE,29);
+                }
+                case DELETE_TIMER -> {itemStage(i,i.itemStage==0 && i.entryRoutine==4,9);
+                    expected=s.addWord(CdObjectState.WordField.MONITOR_ITEM_DELETE,-1);}
+                case WRAPPER_READY -> {
+                    itemStage(i,i.itemStage==6 || i.itemStage==8 || i.itemStage==10
+                            || i.itemStage==9 && s.signedWord(CdObjectState.WordField.MONITOR_ITEM_DELETE)>=0,11);expected=s;
+                }
+                default -> throw new IllegalStateException("Unowned Item publication");
+            }
+            if(!expected.equals(c.output()))throw new IllegalStateException("Item native publication/nonwrites differ");
+            i.readyPool=CdObjectPool.overlay(i.expectedPool,List.of(c.output()));
+        } else if(call instanceof CdMonitorItem.MappingReadCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==1,2);
+            if(c.byteOffset()!=((c.source().unsignedByte(CdObjectState.ByteField.ANIMATION)*2)&255))
+                throw new IllegalStateException("Item raw mapping index differs");
+        } else if(call instanceof CdMonitorItem.MotionCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==4,5);
+            if(!c.primarySupport().equals(Optional.of(new CdMonitorItem.PrimarySupport(i.state.header().slotId(),i.state.motion().flags()))))
+                throw new IllegalStateException("Item omitted actual primary support");
+        } else if(call instanceof CdMonitorItem.ShieldCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==7 && i.awardStage==0,8);
+            if(c.request().identity()!=c.source().identity() || c.request().rawAnimation()!=2
+                    || c.source().unsignedByte(CdObjectState.ByteField.ANIMATION)!=2 || c.source().routine()!=4
+                    || c.source().word(CdObjectState.WordField.MONITOR_ITEM_DELETE)!=29)
+                throw new IllegalStateException("Shield award is not its actual routine4/deleteWORD29 cut");
+            // All publications are prepared before the first store; no allocation, slot clear or art touch.
+            var v=i.expectedValues;var g=v.globals();var contact=g.contact();
+            var next=new LoadingGlobals(g.live(),new CdPlayerBody.ContactGlobals(contact.timeWarp(),1,contact.combineRing()),
+                    g.score(),g.drownTimerWord(),g.tail(),g.bonus(),g.layoutRam(),g.debugBlockWord(),g.pauseMusicBit(),g.retainedDev(),g.checkpointSaved());
+            i.awardContact=itemShieldGlobals(v,next);
+            i.awardImage=timeStarBank.state(6).moveByteAt(0,3);
+            i.awardReserved=reservedValues(i.awardContact,replaceTimeStar(v.hudObjects(),6,i.awardImage));
+            var ledger=new ArrayList<>(sounds);ledger.add(new SonicCdGameModule.PastMonitorItemShieldFm(CdMonitorItem.ShieldSound.FM_SHIELD));
+            i.awardLedger=List.copyOf(ledger);
+            var a=i.awardReserved;var calls=new ArrayList<>(a.calls());calls.add(MONITOR_ITEM_SHIELD_AWARD);
+            i.awardObserved=new Values(a.phase(),a.section(),a.cpuPalette(),a.fadePalette(),a.waterPalette(),a.displayedPalette(),
+                    a.cpuSat(),a.displayedSat(),a.displayedHScroll(),a.displayedVScrollLongBits(),a.foregroundPlane(),a.ring(),a.level(),
+                    a.globals(),a.hudObjects(),a.fadeProgress(),calls,a.loop());
+            i.awardResult=new CdMonitorItem.ShieldAwardResult(CdMonitorItem.ShieldSound.FM_SHIELD);
+        } else if(call instanceof CdMonitorItem.ShoesCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==7,8);
+        } else if(call instanceof CdMonitorItem.DeleteCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==9 && c.source().signedWord(CdObjectState.WordField.MONITOR_ITEM_DELETE)<0,10);
+            // The original DeleteObject creates its new same-owner identity; inspect only after it completes.
+        } else if(call instanceof CdMonitorItem.DrawCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==11 && !i.drawn && !i.cleared,12);
+            i.readyPool=CdObjectPool.overlay(i.expectedPool,List.of(c.source().moveByte(CdObjectState.ByteField.SPRITE_FLAGS,c.source().spriteFlags()&127)));
+        } else if(call instanceof CdMonitorItem.CompletionCall c) {
+            validateItemCut(i,c.cut(),c.source());itemStage(i,i.itemStage==12 && i.drawn && i.cleared && i.itemResult==null,13);
+        } else throw new IllegalStateException("Foreign Item operation");
+    }
+    private static void itemStage(ItemShieldInvocation i,boolean allowed,int next) {
+        if(!allowed)throw new IllegalStateException("Item native operation out of order");i.nextItemStage=next;
+    }
+    private static Values itemShieldGlobals(Values v,LoadingGlobals g) {
+        return new Values(v.phase(),v.section(),v.cpuPalette(),v.fadePalette(),v.waterPalette(),v.displayedPalette(),
+                v.cpuSat(),v.displayedSat(),v.displayedHScroll(),v.displayedVScrollLongBits(),v.foregroundPlane(),v.ring(),v.level(),g,
+                v.hudObjects(),v.fadeProgress(),v.calls(),v.loop());
+    }
+    private void prepareShieldOperation(ItemShieldInvocation i,CdShieldPowerup.Call call) {
+        validateShieldCut(i,call);
+        if(call instanceof CdShieldPowerup.Publication c) {
+            if(c.output()==null || !c.output().equals(c.source().withBytes(c.output().copyBytes())))
+                throw new IllegalStateException("Shield changed source owner/identity");
+            validateShieldPublication(i,c);
+            i.readyValues=reservedValues(i.expectedValues,replaceTimeStar(i.expectedValues.hudObjects(),6,c.output()));
+        } else if(call instanceof CdShieldPowerup.ReadCall c) {
+            // Values are read only at the component's reached conditional native read, never eagerly.
+            int expectedStage=switch(c.field()) {
+                case SHIELD -> 0;case TIME_WARP -> 1;case INVINCIBLE -> 2;case PLAYER_X_WORD -> 3;
+                case PLAYER_Y_WORD -> 4;case PLAYER_FLAGS -> 5;case ZONE -> 6;case LAYER -> 7;
+            };
+            if(i.entryRoutine!=2 || i.readStage!=expectedStage)throw new IllegalStateException("Shield conditional read out of source order");
+        } else if(call instanceof CdShieldPowerup.PowerupReadCall) {
+            if(i.readStage<7)throw new IllegalStateException("Shield Powerup precedes actual body reads");
+        } else if(call instanceof CdShieldPowerup.PowerupWriteCall c) {
+            int routine=c.source().byteAt(0x24);
+            if(i.readStage<7 || routine!=2 || c.previousValue()!=values.level().powerup()
+                    || !(c.value()==routine && (c.previousValue()&15)<8 && (c.previousValue()&15)!=routine
+                        || c.previousValue()==routine && c.value()==(routine|128)))
+                throw new IllegalStateException("Shield Powerup is not actual MOVE2/BSET7");
+            i.readyValues=timeStarsPowerupValues(i.expectedValues,c.value());
+        } else if(call instanceof CdShieldPowerup.DrawCall c) {
+            if(i.readStage<7 || i.drawn || i.cleared)throw new IllegalStateException("Duplicate/early Shield DrawObject");
+            i.readyValues=reservedValues(i.expectedValues,replaceTimeStar(i.expectedValues.hudObjects(),6,c.source().moveByteAt(1,c.source().byteAt(1)&127)));
+        } else throw new IllegalStateException("Foreign Shield operation");
+    }
+    private void validateShieldPublication(ItemShieldInvocation i,CdShieldPowerup.Publication c) {
+        var s=c.source();var out=c.output();
+        if(i.entryRoutine==0) {
+            var expected=switch(i.initStores) {
+                case 0 -> s.moveByteAt(0x24,2);
+                case 1 -> s.moveLong(CdObjectState.LongField.MAPPINGS,i.shieldAssets.mappingAddressBits());
+                case 2 -> s.moveByteAt(1,4);case 3 -> s.moveByteAt(0x18,1);case 4 -> s.moveByteAt(0x19,16);
+                case 5 -> s.moveWord(CdObjectState.WordField.TILE,0x544);
+                case 6 -> {if(s.byteAt(0x1C)==0)throw new IllegalStateException("Shield extra Init branch");yield s.moveByteAt(0x24,4);}
+                case 7 -> {if(s.byteAt(0x1C)<5)throw new IllegalStateException("Shield extra stars branch");yield s.moveByteAt(0x24,6);}
+                default -> throw new IllegalStateException("Shield excessive Init stores");
+            };
+            if(!out.equals(expected))throw new IllegalStateException("Shield Init source bytes differ");
+        } else if(i.readStage==1 && i.lastFieldValue!=null && i.lastFieldValue==0) {
+            if(!out.equals(s.withBytes(new byte[64])))throw new IllegalStateException("Shield DeleteObject must clear its complete64");
+        } else if(i.readStage==4) {
+            if(!out.equals(s.moveWord(CdObjectState.WordField.X,i.state.motion().centreX16_16()>>>16)))throw new IllegalStateException("Shield X WORD/nonwrites differ");
+        } else if(i.readStage==5) {
+            if(!out.equals(s.moveWord(CdObjectState.WordField.Y,i.state.motion().centreY16_16()>>>16)))throw new IllegalStateException("Shield Y WORD/nonwrites differ");
+        } else if(i.readStage==6) {
+            if(!out.equals(s.moveByteAt(0x22,i.state.motion().flags())))throw new IllegalStateException("Shield flags/nonwrites differ");
+        } else if(i.readStage==7 && (i.environment.movement().gates().zoneAct()>>>8)==6) {
+            // The native ORI precedes the reached unrepresented global layer read. R12A's actual zone is0.
+            if(!out.equals(s.moveByteAt(2,s.byteAt(2)|128)))throw new IllegalStateException("Shield layer ORI/nonwrites differ");
+        } else {
+            // Genuine completed native animation publications only. No AnimateObject replay or operand pre-read.
+            if(i.readStage<7 || (i.environment.movement().gates().zoneAct()>>>8)==6)
+                throw new IllegalStateException("Unowned Shield layer/publication");
+            byte[] before=s.copyBytes(),after=out.copyBytes();
+            for(int at=0;at<64;at++)
+                if(before[at]!=after[at] && at!=1 && (at<0x1A || at>0x1E) && at!=0x22 && at!=0x24 && at!=0x25)
+                    throw new IllegalStateException("Shield animation changed non-animation byte "+at);
+        }
+    }
+    private void prepareItemShield(Object call) {
+        var i=requireItemShield();
+        if(i.pending!=call || i.prepared || i.preparedReceipt==null || i.adoptionReceipt!=null || !i.current(call) || i.primitive(call))
+            throw new IllegalStateException("Missing/duplicate Item/Shield preparation receipt");i.prepared=true;
+    }
+    private CdMonitorItem.AwardResult unownedItemShoes(CdMonitorItem.AwardCall request) {
+        var i=itemShieldPrimitive(CdMonitorItem.ShoesCall.class);
+        if(((CdMonitorItem.ShoesCall)i.pending).request()!=request)throw new IllegalStateException("Foreign shoes request");
+        throw module.act2Boundary(SonicCdGameModule.Act2Boundary.MONITOR_ITEM_REWARD);
+    }
+    private CdMonitorItem.ShieldAwardResult awardItemShield(CdMonitorItem.ShieldAwardCall request) {
+        var i=itemShieldPrimitive(CdMonitorItem.ShieldCall.class);
+        if(((CdMonitorItem.ShieldCall)i.pending).request()!=request || i.awardStage!=0 || itemShieldPort || queuePort || drawingItemShield)
+            throw new IllegalStateException("No original Shield award request");
+        itemShieldPort=true;
+        try {
+            verifyItemShield(i);values=i.awardContact;i.expectedValues=values;i.awardStage=1;verifyItemShield(i);
+            // Same raw facade: its private CAS requires this original primitive and stage1.
+            timeStarBank.write(i.awardImage);
+            if(i.awardStage!=2)throw new IllegalStateException("Shield award omitted reserved ID-only adoption");
+            verifyItemShield(i);sounds=i.awardLedger;i.ledger=sounds;i.awardStage=3;verifyItemShield(i);
+            values=i.awardObserved;i.expectedValues=values;i.readyValues=values;
+            i.adoptionReceipt=i.preparedReceipt;verifyItemShield(i);
+            return i.awardResult;
+        } finally {itemShieldPort=false;}
+    }
+    private boolean adoptItemShieldReserved(CdAssetBytes expected,CdAssetBytes next) {
+        var i=requireItemShield();
+        boolean award=!i.reserved && i.pending instanceof CdMonitorItem.ShieldCall && i.awardStage==1 && itemShieldPort;
+        if(!award) itemShieldPrimitive(CdShieldPowerup.Publication.class);
+        if(!i.prepared || i.preparedReceipt==null || !i.primitive(i.pending) || i.adoptionReceipt!=null
+                || queuePort || drawingItemShield || expected==null || next==null || expected.length()!=1984 || next.length()!=1984)
+            throw new IllegalStateException("Reserved CAS lacks original Item/Shield source-primitive authority");
+        if(!sameBytes(expected,i.expectedValues.hudObjects()))return false;
+        var ready=award?i.awardReserved:i.readyValues;
+        if(!sameBytes(next,ready.hudObjects()))throw new IllegalStateException("Item/Shield CAS changed full31/nonwrites");
+        verifyItemShield(i);values=ready;i.expectedValues=ready;
+        if(award)i.awardStage=2;else i.adoptionReceipt=i.preparedReceipt;
+        verifyItemShield(i);return true;
+    }
+    private int readShieldField(CdShieldPowerup.ReadField field) {
+        var i=itemShieldPrimitive(CdShieldPowerup.ReadCall.class);
+        if(((CdShieldPowerup.ReadCall)i.pending).field()!=field || itemShieldPort || drawingItemShield || queuePort)
+            throw new IllegalStateException("Foreign/reentrant Shield field read");
+        itemShieldPort=true;
+        try {
+            int value=switch(field) {
+                case SHIELD -> values.globals().contact().shield();case TIME_WARP -> values.globals().contact().timeWarp();
+                case INVINCIBLE -> frame.environment().globals().invincible();
+                case PLAYER_X_WORD -> frame.state().motion().centreX16_16()>>>16;
+                case PLAYER_Y_WORD -> frame.state().motion().centreY16_16()>>>16;
+                case PLAYER_FLAGS -> frame.state().motion().flags();
+                case ZONE -> frame.environment().movement().gates().zoneAct()>>>8;
+                // No represented global layer in R12A; never borrow a slot alias or invent zero.
+                case LAYER -> throw module.act2Boundary(SonicCdGameModule.Act2Boundary.SHIELD_LAYER);
+            };
+            i.readValue=value;i.lastFieldValue=value;i.adoptionReceipt=i.preparedReceipt;verifyItemShield(i);return value;
+        } finally {itemShieldPort=false;}
+    }
+    private int readShieldPowerup() {
+        var i=itemShieldPrimitive(CdShieldPowerup.PowerupReadCall.class);
+        if(itemShieldPort || drawingItemShield || queuePort)throw new IllegalStateException("Shield Powerup read reentry");
+        itemShieldPort=true;
+        try {int value=values.level().powerup();i.adoptionReceipt=i.preparedReceipt;verifyItemShield(i);return value;}
+        finally {itemShieldPort=false;}
+    }
+    private void writeShieldPowerup(int value) {
+        var i=itemShieldPrimitive(CdShieldPowerup.PowerupWriteCall.class);
+        if(value!=((CdShieldPowerup.PowerupWriteCall)i.pending).value() || itemShieldPort || drawingItemShield || queuePort)
+            throw new IllegalStateException("Shield Powerup write differs from original prepared store");
+        itemShieldPort=true;
+        try {values=i.readyValues;i.expectedValues=values;i.adoptionReceipt=i.preparedReceipt;verifyItemShield(i);}
+        finally {itemShieldPort=false;}
+    }
+    private void drawMonitorItem(CdObjectPool pool,CdObjectState.Identity identity) {
+        var i=itemShieldPrimitive(CdMonitorItem.DrawCall.class);
+        if(i.reserved || pool!=i.pool || identity!=((CdMonitorItem.DrawCall)i.pending).source().identity())
+            throw new IllegalStateException("Item Draw lacks original selected source");drawItemShield(i);
+    }
+    private void drawShield(CdReservedObjectBank bank,CdReservedObjectBank.Identity identity) {
+        var i=itemShieldPrimitive(CdShieldPowerup.DrawCall.class);
+        if(!i.reserved || bank!=i.bank || identity!=((CdShieldPowerup.DrawCall)i.pending).source().identity())
+            throw new IllegalStateException("Shield Draw lacks original selected source");drawItemShield(i);
+    }
+    private void drawItemShield(ItemShieldInvocation i) {
+        if(i.drawn || i.cleared || itemShieldPort || drawingItemShield || queuePort)throw new IllegalStateException("Duplicate/reentrant Item/Shield Draw");
+        i.drawn=true;drawingItemShield=true;
+        try {
+            var raw=i.reserved?reservedImage(i.whole):CdAssetBytes.copyOf(i.pool.state(i.whole).copyBytes());
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),raw.unsignedByte(1),
+                    raw.unsignedWord(8),raw.unsignedWord(12),raw.unsignedByte(0x16),raw.unsignedByte(0x19),raw.unsignedByte(0x18)),i.camera);
+            if(!i.cleared)throw new IllegalStateException("Item/Shield Draw omitted entry BCLR7");
+            i.adoptionReceipt=i.preparedReceipt;verifyItemShield(i);
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingItemShield=false;}
+    }
+    private void writeItemShieldOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var current=requireItemShield();
+        var i=itemShieldPrimitive(current.reserved?CdShieldPowerup.DrawCall.class:CdMonitorItem.DrawCall.class);
+        if(ref==null || ref.wholeIndex()!=i.whole || value || !drawingItemShield || itemShieldPort || queuePort || !i.drawn || i.cleared)
+            throw new IllegalStateException("Only genuine selected Item/Shield Draw clears bit7 once");
+        queuePort=true;
+        try {
+            if(i.reserved){values=i.readyValues;i.expectedValues=values;}
+            else {i.pool.write(i.readyPool.slots().get(i.whole-32));i.expectedPool=i.readyPool;}
+            i.cleared=true;verifyItemShield(i);
+        } finally {queuePort=false;}
+    }
+    private void afterItemShield(Object call) {
+        // First establish ORIGINAL completed primitive authority; only then adopt its completed source publication.
+        var i=activeItemShield;
+        if(i==null || i.pending!=call || !i.current(call) || i.primitive(call) || !i.prepared || i.preparedReceipt==null
+                || i.completed!=null || itemShieldPort || drawingItemShield || queuePort)
+            throw new IllegalStateException("Item/Shield missing original completed primitive");
+        var actual=i.result(call);
+        if(!i.reserved && (call instanceof CdMonitorItem.Publication || call instanceof CdMonitorItem.DeleteCall)) {
+            if(actual!=null)throw new IllegalStateException("Item void publication returned foreign data");
+            if(call instanceof CdMonitorItem.DeleteCall) {
+                var cleared=i.pool.state(i.whole);
+                if(!Arrays.equals(cleared.copyBytes(),new byte[64]))throw new IllegalStateException("Actual DeleteObject omitted its complete64 clear");
+                i.readyPool=CdObjectPool.overlay(i.expectedPool,List.of(cleared));
+            }
+            i.expectedPool=i.readyPool;i.adoptionReceipt=i.preparedReceipt;
+        } else if(call instanceof CdMonitorItem.MappingReadCall c) {
+            int expected=(short)i.itemAssets.visual().mappings().unsignedWord(c.byteOffset());
+            if(!(actual instanceof Integer n) || n!=expected)throw new IllegalStateException("Item actual retained mapping word differs");
+            i.mappingRelative=expected;i.adoptionReceipt=i.preparedReceipt;
+        } else if(call instanceof CdMonitorItem.MotionCall c) {
+            var moved=actual instanceof CdPlayerMovement.RawObjectMoveResult m?m:null;
+            if(moved==null)throw new IllegalStateException("Item omitted genuine ObjMove result");
+            var source=c.source();int xvel=source.signedWord(CdObjectState.WordField.X_VELOCITY);
+            if((source.flags()&8)!=0) {
+                int link=source.unsignedByte(CdObjectState.ByteField.STAND_LINK_3D);
+                int id=link==0?i.state.header().slotId():i.pool.state(link).id();
+                int flags=link==0?i.state.motion().flags():i.pool.state(link).flags();
+                if(id==0x1E)xvel=(short)(xvel+((flags&1)==0?-0x100:0x100));
+            }
+            if(moved.centreX16_16()!=source.longBits(CdObjectState.LongField.X_POSITION)+(xvel<<8)
+                    || moved.centreY16_16()!=source.longBits(CdObjectState.LongField.Y_POSITION)+(source.signedWord(CdObjectState.WordField.Y_VELOCITY)<<8)
+                    || moved.xVelocity()!=source.signedWord(CdObjectState.WordField.X_VELOCITY)
+                    || moved.yVelocity()!=source.signedWord(CdObjectState.WordField.Y_VELOCITY))
+                throw new IllegalStateException("Actual Item ObjMove result differs from native wrapping arithmetic");
+            i.motion=moved;i.adoptionReceipt=i.preparedReceipt;
+        } else if(call instanceof CdMonitorItem.CompletionCall) {
+            if(!(actual instanceof CdMonitorItem.Result result) || !result.state().equals(i.pool.state(i.whole)))
+                throw new IllegalStateException("Item missing actual completed Result");
+            i.itemResult=result;i.adoptionReceipt=i.preparedReceipt;
+        } else if(call instanceof CdMonitorItem.ShieldCall) {
+            if(i.awardStage!=3 || actual!=i.awardResult)
+                throw new IllegalStateException("Item Shield result precedes true ledger adoption");
+        } else if(call instanceof CdShieldPowerup.ReadCall) {
+            if(!Objects.equals(actual,i.readValue))throw new IllegalStateException("Shield read did not return actual owner value");
+            i.readStage++;
+        } else if(call instanceof CdShieldPowerup.PowerupReadCall) {
+            if(!Objects.equals(actual,values.level().powerup()))throw new IllegalStateException("Shield Powerup read differs");
+        }
+        if(i.adoptionReceipt!=i.preparedReceipt || values!=i.readyValues)
+            throw new IllegalStateException("Item/Shield no-op or missing actual adoption receipt");
+        if(call instanceof CdShieldPowerup.Publication && i.entryRoutine==0)i.initStores++;
+        i.itemStage=i.nextItemStage;i.completed=call;i.completionReceipt=i.adoptionReceipt;verifyItemShield(i);
+    }
+    private void completeItemShield(Object call) {
+        var i=requireItemShield();
+        if(i.pending!=call || i.completed!=call || i.preparedReceipt==null || i.completionReceipt!=i.preparedReceipt
+                || i.adoptionReceipt!=i.preparedReceipt || !i.current(call) || i.primitive(call))
+            throw new IllegalStateException("Missing/clone/duplicate Item/Shield completion receipt");
+        i.result(call);i.pending=null;i.completed=null;i.preparedReceipt=null;i.adoptionReceipt=null;i.completionReceipt=null;
+        i.prepared=false;i.readyPool=null;i.readyValues=null;
+    }
+    private void failedItemShield(Object call,Throwable original) {
+        try {
+            var i=requireItemShield();
+            if(!i.current(call) || i.pending!=null && i.pending!=call)throw new IllegalStateException("Foreign failed Item/Shield producer");
+            verifyItemShield(i);
+        } catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}
+    }
 }

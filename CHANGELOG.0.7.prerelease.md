@@ -238,13 +238,17 @@ Unreleased. The earlier development themes remain in
   Main clear now establishes the complete CPU art window; source-ordered star-art
   service copies authenticated raw bytes, preserves its unwritten tail and
   publishes current tiles through the existing captured owner. Controller replay
-  reaches13062, with real star pixels and renderer-only omission at12887; the
-  newly reached Monitor Item and complete acts remain separate dependencies.
+  reaches13126, with real star pixels at12887 and Shield pixels at13098, each
+  checked by renderer-only omission. Complete acts remain separate dependencies.
   Its eight exact static icon views now derive from the retained monitor source.
   Opt-in typed Shield awards and a reserved whole6 Shield kernel now preserve
   native store order, conditional reads and private completed-operation receipts;
   Draw visibility permission ends at primitive exit, including failure paths.
-  The live Act2 award/Shield binding remains separately gated.
+  The live Act2 binding awards the external contact byte, reserved Shield ID and
+  ordered FM request through existing owners; its earlier physical slot waits for
+  the next pass. Native Init, active animation, subsequent art service and signed
+  Item retirement retain full/course replay and selected current-pixel checks.
+  Further traversal needs a controller route past the local obstacle.
   Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower

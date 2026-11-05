@@ -514,3 +514,49 @@ BYTE1, reserved6 ID-only store, ordered FM97, later Shield visit, current-art se
 and live World/full-course replay remain unqualified dependencies. The qualified
 controller still returns13062; first13063 remains Monitor Item until remeasured.
 No new native/regional/full-act/audio or current-Shield-pixel result is claimed.
+
+## Live Monitor Item, Shield and positive13126 — 5 November
+
+The cached Item and Shield now bind to actual retained Monitor/Powerup assets and
+one existing raw-backed reserved facade. Static icon declarations join the old
+counted map list; finite reserved Draw admission adds whole6 only. Private original
+pending/primitive/ordinal/preparation/adoption/completion receipts retain full96,
+saved766/status, reserved31, complete Frame/Values/art/display/clock/scroll and
+World/generation invariants. No second bank, Frame Shield field, art preload or
+capture owner exists. Award prebuilds contact shieldBYTE1, whole6 IDBYTE3-only and
+FM97 ledger publications, adopting them in source order. Returned effects grant
+no replay authority. Exact original Completion Result reference is checked.
+
+Original compilation runs zero tests due to a missing Module import; Root adds
+only that import. The951/33class run then has950 passes/one new test-wrapper
+failure/zero errors/skips. The in-invocation adversary remained installed for an
+outside-invocation rejection check; restoring the original observer before those
+existing assertions corrects only the fixture. Same27 World cases then pass with
+zero failures/errors/skips. All924 other earlier cases remain unchanged. Fresh
+source/cases/environment/XML were checked;66+2 owned reports consumed. Bounded
+static review found no actionableP1/P2. No single951 green run is claimed.
+
+An unchanged ordinary controller observer returns14445 at its finite4000-call
+bound after firstMain10445, without an exception or epochchange. Item first runs
+13063; actual Shield award13095, Init13096 (no Draw), active13097 and current upload
+with four selected Shield pieces13098. CPU/current1152 SHA is
+`beadb3f4adc43c830ecef9c081dbd7c140e917983835487aad95cf7cd975a2af`;
+its real128-byte Main-cleared tail remains unchanged. More returned calls are not
+spatial progress: repeated Right/B remains nearX5813. Ordinary input-route work
+is next; no new unsupported ID is inferred. ID18 is already-bound Explosion,
+whereas Spikes is26. Failed-frame/coordinate seeds are never gameplay ingress.
+
+Two existing permanent methods now pass0failures/errors/skips: positive13126 with
+native award/Init/active/upload and Item's signed deletion/ID0 wrapper Draw, plus
+14 selected-Sonic EGL cuts and independent natural-Shield omission at13098.
+Before-forward full/course state replay adds13062→13063,13063→13064,
+13094→13095,13095→13096,13096→13097,13097→13098,13098→13099,
+13124→13125 and13125→13126; pixel replay also covers13098/13126. Omission preserves
+planes, palette, scroll, current patterns and other sprites. Actual320×224 ENGINE
+PNG13098 is written only after complete session/module/graphics/context cleanup.
+Source `c84d407ff178915a5e3566f23bf9d4cd1f0c45575e34de1d985840b7be7ff2b5`
+is unchanged11:49:38.842530–11:49:56.724315Z17.882s. Exact2 literal identities,
+eight installed pins, environment and fresh XML checked; two owned reports consumed.
+Preparation37.493s/admission0/userwait0; other overhead unmeasured. These refreshed
+methods overlap earlier qualification and add no unique-case total. They certify
+engine output, not emulator comparison, complete-act, regional, audio or timing parity.

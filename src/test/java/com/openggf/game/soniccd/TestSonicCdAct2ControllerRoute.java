@@ -376,6 +376,14 @@ class TestSonicCdAct2ControllerRoute {
             }
         }
         assertNaturalPowerupCurrent(h);
+        for(int call=13063;call<=13126;call++) {
+            var input=(call-11214)%128<32?jump:right;
+            if(call==13063 || call==13064 || call==13095 || call==13096 || call==13097 || call==13098
+                    || call==13099 || call==13125 || call==13126)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            assertNaturalItemShieldCut(h,call);
+        }
+        assertNaturalShieldCurrent(h);
         assertEquals(0,frame.environment().globals().timeWarpTimer());
         assertTrue(module.act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream()
                 .noneMatch(p->p.slotRef().wholeIndex()>=12 && p.slotRef().wholeIndex()<16));
@@ -387,7 +395,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right+B returned13062; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886,12886->12887,12887->12888,12890->12891,13061->13062, actual CPU/current TimeStars upload and reset/retirement, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right+B returned13126; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867,11032->11033,11033->11034,11145->11146,11146->11147,11147->11148,11212->11213,11213->11214,11244->11245,11245->11246,11260->11261,11261->11262,11291->11292,11292->11293 11543->11544,11553->11554 and11586->11587,11587->11588,11588->11589,12648->12649,12649->12650,12669->12670,12670->12671,12671->12672,12698->12699,12699->12700,12700->12701,12877->12878,12883->12884,12884->12885,12885->12886,12886->12887,12887->12888,12890->12891,13061->13062,13062->13063,13063->13064,13094->13095,13095->13096,13096->13097,13097->13098,13098->13099,13124->13125,13125->13126, actual native Item/Shield award/Init/active/upload and Item retirement, CPU/current TimeStars upload and reset/retirement, native TimeStarsInit/Active and PathInit/Main plus natural Flower/Door/Explosion/Points/TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float/Checkpoint/Collapse/Log/Mosqui, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 
@@ -455,8 +463,22 @@ class TestSonicCdAct2ControllerRoute {
             }
             renderReplayNextRight(h,(13062-11214)%128<32?jump:right,13062);
             assertNaturalPowerupCurrent(h);
+            for(int call=13063;call<=13097;call++) {
+                var input=(call-11214)%128<32?jump:right;
+                if(call==13063 || call==13095 || call==13096 || call==13097)replayNextRight(h,input);
+                step(h,input);assertLaterRouteOwners(h,frame,source,world,generation+1);assertNaturalItemShieldCut(h,call);
+            }
+            imageForExport=renderReplayNextRight(h,(13098-11214)%128<32?jump:right,13098).clone();
+            assertNaturalItemShieldCut(h,13098);assertNaturalShieldCurrent(h);
+            for(int call=13099;call<=13125;call++) {
+                var input=(call-11214)%128<32?jump:right;
+                if(call==13125)replayNextRight(h,input);
+                step(h,input);assertLaterRouteOwners(h,frame,source,world,generation+1);assertNaturalItemShieldCut(h,call);
+            }
+            renderReplayNextRight(h,(13126-11214)%128<32?jump:right,13126);
+            assertNaturalItemShieldCut(h,13126);assertNaturalShieldCurrent(h);
             assertEquals(0, frame.environment().controls().controlLocked());
-            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884,12886,12887 and13062; selected Sonic omission changes all twelve endpoint pictures. Actual12887 TimeStars renderer-only omission changes pixels with planes/palette/current unchanged. No13063/next-object or native/regional parity claim.");
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778,10866,11033,11213,11341 11587,12670,12699,12884,12886,12887 and13062,13098,13126; selected Sonic omission changes all fourteen endpoint pictures. Actual12887 TimeStars renderer-only omission changes pixels with planes/palette/current unchanged. Actual natural Shield renderer-only omission at13098 changes pixels; native/regional parity and traversal beyond the local obstacle remain open.");
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
     }
@@ -539,6 +561,19 @@ class TestSonicCdAct2ControllerRoute {
             assertFalse(Arrays.equals(actual,pixels()),"Actually selected natural TimeStars contribute visible engine pixels");
             assertNativeCapture(before,h);assertArrayEquals(actual,draw(h));assertNativeCapture(before,h);
         }
+        if(provePrimary && completedCall==13098) {
+            assertTrue(cpu.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex()==6));
+            var omitted=TestSonicCdPastResultsRoute.omitWhole(scene,cpu,6);
+            assertSame(scene.foreground(),omitted.foreground());assertSame(scene.background(),omitted.background());
+            assertArrayEquals(scene.packedHscroll256(),omitted.packedHscroll256());
+            assertEquals(scene.vscrollLongBits(),omitted.vscrollLongBits());
+            assertArrayEquals(scene.selectedPalette128(),omitted.selectedPalette128());
+            assertEquals(scene.nativePatterns(),omitted.nativePatterns());
+            var camera=h.mode().getCamera();clearPixels();
+            renderer.draw(omitted,camera.getX(),camera.getY(),module::validateAct2LoadingCut);
+            assertFalse(Arrays.equals(actual,pixels()),"Actually selected natural Shield contributes engine pixels");
+            assertNativeCapture(before,h);assertArrayEquals(actual,draw(h));assertNativeCapture(before,h);
+        }
         assertSame(selected, module.act2SelectedDisplay());
         assertSame(foreground, module.act2SelectedDisplay().inputs().foreground());
         assertSame(background, module.act2SelectedDisplay().inputs().background());
@@ -565,6 +600,55 @@ class TestSonicCdAct2ControllerRoute {
         assertArrayEquals(new byte[128],cpu.slice(1024,128).copy(),"Real Main clear's unwritten native CPU tail");
         for(int at=0;at<1152;at+=32)assertArrayEquals(cpu.slice(at,32).copy(),
                 com.openggf.game.soniccd.resources.CdR12aCameraArtResidency.readTile(observed.section().residency(),(0xA880+at)>>>5).copy());
+    }
+
+    /** Measured controller cuts; only comparisons, no diagnostic value supplies gameplay state. */
+    private static void assertNaturalItemShieldCut(Harness h,int completedCall) throws Exception {
+        var state=h.module().act2LoadState();var item=state.placement().pool().slots().get(0);
+        if(completedCall==13063) {
+            assertTrue(state.calls().contains(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY));
+            assertEquals(0x1A,item.id());assertEquals(2,item.routine());assertEquals(0x20A8CB,item.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+            assertEquals(-0x2E8,item.signedWord(com.openggf.game.soniccd.objects.CdObjectState.WordField.Y_VELOCITY));
+        }
+        if(completedCall==13095) {
+            assertTrue(state.calls().contains(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_SHIELD_AWARD));
+            assertEquals(4,item.routine());assertEquals(29,item.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.MONITOR_ITEM_DELETE));
+            byte[] expected=new byte[64];expected[0]=3;assertArrayEquals(expected,state.reservedObjects().slice(5*64,64).copy());
+            assertFalse(state.calls().contains(SonicCdGameModule.Act2LoadCall.SHIELD_BODY));
+            assertEquals(1,state.sounds().stream().filter(SonicCdGameModule.PastMonitorItemShieldFm.class::isInstance).count());
+            assertNaturalPowerupCurrent(h);
+        }
+        if(completedCall==13096) {
+            assertTrue(state.calls().contains(SonicCdGameModule.Act2LoadCall.SHIELD_INIT));
+            assertFalse(state.calls().contains(SonicCdGameModule.Act2LoadCall.SHIELD_ACTIVE));
+            assertEquals(2,state.reservedObjects().unsignedByte(5*64+0x24));
+            assertEquals(0x21D528,state.reservedObjects().unsignedLong(5*64+4));
+            assertTrue(h.module().act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream().noneMatch(p->p.slotRef().wholeIndex()==6));
+        }
+        if(completedCall==13097) {
+            assertTrue(state.calls().contains(SonicCdGameModule.Act2LoadCall.SHIELD_ACTIVE));assertEquals(0x82,state.level().powerup());
+            assertTrue(h.module().act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream().noneMatch(p->p.slotRef().wholeIndex()==6));
+        }
+        if(completedCall==13098) {
+            assertNaturalShieldCurrent(h);
+            assertEquals(4,h.module().act2SelectedDisplay().inputs().selectedCpu().orElseThrow().provenance().stream().filter(p->p.slotRef().wholeIndex()==6).count());
+        }
+        if(completedCall==13125) {
+            assertTrue(state.calls().contains(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY));
+            assertArrayEquals(new byte[64],item.copyBytes(),"Actual signed deletion countdown and ID0 wrapper Draw");
+        }
+        if(completedCall==13126)assertFalse(state.calls().contains(SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_BODY));
+    }
+
+    /** Native selector2 copies source0 only at the subsequent actual Vint, preserving the real128-byte tail. */
+    private static void assertNaturalShieldCurrent(Harness h) throws Exception {
+        var state=h.module().act2LoadState();var values=actualField(actualField(h.module(),"act2Loading"),"values");
+        var cpu=assertInstanceOf(com.openggf.game.soniccd.level.CdAssetBytes.class,((java.util.Optional<?>)actualField(actualField(values,"loop"),"powerupCpu")).orElseThrow());
+        var contact=assertInstanceOf(com.openggf.game.soniccd.player.CdPlayerBody.ContactGlobals.class,actualField(actualField(values,"globals"),"contact"));
+        assertEquals(1,contact.shield());assertEquals(2,state.level().powerup());assertEquals(3,state.reservedObjects().unsignedByte(5*64));
+        assertEquals(1152,cpu.length());assertArrayEquals(state.assets().objects().powerupArtSources().copy(0).copy(),cpu.slice(0,1024).copy());
+        assertArrayEquals(new byte[128],cpu.slice(1024,128).copy());
+        for(int at=0;at<1152;at+=32)assertArrayEquals(cpu.slice(at,32).copy(),com.openggf.game.soniccd.resources.CdR12aCameraArtResidency.readTile(state.section().residency(),(0xA880+at)>>>5).copy());
     }
 
     /** Omit only actually selected reserved12..15 tiles; preserve all native ordering and other layers. */
@@ -596,12 +680,12 @@ class TestSonicCdAct2ControllerRoute {
             int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
             image.setRGB(x, y, argb);
         }
-        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-12887.png").toFile()))
+        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-13098.png").toFile()))
             throw new java.io.IOException("PNG writer unavailable");
-        Files.writeString(directory.resolve("ENGINE-act2-controller-call-12887.txt"),
-                "ENGINE: OpenGGF original-USA controller-only route, actual completed call12887.\n"
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-13098.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call13098.\n"
                 + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
-                + "Full/course complete-value and pixel replay; selected Sonic and natural TimeStars renderer-only omission contrasts.\n"
+                + "Full/course complete-value and pixel replay; selected Sonic and natural Shield renderer-only omission contrasts; earlier12887 Stars contrast retained.\n"
                 + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");
     }
     // END later-route EGL case.
