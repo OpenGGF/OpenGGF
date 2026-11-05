@@ -2657,3 +2657,11 @@ the independent explosion controller.102 functional controls pass across the
 combined/final selective checks, zero skips. The standalone replay now reaches
 its comparison gate with263 divergences instead of aborting at1454. Inherited
 full-route and breadth gaps remain open.
+
+AIZ intro collector lifetime follow-up (2026-11-04): the
+[AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md#scatter-collector-retirement-2026-11-04)
+records exact-owner detachment at managed retirement and both rewind restore
+modes across independently surviving scatter emeralds. This closes the stale
+collector graph edge only; full routes, pickup parity, native presentation,
+donor/team/viewport breadth and the positioned replay suffix remain inherited
+gaps.
