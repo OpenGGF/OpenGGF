@@ -1,5 +1,38 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — actual Act2 Explosion and Points publication
+
+Cached Explosion18 and subtype-bit7 Points1C now execute on the existing Act2
+physical walk, using source127 and the current art already loaded by Std1. No new
+reader, PLC, bank, Frame or score owner is added. Actual private prepared/completed
+receipts surround native pool stores and Draw, including same-value operations;
+full96/source, original Frame pair, Values, saved/status, queue, ledger, World and
+generation remain checked. Earlier children wait and later children execute in
+the same increasing physical pass. Explosion Done deletes a nonbadnik or changes
+only ID/routine to Flower1F without Draw or same-slot redispatch; Flower remains
+unbound. Points retains its HUD boundary, byte timer wrap, integer Y movement and
+unconditional zero-ID Draw after deletion. Legacy A/B kernels remain qualified.
+
+The first236 selection stopped testCompile on nonexistent negative-fixture byte
+accessors, before any test. A test-only typed-field correction then produced
+235passes/1failure/0errors/skips across14classes. All24 new World cases and the
+legacy Explosion24/Points18/Past factory11/Past Robot4 passed. The one failure was
+an old test still expecting ID18 to be unbound. Its replacement uses a genuine
+jump/collision, observes score before Explosion's first store, verifies the actual
+Points child and compares full/course replay. That exact changed case passes
+separately, with no production change. No fresh green236 or full-suite pass is
+claimed. Independent static review of the five-file packet found no P1/P2.
+
+Final one-case source fingerprint is
+`76dac155aaf8da04c8ffcb1b3f6014429b2a84c9db0e4f34bbdcf24922a513cb`;
+execution06:07:16.435663–06:07:22.193761Z, Java25/EGL/actual media/opt-in verified,
+0skips. Source-before/after equality, exact identity and fresh XML hash were
+checked; only owned reports were consumed. Source-bound run specs, terminal
+receipts, original compile failure and review remain in external Downloads.
+Qualified natural11587/six selected-Sonic pixel cuts and first11588 Door0D remain
+unchanged. These labelled child fixtures do not certify a natural enemy kill,
+Flower/reward service, complete act or regional parity.
+
 ## 5 November 2026 — Collapse, Log/Mosqui, source127 and positive11587
 
 Actual R12A dispatch now binds the cached Collapse20, LogShadow33 and Mosqui3D

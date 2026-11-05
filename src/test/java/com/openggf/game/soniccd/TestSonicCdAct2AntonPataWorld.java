@@ -170,17 +170,37 @@ class TestSonicCdAct2AntonPataWorld {
         assertEquals(0,failure.getSuppressed().length);assertTrue(s.frame().closed());retired(s);
     }
 
-    @Test void actualJumpContactPublishesOwnedScoreAndId18BeforeTheHonestUnboundExplosionPhysicalVisit() throws Exception {
+    @Test void actualJumpContactPublishesOwnedScoreBeforeGenuineExplosionAndPointsPhysicalWork() throws Exception {
         var s=scene();var motion=s.frame().state().motion();assertEquals(0,motion.flags()&2,"actual released scene must be grounded");
         var score=(CdOpeningObjectRuntime.ScoreGlobals)actualField(actualField(actualField(s.visit(),"values"),"globals"),"score");
         var source=image(s,127,0x3E,2,0).moveWord(X,motion.centreX16_16()>>>16).moveWord(Y,motion.centreY16_16()>>>16).moveByte(COLLISION_TYPE,0x2A);
-        seed(s,source);var registry=s.h().mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();var before=captureNative(s.h());
+        seed(s,source);var body=(CdExplosion)actualField(s.visit(),"explosion");var original=(CdExplosion.DispatchObserver)actualField(body,"observer");
+        var atInit=new AtomicReference<CdObjectState>();var scoreAtInit=new AtomicReference<CdOpeningObjectRuntime.ScoreGlobals>();
+        set(body,"observer",new CdExplosion.DispatchObserver() {
+            @Override public void beforePublication(CdExplosion.Publication c) {
+                if(c.kind()==CdExplosion.StoreKind.INIT_HEADER && c.source().identity().wholeIndex()==127 && atInit.compareAndSet(null,c.source())) {
+                    try {scoreAtInit.set((CdOpeningObjectRuntime.ScoreGlobals)actualField(actualField(actualField(s.visit(),"values"),"globals"),"score"));}
+                    catch(Exception failure){throw new AssertionError("Read actual pre-Explosion score",failure);}
+                }
+                original.beforePublication(c);
+            }
+            @Override public void afterPublication(CdExplosion.Publication c){original.afterPublication(c);}
+            @Override public void beforeCall(Object c){original.beforeCall(c);}
+            @Override public void afterCall(Object c){original.afterCall(c);}
+        });
+        var registry=s.h().mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();var before=captureNative(s.h());
         registry.restore(full);assertNativeCapture(before,s.h());registry.restoreCourse(course);assertNativeCapture(before,s.h());
         var jump=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(0,0,InputActionMasks.ACTION_B,InputActionMasks.ACTION_B,false,false),PlayerInputState.neutral());
-        var failure=assertThrows(SonicCdGameModule.UnsupportedAct2Loading.class,()->step(s.h(),jump));assertEquals(SonicCdGameModule.Act2Boundary.DYNAMIC_OBJECTS,failure.boundary());
+        step(s.h(),jump);healthy(s);var after=captureNative(s.h());
+        assertNotNull(atInit.get());assertEquals(0x18,atInit.get().id());assertEquals(0,atInit.get().routine());
+        int expectedScore=score.score()+s.assets().objects().view(CdR12aProfile.Asset.ENEMY_POINTS).unsignedWord(0);
+        assertEquals(expectedScore,scoreAtInit.get().score(),"Actual owned score is published before Explosion's first native store");
         var now=(CdOpeningObjectRuntime.ScoreGlobals)actualField(actualField(actualField(s.visit(),"values"),"globals"),"score");
-        assertEquals(score.score()+s.assets().objects().view(CdR12aProfile.Asset.ENEMY_POINTS).unsignedWord(0),now.score(),"actual first-enemy native score operand");assertEquals(0x18,s.placement().pool().state(127).id());
-        assertFalse(rawCalls(s).contains(SonicCdGameModule.Act2LoadCall.PATA_BATA_BODY));assertTrue(s.frame().closed());retired(s);
+        assertEquals(expectedScore,now.score());assertEquals(0x18,s.placement().pool().state(127).id());assertEquals(2,s.placement().pool().state(127).routine());
+        assertFalse(rawCalls(s).contains(SonicCdGameModule.Act2LoadCall.PATA_BATA_BODY));assertTrue(rawCalls(s).contains(SonicCdGameModule.Act2LoadCall.EXPLOSION_BODY));
+        assertTrue(s.placement().pool().capture().slots().stream().anyMatch(row->row.id()==0x1C && (row.subtype()&0x80)!=0),"Genuine first-free Points child is retained");
+        registry.restore(full);assertNativeCapture(before,s.h());step(s.h(),jump);healthy(s);assertNativeCapture(after,s.h());
+        registry.restoreCourse(course);assertNativeCapture(before,s.h());step(s.h(),jump);healthy(s);assertNativeCapture(after,s.h());
     }
 
     private static CdObjectState image(Scene s,int whole,int id,int routine,int subtype) {

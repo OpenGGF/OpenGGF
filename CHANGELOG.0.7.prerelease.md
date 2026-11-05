@@ -218,8 +218,10 @@ Unreleased. The earlier development themes remain in
   actual Act2 dispatch also binds collapse platforms, Log Shadow and Mosqui using
   private callback receipts before native continuation. Natural controller steps,
   floor/sound publication and complete replay now reach the horizontal Door
-  boundary, with six selected-Sonic pixel cuts. Explosion, Points and Flower
-  source views prepare later child bindings without adding an art owner.
+  boundary, with six selected-Sonic pixel cuts. Actual Explosion and Points
+  children now reuse the existing physical pass and current art, preserving native
+  allocation, deletion, score-before-child ordering and full/course replay. Flower
+  source views remain preparatory; no new art owner is added.
   Natural wall contact, complete acts and regional coverage remain separate.
   Terrain-only USA Good Future and Bad Future profiles decode their original
   disc-backed layouts, collision, blocks and patterns through existing loaders;

@@ -123,6 +123,65 @@ public final class CdPoints {
     private final CdObjectPlacementRuntime runtime;
     private final Assets assets;
     private final DrawObjectCall drawObject;
+    private boolean dispatching;
+
+    /** Ephemeral source observations; records and equal copies confer no World authority. */
+    public enum StoreKind { MAIN_RESULT, DELETE }
+    public record Publication(long ordinal, StoreKind kind, CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source, CdObjectState before, CdObjectState output) { }
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public interface DispatchObserver {
+        void beforePublication(Publication call);
+        void afterPublication(Publication call);
+        void beforeCall(Object call);
+        void afterCall(Object call);
+    }
+    /** Separate private-World receipt checks run before native work and after its observer return. */
+    public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+    @FunctionalInterface public interface SourceDraw { void draw(DrawCall call); }
+    private DispatchObserver observer;
+    private ReceiptGuard receiptGuard;
+    private SourceDraw sourceDraw;
+    private Publication pendingPublication;
+    private DrawCall pendingDraw;
+    private long publicationOrdinal;
+    private int activeWhole;
+
+    public boolean isCurrentCall(Object call) {
+        return call != null && dispatching && (call == pendingPublication || call == pendingDraw);
+    }
+    private void observedWrite(CdObjectState output, StoreKind kind) {
+        if (observer == null) { runtime.pool().write(output); return; }
+        var pool = runtime.pool();
+        var call = new Publication(++publicationOrdinal, kind, runtime.capture(), pool.state(activeWhole),
+                pool.state(output.identity().wholeIndex()), output);
+        observePublication(call, () -> pool.write(output));
+    }
+    private void observedDelete(CdObjectState source) {
+        if (observer == null) { runtime.pool().deleteObject(source.identity().wholeIndex()); return; }
+        var call = new Publication(++publicationOrdinal, StoreKind.DELETE, runtime.capture(),
+                runtime.pool().state(activeWhole), source, null);
+        observePublication(call, () -> runtime.pool().deleteObject(source.identity().wholeIndex()));
+    }
+    private void observePublication(Publication call, Runnable nativeStore) {
+        if (pendingPublication != null || pendingDraw != null) throw new IllegalStateException("Nested child-effect publication");
+        pendingPublication = call;
+        try {
+            observer.beforePublication(call); receiptGuard.prepared(call);
+            nativeStore.run();
+            observer.afterPublication(call); receiptGuard.completed(call);
+        } finally { pendingPublication = null; }
+    }
+    private void observedDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (observer == null) { drawObject.drawObject(pool, identity); return; }
+        var call = new DrawCall(runtime.capture(), pool.state(identity.wholeIndex()));
+        if (pendingPublication != null || pendingDraw != null) throw new IllegalStateException("Nested child-effect Draw");
+        pendingDraw = call;
+        try {
+            observer.beforeCall(call); receiptGuard.prepared(call); sourceDraw.draw(call);
+            observer.afterCall(call); receiptGuard.completed(call);
+        } finally { pendingDraw = null; }
+    }
 
     /** The runtime supplies the single live pool; no admitted branch touches its saved bank. */
     public CdPoints(CdObjectPlacementRuntime runtime, Assets assets, DrawObjectCall drawObject) {
@@ -131,10 +190,30 @@ public final class CdPoints {
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
+    /** Same kernel, actual paired R12A sources, and transient private producer receipts only. */
+    public static CdPoints fromAct2Assets(CdObjectPlacementRuntime runtime, CdR12aObjectAssets owner,
+                                              DispatchObserver observer, SourceDraw draw, ReceiptGuard guard) {
+        Objects.requireNonNull(runtime, "runtime"); Objects.requireNonNull(owner, "owner");
+        if (!runtime.sameAct2Source(owner)) throw new IllegalArgumentException("Child-effect placement/assets source differs");
+        var body = new CdPoints(runtime, Assets.fromAct2Assets(owner), (pool, identity) -> {
+            throw new IllegalStateException("R12A child effect requires its actual source Draw");
+        });
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
+        body.receiptGuard = Objects.requireNonNull(guard); return body;
+    }
+
     public Assets assets() { return assets; }
 
     /** One ObjHUDPoints dispatch for the whole-pool dynamic slot currently holding ID $1C with oSubtype bit 7 set. */
     public Result run(int wholeIndex) {
+        if (observer != null && dispatching) throw new IllegalStateException("Reentrant R12A Points dispatch");
+        dispatching = true;
+        if (observer != null) { activeWhole = wholeIndex; publicationOrdinal = 0; }
+        try { return runSelected(wholeIndex); }
+        finally { dispatching = false; }
+    }
+
+    private Result runSelected(int wholeIndex) {
         var pool = runtime.pool();
         var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) {
@@ -161,7 +240,7 @@ public final class CdPoints {
                     "oRoutine " + state.routine() + " is not an ObjPoints .Index entry");
         }
         // JMP DrawObject (HUD and Points/Main.asm:21) after every routine, including a slot DeleteObject just zeroed.
-        drawObject.drawObject(pool, state.identity());
+        observedDraw(pool, state.identity());
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
         return new Result(pool.state(wholeIndex), effects);
     }
@@ -178,13 +257,13 @@ public final class CdPoints {
     }
 
     /** ObjPoints_Main (HUD and Points/Main.asm:46-53); the delete's RTS returns into ObjPoints before DrawObject. */
-    private static void main(CdObjectState state, CdObjectPool pool, List<Effect> effects) {
+    private void main(CdObjectState state, CdObjectPool pool, List<Effect> effects) {
         var next = state.addByte(POINTS_TIMER, -1);                            // SUBQ.B #1,oPntsTimer(a0): $00 wraps to $FF
         if (next.unsignedByte(POINTS_TIMER) == 0) {                            // BNE.S .Rise
-            pool.deleteObject(state.identity().wholeIndex());                  // JMP DeleteObject
+            observedDelete(state);                  // JMP DeleteObject
             effects.add(new Deleted());
             return;
         }
-        pool.write(next.addWord(Y, -2));                                       // .Rise: SUBQ.W #2,oY(a0): integer word only
+        observedWrite(next.addWord(Y, -2), StoreKind.MAIN_RESULT);                                       // .Rise: SUBQ.W #2,oY(a0): integer word only
     }
 }

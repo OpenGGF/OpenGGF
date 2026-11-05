@@ -272,3 +272,24 @@ or named-enemy pixel proof. The six rendered cuts retain complete full/course
 state before pixel/forward work, exact pixels after replay and primary omission.
 Natural death/restart/Checkpoint activation, complete act and regional parity
 remain open. No whole-suite or combined green325 certification is implied.
+
+
+## Explosion and Points World qualification — 5 November
+
+Existing source127/current Std1 art now feeds cached Explosion18 and bit7 Points1C
+on the real physical walk. Native first-free dirty child writes, earlier/later
+scheduling, reset/timer/read failures, Done delete-or-Flower, Points timer wrap and
+zero-ID Draw retain source order. Private actual-operation receipts reject no-op,
+cloned, duplicate, foreign-pool and reentrant publication/Draw before continuation.
+The old97 observations append only Explosion/Points (99 total); no score/Frame,
+PLC, decoder or art owner is added. Flower1F remains a later honest boundary.
+
+All24 `TestSonicCdAct2ExplosionPointsWorld` cases pass in the mixed236 selection
+(235pass/1obsolete-boundary assertion/0errors/skips). Legacy Explosion24, Points18,
+Past factory11 and Past Robot4 pass there as well. The obsolete Anton/Pata test
+is migrated to the genuine jump/score/Explosion/Points path and passes separately,
+including complete full/course values before and after replay. Production is
+unchanged between those runs; no fresh combined236 or whole-suite claim follows.
+The preceding compile-only fixture failure and independent static review limits
+are preserved in the implementation record. Natural enemy kills, Flower/rewards,
+new selected-child pixel proof and natural frontier advancement remain open.

@@ -48,6 +48,12 @@ final class SonicCdAct2LoadingVisit {
     private transient TamabbohInvocation activeTamabboh;
     private transient FloatInvocation activeFloat;
     private boolean tamabbohPort, drawingTamabboh, floatPort, drawingFloat;
+    private final CdExplosion explosion;
+    private final CdPoints points;
+    private final CdExplosion.Assets explosionAssets;
+    private final CdPoints.Assets pointsAssets;
+    private transient ChildEffectInvocation activeChildEffect;
+    private boolean drawingChildEffect;
     private final CdLogShadow logShadow;
     private final CdMosqui mosqui;
     private transient LogMosquiInvocation activeLogMosqui;
@@ -218,6 +224,25 @@ final class SonicCdAct2LoadingVisit {
         tamabboh=CdTamabboh.fromAct2Assets(placement,objectAssets,sharedTerrain,
                 this::commitTamabbohPrimaryAngle,this::readTamabbohPlayerWord,this::playTamabbohFm,this::drawTamabboh);
         floatBlock=CdFloatBlock.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitFloatSolid,this::drawFloatBlock);
+        explosion=CdExplosion.fromAct2Assets(placement,objectAssets,new CdExplosion.DispatchObserver() {
+            @Override public void beforePublication(CdExplosion.Publication c) { beforeExplosionPublication(c); }
+            @Override public void afterPublication(CdExplosion.Publication c) { afterChildPublication(c); }
+            @Override public void beforeCall(Object c) { beforeChildCall(c); }
+            @Override public void afterCall(Object c) { afterChildCall(c); }
+        },this::drawExplosion,new CdExplosion.ReceiptGuard() {
+            @Override public void prepared(Object c) { requirePreparedChildReceipt(c); }
+            @Override public void completed(Object c) { consumeCompletedChildReceipt(c); }
+        });
+        points=CdPoints.fromAct2Assets(placement,objectAssets,new CdPoints.DispatchObserver() {
+            @Override public void beforePublication(CdPoints.Publication c) { beforePointsPublication(c); }
+            @Override public void afterPublication(CdPoints.Publication c) { afterChildPublication(c); }
+            @Override public void beforeCall(Object c) { beforeChildCall(c); }
+            @Override public void afterCall(Object c) { afterChildCall(c); }
+        },this::drawPoints,new CdPoints.ReceiptGuard() {
+            @Override public void prepared(Object c) { requirePreparedChildReceipt(c); }
+            @Override public void completed(Object c) { consumeCompletedChildReceipt(c); }
+        });
+        explosionAssets=explosion.assets(); pointsAssets=points.assets();
         logShadow=CdLogShadow.fromAct2Assets(placement,objectAssets,new CdLogShadow.DispatchObserver() {
             @Override public void beforePublication(CdLogShadow.Publication c) { beforeLogPublication(c); }
             @Override public void afterPublication(CdLogShadow.Publication c) { afterLogMosquiPublication(c); }
@@ -2065,6 +2090,8 @@ final class SonicCdAct2LoadingVisit {
                     boolean post=placement.pool().state(whole).subtype()>=8;
                     runMonitor(whole); call(post ? TIME_POST_BODY : MONITOR_BODY);
                 }
+                else if(id==CdExplosion.OBJECT_ID) { runExplosion(whole); call(EXPLOSION_BODY); }
+                else if(id==CdPoints.OBJECT_ID) { runPoints(whole); call(POINTS_BODY); }
                 else if(id==CdLogShadow.OBJECT_ID) { runLogShadow(whole); call(LOG_SHADOW_BODY); }
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
                 else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
@@ -2096,6 +2123,8 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.TITLE_CARD_MAPPINGS.nativeAddress(),view(CdR12aProfile.Asset.TITLE_CARD_MAPPINGS).bytes(),0,9));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_BOULDER.nativeAddress(),assets.objects().boulder().mappings(),0,1));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PLATFORM.nativeAddress(),assets.objects().platform().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_EXPLOSION.nativeAddress(),assets.objects().explosion().mappings(),0,7));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_POINTS.nativeAddress(),assets.objects().points().mappings(),0,6));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_LOG_SHADOW.nativeAddress(),assets.objects().logShadow().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOSQUI_NORMAL.nativeAddress(),assets.objects().normalMosqui().mappings(),0,5));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOSQUI_DAMAGED.nativeAddress(),assets.objects().damagedMosqui().mappings(),0,5));
@@ -2118,6 +2147,7 @@ final class SonicCdAct2LoadingVisit {
         var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
         return new CdObjectDrawQueue(new CdObjectDrawQueue.CdDrawSlots() {
             @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                if(activeChildEffect!=null) return readChildDrawSlot(ref);
                 if(activeLogMosqui!=null) return readLogMosquiDrawSlot(ref);
                 if(activeDrain!=null) return readDrainingSlot(ref);
                 if(activeTitle!=null) return readTitleDrawSlot(ref);
@@ -2135,6 +2165,7 @@ final class SonicCdAct2LoadingVisit {
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
             }
             @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+                if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
                 if(activeLogMosqui!=null) { writeLogMosquiOnScreen(ref,value); return; }
                 if(activeDrain!=null) { writeDrainingOnScreen(ref,value); return; }
                 if(ref.wholeIndex()==0) { writePrimaryOnScreen(ref,value); return; }
@@ -6777,6 +6808,7 @@ final class SonicCdAct2LoadingVisit {
 
     // Transient source scope only; components retain the native algorithms and publication order.
     private void requireLogMosquiIdle() {
+        requireChildEffectIdle();
         if(activeLogMosqui!=null || logMosquiPort || drawingLogMosqui)
             throw new IllegalStateException("Another actual Log/Mosqui invocation owns this source cut");
     }
@@ -7003,6 +7035,279 @@ final class SonicCdAct2LoadingVisit {
         var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);
         var ready=logMosquiImages(pool);queuePort=true;
         try {verifyLogMosqui(i);i.pool.write(next);i.images=ready;i.cleared=true;verifyLogMosqui(i);}
+        finally {queuePort=false;}
+    }
+
+    // Source-only child-effect receipts; no new captured partition or gameplay owner.
+    private enum ChildStep { ENTRY, HEADER, CHILD, RESET, TIMER, SPEED, ANIMATED, DONE, POINTS }
+    private void requireChildEffectIdle() {
+        if(activeChildEffect!=null || drawingChildEffect) throw new IllegalStateException("Actual child-effect invocation owns this cut");
+    }
+    private void requireOtherChildScopesIdle() {
+        if(activeLogMosqui!=null || logMosquiPort || drawingLogMosqui) throw new IllegalStateException("Actual Log/Mosqui owns this cut");
+        requireOtherLogMosquiScopesIdle();
+    }
+    private final class ChildEffectInvocation {
+        final int whole; final boolean explosive; final Object body;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource();
+        final CdR12aTerrainAssets sourceAssets=assets; final CdObjectPool pool=placement.pool();
+        final CdObjectDrawQueue queue=drawQueue; final CdObjectPlacementRuntime.Status status=placement.status();
+        final CdObjectState entry; final CdPlayerBody.State state=frame.state(); final CdPlayerBody.Environment environment=frame.environment();
+        final CdPlayerFrameRuntime.ActorState actor=frame.captureActor(); final CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll();
+        final Object world; final long generation; final Values ownerValues=values; final CdAssetBytes reserved=values.hudObjects();
+        final List<SonicCdGameModule.PastSound> ledger=sounds; final CdAssetBytes saved=placement.capture().savedFlags();
+        final CdObjectDrawQueue.CameraWords camera; final int firstFree; final boolean childWanted;
+        List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()), readyImages;
+        List<Object> receipts=List.of(),readyReceipts; Object pendingPublication,pendingCall,drawReceipt,completedOperation;
+        long ordinal; ChildStep step=ChildStep.ENTRY,readyStep; boolean childWritten,readyChild,drawn,cleared,queueFailed;
+        ChildEffectInvocation(int whole,boolean explosive) {
+            this.whole=whole;this.explosive=explosive;body=explosive?explosion:points;entry=pool.state(whole);
+            int free=-1;
+            if(explosive && entry.routine()==0 && entry.unsignedByte(CdObjectState.ByteField.ROUTINE_2)==0)
+                for(var slot:placement.capture().pool().slots())if(slot.id()==0){free=slot.identity().wholeIndex();break;}
+            firstFree=free;childWanted=free>=0;
+            var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();world=mode.getWorldSession();
+            generation=mode.getLevelManager().getCompletedProductionLoadGeneration();var fg=presentation.act2ForegroundImage();
+            camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+        }
+    }
+    private void runExplosion(int whole) { runChildEffect(whole,true); }
+    private void runPoints(int whole) { runChildEffect(whole,false); }
+    private void runChildEffect(int whole,boolean explosive) {
+        requireChildEffectIdle();requireOtherChildScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING
+                || placement.pool().state(whole).id()!=(explosive?CdExplosion.OBJECT_ID:CdPoints.OBJECT_ID))
+            throw new IllegalStateException("No actual cached child-effect physical dispatch");
+        var i=new ChildEffectInvocation(whole,explosive);activeChildEffect=i;
+        try {
+            var result=explosive?explosion.run(whole).state():points.run(whole).state();verifyChildEffect(i);
+            boolean done=explosive && i.entry.routine()==4;
+            if(i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null
+                    || !result.equals(i.pool.state(whole)) || done && (i.step!=ChildStep.DONE || i.drawn || i.cleared)
+                    || !done && (!i.drawn || !i.cleared || i.step!=(explosive?ChildStep.ANIMATED:ChildStep.POINTS)))
+                throw new IllegalStateException("Child effect omitted its actual completed native receipts");
+        } catch(RuntimeException|Error original) {
+            try {verifyChildFailure(i);}
+            catch(RuntimeException|Error verification){if(verification!=original)original.addSuppressed(verification);}
+            throw original;
+        } finally {activeChildEffect=null;}
+    }
+    private boolean childOrigin(ChildEffectInvocation i,Object call) {return i.explosive?explosion.isCurrentCall(call):points.isCurrentCall(call);}
+    private void verifyChildOwners(ChildEffectInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherChildScopesIdle();var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(activeChildEffect!=i || !runningObjects || servicing || i.body!=(i.explosive?explosion:points)
+                || i.sourceFrame!=frame || i.stageSource!=frame.stageSource() || i.sourceAssets!=assets || i.pool!=placement.pool()
+                || explosion.assets()!=explosionAssets || points.assets()!=pointsAssets
+                || explosionAssets.explosion()!=assets.objects().explosion() || pointsAssets.points()!=assets.objects().points()
+                || i.queue!=drawQueue || drawQueue==null || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING
+                    || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession()
+                || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.state()!=i.state || frame.environment()!=i.environment || !frame.captureActor().equals(i.actor)
+                || !frame.captureShared().equals(i.shared) || values!=i.ownerValues || sounds!=i.ledger
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Child effect changed or borrowed another World/Frame/source owner");
+    }
+    private boolean childImagesEqual(ChildEffectInvocation i,List<CdAssetBytes> expected) {
+        var cut=placement.capture();i.pool.validateRestore(cut.pool());
+        if(expected==null || expected.size()!=96 || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved))return false;
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),expected.get(at).copy()))return false;
+        return true;
+    }
+    private void verifyChildEffect(ChildEffectInvocation i) {
+        verifyChildOwners(i);if(!childImagesEqual(i,i.images))throw new IllegalStateException("Child effect changed unowned full96/source/saved/status bytes");
+    }
+    private void verifyChildFailure(ChildEffectInvocation i) {
+        verifyChildOwners(i);
+        // A throwing before/after observer can retain only the exact prebuilt old or stored full64 prefix.
+        if(!childImagesEqual(i,i.images) && !(i.pendingPublication!=null && childImagesEqual(i,i.readyImages)))
+            throw new IllegalStateException("Throwing child effect differs from both exact native publication cuts");
+    }
+    private ChildEffectInvocation requireChildEffect() {
+        var i=activeChildEffect;if(i==null)throw new IllegalStateException("No actual child-effect invocation");verifyChildEffect(i);return i;
+    }
+    private void validateChildCut(ChildEffectInvocation i,CdObjectPlacementRuntime.Snapshot cut) {
+        placement.validateRestore(cut);
+        if(!cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved))throw new IllegalStateException("Foreign child-effect source cut");
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),i.images.get(at).copy()))
+            throw new IllegalStateException("Child-effect supplied full96 cut differs");
+    }
+    private void prepareChildPublication(ChildEffectInvocation i,Object call,long ordinal,CdObjectPlacementRuntime.Snapshot cut,
+                                         CdObjectState source,CdObjectState before,CdObjectState output,ChildStep next,boolean child) {
+        if(!childOrigin(i,call) || drawingChildEffect || queuePort || i.pendingPublication!=null || i.pendingCall!=null
+                || i.completedOperation!=null || ordinal!=i.ordinal+1 || !source.equals(i.pool.state(i.whole))
+                || !source.identity().equals(i.entry.identity()) || !before.equals(i.pool.state(before.identity().wholeIndex())))
+            throw new IllegalStateException("Child publication lacks exact pending producer/ordinal/source");
+        validateChildCut(i,cut);var images=new ArrayList<>(i.images);
+        if(output!=null) {
+            if(!output.identity().equals(before.identity()))throw new IllegalArgumentException("Child publication changed physical identity");
+            i.pool.validateRestore(CdObjectPool.overlay(cut.pool(),List.of(output)));
+        }
+        images.set(before.identity().wholeIndex()-32,CdAssetBytes.copyOf(output==null?new byte[64]:output.copyBytes()));
+        var receipts=new ArrayList<>(i.receipts);receipts.add(call);
+        i.readyImages=List.copyOf(images);i.readyReceipts=List.copyOf(receipts);i.readyStep=next;i.readyChild=child;i.pendingPublication=call;
+    }
+    private CdObjectState explosionAnimationBase(ChildEffectInvocation i,CdObjectState source) {
+        if(i.entry.routine()!=0 || i.step!=ChildStep.HEADER && i.step!=ChildStep.CHILD)return source;
+        var value=source.moveByte(CdObjectState.ByteField.COLLISION_TYPE,0).moveByte(CdObjectState.ByteField.ANIMATION_FRAME,0)
+                .moveByte(CdObjectState.ByteField.ANIMATION_TIME,0).moveWord(CdObjectState.WordField.ANIMATION_WORD,0);
+        return source.subtype()==0?value:value.moveWord(CdObjectState.WordField.ANIMATION_WORD,0x100);
+    }
+    private boolean childAnimationSite(ChildEffectInvocation i) {
+        return i.entry.routine()==2 && i.step==ChildStep.ENTRY || i.entry.routine()==0
+                && (i.step==ChildStep.HEADER || i.step==ChildStep.CHILD) && i.childWritten==i.childWanted;
+    }
+    private void beforeExplosionPublication(CdExplosion.Publication c) {
+        var i=requireChildEffect();if(!i.explosive || !childOrigin(i,c) || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null)
+            throw new IllegalStateException("Wrong/cloned/repeated cached child producer");
+        var source=c.source();var output=c.output();CdObjectState expected;ChildStep next;boolean child=i.childWritten;
+        switch(c.kind()) {
+            case INIT_HEADER -> {
+                if(i.entry.routine()!=0 || i.step!=ChildStep.ENTRY)throw new IllegalStateException("Repeated/late Explosion Init");
+                expected=source.addByte(CdObjectState.ByteField.ROUTINE,2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4)
+                        .moveByte(CdObjectState.ByteField.PRIORITY,1).moveWord(CdObjectState.WordField.TILE,source.unsignedByte(CdObjectState.ByteField.LAYER)==0?0x8680:0x0680)
+                        .moveLong(CdObjectState.LongField.MAPPINGS,explosion.assets().mappingsAddress());next=ChildStep.HEADER;
+            }
+            case POINTS_CHILD -> {
+                if(i.step!=ChildStep.HEADER || !i.childWanted || i.childWritten || c.before().identity().wholeIndex()!=i.firstFree || c.before().id()!=0)
+                    throw new IllegalStateException("Explosion child is not its actual first-free dirty slot");
+                int subtype=((source.word(CdObjectState.WordField.EXPLOSION_POINTS_FRAME)&255)>>>1)|0x80;
+                expected=c.before().moveByte(CdObjectState.ByteField.ID,0x1C).moveWord(CdObjectState.WordField.X,source.centreX())
+                        .moveWord(CdObjectState.WordField.Y,source.centreY()).moveByte(CdObjectState.ByteField.SUBTYPE,subtype);
+                next=ChildStep.CHILD;child=true;
+            }
+            case ANIMATION_RESULT -> {
+                if(!childAnimationSite(i) || output==null)throw new IllegalStateException("Explosion animation omitted Init/child receipt");
+                var input=explosionAnimationBase(i,source);
+                expected=input.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION,input.unsignedByte(CdObjectState.ByteField.ANIMATION))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_FRAME,output.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_TIME,output.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME))
+                        .moveByte(CdObjectState.ByteField.MAP_FRAME,output.unsignedByte(CdObjectState.ByteField.MAP_FRAME))
+                        .moveByte(CdObjectState.ByteField.SPRITE_FLAGS,output.spriteFlags())
+                        .moveByte(CdObjectState.ByteField.ROUTINE,output.routine());
+                if((output.spriteFlags()&~3)!=(input.spriteFlags()&~3)
+                        || output.routine()!=2 && output.routine()!=4)
+                    throw new IllegalStateException("Explosion animation changed unowned flags/routine");
+                // The actual producer ran the shared animator once; World never synthesizes successful script bytes.
+                next=ChildStep.ANIMATED;
+            }
+            case FAILURE_RESET -> {
+                var input=explosionAnimationBase(i,source);
+                if(!childAnimationSite(i) || input.unsignedByte(CdObjectState.ByteField.ANIMATION)==input.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION))
+                    throw new IllegalStateException("Unreached animation reset failure prefix");
+                expected=input.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION,input.unsignedByte(CdObjectState.ByteField.ANIMATION))
+                        .moveByte(CdObjectState.ByteField.ANIMATION_FRAME,0).moveByte(CdObjectState.ByteField.ANIMATION_TIME,0);next=ChildStep.RESET;
+            }
+            case FAILURE_TIMER -> {
+                if(!childAnimationSite(i) && i.step!=ChildStep.RESET)throw new IllegalStateException("Unreached animation timer failure prefix");
+                expected=explosionAnimationBase(i,source).addByte(CdObjectState.ByteField.ANIMATION_TIME,-1);next=ChildStep.TIMER;
+            }
+            case FAILURE_SPEED -> {
+                if(i.step!=ChildStep.TIMER)throw new IllegalStateException("Animation speed read before timer prefix");
+                var table=explosion.assets().explosion().animationTable();int animation=source.unsignedByte(CdObjectState.ByteField.ANIMATION);
+                if(animation>=2)throw new IllegalStateException("Unrepresented Explosion animation directory");
+                expected=source.moveByte(CdObjectState.ByteField.ANIMATION_TIME,table.unsignedByte((short)table.unsignedWord(2*animation)));next=ChildStep.SPEED;
+            }
+            case FLOWER -> {
+                if(i.entry.routine()!=4 || i.step!=ChildStep.ENTRY || source.unsignedByte(CdObjectState.ByteField.ROUTINE_2)!=0)
+                    throw new IllegalStateException("Unreached Flower conversion");
+                expected=source.moveByte(CdObjectState.ByteField.ID,0x1F).moveByte(CdObjectState.ByteField.ROUTINE,0);next=ChildStep.DONE;
+            }
+            case DELETE -> {
+                if(i.entry.routine()!=4 || i.step!=ChildStep.ENTRY || source.unsignedByte(CdObjectState.ByteField.ROUTINE_2)==0 || output!=null)
+                    throw new IllegalStateException("Unreached nonbadnik delete");
+                expected=null;next=ChildStep.DONE;
+            }
+            default -> throw new IllegalArgumentException("Unknown Explosion store");
+        }
+        if(c.kind()!=CdExplosion.StoreKind.POINTS_CHILD && !c.before().identity().equals(source.identity())
+                || !Objects.equals(expected,output))throw new IllegalStateException("Explosion publication changed another native byte");
+        prepareChildPublication(i,c,c.ordinal(),c.cut(),source,c.before(),output,next,child);
+    }
+    private void beforePointsPublication(CdPoints.Publication c) {
+        var i=requireChildEffect();if(i.explosive || !childOrigin(i,c) || i.step!=ChildStep.ENTRY || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null)
+            throw new IllegalStateException("Wrong/cloned/repeated Points producer");
+        var source=c.source();var expected=source;
+        if((source.subtype()&0x80)==0)throw new IllegalStateException("Dynamic HUD is not the Points producer");
+        if(i.entry.routine()==0)expected=source.addByte(CdObjectState.ByteField.ROUTINE,2)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4).moveWord(CdObjectState.WordField.TILE,0x6C6)
+                .moveLong(CdObjectState.LongField.MAPPINGS,points.assets().mappingsAddress())
+                .moveByte(CdObjectState.ByteField.MAP_FRAME,source.subtype()&0x7F).moveByte(CdObjectState.ByteField.POINTS_TIMER,24);
+        else if(i.entry.routine()!=2)throw new IllegalStateException("Unrepresented Points routine");
+        expected=expected.addByte(CdObjectState.ByteField.POINTS_TIMER,-1);
+        if(c.kind()==CdPoints.StoreKind.DELETE) {
+            if(expected.unsignedByte(CdObjectState.ByteField.POINTS_TIMER)!=0 || c.output()!=null)throw new IllegalStateException("Unreached Points deletion");expected=null;
+        } else if(c.kind()==CdPoints.StoreKind.MAIN_RESULT) {
+            if(expected.unsignedByte(CdObjectState.ByteField.POINTS_TIMER)==0)throw new IllegalStateException("Points skipped its native delete");expected=expected.addWord(CdObjectState.WordField.Y,-2);
+        } else throw new IllegalArgumentException("Unknown Points store");
+        if(!c.before().identity().equals(source.identity()) || !Objects.equals(expected,c.output()))throw new IllegalStateException("Points changed an unowned full64 byte");
+        prepareChildPublication(i,c,c.ordinal(),c.cut(),source,c.before(),c.output(),ChildStep.POINTS,false);
+    }
+    private void afterChildPublication(Object call) {
+        var i=activeChildEffect;
+        if(i==null || i.pendingPublication!=call || !childOrigin(i,call) || i.completedOperation!=null)
+            throw new IllegalStateException("No exact child publication completion");
+        verifyChildOwners(i);if(!childImagesEqual(i,i.readyImages))throw new IllegalStateException("Native child publication differs from prebuilt full96 output");
+        i.images=i.readyImages;i.receipts=i.readyReceipts;i.step=i.readyStep;i.childWritten=i.readyChild;i.ordinal++;
+        i.readyImages=null;i.readyReceipts=null;i.pendingPublication=null;i.completedOperation=call;
+    }
+    private void beforeChildCall(Object call) {
+        var i=requireChildEffect();CdObjectState source;CdObjectPlacementRuntime.Snapshot cut;
+        if(call instanceof CdExplosion.DrawCall c && i.explosive){source=c.source();cut=c.cut();}
+        else if(call instanceof CdPoints.DrawCall c && !i.explosive){source=c.source();cut=c.cut();}
+        else throw new IllegalArgumentException("Wrong child-effect external call");
+        if(!childOrigin(i,call) || i.pendingCall!=null || i.pendingPublication!=null || i.completedOperation!=null || i.drawn
+                || i.step!=(i.explosive?ChildStep.ANIMATED:ChildStep.POINTS) || !source.equals(i.pool.state(i.whole)))
+            throw new IllegalStateException("Child Draw omitted its actual completed stores");
+        validateChildCut(i,cut);i.pendingCall=call;
+    }
+    private void afterChildCall(Object call) {
+        var i=requireChildEffect();if(!childOrigin(i,call) || i.pendingCall!=call || i.drawReceipt!=call || !i.drawn || !i.cleared)
+            throw new IllegalStateException("Child Draw returned without its private once-only receipt");
+        i.pendingCall=null;i.completedOperation=call;
+    }
+    private void requirePreparedChildReceipt(Object call) {
+        var i=requireChildEffect();
+        if(!childOrigin(i,call) || i.completedOperation!=null || !(i.pendingPublication==call && i.readyImages!=null || i.pendingCall==call))
+            throw new IllegalStateException("Child observer returned without its private prepared receipt");
+    }
+    private void consumeCompletedChildReceipt(Object call) {
+        var i=activeChildEffect;if(i==null || !childOrigin(i,call) || i.completedOperation!=call || i.pendingPublication!=null || i.pendingCall!=null)
+            throw new IllegalStateException("Child observer returned without its private completed receipt");
+        verifyChildEffect(i);i.completedOperation=null;
+    }
+    private void drawExplosion(CdExplosion.DrawCall c) { drawChildEffect(c,c.source()); }
+    private void drawPoints(CdPoints.DrawCall c) { drawChildEffect(c,c.source()); }
+    private void drawChildEffect(Object call,CdObjectState source) {
+        var i=requireChildEffect();
+        if(!childOrigin(i,call) || i.pendingCall!=call || i.drawReceipt!=null || drawingChildEffect || queuePort || i.drawn)
+            throw new IllegalStateException("Public/cloned/repeated child Draw has no actual producer receipt");
+        var receipts=new ArrayList<>(i.receipts);receipts.add(call);var readyReceipts=List.copyOf(receipts);
+        i.drawn=true;drawingChildEffect=true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifyChildEffect(i);if(!i.cleared)throw new IllegalStateException("Child Draw omitted actual BCLR7");
+            i.receipts=readyReceipts;i.drawReceipt=call;
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingChildEffect=false;}
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readChildDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireChildEffect();if(!drawingChildEffect || queuePort || i.pendingCall==null || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("No actual child-effect queue read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var out=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),s.word(CdObjectState.WordField.X_FRACTION),
+                s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));verifyChildEffect(i);return out;}
+        finally {queuePort=false;}
+    }
+    private void writeChildOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireChildEffect();if(!drawingChildEffect || queuePort || i.pendingCall==null || value || i.cleared || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("Only actual child Draw clears bit7 exactly once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&0x7F);
+        var ready=logMosquiImages(CdObjectPool.overlay(placement.capture().pool(),List.of(next)));queuePort=true;
+        try {verifyChildEffect(i);i.pool.write(next);i.images=ready;i.cleared=true;verifyChildEffect(i);}
         finally {queuePort=false;}
     }
 }

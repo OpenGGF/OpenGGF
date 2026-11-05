@@ -163,6 +163,64 @@ public final class CdExplosion {
     private final boolean pastBinding;
     private boolean dispatching;
 
+    /** Ephemeral source observations; records and equal copies confer no World authority. */
+    public enum StoreKind { INIT_HEADER, POINTS_CHILD, ANIMATION_RESULT, FAILURE_RESET, FAILURE_TIMER, FAILURE_SPEED, FLOWER, DELETE }
+    public record Publication(long ordinal, StoreKind kind, CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source, CdObjectState before, CdObjectState output) { }
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public interface DispatchObserver {
+        void beforePublication(Publication call);
+        void afterPublication(Publication call);
+        void beforeCall(Object call);
+        void afterCall(Object call);
+    }
+    /** Separate private-World receipt checks run before native work and after its observer return. */
+    public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+    @FunctionalInterface public interface SourceDraw { void draw(DrawCall call); }
+    private DispatchObserver observer;
+    private ReceiptGuard receiptGuard;
+    private SourceDraw sourceDraw;
+    private Publication pendingPublication;
+    private DrawCall pendingDraw;
+    private long publicationOrdinal;
+    private int activeWhole;
+
+    public boolean isCurrentCall(Object call) {
+        return call != null && dispatching && (call == pendingPublication || call == pendingDraw);
+    }
+    private void observedWrite(CdObjectState output, StoreKind kind) {
+        if (observer == null) { runtime.pool().write(output); return; }
+        var pool = runtime.pool();
+        var call = new Publication(++publicationOrdinal, kind, runtime.capture(), pool.state(activeWhole),
+                pool.state(output.identity().wholeIndex()), output);
+        observePublication(call, () -> pool.write(output));
+    }
+    private void observedDelete(CdObjectState source) {
+        if (observer == null) { runtime.pool().deleteObject(source.identity().wholeIndex()); return; }
+        var call = new Publication(++publicationOrdinal, StoreKind.DELETE, runtime.capture(),
+                runtime.pool().state(activeWhole), source, null);
+        observePublication(call, () -> runtime.pool().deleteObject(source.identity().wholeIndex()));
+    }
+    private void observePublication(Publication call, Runnable nativeStore) {
+        if (pendingPublication != null || pendingDraw != null) throw new IllegalStateException("Nested child-effect publication");
+        pendingPublication = call;
+        try {
+            observer.beforePublication(call); receiptGuard.prepared(call);
+            nativeStore.run();
+            observer.afterPublication(call); receiptGuard.completed(call);
+        } finally { pendingPublication = null; }
+    }
+    private void observedDraw(CdObjectPool pool, CdObjectState.Identity identity) {
+        if (observer == null) { drawObject.drawObject(pool, identity); return; }
+        var call = new DrawCall(runtime.capture(), pool.state(identity.wholeIndex()));
+        if (pendingPublication != null || pendingDraw != null) throw new IllegalStateException("Nested child-effect Draw");
+        pendingDraw = call;
+        try {
+            observer.beforeCall(call); receiptGuard.prepared(call); sourceDraw.draw(call);
+            observer.afterCall(call); receiptGuard.completed(call);
+        } finally { pendingDraw = null; }
+    }
+
     /** The runtime supplies the single live pool; no admitted branch touches its saved bank. */
     public CdExplosion(CdObjectPlacementRuntime runtime, Assets assets, DrawObjectCall drawObject) {
         this(runtime, assets, drawObject, false);
@@ -182,6 +240,18 @@ public final class CdExplosion {
         return new CdExplosion(runtime, Assets.fromPastAssets(assets), drawObject, true);
     }
 
+    /** Same kernel, actual paired R12A sources, and transient private producer receipts only. */
+    public static CdExplosion fromAct2Assets(CdObjectPlacementRuntime runtime, CdR12aObjectAssets owner,
+                                              DispatchObserver observer, SourceDraw draw, ReceiptGuard guard) {
+        Objects.requireNonNull(runtime, "runtime"); Objects.requireNonNull(owner, "owner");
+        if (!runtime.sameAct2Source(owner)) throw new IllegalArgumentException("Child-effect placement/assets source differs");
+        var body = new CdExplosion(runtime, Assets.fromAct2Assets(owner), (pool, identity) -> {
+            throw new IllegalStateException("R12A child effect requires its actual source Draw");
+        }, true);
+        body.observer = Objects.requireNonNull(observer); body.sourceDraw = Objects.requireNonNull(draw);
+        body.receiptGuard = Objects.requireNonNull(guard); return body;
+    }
+
     public Assets assets() { return assets; }
 
     /** One ObjExplosion dispatch for the whole-pool dynamic slot currently holding ID $18. */
@@ -190,6 +260,7 @@ public final class CdExplosion {
             throw new IllegalStateException("Past Explosion dispatch is not reentrant");
         }
         dispatching = true;
+        if (observer != null) { activeWhole = wholeIndex; publicationOrdinal = 0; }
         try {
             return runSelected(wholeIndex);
         } finally {
@@ -210,12 +281,12 @@ public final class CdExplosion {
                 state = init(state, pool, effects);
                 effects.add(new CallReturned(NativeCall.INIT));
                 state = animate(state);                                        // falls into ObjExplosion_Main
-                pool.write(state);
+                observedWrite(state, StoreKind.ANIMATION_RESULT);
                 effects.add(new CallReturned(NativeCall.MAIN));
             }
             case 2 -> {
                 state = animate(state);
-                pool.write(state);
+                observedWrite(state, StoreKind.ANIMATION_RESULT);
                 effects.add(new CallReturned(NativeCall.MAIN));
             }
             case 4 -> {
@@ -226,7 +297,7 @@ public final class CdExplosion {
             default -> throw new UnsupportedExplosion(UnsupportedBoundary.ROUTINE_DISPATCH, wholeIndex,
                     "oRoutine " + state.routine() + " is not an ObjExplosion .Index entry");
         }
-        drawObject.drawObject(pool, state.identity());                         // JMP DrawObject
+        observedDraw(pool, state.identity());                         // JMP DrawObject
         effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
         return new Result(pool.state(wholeIndex), effects);
     }
@@ -244,7 +315,7 @@ public final class CdExplosion {
             self = self.moveWord(TILE, self.word(TILE) & 0x7FFF);              // ANDI.B #$7F,oTile(a0): the high byte only
         }
         self = self.moveLong(MAPPINGS, assets.mappingsAddress());               // .HighPriority: MOVE.L #MapSpr_Explosion,oMap(a0)
-        pool.write(self);
+        observedWrite(self, StoreKind.INIT_HEADER);
         makePoints(self, pool, effects);                                       // BSR.S ObjExplosion_MakePoints
         self = self.moveByte(COLLISION_TYPE, 0)                                // MOVE.B #0,oColType(a0)
                 .moveByte(ANIMATION_FRAME, 0)                                  // MOVE.B #0,oAnimFrame(a0)
@@ -260,7 +331,7 @@ public final class CdExplosion {
      * ObjExplosion_MakePoints (Explosion/Main.asm:14-39). The R3_SEMANTIC_EXPLOSION SpawnPoints label (:21-27)
      * assembles no instruction in this build. The child's other bytes, including fractions, keep slot contents.
      */
-    private static void makePoints(CdObjectState self, CdObjectPool pool, List<Effect> effects) {
+    private void makePoints(CdObjectState self, CdObjectPool pool, List<Effect> effects) {
         if (self.unsignedByte(ROUTINE_2) != 0) { return; }                     // TST.B oExplodeBadnik(a0) / BNE.S MakePoints_End
         int d1 = self.word(EXPLOSION_POINTS_FRAME);                            // MOVEQ #0,d1 / MOVE.W oExplodePoints(a0),d1
         int subtype = ((d1 & 0xFF) >>> 1) | 0x80;                              // LSR.B #1,d1 / ORI.B #$80,d1: the low byte only
@@ -270,11 +341,11 @@ public final class CdExplosion {
             return;
         }
         int childWhole = found.getAsInt();
-        pool.write(pool.state(childWhole)
+        observedWrite(pool.state(childWhole)
                 .moveByte(ID, POINTS_OBJECT_ID)                                // MOVE.B #$1C,oID(a1)
                 .moveWord(X, self.centreX())                                   // MOVE.W oX(a0),oX(a1)
                 .moveWord(Y, self.centreY())                                   // MOVE.W oY(a0),oY(a1)
-                .moveByte(SUBTYPE, subtype));                                  // MOVE.B d1,oSubtype(a1)
+                .moveByte(SUBTYPE, subtype), StoreKind.POINTS_CHILD);                                  // MOVE.B d1,oSubtype(a1)
         effects.add(new PointsCreated(childWhole, subtype));
     }
 
@@ -315,17 +386,17 @@ public final class CdExplosion {
         if (state.unsignedByte(ANIMATION) != state.unsignedByte(PREVIOUS_ANIMATION)) {
             state = state.moveByte(PREVIOUS_ANIMATION, state.unsignedByte(ANIMATION))
                     .moveByte(ANIMATION_FRAME, 0).moveByte(ANIMATION_TIME, 0);
-            runtime.pool().write(state);
+            observedWrite(state, StoreKind.FAILURE_RESET);
         }
         state = state.addByte(ANIMATION_TIME, -1);
-        runtime.pool().write(state);
+        observedWrite(state, StoreKind.FAILURE_TIMER);
         int animation = state.unsignedByte(ANIMATION);
         if (animation >= table.scriptCount()) {
             throw animationMissing(state, UnsupportedBoundary.ANIMATION_DIRECTORY_READ, 2 * animation, cause);
         }
         int script = table.tableOffset() + (short) table.bytes().unsignedWord(table.tableOffset() + 2 * animation);
         state = state.moveByte(ANIMATION_TIME, table.bytes().unsignedByte(script));
-        runtime.pool().write(state);
+        observedWrite(state, StoreKind.FAILURE_SPEED);
         int frameAddress = script + 1 + state.unsignedByte(ANIMATION_FRAME);
         if (frameAddress >= table.bytes().length()) {
             throw animationMissing(state, UnsupportedBoundary.ANIMATION_FRAME_READ, frameAddress, cause);
@@ -341,14 +412,14 @@ public final class CdExplosion {
     }
 
     /** ObjExplosion_Done (Explosion/Main.asm:98-106). */
-    private static void done(CdObjectState state, CdObjectPool pool, List<Effect> effects) {
+    private void done(CdObjectState state, CdObjectPool pool, List<Effect> effects) {
         if (state.unsignedByte(ROUTINE_2) != 0) {                             // TST.B oExplodeBadnik(a0) / BEQ.S .MakeFlower
-            pool.deleteObject(state.identity().wholeIndex());                  // JMP DeleteObject
+            observedDelete(state);                  // JMP DeleteObject
             effects.add(new Deleted());
             return;
         }
-        pool.write(state.moveByte(ID, FLOWER_OBJECT_ID)                        // .MakeFlower: MOVE.B #$1F,oID(a0)
-                .moveByte(ROUTINE, 0));                                        // MOVE.B #0,oRoutine(a0) / RTS
+        observedWrite(state.moveByte(ID, FLOWER_OBJECT_ID)                        // .MakeFlower: MOVE.B #$1F,oID(a0)
+                .moveByte(ROUTINE, 0), StoreKind.FLOWER);                       // MOVE.B #0,oRoutine(a0) / RTS
         effects.add(new BecameFlower());
     }
 }

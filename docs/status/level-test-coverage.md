@@ -253,6 +253,10 @@ unmeasured fixture; Log/Mosqui20 and the changed route/pixel pair pass in23,
 then final positive11587/EGL passes2 separately. Natural Log/Mosqui Init/Main,
 floor/A7 and jump/final cuts replay through full and course captures. Six selected
 Sonic EGL cuts now include11213/11341/11587, with actual after-cleanup ENGINE PNG.
+Actual Explosion/Points World24 also passes in a235/236 mixed run; the sole old
+unbound-ID18 assertion becomes a separately passing genuine score/child/replay
+case without a production change. Flower remains unbound and no fresh combined
+236 or natural kill certificate is claimed.
 Next11588 is Door0D; its failed partial image is not an earlier closed ingress.
 No green325 or whole-act claim. Natural Checkpoint activation, Wall contact,
 death/restart breadth, later acts and JP/EU parity are unfinished.
