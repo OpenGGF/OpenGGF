@@ -16,9 +16,17 @@ on:
         default: false
 
 jobs:
+  # Validates from the head of the last master push whose policy job succeeded,
+  # not only this push's event base: otherwise a push after a failed release run
+  # would check its own commits and publish the failed run's unchecked ones.
+  # tools/git/policy_push_base.py falls back to the event base when no earlier
+  # run succeeded; push-policy.yml uses the same rule for develop and next.
   policy:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,7 +35,17 @@ jobs:
 
       - name: Validate branch policy (push)
         if: github.event_name == 'push' && github.event.deleted == false
-        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
+          REF_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(python3 tools/git/policy_push_base.py --repository "$GITHUB_REPOSITORY" \
+            --workflow release.yml --job policy --branch "$REF_NAME" \
+            --head "$GITHUB_SHA" --before "$BEFORE_SHA")
+          bash .githooks/validate-policy.sh ci-push "$base" "$GITHUB_SHA" "$REF_NAME"
 
   # Cloud builds must not depend on private ROM fixtures or a personal runner.
   test:

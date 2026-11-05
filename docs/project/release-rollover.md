@@ -214,3 +214,15 @@ those shared commits rather than rewrite their messages. The existing master
 release range handling is unchanged. Every commit after the immutable release
 boundary retains normal checks, and the complete delivered resource tree is
 still audited independently.
+
+`REVIEWED_TRAILER_EXEMPT_COMMITS` admits two exact published `develop` commits
+to the trailer and API-coupling replay only (approved 2026-11-05). Both
+landed while CI did not validate `develop`/`next` pushes, and both fail the
+0.7 promotion replay. `aafbb4ba77d87b91050a3ab982dbf2398038bf92` (2026-11-02)
+has no documentation trailers; its changelog entry landed in `2c87d32a6`.
+`306b960af2be7cea46dc8d1358d6c4507962fa40` (2026-10-22) changed the `@ModApi`
+surface without updating the candidate pin; the current pin covers it. The list
+names commits rather than an ancestor boundary, so their neighbours, the
+resource audit and current pin checks are unaffected. `push-policy.yml` now
+validates those pushes from the last successful check, so new debt is
+reported on `develop` before promotion.

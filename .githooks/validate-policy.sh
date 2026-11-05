@@ -14,6 +14,15 @@ PUBLISHED_RELEASE_TRAILER_BASELINE=37aeb6b84d6634457616c942187cdd40dd93c24f
 # Frozen next history imported by the shared-line merge; never a moving branch ref.
 # Current API pins are verified separately; resource history is not grandfathered.
 SHARED_DEVELOPMENT_TRAILER_BASELINE=f514a5f13d353550f8421462c773f17f90a04100
+# Reviewed published commits admitted by exact SHA to the trailer and Mod API
+# coupling replay only; resource audits and current pin checks still apply.
+# Both reached develop while CI did not validate integration pushes, and
+# history is not rewritten (approved 2026-11-05, docs/project/release-rollover.md):
+#   aafbb4ba7 (2026-11-02, SOZ2 entry path-trigger fix) has no documentation
+#     trailers; its changelog entry landed in 2c87d32a6.
+#   306b960af (2026-10-22, batched sprite presentation) changed the @ModApi
+#     surface without the candidate pin; the current pin covers that surface.
+REVIEWED_TRAILER_EXEMPT_COMMITS="aafbb4ba77d87b91050a3ab982dbf2398038bf92 306b960af2be7cea46dc8d1358d6c4507962fa40"
 RELEASE_RANGE_BASE=
 ROM_LIKE_DENYLIST_EXTENSIONS=".gen .smd .bin .sms .gg .32x"
 EMPTY_TREE_OID=4b825dc642cb6eb9a060e54bf8d69288fbee4904
@@ -1542,6 +1551,11 @@ validate_ci_commit_range() {
         fi
     done
     for commit in $trailer_commits; do
+        case " $REVIEWED_TRAILER_EXEMPT_COMMITS " in
+            *" $commit "*)
+                continue
+                ;;
+        esac
         parent_line=$(git rev-list --parents -n 1 "$commit")
         set -- $parent_line
         if [ "$#" -gt 2 ]; then

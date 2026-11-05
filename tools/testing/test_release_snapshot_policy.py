@@ -19,6 +19,7 @@ BASELINE = '45cecf566825aa50612f5e687b2682fc9681aed1'
 NEXT_BASELINE = '218b8fff1a829c7a509331c453d2f3be7e51533b'
 PUBLISHED_BASELINE = '37aeb6b84d6634457616c942187cdd40dd93c24f'
 SHARED_DEVELOPMENT_BASELINE = 'f514a5f13d353550f8421462c773f17f90a04100'
+EXEMPT_COMMIT = 'aafbb4ba77d87b91050a3ab982dbf2398038bf92'
 OID = 'a' * 40
 AUTHORED_ROOT = 'src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide'
 AUTHORED_PATH = AUTHORED_ROOT + '/act1/patterns.bin'
@@ -143,6 +144,7 @@ class SnapshotPolicyTests(unittest.TestCase):
             text = text.replace(PUBLISHED_BASELINE, getattr(self, 'published_baseline', PUBLISHED_BASELINE))
             text = text.replace(SHARED_DEVELOPMENT_BASELINE,
                                 getattr(self, 'shared_baseline', SHARED_DEVELOPMENT_BASELINE))
+            text = text.replace(EXEMPT_COMMIT, getattr(self, 'exempt_commit', EXEMPT_COMMIT))
             (directory / name).write_text(text)
         yield ['sh', str(directory / 'validate-policy.sh')]
         if shutil.which('pwsh'):
@@ -1394,6 +1396,33 @@ public class Api {
         self.git('merge', '--no-ff', 'imported-next', '-m', 'merge imported history')
         head = self.git('rev-parse', 'HEAD')
         self.assert_policy(self.base, self.base, head, 'develop', 'documentation policy')
+
+    def test_reviewed_exempt_commit_skips_trailer_replay_but_later_debt_is_rejected(self):
+        self.write('exempt.txt', 'published without trailers')
+        self.exempt_commit = self.commit('reviewed published commit without trailers')
+        self.assert_policy(self.base, self.base, self.exempt_commit, 'develop', None)
+        self.write('later.txt', 'new work'); head = self.commit('unlisted missing trailers')
+        self.assert_policy(self.base, self.base, head, 'develop', 'documentation policy')
+
+    def test_reviewed_exempt_commit_skips_uncoupled_api_replay_only_for_itself(self):
+        self.write('src/main/java/example/NewApi.java', '@ModApi\npublic interface NewApi {}\n')
+        self.exempt_commit = self.commit('chore: add API\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']))
+        self.assert_policy(self.base, self.base, self.exempt_commit, 'develop', None)
+        self.write('src/main/java/example/OtherApi.java', '@ModApi\npublic interface OtherApi {}\n')
+        head = self.commit('chore: add another API\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']))
+        self.assert_policy(self.base, self.base, head, 'develop', 'candidate signature pin')
+
+    def test_reviewed_exempt_commit_does_not_admit_resource_violations(self):
+        self.write('traces/physics.csv', 'x' * 1048576)
+        self.exempt_commit = self.commit('exempt oversized trace')
+        self.git('rm', 'traces/physics.csv'); head = self.commit('remove violation')
+        self.assert_policy(self.base, self.base, head, 'develop', 'uncompressed trace payload')
 
 
 if __name__ == '__main__':
