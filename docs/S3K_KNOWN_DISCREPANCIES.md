@@ -2129,3 +2129,13 @@ expanded native-pixel/team/viewport or ending coverage. The
 [current discrepancy record](status/s3k-known-bugs.md#doomsday-presentation-gaps-and-unseeded-entry)
 and [DDZ matrix](architecture/validation/levels/s3k-ddz.md) distinguish it from
 the older seeded cold-route witnesses and remaining breadth obligations.
+
+
+**AIZ2 collapsing-slope climbing landing (2026-11-05, bounded correction):**
+The ID `$04` platform selects `SolidObjCheckSloped2`'s direct 1–16-pixel feet
+overlap window even while Knuckles retains his 10-pixel climbing radius.
+Mega's original `aiz_3` recording now has zero errors across 7,430 actual
+compared rows (previously 2,589, first 6443 Y), with no added ERROR tuples or
+changed coverage. Other report payloads are unchanged. The chain still fails
+at segment 8's production ownership closure, movie cursor 25811; missing rows
+and later suffixes remain unknown. See the [bounded AIZ2 matrix](architecture/validation/levels/s3k-aiz2.md#collapsing-slope-landing-during-knuckles-ledge-climb-2026-11-05).

@@ -1464,3 +1464,53 @@ records corrected native request IDs and/or level-restore selection affecting
 this route. Restoration selects the apparent playlist and P1 invincibility at
 the native boundary. These local checks do not requalify this matrix’s inherited
 route, viewport/donor/team, lifecycle or audible-comparison gaps.
+
+
+## Collapsing slope landing during Knuckles ledge climb (2026-11-05)
+
+The original Mega `s3-knux-multibonus-ss` segment 4 (`aiz_3`, game Act 2)
+aux observations resolve slot `$0B` to `loc_20594`, ID `$04` collapsing platform
+at `($1D10,$07AC)`, flipped, subtype 0. This is not object ID `$0B` or water:
+Knuckles is dry and no sidekick is present. `Knuckles_Climb_Ledge`
+(sonic3k.asm:31572-31595) advances the second `Knuckles_ClimbLedge_Frames`
+entry (sonic3k.asm:31543-31549), adding X 8 and Y -10 before the object pass.
+
+`sub_205B6` (sonic3k.asm:44876-44884) calls `SolidObjectTopSloped2`;
+`SolidObjCheckSloped2` (sonic3k.asm:42116-42139) samples slope byte `$1F`.
+`loc_1E45A` (sonic3k.asm:42046-42062) accepts the resulting 14-pixel feet
+overlap even with the current 10-pixel radius. The landing writes Y `$0782`,
+then `RideObject_SetRide` (sonic3k.asm:42069-42095) calls `Player_TouchFloor`.
+`Knux_TouchFloor` (sonic3k.asm:32869-32911) restores the standing radius and
+clears climbing, preserving the nonrolling landing centre. The next standing
+sample writes `$077A`. These are shipped `FixBugs=0` semantics.
+
+The object now selects the existing direct-top 1–16 overlap contract. Previously
+its generic vertical classifier interpreted overlap 14 as a bottom contact with
+a 10-pixel radius and rejected the landing. No shared collision, movement,
+camera, water, load-phase, importer, recorder or fixture owner changes.
+`TestSonic3kCollapsingPlatformLanding` covers 0/1/14/16/17 overlaps, both flips,
+10/19 radii and both platform edges using a real solid checkpoint.
+
+Matched observed/unobserved Mega controls reproduce the supplied executable
+baseline (`93b2514b8`, executable-identical to lane base `eeabd00a7`). AIZ3
+removes all 2,589 errors on 7,430 actual compared rows, with zero added ERROR
+tuples or new errors on the 6,442 baseline error-free rows. There are 267,480
+field observations on each side and no changed row/field coverage. Existing
+unobserved gaps remain unknown: rows 1, 659, 1852, 7431–7452 and 7454–7535;
+the final observed row is 7536. Other nine report payloads are unchanged.
+The chain remains red at segment 8's production ownership closure, movie cursor
+25811; no later owner is pursued. These checks do not certify the missing act
+route, donor/team/viewport products or a full-route rewind traversal.
+
+
+Final focused validation passes 230 cases in 15 classes with no failures,
+errors or skips: the 12 new landing-window cases, existing platform transition
+and fragment cases, Knuckles landing callbacks, solid checkpoints, the selected
+fragment graph restore, rewind/source/replay/timing guards and all four S3K
+keep-greens. The short-name selection also runs both `TestSonic3kLevelLoading`
+classes. The initial component witness had three intended 14/16-pixel failures
+and four missing-session fixture errors; after adding the standard gameplay
+fixture, all 12 cases pass with the correction. No category run or broad trace
+profile was repeated in this lane; final composition and smoke belong to the
+lead. The known helper-order pitfall is already recorded in the S3K object
+skill's “Native top helpers use the landing surface before floor reset” entry.
