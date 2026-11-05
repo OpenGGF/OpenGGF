@@ -124088,3 +124088,197 @@ pass or whole-campaign certification. Remaining frontiers include CNZ2 row
 2390, Angel Island row 6443, the later Mega ownership closure, and the separate
 AIZ2 rewind-reference closure. Validation artifacts and the lead's integration,
 push and cleanup receipts remain in `/tmp/trace-survey-20261102/SURVEY.md`.
+
+
+## 2026-11-05 — Five-cluster follow-up: shrine standing, AIZ lifetime and Tails visibility
+
+Frozen executable candidate `93b2514b8917c79e87890aee9963cc79fcea7d97` combines
+C1 `87e8a64fb`, C2 `fdeb76732`, C3 `ad23ef192`, C4 `76f776abf` and C5
+`636dbf69a` on develop `009c870f1`. The main workspace remains on develop;
+qualification ran in isolated checkouts. Upstream PR263's canonical `AGENTS.md`
+and generated skill-copy policy are retained. Actual TraceChaser checkout and
+engine gitlink both remain `c17f4b269`; original ROMs, trace payloads, protected
+bootstrap owners, timing admission and tolerances are unchanged.
+
+### Outcomes and held boundaries
+
+C1 preserves the shrine pedestal's native standing state during its selected
+entry countdown. `loc_90926` decrements and draws; it does not repeat the solid
+call. All fourteen Sonic+Tails/Tails `dez23` through `dez23_7` witnesses are green:
+**73 groups to zero across the same 4563 rows**. These recordings are already
+in the Hidden Palace shrine, native zone `$17`; `air` is the airborne boolean,
+not the drowning timer. Only the shrine object's production code changed.
+The separate `dez23_8` entry-X front is not included.
+
+C2 is documentation only. The executed boundary observer proves fresh camera
+`$15A0/$0320` is overwritten by the results-backdrop `$0240` Y. Checkpoint
+bypass and results reentry's `$1600/$0240` plus camera copies are separately
+verified, retaining fraction `$A400`. The correct final native `$0326`
+discriminator remains red at `$0240`; normal engine camera update clamps to
+`$0320`. The missing initial-scroll operation cannot be supplied by the narrow
+profile patch alone. That patch and discriminator remain held outside the
+candidate: no artificial bounds/wrap state or partial camera fix is integrated.
+Four recurring fronts are supported; the fourteen-case single-cause hypothesis
+is rejected. See the [MHZ matrix](../architecture/validation/levels/s3k-mhz-act1.md)
+and [coverage backlog](level-test-coverage.md).
+
+C3 adds two importer-boundary tests and design evidence, with no production
+change. HPZ22's native Act3 continuation bank is real, but the pinned recorder
+omits its flag, ring bank and timer. Matching PreLevel live rings cannot establish
+that continuation. The importer stays fail-closed, protects same-destination
+Saved returns, and rejects the other seven proposed imports of fresh-computed
+player position/speed/fraction state. See the
+[carried-state design](../architecture/designs/2026-11-03-segment-carried-run-state.md).
+
+C4 detaches only a retiring AIZ cutscene actor's surviving emerald-collector
+edges through the injected typed object query. Strict rewind closure still
+rejects unmanaged references. The Sonic+Tails AIZ2 closure at row 996 is removed:
+the combined run compares 4015 rows, with **1069 groups, first row 84 `x_speed`**.
+The old run compared 996 rows and had 260 groups before aborting. The newly
+reached 3019 rows and eight absent IDs have no baseline agreement certificate.
+SSZ's missing initial production KosM submission and SS15's unreached emerald
+submission remain blockers; both complete reports match baseline. No completion
+record invents work. The promoted
+[parent-module fingerprint lookup](../../tools/traces/identify_kosm_fingerprint.py)
+identifies ROM-backed KosM parents for investigation only; it cannot submit,
+release or execute jobs.
+
+C5 fixes two distinct lifetimes in the shared sidekick CPU. The existing S3K
+semantic policy gates the native catch-up hurt-blink clear; S1/S2/KiS2 negative
+controls remain green. Separately, live INIT retires only its own tentative
+setup hiding when checkpoint admission bypasses the dormant intro, restoring
+the caller's captured hidden state. Existing rewind fields already own this
+state. Witnesses reproduce in the combined profiles:
+
+| Witness | Before | Combined |
+| --- | --- | --- |
+| FBZ complete | 1 group, first 19158 counter | Green, same 44134 rows |
+| HPZ3 | 291 groups, first 332 counter | 288, first 410 existing unmatched KosM completion |
+| SOZ | 3590 groups, first 4922 counter | 3589, first 5104 existing `y_speed` |
+
+The isolated SOZ raw gate removes two errors with zero additions. HPZ3 removes
+1532/adds 1422 ERROR tuples; first replacement at 2780 is ROM/base/new `0/9/1`,
+not a newly wrong field. Its first new ERROR field location is 3071, after the
+existing physical divergence at 985. No additions occur on its 902 baseline
+error-free rows or SOZ's 5102. These qualified later differences are retained.
+
+### One combined sweep and the composed raw gates
+
+Exactly one serial run of each profile executed on `93b2514b8`, using the
+complete delivered wave8 `a98857cdb` archives as BEFORE. No fresh full baseline
+sweep ran. PR263 changes the policy/tooling epoch; reference comments and a
+tooling instruction string are not claimed as a freshly executed baseline.
+All six original inputs are hash-identical, and no ROM aliases were created.
+Commands use Java25, Lua5.4 and surfaceless EGL, unset display/Maven override
+variables, and pass these original properties through the queue. Paths below
+are parameterized by `OPENGGF_ROM_DIR`, the original main-workspace ROM
+directory; the evidence retains the actual absolute arguments:
+
+```sh
+for trace_profile in trace-replay trace-replay-r7 trace-segments; do
+  python3 tools/testing/maven_queue.py -Dmse=off -B "-P${trace_profile}" \
+    -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+    "-Dsonic1.rom.path=${OPENGGF_ROM_DIR}/s1.gen" \
+    "-Dsonic.rom.path=${OPENGGF_ROM_DIR}/s1.gen" \
+    "-Dsonic1.rev00.rom.path=${OPENGGF_ROM_DIR}/s1-r0.gen" \
+    "-Dsonic2.rom.path=${OPENGGF_ROM_DIR}/s2.gen" \
+    "-Dsonic2.rev00.rom.path=${OPENGGF_ROM_DIR}/s2-r0.gen" \
+    "-Ds3k.rom.path=${OPENGGF_ROM_DIR}/s3k.gen" \
+    "-Dkis2.rom.path=${OPENGGF_ROM_DIR}/kis2.gen test"
+done
+```
+
+| Profile | BEFORE cases / failures / errors / skips | Candidate |
+| --- | --- | --- |
+| r6 | 895 / 9 / 0 / 7 | 895 / 9 / 0 / 7 |
+| r7 | 121 / 80 / 2 / 0 | 121 / 65 / 2 / 0 |
+| Segments | 70 / 45 / 2 / 0 | 70 / 39 / 1 / 0 |
+
+All profiles terminate normally with Maven exit 1 for remaining trace reds.
+There are no missing/new test identities, new red identities or earlier
+serialized first-error frontiers. All seven skips are formally allowed, with
+no missing ROMs. r6's complete outcomes and all 440 JSONs are identical. All
+seventeen C1/C5 witness JSONs reproduce component reports. Full uncapped
+assertions, contexts, values and identities are retained; group spans are not
+expanded into invented observations.
+
+Two composition gates required additional *focused* measurement. One matching
+two-class `trace-segments` invocation per source selected
+`TestS3kSonicTailsAiz2SegmentTraceReplay,TestS3kSonicTailsHpz2SegmentTraceReplay`.
+A temporary post-replay comparison-only exporter captured actual
+FrameComparisons using existing Jackson. Both instrumented sources reproduce
+all four complete archived JSONs exactly. Source, compiled observers and original
+inputs are restored/verified; no repeated full profile or gameplay write ran.
+
+HPZ2's groups rise **1114 to 1118**, first 119 rings unchanged, but raw ERRORs
+fall **91279 to 91075** across identical 4208 rows/192977 fields. Only the
+counter changes: 704 removals and 500 added value tuples, **zero new ERROR
+field locations**, identical expected values and field coverage. At 1191,
+matching P2/camera geometry and zero invulnerability still leave the old engine
+hidden with invalid visibility; the corrected owner permits refresh and clears
+counter `$0067` to zero. First added value 1199 is ROM/base/new `$0001/$006F/0`,
+an already wrong counter. All 118 baseline-clean rows remain free of additions.
+The higher grouped total is attributed to splitting the counter spans.
+
+The composed AIZ2 prefix differs from isolated C4, so **C4's prefix-equality
+certificate is not carried forward**. Actual common rows 0–995 retain all 45816
+fields and expected values. ERROR tuples are **21803 to 21805**, 519 removed,
+521 added; nine new/seven removed ERROR field locations. First replacement
+528 is counter ROM/base/new `0/3/1`; first new ERROR location is row **825**
+`tails_air`, ROM/base/new `1/1/0`. At that row P1 X `$2628/$24F3`, Y
+`$04DA/$055C` and camera `$2588,$049A/$2463,$0430` already differ. Raw diagnostics
+show the old setup hiding leaves visibility stale at 526; later the old CPU
+despawns while the corrected CPU follows. This attributes the changed prefix
+to C5's native presentation lifetime. No addition occurs on the 84 matching
+baseline rows. The newly reached suffix and eight gaps remain unqualified;
+no universal added-error certificate is claimed.
+
+### Shared-code smoke and validation limits
+
+C5 touches shared code, so the lead ran exactly one change-based smoke:
+
+```sh
+python3 tools/testing/run_categories.py \
+  --base 009c870f12f5c4565b363797b544ac1ea9c15264 --workers 2 \
+  --headless-gl surfaceless-egl \
+  --rom-directory "${OPENGGF_ROM_DIR}" --max-minutes 40 --run
+```
+
+It completes all 4463 selected classes, 90 ordinary batches and guards on
+`93b2514b8`: **37789 cases, 32 failures, 1 error, 49 allowed skips**. Raw verdict:
+
+```text
+VERDICT FAILED: head=93b2514b8917 source=cf3e34e2a1b7 change-based 4463/4463 candidate classes; ordinary 90/90 batches; guards 1/1 batches; tests=37789 failures=32 errors=1 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+All 33 negative identities/kinds/types match delivered wave8 and its qualified
+historical baseline. Thirty full assertions/details match literally; three MHZ
+Set assertions differ only in display order with identical members. All 21
+owning negative-test Git objects are identical across those sources and current
+develop/candidate. The existing semantic qualification plus the upstream
+source bridge is reused; no new `009c` baseline execution is claimed. All 834
+guards pass; all 49 skip identities/reasons match, with no unexplained/required
+skip or missing ROM. No new/worsened ordinary failure is observed.
+
+Component checks: C1 238, C3 208, C4 226 and C5 212 ordinary plus 125 selected
+guards pass without skips. C2's final-camera red is intentional held evidence,
+not a passing retained test. Three synthetic parent-module lookup tests and
+both real-ROM identity controls pass. None is a public-release full suite.
+
+Combined traces: queue 90.1s, slot holds 1387.6s, Maven 1383s, command wall
+1478.005s. The focused raw pair adds queue 0.2s, slot holds 131.8s, command walls
+90.292s and 41.814s (concurrent, not summed as delivery wall time). Smoke:
+preparation 90.45s, queue 1416.9s, slot holds 1649.3s, command wall 3165.019s.
+Slot holds include launch/teardown. User wait is zero; off-job investigation and
+unattributed overhead remain unknown. Component queue costs are preserved in
+their handoffs, not silently counted as execution.
+
+Complete profile evidence is in `/tmp/trace-clusters-combined-profiles-20261105/`;
+component, smoke and final raw-gate receipts are in
+`/tmp/trace-clusters-20261104/`. The append-only lead log is
+`/tmp/trace-survey-20261102/SURVEY.md`. Remaining boundaries include the held
+MHZ initial camera owner, missing Act3-bank recorder evidence, SSZ/SS15 production
+submission, later AIZ physics and Mega ownership. This qualification permits
+bounded integration under the fleet's gate; it certifies neither all newly
+reached rows nor whole-campaign parity. Delivery and cleanup are recorded by
+the lead after the develop push.
