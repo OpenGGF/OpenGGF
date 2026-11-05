@@ -59,3 +59,17 @@ Commands, full reports, source hashes and actual mode analysis remain under
 `icz2-qualification` and `icz2-context-*`. The lead records final composition
 qualification and delivery separately. The route is still red; these component
 checks add no full-act, broader roster/donor/viewport or native-pixel certificate.
+
+
+## Final composed control
+
+Final source `64df7449b` executes the corrected actual Tails ICZ selector and
+Sonic+Tails ICZ2 in its explicit201-case composed selection:199 pass, two
+inherited trace assertions, zero errors/skips. All seven object cases pass.
+The complete Tails report remains1,157/first0 Y speed and matches original
+r7; ICZ2 remains1,724/first483 Y and matches original segments. Actual final
+ICZ2 rows exactly equal the current-develop native-order control across6,282
+rows/288,065 fields, with0 added or removed ERROR tuples, no expected-value or
+field-coverage change. This is a real current-base/final-source pair; the older
+wrong-order1,035 stream retains its separate historical provenance. The late
+read-only observer source is restored exactly and its compiled marker removed.

@@ -124404,3 +124404,174 @@ Tails selector did not execute; final-composition corrected selection and actual
 rows remain lead-owned before delivery. Full commands/reports/source hashes are
 in `/tmp/trace-native-frontiers-20261105/{icz-order-red,icz-order-green}/`.
 No full-route or original-source-pair parity certificate is claimed here.
+
+
+## 2026-11-05 — Native-frontiers lead qualification
+
+The lead accepts these bounded native corrections for develop integration.
+This is not whole-campaign parity, a passing full suite, or certification of
+all newly reached rows. Base is develop `eeabd00a7`, executable-identical to
+reused `93b2514b` except the frontier log. The combined profiles and ONE shared
+smoke measured frozen `a89b85806`. Final executable source is `64df7449b`, after
+the actorless-camera correction `baab5d83e` and object-local ICZ rider-order
+`79a1d861f`; its final composed focus and actual rows qualify those deltas.
+Subsequent qualification edits are documentation only.
+
+### Implementations and stopped frontiers
+
+- Camera `98bf3fa1b`: scoped native pre-LevelSetup movement reaches shrine
+  `$326`, with normal clamp `$320` and results backdrop `$240` retained.
+  Four initial camera errors disappear; existing routine `$0/$2` entry errors
+  remain. Later MHZ8/SOZ camera fields also become native. Lock, copy/fraction,
+  initial-load, checkpoint/results and rewind controls remain bounded evidence.
+- Producer `e6ea72332b559a4a52519166f0e5c108cb8d5385` and engine `088f4b815`:
+  original native movies export Act3 banks before consumption. Full captures
+  preserve physics/aux/timing/manifests logically; 133 metadata changes add
+  native observations and dates. HPZ22 banks233/127 move first errors from
+  entry rings to rows87/335. Saved/Saved2/fresh paths remain distinct. Paired
+  923-case producer controls retain848 passes,60 inherited failures,15 identical
+  skips, with a source-dependent stale-seal assertion disclosed. Independent
+  source/provenance review finds no actionable defect. Producer main was pushed
+  and remotely verified before publishing the engine gitlink.
+- DEZ submissions `658e7fa4b` and independent eye retirement `ac35ecb80`:
+  native enemy jobs remove the queue abort, then the native debris conversion
+  releases the obsolete parent edge. The SSZ-labelled DEZ replay now reaches
+  its final parity assertion:3,038 groups, first row0 camera,39,988 comparisons.
+  All18,376 common actual rows match;21,612 newly reached suffix rows still
+  lack original-before parity evidence. Internal gaps and terminal tail remain
+  unknown. This is closure repair, not a green route.
+- Special-stage input `259ed1769`: sample original BK2 inputs through the real
+  entry-fade lifetime. SS15 is strict green across5,600 comparisons, retaining
+  three warning groups. No synthetic production job or fitted input loop.
+- Mega platform `b14a00beb`: native direct-top landing window makes AIZ3 green,
+  2,589 ERROR observations to0 on7,430 shared rows,0 added tuples. Other nine
+  Mega reports match. The chain still stops at excluded movie25811 ownership.
+- S2 Crawl `3647ca553`: native touch dispatch has no render gate. CNZ2 moves
+  276,895→188,220 ERROR observations, first2390→7849 Y speed; other24-report
+  controls retain their boundaries. Actual common-row gate has0 additions on
+  2,390 baseline-clean rows. Later changed art values and variable field sets
+  remain qualified; ARZ2 first5512 and the movie138828 boundary remain open.
+- AIZ2's previously unchecked3,019 rows are compared against the real C4
+  lifetime-repair executable control, not its historically aborted predecessor.
+  Shared138,739 fields change86,547→86,461 ERRORs, with11,869 added/11,955
+  removed value tuples after earlier sidekick divergence. The clean suffix set
+  is empty; the claim is vacuous there, while84 clean prefix rows have no
+  additions. Eight absent IDs remain unknown. A terminal actual singleton
+  separately resolves the observer publication-boundary difference.
+
+### Original combined profiles and additional raw gates
+
+Each queued profile uses Java25, Lua5.4, `-Dmse=off`, verified original ROM
+properties, one alphabetical fork and surfaceless EGL:
+
+```text
+python3 tools/testing/maven_queue.py -Dmse=off -B -P<profile> -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical <seven verified ROM properties> test
+```
+
+| Profile | Reused tests/F/E/S | Frozen a89 tests/F/E/S |
+| --- | --- | --- |
+| trace-replay | 895/9/0/7 | 898/9/0/7 |
+| trace-replay-r7 | 121/65/2/0 | 121/66/0/0 |
+| trace-segments | 70/39/1/0 | 70/40/0/0 |
+
+All three complete with expected Maven exit1 for remaining trace assertions;
+no infrastructure abort, missing/newly red identity or earlier observed first
+frontier. SS15 error becomes pass; SSZ closure errors become parity failures.
+R6 adds three passing entry-input tests. The uncapped3.8-million-character S1
+assertion matches. All seven r6 skips are classified allowed; no missing ROM,
+unclassified/required skip or undeclared input. All component whole-report
+witnesses reproduce; no raw row is inferred from grouped spans.
+
+The four-report source-paired follow-up uses exactly two explicit four-class
+r7 invocations and the same approved metadata in both arms. All eight complete
+JSONs and assertions reproduce originals. Every shared expected value agrees.
+
+| Witness | Actual raw ERRORs before→after | Added/removed ERROR tuples | Qualification |
+| --- | --- | --- | --- |
+| Tails DEZ23_8 | 58,591→57,227 | 20,878/22,242 | Bank86 is the only difference before1291; same collision then chooses death without rings versus native hurt/ring loss with rings. 1,324 new late field locations follow that branch. Zero clean baseline rows: clean-row claim is vacuous. First new location1303 X speed occurs on an already divergent position/routine row. |
+| MHZ8 | 25→24 | 0/1 | Only actual terminal camera Y changes `$240`→native`$326`;1,897 clean rows have no additions. |
+| Tails SOZ | 17→16 | 0/1 | Same terminal camera correction;21,322 clean rows have no additions. |
+| Tails SSZ3 | 24,405→24,404 | 8/9 | Gameplay fields identical; existing unmatched-completion values change pending identities. One pending-submission field is absent, not MATCH. All128 clean rows have no additions. |
+
+The lead accepts Tails DEZ as a causally explained native bank correction with
+mixed later effects, not proof each later value is correct. Its entry X error
+already exists at row0. SSZ3 retains all eight timing-only rows and the missing
+field qualification; absent pending data does not certify completion matching.
+These decisions preserve errors, expected values and missing coverage.
+
+ICZ2's corrected identity is `TestS3kSonicTailsIcz2SegmentTraceReplay`;
+ZoneSlice remains unchanged. Historical1,035 versus1,724 groups comes from an
+inherited identity-map impulse order: the former swaps P1/P2 launch speeds at
+953. Native `sub_8BA1C`/`sub_8BA7E` processes P1 then P2 with shared velocity.
+Three deterministic discriminators fail before the owner correction and all
+seven object tests pass afterward. The final composed source's actual6,282
+rows/288,065 fields exactly match the current-base native-order control:
+102,597 ERRORs,0 added/removed tuples, no field/expected-value change. The
+historical wrong-order raw stream remains separately source-qualified; its483
+clean rows also have no additions. No exact original1035 current-source run
+is invented. See [the rider-order audit](../architecture/audits/2026-11-05-icz-rider-order.md).
+
+### ONE smoke, repairs and final source boundary
+
+```text
+python3 tools/testing/run_categories.py --base eeabd00a7b838e361922ff0449fffff45b134051 --workers 2 --headless-gl surfaceless-egl --rom-directory "$ROM_DIRECTORY" --max-minutes 40 --run
+```
+
+The one original run completes4467/4467 classes,91/91 ordinary batches and all
+834 guards. All49 skips are allowed and identical to the reused epoch. Raw
+verdict is retained verbatim:
+
+```text
+VERDICT FAILED: head=a89b85806f90 source=436f0881254a change-based 4467/4467 candidate classes; ordinary 91/91 batches; guards 1/1 batches; tests=37823 failures=33 errors=15 skipped=49 (allowed=49 unexplained=0); missing ROM properties=none; skip inputs audio_reference_files=false,gl=false,s1_bizhawk_reference=false,s2_bk2=false,s3k_observations=false; bounded smoke selection, not a full-suite pass
+```
+
+Thirty-two inherited negative outcomes retain full assertions/details or the
+three previously proven Set display permutations; one old physical-clear case
+passes. Fourteen new errors share actorless resource loading, now excluded
+from initial camera movement and copy publication. FBZ's old final checkpoint
+camera assertion is corrected from intermediate`$B00` to native`$B06`, with
+maxY`$B00` and all route assertions retained. An original-ROM placement and
+native common movement prove the new expectation. The new camera unit initially
+used an invalid null setter; its corrected nullable presentation setup passes
+all six cases. No runtime FBZ object/event code changes.
+
+The remaining smoke-only host budget0/1 observation has an unchanged-source
+race: retirement is published before the final one-item profile reservation
+closes. All150 networking entries and runner/build objects match base; matched
+focused base and candidate checks pass. The precise smoke item's owner was not
+logged. No networking repair or false broad-pass claim is made.
+
+Final explicit composed focus on `64df7449b` completes201 cases:199 pass,
+two inherited strict ICZ failures,0 errors/skips. It includes the real repaired
+resource loads, native camera and checkpoint route, host case, ICZ object tests,
+guards and four keep-green classes. Correct actual Tails ICZ executes and its
+whole report matches frozen r7; ICZ2 matches frozen segments. Temporary late
+actual-row instrumentation is restored byte-for-byte and its compiled marker
+removed; source is clean. No repeated broad sweep or smoke is claimed. The
+original full-profile evidence covers a89; final guarded admission leaves
+nonnull gameplay paths unchanged, and the only further gameplay owner is the
+separately exercised ICZ object. Four follow-up fixtures use SKL objects, so
+that S3KL-only tension owner is not dispatched there.
+
+### Provenance, cost and delivery boundary
+
+Full reports, uncapped assertions, row streams/gaps, source/input/producer hashes,
+commands, skip decisions, native citations, restoration and timings are retained
+under `/tmp/trace-native-frontiers-combined-profiles-20261105/` and
+`/tmp/trace-native-frontiers-20261105/`. Native outputs remain outside either
+repository. Component notes and the append-only lead log remain in
+`/tmp/trace-survey-20261102/SURVEY.md`. No fixture tolerance, hydration switch,
+protected bootstrap, other-fleet production owner or hardware simulation changes.
+
+Original serial profiles: queue19.8s, slot holds1,426.2s, Maven1,423s. ONE smoke:
+queue1,709.6s, slot holds1,760.2s, runner execution1,756.24s, preparation32.76s,
+command wall3,512.612s. Four-report follow-up: queue112.5s, slot holds227.5s,
+command walls206.230/133.945s. Component/final focused costs remain separate in
+exact command receipts, not summed into parallel delivery wall. User wait0;
+off-job work and unattributed overhead remain unknown.
+
+Producer main is remotely verified at e6ea723 before engine publication.
+Develop integration, post-integration focused/source checks, push verification
+and fully accounted cleanup follow this qualification and are recorded by the
+lead. Explicit old AIZ worktree, all native/tmp evidence and main user changes
+remain preserved.

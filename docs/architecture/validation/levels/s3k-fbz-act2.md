@@ -466,3 +466,10 @@ incorrectly, then all6 isolated native camera tests pass using the nullable
 presentation restore. The final composed check after the caller's focus gate
 is recorded by the lead. This adds no emulator capture or full-route/native
 pixel certificate; inherited roster/donor/viewport/rewind breadth remains open.
+
+
+The final explicit composed source `64df7449b` re-executes this real checkpoint
+route with the final actorless-load admission, native camera units and resource
+worlds: all199 ordinary/guard cases pass; only two separately selected existing
+ICZ trace assertions remain red. No FBZ assertion is relaxed beyond replacing
+the stale intermediate camera pin with the native completed-load value.
