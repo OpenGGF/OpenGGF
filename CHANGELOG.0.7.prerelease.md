@@ -221,7 +221,9 @@ Unreleased. The earlier development themes remain in
   through actual primary/secondary Solid publication, with eight selected-Sonic
   pixel cuts and natural Explosion/Points work. Actual Flower floor/angle,
   growth and draw publication now continue to the Tunnel Path boundary, retaining
-  explicit persistent-flower storage limits. Actual Explosion and Points
+  explicit persistent-flower storage limits. Authenticated Tunnel Path speed,
+  coordinates and raw Init-pointer views now prepare its player-publication bridge
+  without admitting a Powerup art owner. Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower
   source views remain preparatory; no new art owner is added.

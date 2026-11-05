@@ -128,7 +128,10 @@ public final class CdR12aProfile {
         ANI_EXPLOSION(0x1D700, 20), MAP_SPR_EXPLOSION(0x1D714, 146), MAP_SPR_POINTS(0xAA8C, 82),
         ANI_FLOWER(0x36A94, 28), MAP_SPR_FLOWER(0x36AB0, 90),
         // Horizontal Door's actual absolute Init/Animate operands, not equal vertical-script copies.
-        ANI_TUNNEL_DOOR(0x1D6B6, 14), MAP_SPR_TUNNEL_DOOR(0x1D6C4, 28);
+        ANI_TUNNEL_DOOR(0x1D6B6, 14), MAP_SPR_TUNNEL_DOOR(0x1D6C4, 28),
+        // Tunnel Path: actual R12A PC operands and raw four-byte Init immediate; no Powerup map/art owner.
+        TUNNEL_PATH_GROUND_SPEEDS(0x8BB8, 8), TUNNEL_PATH_COORDINATES(0x8BC0, 284),
+        TUNNEL_PATH_MAPPING_ADDRESS(0x8994, 4);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

@@ -1,5 +1,26 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — Tunnel Path132 data bridge qualified
+
+Three original-MMD views extend the old129 prefix: native speed208BB8/8bytes,
+paths208BC0/284bytes and the actual Init mapping immediate208994/4bytes. The
+new Assets.fromAct2Assets factory borrows existing cached original-USA R12A views
+and native addresses. It preserves the raw21D528 mapping LONG without eagerly
+reading/admitting Powerup mappings or art. Native low-nibble speed4..15 address
+aliases into adjacent path directory/header/coordinates remain exact through the
+existing finite union; no whitelist, pad, decoder, PLC, reader, current or Frame
+owner is added. Old129 descriptors,35readers,19PLCs and selector tests remain.
+
+137focused cases4classes pass0failures/errors/skips: Object51, Player12, Terrain10,
+legacyTunnelPath64. Source-before/after
+`917dc2ec9bf60780a5516eb1f87f08425ad6e3d8e16f25900b5326db281bc07d`,
+07:05:39.022424–07:05:44.238872Z; test admission0s/normal precompile about90s.
+Exact137identities/properties/fresh XML hashes checked; only8owned reports consumed.
+The runtime factory alone does not admit actual ID07. Private World/player/FM
+publication is authored independently against saved0213; qualified12699/eight
+selected-Sonic cuts and first12700TunnelPath07 remain unchanged. No new route,
+pixel, native/full-act or regional claim. Morning digest delivered07:00 separately.
+
 ## 5 November 2026 — actual Flower and positive12699
 
 Cached Flower1F now uses the existing source129/Std1/current terrain and art.

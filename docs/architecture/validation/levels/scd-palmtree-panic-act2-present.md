@@ -341,3 +341,14 @@ Actual ENGINE12699 is320×224/11097B/SHA256
 First12700 is live whole79 ID07/TunnelPath/routine0/subtype2. Failed partial96 is
 not ingress. Its native source/data/publication bridge is next. No persistent
 flower, complete-act, matched native/HUD/audio or regional certificate is implied.
+
+
+## Tunnel Path data prerequisite — 5 November
+
+Source132 appends only complete native speed8/path284/rawInitMap4 views to old129;
+old35readers/19PLCs/current owners remain. Actual runtime original-MMD Assets
+bridge preserves raw pointer21D528 and native adjacent speed-address aliases,
+without eager mapping/art service. Object51/Player12/Terrain10/legacyPath64 pass
+137focused cases4classes,0failures/errors/skips, exact source/env/IDs/XML checked.
+This qualifies data and existing component behavior, not actual Act2 ID07 World
+publication or a returned12700. That private join is the next measured dependency.

@@ -273,6 +273,9 @@ obsolete-boundary corrections; original240 and diagnostic26 remain non-green.
 Final permanent12699/EGL2 passes separately, with eight selected-Sonic image cuts
 and complete full/course Flower crossings. Next12700 is Tunnel Path07 at whole79.
 Persistent subtype0 flowers, complete-act, native/regional parity remain open.
+TunnelPath source132/raw-pointer Assets prerequisite passes137focused data/legacy
+checks4classes,0skips. Source129prefix/35readers/19PLCs and adjacent address aliases
+remain exact; no new art/current/Frame owner. Actual ID07 World join remains next.
 The first-act matrix remains partial as well.
 
 ### Historical26October pause checkpoint

@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -103,6 +109,21 @@ public final class CdTunnelPath {
     public record Assets(CdAssetBytes groundSpeeds,int groundSpeedsAddressBits,
                          CdAssetBytes paths,int pathsAddressBits,int mappingAddressBits) {
         public Assets { Objects.requireNonNull(groundSpeeds); Objects.requireNonNull(paths); }
+        /** Original USA R12A only. Native Init8992 stores the retained raw LONG from8994;
+         * Paths LEA89C0 and indexed speed read8BA8 select208BC0/208BB8 (N1ecc5f3a).
+         * The Powerup pointer is not dereferenced or admitted as a mapping/art owner. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity=Objects.requireNonNull(owner.identity(), "identity");
+            if(identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12A
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !CdStagePayload.R12A.stage().equals(identity.stage()))
+                throw new IllegalArgumentException("Tunnel Path requires the authenticated original USA R12A source");
+            var speeds=owner.view(CdR12aProfile.Asset.TUNNEL_PATH_GROUND_SPEEDS);
+            var paths=owner.view(CdR12aProfile.Asset.TUNNEL_PATH_COORDINATES);
+            int mappings=(int)owner.view(CdR12aProfile.Asset.TUNNEL_PATH_MAPPING_ADDRESS).unsignedLong(0);
+            return new Assets(speeds,owner.profile().range(CdR12aProfile.Asset.TUNNEL_PATH_GROUND_SPEEDS).nativeAddress(),
+                    paths,owner.profile().range(CdR12aProfile.Asset.TUNNEL_PATH_COORDINATES).nativeAddress(),mappings);
+        }
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner);
             var speeds=owner.view(CdR11aObjectAssets.Table.TUNNEL_PATH_GROUND_SPEEDS);

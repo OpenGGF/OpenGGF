@@ -156,6 +156,9 @@ ANI_FLOWER 36a94 28 74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a53
 MAP_SPR_FLOWER 36ab0 90 48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41
 ANI_TUNNEL_DOOR 1d6b6 14 398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0
 MAP_SPR_TUNNEL_DOOR 1d6c4 28 7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92
+TUNNEL_PATH_GROUND_SPEEDS 8bb8 8 6421e780611a8a1f2d7c46b123246ca2072d8d8115454f62cdae39738a6e9836
+TUNNEL_PATH_COORDINATES 8bc0 284 ffdca0eca125c54bf14c076060a27657bf82bcc3ce52d3e912c4ac14e5b5cd93
+TUNNEL_PATH_MAPPING_ADDRESS 8994 4 d8dbb822f69324f4e22b24211ac6e036ae11d483ad9940f613f0d575bb36446a
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -225,9 +228,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete129RowManifestPreservesTheOriginal122AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete132RowManifestPreservesTheOriginal129AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(129, CdR12aProfile.Asset.values().length); assertEquals(129, rows.size());
+        assertEquals(132, CdR12aProfile.Asset.values().length); assertEquals(132, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -1051,6 +1054,83 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(mapping,2,o.view(ANI_TUNNEL_DOOR).copy(),1,12));
         assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_TUNNEL_DOOR).copy(),2,o.view(ANI_TUNNEL_DOOR).copy(),1,11));
         assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdTunnelDoor.Assets.fromAct2Assets(null));
+    }
+
+    @Test void tunnelPathHasActualIdSevenDispatchAndItsOwnPcAndRawLongOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(129,TUNNEL_PATH_GROUND_SPEEDS.ordinal());assertEquals(130,TUNNEL_PATH_COORDINATES.ordinal());assertEquals(131,TUNNEL_PATH_MAPPING_ADDRESS.ordinal());
+        assertEquals(0x20890E,o.view(OBJECT_INDEX).unsignedLong((7-1)*4));
+        assertEquals("323b00164ebb1012",hex.formatHex(file.readFile(0x8972,8)));
+        assertEquals("0008004e00ee0102",hex.formatHex(file.readFile(0x898A,8)));assertEquals(0x8992,0x898A+(short)0x0008);
+        assertEquals("217c0021d5280004",hex.formatHex(file.readFile(0x8992,8)));
+        assertEquals("45fa01fe",hex.formatHex(file.readFile(0x89C0,4)));assertEquals(0x8BC0,0x89C2+(short)0x01FE);
+        assertEquals("303b000e",hex.formatHex(file.readFile(0x8BA8,4)));assertEquals(0x8BB8,0x8BAA+(byte)0x0E);
+        assertEquals("10000c000c000800",hex.formatHex(o.view(TUNNEL_PATH_GROUND_SPEEDS).copy()));
+        assertEquals("0006009000d60088144000f01478010814900140149001e0144001f8140001e013f001c013f00180140001701420016814400170146801a81660021816a0021016c001f816d001c816c001a816800198165801a0164001c8165001f01680020016c0020016d0021016d0028816c002c0168002d8165002c0165002a01680029017000290172802a0172802e0170002f000440f0801a00f9001a00fc801b80fe001f00fe0026010000290103002a0106802881080025010680218103002000ff002200fe0026010000290103002a010680288113001c8004416300290163003181638033816d003d0170003e0173803c8175803901738035816f8034016c0036016a8039016d003d0170003e0173803c817b8034817d0032017d00268",hex.formatHex(o.view(TUNNEL_PATH_COORDINATES).copy()));
+        assertEquals("0021d528",hex.formatHex(o.view(TUNNEL_PATH_MAPPING_ADDRESS).copy()));
+        assertEquals("00144e75",hex.formatHex(file.readFile(0x8BB4,4)));assertEquals("0828000300226768",hex.formatHex(file.readFile(0x8CDC,8)));
+    }
+
+    @Test void completeTunnelPathDirectoryAndAllThreeBodiesHaveNoInventedPaddingOrAliases() throws Exception {
+        var o=retail().terrain().objects();var raw=o.view(TUNNEL_PATH_COORDINATES);var speeds=o.view(TUNNEL_PATH_GROUND_SPEEDS);
+        assertEquals(284,raw.length());assertEquals(8,speeds.length());assertEquals(0x8BC0,TUNNEL_PATH_GROUND_SPEEDS.fileOffset()+speeds.length());
+        int[] starts={6,144,214},bytes={136,68,68},firstX={0x1440,0x0F08,0x1630},firstY={0xF0,0x1A0,0x290},lastX={0x1700,0x1130,0x17D0},lastY={0x2F0,0x1C8,0x268};
+        for(int i=0;i<3;i++) {
+            assertEquals(starts[i],(short)raw.unsignedWord(2*i));assertEquals(bytes[i],raw.unsignedWord(starts[i]));
+            assertEquals(firstX[i],raw.unsignedWord(starts[i]+2));assertEquals(firstY[i],raw.unsignedWord(starts[i]+4));
+            int end=starts[i]+2+bytes[i];assertEquals(i==2?284:starts[i+1],end);assertEquals(0,bytes[i]%4);
+            assertEquals(lastX[i],raw.unsignedWord(end-4));assertEquals(lastY[i],raw.unsignedWord(end-2));
+        }
+        assertEquals(List.of(0x1000,0xC00,0xC00,0x800),java.util.stream.IntStream.range(0,4).map(i->speeds.unsignedWord(i*2)).boxed().toList());
+        // Native low-nibble GVel reads4..15 alias into the immediately following real path bytes.
+        assertEquals(List.of(0x6,0x90,0xD6,0x88,0x1440,0xF0,0x1478,0x108,0x1490,0x140,0x1490,0x1E0),
+                java.util.stream.IntStream.range(0,12).map(i->raw.unsignedWord(i*2)).boxed().toList());
+        assertEquals(0x800,speeds.unsignedWord(6));assertEquals(0x268,raw.unsignedWord(282));
+        assertThrows(IndexOutOfBoundsException.class,()->speeds.unsignedWord(7));assertThrows(IndexOutOfBoundsException.class,()->raw.unsignedWord(283));
+        assertThrows(IndexOutOfBoundsException.class,()->raw.unsignedByte(284));
+        for(var added:new CdR12aProfile.Asset[]{TUNNEL_PATH_GROUND_SPEEDS,TUNNEL_PATH_COORDINATES,TUNNEL_PATH_MAPPING_ADDRESS})
+            for(var old:Arrays.asList(CdR12aProfile.Asset.values()).subList(0,129))
+                assertTrue(added.fileOffset()+added.length()<=old.fileOffset() || old.fileOffset()+old.length()<=added.fileOffset(),old+" overlaps "+added);
+    }
+
+    @Test void tunnelFactoryBorrowsOnlyThreeCachedRawViewsAndKeepsUnregisteredMappingLongOpaque() throws Exception {
+        var o=retail().terrain().objects();var readers=o.readerProfiles();var lists=o.plcLists();
+        var a=com.openggf.game.soniccd.objects.CdTunnelPath.Assets.fromAct2Assets(o);
+        assertSame(o.view(TUNNEL_PATH_GROUND_SPEEDS),a.groundSpeeds());assertSame(o.view(TUNNEL_PATH_COORDINATES),a.paths());
+        assertEquals(0x208BB8,a.groundSpeedsAddressBits());assertEquals(0x208BC0,a.pathsAddressBits());assertEquals(0x21D528,a.mappingAddressBits());
+        assertSame(a.paths(),com.openggf.game.soniccd.objects.CdTunnelPath.Assets.fromAct2Assets(o).paths());
+        assertNotEquals(CdR11aObjectAssets.Table.TUNNEL_PATH_GROUND_SPEEDS.range().nativeAddress(),a.groundSpeedsAddressBits());
+        assertNotEquals(CdR11aObjectAssets.Table.TUNNEL_PATH_COORDINATES.range().nativeAddress(),a.pathsAddressBits());
+        assertEquals(5,com.openggf.game.soniccd.objects.CdTunnelPath.Assets.class.getRecordComponents().length);
+        assertTrue(Arrays.stream(CdR12aProfile.Asset.values()).noneMatch(k->k.nativeAddress()<=a.mappingAddressBits() && a.mappingAddressBits()<k.nativeAddress()+k.length()));
+        assertSame(readers,o.readerProfiles());assertSame(lists,o.plcLists());assertEquals(35,readers.size());assertEquals(19,lists.size());
+        for(var key:new CdR12aProfile.Asset[]{TUNNEL_PATH_GROUND_SPEEDS,TUNNEL_PATH_COORDINATES,TUNNEL_PATH_MAPPING_ADDRESS}) {
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(key));assertThrows(IllegalArgumentException.class,()->o.readerView(key,CdR12aObjectAssets.ReaderKind.NATIVE));
+        }
+    }
+
+    @Test void tunnelRawViewsAndBridgeRejectFiniteOverreadsChangedOriginalsAndForeignSourceIdentities() throws Exception {
+        var assets=retail().terrain();var o=assets.objects();var file=retail().original();
+        for(var key:new CdR12aProfile.Asset[]{TUNNEL_PATH_GROUND_SPEEDS,TUNNEL_PATH_COORDINATES,TUNNEL_PATH_MAPPING_ADDRESS}) {
+            var bytes=o.view(key);var before=bytes.copy();var copy=bytes.copy();copy[0]^=1;
+            assertSame(bytes,o.view(key));assertArrayEquals(before,bytes.copy());assertArrayEquals(file.readFile(key.fileOffset(),key.length()),bytes.copy());
+            assertThrows(IndexOutOfBoundsException.class,()->bytes.unsignedByte(bytes.length()));
+            byte[] corrupt=file.readFile(0,262144);corrupt[key.fileOffset()]^=1;
+            assertThrows(IOException.class,()->assets.profile().verifyProgram(CdNativeFile.R12A,assets.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        var mapping=o.view(TUNNEL_PATH_MAPPING_ADDRESS);assertEquals(0x21D528,mapping.unsignedLong(0));assertThrows(IndexOutOfBoundsException.class,()->mapping.unsignedLong(1));
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdTunnelPath.Assets.fromAct2Assets(null));
+        // Constructed source negatives only; no fixture supplies World or programme authority.
+        for(int variant=0;variant<4;variant++) {
+            var foreign=org.mockito.Mockito.mock(CdR12aObjectAssets.class);var id=org.mockito.Mockito.mock(CdR12aTerrainAssets.Identity.class);
+            org.mockito.Mockito.when(foreign.identity()).thenReturn(id);
+            org.mockito.Mockito.when(id.variant()).thenReturn(variant==0?CdReleaseVariant.EUROPE:CdReleaseVariant.USA);
+            org.mockito.Mockito.when(id.file()).thenReturn(variant==1?CdNativeFile.R11A:CdNativeFile.R12A);
+            org.mockito.Mockito.when(id.domain()).thenReturn(variant==2?CdMmdImage.Domain.RELOCATED_COPY:CdMmdImage.Domain.ORIGINAL_WORD_RAM);
+            org.mockito.Mockito.when(id.stage()).thenReturn(variant==3?com.openggf.game.soniccd.CdStagePayload.R11A.stage():com.openggf.game.soniccd.CdStagePayload.R12A.stage());
+            assertThrows(IllegalArgumentException.class,()->com.openggf.game.soniccd.objects.CdTunnelPath.Assets.fromAct2Assets(foreign));
+            org.mockito.Mockito.verify(foreign,org.mockito.Mockito.never()).view(org.mockito.ArgumentMatchers.any(CdR12aProfile.Asset.class));
+        }
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }
