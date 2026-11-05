@@ -221,7 +221,7 @@ remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
 The resumed private controller route now completes Act1's Past Results and old
 programme exit, then admits actual Act2 Main10445, completes Title's queued art
-and control release, and returns ordinary Right through10866.
+and control release, and returns ordinary Right through11033.
 The [Act2 partial matrix](../architecture/validation/levels/scd-palmtree-panic-act2-present.md)
 records same-World FULL loading, native normal-load/fade/first-walk ownership,
 full/course replay, actual selected Sonic pixels and488-selected-upload retirement.
@@ -231,11 +231,14 @@ checks pass without skips, including Title/PLC2 release. The later56-case select
 qualifies Monitor/TimePost14, controller3 and metadata39 with zero skips; full/course
 10718→10719 and10762→10763 retain the natural post Init/Main cuts. Later scoped
 checks qualify Boulder/Platform22, Anton/Pata15 and Pata component36 without skips;
-positive10866 replays10763→10764,10778→10779 and10865→10866. The next measured10867
-stop is existing-but-unbound Tamabboh22. These are separately attributed scopes,
+positive10866 replays10763→10764,10778→10779 and10865→10866. These are separately attributed scopes,
 not a single green134/25 or whole-act certificate. A later49-case selection passes
 metadata48 and actual selected-Sonic EGL/pixel replay1 at10778/10866, without skips.
-Broader object binding, sustained
+The next165 selection passes164 cases, including all25 Tamabboh/Float World checks,
+and has one diagnostic observer error at the next unbound Checkpoint13/11034,
+with no skips. The changed positive route method then passes separately through
+11033 with full/course10866→10867 and11032→11033 replay. This is not a green165
+or new11033 pixel comparison. Checkpoint saved-data carry, broader object binding, sustained
 Act2 traversal, later acts and JP/EU parity are unfinished.
 The first-act matrix remains partial as well.
 

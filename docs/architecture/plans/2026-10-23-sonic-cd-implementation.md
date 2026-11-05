@@ -1,5 +1,44 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — live Tamabboh/Float and positive11033
+
+The genuine original-USA Act2 walk now includes cached Tamabboh22 and Float12
+over the existing source, terrain, Solid, Frame and current-art owners. Exact
+pending producer identity and completed prefix/ordinal checks run before the next
+publication, including skipped no-op Top calls, substituted reads and throwing
+wrappers. Private adapters retain full96/source64 and all existing owner cuts;
+Float prepares pool/Frame/ledger values before adoption. Dirty missile allocation,
+raw angle stores, conditional Y/X reads, FM order, Draw/reload and native failure
+prefixes remain source-owned. No effect replay, new capture or art bank is added.
+
+The165 selection is164passes,0failures,1diagnostic-observer error,0skips, at source
+`7fef7c1e68f79a30a3ae77cd98189657608560377d12bca44b3ab64eea2ac1a8`,
+02:57:09.674723–02:59:11.202455Z. New World25 and all139 retained regressions pass;
+normal precompile1m29s, admission0s. All165 literal/expanded identities, requested
+properties and ten fresh XML hashes were inspected; only20owned reports consumed.
+The observer returned11033 and stopped11034 at DYNAMIC_OBJECTS. Exact source walk
+plus retained failed partial pool identifies Checkpoint13/whole41/routine0. That
+pool is not a prior closed-cut oracle. The observer was removed from I, with its
+finite observations and original source retained externally. No green165 follows.
+
+The permanent positive method retains10866 and now replays10866→10867 and
+11032→11033 in both full and course scopes, with captures before forward work.
+Only that changed method was rerun:1test,0failures/errors/skips at source
+`98fcca6471fdf02a0d3fe5648e6603feb09e40257e5177d55560de5dde6f1529`,
+03:09:25.591719–03:09:32.334981Z,0s admission/33.556s test precompile. Exact
+identity/properties/XML hash checked and2own reports consumed. Its final Ready
+cut has the same source/Frame/World/epoch and native unlocked controls; it asserts
+success, not the next expected failure. Independent static review found no concrete
+P1/P2. The separately verified EGL pictures remain10778/10866, not11033.
+
+Next is Checkpoint13. Its actual saved half must survive the programme handoff;
+live auxiliary bytes alone cannot substitute for it. Data110 and the existing
+owner carry/World bridge are external unrun work. Animal24 images later in the
+failed pool already use the native presence/despawn binding, not a separately
+measured frontier. Later Act2/death/restart/regional/native-image parity remain
+open. External receipts and Root reconciliation are under the existing Downloads
+research root. Main remains untouched; no remote operation is authorized here.
+
 ## 5 November 2026 — later-route pixels and Tamabboh/Float source
 
 Actual original-USA R12A source inventory now has108 descriptors, retaining its

@@ -235,7 +235,7 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(0, module.act2LoadState().section().queue().headSource());
         assertTrue(frame.state().motion().centreX16_16() > (80 << 16), "Ordinary native Right moved beyond its native entry");
         replayNextRight(h, right);
-        step(h, right); // Positive endpoint10866; later unowned dispatch is not a permanent success condition.
+        step(h, right); // Retain the earlier positive10866 before crossing the newly admitted families.
         var pool=module.act2LoadState().placement().pool();
         assertEquals(0x1B,pool.slots().get(43-32).id());assertEquals(2,pool.slots().get(43-32).routine());
         assertEquals(0x3F,pool.slots().get(34-32).id());
@@ -249,6 +249,20 @@ class TestSonicCdAct2ControllerRoute {
         assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.ANTON_BODY));
         assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.PATA_BATA_BODY));
         assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.PLATFORM_BODY));
+        var world = h.mode().getWorldSession();
+        long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+        replayNextRight(h, right); // Actual10866->10867 Tamabboh/Float entry, no net extra frame.
+        for (int call = 10867; call <= 11032; call++) {
+            step(h, right);
+            assertLaterRouteOwners(h, frame, source, world, generation);
+            if (call == 10867) {
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.TAMABBOH_BODY));
+                assertTrue(module.act2LoadState().calls().contains(SonicCdGameModule.Act2LoadCall.FLOAT_BLOCK_BODY));
+            }
+        }
+        replayNextRight(h, right); // The last measured successful11032->11033 crossing, both replay scopes.
+        step(h, right);
+        assertLaterRouteOwners(h, frame, source, world, generation);
         assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, module.act2LoadState().calls().getLast());
         assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource()); assertFalse(frame.closed());
         assertInstanceOf(SonicCdPastDisplay.Ready.class, module.act2SelectedDisplay().projection());
@@ -256,7 +270,7 @@ class TestSonicCdAct2ControllerRoute {
         var full = registry.capture(); var course = registry.captureCourse();
         registry.restore(full); assertNativeCapture(before, h);
         registry.restoreCourse(course); assertNativeCapture(before, h);
-        System.out.printf("Controller-only Act2 Right returned10866; full/course10718->10719,10763->10764,10778->10779 and10865->10866, natural TimePosts/Boulder/Anton/Pata/Platform, controls clear and selected picture Ready; X=%d.%n",
+        System.out.printf("Controller-only Act2 Right returned11033; full/course10718->10719,10763->10764,10778->10779,10865->10866,10866->10867 and11032->11033, natural TimePosts/Boulder/Anton/Pata/Platform/Tamabboh/Float, controls clear and selected picture Ready; X=%d.%n",
                 frame.state().motion().centreX16_16() >>> 16);
     }
 

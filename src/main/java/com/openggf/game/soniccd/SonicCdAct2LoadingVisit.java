@@ -34,6 +34,11 @@ final class SonicCdAct2LoadingVisit {
     private final CdRing ring;
     private final CdSpring spring;
     private final CdAnimal animal;
+    private final CdTamabboh tamabboh;
+    private final CdFloatBlock floatBlock;
+    private transient TamabbohInvocation activeTamabboh;
+    private transient FloatInvocation activeFloat;
+    private boolean tamabbohPort, drawingTamabboh, floatPort, drawingFloat;
     private final CdAnton anton;
     private final CdPataBata pataBata;
     private transient AntonInvocation activeAnton;
@@ -179,6 +184,9 @@ final class SonicCdAct2LoadingVisit {
         var objectAssets=assets.objects();
         var sharedSolid=new CdSolidObject(CdPlayerMovement.fromStageSource(frame.stageSource()));
         var sharedTerrain=CdPlayerTerrain.fromStageTerrain(assets.terrain());
+        tamabboh=CdTamabboh.fromAct2Assets(placement,objectAssets,sharedTerrain,
+                this::commitTamabbohPrimaryAngle,this::readTamabbohPlayerWord,this::playTamabbohFm,this::drawTamabboh);
+        floatBlock=CdFloatBlock.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitFloatSolid,this::drawFloatBlock);
         anton=new CdAnton(placement,CdAnton.Assets.fromAct2Assets(objectAssets),sharedTerrain,this::commitAntonPrimaryAngle,this::drawAnton);
         pataBata=new CdPataBata(placement,CdPataBata.Assets.fromAct2Assets(objectAssets,player),this::drawPataBata);
         boulder=CdBoulder.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitBoulderSolid,this::drawBoulder);
@@ -2011,6 +2019,8 @@ final class SonicCdAct2LoadingVisit {
                 }
                 else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
                 else if(id==CdPataBata.OBJECT_ID) { runPataBata(whole); call(PATA_BATA_BODY); }
+                else if(id==CdTamabboh.OBJECT_ID) { runTamabboh(whole); call(TAMABBOH_BODY); }
+                else if(id==CdFloatBlock.OBJECT_ID) { runFloatBlock(whole); call(FLOAT_BLOCK_BODY); }
                 else if(id==CdBoulder.OBJECT_ID) { runBoulder(whole); call(BOULDER_BODY); }
                 else if(id==CdPlatform.OBJECT_ID) { runPlatform(whole); call(PLATFORM_BODY); }
                 else throw module.act2Boundary(SonicCdGameModule.Act2Boundary.DYNAMIC_OBJECTS);
@@ -2036,6 +2046,10 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ANTON.nativeAddress(),assets.objects().anton().mappings(),0,4));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA1.nativeAddress(),assets.objects().pataBataNormal().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2.nativeAddress(),assets.objects().pataBataDamaged().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohNormal().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohDamaged().mappings(),22,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH_MISSILE.nativeAddress(),assets.objects().tamabbohMissile().mappings(),0,4));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_FLOAT_BLOCK.nativeAddress(),assets.objects().floatBlock().mappings(),0,6));
         for(int root:new int[]{0,6,80}) roots.add(new CdObjectMappings.DeclaredTable(
                 CdR12aProfile.Asset.MAP_SPRING.nativeAddress(),assets.objects().springMappings(),root,3));
         var mappings=CdObjectMappings.declaredSourceViews(roots,List.of());
@@ -2047,6 +2061,8 @@ final class SonicCdAct2LoadingVisit {
                 if(activePlatform!=null) return readPlatformDrawSlot(ref);
                 if(activeAnton!=null) return readAntonDrawSlot(ref);
                 if(activePata!=null) return readPataDrawSlot(ref);
+                if(activeTamabboh!=null) return readTamabbohDrawSlot(ref);
+                if(activeFloat!=null) return readFloatDrawSlot(ref);
                 if(activeMonitor!=null) return readMonitorDrawSlot(ref);
                 return ref.wholeIndex()<32 ? readReservedDrawSlot(ref)
                         : activeSpring!=null ? readSpringDrawSlot(ref) : readRingDrawSlot(ref);
@@ -2059,6 +2075,8 @@ final class SonicCdAct2LoadingVisit {
                 if(activePlatform!=null) { writePlatformOnScreen(ref,value); return; }
                 if(activeAnton!=null) { writeAntonOnScreen(ref,value); return; }
                 if(activePata!=null) { writePataOnScreen(ref,value); return; }
+                if(activeTamabboh!=null) { writeTamabbohOnScreen(ref,value); return; }
+                if(activeFloat!=null) { writeFloatOnScreen(ref,value); return; }
                 if(activeMonitor!=null) { writeMonitorOnScreen(ref,value); return; }
                 if(ref.wholeIndex()<32) writeReservedOnScreen(ref,value);
                 else if(activeSpring!=null) writeSpringOnScreen(ref,value); else writeRingOnScreen(ref,value);
@@ -3305,13 +3323,18 @@ final class SonicCdAct2LoadingVisit {
 
 
 
+    private void requireTamabbohFloatIdle() {
+        if (activeTamabboh != null || activeFloat != null || tamabbohPort || drawingTamabboh || floatPort || drawingFloat)
+            throw new IllegalStateException("Another actual Act2 Tamabboh/Float source scope is active");
+    }
     private void requireAntonPataIdle() {
+        requireTamabbohFloatIdle();
         if(activeAnton!=null || activePata!=null || antonPort || drawingAnton || drawingPata)
             throw new IllegalStateException("Another actual Act2 enemy source scope is active");
     }
     private void requireBoulderPlatformIdle() {
         requireAntonPataIdle();
-        if (activeBoulder!=null || activePlatform!=null || boulderPort || drawingBoulder || platformPort || drawingPlatform)
+        if (activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder!=null || activePlatform!=null || boulderPort || drawingBoulder || platformPort || drawingPlatform)
             throw new IllegalStateException("Another actual Act2 family scope is active");
     }
     private final class BoulderInvocation {
@@ -3352,7 +3375,7 @@ final class SonicCdAct2LoadingVisit {
         module.requireAct2LoadingVisit(this);
         if (activeTitle != null || titlePort || drawingTitle || !runningObjects || servicing || activeDrain != null || activePrimary != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeBoulder != null || activeMonitor != null || reservedPort || drawingReserved
+                || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder != null || activeMonitor != null || reservedPort || drawingReserved
                 || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
                 || monitorPort || drawingMonitor || boulderPort || drawingBoulder || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdBoulder.OBJECT_ID
@@ -3712,7 +3735,7 @@ final class SonicCdAct2LoadingVisit {
         requireAntonPataIdle();
         module.requireAct2LoadingVisit(this);
         if (activeTitle != null || titlePort || drawingTitle || activeDrain != null || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null
-                || activeSpring != null || activePlatform != null || activeMonitor != null || activeBoulder != null || boulderPort || drawingBoulder || reservedPort || drawingReserved || ringPort || drawingRing
+                || activeSpring != null || activePlatform != null || activeMonitor != null || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder != null || boulderPort || drawingBoulder || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || monitorPort || drawingMonitor || queuePort
                 || whole < 32 || whole >= 128 || placement.pool().state(whole).id() != CdPlatform.OBJECT_ID
                 || values.phase() != BEGIN_LEVEL || drawQueue == null
@@ -3767,7 +3790,7 @@ final class SonicCdAct2LoadingVisit {
         requireAntonPataIdle();
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeTitle != null || titlePort || drawingTitle || activeDrain != null || activePlatform != invocation || activeMonitor != null || activeBoulder != null || boulderPort || drawingBoulder || monitorPort || drawingMonitor || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
+        if (activeTitle != null || titlePort || drawingTitle || activeDrain != null || activePlatform != invocation || activeMonitor != null || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder != null || boulderPort || drawingBoulder || monitorPort || drawingMonitor || !runningObjects || servicing || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || invocation.body != platform || invocation.sourceFrame != frame || invocation.sourceAssets != assets
                 || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
@@ -4128,7 +4151,7 @@ final class SonicCdAct2LoadingVisit {
         module.requireAct2LoadingVisit(this);
         if (!runningObjects || servicing || activePrimary != null || activeDrain != null || activeReserved != null
                 || activeRing != null || activeSpring != null || activePlatform != null || activePata != null
-                || activeBoulder != null || activeAnton != null
+                || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder != null || activeAnton != null
                 || activeMonitor != null || reservedPort || drawingReserved || ringPort || drawingRing
                 || springPort || drawingSpring || platformPort || drawingPlatform || drawingPata
                 || boulderPort || drawingBoulder
@@ -4166,7 +4189,7 @@ final class SonicCdAct2LoadingVisit {
         if (activeTitle != null || titlePort || drawingTitle || activeAnton != invocation || !runningObjects || servicing
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null || activeSpring != null
                 || activePlatform != null || activePata != null
-                || activeBoulder != null || activeMonitor != null
+                || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder != null || activeMonitor != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
                 || drawingPata
                 || boulderPort || drawingBoulder || monitorPort || drawingMonitor
@@ -4375,7 +4398,7 @@ final class SonicCdAct2LoadingVisit {
         module.requireAct2LoadingVisit(this);
         if (!runningObjects || servicing || activePrimary != null || activeDrain != null
                 || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
-                || activeMonitor != null || activePata != null || activeBoulder != null || activeAnton != null
+                || activeMonitor != null || activePata != null || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder != null || activeAnton != null
                 || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
                 || platformPort || drawingPlatform
                 || monitorPort || drawingMonitor || drawingPata || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || whole < 32 || whole >= 128
@@ -4403,7 +4426,7 @@ final class SonicCdAct2LoadingVisit {
     private void verifyPataInvocation(PataInvocation invocation) {
         module.requireAct2LoadingVisit(this);
         var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (activeAnton!=null || antonPort || drawingAnton || activeBoulder!=null || boulderPort || drawingBoulder
+        if (activeAnton!=null || antonPort || drawingAnton || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeFloat != null || floatPort || drawingFloat || activeBoulder!=null || boulderPort || drawingBoulder
                 || activeTitle != null || titlePort || drawingTitle || invocation == null || activePata != invocation || !runningObjects || servicing
                 || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
                 || activeSpring != null || activePlatform != null || activeMonitor != null
@@ -4726,6 +4749,894 @@ final class SonicCdAct2LoadingVisit {
         if (!result.state().equals(invocation.pool.state(invocation.whole)) || !result.effects().equals(effects)
                 || result.converted() != conversion || result.deleted() != delete)
             throw new IllegalStateException("Pata-Bata returned metadata disagrees with its actual completed native branch");
+    }
+
+
+
+
+    private final class TamabbohInvocation {
+        private final CdTamabboh body = tamabboh;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR12aTerrainAssets sourceAssets = assets;
+        private final Object stageSource = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final CdPlayerBody.State player = frame.state();
+        private final CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private final CdObjectPlacementRuntime.Status placementStatus = placement.status();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.captureAct2Scroll();
+        private Values expectedValues = values;
+        private final CdObjectPlacementRuntime.Snapshot before = placement.capture();
+        private final Set<Object> consumed = Collections.newSetFromMap(new IdentityHashMap<>());
+        private List<CdTamabboh.PrimaryAngleCommitted> angleReceipts = List.of();
+        private List<CdTamabboh.PlayerWordReadReturned> playerReceipts = List.of();
+        private List<CdTamabboh.FmPlayed> fmReceipts = List.of();
+        private CdObjectPool.Snapshot drawCut;
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final CdTamabboh.Globals globals;
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdObjectState expectedRangeX, drawSource;
+        private boolean drawn, screenCleared, sounded;
+        private TamabbohInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole);
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg = presentation.act2ForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(fg.cameraX(), fg.cameraYWord());
+            var environment = frame.environment(); var movement = environment.movement();
+            globals = new CdTamabboh.Globals(values.globals().retainedDev().goodFuture(),
+                    movement.gates().timeZone(), movement.gates().timeWarpDirection(),
+                    environment.globals().debugMode(), camera.xWord(), movement.globals().primaryAngle());
+        }
+    }
+
+    private void runTamabboh(int whole) {
+        module.requireAct2LoadingVisit(this);
+        if (activeTitle != null || titlePort || drawingTitle) throw new IllegalStateException("Actual Title owns this cut");
+        if (!runningObjects || servicing || activePrimary != null || activeDrain != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeFloat != null || activePata != null || activeMonitor != null
+                || activeTamabboh != null || activeBoulder != null || activeAnton != null || reservedPort || drawingReserved || ringPort || drawingRing
+                || springPort || drawingSpring || platformPort || drawingPlatform || floatPort || drawingFloat
+                || drawingPata || monitorPort || drawingMonitor
+                || tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || whole < 32 || whole >= 128
+                || placement.pool().state(whole).id() != CdTamabboh.OBJECT_ID || values.phase() != BEGIN_LEVEL
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached Act2 Tamabboh dispatch");
+        var invocation = new TamabbohInvocation(whole); activeTamabboh = invocation;
+        try {
+            var result = tamabboh.run(whole, invocation.globals);
+            verifyTamabbohInvocation(invocation); validateTamabbohMutation(invocation, false);
+            if (!result.effects().stream().filter(CdTamabboh.PrimaryAngleCommitted.class::isInstance).toList().equals(invocation.angleReceipts)
+                    || !result.effects().stream().filter(CdTamabboh.PlayerWordReadReturned.class::isInstance).toList().equals(invocation.playerReceipts)
+                    || !result.effects().stream().filter(CdTamabboh.FmPlayed.class::isInstance).toList().equals(invocation.fmReceipts))
+                throw new IllegalStateException("Tamabboh completed observations lack actual scalar/read/FM receipts");
+            if (!result.state().equals(invocation.pool.state(whole)))
+                throw new IllegalStateException("Tamabboh result differs from its actual completed physical image");
+            boolean conversion = invocation.entry.subtype() != 1 && invocation.globals.goodFuture() != 0
+                    && (invocation.globals.timeZone() != 1 || invocation.entry.subtype() != 0);
+            if (conversion ? invocation.drawn : !invocation.drawn || !invocation.screenCleared)
+                throw new IllegalStateException("Tamabboh returned without its actual native DrawObject cut");
+        } catch (RuntimeException | Error original) {
+            try { verifyTamabbohInvocation(invocation); validateTamabbohMutation(invocation, true); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { activeTamabboh = null; }
+    }
+
+    private void validateTamabbohCompletedCallbacks(TamabbohInvocation i) {
+        if (!tamabboh.matchesCurrentCallbackPrefix(i.angleReceipts,i.playerReceipts,i.fmReceipts))
+            throw new IllegalStateException("Tamabboh skipped or substituted a prior actual callback publication");
+    }
+
+    /** Other rows are byte-exact, except the two real first-free Fire children and their native dirty-byte stores. */
+    private void validateTamabbohOtherImages(TamabbohInvocation i, boolean failure) {
+        var expected = new ArrayList<>(i.before.pool().slots());
+        if (i.entry.subtype() == 0 && i.entry.routine() == 10) {
+            int direction = 0;
+            for (var old : i.before.pool().slots()) {
+                if (old.id() != 0 || direction >= 2) continue;
+                var child = old.moveByte(CdObjectState.ByteField.ID,CdTamabboh.OBJECT_ID)
+                        .moveByte(CdObjectState.ByteField.SUBTYPE,1).moveWord(CdObjectState.WordField.TILE,i.entry.word(CdObjectState.WordField.TILE))
+                        .moveByte(CdObjectState.ByteField.PRIORITY,i.entry.unsignedByte(CdObjectState.ByteField.PRIORITY)+1)
+                        .moveWord(CdObjectState.WordField.X,i.entry.centreX()).moveWord(CdObjectState.WordField.Y,i.entry.centreY()-10)
+                        .moveByte(CdObjectState.ByteField.TAMABBOH_MISSILE_DIRECTION,direction++ == 0 ? 0 : 255);
+                var actual = i.pool.state(old.identity().wholeIndex());
+                // Before the synchronous FM return, neither child has been touched. Afterwards both stores are pure.
+                if (!actual.equals(child) && !(actual.equals(old) && (!i.drawn || failure)))
+                    throw new IllegalStateException("Tamabboh Fire changed a first-free dirty image beyond its exact native stores");
+                expected.set(old.identity().wholeIndex()-32,actual);
+            }
+        }
+        expected.set(i.whole-32,i.pool.state(i.whole));
+        if (!i.pool.capture().slots().equals(expected))
+            throw new IllegalStateException("Tamabboh changed an unrelated full96 physical row");
+    }
+
+    private void validateTamabbohMutation(TamabbohInvocation i, boolean failure) {
+        validateTamabbohOtherImages(i,failure);
+        var actual=i.pool.state(i.whole); var bank=placement.capture().savedFlags();
+        boolean conversion=i.entry.subtype()!=1 && i.globals.goodFuture()!=0
+                && (i.globals.timeZone()!=1 || i.entry.subtype()!=0);
+        if(conversion) {
+            byte[] zero=new byte[64]; byte[] x=zero.clone(), xy;
+            x[8]=(byte)(i.entry.centreX()>>>8);x[9]=(byte)i.entry.centreX();xy=x.clone();
+            xy[12]=(byte)(i.entry.centreY()>>>8);xy[13]=(byte)i.entry.centreY();byte[] result=xy.clone();result[0]=0x18;
+            boolean prefix=failure && (actual.equals(i.entry) || Arrays.equals(actual.copyBytes(),zero)
+                    || Arrays.equals(actual.copyBytes(),x) || Arrays.equals(actual.copyBytes(),xy));
+            if(!sameBytes(bank,i.before.savedFlags()) || i.drawn || !prefix && !Arrays.equals(actual.copyBytes(),result))
+                throw new IllegalStateException("Tamabboh conversion crossed its exact Delete64/X/Y/ID18 prefix");
+            return;
+        }
+        if(!i.drawn) {
+            if(!sameBytes(bank,i.before.savedFlags())) throw new IllegalStateException("Tamabboh pre-Draw changed saved bank");
+            if(i.entry.subtype()==1 && i.entry.routine()==2 && Arrays.equals(actual.copyBytes(),new byte[64])) return;
+            byte[] before=i.entry.copyBytes(),after=actual.copyBytes();
+            for(int at=0;at<64;at++) {
+                int mask=(at>=2&&at<=15 || at>=0x16&&at<=0x1E || at==0x20 || at==0x24 || at>=0x2A&&at<=0x39)?255
+                        :at==1?0x87:at==0x22?1:0;
+                if(((before[at]^after[at])&~mask&255)!=0)
+                    throw new IllegalStateException("Tamabboh changed an unowned full64 source byte "+at);
+            }
+            return;
+        }
+        var source=i.drawSource;
+        if(i.entry.subtype()==1) {
+            if(!actual.equals(source) || !sameBytes(bank,i.before.savedFlags()) || i.drawCut==null
+                    || !i.pool.capture().slots().equals(i.drawCut.slots()))
+                throw new IllegalStateException("Tamabboh missile changed its native post-Draw source/full96/bank");
+            return;
+        }
+        boolean outside=source.signedByte(CdObjectState.ByteField.SPRITE_FLAGS)>=0
+                && (((source.word(CdObjectState.WordField.TAMABBOH_ANCHOR_X)&0xFF80)
+                -((i.camera.xWord()-0x80)&0xFF80))&0xFFFF)>0x280;
+        boolean delete=outside || (i.globals.timeZone()&0x80)!=0;
+        byte[] saved=i.before.savedFlags().copy();boolean owned=true;
+        if(delete && source.savedFlagsId()!=0) {
+            int period=i.globals.timeZone()&0x7F;
+            if((i.globals.timeZone()&0x80)!=0){period=(short)((period-(byte)i.globals.timeWarpDirection())&65535);period=period<0?0:Math.min(period,2);}
+            int address=2+3*source.savedFlagsId()+period;owned=address>=2&&address<saved.length;
+            if(owned)saved[address]&=0x7F;
+        }
+        if(failure && actual.equals(source) && (sameBytes(bank,i.before.savedFlags()) || owned&&Arrays.equals(bank.copy(),saved)))return;
+        if(!owned&&!failure || !Arrays.equals(actual.copyBytes(),delete&&owned?new byte[64]:source.copyBytes())
+                || !Arrays.equals(bank.copy(),saved))
+            throw new IllegalStateException("Tamabboh return/failure changed its exact source/saved despawn tail");
+    }
+
+    private TamabbohInvocation requireTamabbohInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeTamabboh;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128)
+            throw new IllegalStateException("No actual cached Tamabboh callback at this physical pointer");
+        verifyTamabbohInvocation(invocation); return invocation;
+    }
+    private void verifyTamabbohInvocation(TamabbohInvocation invocation) {
+        module.requireAct2LoadingVisit(this);
+        if (activeTitle != null || titlePort || drawingTitle) throw new IllegalStateException("Actual Title owns this cut");
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeTamabboh != invocation || activeBoulder != null || boulderPort || drawingBoulder || activeAnton != null || antonPort || drawingAnton || !runningObjects || servicing
+                || activePrimary != null || activeDrain != null || activeReserved != null || activeRing != null
+                || activeSpring != null || activePlatform != null || activeFloat != null || activePata != null
+                || activeMonitor != null || reservedPort || drawingReserved
+                || ringPort || drawingRing || springPort || drawingSpring || platformPort || drawingPlatform
+                || floatPort || drawingFloat || drawingPata || monitorPort || drawingMonitor
+                || invocation.body != tamabboh || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.stageSource != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || invocation.world != mode.getWorldSession()
+                || invocation.generation != mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || invocation.expectedValues != values || values.phase() != BEGIN_LEVEL || invocation.expectedSounds != sounds
+                || !placement.status().equals(invocation.placementStatus) || !presentation.sameAct2Scroll(invocation.scroll)
+                || frame.state() != invocation.player || !frame.captureActor().equals(invocation.actor)
+                || !frame.captureShared().equals(invocation.shared))
+            throw new IllegalStateException("Tamabboh changed another owner or retained a stale actual World/Frame cut");
+    }
+    private CdObjectState validateTamabbohCut(TamabbohInvocation invocation, CdObjectPool.Snapshot cut,
+                                             CdObjectState source) {
+        verifyTamabbohInvocation(invocation); invocation.pool.validateRestore(cut);
+        var live = invocation.pool.state(invocation.whole);
+        if (live.id() != CdTamabboh.OBJECT_ID || !live.equals(source)
+                || source.identity().wholeIndex() != invocation.whole
+                || !cut.slots().get(invocation.whole - 32).equals(source)
+                || !invocation.pool.capture().slots().equals(cut.slots()))
+            throw new IllegalStateException("Tamabboh port differs from its actual same-owner full96/source cut");
+        validateTamabbohOtherImages(invocation, false);
+        if (!sameBytes(placement.capture().savedFlags(),invocation.before.savedFlags()))
+            throw new IllegalStateException("Tamabboh changed saved flags before its native despawn tail");
+        return live;
+    }
+    private void verifyTamabbohCallback(TamabbohInvocation invocation, CdObjectPlacementRuntime.Snapshot before) {
+        verifyTamabbohInvocation(invocation);
+        var now = placement.capture();
+        if (!now.status().equals(before.status()) || !now.pool().slots().equals(before.pool().slots())
+                || !sameBytes(now.savedFlags(), before.savedFlags()))
+            throw new IllegalStateException("Tamabboh read/angle/FM callback changed the full96 pool or saved/placement state");
+    }
+    private void verifyTamabbohCallbackFailure(TamabbohInvocation invocation,
+                                              CdObjectPlacementRuntime.Snapshot before, Throwable original) {
+        try { verifyTamabbohCallback(invocation, before); }
+        catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+    }
+
+    /** Every reached floor store uses this exact current primary byte; no player/state aggregate is written. */
+    private void commitTamabbohPrimaryAngle(CdTamabboh.PrimaryAngleCall call) {
+        Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
+        if (!tamabboh.isCurrentPrimaryAngleCall(call) || invocation.consumed.contains(call))
+            throw new IllegalStateException("Tamabboh callback lacks its actual unconsumed producer call");
+        validateTamabbohCompletedCallbacks(invocation);
+        if (tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.expectedRangeX != null)
+            throw new IllegalStateException("Tamabboh angle is outside its genuine floor call");
+        var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
+        if ((live.subtype() == 1 ? live.routine() != 2 : live.routine() != 2 && live.routine() != 4)
+                || frame.environment().movement().globals().primaryAngle() != call.expectedPrimaryAngle())
+            throw new IllegalStateException("Tamabboh angle differs from its reached routine/current Frame byte");
+        var before = placement.capture();
+        var readyValues = preparedMonitorValues(TAMABBOH_PRIMARY_ANGLE);
+        var receiptList = new ArrayList<>(invocation.angleReceipts);
+        receiptList.add(new CdTamabboh.PrimaryAngleCommitted(call.expectedPrimaryAngle(),call.value()));
+        var readyReceipts = List.copyOf(receiptList);
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(),
+                monitorAngleEnvironment(invocation.shared.environment(), call.value()), invocation.shared.artState(),
+                invocation.shared.paused(), invocation.shared.vIntClock());
+        tamabbohPort = true;
+        try {
+            verifyTamabbohCallback(invocation, before);
+            invocation.consumed.add(call);
+            frame.applyObjectPrimaryAngle(call.value()); invocation.shared = readyShared;
+            values = readyValues; invocation.expectedValues = readyValues;
+            invocation.angleReceipts = readyReceipts;
+            verifyTamabbohCallback(invocation, before);
+        } catch (RuntimeException | Error original) {
+            verifyTamabbohCallbackFailure(invocation, before, original); throw original;
+        } finally { tamabbohPort = false; }
+    }
+    private int readTamabbohPlayerWord(CdTamabboh.PlayerReadCall call) {
+        Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
+        if (!tamabboh.isCurrentPlayerReadCall(call) || invocation.consumed.contains(call))
+            throw new IllegalStateException("Tamabboh callback lacks its actual unconsumed producer call");
+        validateTamabbohCompletedCallbacks(invocation);
+        if (tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || invocation.drawn)
+            throw new IllegalStateException("Tamabboh player read is outside its actual range call");
+        var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
+        if (live.routine() != 4 || live.subtype() != 0 || live.word(CdObjectState.WordField.TAMABBOH_COOLDOWN) != 0
+                || frame.environment().globals().debugMode() != 0)
+            throw new IllegalStateException("Tamabboh player read is not its reached Main range cut");
+        var before = placement.capture();
+        var readyValues = preparedMonitorValues(call.field() == CdTamabboh.PlayerField.Y_WORD ? TAMABBOH_PLAYER_Y : TAMABBOH_PLAYER_X);
+        tamabbohPort = true;
+        try {
+            int value;
+            if (call.field() == CdTamabboh.PlayerField.Y_WORD) {
+                if (invocation.expectedRangeX != null) throw new IllegalStateException("Tamabboh repeated Y before its reached X read");
+                value = invocation.player.motion().centreY16_16() >>> 16;
+                invocation.expectedRangeX = ((value - live.centreY() + 0x50) & 0xFFFF) < 0xA0 ? live : null;
+            } else {
+                if (invocation.expectedRangeX == null || !invocation.expectedRangeX.equals(live))
+                    throw new IllegalStateException("Tamabboh X read did not follow its actual in-range Y read");
+                value = invocation.player.motion().centreX16_16() >>> 16; invocation.expectedRangeX = null;
+            }
+            var receiptList = new ArrayList<>(invocation.playerReceipts);
+            receiptList.add(new CdTamabboh.PlayerWordReadReturned(call.field(),value)); var readyReceipts = List.copyOf(receiptList);
+            invocation.consumed.add(call); values = readyValues; invocation.expectedValues = readyValues;
+            invocation.playerReceipts = readyReceipts;
+            verifyTamabbohCallback(invocation, before); return value;
+        } catch (RuntimeException | Error original) {
+            verifyTamabbohCallbackFailure(invocation, before, original); throw original;
+        } finally { tamabbohPort = false; }
+    }
+    private void playTamabbohFm(CdTamabboh.FmCall call) {
+        Objects.requireNonNull(call); var invocation = requireTamabbohInvocation(placement.pool(), call.expectedSource().identity().wholeIndex());
+        if (!tamabboh.isCurrentFmCall(call) || invocation.consumed.contains(call))
+            throw new IllegalStateException("Tamabboh callback lacks its actual unconsumed producer call");
+        validateTamabbohCompletedCallbacks(invocation);
+        if (tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || invocation.drawn || invocation.sounded)
+            throw new IllegalStateException("Tamabboh FM lacks its actual first Fire request");
+        var live = validateTamabbohCut(invocation, call.callCut(), call.expectedSource());
+        if (live.routine() != 4 || live.subtype() != 0 || live.word(CdObjectState.WordField.TAMABBOH_COOLDOWN) != 0x78
+                || live.unsignedByte(CdObjectState.ByteField.ANIMATION) != 0 || live.signedByte(CdObjectState.ByteField.SPRITE_FLAGS) >= 0
+                || call.sound() != CdTamabboh.FmSound.FM_A0
+                || invocation.pool.findObjSlot().orElse(-1) != call.firstFreeWholeIndex()
+                || invocation.pool.state(call.firstFreeWholeIndex()).id() != 0)
+            throw new IllegalStateException("Tamabboh FM_A0 lacks its actual parent prefix/untouched first-free candidate");
+        var before = placement.capture(); var ledger = new ArrayList<>(sounds);
+        ledger.add(new SonicCdGameModule.PastTamabbohFm(call.sound())); var ready = List.copyOf(ledger);
+        var readyValues = preparedMonitorValues(TAMABBOH_FM);
+        var receiptList = new ArrayList<>(invocation.fmReceipts);
+        receiptList.add(new CdTamabboh.FmPlayed(call.firstFreeWholeIndex(),call.sound())); var readyReceipts = List.copyOf(receiptList);
+        tamabbohPort = true;
+        try {
+            verifyTamabbohCallback(invocation, before);
+            invocation.consumed.add(call); values = readyValues; invocation.expectedValues = readyValues;
+            invocation.fmReceipts = readyReceipts;
+            sounds = ready; invocation.expectedSounds = ready; invocation.sounded = true;
+            verifyTamabbohCallback(invocation, before);
+        } catch (RuntimeException | Error original) {
+            verifyTamabbohCallbackFailure(invocation, before, original); throw original;
+        } finally { tamabbohPort = false; }
+    }
+
+    private void drawTamabboh(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireTamabbohInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (tamabbohPort || drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || queuePort || invocation.drawn || !identity.equals(invocation.entry.identity()))
+            throw new IllegalStateException("Tamabboh DrawObject lacks its actual once-only physical source");
+        if (!tamabboh.isCurrentDrawCall(pool,identity)) throw new IllegalStateException("Tamabboh Draw lacks its actual producer source prefix");
+        validateTamabbohCompletedCallbacks(invocation);
+        validateTamabbohOtherImages(invocation, false);
+        var current = pool.state(invocation.whole);
+        invocation.drawCut = pool.capture();
+        boolean clearedMissile = invocation.entry.subtype() == 1 && invocation.entry.routine() == 2
+                && current.id() == 0 && Arrays.equals(current.copyBytes(), new byte[CdObjectState.BYTE_SIZE]);
+        if (current.id() != CdTamabboh.OBJECT_ID && !clearedMissile)
+            throw new IllegalStateException("Only the genuine cleared missile may draw its live ID0 image");
+        invocation.drawSource = current; invocation.drawn = true; drawingTamabboh = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("Tamabboh DrawObject did not clear bit7 exactly once");
+            verifyTamabbohInvocation(invocation);
+        } catch (RuntimeException | Error original) {
+            try { verifyTamabbohInvocation(invocation); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { drawingTamabboh = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readTamabbohDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireTamabbohInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || tamabbohPort || queuePort || !invocation.drawn)
+            throw new IllegalStateException("No actual collecting Tamabboh queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyTamabbohCallback(invocation, before); return live;
+        } catch (RuntimeException | Error original) {
+            verifyTamabbohCallbackFailure(invocation, before, original); throw original;
+        } finally { queuePort = false; }
+    }
+    private void writeTamabbohOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireTamabbohInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingTamabboh || boulderPort || drawingBoulder || antonPort || drawingAnton || tamabbohPort || queuePort || onScreen || invocation.screenCleared || !invocation.drawn)
+            throw new IllegalStateException("Only actual Tamabboh DrawObject may clear bit7 once");
+        var before = placement.capture(); var source = invocation.pool.state(invocation.whole);
+        if (!source.equals(invocation.drawSource)) throw new IllegalStateException("Tamabboh changed its DrawObject source before BCLR7");
+        var next = source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() & 0x7F);
+        var ready = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(ready);
+        queuePort = true;
+        try {
+            verifyTamabbohCallback(invocation, before);
+            invocation.pool.write(next); invocation.screenCleared = true; invocation.drawSource = next;
+            invocation.drawCut = ready;
+            verifyTamabbohInvocation(invocation); var now = placement.capture();
+            if (!now.pool().slots().equals(ready.slots()) || !sameBytes(now.savedFlags(), before.savedFlags())
+                    || !now.status().equals(before.status()))
+                throw new IllegalStateException("Tamabboh DrawObject changed more than its exact source BCLR7 byte");
+        } catch (RuntimeException | Error original) {
+            try { verifyTamabbohInvocation(invocation); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { queuePort = false; }
+    }
+
+    private enum FloatSite { SOLID, DRAW, RETURN, FAILURE }
+    private final class FloatInvocation {
+        private final CdFloatBlock body = floatBlock;
+        private final CdPlayerFrameRuntime sourceFrame = frame;
+        private final CdR12aTerrainAssets sourceAssets = assets;
+        private final Object sourceStage = frame.stageSource();
+        private final CdObjectPool pool = placement.pool();
+        private final CdObjectDrawQueue queue = drawQueue;
+        private final Object world;
+        private final long generation;
+        private final int whole;
+        private final CdObjectState entry;
+        private final Values base = values;
+        private final CdObjectPlacementRuntime.Status status = placement.status();
+        private final CdAssetBytes savedFlags = placement.capture().savedFlags();
+        private final SonicCdPlayerPresentation.ScrollCapture scroll = presentation.captureAct2Scroll();
+        private final CdObjectDrawQueue.CameraWords camera;
+        private CdPlayerFrameRuntime.ActorState actor = frame.captureActor();
+        private CdPlayerFrameRuntime.SharedState shared = frame.captureShared();
+        private Values expectedValues = base;
+        private List<SonicCdGameModule.PastSound> expectedSounds = sounds;
+        private CdObjectPool.Snapshot currentPool = pool.capture();
+        private CdObjectState expectedSource;
+        private CdObjectPool.Snapshot lastCut;
+        private CdSolidObject.Outcome adoptedOutcome;
+        private List<CdSolidObject.Result> completed = List.of();
+        private int ordinal;
+        private boolean falling, stopped, drawn, screenCleared, bodyVerified, noDraw, tailArmed, animationStopped;
+        private FloatInvocation(int whole) {
+            this.whole = whole; entry = pool.state(whole); expectedSource = entry;
+            var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world = mode.getWorldSession(); generation = mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var foreground = presentation.act2ForegroundImage();
+            camera = new CdObjectDrawQueue.CameraWords(foreground.cameraX(), foreground.cameraYWord());
+        }
+    }
+
+    private void runFloatBlock(int whole) {
+        module.requireAct2LoadingVisit(this);
+        if (activeTitle != null || titlePort || drawingTitle) throw new IllegalStateException("Actual Title owns this cut");
+        if (!runningObjects || servicing || activeDrain != null || activePrimary != null
+                || activeReserved != null || activeRing != null || activeSpring != null || activePlatform != null
+                || activeMonitor != null || activeFloat != null || activePata != null || activeAnton != null || antonPort || drawingAnton || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeBoulder != null || boulderPort || drawingBoulder || drawingPata
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || monitorPort || drawingMonitor
+                || floatPort || drawingFloat || queuePort || whole < 32 || whole >= 128
+                || placement.pool().state(whole).id() != CdFloatBlock.OBJECT_ID || values.phase() != BEGIN_LEVEL
+                || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual live Act2 FloatBlock invocation entry");
+        var invocation = new FloatInvocation(whole); activeFloat = invocation;
+        try {
+            var env = frame.environment(); var gates = env.movement().gates();
+            var result = floatBlock.run(whole, new CdFloatBlock.Globals(gates.timeZone(),
+                            invocation.camera.xWord(), invocation.camera.yWord()),
+                    new CdFloatBlock.SolidInputs(springPlayer(),
+                            new CdSolidObject.Gates(env.globals().debugMode(), gates.miniSonic()), springGlobals()));
+            verifyFloatInvocation(invocation); validateFloatSource(invocation, FloatSite.RETURN);
+            if (invocation.stopped || !result.state().equals(invocation.pool.state(whole)))
+                throw new IllegalStateException("FloatBlock returned without its exact actual source image");
+            verifyFloatResult(invocation, result);
+        } catch (RuntimeException | Error failure) {
+            if (invocation.adoptedOutcome instanceof CdSolidObject.NativeStopped nativeStop) {
+                var original = nativeStop.stop().originalException();
+                if (failure != original) original.addSuppressed(failure);
+                verifyFloatFailure(original); throw original;
+            }
+            verifyFloatFailure(failure); throw failure;
+        } finally { activeFloat = null; }
+    }
+
+    private FloatInvocation requireFloatInvocation(CdObjectPool pool, int whole) {
+        var invocation = activeFloat;
+        if (invocation == null || invocation.pool != pool || pool != placement.pool() || invocation.whole != whole
+                || whole < 32 || whole >= 128 || drawQueue == null
+                || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING)
+            throw new IllegalStateException("No actual cached FloatBlock callback at this physical pointer");
+        verifyFloatInvocation(invocation); return invocation;
+    }
+
+    private void verifyFloatInvocation(FloatInvocation invocation) {
+        module.requireAct2LoadingVisit(this);
+        if (activeTitle != null || titlePort || drawingTitle) throw new IllegalStateException("Actual Title owns this cut");
+        var mode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (activeFloat != invocation || activePata != null || drawingPata || activeAnton != null || antonPort || drawingAnton || activeTamabboh != null || tamabbohPort || drawingTamabboh || activeBoulder != null || boulderPort || drawingBoulder || !runningObjects || servicing || activeDrain != null
+                || activePrimary != null || activeReserved != null || activeRing != null || activeSpring != null
+                || activePlatform != null || activeMonitor != null
+                || reservedPort || drawingReserved || ringPort || drawingRing || springPort || drawingSpring
+                || platformPort || drawingPlatform || monitorPort || drawingMonitor
+                || invocation.body != floatBlock || invocation.sourceFrame != frame || invocation.sourceAssets != assets
+                || invocation.sourceStage != frame.stageSource() || invocation.pool != placement.pool()
+                || invocation.queue != drawQueue || drawQueue == null || drawQueue.phase() != CdObjectDrawQueue.Phase.COLLECTING
+                || mode.getWorldSession() != invocation.world
+                || mode.getLevelManager().getCompletedProductionLoadGeneration() != invocation.generation
+                || !frame.captureActor().equals(invocation.actor) || !frame.captureShared().equals(invocation.shared)
+                || !placement.status().equals(invocation.status) || !presentation.sameAct2Scroll(invocation.scroll)
+                || !sameBytes(placement.capture().savedFlags(), invocation.savedFlags)
+                || !sameBytes(values.hudObjects(), invocation.base.hudObjects())
+                || sounds != invocation.expectedSounds || values != invocation.expectedValues || values.phase() != BEGIN_LEVEL)
+            throw new IllegalStateException("FloatBlock changed another owner or retained a stale actual World/Frame cut");
+    }
+
+    private void verifyFloatFailure(Throwable original) {
+        try {
+            if (activeFloat != null) {
+                verifyFloatInvocation(activeFloat); validateFloatSource(activeFloat, FloatSite.FAILURE);
+            }
+        } catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private boolean matchesFloatPool(FloatInvocation invocation, CdObjectState source) {
+        return CdObjectPool.overlay(invocation.currentPool, List.of(source)).slots().equals(invocation.pool.capture().slots());
+    }
+    private void acceptFloatPool(FloatInvocation invocation, CdObjectState source) {
+        var ready = CdObjectPool.overlay(invocation.currentPool, List.of(source));
+        invocation.pool.validateRestore(ready);
+        if (!ready.slots().equals(invocation.pool.capture().slots()))
+            throw new IllegalStateException("FloatBlock changed bytes beyond its exact reached a0 prefix/full96 cut");
+        invocation.currentPool = ready; invocation.expectedSource = source;
+    }
+    private CdObjectState floatDeletedImage(FloatInvocation invocation, CdObjectState source) {
+        var actual = invocation.pool.state(invocation.whole);
+        if (!actual.identity().equals(source.identity()) || !Arrays.equals(actual.copyBytes(), new byte[CdObjectState.BYTE_SIZE]))
+            throw new IllegalStateException("FloatBlock DeleteObject did not clear its entire actual64 image");
+        return actual;
+    }
+    private boolean floatOutsideWindow(FloatInvocation invocation, CdObjectState source) {
+        return (((source.centreX() & 0xFF80) - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280;
+    }
+
+    /** Source instruction stores only. No Solid, Movement, terrain, animator or other producer is executed here. */
+    private CdObjectState floatSolidSource(FloatInvocation invocation) {
+        var source = invocation.expectedSource;
+        if (invocation.ordinal == 0) {
+            int routine = invocation.entry.routine();
+            if ((routine & 1) != 0 || routine > 10)
+                throw new IllegalStateException("FloatBlock Top does not belong to this native routine");
+            if (routine == 0) {
+                source = source.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                        .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, source.spriteFlags() | 4)
+                        .moveLong(CdObjectState.LongField.MAPPINGS,
+                                view(CdR12aProfile.Asset.MAP_SPR_FLOAT_BLOCK).range().nativeAddress());
+                if (source.subtype2() != 0)
+                    throw new IllegalStateException("FloatBlock Top advanced past a missing Init tile read");
+                var tiles = view(CdR12aProfile.Asset.OBJECT_TILE_IDS).bytes();
+                int target = (short) tiles.unsignedWord(CdFloatBlock.TILE_SELECTOR * 2);
+                int end = CdObjectTileIds.endOfBody(tiles, CdFloatBlock.TILE_SELECTOR);
+                if (target < 0 || target > end - 2)
+                    throw new IllegalStateException("FloatBlock Init selected an absent declared tile word");
+                source = source.moveWord(CdObjectState.WordField.TILE, tiles.unsignedWord(target))
+                        .moveByte(CdObjectState.ByteField.PRIORITY, 1).moveByte(CdObjectState.ByteField.WIDTH, 12)
+                        .moveByte(CdObjectState.ByteField.Y_RADIUS, 12).moveByte(CdObjectState.ByteField.MAP_FRAME, 5);
+            } else if (routine == 8) source = source.moveByte(CdObjectState.ByteField.ANIMATION, 0);
+        } else if (invocation.ordinal == 2) {
+            if ((invocation.entry.routine() != 0 && invocation.entry.routine() != 2)
+                    || invocation.shared.environment().movement().gates().timeZone() != 2 || (source.flags() & 8) == 0)
+                throw new IllegalStateException("FloatBlock third Top lacks Main's actual StartFall branch");
+            source = source.addByte(CdObjectState.ByteField.ROUTINE, 2);
+        } else if (invocation.ordinal != 1 && (invocation.ordinal != 3 || !invocation.falling))
+            throw new IllegalStateException("FloatBlock Top ordinal is outside the actual native pair/fall-through");
+        return source;
+    }
+
+    /** Validate complete live images at native cuts, including same-value stores, no-Draw paths and failed reads. */
+    private void validateFloatSource(FloatInvocation invocation, FloatSite site) {
+        boolean failure = site == FloatSite.FAILURE;
+        var actual = invocation.pool.state(invocation.whole);
+        if (failure && matchesFloatPool(invocation, invocation.expectedSource)) return;
+        if (invocation.stopped) throw new IllegalStateException("Stopped FloatBlock executed later source work");
+        if (site == FloatSite.SOLID) {
+            if (invocation.drawn || invocation.bodyVerified)
+                throw new IllegalStateException("FloatBlock Top follows its returned body");
+            var source = floatSolidSource(invocation);
+            acceptFloatPool(invocation, source);
+            if (invocation.ordinal == 2) invocation.falling = true;
+            return;
+        }
+        if (invocation.drawn || invocation.bodyVerified) {
+            var source = invocation.expectedSource;
+            if (!invocation.tailArmed) {
+                if (!failure) throw new IllegalStateException("FloatBlock returned before DrawObject returned");
+            } else if (floatOutsideWindow(invocation, source)) source = floatDeletedImage(invocation, source);
+            acceptFloatPool(invocation, source); return;
+        }
+        int routine = invocation.entry.routine();
+        if ((routine & 1) != 0 || routine > 12)
+            throw new IllegalStateException("Unsupported FloatBlock routine changed its native source");
+        if (failure && invocation.ordinal == 0 && routine == 0 && invocation.entry.subtype2() != 0) {
+            var source = invocation.entry.addByte(CdObjectState.ByteField.ROUTINE, 2)
+                    .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, invocation.entry.spriteFlags() | 4)
+                    .moveLong(CdObjectState.LongField.MAPPINGS,
+                            view(CdR12aProfile.Asset.MAP_SPR_FLOAT_BLOCK).range().nativeAddress());
+            acceptFloatPool(invocation, source); return;
+        }
+        int required = routine == 12 ? 0 : invocation.falling ? 4 : 2;
+        if (invocation.ordinal != required) {
+            if (failure) { acceptFloatPool(invocation, floatSolidSource(invocation)); return; }
+            throw new IllegalStateException("FloatBlock skipped an actual TopSolid pair");
+        }
+        var source = invocation.expectedSource; boolean draw = true;
+        int rawPeriod = invocation.shared.environment().movement().gates().timeZone();
+        if (routine == 12) {
+            source = source.moveByte(CdObjectState.ByteField.ROUTINE, 2); draw = false;
+        } else if (routine == 4 || invocation.falling) {
+            source = source.addWord(CdObjectState.WordField.Y, 2);
+            if (((invocation.camera.yWord() + 0xE0) & 0xFFFF) < source.centreY()) {
+                source = floatDeletedImage(invocation, source); draw = false;
+            }
+        } else if (routine == 0 || routine == 2) {
+            if (rawPeriod != 0 && rawPeriod != 2) {
+                source = source.moveByte(CdObjectState.ByteField.MAP_FRAME, 0);
+                if ((source.flags() & 8) != 0) source = source.moveByte(CdObjectState.ByteField.ROUTINE, 6)
+                        .moveByte(CdObjectState.ByteField.ANIMATION, 1);
+            } else if (rawPeriod == 2 && (source.flags() & 8) != 0) {
+                if (failure) { acceptFloatPool(invocation, floatSolidSource(invocation)); return; }
+                throw new IllegalStateException("FloatBlock Main skipped its native Fall pair");
+            }
+        } else if (routine == 6 && (source.flags() & 8) == 0) {
+            source = source.moveByte(CdObjectState.ByteField.ROUTINE, 2); draw = false;
+        } else if (routine == 8 && (source.flags() & 8) == 0) {
+            source = source.addByte(CdObjectState.ByteField.ROUTINE, 2).moveByte(CdObjectState.ByteField.ANIMATION, 2);
+            draw = false;
+        } else {
+            source = validateFloatAnimation(invocation, source, failure);
+            if (invocation.animationStopped) { acceptFloatPool(invocation, source); return; }
+        }
+        if (site == FloatSite.DRAW && !draw)
+            throw new IllegalStateException("FloatBlock DrawObject is outside its actual native branch");
+        if (site == FloatSite.RETURN && draw)
+            throw new IllegalStateException("FloatBlock returned without its actual DrawObject");
+        if (!draw && floatOutsideWindow(invocation, source)) source = floatDeletedImage(invocation, source);
+        acceptFloatPool(invocation, source);
+        invocation.bodyVerified = true; invocation.noDraw = !draw;
+        if (!draw) invocation.tailArmed = true;
+    }
+
+    /**
+     * Bounded verification of already-reached Object Animate:14-95 stores over the finite 30-byte owner.
+     * This never calls the animator or returns a gameplay State. Missing reads admit only their exact native prefix.
+     */
+    private CdObjectState validateFloatAnimation(FloatInvocation invocation, CdObjectState source, boolean failure) {
+        var expected = source; int animation = source.unsignedByte(CdObjectState.ByteField.ANIMATION);
+        if (animation != source.unsignedByte(CdObjectState.ByteField.PREVIOUS_ANIMATION))
+            expected = expected.moveByte(CdObjectState.ByteField.PREVIOUS_ANIMATION, animation)
+                    .moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0).moveByte(CdObjectState.ByteField.ANIMATION_TIME, 0);
+        expected = expected.addByte(CdObjectState.ByteField.ANIMATION_TIME, -1);
+        if (expected.unsignedByte(CdObjectState.ByteField.ANIMATION_TIME) < 0x80) return expected;
+        var bytes = view(CdR12aProfile.Asset.ANI_FLOAT_BLOCK).bytes();
+        if (animation >= 3) return floatMissingAnimation(invocation, expected, failure);
+        int script = (short) bytes.unsignedWord(animation * 2);
+        if (script < 0 || script >= bytes.length()) return floatMissingAnimation(invocation, expected, failure);
+        expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_TIME, bytes.unsignedByte(script));
+        int index = expected.unsignedByte(CdObjectState.ByteField.ANIMATION_FRAME), at = script + 1 + index;
+        if (at < 0 || at >= bytes.length()) return floatMissingAnimation(invocation, expected, failure);
+        int raw = bytes.unsignedByte(at);
+        if (raw == 0xFF) {
+            expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0); index = 0; at = script + 1;
+            if (at >= bytes.length()) return floatMissingAnimation(invocation, expected, failure);
+            raw = bytes.unsignedByte(at);
+        } else if (raw == 0xFE) {
+            at = script + 2 + index;
+            if (at >= bytes.length()) return floatMissingAnimation(invocation, expected, failure);
+            index = (index - bytes.unsignedByte(at)) & 0xFF;
+            expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME, index); at = script + 1 + index;
+            if (at >= bytes.length()) return floatMissingAnimation(invocation, expected, failure);
+            raw = bytes.unsignedByte(at);
+        } else if (raw >= 0x80) {
+            if (raw == 0xFD) {
+                at = script + 2 + index;
+                if (at >= bytes.length()) return floatMissingAnimation(invocation, expected, failure);
+                expected = expected.moveByte(CdObjectState.ByteField.ANIMATION, bytes.unsignedByte(at));
+            } else if (raw == 0xFC) expected = expected.addByte(CdObjectState.ByteField.ROUTINE, 2);
+            else if (raw == 0xFB) expected = expected.moveByte(CdObjectState.ByteField.ANIMATION_FRAME, 0)
+                    .moveByte(CdObjectState.ByteField.ROUTINE_2, 0);
+            else if (raw == 0xFA) expected = expected.addByte(CdObjectState.ByteField.ROUTINE_2, 2);
+            return expected;
+        }
+        int rotated = ((raw << 3) | (raw >>> 5)) & 0xFF;
+        return expected.moveByte(CdObjectState.ByteField.MAP_FRAME, raw & 0x1F)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, (source.spriteFlags() & 0xFC) | ((rotated ^ source.flags()) & 3))
+                .moveByte(CdObjectState.ByteField.ANIMATION_FRAME, (index + 1) & 0xFF);
+    }
+    private CdObjectState floatMissingAnimation(FloatInvocation invocation, CdObjectState prefix, boolean failure) {
+        if (!failure) throw new IllegalStateException("FloatBlock advanced past an absent finite animation read");
+        invocation.animationStopped = true; return prefix;
+    }
+
+    private List<CdObjectState> validateFloatImages(FloatInvocation invocation, CdFloatBlock.PrefixTopSolidCall call,
+            CdObjectState source, CdObjectState object, List<CdObjectState> others, Set<CdObjectState.ByteField> writes) {
+        if (!source.identity().equals(object.identity()) || source.id() != CdFloatBlock.OBJECT_ID
+                || writes.stream().anyMatch(field -> field != CdObjectState.ByteField.SOLID_TYPE && field != CdObjectState.ByteField.FLAGS)
+                || !writes.contains(CdObjectState.ByteField.SOLID_TYPE)
+                || object.unsignedByte(CdObjectState.ByteField.SOLID_TYPE) > 1 || ((source.flags() ^ object.flags()) & ~8) != 0)
+            throw new IllegalStateException("FloatBlock Top changed identity, canonical masks or unowned flag bits");
+        byte[] before = source.copyBytes(), after = object.copyBytes();
+        for (int at = 0; at < CdObjectState.BYTE_SIZE; at++) {
+            int mask = at == 0x25 ? 0xFF : at == 0x22 && writes.contains(CdObjectState.ByteField.FLAGS) ? 8 : 0;
+            if (((before[at] ^ after[at]) & ~mask & 0xFF) != 0)
+                throw new IllegalStateException("FloatBlock Top changed undeclared a0 byte " + at);
+        }
+        if (others.size() > 1) throw new IllegalStateException("FloatBlock Top returned extra native stand releases");
+        var images = new ArrayList<CdObjectState>(); images.add(object);
+        var seen = new HashSet<Integer>(); seen.add(invocation.whole);
+        for (var other : others) {
+            int whole = other.identity().wholeIndex();
+            if (whole < 32 || whole >= 128 || !seen.add(whole) || whole != call.player().standObject())
+                throw new IllegalStateException("FloatBlock release lacks its unique actual dynamic stand identity");
+            var old = call.callCut().slots().get(whole - 32);
+            if (!old.identity().equals(other.identity())
+                    || !old.moveByte(CdObjectState.ByteField.FLAGS, old.flags() & ~8).equals(other))
+                throw new IllegalStateException("FloatBlock previous-stand release changed bytes beyond BCLR3");
+            images.add(other);
+        }
+        return List.copyOf(images);
+    }
+
+    private void validateFloatStopped(CdFloatBlock.PrefixTopSolidCall call, CdSolidObject.NativeStopped stopped,
+                                      CdObjectState source) {
+        var prefix = stopped.prefix(); var stop = stopped.stop();
+        if (prefix.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT || stop.originalException() == null)
+            throw new IllegalStateException("FloatBlock stop is not its actual TopSolidObject prefix");
+        if (stop.site() == CdSolidObject.StopSite.STAND_RELEASE) {
+            if (!(stop.detail() instanceof CdSolidObject.SlotAddress address)
+                    || address.routine() != CdSolidObject.Routine.STAND_ON_OBJECT
+                    || address.slotByte() != call.player().standObject() || address.slotByte() == 0
+                    || address.slotByte() >= 32 && address.slotByte() < 128
+                    || address.boundary() != (address.slotByte() < 32 ? CdSolidObject.UnsupportedBoundary.RESERVED_SLOT_ADDRESS
+                            : CdSolidObject.UnsupportedBoundary.OUT_OF_POOL_ADDRESS)
+                    || prefix.object().unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 0 || (prefix.object().flags() & 8) == 0
+                    || prefix.calls().stream().noneMatch(c -> c instanceof CdSolidObject.RoutineCall entered
+                            && entered.routine() == CdSolidObject.Routine.STAND_ON_OBJECT))
+                throw new IllegalStateException("FloatBlock stop lacks its actual previous-stand dereference prefix");
+        } else if (stop.detail() instanceof CdSolidObject.SlotAddress
+                || prefix.object().unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 1
+                || prefix.object().flags() != source.flags())
+            throw new IllegalStateException("FloatBlock terrain stop crossed the native pre-StandOn object prefix");
+    }
+
+    /** Prepare the full96, existing Frame publication, immutable sound ledger and call trace before any live write. */
+    private void commitFloatSolid(CdFloatBlock.PrefixTopSolidCall call) {
+        Objects.requireNonNull(call);
+        var invocation = requireFloatInvocation(placement.pool(), activeFloat == null ? -1 : activeFloat.whole);
+        if (!floatBlock.isCurrentPrefixTopSolidCall(call,invocation.ordinal)) throw new IllegalStateException("Float Top lacks its actual pending producer call");
+        if (floatPort || drawingFloat || queuePort || invocation.stopped || invocation.drawn
+                || invocation.ordinal >= 4 || call.callCut() == invocation.lastCut || call.outcome() == invocation.adoptedOutcome)
+            throw new IllegalStateException("FloatBlock Top lacks its next actual private helper cut");
+        validateFloatSource(invocation, FloatSite.SOLID);
+        var pool = invocation.pool; var cut = call.callCut(); pool.validateRestore(cut);
+        if (!cut.slots().equals(invocation.currentPool.slots()) || !pool.capture().slots().equals(cut.slots())
+                || !call.player().equals(springPlayer()) || !call.globals().equals(springGlobals()))
+            throw new IllegalStateException("FloatBlock Top differs from its actual full96/player/global cut");
+        var source = cut.slots().get(invocation.whole - 32);
+        CdObjectState object; List<CdObjectState> others; Set<CdObjectState.ByteField> writes;
+        List<CdPlayerTouchResponse.FmSound> requests; CdPlayerFrameRuntime.ObjectSolidPublication readyFrame;
+        boolean stopped; var completed = new ArrayList<>(invocation.completed);
+        if (call.outcome() instanceof CdSolidObject.Completed done) {
+            var result = done.completedResult();
+            if (result.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT
+                    || result.path() != CdSolidObject.Path.GET_OFF && result.path() != CdSolidObject.Path.STAND_ON
+                    || result.object().unsignedByte(CdObjectState.ByteField.SOLID_TYPE) != 0)
+                throw new IllegalStateException("FloatBlock completed a different native helper/path");
+            object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+            readyFrame = frame.prepareObjectSolidResult(call.player(), call.globals(), result);
+            completed.add(result); stopped = false;
+        } else {
+            var nativeStop = (CdSolidObject.NativeStopped) call.outcome(); validateFloatStopped(call, nativeStop, source);
+            var prefix = nativeStop.prefix();
+            object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+            readyFrame = frame.prepareObjectSolidPrefix(call.player(), call.globals(), prefix); stopped = true;
+        }
+        var images = validateFloatImages(invocation, call, source, object, others, writes);
+        var readyPool = CdObjectPool.overlay(cut, images); pool.validateRestore(readyPool);
+        var readyActor = new CdPlayerFrameRuntime.ActorState(invocation.actor.owner(), readyFrame.finalState(), invocation.actor.display());
+        var readyShared = new CdPlayerFrameRuntime.SharedState(invocation.shared.owner(), readyFrame.finalEnvironment(),
+                invocation.shared.artState(), invocation.shared.paused(), invocation.shared.vIntClock());
+        var ledger = new ArrayList<>(sounds);
+        for (var fm : requests) ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+        var readySounds = List.copyOf(ledger); var readyValues = preparedFloatValues(FLOAT_BLOCK_SOLID);
+        var readyCompleted = List.copyOf(completed); int readyOrdinal = invocation.ordinal + 1;
+        floatPort = true;
+        try {
+            verifyFloatInvocation(invocation);
+            if (!pool.capture().slots().equals(cut.slots()) || !sameBytes(placement.capture().savedFlags(), invocation.savedFlags))
+                throw new IllegalStateException("FloatBlock full96/saved source changed before publication");
+            frame.validatePreparedObjectSolidPublication(readyFrame);
+            pool.restore(readyPool);
+            frame.applyPreparedObjectSolidPublication(readyFrame);
+            sounds = readySounds; values = readyValues;
+            invocation.actor = readyActor; invocation.shared = readyShared; invocation.expectedSounds = readySounds;
+            invocation.expectedValues = readyValues; invocation.currentPool = readyPool; invocation.expectedSource = object;
+            invocation.ordinal = readyOrdinal; invocation.completed = readyCompleted; invocation.stopped = stopped;
+            invocation.lastCut = cut; invocation.adoptedOutcome = call.outcome();
+            verifyFloatInvocation(invocation);
+            if (!pool.capture().slots().equals(readyPool.slots()))
+                throw new IllegalStateException("FloatBlock Top did not publish its exact complete output96");
+        } catch (RuntimeException | Error failure) {
+            verifyFloatFailure(failure); throw failure;
+        } finally { floatPort = false; }
+    }
+
+    private Values preparedFloatValues(SonicCdGameModule.Act2LoadCall call) {
+        var old = values; var calls = new ArrayList<>(old.calls()); calls.add(call);
+        return new Values(old.phase(), old.section(), old.cpuPalette(), old.fadePalette(), old.waterPalette(), old.displayedPalette(), old.cpuSat(),
+                old.displayedSat(), old.displayedHScroll(), old.displayedVScrollLongBits(), old.foregroundPlane(), old.ring(),
+                old.level(), old.globals(), old.hudObjects(), old.fadeProgress(), List.copyOf(calls), old.loop());
+    }
+
+    private void verifyFloatCallback(FloatInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                     CdObjectState cleared) {
+        verifyFloatInvocation(invocation);
+        var now = placement.capture(); var expected = new ArrayList<>(before.pool().slots());
+        if (cleared != null) expected.set(invocation.whole - 32, cleared);
+        if (!now.status().equals(before.status()) || !now.pool().slots().equals(expected)
+                || !sameBytes(now.savedFlags(), before.savedFlags())
+                || !now.pool().slots().equals(invocation.currentPool.slots()))
+            throw new IllegalStateException("FloatBlock callback changed full96/bank outside its actual bit7 clear");
+    }
+    private void verifyFloatCallbackFailure(FloatInvocation invocation, CdObjectPlacementRuntime.Snapshot before,
+                                            CdObjectState cleared, Throwable original) {
+        try { verifyFloatCallback(invocation, before, cleared); }
+        catch (RuntimeException | Error verification) {
+            if (verification != original) original.addSuppressed(verification);
+        }
+    }
+
+    private void drawFloatBlock(CdObjectPool pool, CdObjectState.Identity identity) {
+        var invocation = requireFloatInvocation(pool, Objects.requireNonNull(identity).wholeIndex());
+        if (floatPort || drawingFloat || queuePort || invocation.drawn || invocation.stopped
+                || !identity.equals(invocation.entry.identity()))
+            throw new IllegalStateException("FloatBlock DrawObject lacks its actual once-only native source");
+        if (!floatBlock.isCurrentDrawCall(pool,identity)) throw new IllegalStateException("Float Draw lacks its actual producer source prefix");
+        validateFloatSource(invocation, FloatSite.DRAW);
+        var before = placement.capture(); var current = invocation.expectedSource;
+        var cleared = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        invocation.drawn = true; drawingFloat = true;
+        try {
+            drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(invocation.whole),
+                    current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.unsignedByte(CdObjectState.ByteField.Y_RADIUS), current.unsignedByte(CdObjectState.ByteField.WIDTH),
+                    current.unsignedByte(CdObjectState.ByteField.PRIORITY)), invocation.camera);
+            if (!invocation.screenCleared) throw new IllegalStateException("FloatBlock DrawObject did not clear bit7 once");
+            verifyFloatCallback(invocation, before, cleared); invocation.tailArmed = true;
+        } catch (RuntimeException | Error failure) {
+            verifyFloatCallbackFailure(invocation, before, invocation.screenCleared ? cleared : null, failure); throw failure;
+        } finally { drawingFloat = false; }
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readFloatDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var invocation = requireFloatInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingFloat || floatPort || queuePort) throw new IllegalStateException("No actual FloatBlock queue read");
+        var before = placement.capture(); queuePort = true;
+        try {
+            if (!before.pool().slots().equals(invocation.currentPool.slots()))
+                throw new IllegalStateException("FloatBlock queue read lost its exact live96");
+            var current = invocation.pool.state(invocation.whole);
+            var live = new CdObjectDrawQueue.LiveDrawSlot(current.id(), current.spriteFlags(), current.centreX(), current.centreY(),
+                    current.word(CdObjectState.WordField.X_FRACTION), current.longBits(CdObjectState.LongField.MAPPINGS),
+                    current.unsignedByte(CdObjectState.ByteField.MAP_FRAME), current.word(CdObjectState.WordField.TILE));
+            verifyFloatCallback(invocation, before, null); return live;
+        } catch (RuntimeException | Error failure) {
+            verifyFloatCallbackFailure(invocation, before, null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+    private void writeFloatOnScreen(CdObjectDrawQueue.CdSlotRef ref, boolean onScreen) {
+        var invocation = requireFloatInvocation(placement.pool(), Objects.requireNonNull(ref).wholeIndex());
+        if (!drawingFloat || floatPort || queuePort || onScreen || invocation.screenCleared)
+            throw new IllegalStateException("Only actual FloatBlock DrawObject may clear bit7 once");
+        var before = placement.capture(); var current = invocation.pool.state(invocation.whole);
+        if (!before.pool().slots().equals(invocation.currentPool.slots()) || !current.equals(invocation.expectedSource))
+            throw new IllegalStateException("FloatBlock bit7 store lost its complete current source");
+        var next = current.moveByte(CdObjectState.ByteField.SPRITE_FLAGS, current.spriteFlags() & 0x7F);
+        var readyPool = CdObjectPool.overlay(before.pool(), List.of(next)); invocation.pool.validateRestore(readyPool);
+        queuePort = true;
+        try {
+            invocation.pool.write(next); invocation.screenCleared = true;
+            invocation.currentPool = readyPool; invocation.expectedSource = next;
+            verifyFloatCallback(invocation, before, next);
+        } catch (RuntimeException | Error failure) {
+            verifyFloatCallbackFailure(invocation, before, invocation.screenCleared ? next : null, failure); throw failure;
+        } finally { queuePort = false; }
+    }
+
+    /** Read-only completed metadata check, tied to the actual private helper results; never replay effects. */
+    private void verifyFloatResult(FloatInvocation invocation, CdFloatBlock.Result result) {
+        var expected = new ArrayList<CdFloatBlock.Effect>();
+        int routine = invocation.entry.routine();
+        expected.add(new CdFloatBlock.RoutineEntered(CdFloatBlock.NativeRoutine.values()[routine / 2]));
+        if (routine == 0) expected.add(new CdFloatBlock.RoutineEntered(CdFloatBlock.NativeRoutine.MAIN));
+        for (int i = 0; i < invocation.completed.size(); i++) {
+            if (i == 2) expected.add(new CdFloatBlock.RoutineEntered(CdFloatBlock.NativeRoutine.FALL));
+            expected.add(new CdFloatBlock.TopSolid(i, invocation.completed.get(i)));
+        }
+        if (routine == 6 && !invocation.noDraw || routine == 8 && !invocation.noDraw || routine == 10)
+            expected.add(new CdFloatBlock.CallReturned(CdFloatBlock.NativeCall.ANIMATE_OBJECT));
+        if (invocation.drawn) expected.add(new CdFloatBlock.CallReturned(CdFloatBlock.NativeCall.DRAW_OBJECT));
+        // Deletion authority came from the checked live Y/window branch, never this returned metadata.
+        var source = invocation.expectedSource;
+        boolean below = (routine == 4 || invocation.falling)
+                && ((invocation.camera.yWord() + 0xE0) & 0xFFFF) < ((invocation.entry.centreY() + 2) & 0xFFFF);
+        if (below) expected.add(new CdFloatBlock.Deleted(CdFloatBlock.DeleteSite.FALL_BELOW_CAMERA));
+        int x = below ? 0 : invocation.entry.centreX();
+        if ((((x & 0xFF80) - ((invocation.camera.xWord() - 0x80) & 0xFF80)) & 0xFFFF) > 0x280)
+            expected.add(new CdFloatBlock.Deleted(CdFloatBlock.DeleteSite.CHUNK_WINDOW));
+        if (!result.effects().equals(expected) || !result.state().equals(source)
+                || invocation.ordinal != invocation.completed.size() || !invocation.noDraw && !invocation.drawn)
+            throw new IllegalStateException("FloatBlock returned metadata without its actual complete native call grammar");
+        int at = 0;
+        for (var effect : result.effects()) if (effect instanceof CdFloatBlock.TopSolid top
+                && top.result() != invocation.completed.get(at++))
+            throw new IllegalStateException("FloatBlock returned a substituted completed helper observation");
     }
 
 

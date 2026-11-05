@@ -272,6 +272,21 @@ public final class CdFloatBlock {
     private final PrefixTopSolidCommit prefixCommit;
     private final DrawObjectCall drawObject;
 
+    private boolean running;
+    private transient Cursor currentCursor;
+    private transient PrefixTopSolidCall pendingTop;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient CdObjectState.Identity pendingDrawIdentity;
+
+    /** Current synchronous producer identity only; the World separately checks the full live cut and consumes once. */
+    public boolean isCurrentPrefixTopSolidCall(PrefixTopSolidCall call, int completedOrdinal) {
+        return running && call != null && pendingTop == call && currentCursor != null && currentCursor.ordinal == completedOrdinal;
+    }
+    public boolean isCurrentDrawCall(CdObjectPool pool, CdObjectState.Identity identity) {
+        return running && pool == runtime.pool() && identity != null && pendingDrawIdentity == identity
+                && pendingDrawCut != null && pool.capture().slots().equals(pendingDrawCut.slots());
+    }
+
     /** The runtime supplies the single live pool; production binds {@link CdSolidObject#fromAssets} over the same assets. */
     public CdFloatBlock(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, TopSolidCommit commit,
                         DrawObjectCall drawObject) {
@@ -300,8 +315,24 @@ public final class CdFloatBlock {
         return new CdFloatBlock(runtime, Assets.fromPastAssets(assets), solid, null, commit, drawObject);
     }
 
+    /** Actual R12A source binding to the existing stopped-prefix body; no completed-only adapter. */
+    public static CdFloatBlock fromAct2Assets(CdObjectPlacementRuntime runtime, CdR12aObjectAssets assets,
+                                              CdSolidObject solid, PrefixTopSolidCommit commit,
+                                              DrawObjectCall drawObject) {
+        Objects.requireNonNull(runtime,"actual placement"); Objects.requireNonNull(assets,"actual R12A source");
+        if (!runtime.sameAct2Source(assets)) throw new IllegalArgumentException("FloatBlock requires the same retained R12A placement/source");
+        return new CdFloatBlock(runtime, Assets.fromAct2Assets(assets), solid, null, commit, drawObject);
+    }
+
     /** One ObjFloatBlock dispatch for the whole-pool dynamic slot currently holding ID $12. */
     public Result run(int wholeIndex, Globals globals, SolidInputs inputs) {
+        if (running) throw new IllegalStateException("FloatBlock cannot reenter its synchronous physical dispatch");
+        running = true;
+        try { return runBody(wholeIndex, globals, inputs); }
+        finally { currentCursor = null; running = false; }
+    }
+
+    private Result runBody(int wholeIndex, Globals globals, SolidInputs inputs) {
         Objects.requireNonNull(globals, "globals");
         Objects.requireNonNull(inputs, "solid inputs");
         var pool = runtime.pool();
@@ -319,7 +350,7 @@ public final class CdFloatBlock {
             throw new UnsupportedFloatBlock(UnsupportedBoundary.TILE_ID_SUBTYPE2, wholeIndex,
                     "oSubtype2 $" + Integer.toHexString(state.subtype2()) + " selects an unreviewed ObjectTileIDs word");
         }
-        var c = new Cursor(pool, state, globals, inputs);
+        var c = new Cursor(pool, state, globals, inputs); currentCursor = c;
         switch (routine) {                                                // JSR .Index(pc,d0.w)
             case 0 -> { init(c); main(c); }                               // Init falls into ObjFloatBlock_Main (:48-54)
             case 2 -> main(c);
@@ -483,16 +514,19 @@ public final class CdFloatBlock {
                 object = stopped.prefix().object();
                 others = stopped.prefix().otherSlots();
             }
+            var call = new PrefixTopSolidCall(cut, c.player, c.solidGlobals, outcome);
+            pendingTop = call;
             try {
-                prefixCommit.commit(new PrefixTopSolidCall(cut, c.player, c.solidGlobals, outcome));
+                prefixCommit.commit(call);
             } catch (RuntimeException | Error failure) {
                 try {
-                    verifyPublished(cut, object, others);
+                    // A rejected publication may leave either its exact source or its exact declared ready image.
+                    if (!c.pool.capture().slots().equals(cut.slots())) verifyPublished(cut, object, others);
                 } catch (RuntimeException | Error verification) {
                     if (verification != failure) failure.addSuppressed(verification);
                 }
                 throw failure;
-            }
+            } finally { pendingTop = null; }
             verifyPublished(cut, object, others);
             if (outcome instanceof CdSolidObject.NativeStopped stopped) {
                 // The actual helper never returned. No pair fall-through, effect, animation, draw or tail follows.
@@ -614,7 +648,9 @@ public final class CdFloatBlock {
     /** JMP DrawObject after the routine's writes; the live slot, bit 7 included, is reloaded afterwards. */
     private void draw(Cursor c) {
         c.publish();
-        drawObject.drawObject(c.pool, c.state.identity());
+        pendingDrawCut = c.pool.capture(); pendingDrawIdentity = c.state.identity();
+        try { drawObject.drawObject(c.pool, pendingDrawIdentity); }
+        finally { pendingDrawCut = null; pendingDrawIdentity = null; }
         c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
         c.state = c.pool.state(c.wholeIndex);
     }

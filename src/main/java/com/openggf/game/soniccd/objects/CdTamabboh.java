@@ -212,6 +212,30 @@ public final class CdTamabboh {
     private final PlayFmSound playFmSound;
     private final DrawObjectCall drawObject;
     private boolean running;
+    private transient Cursor currentCursor;
+    private transient PrimaryAngleCall pendingAngle;
+    private transient PlayerReadCall pendingPlayer;
+    private transient FmCall pendingFm;
+    private transient CdObjectPool.Snapshot pendingDrawCut;
+    private transient CdObjectState.Identity pendingDrawIdentity;
+
+    /** Read-only consistency with this actual producer's completed callbacks; it grants no World/publication authority. */
+    public boolean matchesCurrentCallbackPrefix(List<PrimaryAngleCommitted> angles,
+                                                List<PlayerWordReadReturned> playerReads, List<FmPlayed> fm) {
+        return running && currentCursor != null
+                && currentCursor.effects.stream().filter(PrimaryAngleCommitted.class::isInstance).toList().equals(angles)
+                && currentCursor.effects.stream().filter(PlayerWordReadReturned.class::isInstance).toList().equals(playerReads)
+                && currentCursor.effects.stream().filter(FmPlayed.class::isInstance).toList().equals(fm);
+    }
+
+    /** Current synchronous producer identity only; the World still owns full-cut validation and one consumption. */
+    public boolean isCurrentPrimaryAngleCall(PrimaryAngleCall call) { return running && call != null && pendingAngle == call; }
+    public boolean isCurrentPlayerReadCall(PlayerReadCall call) { return running && call != null && pendingPlayer == call; }
+    public boolean isCurrentFmCall(FmCall call) { return running && call != null && pendingFm == call; }
+    public boolean isCurrentDrawCall(CdObjectPool pool, CdObjectState.Identity identity) {
+        return running && pool == placement.pool() && identity != null && pendingDrawIdentity == identity
+                && pendingDrawCut != null && pool.capture().slots().equals(pendingDrawCut.slots());
+    }
 
     public CdTamabboh(CdObjectPlacementRuntime placement, Assets assets, CdPlayerTerrain terrain,
                      PrimaryAngleCommit angleCommit, PlayerWordRead playerRead, PlayFmSound playFmSound, DrawObjectCall drawObject) {
@@ -281,6 +305,15 @@ public final class CdTamabboh {
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
     }
 
+    /** Same retained R12A placement/source, using the existing native body and reached scalar/FM ports. */
+    public static CdTamabboh fromAct2Assets(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
+                                            CdPlayerTerrain terrain, PrimaryAngleCommit angleCommit,
+                                            PlayerWordRead playerRead, PlayFmSound playFmSound, DrawObjectCall drawObject) {
+        Objects.requireNonNull(placement,"actual placement"); Objects.requireNonNull(owner,"actual R12A source");
+        if (!placement.sameAct2Source(owner)) throw new IllegalArgumentException("Tamabboh requires the same retained R12A placement/source");
+        return new CdTamabboh(placement,Assets.fromAct2Assets(owner),terrain,angleCommit,playerRead,playFmSound,drawObject);
+    }
+
     /** ObjTamabboh:7-18 / ObjTamabbohMissile:213-224: subtype equality1 is FIRST. */
     public Result run(int wholeIndex, Globals globals) {
         if (running) throw new IllegalStateException("Tamabboh cannot reenter its synchronous physical dispatch");
@@ -288,7 +321,7 @@ public final class CdTamabboh {
         try {
             Objects.requireNonNull(globals, "globals"); var pool = placement.pool(); var state = pool.state(wholeIndex);
             if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Selected slot is not Tamabboh ID $22");
-            var c = new Cursor(pool, state, globals.primaryAngle());
+            var c = new Cursor(pool, state, globals.primaryAngle()); currentCursor = c;
             if (state.subtype() == 1) {
                 switch (state.routine()) {
                     case 0 -> missileInit(c);
@@ -313,7 +346,7 @@ public final class CdTamabboh {
                 default -> throw unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, c, c.state.routine());
             }
             draw(c); despawn(c, globals); return c.finish();
-        } finally { running = false; }
+        } finally { currentCursor = null; running = false; }
     }
 
     /** Object Time Check.asm:12-44: Delete64, restore only XY WORDs, ID18, skip body wrapper. */
@@ -438,19 +471,40 @@ public final class CdTamabboh {
     private void angle(Cursor c, int value) {
         var cut = c.pool.capture(); var call = new PrimaryAngleCall(cut, c.state, c.primaryAngle, value);
         requireCurrentCut(c, cut, call.expectedSource());
-        try { angleCommit.commit(call); } finally { requireCurrentCut(c, cut, call.expectedSource()); }
+        pendingAngle = call;
+        try { angleCommit.commit(call); }
+        catch (RuntimeException | Error original) {
+            try { requireCurrentCut(c,cut,call.expectedSource()); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { pendingAngle = null; }
+        requireCurrentCut(c,cut,call.expectedSource());
         c.effects.add(new PrimaryAngleCommitted(c.primaryAngle, value)); c.primaryAngle = value;
     }
     private int playerWord(Cursor c, PlayerField field) {
         var cut = c.pool.capture(); var call = new PlayerReadCall(cut, c.state, field);
         requireCurrentCut(c, cut, call.expectedSource()); int value;
-        try { value = playerRead.read(call); } finally { requireCurrentCut(c, cut, call.expectedSource()); }
+        pendingPlayer = call;
+        try { value = playerRead.read(call); }
+        catch (RuntimeException | Error original) {
+            try { requireCurrentCut(c,cut,call.expectedSource()); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { pendingPlayer = null; }
+        requireCurrentCut(c,cut,call.expectedSource());
         wordValue(value); c.effects.add(new PlayerWordReadReturned(field, value)); return value;
     }
     private void fm(Cursor c, int firstFreeWholeIndex) {
         var cut = c.pool.capture(); var call = new FmCall(cut, c.state, firstFreeWholeIndex, FmSound.FM_A0);
         requireCurrentCut(c, cut, call.expectedSource());
-        try { playFmSound.play(call); } finally { requireCurrentCut(c, cut, call.expectedSource()); }
+        pendingFm = call;
+        try { playFmSound.play(call); }
+        catch (RuntimeException | Error original) {
+            try { requireCurrentCut(c,cut,call.expectedSource()); }
+            catch (RuntimeException | Error verification) { if (verification != original) original.addSuppressed(verification); }
+            throw original;
+        } finally { pendingFm = null; }
+        requireCurrentCut(c,cut,call.expectedSource());
         c.effects.add(new FmPlayed(firstFreeWholeIndex, FmSound.FM_A0)); c.returned(NativeCall.PLAY_FM_SOUND);
     }
     private static void requireCurrentCut(Cursor c, CdObjectPool.Snapshot cut, CdObjectState expectedSource) {
@@ -527,8 +581,9 @@ public final class CdTamabboh {
 
     /** Existing DrawObject is mutating. Reload live source before the wrapper's anchor/saved tail. */
     private void draw(Cursor c) {
-        try { drawObject.drawObject(c.pool, c.state.identity()); }
-        finally { c.state = c.pool.state(c.wholeIndex); }
+        pendingDrawCut = c.pool.capture(); pendingDrawIdentity = c.state.identity();
+        try { drawObject.drawObject(c.pool, pendingDrawIdentity); }
+        finally { pendingDrawCut = null; pendingDrawIdentity = null; c.state = c.pool.state(c.wholeIndex); }
         c.returned(NativeCall.DRAW_OBJECT);
     }
     /** CheckObjDespawn2:388-399,442-446 / DespawnObject:403-438; raw anchor loaded AFTER draw. */
