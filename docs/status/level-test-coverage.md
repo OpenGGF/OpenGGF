@@ -319,6 +319,16 @@ Monitor Item rewards, outgoing lifetime, complete acts and native/regional parit
 remain open. See the Act2 matrix's latest Powerup section; the earlier12886 fence
 above is historical.
 
+Monitor Item's typed Shield opt-in and the reserved whole6 Shield component now
+have bounded component qualification:389 cases across five classes pass, followed
+by104 refreshed Item cases after a meaningful two-case Draw-failure RED→GREEN.
+The391 distinct identities span two source snapshots; they are not one combined
+run. Two preparation-only fixture errors and both Root repairs remain explicit in
+the Act2 matrix. Original-operation receipts, conditional reads, full-bank
+nonwrites and exceptional visibility permission are covered. The live contact /
+reserved ID-only / FM97 World award and subsequent Shield/current-art execution
+remain open; no new controller endpoint or current-pixel claim follows.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

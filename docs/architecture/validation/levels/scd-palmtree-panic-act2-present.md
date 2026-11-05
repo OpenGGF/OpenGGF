@@ -475,3 +475,42 @@ assertions add only the new name. Nine new source/format tests plus52 old mapper
 and56 Act2 asset cases pass117,0failures/errors/skips. Source/case/env/XML checked;
 six owned reports consumed. This factory is not yet bound into the Act2 World:
 first13063 Monitor Item and later reserved Shield/reward execution remain open.
+
+## Monitor Item and reserved Shield components — 5 November
+
+The opt-in Monitor Item component preserves the legacy constructor, shoes award
+port and59 inherited cases. Typed raw2 Shield award metadata, original pending
+operations and exact Completion result references support a future World binding;
+returned effects do not execute an award. The reserved whole6 Shield component
+borrows existing TimeStars assets and the existing raw-backed reserved bank. Its
+native Init returns without Draw, and active Shield uses conditional external
+reads, one shared animator and real Powerup MOVE/BSET ports. Neither component
+creates a Frame Shield field, another bank/capture owner, art preload or scheduler.
+
+Combined389/5classes passes without failures/errors/skips: Shield117, Item102,
+legacyStars67, reservedBank47 and Act2Assets56. The first preparation attempt ran
+zero tests because four fixture LAYER names were ambiguous; Root qualifies only
+those references. A fresh static Item review then identifies a Draw failure-path
+P2 missed by the102 cases: a separate storage mismatch could leave visibility
+permission live while a failure observer changed own bit7. Two new regressions
+produce exactly two assertion failures, with102 earlier cases passing. The first
+regression preparation also ran zero tests due to a missing Arrays qualification;
+that test-only correction is explicit.
+
+The minimal production repair freezes only Draw's actual bit7 into the original
+expected image in its finally block before verification/failure observers, on
+normal return and throw. Other expected bytes remain fixed; original exceptions
+and suppressed verification faults survive, with no rollback. The same104 Item
+identities then all pass without failures/errors/skips. Source
+`032532d899cc02f9c5e89fd1ff24ac1144ff6286998937590b6f785f48e82637`
+is unchanged11:06:53.659162–11:06:55.622313Z. Fresh XML, environment, identities and
+all four installed component pins are checked; two owned reports are consumed.
+Preparation91s/admission0/execution1.963s/userwait0; other overhead is unmeasured.
+
+This is391 distinct passing component cases across the389 and refreshed104
+snapshots, not a single391-case run or a whole-suite certificate. Static reviews
+and the exact Root repairs are separately attributed. Actual contact Shield
+BYTE1, reserved6 ID-only store, ordered FM97, later Shield visit, current-art service
+and live World/full-course replay remain unqualified dependencies. The qualified
+controller still returns13062; first13063 remains Monitor Item until remeasured.
+No new native/regional/full-act/audio or current-Shield-pixel result is claimed.

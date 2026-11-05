@@ -240,8 +240,11 @@ Unreleased. The earlier development themes remain in
   publishes current tiles through the existing captured owner. Controller replay
   reaches13062, with real star pixels and renderer-only omission at12887; the
   newly reached Monitor Item and complete acts remain separate dependencies.
-  Its eight exact static icon views now derive from the retained monitor source;
-  item rewards and the reserved Shield body remain separately gated.
+  Its eight exact static icon views now derive from the retained monitor source.
+  Opt-in typed Shield awards and a reserved whole6 Shield kernel now preserve
+  native store order, conditional reads and private completed-operation receipts;
+  Draw visibility permission ends at primitive exit, including failure paths.
+  The live Act2 award/Shield binding remains separately gated.
   Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower

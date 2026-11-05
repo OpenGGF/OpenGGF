@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,9 +24,12 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
  * adds1 to the full pointer. The possibly odd/static target is not dereferenced here; Root's mapper
  * owns that later finite boundary. No map/script bytes or assumed animation roots are embedded.
  *
- * <p>Only reached animation4 has an award port. Before that synchronous callback the native routine4/
- * deletion-word29 prefix is live. Root projects actual Frame/world values, calls its pure shoes owner,
- * validates/commits exactly once and performs ordered sound calls. This body contains no reward values,
+ * <p>The legacy constructor admits only animation4. Named opt-in construction also admits Shield2
+ * through a separate synchronous host port (Main.asm:525-529): contact.shield BYTE1, reserved whole6
+ * ID BYTE3 only, then FM_SHIELD ($97). The host owns all three external effects and their failure
+ * prefixes; there is no Frame shield field or reserved body here. Before either award, routine4/
+ * deletion-word29 prefix is live. For shoes, Root projects actual Frame/world values, calls its pure
+ * shoes owner, validates/commits exactly once and performs ordered sound calls. This body contains no reward values,
  * Frame patch, timer tick or no-op award. Other rewards stop explicitly after the legitimate item prefix.
  * All effect metadata describes completed work and must never be replayed. Every returning routine,
  * even DeleteObject, returns to the wrapper DrawObject. Root owns scheduling/phase/nonreentry and assets.
@@ -37,7 +41,7 @@ public final class CdMonitorItem {
     public enum NativeCall { OBJ_MOVE, DRAW_OBJECT }
     public enum AwardSound { SCMD_FADEPCM, SCMD_SHOESMUS }
 
-    public sealed interface Effect permits RoutineEntered, CallReturned, Awarded, Deleted { }
+    public sealed interface Effect permits RoutineEntered, CallReturned, Awarded, Deleted, ShieldAwarded { }
     public record RoutineEntered(NativeRoutine routine) implements Effect {
         public RoutineEntered { Objects.requireNonNull(routine); }
     }
@@ -79,6 +83,28 @@ public final class CdMonitorItem {
      */
     @FunctionalInterface public interface AwardPort { AwardResult award(AwardCall call); }
 
+    /** Separate finite Shield metadata; AwardSound/AwardResult retain their shoes-only grammar. */
+    public enum ShieldSound { FM_SHIELD }
+    public record ShieldAwardCall(CdObjectState.Identity identity, int rawAnimation) {
+        public ShieldAwardCall {
+            Objects.requireNonNull(identity);
+            if (rawAnimation != 2) throw new IllegalArgumentException("Shield requires raw animation BYTE2");
+        }
+    }
+    public record ShieldAwardResult(ShieldSound completedSound) {
+        public ShieldAwardResult { Objects.requireNonNull(completedSound); }
+    }
+    public record ShieldAwarded(ShieldAwardCall call, ShieldAwardResult result) implements Effect {
+        public ShieldAwarded { Objects.requireNonNull(call); Objects.requireNonNull(result); }
+    }
+    /**
+     * Root synchronously stores ContactGlobals.shield BYTE1, then only reserved whole6 ID BYTE3,
+     * then calls FM_SHIELD97, in that order. Return only after actual completion, never as commands.
+     * Root validates each external prefix/once-only store and retains it on failure. This component
+     * guards its dynamic/source banks, but cannot attest external stores, FM, Frame or World state.
+     */
+    @FunctionalInterface public interface ShieldAwardPort { ShieldAwardResult award(ShieldAwardCall call); }
+
     public record Result(CdObjectState state, List<Effect> effects) {
         public Result { Objects.requireNonNull(state); effects = List.copyOf(effects); }
         public boolean deleted() { return effects.stream().anyMatch(Deleted.class::isInstance); }
@@ -110,8 +136,168 @@ public final class CdMonitorItem {
         this.award = Objects.requireNonNull(award); this.drawObject = Objects.requireNonNull(drawObject);
     }
 
+    private ShieldAwardPort shieldAward;
+    private DispatchObserver observer;
+    private ReceiptGuard receiptGuard;
+    private boolean running, primitiveActive, resultReady;
+    private Object pendingOperation, operationResult;
+    private long operationOrdinal;
+
+    /** Public immutable descriptions are comparison data, never producer/adoption authority. */
+    public enum StoreKind { INIT_PREFIX, MAPPING_POINTER, MOVE_READY, MOVE_RESULT, REWARD_PREFIX, DELETE_TIMER, WRAPPER_READY }
+    public record Publication(StoreKind kind, CdObjectPlacementRuntime.Snapshot cut,
+                              CdObjectState source, CdObjectState output) { }
+    public record MappingReadCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, int byteOffset) { }
+    public record MotionCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source,
+                             Optional<PrimarySupport> primarySupport) { }
+    public record ShoesCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, AwardCall request) { }
+    public record ShieldCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source, ShieldAwardCall request) { }
+    public record DeleteCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public record DrawCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    /** The exact Result exposed by currentResult at this cut must be the object returned to Root. */
+    public record CompletionCall(CdObjectPlacementRuntime.Snapshot cut, CdObjectState source) { }
+    public interface DispatchObserver {
+        void beforeOperation(Object call);
+        void afterOperation(Object call);
+        void failedOperation(Object call, Throwable original);
+    }
+    public interface ReceiptGuard { void prepared(Object call); void completed(Object call); }
+
+    public CdMonitor.Assets assets() { return assets; }
+    public boolean isCurrentCall(Object call) { return running && call != null && call == pendingOperation; }
+    public boolean isCurrentPrimitive(Object call) { return isCurrentCall(call) && primitiveActive; }
+    public long currentOrdinal(Object call) {
+        if (!isCurrentCall(call)) throw new IllegalStateException("No original pending Monitor item operation");
+        return operationOrdinal;
+    }
+    public Object currentResult(Object call) {
+        if (!isCurrentCall(call) || !resultReady || primitiveActive)
+            throw new IllegalStateException("No completed original Monitor item operation");
+        return operationResult;
+    }
+
+    /** Explicit Shield opt-in without a World receipt binding; the old constructor stays unbound. */
+    public static CdMonitorItem withShieldAward(CdObjectPlacementRuntime runtime, CdMonitor.Assets assets,
+                                               AwardPort shoes, ShieldAwardPort shield, CdMonitor.DrawObjectCall draw) {
+        var body = new CdMonitorItem(runtime, assets, shoes, draw);
+        body.shieldAward = Objects.requireNonNull(shield); return body;
+    }
+    /**
+     * Root caches this exact body and binds a private invocation scope/guard. Supply the retained
+     * CdMonitor.Assets.fromAct2Assets view and its matching runtime; this factory alone grants no
+     * media, phase, generation or Frame authority. No callback may reenter this bound body.
+     */
+    public static CdMonitorItem withWorldOwner(CdObjectPlacementRuntime runtime, CdMonitor.Assets assets,
+                                              AwardPort shoes, ShieldAwardPort shield, CdMonitor.DrawObjectCall draw,
+                                              DispatchObserver observer, ReceiptGuard guard) {
+        var body = withShieldAward(runtime, assets, shoes, shield, draw);
+        body.observer = Objects.requireNonNull(observer); body.receiptGuard = Objects.requireNonNull(guard);
+        return body;
+    }
+
+    @FunctionalInterface private interface Operation<T> { T run(PrimitiveReceipt receipt); }
+    private static final class PrimitiveReceipt {
+        CdObjectState expected;
+        PrimitiveReceipt(CdObjectState source) { expected = source; }
+    }
+    /** No replay/rollback: a completed primitive prefix remains live even if verification fails. */
+    private <T> T observed(Object call, CdObjectPlacementRuntime.Snapshot cut,
+                           CdObjectState source, Operation<T> operation) {
+        if (pendingOperation != null) throw new IllegalStateException("Nested Monitor item operation");
+        pendingOperation = call; operationOrdinal++; resultReady = false;
+        var receipt = new PrimitiveReceipt(source);
+        try {
+            verifyStorage(cut, receipt);
+            if (observer != null) {
+                observer.beforeOperation(call); verifyStorage(cut, receipt);
+                receiptGuard.prepared(call); verifyStorage(cut, receipt);
+            }
+            T result;
+            primitiveActive = true;
+            try { result = operation.run(receipt); } finally { primitiveActive = false; }
+            verifyStorage(cut, receipt);
+            operationResult = result; resultReady = true;
+            if (observer != null) {
+                observer.afterOperation(call); verifyStorage(cut, receipt);
+                receiptGuard.completed(call); verifyStorage(cut, receipt);
+            }
+            return result;
+        } catch (RuntimeException | Error original) {
+            verifySuppressed(original, () -> verifyStorage(cut, receipt));
+            if (observer != null) {
+                verifySuppressed(original, () -> observer.failedOperation(call, original));
+                verifySuppressed(original, () -> verifyStorage(cut, receipt));
+            }
+            throw original;
+        } finally {
+            primitiveActive = false; pendingOperation = null; operationResult = null; resultReady = false;
+        }
+    }
+    private void verifyStorage(CdObjectPlacementRuntime.Snapshot cut, PrimitiveReceipt receipt) {
+        runtime.validateRestore(cut);
+        var actual = runtime.capture();
+        if (!cut.status().equals(actual.status())
+                || !Arrays.equals(cut.savedFlags().copy(), actual.savedFlags().copy()))
+            throw new IllegalStateException("Monitor item callback changed placement/saved storage");
+        int own = receipt.expected.identity().wholeIndex();
+        for (var before : cut.pool().slots()) {
+            int whole = before.identity().wholeIndex();
+            var expected = whole == own ? receipt.expected : before;
+            var live = runtime.pool().state(whole);
+            if (!expected.equals(live))
+                throw new IllegalStateException("Monitor item callback changed unowned dynamic bytes at " + whole);
+        }
+    }
+    private static void verifySuppressed(Throwable original, Runnable verification) {
+        try { verification.run(); }
+        catch (RuntimeException | Error fault) { if (fault != original) original.addSuppressed(fault); }
+    }
+    private CdObjectPlacementRuntime.Snapshot callbackCut(Cursor c) {
+        var cut = runtime.capture();
+        if (!c.state.equals(runtime.pool().state(c.wholeIndex)))
+            throw new IllegalStateException("Monitor item source changed before its synchronous operation");
+        return cut;
+    }
+    private void publish(Cursor c, StoreKind kind) {
+        if (observer == null) { c.pool.write(c.state); return; }
+        var cut = runtime.capture(); var source = c.pool.state(c.wholeIndex); var output = c.state;
+        observed(new Publication(kind, cut, source, output), cut, source, receipt -> {
+            c.pool.write(output); receipt.expected = output; return null;
+        });
+    }
+    private void draw(Cursor c) {
+        if (observer == null) { drawObject.drawObject(c.pool, c.state.identity()); return; }
+        var cut = callbackCut(c); var source = c.state;
+        observed(new DrawCall(cut, source), cut, source, receipt -> {
+            Throwable original = null;
+            try { drawObject.drawObject(c.pool, source.identity()); }
+            catch (RuntimeException | Error failure) { original = failure; throw failure; }
+            finally {
+                // Draw's permission ends at primitive exit, even when another storage check will fail.
+                // Retain every expected non-bit7 byte instead of adopting a possibly corrupted image.
+                try {
+                    int flags = c.pool.state(c.wholeIndex).spriteFlags();
+                    receipt.expected = receipt.expected.moveByte(SPRITE_FLAGS,
+                            (receipt.expected.spriteFlags() & 127) | (flags & 128));
+                } catch (RuntimeException | Error verification) {
+                    if (original == null) throw verification;
+                    if (verification != original) original.addSuppressed(verification);
+                }
+            }
+            return null;
+        });
+    }
+
     /** ObjMonitorItem (:419-425). Optional.empty is an explicit missing primary cut, never ID0/flags0. */
     public Result run(int wholeIndex, Optional<PrimarySupport> primarySupport) {
+        // Legacy unbound path retains its original callback/write behavior, including lack of receipts.
+        if (shieldAward == null) return runSelected(wholeIndex, primarySupport);
+        if (running) throw new IllegalStateException("Reentrant Monitor item invocation");
+        running = true; operationOrdinal = 0;
+        try { return runSelected(wholeIndex, primarySupport); }
+        finally { running = false; }
+    }
+    private Result runSelected(int wholeIndex, Optional<PrimarySupport> primarySupport) {
         Objects.requireNonNull(primarySupport);
         var pool = runtime.pool(); var state = pool.state(wholeIndex);
         if (state.id() != OBJECT_ID) throw new IllegalArgumentException("Monitor item requires live ID $1A at whole " + wholeIndex);
@@ -123,11 +309,13 @@ public final class CdMonitorItem {
             case 2 -> main(c, primarySupport);
             case 4 -> delete(c);
         }
-        c.publish();
-        drawObject.drawObject(pool, c.state.identity()); // Native wrapper runs even after DeleteObject.
+        publish(c, StoreKind.WRAPPER_READY);
+        draw(c); // Native wrapper runs even after DeleteObject.
         c.state = pool.state(wholeIndex);
         c.effects.add(new CallReturned(NativeCall.DRAW_OBJECT));
-        return new Result(c.state, c.effects);
+        if (observer == null) return new Result(c.state, c.effects);
+        var cut = callbackCut(c);
+        return observed(new CompletionCall(cut, c.state), cut, c.state, receipt -> new Result(c.state, c.effects));
     }
 
     /** ObjMonitorItem_Init (:438-459), including the byte-width ADD.B and full signed ADDA.W. */
@@ -138,30 +326,48 @@ public final class CdMonitorItem {
         c.state = c.state.moveByte(SPRITE_FLAGS, 0x24).moveByte(PRIORITY, 3).moveByte(WIDTH, 8).moveWord(Y_VELOCITY, -0x300);
         int animation = c.state.unsignedByte(ANIMATION);
         c.state = c.state.moveByte(MAP_FRAME, animation);
-        c.publish(); // These stores precede the actual retained-table word read.
+        publish(c, StoreKind.INIT_PREFIX); // These stores precede the actual retained-table word read.
         int index = (animation + animation) & 0xFF;
-        int relative = (short) assets.visual().mappings().unsignedWord(index);
+        int relative;
+        if (observer == null) relative = (short) assets.visual().mappings().unsignedWord(index);
+        else {
+            var cut = callbackCut(c);
+            relative = observed(new MappingReadCall(cut, c.state, index), cut, c.state,
+                    receipt -> (int) (short) assets.visual().mappings().unsignedWord(index));
+        }
         int pointer = assets.mappingsAddress() + relative + 1;
         // Do not read/validate a target before DrawObjects does so. Static mapping pointers may be odd.
         c.state = c.state.moveLong(MAPPINGS, pointer);
-        c.publish();
+        publish(c, StoreKind.MAPPING_POINTER);
     }
 
     /** ObjMonitorItem_Main (:465-482), followed only by the actually reached reward entry. */
     private void main(Cursor c, Optional<PrimarySupport> primarySupport) {
         c.enter(NativeRoutine.MAIN);
         if (c.state.signedWord(Y_VELOCITY) < 0) {
-            c.publish();
-            var moved = CdPlayerMovement.moveObject(CdMonitor.rawMotion(c.state), support(c, primarySupport));
+            publish(c, StoreKind.MOVE_READY);
+            CdPlayerMovement.RawObjectMoveResult moved;
+            if (observer == null) moved = CdPlayerMovement.moveObject(CdMonitor.rawMotion(c.state), support(c, primarySupport));
+            else {
+                var cut = callbackCut(c);
+                moved = observed(new MotionCall(cut, c.state, primarySupport), cut, c.state,
+                        receipt -> CdPlayerMovement.moveObject(CdMonitor.rawMotion(c.state), support(c, primarySupport)));
+            }
             // ObjMove writes position longs only. Its local flipper resistance never stores X velocity.
             c.state = c.state.moveLong(X_POSITION, moved.centreX16_16()).moveLong(Y_POSITION, moved.centreY16_16())
                     .addWord(Y_VELOCITY, 0x18);
-            c.publish(); c.effects.add(new CallReturned(NativeCall.OBJ_MOVE));
+            publish(c, StoreKind.MOVE_RESULT); c.effects.add(new CallReturned(NativeCall.OBJ_MOVE));
             return;
         }
         c.state = c.state.addByte(ROUTINE, 2).moveWord(MONITOR_ITEM_DELETE, 29);
-        c.publish();
+        publish(c, StoreKind.REWARD_PREFIX);
         int kind = c.state.unsignedByte(ANIMATION);
+        if (kind == 2 && shieldAward != null) {
+            var call = new ShieldAwardCall(c.state.identity(), kind); var cut = callbackCut(c);
+            var completed = observed(new ShieldCall(cut, c.state, call), cut, c.state,
+                    receipt -> Objects.requireNonNull(shieldAward.award(call), "Root must complete the actual Shield award"));
+            c.effects.add(new ShieldAwarded(call, completed)); return;
+        }
         if (kind != 4) {
             var boundary = switch (kind) {
                 case 0 -> UnsupportedBoundary.REWARD_ONE_UP;
@@ -175,7 +381,13 @@ public final class CdMonitorItem {
             throw new UnsupportedMonitorItem(boundary, c.wholeIndex, kind);
         }
         var call = new AwardCall(c.state.identity(), kind);
-        var completed = Objects.requireNonNull(award.award(call), "Root must return a completed award result");
+        AwardResult completed;
+        if (observer == null) completed = Objects.requireNonNull(award.award(call), "Root must return a completed award result");
+        else {
+            var cut = callbackCut(c);
+            completed = observed(new ShoesCall(cut, c.state, call), cut, c.state,
+                    receipt -> Objects.requireNonNull(award.award(call), "Root must return a completed award result"));
+        }
         if (!c.pool.state(c.wholeIndex).equals(c.state)) {
             throw new IllegalStateException("Monitor award port changed the item slot");
         }
@@ -198,11 +410,18 @@ public final class CdMonitorItem {
     }
 
     /** ObjMonitorItem_Delete (:624-638): decrement WORD, then B(M)I tests the resulting sign. */
-    private static void delete(Cursor c) {
+    private void delete(Cursor c) {
         c.enter(NativeRoutine.DELETE);
-        c.state = c.state.addWord(MONITOR_ITEM_DELETE, -1); c.publish();
+        c.state = c.state.addWord(MONITOR_ITEM_DELETE, -1); publish(c, StoreKind.DELETE_TIMER);
         if (c.state.signedWord(MONITOR_ITEM_DELETE) < 0) {
-            c.pool.deleteObject(c.wholeIndex); c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
+            if (observer == null) c.pool.deleteObject(c.wholeIndex);
+            else {
+                var cut = callbackCut(c);
+                observed(new DeleteCall(cut, c.state), cut, c.state, receipt -> {
+                    c.pool.deleteObject(c.wholeIndex); receipt.expected = c.pool.state(c.wholeIndex); return null;
+                });
+            }
+            c.state = c.pool.state(c.wholeIndex); c.effects.add(new Deleted());
         }
     }
 
@@ -215,7 +434,6 @@ public final class CdMonitorItem {
             this.pool = pool; this.state = state; wholeIndex = state.identity().wholeIndex();
         }
         void enter(NativeRoutine routine) { effects.add(new RoutineEntered(routine)); }
-        void publish() { pool.write(state); }
     }
     private static void byteValue(int value) {
         if ((value & ~0xFF) != 0) throw new IllegalArgumentException("Expected an unsigned native byte");

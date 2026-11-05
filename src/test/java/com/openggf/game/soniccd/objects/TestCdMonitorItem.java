@@ -191,6 +191,393 @@ class TestCdMonitorItem {
         assertThrows(IllegalArgumentException.class,()->new CdMonitorItem.PrimarySupport(1,256));
     }
 
+    // Additive Shield/receipt fixtures. All pre-existing tests and helpers above/below are preserved.
+    @Test void shieldOptInUsesItsOwnTypedCompletedResultAndKeepsShoesGrammar() {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        var before = b.h.slot(); var r = b.run();
+        assertEquals(before.moveByte(ROUTINE, 4).moveWord(MONITOR_ITEM_DELETE, 29), r.state());
+        assertEquals(List.of("CONTACT1", "RESERVED_ID3", "FM_SHIELD97", "DRAW"), b.externalOrder);
+        var awarded = r.effects().stream().filter(CdMonitorItem.ShieldAwarded.class::isInstance)
+                .map(CdMonitorItem.ShieldAwarded.class::cast).findFirst().orElseThrow();
+        assertSame(b.shieldResult, awarded.result()); assertEquals(2, awarded.call().rawAnimation());
+        assertEquals(CdMonitorItem.ShieldSound.FM_SHIELD, awarded.result().completedSound());
+        assertTrue(r.effects().stream().noneMatch(CdMonitorItem.Awarded.class::isInstance));
+        assertTrue(b.h.awards.isEmpty()); assertEquals(1, b.shieldCalls);
+        assertEquals(List.of(CdMonitorItem.AwardSound.SCMD_FADEPCM, CdMonitorItem.AwardSound.SCMD_SHOESMUS),
+                List.of(CdMonitorItem.AwardSound.values()));
+        assertThrows(UnsupportedOperationException.class, () -> r.effects().clear());
+        b.run(); assertEquals(1, b.shieldCalls); assertEquals(28, b.h.slot().word(MONITOR_ITEM_DELETE));
+    }
+
+    @Test void namedUnobservedShieldConstructionIsExplicitAndLegacyAnimationTwoStillStops() {
+        var h = prepared(2); h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        assertEquals(CdMonitorItem.UnsupportedBoundary.REWARD_SHIELD,
+                assertThrows(CdMonitorItem.UnsupportedMonitorItem.class, h::run).boundary());
+        h.edit(o -> o.moveByte(ROUTINE, 2)); var calls = new ArrayList<CdMonitorItem.ShieldAwardCall>();
+        var body = CdMonitorItem.withShieldAward(h.runtime, TestCdMonitor.assets(), h::award, c -> {
+            assertEquals(4, h.slot().routine()); assertEquals(29, h.slot().word(MONITOR_ITEM_DELETE));
+            calls.add(c); return new CdMonitorItem.ShieldAwardResult(CdMonitorItem.ShieldSound.FM_SHIELD);
+        }, h::draw);
+        var r = body.run(WHOLE, Optional.empty());
+        assertEquals(1, calls.size()); assertEquals(1, h.draws.size());
+        assertTrue(r.effects().stream().anyMatch(CdMonitorItem.ShieldAwarded.class::isInstance));
+    }
+
+    @Test void boundShieldRises32TimesAndOnlyDispatch33AwardsWithoutReadingDirtySupport() {
+        var b = bound(0); b.h.edit(o -> o.moveByte(ANIMATION, 2));
+        for (int i = 0; i < 32; i++) b.run();
+        assertEquals(0, b.shieldCalls); assertEquals(0x02A68000, b.h.slot().longBits(Y_POSITION));
+        b.h.edit(o -> o.moveByte(FLAGS, 8).moveByte(STAND_LINK_3D, 255));
+        b.run(); assertEquals(1, b.shieldCalls); assertEquals(29, b.h.slot().word(MONITOR_ITEM_DELETE));
+        assertEquals(32, b.calls.stream().filter(CdMonitorItem.MotionCall.class::isInstance).count());
+        assertEquals(1, b.calls.stream().filter(CdMonitorItem.ShieldCall.class::isInstance).count());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 1, 3, 5, 6, 7, 128, 255})
+    void shieldBindingDoesNotBroadenOtherUnsupportedRewardBranches(int animation) {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, animation).moveWord(Y_VELOCITY, 0));
+        var before = b.h.slot(); assertThrows(CdMonitorItem.UnsupportedMonitorItem.class, b::run);
+        assertEquals(before.moveByte(ROUTINE, 4).moveWord(MONITOR_ITEM_DELETE, 29), b.h.slot());
+        assertEquals(0, b.shieldCalls); assertTrue(b.h.awards.isEmpty()); assertTrue(b.h.draws.isEmpty());
+        assertEquals(1, b.calls.size()); assertInstanceOf(CdMonitorItem.Publication.class, b.calls.getFirst());
+    }
+
+    @Test void observedShoesStillReturnsTheOriginalShoesResultAndNeverCallsShield() {
+        var b = bound(2); b.h.edit(o -> o.moveWord(Y_VELOCITY, 0));
+        b.h.completed = List.of(CdMonitorItem.AwardSound.SCMD_FADEPCM, CdMonitorItem.AwardSound.SCMD_SHOESMUS);
+        var r = b.run(); var awarded = r.effects().stream().filter(CdMonitorItem.Awarded.class::isInstance)
+                .map(CdMonitorItem.Awarded.class::cast).findFirst().orElseThrow();
+        int index = indexOf(b.calls, CdMonitorItem.ShoesCall.class);
+        assertSame(awarded.result(), b.results.get(index)); assertEquals(b.h.completed, awarded.result().completedSounds());
+        assertEquals(0, b.shieldCalls); assertEquals(1, b.h.awards.size());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 1, 2, 3})
+    void originalShieldFaultRetainsActualExternalAndItemPrefixesWithoutLaterDrawOrReplay(int stage) {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        var before = b.h.slot(); b.failShieldStage = stage;
+        assertSame(b.original, assertThrows(IllegalStateException.class, b::run));
+        assertEquals(before.moveByte(ROUTINE, 4).moveWord(MONITOR_ITEM_DELETE, 29), b.h.slot());
+        assertEquals(stage >= 1 ? 1 : 0xA5, b.contact);
+        assertEquals(stage >= 2 ? 3 : 0xB6, b.reservedId); assertEquals(stage >= 3 ? 1 : 0, b.fmCount);
+        assertEquals(List.of("CONTACT1", "RESERVED_ID3", "FM_SHIELD97").subList(0, stage), b.externalOrder);
+        assertTrue(b.h.draws.isEmpty()); assertEquals(1, b.failed.size());
+        Object stale = b.failed.getFirst(); assertFalse(b.body.isCurrentCall(stale));
+        assertThrows(IllegalStateException.class, () -> b.body.currentResult(stale));
+        b.failShieldStage = -1; b.run(); assertEquals(1, b.shieldCalls);
+        assertEquals(28, b.h.slot().word(MONITOR_ITEM_DELETE));
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"OWN", "OTHER", "SAVED", "STATUS"})
+    void shieldPortFaultKeepsIdenticalThrowableAndSuppressesFullOwnedStorageVerification(String target) {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        b.shieldHook = () -> { corrupt(b.h, target); throw b.original; };
+        assertSame(b.original, assertThrows(IllegalStateException.class, b::run));
+        assertTrue(b.original.getSuppressed().length >= 1); assertTrue(b.h.draws.isEmpty());
+        assertEquals(4, b.h.slot().routine()); assertEquals(29, b.h.slot().word(MONITOR_ITEM_DELETE));
+        assertEquals(0, b.fmCount); assertEquals(0xA5, b.contact);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"OWN", "OTHER", "SAVED", "STATUS"})
+    void shieldSuccessCannotHideDynamicOrSourceBankWrites(String target) {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        b.shieldHook = () -> corrupt(b.h, target);
+        assertThrows(IllegalStateException.class, b::run); assertTrue(b.h.draws.isEmpty());
+        assertEquals(1, b.shieldCalls); assertEquals(1, b.fmCount); // Actual external prefix is not rolled back.
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"BEFORE", "PREPARED", "AFTER", "COMPLETED"})
+    void callbackFaultPreservesReachedPrimitivePrefixAndCleansAuthority(String phase) {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        var before = b.h.slot();
+        java.util.function.Consumer<Object> reject = call -> { throw b.original; };
+        switch (phase) {
+            case "BEFORE" -> b.beforeHook = reject;
+            case "PREPARED" -> b.preparedHook = reject;
+            case "AFTER" -> b.afterHook = reject;
+            case "COMPLETED" -> b.completedHook = reject;
+        }
+        assertSame(b.original, assertThrows(IllegalStateException.class, b::run));
+        boolean wrote = phase.equals("AFTER") || phase.equals("COMPLETED");
+        assertEquals(wrote ? before.moveByte(ROUTINE, 4).moveWord(MONITOR_ITEM_DELETE, 29) : before, b.h.slot());
+        assertEquals(0, b.shieldCalls); assertTrue(b.h.draws.isEmpty());
+        assertFalse(b.body.isCurrentCall(b.calls.getFirst()));
+    }
+
+    @Test void failedObserverExceptionIsSuppressedAndCannotReplaceOriginalAwardFault() {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        var verification = new AssertionError("failure observer verification");
+        b.failShieldStage = 1; b.failedHook = call -> { throw verification; };
+        assertSame(b.original, assertThrows(IllegalStateException.class, b::run));
+        assertArrayEquals(new Throwable[]{verification}, b.original.getSuppressed());
+        assertEquals(1, b.contact); assertTrue(b.h.draws.isEmpty());
+    }
+
+    @Test void observerAndGuardNonwritesAreCheckedBeforeAnActualSourceReadOrAward() {
+        var b = bound(0); b.beforeHook = call -> {
+            if (call instanceof CdMonitorItem.MappingReadCall) corrupt(b.h, "OTHER");
+        };
+        assertThrows(IllegalStateException.class, b::run);
+        assertEquals(0, b.h.slot().longBits(MAPPINGS)); // Init prefix exists, reached read did not return.
+        assertEquals(2, b.h.slot().routine()); assertTrue(b.h.draws.isEmpty());
+        var k = bound(2); k.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        k.preparedHook = call -> { if (call instanceof CdMonitorItem.ShieldCall) corrupt(k.h, "SAVED"); };
+        assertThrows(IllegalStateException.class, k::run); assertEquals(0, k.shieldCalls);
+    }
+
+    @Test void currentOriginalReceiptsExposeExactReadMotionAndReturnedResultObjectsInSourceOrder() {
+        var b = bound(0); var r = b.run();
+        assertSame(b.body.assets(), b.assets); assertSame(r, b.adopted);
+        assertEquals(List.of("INIT_PREFIX", "READ", "MAPPING_POINTER", "MOVE_READY", "MOVE", "MOVE_RESULT",
+                "WRAPPER_READY", "DRAW", "COMPLETE"), b.calls.stream().map(TestCdMonitorItem::operationName).toList());
+        var read = (CdMonitorItem.MappingReadCall) b.calls.get(1);
+        assertEquals(8, read.byteOffset()); assertEquals(2, read.source().routine());
+        assertEquals(0x80, b.results.get(1));
+        assertInstanceOf(CdPlayerMovement.RawObjectMoveResult.class, b.results.get(4));
+        assertSame(r, b.results.getLast());
+        for (Object stale : b.calls) {
+            assertFalse(b.body.isCurrentCall(stale)); assertFalse(b.body.isCurrentPrimitive(stale));
+            assertThrows(IllegalStateException.class, () -> b.body.currentOrdinal(stale));
+            assertThrows(IllegalStateException.class, () -> b.body.currentResult(stale));
+        }
+        assertFalse(b.body.isCurrentCall(null)); assertFalse(b.body.isCurrentCall(new Object()));
+        var equalClone = new CdMonitorItem.Result(r.state(), r.effects()); assertEquals(r, equalClone); assertNotSame(r, equalClone);
+        b.run(); assertEquals(1L, b.firstOrdinal); // Ordinals restart per invocation, host generation still required.
+    }
+
+    @Test void equalPublicCallClonesNeverAcquirePendingOrPrimitiveOrCompletionAuthority() {
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        b.beforeHook = call -> {
+            Object clone = cloneCall(call); assertEquals(call, clone); assertNotSame(call, clone);
+            assertFalse(b.body.isCurrentCall(clone)); assertFalse(b.body.isCurrentPrimitive(clone));
+            assertThrows(IllegalStateException.class, () -> b.body.currentOrdinal(clone));
+            assertThrows(IllegalStateException.class, () -> b.body.currentResult(clone));
+            assertThrows(IllegalStateException.class, b::run);
+        };
+        b.shieldHook = () -> {
+            var actual = (CdMonitorItem.ShieldCall) b.pending;
+            assertFalse(b.body.isCurrentPrimitive(cloneCall(actual)));
+            assertThrows(IllegalStateException.class, () -> b.body.currentResult(actual));
+            assertThrows(IllegalStateException.class, b::run);
+        };
+        b.run(); assertEquals(1, b.shieldCalls);
+    }
+
+    @Test void observedUnsupportedSupportReadKeepsTypedFailureAndInitMappingPrefixWithoutMotionWrites() {
+        var b = bound(0); b.h.edit(o -> o.moveByte(FLAGS, 8).moveByte(STAND_LINK_3D, 31));
+        var original = assertThrows(CdPlayerMovement.UnsupportedMotion.class, b::run);
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.RESERVED_OBJECT_SLOT, original.boundary());
+        assertEquals(TestCdMonitor.MAP + 0x81, b.h.slot().longBits(MAPPINGS));
+        assertEquals(-0x300, b.h.slot().signedWord(Y_VELOCITY)); assertEquals(0x02D80000, b.h.slot().longBits(Y_POSITION));
+        assertInstanceOf(CdMonitorItem.MotionCall.class, b.failed.getFirst()); assertTrue(b.h.draws.isEmpty());
+    }
+
+    @Test void boundOldNegativeMoveReadsRealDynamicSupportAndRetainsStoredVelocity() {
+        var b = bound(2); b.h.edit(o -> o.moveByte(FLAGS, 8).moveByte(STAND_LINK_3D, 42)
+                .moveLong(X_POSITION, 0x01000000).moveWord(X_VELOCITY, 0x100).moveWord(Y_VELOCITY, -1));
+        b.h.pool().write(b.h.pool().state(42).moveByte(ID, 0x1E).moveByte(FLAGS, 1));
+        var support = b.h.pool().state(42); var r = b.run();
+        assertEquals(0x01020000, r.state().longBits(X_POSITION)); assertEquals(23, r.state().signedWord(Y_VELOCITY));
+        assertEquals(0x100, r.state().word(X_VELOCITY)); assertEquals(support, b.h.pool().state(42));
+    }
+
+    @Test void observedRawMappingBodyWordUsesSignedRelativePlusOneWithoutAnEarlyTargetRead() {
+        var b = bound(0); b.h.edit(o -> o.moveByte(ANIMATION, 23));
+        // Actual retained monitor include at46: F0 06, selected by raw animation23.
+        var r = b.run();
+        assertEquals(TestCdMonitor.MAP - 4090 + 1, r.state().longBits(MAPPINGS));
+        var read = (CdMonitorItem.MappingReadCall) b.calls.get(1); assertEquals(46, read.byteOffset());
+        assertEquals(-4090, b.results.get(1)); assertEquals(23, r.state().unsignedByte(MAP_FRAME));
+    }
+
+    @ParameterizedTest @CsvSource({"0,true", "32768,false", "32769,true"})
+    void observedDeleteIsWordSignBasedAndStillReturnsThroughRealDraw(int timer, boolean deleted) {
+        var b = bound(4); b.h.edit(o -> o.moveWord(MONITOR_ITEM_DELETE, timer));
+        var r = b.run(); assertEquals(deleted, r.deleted()); assertEquals(1, b.h.draws.size());
+        assertEquals(deleted ? 1 : 0, b.calls.stream().filter(CdMonitorItem.DeleteCall.class::isInstance).count());
+        if (deleted) assertArrayEquals(new byte[64], r.state().copyBytes());
+        else assertEquals(32767, r.state().word(MONITOR_ITEM_DELETE));
+        assertSame(r, b.adopted); assertEquals(0, b.shieldCalls);
+    }
+
+    @Test void drawAllowsOnlyActualOwnBitSevenAndFreezesItBeforeObserverCallbacks() {
+        var b = bound(2); b.h.drawFlags = 0xA4; assertEquals(0xA4, b.run().state().spriteFlags());
+        var k = bound(2); k.h.drawFlags = 0xE4; assertThrows(IllegalStateException.class, k::run);
+        assertEquals(0xE4, k.h.slot().spriteFlags()); // Invalid actual primitive bytes remain; no rollback.
+        var j = bound(2); j.afterHook = call -> {
+            if (call instanceof CdMonitorItem.DrawCall) j.h.edit(o -> o.moveByte(SPRITE_FLAGS, o.spriteFlags() ^ 128));
+        };
+        assertThrows(IllegalStateException.class, j::run);
+        assertTrue(j.calls.stream().noneMatch(CdMonitorItem.CompletionCall.class::isInstance));
+    }
+
+    @Test void drawFailureRetainsActualBitSevenAndIdenticalThrowableWithVerificationSuppressed() {
+        var b = bound(4); b.h.edit(o -> o.moveWord(MONITOR_ITEM_DELETE, 0));
+        b.drawHook = () -> { b.h.edit(o -> o.moveByte(SPRITE_FLAGS, 128)); throw b.original; };
+        assertSame(b.original, assertThrows(IllegalStateException.class, b::run));
+        assertEquals(128, b.h.slot().spriteFlags()); assertEquals(0, b.h.slot().id());
+        assertEquals(0, b.original.getSuppressed().length); assertInstanceOf(CdMonitorItem.DrawCall.class, b.failed.getFirst());
+        var k = bound(2); k.drawHook = () -> { corrupt(k.h, "OTHER"); throw k.original; };
+        assertSame(k.original, assertThrows(IllegalStateException.class, k::run));
+        assertTrue(k.original.getSuppressed().length >= 1);
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {true, false})
+    void drawPermissionEndsBeforeFailedObserverEvenWhenAnotherSlotIsCorrupt(boolean throwInDraw) {
+        var b = bound(2);
+        b.drawHook = () -> {
+            corrupt(b.h, "OTHER");
+            if (throwInDraw) throw b.original;
+        };
+        b.failedHook = call -> {
+            if (call instanceof CdMonitorItem.DrawCall) {
+                b.h.pool().deleteObject(127); // Repair only the unrelated corruption, exposing persistent own-bit change.
+                b.h.edit(o -> o.moveByte(SPRITE_FLAGS, o.spriteFlags() ^ 128));
+            }
+        };
+        var failure = assertThrows(IllegalStateException.class, b::run);
+        if (throwInDraw) assertSame(b.original, failure);
+        else assertTrue(failure.getMessage().contains("at 127"));
+        assertEquals(0xA4, b.h.slot().spriteFlags(), "Unauthorized failed-observer write is detected, not rolled back");
+        assertTrue(java.util.Arrays.stream(failure.getSuppressed()).anyMatch(f -> f.getMessage() != null
+                && f.getMessage().contains("unowned dynamic bytes at " + WHOLE)),
+                "Draw's actual bit must be frozen before failedOperation changes it");
+        assertTrue(b.calls.stream().noneMatch(CdMonitorItem.CompletionCall.class::isInstance));
+        assertFalse(b.body.isCurrentCall(b.failed.getLast()));
+    }
+
+    @Test void nullShieldReturnStopsAfterActualExternalPrefixAndErrorIdentityAlsoSurvivesVerification() {
+        var h = prepared(2); h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        var body = CdMonitorItem.withShieldAward(h.runtime, TestCdMonitor.assets(), h::award, c -> null, h::draw);
+        assertThrows(NullPointerException.class, () -> body.run(WHOLE, Optional.empty()));
+        assertEquals(4, h.slot().routine()); assertEquals(29, h.slot().word(MONITOR_ITEM_DELETE)); assertTrue(h.draws.isEmpty());
+        var b = bound(2); b.h.edit(o -> o.moveByte(ANIMATION, 2).moveWord(Y_VELOCITY, 0));
+        var error = new AssertionError("original Shield error"); b.shieldHook = () -> { corrupt(b.h, "SAVED"); throw error; };
+        assertSame(error, assertThrows(AssertionError.class, b::run)); assertTrue(error.getSuppressed().length >= 1);
+    }
+
+    @Test void everyOperationDescriptionCloneIsRejectedAcrossRiseRewardDeleteAndCompletion() {
+        var b = bound(0); b.h.edit(o -> o.moveByte(ANIMATION, 2));
+        b.beforeHook = call -> {
+            Object clone = cloneCall(call); assertEquals(call, clone); assertNotSame(call, clone);
+            assertFalse(b.body.isCurrentCall(clone)); assertFalse(b.body.isCurrentPrimitive(clone));
+            assertThrows(IllegalStateException.class, () -> b.body.currentOrdinal(clone));
+            assertThrows(IllegalStateException.class, () -> b.body.currentResult(clone));
+        };
+        b.run(); b.h.edit(o -> o.moveWord(Y_VELOCITY, 0)); b.run();
+        b.h.edit(o -> o.moveWord(MONITOR_ITEM_DELETE, 0)); b.run();
+        var k = bound(2); k.h.edit(o -> o.moveWord(Y_VELOCITY, 0));
+        k.beforeHook = call -> assertFalse(k.body.isCurrentCall(cloneCall(call))); k.run();
+        assertTrue(b.calls.stream().anyMatch(CdMonitorItem.DeleteCall.class::isInstance));
+        assertTrue(b.calls.stream().anyMatch(CdMonitorItem.MappingReadCall.class::isInstance));
+        assertTrue(b.calls.stream().anyMatch(CdMonitorItem.MotionCall.class::isInstance));
+    }
+
+    @Test void publicOptInFactoriesAndShieldRecordsRejectMissingOwnersAndInvalidShapes() {
+        var h = prepared(2); var a = TestCdMonitor.assets();
+        CdMonitorItem.ShieldAwardPort shield = c -> new CdMonitorItem.ShieldAwardResult(CdMonitorItem.ShieldSound.FM_SHIELD);
+        assertThrows(NullPointerException.class, () -> CdMonitorItem.withShieldAward(h.runtime, a, h::award, null, h::draw));
+        assertThrows(NullPointerException.class, () -> CdMonitorItem.withWorldOwner(h.runtime, a, h::award, shield, h::draw, null, null));
+        var b = bound(2);
+        assertThrows(NullPointerException.class, () -> CdMonitorItem.withWorldOwner(h.runtime, a, h::award, shield, h::draw, b, null));
+        assertThrows(IllegalArgumentException.class, () -> new CdMonitorItem.ShieldAwardCall(h.slot().identity(), 4));
+        assertThrows(IllegalArgumentException.class, () -> new CdMonitorItem.ShieldAwardCall(h.slot().identity(), 258));
+        assertThrows(NullPointerException.class, () -> new CdMonitorItem.ShieldAwardResult(null));
+        assertThrows(NullPointerException.class, () -> new CdMonitorItem.ShieldAwarded(null, b.shieldResult));
+        assertThrows(NullPointerException.class, () -> new CdMonitorItem.ShieldAwarded(new CdMonitorItem.ShieldAwardCall(h.slot().identity(), 2), null));
+    }
+
+    static int indexOf(List<Object> calls, Class<?> type) {
+        for (int i = 0; i < calls.size(); i++) if (type.isInstance(calls.get(i))) return i;
+        throw new AssertionError("Missing actual operation " + type);
+    }
+    static String operationName(Object call) {
+        if (call instanceof CdMonitorItem.Publication p) return p.kind().name();
+        if (call instanceof CdMonitorItem.MappingReadCall) return "READ";
+        if (call instanceof CdMonitorItem.MotionCall) return "MOVE";
+        if (call instanceof CdMonitorItem.DrawCall) return "DRAW";
+        if (call instanceof CdMonitorItem.CompletionCall) return "COMPLETE";
+        throw new AssertionError("Unexpected call " + call);
+    }
+    static Object cloneCall(Object call) {
+        if (call instanceof CdMonitorItem.Publication c) return new CdMonitorItem.Publication(c.kind(), c.cut(), c.source(), c.output());
+        if (call instanceof CdMonitorItem.ShieldCall c) return new CdMonitorItem.ShieldCall(c.cut(), c.source(), c.request());
+        if (call instanceof CdMonitorItem.ShoesCall c) return new CdMonitorItem.ShoesCall(c.cut(), c.source(), c.request());
+        if (call instanceof CdMonitorItem.MappingReadCall c) return new CdMonitorItem.MappingReadCall(c.cut(), c.source(), c.byteOffset());
+        if (call instanceof CdMonitorItem.MotionCall c) return new CdMonitorItem.MotionCall(c.cut(), c.source(), c.primarySupport());
+        if (call instanceof CdMonitorItem.DeleteCall c) return new CdMonitorItem.DeleteCall(c.cut(), c.source());
+        if (call instanceof CdMonitorItem.DrawCall c) return new CdMonitorItem.DrawCall(c.cut(), c.source());
+        if (call instanceof CdMonitorItem.CompletionCall c) return new CdMonitorItem.CompletionCall(c.cut(), c.source());
+        throw new AssertionError("Unexpected clone fixture " + call);
+    }
+    static void corrupt(Harness h, String target) {
+        switch (target) {
+            case "OWN" -> h.edit(o -> o.moveByte(ANGLE, o.unsignedByte(ANGLE) ^ 1));
+            case "OTHER" -> h.pool().write(h.pool().state(127).moveByte(ANGLE, 1));
+            case "SAVED" -> h.runtime.bsetSavedFlag(1, 0, CdObjectPlacementRuntime.SavedBit.MEMBER_1);
+            case "STATUS" -> h.runtime.spawnObjects(0, 0);
+            default -> throw new AssertionError(target);
+        }
+    }
+    static Binding bound(int routine) { return new Binding(prepared(routine)); }
+    static final class Binding implements CdMonitorItem.DispatchObserver, CdMonitorItem.ReceiptGuard {
+        final Harness h;
+        final CdMonitor.Assets assets = TestCdMonitor.assets();
+        final CdMonitorItem body;
+        final CdMonitorItem.ShieldAwardResult shieldResult = new CdMonitorItem.ShieldAwardResult(CdMonitorItem.ShieldSound.FM_SHIELD);
+        final IllegalStateException original = new IllegalStateException("actual constructed port failure");
+        final List<Object> calls = new ArrayList<>(), results = new ArrayList<>(), failed = new ArrayList<>();
+        final List<String> externalOrder = new ArrayList<>();
+        java.util.function.Consumer<Object> beforeHook = c -> {}, preparedHook = c -> {}, afterHook = c -> {},
+                completedHook = c -> {}, failedHook = c -> {};
+        Runnable shieldHook = () -> {}, drawHook = () -> {};
+        int shieldCalls, contact = 0xA5, reservedId = 0xB6, fmCount, failShieldStage = -1;
+        Object pending;
+        CdMonitorItem.Result adopted;
+        long firstOrdinal;
+        Binding(Harness h) {
+            this.h = h;
+            body = CdMonitorItem.withWorldOwner(h.runtime, assets, call -> {
+                assertTrue(bodyPrimitive());
+                assertSame(((CdMonitorItem.ShoesCall) pending).request(), call); return h.award(call);
+            }, this::shield, (pool, identity) -> {
+                assertTrue(bodyPrimitive()); drawHook.run(); externalOrder.add("DRAW"); h.draw(pool, identity);
+            }, this, this);
+        }
+        boolean bodyPrimitive() { return body.isCurrentPrimitive(pending); }
+        CdMonitorItem.Result run() { return body.run(WHOLE, h.primary); }
+        CdMonitorItem.ShieldAwardResult shield(CdMonitorItem.ShieldAwardCall call) {
+            assertTrue(bodyPrimitive()); assertSame(((CdMonitorItem.ShieldCall) pending).request(), call);
+            assertEquals(h.slot().identity(), call.identity()); assertEquals(4, h.slot().routine());
+            assertEquals(29, h.slot().word(MONITOR_ITEM_DELETE)); shieldCalls++; shieldHook.run();
+            if (failShieldStage == 0) throw original;
+            contact = 1; externalOrder.add("CONTACT1"); if (failShieldStage == 1) throw original;
+            reservedId = 3; externalOrder.add("RESERVED_ID3"); if (failShieldStage == 2) throw original;
+            fmCount++; externalOrder.add("FM_SHIELD97"); if (failShieldStage == 3) throw original;
+            return shieldResult;
+        }
+        public void beforeOperation(Object call) {
+            pending = call; calls.add(call); assertTrue(body.isCurrentCall(call)); assertFalse(bodyPrimitive());
+            long ordinal = body.currentOrdinal(call); if (ordinal == 1) firstOrdinal = ordinal;
+            assertThrows(IllegalStateException.class, () -> body.currentResult(call)); beforeHook.accept(call);
+        }
+        public void prepared(Object call) { assertSame(pending, call); assertFalse(bodyPrimitive()); preparedHook.accept(call); }
+        public void afterOperation(Object call) {
+            assertSame(pending, call); assertTrue(body.isCurrentCall(call)); assertFalse(bodyPrimitive());
+            Object result = body.currentResult(call); results.add(result);
+            if (call instanceof CdMonitorItem.CompletionCall) adopted = (CdMonitorItem.Result) result;
+            afterHook.accept(call);
+        }
+        public void completed(Object call) {
+            assertSame(pending, call); assertFalse(bodyPrimitive()); assertSame(results.getLast(), body.currentResult(call));
+            completedHook.accept(call);
+        }
+        public void failedOperation(Object call, Throwable failure) {
+            assertSame(pending, call); assertTrue(body.isCurrentCall(call)); assertFalse(bodyPrimitive());
+            assertNotNull(failure); failed.add(call); failedHook.accept(call);
+        }
+    }
+
     static Harness prepared(int routine) { var h=new Harness(); h.edit(o -> o.moveByte(ID,0x1A).moveByte(ROUTINE,routine)
             .moveByte(ANIMATION,4).moveByte(SPRITE_FLAGS,0x24).moveWord(X,0x850).moveWord(Y,0x2D8)
             .moveWord(Y_VELOCITY,-0x300)); return h; }
