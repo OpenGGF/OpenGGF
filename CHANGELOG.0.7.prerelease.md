@@ -90,7 +90,9 @@ Unreleased. The earlier development themes remain in
 
 - Fresh S3K trace segments derive the entry camera from the ROM start-location
   entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
-  objects (the DDZ fly-in, the shrine) have already moved.
+  objects (the DDZ fly-in, the shrine) have already moved. Fresh Level assembly
+  then runs its native initial camera movement before zone setup; the sanctuary
+  starts at `$326`, while its special-stage results backdrop retains `$240`.
 
 - Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
   fly-in: CPU-held flight to the right until landing.

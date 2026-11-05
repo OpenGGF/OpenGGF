@@ -494,17 +494,33 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                     int act = GameServices.level().getCurrentAct();
                     Sonic3kLevelResourceProfile profile =
                             Sonic3kLevelResourceProfile.resolve(zone, act);
-                    if (ctx.hasCheckpoint() || profile.eventKind()
-                            != Sonic3kLevelResourceProfile.EventKind.HPZ_SPECIAL_STAGE_HUB) {
+                    // Both synchronous and resumable Level assembly pass here.
+                    // loc_6310 (sonic3k.asm:7791-7795) runs MoveCameraX/Y immediately
+                    // after Get_LevelSizeStart, before any zone initialization.
+                    // Results loc_2E16C goes straight to LevelSetup instead.
+                    boolean resultsBackdrop = !ctx.hasCheckpoint()
+                            && profile.eventKind() == Sonic3kLevelResourceProfile.EventKind.HPZ_SPECIAL_STAGE_HUB
+                            && GameServices.level().sanctuaryReentryStage().isPresent();
+                    if (!resultsBackdrop) {
+                        if (ctx.permitsInitialProcessSpritesRequest()
+                                && Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) {
+                            var camera = GameServices.camera();
+                            com.openggf.camera.NativeCameraInitialization.moveBeforeLevelSetup(camera);
+                            // LevelSetup publishes the resulting words before either
+                            // screen-init consumer (sonic3k.asm:102254-102255).
+                            camera.copyLivePositionToScreenEventWords();
+                        }
                         return;
                     }
+                    // Fresh loc_1BF9C (sonic3k.asm:38305-38312) owns the start.
+                    // Only results loc_2E16C (sonic3k.asm:63214-63225) selects
+                    // the stage backdrop's $240; a fresh shrine is not results.
+                    var reentryStage = GameServices.level().sanctuaryReentryStage();
+                    if (reentryStage.isEmpty()) return;
                     Sonic3kLevelResourceProfile.CustomLevelResources resources =
                             profile.requireCustomResources();
                     var camera = GameServices.camera();
-                    int cameraX = GameServices.level().sanctuaryReentryStage().isPresent()
-                            ? hpzReturnCameraX(GameServices.level()
-                            .sanctuaryReentryStage().getAsInt())
-                            : resources.cameraX();
+                    int cameraX = hpzReturnCameraX(reentryStage.getAsInt());
                     camera.setX((short) cameraX);
                     camera.setY((short) resources.cameraY());
                     camera.setXCopy((short) cameraX);
@@ -528,10 +544,11 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         // special/results/preview/restoration loops carry no such admission.
         if (!(level.getCurrentLevel() instanceof Sonic3kLevel loaded)
                 || !loaded.hasStockRomZoneIdentity()) return;
-        // Level loc_6310 (asm:7759-7760) calls DeformBgLayer before LevelSetup and
+        // Level loc_6310 (sonic3k.asm:7791-7795) calls DeformBgLayer before LevelSetup and
         // the initial Process_Sprites/Render_Sprites pair. Reproduce the real
-        // dispatch once so its first published scroll is already initialized;
-        // post-restore derived reconstruction then observes the same state.
+        // parallax dispatch once so its first published scroll is initialized.
+        // InitCamera already owns the preceding MoveCameraX/Y on both load paths;
+        // do not move again after LevelSetup or during derived reconstruction.
         level.recomputeParallaxOnlyForCurrentFrame();
     }
 

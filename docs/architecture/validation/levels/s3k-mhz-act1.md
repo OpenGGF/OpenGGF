@@ -611,19 +611,70 @@ replaced with an expectation of `$0320`: that value certifies only the earlier
 `Get_LevelSizeStart` boundary. Both checks used the queued ordinary selection,
 Java 25, surfaceless EGL and explicit original S3&K ROM input.
 
-The proposed restriction of `Sonic3kLevelInitProfile.initCameraStep` to results
-reentry is **held**, not implemented. Its preservation of fresh `$0320` alone
-cannot close the final-camera gate. `prepareInitialLevelScroll` currently
-refreshes parallax without native initial camera movement, while
-`Camera.clampBottomBoundary` always hard-clamps the existing movement owner.
-There is no existing initial-load camera API for the exceptional first
-pre-`LevelSetup` dispatch. Repair requires a separately reviewed native camera
-lifecycle contract, retaining admission, locks, ordering, low words and
-once-only dispatch without a gameplay/object/timer tick. No fake bounds, fitted
-`$0326` write or shared camera change was retained.
+The initial C2 investigation held its proposed profile-only restriction because
+preserving `$0320` alone could not close the final-camera gate. Production and
+permanent tests were unchanged in that earlier documentation-only delivery.
+The following authorized shared-camera work supersedes that held state.
 
-Runtime and permanent tests remain unchanged. No candidate replay improvement,
-newly reached suffix, raw-row comparison, keeper/rewind requalification or
-whole-route parity is claimed. The original grouped reports are not expanded
-into inferred raw mismatches. The remaining route, team, viewport and restore
-obligations above remain open.
+### Native initial movement follow-up (2026-11-05)
+
+The internal `NativeCameraInitialization` entry reuses ordinary movement with the
+call-local pre-setup `$FFFF` mask semantics. It neither changes destination bounds
+nor leaves a pending camera mode for gameplay/rewind. `initCameraStep` invokes it
+immediately after `Get_LevelSizeStart` for admitted stock fresh Level assembly;
+results retains its separate override. Initial copies are published for the
+following setup consumers, as `LevelSetup (sonic3k.asm:102254-102255)` does.
+Preview, decode, restoration and authored non-stock identity acquire no initial
+movement. `prepareInitialLevelScroll` remains parallax-only, avoiding a second move.
+
+An executed rejected placement put movement only in the later preparation hook:
+the native final discriminator returned `$0320` and a real synchronous fresh
+load observed zero movement calls. Both synchronous and resumable loads share
+`InitCamera`, so this earlier owner is required. The retained implementation has
+no fixture selectors, fitted `$326` write, bootstrap compensation, global clamp
+relaxation or gameplay/object/timer tick.
+
+The corrected existing ROM-backed load pin first failed `$0326/$0240` on
+`eeabd00a7b838e361922ff0449fffff45b134051`. After the shared sequence correction,
+it passes alongside explicit `$0320` pre-movement, ordinary clamp, `$1600/$0240`
+results-stage-2 plus `$A400` fraction, checkpoint bypass, lock, airborne/grounded,
+wrap and once-only fresh-load controls. Two full-registry restores replay the
+ordinary clamp without rearming initial movement. These controls do not certify
+all routes, widths or donor/team products.
+
+Five bounded matched-source/input replays exported every actual completed
+`FrameComparison` using the same comparison-only observer. The base observation
+reproduced the archived unobserved grouped results. Candidate data has identical
+row/field coverage and zero added ERROR tuples, including on baseline-clean rows.
+Each targeted shrine camera tuple is removed exactly once:
+
+| Replay suffix | Row | Actual raw errors before → after | Grouped errors before → after |
+| --- | ---: | ---: | ---: |
+| SonicTailsMhz | 1276 | 14 → 13 | 12 → 11 |
+| SonicTailsMhz4 | 1021 | 14 → 13 | 12 → 11 |
+| SonicTailsMhz7 | 2107 | 14 → 13 | 12 → 11 |
+| TailsFullChainMhz | 1389 | 13 → 12 | 11 → 10 |
+
+All four remain red at those same rows: `routine` expects `$0000`, engine `$0002`.
+The other existing entry-row mismatches are unchanged. No suffix is newly
+compared: common row counts are respectively 1265/1010/2096/1378, with no unmatched
+rows. The bounded MHZ3 sibling retains all 7041 actual ERROR tuples across 1249
+rows, 144 groups, first row914 camera Y `$060A/$0609`. It is an unrelated stopped
+camera/physics frontier, not authority for a global parity expansion. The other
+nine earlier MHZ first fronts were not rerun or attributed to this repair. No
+grouped span was expanded into guessed raw errors; fixtures and producer inputs
+remain unchanged. Broad combined-profile/shared-code validation belongs to the
+integration lead. Existing route/configuration and native-pixel gaps remain open.
+
+Final bounded verification on the scoped `eeabd00a7` candidate uses Java25,
+surfaceless EGL, all seven absolute original ROM properties, one alphabetical
+fork and the repository queue wrapper. The explicitly selected ordinary17-class
+run passes153 cases, zero skips, including all four required AIZ/load/bootstrap/
+decoder keepgreens. Eight targeted guard classes pass59 cases, zero skips,
+including the unchanged mod API surface, rewind coverage, headless isolation and
+hardware-timing authority. A final unobserved `trace-segments` eight-class run
+reproduces the five observed MHZ outcomes exactly; S1 GHZ1, S2 EHZ1 and KiS2 EHZ1
+pass their unchanged input controls (8 tests,5 existing failures,0 errors/skips).
+The comparison-only exporter is restored byte-for-byte; neither replay input nor
+protected bootstrap changes. This bounded pass is not broad smoke or full-suite
+qualification. The integration lead owns the remaining shared-code sweep.
