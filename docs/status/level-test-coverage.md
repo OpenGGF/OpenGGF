@@ -1740,6 +1740,22 @@ The [sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md#bl
 records the bounded 106-check selection. Actual composed framebuffer, complete
 stage/cold route, donor, PAL and PCM limits remain open.
 
+Blue Sphere standalone replay entry input (2026-11-05):
+`S3kSpecialStageReplayHarness` samples the original BK2 offset through the
+provider's native entry-fade lifetime. The final fade poll survives the
+masked-interrupt load into the first sprite pass; the comparator still starts
+at its first interactive non-lag row. `TestS3kSpecialStageEntryInput` has three
+native boundary controls for neutral versus Up, a carried press/P2 input, and
+physical-predecessor held edges. These distinguish input lifetime without
+fitting a fade duration or importing gameplay comparison values.
+The existing Knuckles multibonus stage, Sonic+Tails Chaos/Super stages and
+Tails Chaos/Super stages remain strict controls. Tails full-chain `ss_15` now
+passes all 5,600 comparisons with zero errors, retaining the three recorded-only
+`rate`/`rate_timer`/`anim_frame` warning groups and consuming its native emerald
+art completions. This qualifies the selected entry-starting recordings, not
+post-boot cuts, full campaigns, every special-stage route, or native pixels/audio;
+character configuration and the wider coverage obligations remain separate.
+
 HPZ saved-slot roundtrip (2026-10-17): native320 donor-off Knuckles, Tails
 and Sonic+Tails now have actual title/menu saved-slot entry, gameplay HPZ
 SaveGame, disk read, disposed-session title reload and released SSZ1/2
