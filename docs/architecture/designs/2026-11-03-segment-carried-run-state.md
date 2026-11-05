@@ -253,6 +253,56 @@ return. Policy B can establish the engine's return state before
 `importAtSegmentEntry` runs. The import then writes the same values the engine's
 return path would otherwise restore from its saved block.
 
+### Native continuation bank: not established by the current recording
+
+`start_table` describes player placement, not whether the load carries a native
+continuation bank. The LRZ boss entry saves `Act3_flag`, `Act3_ring_count` and
+`Act3_timer` at loc_63C14 (sonic3k.asm:131250-131259). The fresh load still clears
+live rings and time at loc_63B4 (sonic3k.asm:7826-7833); the first screen event
+consumes the separate bank at loc_59B1C (sonic3k.asm:119410-119424).
+The final DEZ boss entry has the same distinction: loc_7F310
+(sonic3k.asm:169871-169879) saves the bank, and loc_5A49A
+(sonic3k.asm:120364-120378) consumes it. This is not a Saved/Saved2 restore.
+
+The pinned TraceChaser `c17f4b269` field table
+(`bizhawk-headless/src/Recording/LevelEntryPlacementLatch.cs`, `S3kFields`)
+does not export that flag or bank. Its PreLevel `ring_count` and `timer` are the
+live counters that the fresh load subsequently clears. A matching live count
+does not establish the bank, and neither the destination zone nor a physics/aux
+row may supply it. Keep these entries unresolved. In particular, both `hpz22`
+recordings have a zero star-post byte and nonzero live rings (Sonic+Tails 233,
+Tails 127), but their predecessors already end on load-time rows with zero
+rings. Their first level rows then show the restored counts. Importing the
+predecessor's last row would also be wrong.
+
+A recorder follow-up must observe the byte `Act3_flag` at `$FFEE5E`, word
+`Act3_ring_count` at `$FFEF5E`, and long `Act3_timer` at `$FFEF60` at the same
+first PreLevel boundary, before the load consumes them. The shipped ROM's
+encoded loc_63C14 and loc_59B1C stores/reads establish these addresses. Recapture
+both native continuations and ordinary fresh/checkpoint entries, including the
+same destination entered by each path. These are requirements for future
+observations, not fields accepted or synthesized by the current importer.
+Any later implementation must preserve the production presentation skip and
+one-shot screen-event consumption, including rewind before and after it.
+
+`TestTraceSegmentCarriedStateResolution` checks that these two unestablished
+entries do not import live rings and that their later `hpz22_2` checkpoint
+returns still use the recorded Saved bank. `TestS3kLevelContinuationHeadless`
+and `TestLevelContinuationCarry` separately exercise the existing production
+bank, ordinary fresh negative case, one-shot consumption and rewind. This
+distinguishes missing standalone-entry evidence from a missing counter-restore
+implementation; it is not a trace parity claim.
+
+Player velocity, position fractions, animation and routine fields remain
+outside this bank. Level clears player object RAM at loc_60DE
+(sonic3k.asm:7649-7653). For example, the Tails ICZ intro writes its own `$0480`
+Y velocity at Obj_LevelIntroICZ1Tails (sonic3k.asm:77367-77388), and the ending
+director writes `$0800` ground velocity at loc_5D8BC
+(sonic3k.asm:123673-123692). Row-0 differences in those fields require their
+production initialization/dispatch investigation, not additional carried-state
+imports. The recorded `ddz` ending is zone `$0D`, act 2; zone `$0C` Doomsday is
+a separate regression control.
+
 
 ## Wave 8 final qualification — 2026-11-04
 
