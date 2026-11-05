@@ -73,6 +73,31 @@ public final class CdSolidObject {
         }
     }
 
+    /** Explicit selected-player values for the opt-in TOP-only prefix overload; not native header IDs. */
+    public enum PlayerSlot {
+        PRIMARY(0), SECONDARY(1);
+        private final int wholeIndex;
+        PlayerSlot(int wholeIndex) { this.wholeIndex = wholeIndex; }
+        public int wholeIndex() { return wholeIndex; }
+    }
+    /** The actual other player's flags BYTE at this call cut; this value authenticates no owner or call. */
+    public record PlayerSelection(PlayerSlot selected, int counterpartFlags) {
+        public PlayerSelection { Objects.requireNonNull(selected, "selected player"); byteValue(counterpartFlags); }
+    }
+    /** Completed counterpart observation, including a real same-value BCLR or an unchanged stopped cut. */
+    public record CounterpartFlags(PlayerSlot slot, int before, int value, boolean stored) {
+        public CounterpartFlags {
+            Objects.requireNonNull(slot, "counterpart player"); byteValue(before); byteValue(value);
+            if (value != (stored ? before & ~8 : before)) {
+                throw new IllegalArgumentException("Counterpart flags permit only the reached bit3 clear");
+            }
+        }
+    }
+    /** The original same-Cursor native Outcome plus counterpart values, never replayable effect commands. */
+    public record SelectedOutcome(Outcome outcome, CounterpartFlags counterpart) {
+        public SelectedOutcome { Objects.requireNonNull(outcome, "native outcome"); Objects.requireNonNull(counterpart, "counterpart"); }
+    }
+
     /** Read-only gates: the debugMode WORD ($FF1906) and the miniSonic byte ($FF195B). */
     public record Gates(int debugMode, int miniSonic) {
         public Gates { wordValue(debugMode); byteValue(miniSonic); }
@@ -587,6 +612,10 @@ public final class CdSolidObject {
         int invincible, scoreChain, primaryAngle, secondaryAngle;
         Path path;
         GetOffReason reason;
+        // Present only in the opt-in selected TOP path; the legacy constructor leaves its defaults untouched.
+        PlayerSelection selection;
+        int counterpartBefore, counterpartFlags;
+        boolean counterpartStored;
         boolean prefixReads; // Invocation-local opt-in only; legacy run leaves it false.
 
         Cursor(Entry entry, CdObjectState object, Player player, Gates gates, Globals globals, CdObjectPool.Snapshot callCut) {
@@ -597,6 +626,18 @@ public final class CdSolidObject {
             slotId = player.slotId(); push = player.pushObject(); stand = player.standObject();
             invincible = globals.invincible(); scoreChain = globals.scoreChain();
             primaryAngle = globals.primaryAngle(); secondaryAngle = globals.secondaryAngle();
+        }
+
+        Cursor(Entry entry, CdObjectState object, Player player, Gates gates, Globals globals,
+               CdObjectPool.Snapshot callCut, PlayerSelection selection) {
+            this(entry, object, player, gates, globals, callCut);
+            this.selection = selection;
+            counterpartBefore = selection.counterpartFlags(); counterpartFlags = counterpartBefore;
+        }
+
+        CounterpartFlags counterpart() {
+            var other = selection.selected() == PlayerSlot.PRIMARY ? PlayerSlot.SECONDARY : PlayerSlot.PRIMARY;
+            return new CounterpartFlags(other, counterpartBefore, counterpartFlags, counterpartStored);
         }
 
         int x() { return xpos >>> 16; }
@@ -649,6 +690,13 @@ public final class CdSolidObject {
 
         /** BCLR #3,oFlags(a2) for the previously stood-on byte; byte 0 is objPlayerSlot itself. */
         void releaseStoodOn(int slotByte) {
+            // Native StandOnObject:117-118 addresses physical0/1, independent of selected header ID.
+            // Resolve only this reached FLAGS BCLR; no PushObject/reserved-pool admission is broadened.
+            if (selection != null && (slotByte == 0 || slotByte == 1)) {
+                if (slotByte == selection.selected().wholeIndex()) setFlags(flags & ~8);
+                else { counterpartFlags &= ~8; counterpartStored = true; }
+                return;
+            }
             if (slotByte == PLAYER_WHOLE_INDEX) { setFlags(flags & ~8); return; }
             var slot = dynamic(slotByte, Routine.STAND_ON_OBJECT);
             var released = slot.moveByte(ByteField.FLAGS, slot.flags() & ~8);
@@ -815,6 +863,34 @@ public final class CdSolidObject {
         } catch (NativeStopReached stopped) {
             return new NativeStopped(c.prefix(), stopped.stop);
         }
+    }
+
+    /**
+     * One real TopSolidObject with a1 selecting physical primary0 or secondary1. All legacy six-argument
+     * paths retain their original primary-only contract. The same native Cursor/algorithms produce the
+     * selected result, every reached probe prefix and the counterpart observation, also on NativeStopped.
+     * No second player/Frame/pool owner, callback, global store or copied Solid implementation is introduced.
+     * Caller/World owns actual player/counterpart inputs and publication; these records prove no execution.
+     */
+    public SelectedOutcome runWithPrefix(Entry entry, CdObjectState object, Player player, Gates gates, Globals globals,
+                                         CdObjectPool.Snapshot callCut, PlayerSelection selection) {
+        Objects.requireNonNull(entry, "entry");
+        if (entry != Entry.TOP_SOLID_OBJECT) {
+            throw new IllegalArgumentException("Selected-player prefixes support only TopSolidObject");
+        }
+        Objects.requireNonNull(object, "object"); Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(gates, "gates"); Objects.requireNonNull(globals, "globals");
+        Objects.requireNonNull(callCut, "call-cut capture"); Objects.requireNonNull(selection, "player selection");
+        var c = new Cursor(entry, object, player, gates, globals, callCut, selection);
+        c.prefixReads = true;
+        Outcome outcome;
+        try {
+            c.objectByte(ByteField.SOLID_TYPE, 1); solidObject(c);
+            outcome = new Completed(c.finish());
+        } catch (NativeStopReached stopped) {
+            outcome = new NativeStopped(c.prefix(), stopped.stop);
+        }
+        return new SelectedOutcome(outcome, c.counterpart());
     }
 
     private int roomInFrontWithPrefix(Cursor c, int angle) {

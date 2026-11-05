@@ -207,7 +207,7 @@ class TestSonicCdAct2MonitorItemRingsWorld {
 
     @Test void constructedAwardFullAndCourseAdoptionReplayAndAppendOnlyMetadataRemainExact() throws Exception {
         var s=scene();seedItem(s,127,2,1,0);seedRing(s,new CdRingGlobals(90,255,0xA1,0xA4,255,0xBEEF,0x81,0xFE));replayNext(s);
-        assertEquals(124,SonicCdGameModule.Act2LoadCall.values().length);
+        assertEquals(125,SonicCdGameModule.Act2LoadCall.values().length);
         assertEquals(118,SonicCdGameModule.Act2LoadCall.SHIELD_ACTIVE.ordinal());
         assertEquals(119,SonicCdGameModule.Act2LoadCall.MONITOR_ITEM_RING_AWARD.ordinal());
         assertEquals(List.of("PastCheckpointFm","PastFrameSound","PastSubCpuSound","PastRingFm","PastRingSubCpu","PastSpringFm",

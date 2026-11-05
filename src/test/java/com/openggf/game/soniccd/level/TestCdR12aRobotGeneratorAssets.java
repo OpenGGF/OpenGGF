@@ -50,7 +50,7 @@ class TestCdR12aRobotGeneratorAssets {
 
     @Test void appendedDescriptorsPreserveSplashOrdinalsAndExactOriginalWordRamProvenance() throws Exception {
         var o = retail().terrain().objects(); sameSource(o);
-        assertEquals(144, CdR12aProfile.Asset.values().length);
+        assertEquals(146, CdR12aProfile.Asset.values().length);
         assertEquals(136, ANI_TUNNEL_DOOR_SPLASH.ordinal()); assertEquals(137, MAP_SPR_TUNNEL_DOOR_SPLASH.ordinal());
         int[] offsets = {0xE4EE, 0xE4F6, 0xE734, 0xE774}, lengths = {8, 574, 64, 22};
         for (int i = 0; i < KEYS.length; i++) {

@@ -4,7 +4,9 @@
 Origin: 2026-10-26 private java-declaration-census task. Set TMPDIR to owned
 scratch when running. No Java/compiler/runtime code is executed.
 """
+import contextlib
 import hashlib
+import io
 import importlib.util
 import json
 import os
@@ -364,6 +366,203 @@ class ImmutableInputs(unittest.TestCase):
                             '--final-sha256',self.pins['final_sha256']])
         self.assertEqual(incomplete.returncode,3);self.assertEqual(json.loads(incomplete.stdout)['status'],'incomplete')
         self.assertEqual(cli(['--help']).returncode,0)
+
+
+class OrdinarySelectorPreflight(unittest.TestCase):
+    """Static selector contracts over pinned synthetic sources, without Java."""
+    setUp = ImmutableInputs.setUp
+    git = ImmutableInputs.git
+    options = ImmutableInputs.options
+
+    def pin_source(self, body, header='class C', imports='import org.junit.jupiter.api.Test;'):
+        data = ('package p; ' + imports + ' ' + header + ' {' + body + '}\n').encode()
+        (self.repo / self.source).write_bytes(data)
+        self.git('add', '--', self.source)
+        self.git('commit', '-qm', 'ordinary selector fixture')
+        self.revision = self.git('rev-parse', 'HEAD').decode().strip()
+        return data
+
+    def cli(self, *extra):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = census.main(['--git-dir', str(self.repo / '.git'), '--revision', self.revision,
+                                '--source', self.source, *extra])
+        return code, json.loads(output.getvalue())
+
+    def final_args(self, data):
+        self.final.write_bytes(data)
+        return ['--final', str(self.final), '--final-sha256', hashlib.sha256(data).hexdigest(),
+                '--final-bytes', str(len(data))]
+
+    def test_repeatable_selectors_emit_literal_ids_in_requested_order(self):
+        self.pin_source('@Test void first() {} @Test() void second() {} '
+                        'void helper() { String s = "@Test void invented() {}"; }')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'second',
+                                '--require-ordinary-test', 'first', '--expected-count', '2')
+        self.assertEqual(code, 0)
+        self.assertEqual(result['ordinary_test_selection'], dict(source='baseline', selected_class='p.C',
+            requested_names=['second', 'first'], selected_ids=['p.C#second', 'p.C#first'],
+            missing_names=[], matches=True))
+        self.assertEqual(result['expected_count']['value'], 2)
+        self.assertEqual(result['baseline']['test_inventory']['proposed_count'], 2)
+
+    def test_unknown_names_are_explicit_and_preserve_known_selection(self):
+        actual = 'complete138RowManifestPreservesTheOriginal136AndPinsEveryAdditionalOriginalDomainSpan'
+        typo = 'complete138RowManifestStillPinsAllOldOrdinalsAndAppendedLiteralTables'
+        self.pin_source('@Test void ' + actual + '() {} void helper() {}')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', actual,
+                                '--require-ordinary-test', typo, '--require-ordinary-test', 'helper')
+        self.assertEqual(code, 1)
+        selection = result['ordinary_test_selection']
+        self.assertEqual(selection['selected_ids'], ['p.C#' + actual])
+        self.assertEqual(selection['missing_names'], [typo, 'helper'])
+        self.assertFalse(selection['matches'])
+        self.assertEqual(result['status'], 'complete')
+
+    def test_expected_count_stays_whole_inventory_not_selection_size(self):
+        self.pin_source('@Test void first() {} @Test void second() {}')
+        args = ['--test-inventory', 'p.C', '--require-ordinary-test', 'first']
+        code, result = self.cli(*args, '--expected-count', '1')
+        self.assertEqual(code, 1)
+        self.assertTrue(result['ordinary_test_selection']['matches'])
+        self.assertFalse(result['expected_count']['matches'])
+        self.assertEqual(self.cli(*args, '--expected-count', '2')[0], 0)
+
+    def test_final_pins_select_final_names_without_union_or_baseline_fallback(self):
+        self.pin_source('@Test void old() {}')
+        pins = self.final_args(b'package p; import org.junit.jupiter.api.Test; class C { @Test void fresh() {} }')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'fresh', *pins)
+        self.assertEqual(code, 0)
+        self.assertEqual(result['ordinary_test_selection']['source'], 'final')
+        self.assertEqual(result['ordinary_test_selection']['selected_ids'], ['p.C#fresh'])
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'old', *pins)
+        self.assertEqual(code, 1)
+        self.assertEqual(result['ordinary_test_selection']['missing_names'], ['old'])
+        pins[3] = '0' * 64
+        self.assertEqual(self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'fresh', *pins)[0], 2)
+
+    def test_exact_class_is_required_and_absent_class_is_incomplete(self):
+        self.pin_source('@Test void check() {}')
+        for selected in ['p.Other', 'p.C.Inner']:
+            with self.subTest(selected=selected):
+                code, result = self.cli('--test-inventory', selected, '--require-ordinary-test', 'check')
+                self.assertEqual(code, 3)
+                selection = result['ordinary_test_selection']
+                self.assertIsNone(selection['selected_ids'])
+                self.assertIsNone(selection['missing_names'])
+                self.assertIsNone(selection['matches'])
+        self.assertEqual(self.cli('--test-inventory', 'p.*', '--require-ordinary-test', 'check')[0], 2)
+
+    def test_inherited_and_parameterized_factory_repeated_methods_never_qualify(self):
+        cases = [('class C extends Base', '@Test void check() {}', 'inherited'),
+                 ('class C', '@org.junit.jupiter.params.ParameterizedTest void parameter(int x) {} '
+                  '@Test void check() {}', 'parameter'),
+                 ('class C', '@org.junit.jupiter.api.TestFactory Object factory() { return null; } '
+                  '@Test void check() {}', 'factory'),
+                 ('class C', '@org.junit.jupiter.api.RepeatedTest(2) void repeated() {} '
+                  '@Test void check() {}', 'repeated')]
+        for header, body, name in cases:
+            with self.subTest(name=name):
+                self.pin_source(body, header=header)
+                code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', name)
+                self.assertEqual(code, 3)
+                self.assertIsNone(result['ordinary_test_selection']['selected_ids'])
+                self.assertIsNone(result['ordinary_test_selection']['missing_names'])
+                self.assertTrue(result['baseline']['test_inventory']['incomplete_reasons'])
+
+    def test_testinstance_and_member_types_keep_real_target_scope_incomplete(self):
+        cases = [('@org.junit.jupiter.api.TestInstance(org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS) class C',
+                  '@Test void check() {}'),
+                 ('class C', '@Test void check() {} record Helper(int n) {}')]
+        for header, body in cases:
+            with self.subTest(header=header, body=body):
+                self.pin_source(body, header=header)
+                code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'check')
+                self.assertEqual(code, 3)
+                self.assertIsNone(result['ordinary_test_selection']['selected_ids'])
+                self.assertIsNone(result['ordinary_test_selection']['matches'])
+
+    def test_overloaded_nonordinary_test_keeps_existing_incomplete_classification(self):
+        self.pin_source('@Test void check() {} @Test void check(int x) {}')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'check')
+        self.assertEqual(code, 3)
+        self.assertIsNone(result['ordinary_test_selection']['matches'])
+        self.assertIsNone(result['baseline']['test_inventory']['proposed_count'])
+
+    def test_incomplete_priority_over_missing_names_and_wrong_expected_count(self):
+        self.pin_source('@Test void check() {}', header='class C extends Base')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'missing',
+                                '--expected-count', '999')
+        self.assertEqual(code, 3)
+        self.assertIsNone(result['ordinary_test_selection']['matches'])
+        self.assertIsNone(result['expected_count']['matches'])
+
+    def test_either_side_incomplete_retains_exit_three(self):
+        self.pin_source('@Test void check() {}', header='class C extends Base')
+        pins = self.final_args(b'package p; import org.junit.jupiter.api.Test; class C { @Test void check() {} }')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'missing', *pins)
+        self.assertEqual(code, 3)
+        self.assertEqual(result['ordinary_test_selection']['missing_names'], ['missing'])
+        self.pin_source('@Test void check() {}')
+        pins = self.final_args(b'package p; import org.junit.jupiter.api.Test; class C extends Base { @Test void check() {} }')
+        code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'check', *pins)
+        self.assertEqual(code, 3)
+        self.assertIsNone(result['ordinary_test_selection']['selected_ids'])
+
+    def test_token_and_combined_byte_budgets_still_fail_incomplete(self):
+        data = self.pin_source('@Test void check() {}')
+        for args in [('--max-tokens', '4'),
+                     ('--max-total-bytes', str(len(data)), *self.final_args(data))]:
+            with self.subTest(args=args):
+                code, result = self.cli('--test-inventory', 'p.C', '--require-ordinary-test', 'missing', *args)
+                self.assertEqual(code, 3)
+                self.assertEqual(result['status'], 'incomplete')
+                self.assertNotIn('ordinary_test_selection', result)
+
+    def test_malformed_duplicate_without_inventory_and_oversized_selectors_are_invalid(self):
+        self.pin_source('@Test void check() {}')
+        invalid = [('--require-ordinary-test', 'check'),
+                   ('--test-inventory', 'p.C', '--require-ordinary-test', 'check',
+                    '--require-ordinary-test', 'check')]
+        for name in ['', 'check()', 'p.C#check', 'p.C.check', '*', '1check', 'void', 'null', 'x' * 4097]:
+            invalid.append(('--test-inventory', 'p.C', '--require-ordinary-test', name))
+        invalid.append(tuple(['--test-inventory', 'p.C'] +
+                       [item for n in range(51) for item in ('--require-ordinary-test', 't%d' % n)]))
+        for args in invalid:
+            with self.subTest(args=args):
+                code, result = self.cli(*args)
+                self.assertEqual(code, 2)
+                self.assertEqual(result['status'], 'error')
+
+    def test_fifty_distinct_ordinary_selectors_are_allowed(self):
+        self.pin_source(' '.join('@Test void t%d() {}' % n for n in range(50)))
+        args = ['--test-inventory', 'p.C']
+        for n in range(50):
+            args += ['--require-ordinary-test', 't%d' % n]
+        code, result = self.cli(*args)
+        self.assertEqual(code, 0)
+        self.assertEqual(result['ordinary_test_selection']['selected_ids'], ['p.C#t%d' % n for n in range(50)])
+
+    def test_null_or_nonlist_selector_inputs_fail_before_source_reads(self):
+        for value in [[None], ['check', None], 'check', [1], [], ()]:
+            with self.subTest(value=value):
+                args = self.options(False)
+                args.test_inventory = 'p.C'
+                args.require_ordinary_test = value
+                with mock.patch.object(census, 'read_baseline') as read:
+                    with self.assertRaises(census.CensusError) as caught:
+                        census.run(args)
+                    self.assertEqual(caught.exception.code, 2)
+                    read.assert_not_called()
+
+    def test_unused_flag_preserves_old_result_and_optional_namespace_shape(self):
+        self.pin_source('@Test void check() {}')
+        args = self.options(False)
+        args.test_inventory = 'p.C'
+        result = census.run(args)
+        self.assertNotIn('ordinary_test_selection', result)
+        del args.require_ordinary_test
+        self.assertEqual(result, census.run(args))
 
 
 if __name__=='__main__':unittest.main()

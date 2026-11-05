@@ -1591,24 +1591,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         if (!expectedPlayer.equals(currentPlayer) || !expectedGlobals.equals(currentGlobals)) {
             throw new IllegalArgumentException("Stale SolidObject player/global call cut");
         }
-        var next = result.player(); var before = expectedPlayer.actor().motion(); var after = next.actor().motion();
-        if (next.slotId() != expectedPlayer.slotId() || after.spriteFlags() != before.spriteFlags()
-                || after.previousAnimation() != before.previousAnimation() || after.charge() != before.charge()
-                || after.moveLock() != before.moveLock() || after.previousPrimaryAngle() != before.previousPrimaryAngle()
-                || after.previousSecondaryAngle() != before.previousSecondaryAngle()) {
-            throw new IllegalArgumentException("SolidObject result changes an unowned player field");
-        }
-        for (var field : CdSolidObject.PlayerField.values()) {
-            if (!result.playerWrites().contains(field) && solidPlayerValue(expectedPlayer, field) != solidPlayerValue(next, field)) {
-                throw new IllegalArgumentException("Undeclared SolidObject player write: " + field);
-            }
-        }
-        for (var field : CdSolidObject.GlobalField.values()) {
-            if (!result.globalWrites().contains(field)
-                    && solidGlobalValue(expectedGlobals, field) != solidGlobalValue(result.globals(), field)) {
-                throw new IllegalArgumentException("Undeclared SolidObject global write: " + field);
-            }
-        }
+        validateSolidValues(expectedPlayer, expectedGlobals, result.player(), result.globals(),
+                result.playerWrites(), result.globalWrites(), "result");
     }
 
     /**
@@ -1619,6 +1603,30 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public void applyObjectSolidResult(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
                                        CdSolidObject.Result result) {
         applyPreparedObjectSolidPublication(prepareObjectSolidResult(expectedPlayer, expectedGlobals, result));
+    }
+
+    /** Intrinsic declared-store/nonwrite rules shared by genuine completed and stopped player projections. */
+    private static void validateSolidValues(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
+            CdSolidObject.Player next, CdSolidObject.Globals nextGlobals,
+            java.util.Set<CdSolidObject.PlayerField> playerWrites, java.util.Set<CdSolidObject.GlobalField> globalWrites,
+            String kind) {
+        var before = expectedPlayer.actor().motion(); var after = next.actor().motion();
+        if (next.slotId() != expectedPlayer.slotId() || after.spriteFlags() != before.spriteFlags()
+                || after.previousAnimation() != before.previousAnimation() || after.charge() != before.charge()
+                || after.moveLock() != before.moveLock() || after.previousPrimaryAngle() != before.previousPrimaryAngle()
+                || after.previousSecondaryAngle() != before.previousSecondaryAngle()) {
+            throw new IllegalArgumentException("SolidObject " + kind + " changes an unowned player field");
+        }
+        for (var field : CdSolidObject.PlayerField.values()) {
+            if (!playerWrites.contains(field) && solidPlayerValue(expectedPlayer, field) != solidPlayerValue(next, field)) {
+                throw new IllegalArgumentException("Undeclared SolidObject player write: " + field);
+            }
+        }
+        for (var field : CdSolidObject.GlobalField.values()) {
+            if (!globalWrites.contains(field) && solidGlobalValue(expectedGlobals, field) != solidGlobalValue(nextGlobals, field)) {
+                throw new IllegalArgumentException("Undeclared SolidObject global write: " + field);
+            }
+        }
     }
 
     private static int solidPlayerValue(CdSolidObject.Player player, CdSolidObject.PlayerField field) {
@@ -1848,24 +1856,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         if (!expectedPlayer.equals(currentPlayer) || !expectedGlobals.equals(currentGlobals)) {
             throw new IllegalArgumentException("Stale SolidObject player/global call cut");
         }
-        var next = prefix.player(); var before = expectedPlayer.actor().motion(); var after = next.actor().motion();
-        if (next.slotId() != expectedPlayer.slotId() || after.spriteFlags() != before.spriteFlags()
-                || after.previousAnimation() != before.previousAnimation() || after.charge() != before.charge()
-                || after.moveLock() != before.moveLock() || after.previousPrimaryAngle() != before.previousPrimaryAngle()
-                || after.previousSecondaryAngle() != before.previousSecondaryAngle()) {
-            throw new IllegalArgumentException("SolidObject prefix changes an unowned player field");
-        }
-        for (var field : CdSolidObject.PlayerField.values()) {
-            if (!prefix.playerWrites().contains(field) && solidPlayerValue(expectedPlayer, field) != solidPlayerValue(next, field)) {
-                throw new IllegalArgumentException("Undeclared SolidObject player write: " + field);
-            }
-        }
-        for (var field : CdSolidObject.GlobalField.values()) {
-            if (!prefix.globalWrites().contains(field)
-                    && solidGlobalValue(expectedGlobals, field) != solidGlobalValue(prefix.globals(), field)) {
-                throw new IllegalArgumentException("Undeclared SolidObject global write: " + field);
-            }
-        }
+        validateSolidValues(expectedPlayer, expectedGlobals, prefix.player(), prefix.globals(),
+                prefix.playerWrites(), prefix.globalWrites(), "prefix");
     }
 
     /**
@@ -1918,6 +1910,102 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                                                            CdSolidObject.Prefix prefix) {
         validateObjectSolidPrefix(expectedPlayer, expectedGlobals, prefix);
         return buildObjectSolidPublication(prefix.player(), prefix.globals());
+    }
+
+    /**
+     * Prepare a genuine selected-player TopSolidObject outcome at the complete closed Frame value cut.
+     * The selected secondary remains detached: only its actual counterpart BCLR may alter the primary.
+     * Shared globals come from the original completed result or stopped prefix, never a primary-shaped
+     * substitute. Public metadata grants no native-call, source, pool, phase, sound or publication authority.
+     */
+    public ObjectSolidPublication prepareObjectSelectedSolid(CdPlayerBody.State expectedState,
+            CdPlayerBody.Environment expectedEnvironment, CdSolidObject.Player expectedSelected,
+            CdSolidObject.PlayerSelection selection, CdSolidObject.SelectedOutcome actual) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "selected Solid player State");
+        Objects.requireNonNull(expectedEnvironment, "selected Solid player Environment");
+        Objects.requireNonNull(expectedSelected, "selected Solid call player");
+        Objects.requireNonNull(selection, "Solid player selection");
+        Objects.requireNonNull(actual, "selected Solid outcome");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale selected Solid State/Environment cut");
+        }
+        var s = state; var h = s.header(); var g = environment.movement().globals();
+        var primary = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+        var globals = new CdSolidObject.Globals(environment.globals().invincible(), g.scoreChain(),
+                g.primaryAngle(), g.secondaryAngle());
+        boolean primarySelected = selection.selected() == CdSolidObject.PlayerSlot.PRIMARY;
+        if (primarySelected ? !expectedSelected.equals(primary) : selection.counterpartFlags() != s.motion().flags()) {
+            throw new IllegalArgumentException("Stale selected Solid primary player cut");
+        }
+        var counterpart = actual.counterpart();
+        var counterpartSlot = primarySelected ? CdSolidObject.PlayerSlot.SECONDARY : CdSolidObject.PlayerSlot.PRIMARY;
+        if (counterpart.slot() != counterpartSlot || counterpart.before() != selection.counterpartFlags()
+                || counterpart.value() != (counterpart.stored() ? counterpart.before() & ~8 : counterpart.before())) {
+            throw new IllegalArgumentException("Invalid selected Solid counterpart flags");
+        }
+        CdSolidObject.Player selectedAfter; CdSolidObject.Globals globalsAfter;
+        if (actual.outcome() instanceof CdSolidObject.Completed completed) {
+            var result = completed.completedResult();
+            if (result.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT) {
+                throw new IllegalArgumentException("Selected Solid publication requires TopSolidObject");
+            }
+            selectedAfter = result.player(); globalsAfter = result.globals();
+            validateSolidValues(expectedSelected, globals, selectedAfter, globalsAfter,
+                    result.playerWrites(), result.globalWrites(), "result");
+        } else {
+            var prefix = ((CdSolidObject.NativeStopped) actual.outcome()).prefix();
+            if (prefix.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT) {
+                throw new IllegalArgumentException("Selected Solid publication requires TopSolidObject");
+            }
+            selectedAfter = prefix.player(); globalsAfter = prefix.globals();
+            validateSolidValues(expectedSelected, globals, selectedAfter, globalsAfter,
+                    prefix.playerWrites(), prefix.globalWrites(), "prefix");
+        }
+        var primaryAfter = primarySelected ? selectedAfter : primary;
+        if (!primarySelected && counterpart.stored()) primaryAfter = solidPrimaryWithFlags(primary, counterpart.value());
+        return buildObjectSolidPublication(primaryAfter, globalsAfter);
+    }
+
+    /**
+     * Prepare only the post-Solid Swing integer-Y WORD. The caller owns the reached native formula and
+     * invocation; this observational carrier grants neither. Both WORDs and the complete current pair
+     * are checked before building the single-field State, preserving every fraction bit and Environment.
+     */
+    public ObjectSolidPublication prepareObjectSwingYWord(CdPlayerBody.State expectedState,
+            CdPlayerBody.Environment expectedEnvironment, int expectedYWord, int value) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Swing player State");
+        Objects.requireNonNull(expectedEnvironment, "Swing player Environment");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Swing player State/Environment cut");
+        }
+        if ((expectedYWord & ~0xFFFF) != 0 || (value & ~0xFFFF) != 0) {
+            throw new IllegalArgumentException("Swing Y stores require unsigned native words");
+        }
+        var s = state; var m = s.motion();
+        if (expectedYWord != m.centreY16_16() >>> 16) {
+            throw new IllegalArgumentException("Stale Swing player Y word");
+        }
+        var nextMotion = new CdPlayerMotionState(m.centreX16_16(), (value << 16) | (m.centreY16_16() & 0xFFFF),
+                m.xVelocity(), m.yVelocity(), m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(),
+                m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(),
+                m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var nextState = new CdPlayerBody.State(nextMotion, s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+        return new ObjectSolidPublication(s, environment, nextState, environment);
+    }
+
+    /** A secondary StandOnObject can clear only bit3 in the actual primary projection. */
+    private static CdSolidObject.Player solidPrimaryWithFlags(CdSolidObject.Player primary, int flags) {
+        var a = primary.actor(); var m = a.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), flags, m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
+                m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(motion, a.tile(), a.priority(), a.hurt(),
+                a.rotationDistance()), primary.slotId(), primary.pushObject(), primary.standObject());
     }
 
     /** Recheck the existing closed-cut guards and the entire prepared actual State/Environment pair. */

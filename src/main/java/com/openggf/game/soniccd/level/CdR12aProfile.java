@@ -145,7 +145,9 @@ public final class CdR12aProfile {
         ANI_ROBOT_GENERATOR(0xE4EE, 8), MAP_SPR_ROBOT_GENERATOR(0xE4F6, 574),
         ROBOT_GENERATOR_EXPLOSION_SCHEDULE(0xE734, 64), ROBOT_GENERATOR_BASE_TILES(0xE774, 22),
         // Spring/Main.asm:33,89: actual original R12A operands; complete finite wheel includes.
-        ANI_MOVING_SPRING(0x9A90, 6), MAP_SPR_MOVING_SPRING(0x9A96, 16);
+        ANI_MOVING_SPRING(0x9A90, 6), MAP_SPR_MOVING_SPRING(0x9A96, 16),
+        // PP Swing/Main.asm:71-79,87,125-135: actual original motion table and complete static mappings.
+        SWING_MOTION(0xEBC2, 64), MAP_SPR_SWING(0xED60, 30);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

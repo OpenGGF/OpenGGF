@@ -82,7 +82,7 @@ class TestCdR12aSpikesAssets {
         var r = retail();
         var objects = r.terrain().objects();
         var range = objects.profile().range(MAP_SPR_SPIKES);
-        assertEquals(144, CdR12aProfile.Asset.values().length);
+        assertEquals(146, CdR12aProfile.Asset.values().length);
         assertEquals(134, SHIELD_ART_INDEX.ordinal());
         assertEquals(135, MAP_SPR_SPIKES.ordinal());
         assertEquals(0xC018, range.fileOffset());

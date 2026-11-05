@@ -127,6 +127,7 @@ public final class CdR12aObjectAssets {
     private CdObjectVisualAssets tunnelDoorSplash;
     private CdObjectVisualAssets robotGenerator;
     private CdObjectVisualAssets movingSpring;
+    private CdObjectVisualAssets swing;
 
     /** Only the actual authenticated terrain owner calls this; no public arbitrary-image ingress. */
     CdR12aObjectAssets(CdR12aTerrainAssets terrain, CdMmdImage image) {
@@ -228,6 +229,11 @@ public final class CdR12aObjectAssets {
     public synchronized List<CdR11aObjectAssets.TouchSize> touchDimensions() {
         if (dimensions == null) dimensions = CdR11aObjectAssets.decodeTouchDimensions(view(TOUCH_DIMENSIONS).copy());
         return dimensions;
+    }
+    /** Complete native three-frame Swing metadata; existing section PLCs own its fourteen art tiles. */
+    public synchronized CdObjectVisualAssets swing() {
+        if (swing == null) swing = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_SWING).copy(), 3, 14);
+        return swing;
     }
     /** Two counted wheel frames and one script over the existing eight-tile Std source; no art decode. */
     public synchronized CdObjectVisualAssets movingSpring() {

@@ -1828,4 +1828,255 @@ class TestCdSolidObject {
             case SECONDARY_ANGLE -> globals.secondaryAngle();
         };
     }
+
+    // BEGIN selected-player TOP-only prefix additions, SOURCE ONLY / author Java/JUnit UNRUN.
+    // Native Object Solid.asm:15-55,65-146,174-175,188-478 and Swing/Main.asm:37-67 at1ecc5f3a.
+    // Existing constructed terrain/probe helpers are reused, never mock floors or invented Outcomes.
+
+    @Test void selectedRecordsValidateActualByteWidthsNullsAndOnlyTheDeclaredCounterpartBclr() {
+        assertEquals(0, CdSolidObject.PlayerSlot.PRIMARY.wholeIndex());
+        assertEquals(1, CdSolidObject.PlayerSlot.SECONDARY.wholeIndex());
+        assertEquals(2, CdSolidObject.PlayerSelection.class.getRecordComponents().length);
+        assertEquals(4, CdSolidObject.CounterpartFlags.class.getRecordComponents().length);
+        assertEquals(2, CdSolidObject.SelectedOutcome.class.getRecordComponents().length);
+        assertThrows(NullPointerException.class, () -> new CdSolidObject.PlayerSelection(null, 0));
+        assertThrows(NullPointerException.class, () -> new CdSolidObject.CounterpartFlags(null, 0, 0, false));
+        for (int bad : new int[]{-1, 256, 65535}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY, bad));
+            assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, bad, 0, false));
+            assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0, bad, true));
+        }
+        assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0xAD, 0xA5, false));
+        assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0xAD, 0xA4, true));
+        assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0xA5, 0xAD, true));
+        var unchanged = new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0xA5, 0xA5, false);
+        assertEquals(0xA5, unchanged.value()); assertFalse(unchanged.stored());
+        assertTrue(new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0xA5, 0xA5, true).stored());
+        var s = new Scene(); var genuine = s.terrain.owner().runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), s.pool.capture());
+        assertThrows(NullPointerException.class, () -> new CdSolidObject.SelectedOutcome(null, unchanged));
+        assertThrows(NullPointerException.class, () -> new CdSolidObject.SelectedOutcome(genuine, null));
+        assertSame(genuine, new CdSolidObject.SelectedOutcome(genuine, unchanged).outcome());
+    }
+
+    @Test void selectedOverloadKeepsEveryLegacyPublicRecordAndSixArgumentEntrySurface() throws Exception {
+        assertEquals(4, Player.class.getRecordComponents().length);
+        assertEquals(12, Result.class.getRecordComponents().length);
+        assertEquals(9, CdSolidObject.Prefix.class.getRecordComponents().length);
+        assertEquals(Set.of(CdSolidObject.Completed.class, CdSolidObject.NativeStopped.class), Set.of(CdSolidObject.Outcome.class.getPermittedSubclasses()));
+        assertNotNull(CdSolidObject.class.getMethod("run", Entry.class, CdObjectState.class, Player.class, Gates.class, Globals.class, CdObjectPool.Snapshot.class));
+        assertNotNull(CdSolidObject.class.getMethod("runWithPrefix", Entry.class, CdObjectState.class, Player.class, Gates.class, Globals.class, CdObjectPool.Snapshot.class));
+        assertNotNull(CdSolidObject.class.getMethod("runWithPrefix", Entry.class, CdObjectState.class, Player.class, Gates.class, Globals.class, CdObjectPool.Snapshot.class, CdSolidObject.PlayerSelection.class));
+    }
+
+    @ParameterizedTest @CsvSource({"PRIMARY,0,false", "PRIMARY,1,true", "SECONDARY,0,true", "SECONDARY,1,false"})
+    void selectedPhysicalSelfAndCounterpartAliasesUseLiteralCurrentFlagsRatherThanHeaderId(String selected, int stand, boolean cross) {
+        var s = new Scene(); s.p.flags = 8; s.p.stand = stand; s.p.yv = 0; s.p.id = 0x29;
+        var cut = s.pool.capture(); var before = s.object(); var actual = selectedCall(s, CdSolidObject.PlayerSlot.valueOf(selected), 0xAD);
+        var r = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+        var e = s.p.copy(); e.y = 0x00611234; e.yv = 0; e.gv = 0x0123; e.angle = 0; e.flags = cross ? 8 : 0; e.jump = 0; e.stand = 40;
+        assertEquals(e.player(), r.player()); assertEquals(before.moveByte(ByteField.FLAGS, 8), r.object());
+        assertEquals(LANDING, r.playerWrites()); assertEquals(Set.of(ByteField.FLAGS, ByteField.SOLID_TYPE), r.objectWrites());
+        assertEquals(List.of(new FloorDistance(27, NONE, NONE), call(Routine.STAND_ON_OBJECT)), r.calls());
+        assertEquals(List.of(), r.otherSlots()); assertEquals(List.of(), r.fmRequests()); assertEquals(OptionalInt.of(1), r.d0());
+        var other = selected.equals("PRIMARY") ? CdSolidObject.PlayerSlot.SECONDARY : CdSolidObject.PlayerSlot.PRIMARY;
+        assertEquals(new CdSolidObject.CounterpartFlags(other, 0xAD, cross ? 0xA5 : 0xAD, cross), actual.counterpart());
+        plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"PRIMARY", "SECONDARY"})
+    void selectedCounterpartBclrRecordsItsRealSameValueStore(String selected) {
+        var slot = CdSolidObject.PlayerSlot.valueOf(selected); var s = new Scene(); s.p.flags = 8; s.p.yv = 0;
+        s.p.stand = slot == CdSolidObject.PlayerSlot.PRIMARY ? 1 : 0;
+        var actual = selectedCall(s, slot, 0xA5); var r = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+        assertTrue(actual.counterpart().stored()); assertEquals(0xA5, actual.counterpart().before()); assertEquals(0xA5, actual.counterpart().value());
+        assertEquals(8, r.player().actor().motion().flags()); assertEquals(40, r.player().standObject()); assertTrue(r.otherSlots().isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({"PRIMARY,32", "PRIMARY,127", "SECONDARY,32", "SECONDARY,127"})
+    void selectedDynamicReleaseKeepsActualDirtyIdZeroAndReusedFullImages(String selected, int whole) {
+        var s = new Scene(); s.p.flags = 8; s.p.stand = whole; s.p.yv = 0;
+        s.other(whole, o -> o.moveByte(ByteField.ID, whole == 32 ? 0 : 0x29).moveByte(ByteField.FLAGS, 0xAD)
+                .moveWord(WordField.X_FRACTION, 0xBEEF).moveWord(WordField.Y_FRACTION, 0xCAFE)
+                .moveLong(CdObjectState.LongField.CHECKPOINT_PARENT, 0x13579BDF).moveWord(WordField.EXPLOSION_POINTS_FRAME, 0xF00D));
+        var cut = s.pool.capture(); var old = s.pool.state(whole); var actual = selectedCall(s, CdSolidObject.PlayerSlot.valueOf(selected), 0x6D);
+        var r = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+        assertEquals(List.of(old.moveByte(ByteField.FLAGS, 0xA5)), r.otherSlots()); assertArrayEquals(old.moveByte(ByteField.FLAGS, 0xA5).copyBytes(), r.otherSlots().getFirst().copyBytes());
+        assertFalse(actual.counterpart().stored()); assertEquals(0x6D, actual.counterpart().value()); assertEquals(8, r.player().actor().motion().flags());
+        plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @CsvSource({"PRIMARY,2,RESERVED_SLOT_ADDRESS", "PRIMARY,31,RESERVED_SLOT_ADDRESS", "PRIMARY,128,OUT_OF_POOL_ADDRESS", "PRIMARY,255,OUT_OF_POOL_ADDRESS",
+            "SECONDARY,2,RESERVED_SLOT_ADDRESS", "SECONDARY,31,RESERVED_SLOT_ADDRESS", "SECONDARY,128,OUT_OF_POOL_ADDRESS", "SECONDARY,255,OUT_OF_POOL_ADDRESS"})
+    void selectedUnownedStandLinksKeepTheSameNativeStoppedPrefixAndOriginalError(String selected, int stand, UnsupportedBoundary boundary) {
+        var s = prefixScene(); s.p.flags = 8; s.p.stand = stand; s.p.yv = 0;
+        var cut = s.pool.capture(); var actual = selectedCall(s, CdSolidObject.PlayerSlot.valueOf(selected), 0xAD);
+        var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class, actual.outcome());
+        assertEquals(CdSolidObject.StopSite.STAND_RELEASE, stopped.stop().site());
+        var detail = assertInstanceOf(CdSolidObject.SlotAddress.class, stopped.stop().detail());
+        assertEquals(boundary, detail.boundary()); assertEquals(stand, detail.slotByte()); assertEquals(Routine.STAND_ON_OBJECT, detail.routine());
+        var e = s.p.copy(); e.y = 0x00611234; e.jump = 0;
+        prefixValues(s, stopped, e, s.globals(), Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS), CARRY, Set.of(), List.of(new FloorDistance(27, NONE, NONE), call(Routine.STAND_ON_OBJECT)));
+        assertFalse(actual.counterpart().stored()); assertEquals(0xAD, actual.counterpart().before()); assertEquals(0xAD, actual.counterpart().value());
+        var original = stopped.stop().originalException(); var typed = assertInstanceOf(UnsupportedSolidObject.class, original);
+        assertEquals(boundary, typed.boundary()); assertEquals(stand, typed.slotByte()); assertSame(original, assertThrows(UnsupportedSolidObject.class, () -> { throw stopped.stop().originalException(); }));
+        plainPoolUnchanged(s, cut);
+    }
+
+    @Test void selectedLiteralZeroSecondaryStillPerformsBothRealTopCallsAndNoPlayerGlobalOrSoundStore() {
+        var s = new Scene(); s.object(o -> o.moveByte(ByteField.FLAGS, 8).moveByte(ByteField.Y_RADIUS, 8));
+        var zero = selectedLiteralZeroPlayer(); var owner = s.terrain.owner(); var cut = s.pool.capture();
+        var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, 0xAD);
+        var first = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), zero, s.gates(), s.globals(), cut, selection);
+        var r1 = assertInstanceOf(CdSolidObject.Completed.class, first.outcome()).completedResult();
+        assertEquals(zero, r1.player()); assertEquals(s.object(), r1.object()); assertEquals(s.globals(), r1.globals());
+        assertEquals(Set.of(ByteField.SOLID_TYPE), r1.objectWrites()); assertEquals(Set.of(), r1.playerWrites()); assertEquals(Set.of(), r1.globalWrites());
+        assertEquals(List.of(call(Routine.STOP_OBJ_PUSH), call(Routine.GET_OFF_OBJECT)), r1.calls());
+        assertEquals(Optional.of(GetOffReason.PLAYER_ABSENT), r1.getOffReason()); assertEquals(OptionalInt.of(0), r1.d0()); assertTrue(r1.fmRequests().isEmpty());
+        var radius12 = r1.object().moveByte(ByteField.Y_RADIUS, 12); var nextCut = CdObjectPool.overlay(cut, List.of(radius12));
+        var second = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, radius12, r1.player(), s.gates(), r1.globals(), nextCut, selection);
+        var r2 = assertInstanceOf(CdSolidObject.Completed.class, second.outcome()).completedResult();
+        assertEquals(radius12, r2.object()); assertEquals(zero, r2.player()); assertEquals(r1.calls(), r2.calls());
+        assertEquals(r1.objectWrites(), r2.objectWrites()); assertTrue(r2.playerWrites().isEmpty()); assertTrue(r2.globalWrites().isEmpty()); assertTrue(r2.otherSlots().isEmpty());
+        assertEquals(new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.PRIMARY, 0xAD, 0xAD, false), first.counterpart());
+        assertEquals(first.counterpart(), second.counterpart()); assertNotSame(first.outcome(), second.outcome());
+        assertEquals(8, r2.object().moveByte(ByteField.Y_RADIUS, 8).unsignedByte(ByteField.Y_RADIUS)); plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @CsvSource({"absent,PLAYER_ABSENT", "drowning,PLAYER_DROWNING", "invisible,PLAYER_INVISIBLE", "dead,PLAYER_DEAD"})
+    void selectedDirtyIdZeroRetainsRealStopPushGetOffAndChargeStopOrder(String vector, GetOffReason reason) {
+        var s = new Scene().standing(); s.p.id = 0; s.p.push = 40; s.p.charge = 1; s.p.stick = 0x55; s.p.ctrl = 1;
+        if (vector.equals("drowning")) s.p.anim = 0x17;
+        if (vector.equals("invisible")) s.p.ctrl = 0x41;
+        if (vector.equals("dead")) s.p.routine = 6;
+        var cut = s.pool.capture(); var actual = selectedCall(s, CdSolidObject.PlayerSlot.SECONDARY, 0xAD);
+        var r = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+        var e = s.p.copy(); e.push = 0; e.stick = 0; e.flags = 2; e.stand = 0;
+        if (!vector.equals("drowning") && !vector.equals("invisible")) e.ctrl = 0;
+        assertEquals(e.player(), r.player()); assertEquals(s.object().moveByte(ByteField.FLAGS, 0), r.object());
+        assertEquals(Optional.of(reason), r.getOffReason()); assertEquals(OptionalInt.of(0), r.d0());
+        assertEquals(List.of(call(Routine.STOP_OBJ_PUSH), call(Routine.GET_OFF_OBJECT), new PlayFm(FmSound.FM_CHARGESTOP)), r.calls());
+        assertEquals(List.of(FmSound.FM_CHARGESTOP), r.fmRequests()); assertEquals(s.globals(), r.globals()); assertTrue(r.globalWrites().isEmpty());
+        var fields = EnumSet.of(PUSH_OBJECT, STICK, FLAGS, STAND_OBJECT);
+        if (!vector.equals("drowning") && !vector.equals("invisible")) fields.add(PLAYER_CONTROL);
+        assertEquals(fields, r.playerWrites()); assertEquals(Set.of(ByteField.FLAGS, ByteField.SOLID_TYPE), r.objectWrites());
+        assertFalse(actual.counterpart().stored()); assertEquals(0xAD, actual.counterpart().value()); plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"PRIMARY", "SECONDARY"})
+    void selectedContinuingStandDoesNotReadOrClearTheCounterpart(String selected) {
+        var s = new Scene().standing(); var cut = s.pool.capture(); var actual = selectedCall(s, CdSolidObject.PlayerSlot.valueOf(selected), 0xAD);
+        var r = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+        var e = s.p.copy(); e.jump = 0; assertEquals(e.player(), r.player()); assertEquals(CARRY, r.playerWrites());
+        assertEquals(40, r.player().standObject()); assertFalse(actual.counterpart().stored()); assertEquals(0xAD, actual.counterpart().value());
+        plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"landing", "carry", "right", "left", "floor", "ceiling", "kill", "rolledKill", "miniKill", "offscreen", "debug", "dead", "rising", "below", "side"})
+    void selectedPrimaryNoncrossBranchesMatchTheWholeGenuineLegacyOutcome(String vector) {
+        var s = prefixScene();
+        switch (vector) {
+            case "carry" -> s.standing();
+            case "right", "left" -> { s.standing(); s.p.xv = 0; s.object(o -> o.moveWord(WordField.X_VELOCITY, vector.equals("right") ? 0x100 : -0x100)); }
+            case "floor" -> { s.terrain.row(6, 0x6001); s.object(o -> o.moveWord(WordField.Y, 0x66)); s.p.y = 0x00471234; }
+            case "ceiling", "kill", "rolledKill", "miniKill" -> {
+                s.standing(); s.object(o -> o.moveWord(WordField.Y, 0x180).moveWord(WordField.Y_VELOCITY, -0x100)); s.p.y = 0x01611234;
+                if (!vector.equals("ceiling")) { s.terrain.row(5, 0x5001); s.p.ctrl = 1; s.p.charge = 0x1E; s.invincible = 1; }
+                if (vector.endsWith("Kill")) s.p.flags = 0x0C; if (vector.equals("miniKill")) s.mini = 1;
+            }
+            case "offscreen" -> s.object(o -> o.moveByte(ByteField.SPRITE_FLAGS, 4));
+            case "debug" -> s.debugMode = 0x100;
+            case "dead" -> s.p.routine = 6;
+            case "rising" -> s.p.yv = -1;
+            case "below" -> { s.p.y = 0x009F1234; s.p.yv = 0; }
+            case "side" -> { s.p.x = 0x00E88000; s.p.y = 0x00801234; s.p.yv = 0; }
+            case "landing" -> { }
+            default -> fail(vector);
+        }
+        var owner = s.terrain.owner(); var cut = s.pool.capture();
+        var legacy = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut);
+        var selected = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut,
+                new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY, 0xA5));
+        assertEquals(legacy, selected.outcome()); assertEquals(new CdSolidObject.CounterpartFlags(CdSolidObject.PlayerSlot.SECONDARY, 0xA5, 0xA5, false), selected.counterpart());
+        plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @CsvSource({"PRIMARY,first", "SECONDARY,first", "PRIMARY,second", "SECONDARY,second", "PRIMARY,primaryRaw", "SECONDARY,primaryRaw",
+            "PRIMARY,roomRaw", "SECONDARY,roomRaw", "PRIMARY,ceilingRaw", "SECONDARY,ceilingRaw"})
+    void selectedFirstMissingProbeKeepsSameCursorPrefixUnchangedCounterpartAndOriginalError(String selected, String vector) {
+        var s = prefixScene(); s.p.spr = 0x44; CdSolidObject.StopSite site;
+        switch (vector) {
+            case "first" -> { prefixCell(s, 1, 0, 0xF9); site = CdSolidObject.StopSite.FLOOR_PRIMARY; }
+            case "second" -> { s.object(o -> o.moveWord(WordField.X, 0xF8)); s.p.x = 0x00F88000; prefixCell(s, 0, 0, 0xF9); site = CdSolidObject.StopSite.FLOOR_SECONDARY; }
+            case "primaryRaw" -> {
+                s.object(o -> o.moveWord(WordField.Y, 0x10B)); s.p.y = 0x00EE1234; prefixCell(s, 1, 1, 0xF9);
+                prefixBlock(s, 2, 0, 15, 0x2001); s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0); site = CdSolidObject.StopSite.FLOOR_PRIMARY;
+            }
+            case "roomRaw" -> {
+                s.object(o -> o.moveWord(WordField.X, 0xF4).moveWord(WordField.X_VELOCITY, 0x100)); s.p.x = 0x00F40000; s.p.xv = 0; s.p.yv = 0;
+                prefixCell(s, 1, 0, 0xF9); prefixBlock(s, 2, 15, 6, 0x4001); s.terrain.angles[1] = 3; site = CdSolidObject.StopSite.ROOM_PRIMARY;
+            }
+            case "ceilingRaw" -> {
+                s.object(o -> o.moveWord(WordField.Y, 0x12A).moveWord(WordField.Y_VELOCITY, -0x100)); s.p.y = 0x010D1234; s.p.yv = 0;
+                prefixCell(s, 1, 0, 0xF9); prefixBlock(s, 2, 0, 0, 0x4001); s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0); site = CdSolidObject.StopSite.CEILING_PRIMARY;
+            }
+            default -> throw new AssertionError(vector);
+        }
+        var cut = s.pool.capture(); var actual = selectedCall(s, CdSolidObject.PlayerSlot.valueOf(selected), 0xAD);
+        var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class, actual.outcome()); assertEquals(site, stopped.stop().site());
+        assertFalse(actual.counterpart().stored()); assertEquals(0xAD, actual.counterpart().before()); assertEquals(0xAD, actual.counterpart().value());
+        var e = s.p.copy(); Globals globals = s.globals(); Set<PlayerField> fields = PREFIX_POSITION; Set<GlobalField> writes = Set.of();
+        if (vector.equals("primaryRaw")) { e.y = 0x00EC1234; globals = new Globals(0, 4, 3, 0x34); writes = Set.of(GlobalField.PRIMARY_ANGLE); }
+        else if (vector.equals("roomRaw")) { e.x = 0x00F50000; e.y = 0x00611234; globals = new Globals(0, 4, 3, 0xC0);
+            fields = Set.of(CENTRE_X, CENTRE_X_FRACTION, CENTRE_Y); writes = Set.of(GlobalField.PRIMARY_ANGLE, GlobalField.SECONDARY_ANGLE); }
+        else if (vector.equals("ceilingRaw")) { e.y = 0x010A1234; globals = new Globals(0, 4, 3, 0x34); writes = Set.of(GlobalField.PRIMARY_ANGLE); }
+        else e.y = 0x00611234;
+        prefixValues(s, stopped, e, globals, Set.of(ByteField.SOLID_TYPE), fields, writes, List.of());
+        var original = stopped.stop().originalException(); assertEquals(IllegalStateException.class, original.getClass());
+        assertSame(original, assertThrows(IllegalStateException.class, () -> { throw stopped.stop().originalException(); }));
+        assertFalse(stopped.prefix().calls().stream().anyMatch(c -> c instanceof FloorDistance || c instanceof RoomInFront || c instanceof CeilingDistance));
+        plainPoolUnchanged(s, cut);
+    }
+
+    @Test void selectedCallsRetainNoAliasOrCounterpartStateBetweenPureInvocations() {
+        var s = new Scene(); s.p.flags = 8; s.p.stand = 0; s.p.yv = 0; var cut = s.pool.capture(); var owner = s.terrain.owner();
+        var first = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut,
+                new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, 0xAD));
+        var middle = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut,
+                new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, 0x45));
+        var repeat = owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut,
+                new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, 0xAD));
+        assertEquals(0xA5, first.counterpart().value()); assertEquals(0x45, middle.counterpart().value()); assertTrue(middle.counterpart().stored());
+        assertEquals(first, repeat); assertNotSame(first, repeat); assertNotSame(first.outcome(), repeat.outcome());
+        var legacy = assertInstanceOf(CdSolidObject.Completed.class, owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut)).completedResult();
+        assertEquals(0, legacy.player().actor().motion().flags()); // Legacy stand0 remains selected-primary self.
+        plainPoolUnchanged(s, cut);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"SOLID_OBJECT", "BTM_SOLID_OBJECT", "GET_OFF_OBJECT", "STAND_ON_OBJECT"})
+    void selectedOverloadAdmitsOnlyTopBeforeAnyOtherInput(String entry) {
+        var owner = new Scene().terrain.owner();
+        assertThrows(IllegalArgumentException.class, () -> owner.runWithPrefix(Entry.valueOf(entry), null, null, null, null, null, null));
+    }
+
+    @Test void selectedTopRejectsNullCallInputsWithoutMutatingTheBorrowedPool() {
+        var s = new Scene(); var owner = s.terrain.owner(); var cut = s.pool.capture(); var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, 0);
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(null, null, null, null, null, null, null));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, null, s.p.player(), s.gates(), s.globals(), cut, selection));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), null, s.gates(), s.globals(), cut, selection));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), null, s.globals(), cut, selection));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), null, cut, selection));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), null, selection));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut, null));
+        plainPoolUnchanged(s, cut);
+    }
+
+    private static CdSolidObject.SelectedOutcome selectedCall(Scene s, CdSolidObject.PlayerSlot slot, int counterpart) {
+        return s.terrain.owner().runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), s.pool.capture(),
+                new CdSolidObject.PlayerSelection(slot, counterpart));
+    }
+    /** Literal64-zero semantic projection, a constructed case only; never a production missing-player fallback. */
+    private static Player selectedLiteralZeroPlayer() {
+        return new Player(new CdPlayerTouchResponse.Actor(new CdPlayerMotionState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 0, 0, 0, 0), 0, 0, 0);
+    }
+    // END selected-player TOP-only prefix additions.
 }

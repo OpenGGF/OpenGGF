@@ -153,7 +153,8 @@ public final class SonicCdGameModule implements GameModule {
         MONITOR_ITEM_RING_AWARD,
         TUNNEL_DOOR_SPLASH_BODY, TUNNEL_DOOR_SPLASH_FM,
         ROBOT_GENERATOR_BODY,
-        MOVING_SPRING_BODY
+        MOVING_SPRING_BODY,
+        SWING_BODY
     }
     enum Act2Boundary { ENTRY, PRIMARY_BODY, RESERVED_HUD, DYNAMIC_OBJECTS, LEVEL_FLOW, POWERUP_ART, PALETTE_CYCLE, GLOBAL_ANIMATIONS, MONITOR_ITEM_REWARD, SHIELD_LAYER }
     static final class UnsupportedAct2Loading extends UnsupportedOperationException {

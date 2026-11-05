@@ -171,6 +171,8 @@ ROBOT_GENERATOR_EXPLOSION_SCHEDULE e734 64 1827c7470bb98b70240de9237aeb30aec8841
 ROBOT_GENERATOR_BASE_TILES e774 22 3948236aa2a83a827ef6a7fb0f0e863b4a1ffc2b743355f954aed558420992b4
 ANI_MOVING_SPRING 9a90 6 e8b2932927462b357fa2e0666e939c3cd3031a290c5be159b9f9321c3021547a
 MAP_SPR_MOVING_SPRING 9a96 16 f06f49cb0a71706485ede6030456b96b0523e69e3545ba6bc7094076698f459d
+SWING_MOTION ebc2 64 70b18bc828edc56e0a4157ccb2b124aa274914d0e898a9a852239d5cade58eb8
+MAP_SPR_SWING ed60 30 22d182c8037a55534a03b0f9cf2d90691c3161180ddd68d54eae822a3cfab68a
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -242,7 +244,7 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
 
     @Test void complete138RowManifestPreservesTheOriginal136AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(144, CdR12aProfile.Asset.values().length); assertEquals(144, rows.size());
+        assertEquals(146, CdR12aProfile.Asset.values().length); assertEquals(146, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());

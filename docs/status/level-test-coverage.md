@@ -389,8 +389,18 @@ including full/course replay and 21 selected Sonic render endpoints. Natural
 parent 41 allocates later child 71 at 13423; the child runs in that same physical
 pass. Align reaches Main at 13442, followed by real parent movement and child
 following. Both remain offscreen, so no wheel/child pixel claim follows. First
-13451 stops at unbound Swinging Platform $29/whole42. The Act2 matrix records
-source, failure attribution and the next primary/secondary collision obligations.
+The subsequent Swinging Platform $29 binding now qualifies its actual raw
+secondary/primary Solid and prepared Frame publications, native multipart
+allocation/motion and deferred art use. Core433 distinct identities pass across
+431 original passes plus two fixture corrections; World38 distinct identities
+pass across36 original passes and two targeted corrections. No single combined
+green run is implied. The unchanged diagnostic controller returns13486 and first
+13487 stops at native TimeWarp SCROLL_LOCK_WRITE before dynamic visits. Both
+updated permanent methods pass separately with zero skips: full/course through
+13486 and23 selected-Sonic render checkpoints, retaining the old21. The actual
+engine13486 capture follows complete cleanup; no matched native image or Swing
+visible-pixel claim follows. Broader change-based smoke remains pending. The
+Act2 matrix records source, failure attribution and remaining coverage.
 
 ### Historical26October pause checkpoint
 

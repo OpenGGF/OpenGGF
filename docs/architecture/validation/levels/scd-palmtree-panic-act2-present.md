@@ -806,3 +806,64 @@ The native Swing audit identifies existing art/sine dependencies, missing static
 metadata and a genuine selected-primary/secondary Solid/adoption obligation. No
 secondary actor, collision result or absent-player shortcut is fabricated. Native
 image, regional, whole-act, audio and whole-suite completion remain open.
+
+
+## Swing component and World qualification — 5 November
+
+Metadata appends only motion64@EBC2 and mapping30@ED60 (144→146), retaining all
+35readers/19PLC lists and existing14-tile Swing art. The TOP-only selected-player
+Solid overload shares the original Cursor, preserving the legacy six-argument
+contract and native reached primary/secondary counterpart aliases. Frame prepares
+the existing immutable four-value publication carrier before any World adoption;
+its source-specific Y-WORD preparation preserves fractions and all nonwrites.
+The actual reserved secondary1 is decoded from the captured raw bank, including
+ID0 GetOff/StopPush behavior. This is not a certified full secondary programme.
+
+Swing's cached component creates dirty ID-only children, preserves unsigned
+MULU and both native truncating arithmetic shifts, writes Y then X, then calls
+primary and secondary real Solid before Draw and centre-based despawn. Genuine
+stopped prefixes and original exceptions survive; public cloned calls confer no
+publication authority. World appends only SWING_BODY124, total125 observations,
+without a new sound, art, capture or player owner.
+
+Core433 distinct identities qualify across431 original passes and two corrected
+Body fixtures. Metadata74 and shared Solid/Frame330 passed in the first run; Body
+27 passed there and its two corrected cases passed separately. World38 qualifies
+across36 original passes plus the corrected cloned-read case and native stopped
+fallback case. All runs have zero skips. Corrections only repaired constructed
+sine extent/range, genuine cull/controlled prerequisites and terminal read-only
+diagnostics; production stayed unchanged. Independent bounded static reviews of
+selected Solid/Frame and Body/World found no actionable P1/P2. No single fresh
+green471 or full-suite result is claimed.
+
+The diagnostic unchanged controller returns13486, with actual Swing42 Init13451
+creating later51/53/57/58(parts4/3/2/1), which run in the same physical pass.
+Closed13450 preimages are zero, not internal pre-allocation snapshots. First
+13487 reaches primary TimeWarp SCROLL_LOCK_WRITE before dynamic bodies; its
+partial raw pool/status/saved values are not a returned checkpoint. Both updated
+permanent methods now pass2T/0F/0E/0S at source
+`06539a54925b9d5135106655db8fa2aa90947ba3d8a36773fa3a98b11942b824`,
+5November20:32:51.867784–20:33:12.040752Z/20.172968s execution,0s admission,
+37.103s test compilation. All35incoming source pins, exact unique identities,
+Java25/I/media/EGL properties and fresh XML hashes matched; owned reports were
+consumed. Full/course edges13450→13451,13451→13452,13485→13486 and healthy
+endpoint13486 retain complete state before forward work. Selected Sonic EGL
+adds13451/13486 to all21 old cuts,23total, with actual primary omission and pixel
+replay. No new gameplay inputs or pose/clock/queue writes were introduced.
+
+Actual after-cleanup ENGINE13486 is320×224/12852bytes, SHA256
+`aa9f51f76503399a5de0171fe80bdb95a8603a41a0035a1d3a1b5fa6565382e2`.
+It shows airborne Sonic with the existing time-warp effect. Completed Main CPU
+and already-selected V-int output stay separate. No Swing contact,
+selected-family pixel/native-image, complete-act or regional parity claim
+follows. The permanent source/optional export received a separate static review
+with no actionable P1/P2. Broader change-based smoke remains pending.
+
+The normal resource-policy hook subsequently rejected a machine-local optional
+capture-root literal. Replacing only that test expression with portable user.home
+keeps production and gameplay comparisons unchanged. The affected EGL method
+passes again1T/0F/0E/0S with35pins/source/properties/XML checked; its actual PNG is
+byte-identical. Final route153043/SHA
+`220052a22579297b28f53907c514764c05dd1fa0711a8144e1e33466ae160583`.
+The prior two-case run remains the main-route qualification; no repeated combined
+result is invented. Broader smoke remains pending.

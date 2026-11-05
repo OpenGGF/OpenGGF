@@ -62,7 +62,7 @@ class TestCdR12aDoorSplashAssets {
 
     @Test void twoAppendedOriginalFileDescriptorsPreserveEveryOldOrdinalOffsetAndLength() {
         var all = CdR12aProfile.Asset.values();
-        assertEquals(144, all.length);
+        assertEquals(146, all.length);
         var oldPrefix = new StringBuilder();
         for (int i = 0; i < 136; i++) {
             var asset = all[i];

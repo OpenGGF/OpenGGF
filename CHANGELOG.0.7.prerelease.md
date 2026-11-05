@@ -31,6 +31,9 @@ Unreleased. The earlier development themes remain in
   Source-census and import-preflight dependency pins now match their approved
   sibling helpers while retaining exact byte budgets, hash checks and explicit
   incomplete results for unsupported Java scopes.
+  The census can also require exact direct ordinary test names before a costly
+  run, preserving requested order and reporting missing names only for complete
+  supported inventories. Unsupported Java scopes remain explicitly incomplete.
 
 - **Sonic CD development support:** authenticated user-disc sources now feed an
   experimental Palmtree Panic player, terrain and native-object runtime with
@@ -257,9 +260,12 @@ Unreleased. The earlier development themes remain in
   tables and Withered art owner; active Past, explosion and rebuild actions remain
   outside this Act2 binding. Moving Spring now allocates its ordinary Spring child,
   aligns to the real floor and moves through the existing terrain, angle, animation
-  and art owners. Full/course controller replay reaches the next Swinging Platform
-  boundary, with twenty-one selected Sonic render checkpoints. The wheel and its
-  child remain offscreen on that route.
+  and art owners. Swing now allocates its multipart children and visits both the
+  primary and raw reserved secondary through the same shared Solid kernel, with
+  prepared same-Frame publications and source-ordered failure prefixes. Existing
+  art and checkpoint owners remain unchanged. Full/course controller replay now
+  reaches the next time-warp save boundary, with twenty-three selected Sonic
+  render checkpoints. Swing parts remain offscreen at the checked route cuts.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains
   separate from the qualified route.

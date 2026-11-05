@@ -41,7 +41,7 @@ class TestCdR12aMovingSpringAssets {
         assertEquals(CdReleaseVariant.USA, o.identity().variant());
         assertEquals(CdStagePayload.R12A.stage(), o.identity().stage());
         assertEquals("6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7", o.identity().mmdSha256());
-        assertEquals(144, CdR12aProfile.Asset.values().length);
+        assertEquals(146, CdR12aProfile.Asset.values().length);
         assertEquals(138, ANI_ROBOT_GENERATOR.ordinal()); assertEquals(141, ROBOT_GENERATOR_BASE_TILES.ordinal());
         int[] offsets = {0x9A90, 0x9A96}, lengths = {6, 16};
         for (int i = 0; i < KEYS.length; i++) {

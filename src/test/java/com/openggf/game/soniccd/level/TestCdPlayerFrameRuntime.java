@@ -6100,4 +6100,402 @@ class TestCdPlayerFrameRuntime {
         assertEquals(actor,f.captureActor());assertEquals(new CdPlayerFrameRuntime.SharedState(shared.owner(),expected,shared.artState(),shared.paused(),new CdPlayerFrameRuntime.VIntClock(shared.vIntClock().absoluteSeed(),(shared.vIntClock().deltaSinceAdmittedCut()+1)&0xFFFFFFFFL)),f.captureShared());assertSame(actor.state(),f.state());assertSame(actor.display(),f.display());assertSame(shared.artState(),f.artState());
     }
     // END old-programme exit services.
+    // BEGIN selected-player Solid and Swing WORD-Y preparations. Source-only; Java UNRUN.
+    @Test void selectedSolidPrimaryUsesRealCompletedAndStoppedValuesWithoutAnyPreparationWrite() throws IOException {
+        for (boolean stopped : new boolean[]{false, true}) try (var f = framePortSolidFrame(new Fixture(), stopped)) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool); var cut = pool.capture();
+            var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY, 0xB8);
+            var actual = selectedSolidRun(f, object, player, selection, cut); var actor = f.captureActor(); var shared = f.captureShared();
+            if (stopped) assertEquals(CdSolidObject.StopSite.STAND_RELEASE,
+                    assertInstanceOf(CdSolidObject.NativeStopped.class, actual.outcome()).stop().site());
+            else assertEquals(CdSolidObject.Path.STAND_ON,
+                    assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult().path());
+            var ready = f.prepareObjectSelectedSolid(actor.state(), shared.environment(), player, selection, actual);
+            assertEquals(rotationAngleSolidExpected(actor.state(), selectedSolidPlayer(actual)), ready.finalState());
+            assertEquals(selectedSolidEnvironment(shared.environment(), selectedSolidGlobals(actual)), ready.finalEnvironment());
+            selectedSolidUnchanged(f, actor, shared); assertEquals(cut.slots(), pool.capture().slots());
+            f.applyPreparedObjectSolidPublication(ready);
+            assertSame(ready.finalState(), f.state()); assertSame(ready.finalEnvironment(), f.environment());
+            assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+            assertEquals(cut.slots(), pool.capture().slots());
+            if (stopped) {
+                var stop = ((CdSolidObject.NativeStopped) actual.outcome()).stop(); var original = stop.originalException();
+                assertSame(original, assertThrows(RuntimeException.class, () -> { throw original; }));
+                assertSame(stop, ((CdSolidObject.NativeStopped) actual.outcome()).stop());
+            }
+        }
+    }
+
+    @Test void selectedSolidSecondaryAdoptsOnlyActualCounterpartFlagsAndSharedGlobalsForBothOutcomes() throws IOException {
+        for (boolean stopped : new boolean[]{false, true}) try (var f = framePortSolidFrame(new Fixture(), true)) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool); var actor = f.captureActor(); var shared = f.captureShared();
+            var secondary = selectedSolidPlayer(solidPlayer(f), 0x0C, stopped ? 5 : 0);
+            secondary = springChanged(secondary, "TILE"); secondary = springChanged(secondary, "PRIORITY");
+            var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, f.state().motion().flags());
+            var actual = selectedSolidRun(f, object, secondary, selection, pool.capture());
+            if (stopped) assertInstanceOf(CdSolidObject.NativeStopped.class, actual.outcome());
+            else assertInstanceOf(CdSolidObject.Completed.class, actual.outcome());
+            assertEquals(!stopped, actual.counterpart().stored());
+            int expectedFlags = stopped ? actor.state().motion().flags() : actor.state().motion().flags() & ~8;
+            var ready = f.prepareObjectSelectedSolid(actor.state(), shared.environment(), secondary, selection, actual);
+            assertEquals(selectedSolidStateFlags(actor.state(), expectedFlags), ready.finalState());
+            assertEquals(selectedSolidEnvironment(shared.environment(), selectedSolidGlobals(actual)), ready.finalEnvironment());
+            assertEquals(actor.state().header(), ready.finalState().header()); assertEquals(actor.state().objectLinks(), ready.finalState().objectLinks());
+            assertEquals(actor.state().timers(), ready.finalState().timers()); assertEquals(actor.state().rotationDistance(), ready.finalState().rotationDistance());
+            selectedSolidUnchanged(f, actor, shared); f.applyPreparedObjectSolidPublication(ready);
+            assertEquals(expectedFlags, f.state().motion().flags()); assertEquals(actor.state().motion().centreY16_16(), f.state().motion().centreY16_16());
+            assertNotEquals(selectedSolidPlayer(actual).actor().motion().routine(), f.state().motion().routine());
+        }
+    }
+
+    @Test void selectedSolidUsesPhysicalSelfAndCrossAliasesAndPreservesSameValueCounterpartStores() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) for (int stand : new int[]{0, 1})
+            for (int counterpartFlags : new int[]{4, 12}) try (var f = framePortSolidFrame(new Fixture(), true)) {
+                var actor = f.captureActor(); var seeded = selectedSolidStateFlags(actor.state(), counterpartFlags);
+                if (slot == CdSolidObject.PlayerSlot.PRIMARY) {
+                    seeded = new CdPlayerBody.State(selectedSolidPlayer(solidPlayer(f), 12, stand).actor().motion(),
+                            seeded.animation(), seeded.header(), seeded.timers(), seeded.history(), seeded.rotationDistance(),
+                            new CdPlayerBody.ObjectLinks(seeded.objectLinks().pushObject(), stand), seeded.rotationAngle());
+                }
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), seeded, actor.display()));
+                var player = slot == CdSolidObject.PlayerSlot.PRIMARY ? solidPlayer(f) : selectedSolidPlayer(solidPlayer(f), 12, stand);
+                var selection = new CdSolidObject.PlayerSelection(slot, counterpartFlags); var pool = new CdObjectPool();
+                var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture());
+                assertInstanceOf(CdSolidObject.Completed.class, actual.outcome());
+                boolean cross = slot == CdSolidObject.PlayerSlot.PRIMARY ? stand == 1 : stand == 0;
+                assertEquals(cross, actual.counterpart().stored()); assertEquals(counterpartFlags, actual.counterpart().before());
+                assertEquals(cross ? counterpartFlags & ~8 : counterpartFlags, actual.counterpart().value());
+                assertEquals(slot == CdSolidObject.PlayerSlot.PRIMARY ? CdSolidObject.PlayerSlot.SECONDARY : CdSolidObject.PlayerSlot.PRIMARY,
+                        actual.counterpart().slot());
+                var ready = f.prepareObjectSelectedSolid(f.state(), f.environment(), player, selection, actual);
+                if (slot == CdSolidObject.PlayerSlot.PRIMARY) assertEquals(rotationAngleSolidExpected(f.state(), selectedSolidPlayer(actual)), ready.finalState());
+                else assertEquals(selectedSolidStateFlags(f.state(), cross ? counterpartFlags & ~8 : counterpartFlags), ready.finalState());
+            }
+    }
+
+    @Test void selectedSolidBothSelectionsAdoptActualCompletedFloorAngleStoresIntoTheSingleEnvironment() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) try (var f = framePortSolidFrame(new Fixture(), false)) {
+            // Explicit fixture ingress: ordinary chunk2 owns the constructed floor; bit6 would select chunk3.
+            var seed = new Actor(f); seed.spriteFlags &= ~0x40; seed.install(f);
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool).moveWord(CdObjectState.WordField.Y, 0x80); pool.write(object);
+            var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+            var actual = selectedSolidRun(f, object, player, selection, pool.capture());
+            var result = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+            assertEquals(Set.of(CdSolidObject.GlobalField.PRIMARY_ANGLE, CdSolidObject.GlobalField.SECONDARY_ANGLE), result.globalWrites());
+            assertNotEquals(solidGlobals(f), result.globals()); var s = f.state(); var e = f.environment();
+            var ready = f.prepareObjectSelectedSolid(s, e, player, selection, actual);
+            assertEquals(selectedSolidEnvironment(e, result.globals()), ready.finalEnvironment());
+            assertEquals(slot == CdSolidObject.PlayerSlot.PRIMARY ? rotationAngleSolidExpected(s, result.player()) : s, ready.finalState());
+            assertEquals(s.motion().previousPrimaryAngle(), ready.finalState().motion().previousPrimaryAngle());
+            assertEquals(s.motion().previousSecondaryAngle(), ready.finalState().motion().previousSecondaryAngle());
+        }
+    }
+
+    @Test void selectedSolidFirstMissingProbeKeepsTheActualStopAndOriginalExceptionForBothSelections() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool); var player = solidPlayer(f);
+            var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+            var actual = selectedSolidMissingFloor(f).runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, object, player,
+                    new CdSolidObject.Gates(0, 0), solidGlobals(f), pool.capture(), selection);
+            var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class, actual.outcome()); var original = stopped.stop().originalException();
+            assertEquals(CdSolidObject.StopSite.FLOOR_PRIMARY, stopped.stop().site());
+            var detail = assertInstanceOf(CdSolidObject.TerrainWord.class, stopped.stop().detail());
+            assertEquals(CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS, detail.reason());
+            assertTrue(stopped.prefix().globalWrites().isEmpty()); assertEquals(solidGlobals(f), stopped.prefix().globals());
+            assertTrue(stopped.prefix().calls().stream().noneMatch(CdSolidObject.FloorDistance.class::isInstance));
+            var actor = f.captureActor(); var shared = f.captureShared();
+            var ready = f.prepareObjectSelectedSolid(actor.state(), shared.environment(), player, selection, actual);
+            selectedSolidUnchanged(f, actor, shared); f.applyPreparedObjectSolidPublication(ready);
+            assertEquals(slot == CdSolidObject.PlayerSlot.PRIMARY ? rotationAngleSolidExpected(actor.state(), stopped.prefix().player()) : actor.state(), f.state());
+            assertEquals(shared.environment(), f.environment()); assertSame(original, stopped.stop().originalException());
+            assertSame(original, assertThrows(RuntimeException.class, () -> { throw stopped.stop().originalException(); }));
+        }
+    }
+
+    @Test void selectedSolidRejectsEveryUndeclaredSelectedPlayerChangeAndEveryUnownedIntrinsicField() throws IOException {
+        String[] fields = {"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY",
+                "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION",
+                "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY", "PREVIOUS_SECONDARY",
+                "TILE", "PRIORITY", "HURT", "ROTATION_DISTANCE", "SLOT_ID", "PUSH_OBJECT", "STAND_OBJECT"};
+        for (var slot : CdSolidObject.PlayerSlot.values()) for (boolean stopped : new boolean[]{false, true})
+            try (var f = framePortSolidFrame(new Fixture(), stopped)) {
+                var pool = new CdObjectPool(); var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+                var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture());
+                for (String field : fields) {
+                    var wrong = selectedSolidChanged(actual, springChanged(player, field), selectedSolidGlobals(actual), Set.of(), selectedSolidGlobalWrites(actual));
+                    selectedSolidRejected(f, f.state(), f.environment(), player, selection, wrong, IllegalArgumentException.class);
+                }
+            }
+    }
+
+    @Test void selectedSolidRejectsAllFourUndeclaredSharedGlobalsOnCompletedAndStoppedOutcomes() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) for (boolean stopped : new boolean[]{false, true})
+            try (var f = framePortSolidFrame(new Fixture(), stopped)) {
+                var pool = new CdObjectPool(); var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+                var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture());
+                for (int field = 0; field < 4; field++) {
+                    var wrong = selectedSolidChanged(actual, selectedSolidPlayer(actual), prefixChangedGlobals(solidGlobals(f), field),
+                            selectedSolidPlayerWrites(actual), Set.of());
+                    selectedSolidRejected(f, f.state(), f.environment(), player, selection, wrong, IllegalArgumentException.class);
+                }
+            }
+    }
+
+    @Test void selectedSolidChecksTheActualPrimaryProjectionAndSecondaryCounterpartCutBeforeBuilding() throws IOException {
+        try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var player = solidPlayer(f);
+            for (var slot : CdSolidObject.PlayerSlot.values()) {
+                var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+                var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture());
+                if (slot == CdSolidObject.PlayerSlot.PRIMARY) for (String field : new String[]{"FLAGS", "SLOT_ID", "TILE", "Y_FRACTION", "STAND_OBJECT"})
+                    selectedSolidRejected(f, f.state(), f.environment(), springChanged(player, field), selection, actual, IllegalArgumentException.class);
+                else {
+                    var stale = new CdSolidObject.PlayerSelection(slot, selection.counterpartFlags() ^ 1);
+                    selectedSolidRejected(f, f.state(), f.environment(), player, stale, actual, IllegalArgumentException.class);
+                }
+            }
+        }
+    }
+
+    @Test void selectedSolidRejectsWrongCounterpartSlotOrBeforeAndTheTypedReceiptsEnforceNativeByteStores() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+            var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture()); var c = actual.counterpart();
+            var wrongSlot = new CdSolidObject.SelectedOutcome(actual.outcome(), new CdSolidObject.CounterpartFlags(slot, c.before(), c.before(), false));
+            selectedSolidRejected(f, f.state(), f.environment(), player, selection, wrongSlot, IllegalArgumentException.class);
+            var wrongBefore = new CdSolidObject.SelectedOutcome(actual.outcome(), new CdSolidObject.CounterpartFlags(c.slot(), c.before() ^ 1, c.before() ^ 1, false));
+            selectedSolidRejected(f, f.state(), f.environment(), player, selection, wrongBefore, IllegalArgumentException.class);
+            assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(c.slot(), 0, 1, false));
+            assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(c.slot(), 8, 8, true));
+            for (int invalid : new int[]{-1, 256}) {
+                assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.PlayerSelection(slot, invalid));
+                assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(c.slot(), invalid, 0, false));
+                assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.CounterpartFlags(c.slot(), 0, invalid, false));
+            }
+        }
+    }
+
+    @Test void selectedSolidAndSwingYPreparationsCasEveryActualStateMemberBeforePublishingAnything() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+            var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture()); var state = f.state(); var e = f.environment();
+            for (String field : selectedSolidStateFields()) {
+                var stale = framePortChangedState(state, field); assertNotEquals(state, stale, field);
+                selectedSolidRejected(f, stale, e, player, selection, actual, IllegalArgumentException.class);
+                selectedSwingYRejected(f, stale, e, state.motion().centreY16_16() >>> 16, 0, IllegalArgumentException.class);
+            }
+        }
+    }
+
+    @Test void selectedSolidAndSwingYPreparationsCasEveryActualEnvironmentMemberBeforePublishingAnything() throws IOException {
+        for (var slot : CdSolidObject.PlayerSlot.values()) try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(slot, f.state().motion().flags());
+            var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture()); var state = f.state(); var e = f.environment();
+            for (String field : selectedSolidEnvironmentFields()) {
+                var stale = framePortChangedEnvironment(e, field); assertNotEquals(e, stale, field);
+                selectedSolidRejected(f, state, stale, player, selection, actual, IllegalArgumentException.class);
+                selectedSwingYRejected(f, state, stale, state.motion().centreY16_16() >>> 16, 0, IllegalArgumentException.class);
+            }
+        }
+    }
+
+    @Test void selectedSolidAndSwingYUseTheExistingPreparedFullPairValidatorAfterActualInterveningChanges() throws IOException {
+        try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var pool = new CdObjectPool(); var player = solidPlayer(f);
+            var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY, 0);
+            var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture());
+            var solid = f.prepareObjectSelectedSolid(actor.state(), shared.environment(), player, selection, actual);
+            var y = f.prepareObjectSwingYWord(actor.state(), shared.environment(), actor.state().motion().centreY16_16() >>> 16, 0xFFFF);
+            for (String field : selectedSolidStateFields()) {
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), framePortChangedState(actor.state(), field), actor.display()));
+                framePortPreparedRejected(f, solid, IllegalArgumentException.class); framePortPreparedRejected(f, y, IllegalArgumentException.class); f.restoreActor(actor);
+            }
+            for (String field : selectedSolidEnvironmentFields()) {
+                f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), framePortChangedEnvironment(shared.environment(), field), shared.artState(), shared.paused(), shared.vIntClock()));
+                framePortPreparedRejected(f, solid, IllegalArgumentException.class); framePortPreparedRejected(f, y, IllegalArgumentException.class); f.restoreShared(shared);
+            }
+        }
+    }
+
+    @Test void selectedSolidAndSwingYKeepPendingActiveEntitledAndClosedGuardsAheadOfArguments() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var input = f.prepareInput(0);
+            selectedSolidAndSwingYGuarded(f);
+            f.serviceVBlank(input.phase(), () -> selectedSolidAndSwingYGuarded(f));
+            selectedSolidAndSwingYGuarded(f); f.runBody(1);
+            assertDoesNotThrow(() -> f.prepareObjectSwingYWord(f.state(), f.environment(), f.state().motion().centreY16_16() >>> 16, 0));
+            f.close(); selectedSolidAndSwingYGuarded(f);
+        }
+    }
+
+    @Test void selectedSolidAndSwingYRejectNullIngressWithoutChangingAnyPartition() throws IOException {
+        try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var player = solidPlayer(f); var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY, 0);
+            var actual = selectedSolidRun(f, framePortSolidObject(pool), player, selection, pool.capture()); var s = f.state(); var e = f.environment();
+            selectedSolidRejected(f, null, e, player, selection, actual, NullPointerException.class);
+            selectedSolidRejected(f, s, null, player, selection, actual, NullPointerException.class);
+            selectedSolidRejected(f, s, e, null, selection, actual, NullPointerException.class);
+            selectedSolidRejected(f, s, e, player, null, actual, NullPointerException.class);
+            selectedSolidRejected(f, s, e, player, selection, null, NullPointerException.class);
+            selectedSwingYRejected(f, null, e, 0, 0, NullPointerException.class); selectedSwingYRejected(f, s, null, 0, 0, NullPointerException.class);
+        }
+    }
+
+    @Test void swingYWordChangesOnlyTheHighWordAcrossEveryFractionAndSignedWordBoundary() throws IOException {
+        try (var f = framePortSolidFrame(new Fixture(), false)) {
+            for (int fraction : new int[]{0, 1, 0x1234, 0xFFFF}) for (int before : new int[]{0, 1, 0x7FFF, 0x8000, 0xFFFF})
+                for (int value : new int[]{0, 1, 0x7FFF, 0x8000, 0xFFFF}) {
+                    var actor = f.captureActor(); var s = actor.state(); var m = s.motion();
+                    var seeded = selectedSwingYState(s, (before << 16) | fraction);
+                    f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), seeded, actor.display()));
+                    var shared = f.captureShared(); var current = f.captureActor();
+                    var ready = f.prepareObjectSwingYWord(seeded, shared.environment(), before, value);
+                    assertSame(seeded, ready.expectedState()); assertSame(shared.environment(), ready.expectedEnvironment());
+                    assertEquals(selectedSwingYState(seeded, (value << 16) | fraction), ready.finalState());
+                    assertSame(shared.environment(), ready.finalEnvironment()); selectedSolidUnchanged(f, current, shared);
+                    f.applyPreparedObjectSolidPublication(ready); assertSame(ready.finalState(), f.state());
+                    assertEquals(fraction, f.state().motion().centreY16_16() & 0xFFFF); assertEquals(value, f.state().motion().centreY16_16() >>> 16);
+                    assertSame(seeded.animation(), f.state().animation()); assertSame(seeded.header(), f.state().header());
+                    assertSame(seeded.timers(), f.state().timers()); assertSame(seeded.history(), f.state().history());
+                    assertSame(seeded.objectLinks(), f.state().objectLinks()); assertSame(shared.environment(), f.environment());
+                    assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock()); assertSame(current.display(), f.display());
+                }
+        }
+    }
+
+    @Test void swingYWordRejectsBothOutOfWidthArgumentsAndAStaleIntegerWordBeforeAnyWrite() throws IOException {
+        try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var s = f.state(); var e = f.environment(); int before = s.motion().centreY16_16() >>> 16;
+            for (int invalid : new int[]{-1, 0x10000, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+                selectedSwingYRejected(f, s, e, invalid, 0, IllegalArgumentException.class);
+                selectedSwingYRejected(f, s, e, before, invalid, IllegalArgumentException.class);
+            }
+            selectedSwingYRejected(f, s, e, before ^ 1, 0, IllegalArgumentException.class);
+        }
+    }
+
+    @Test void selectedSolidAndSwingYCarriersRemainEqualValueReusableDataWithoutOwnerOrInvocationAuthority() throws IOException {
+        try (var a = framePortSolidFrame(new Fixture(), false); var b = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool).moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 4); pool.write(object);
+            var player = solidPlayer(a); var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.SECONDARY, a.state().motion().flags());
+            var actual = selectedSolidRun(a, object, player, selection, pool.capture());
+            var result = assertInstanceOf(CdSolidObject.Completed.class, actual.outcome()).completedResult();
+            assertTrue(result.playerWrites().isEmpty()); assertFalse(actual.counterpart().stored());
+            var actor = a.captureActor(); var shared = a.captureShared(); var other = b.captureActor();
+            var solid = a.prepareObjectSelectedSolid(other.state(), b.environment(), player, selection, actual);
+            var y = a.prepareObjectSwingYWord(other.state(), b.environment(), a.state().motion().centreY16_16() >>> 16, a.state().motion().centreY16_16() >>> 16);
+            for (var ready : List.of(solid, y)) { a.applyPreparedObjectSolidPublication(ready); a.applyPreparedObjectSolidPublication(ready); b.applyPreparedObjectSolidPublication(ready); }
+            assertEquals(actor, a.captureActor()); assertEquals(shared, a.captureShared()); assertEquals(other, b.captureActor());
+            assertNotSame(actor.owner(), other.owner()); assertThrows(IllegalArgumentException.class, () -> b.restoreActor(actor));
+        }
+    }
+
+    @Test void selectedSolidPreparationRejectsRealLegacyEntryOutcomesInsteadOfTreatingThemAsTopCalls() throws IOException {
+        try (var f = framePortSolidFrame(new Fixture(), false)) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool); var player = solidPlayer(f);
+            var selection = new CdSolidObject.PlayerSelection(CdSolidObject.PlayerSlot.PRIMARY, 0);
+            var top = selectedSolidRun(f, object, player, selection, pool.capture());
+            for (var entry : List.of(CdSolidObject.Entry.SOLID_OBJECT, CdSolidObject.Entry.GET_OFF_OBJECT)) {
+                var actual = CdSolidObject.fromAssets(f.assets()).runWithPrefix(entry, object, player, new CdSolidObject.Gates(0, 0), solidGlobals(f), pool.capture());
+                var wrongEntry = new CdSolidObject.SelectedOutcome(actual, top.counterpart());
+                selectedSolidRejected(f, f.state(), f.environment(), player, selection, wrongEntry, IllegalArgumentException.class);
+            }
+        }
+    }
+
+    @Test void selectedSolidAndSwingYExposeOnlyTheirTwoAcceptedPreparersAndTheUnchangedCarrier() throws Exception {
+        assertEquals(CdPlayerFrameRuntime.ObjectSolidPublication.class, CdPlayerFrameRuntime.class.getMethod("prepareObjectSelectedSolid",
+                CdPlayerBody.State.class, CdPlayerBody.Environment.class, CdSolidObject.Player.class,
+                CdSolidObject.PlayerSelection.class, CdSolidObject.SelectedOutcome.class).getReturnType());
+        assertEquals(CdPlayerFrameRuntime.ObjectSolidPublication.class, CdPlayerFrameRuntime.class.getMethod("prepareObjectSwingYWord",
+                CdPlayerBody.State.class, CdPlayerBody.Environment.class, int.class, int.class).getReturnType());
+        assertEquals(4, CdPlayerFrameRuntime.ObjectSolidPublication.class.getDeclaredFields().length);
+        assertEquals(1, CdPlayerFrameRuntime.ObjectSolidPublication.class.getDeclaredConstructors().length);
+        assertEquals(4, CdPlayerFrameRuntime.ObjectSolidPublication.class.getDeclaredConstructors()[0].getParameterCount());
+    }
+
+    private static CdSolidObject.SelectedOutcome selectedSolidRun(CdPlayerFrameRuntime f, CdObjectState object,
+            CdSolidObject.Player player, CdSolidObject.PlayerSelection selection, CdObjectPool.Snapshot cut) {
+        return CdSolidObject.fromAssets(f.assets()).runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, object, player,
+                new CdSolidObject.Gates(0, 0), solidGlobals(f), cut, selection);
+    }
+    private static CdSolidObject.Player selectedSolidPlayer(CdSolidObject.SelectedOutcome selected) {
+        return selected.outcome() instanceof CdSolidObject.Completed c ? c.completedResult().player() : ((CdSolidObject.NativeStopped) selected.outcome()).prefix().player();
+    }
+    private static CdSolidObject.Globals selectedSolidGlobals(CdSolidObject.SelectedOutcome selected) {
+        return selected.outcome() instanceof CdSolidObject.Completed c ? c.completedResult().globals() : ((CdSolidObject.NativeStopped) selected.outcome()).prefix().globals();
+    }
+    private static Set<CdSolidObject.PlayerField> selectedSolidPlayerWrites(CdSolidObject.SelectedOutcome selected) {
+        return selected.outcome() instanceof CdSolidObject.Completed c ? c.completedResult().playerWrites() : ((CdSolidObject.NativeStopped) selected.outcome()).prefix().playerWrites();
+    }
+    private static Set<CdSolidObject.GlobalField> selectedSolidGlobalWrites(CdSolidObject.SelectedOutcome selected) {
+        return selected.outcome() instanceof CdSolidObject.Completed c ? c.completedResult().globalWrites() : ((CdSolidObject.NativeStopped) selected.outcome()).prefix().globalWrites();
+    }
+    private static CdSolidObject.SelectedOutcome selectedSolidChanged(CdSolidObject.SelectedOutcome selected, CdSolidObject.Player player,
+            CdSolidObject.Globals globals, Set<CdSolidObject.PlayerField> writes, Set<CdSolidObject.GlobalField> globalWrites) {
+        CdSolidObject.Outcome outcome;
+        if (selected.outcome() instanceof CdSolidObject.Completed c) {
+            var r = c.completedResult(); outcome = new CdSolidObject.Completed(new CdSolidObject.Result(r.entry(), r.object(), player,
+                    globals, r.otherSlots(), r.objectWrites(), writes, globalWrites, r.calls(), r.path(), r.getOffReason(), r.d0()));
+        } else {
+            var stopped = (CdSolidObject.NativeStopped) selected.outcome(); var p = stopped.prefix();
+            outcome = new CdSolidObject.NativeStopped(new CdSolidObject.Prefix(p.entry(), p.object(), player, globals, p.otherSlots(),
+                    p.objectWrites(), writes, globalWrites, p.calls()), stopped.stop());
+        }
+        return new CdSolidObject.SelectedOutcome(outcome, selected.counterpart());
+    }
+    private static CdSolidObject.Player selectedSolidPlayer(CdSolidObject.Player p, int flags, int stand) {
+        var a = p.actor(); var m = a.motion();
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(hurtMotion(m, m.centreY16_16(), m.yVelocity(), flags),
+                a.tile(), a.priority(), a.hurt(), a.rotationDistance()), p.slotId(), p.pushObject(), stand);
+    }
+    private static CdPlayerBody.State selectedSolidStateFlags(CdPlayerBody.State s, int flags) {
+        var m = s.motion(); return new CdPlayerBody.State(hurtMotion(m, m.centreY16_16(), m.yVelocity(), flags), s.animation(),
+                s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+    }
+    private static CdPlayerBody.State selectedSwingYState(CdPlayerBody.State s, int y) {
+        var m = s.motion(); return new CdPlayerBody.State(hurtMotion(m, y, m.yVelocity(), m.flags()), s.animation(),
+                s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+    }
+    private static CdPlayerBody.Environment selectedSolidEnvironment(CdPlayerBody.Environment e, CdSolidObject.Globals g) {
+        var m = e.movement(); var old = m.globals(); var b = e.globals();
+        return new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(),
+                new CdPlayerMovement.Globals(old.lookMode(), old.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), old.boredTimer(),
+                        g.scoreChain(), old.debugAngle(), old.debugAngleShift(), old.debugQuadrant(), old.debugFloorDistance())), e.controls(),
+                new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(),
+                        b.timeWarpTimer(), g.invincible(), b.bossMusic()), e.dynamicSlots());
+    }
+    private static CdSolidObject selectedSolidMissingFloor(CdPlayerFrameRuntime f) {
+        byte[] fg = new byte[338], bg = new byte[50]; fg[0] = 41; fg[1] = 7; bg[0] = 5; bg[1] = 7;
+        Arrays.fill(fg, 2, fg.length, (byte) 2); fg[3] = (byte) 0xF9;
+        var terrain = CdR11aTerrain.decode(new byte[6432], new byte[25600], new byte[61952], fg, bg, new byte[900], new byte[256], new byte[4096], new byte[4096]);
+        return new CdSolidObject(new CdPlayerMovement(terrain, f.assets().player()));
+    }
+    private static void selectedSolidUnchanged(CdPlayerFrameRuntime f, CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared) {
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertSame(actor.state(), f.state());
+        assertSame(shared.environment(), f.environment()); assertSame(shared.artState(), f.artState());
+        assertSame(shared.vIntClock(), f.vIntClock()); assertSame(actor.display(), f.display());
+    }
+    private static void selectedSolidRejected(CdPlayerFrameRuntime f, CdPlayerBody.State s, CdPlayerBody.Environment e,
+            CdSolidObject.Player player, CdSolidObject.PlayerSelection selection, CdSolidObject.SelectedOutcome actual, Class<? extends RuntimeException> type) {
+        var actor = f.captureActor(); var shared = f.captureShared();
+        assertThrows(type, () -> f.prepareObjectSelectedSolid(s, e, player, selection, actual)); selectedSolidUnchanged(f, actor, shared);
+    }
+    private static void selectedSwingYRejected(CdPlayerFrameRuntime f, CdPlayerBody.State s, CdPlayerBody.Environment e,
+            int before, int value, Class<? extends RuntimeException> type) {
+        var actor = f.captureActor(); var shared = f.captureShared();
+        assertThrows(type, () -> f.prepareObjectSwingYWord(s, e, before, value)); selectedSolidUnchanged(f, actor, shared);
+    }
+    private static void selectedSolidAndSwingYGuarded(CdPlayerFrameRuntime f) {
+        assertThrows(IllegalStateException.class, () -> f.prepareObjectSelectedSolid(null, null, null, null, null));
+        assertThrows(IllegalStateException.class, () -> f.prepareObjectSwingYWord(null, null, -1, -1));
+    }
+    private static List<String> selectedSolidStateFields() {
+        return List.of("CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "SCRIPT_INDEX", "ANIMATION_TIMER", "MAP_FRAME", "SLOT_ID", "MAPPING_ADDRESS", "TILE", "PRIORITY", "WIDTH", "HURT", "INVINCIBILITY", "SPEED_SHOES", "RESET", "HISTORY_INDEX", "ROTATION_DISTANCE", "PUSH_OBJECT", "STAND_OBJECT", "ROTATION_ANGLE", "HISTORY_BYTES");
+    }
+    private static List<String> selectedSolidEnvironmentFields() {
+        return List.of("TOP_SPEED", "ACCELERATION", "DECELERATION", "BOUND_LEFT", "BOUND_RIGHT", "BOUND_BOTTOM", "BOUND_BOSS_FIGHT", "GATE_ZONE_ACT", "GATE_TIME_ZONE", "GATE_MINI_SONIC", "GATE_WATER_SLIDE", "GATE_WIND_TUNNEL", "GATE_SPEED_SHOES", "GATE_TIME_WARP_DIRECTION", "MOVEMENT_LOOK_MODE", "MOVEMENT_CAMERA_Y_CENTRE", "MOVEMENT_PRIMARY_ANGLE", "MOVEMENT_SECONDARY_ANGLE", "MOVEMENT_BORED_TIMER", "MOVEMENT_SCORE_CHAIN", "MOVEMENT_DEBUG_ANGLE", "MOVEMENT_DEBUG_ANGLE_SHIFT", "MOVEMENT_DEBUG_QUADRANT", "MOVEMENT_DEBUG_FLOOR_DISTANCE", "RAW_HELD", "RAW_TAP", "LOGICAL_HELD", "LOGICAL_TAP", "CONTROL_LOCKED", "BODY_LEVEL_FRAMES", "BODY_CAMERA_X_CENTRE", "BODY_TIME_ATTACK_MODE", "BODY_DEBUG_MODE", "BODY_DEBUG_CHEAT", "BODY_TIME_WARP_TIMER", "BODY_INVINCIBLE", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS");
+    }
+    // END selected-player Solid and Swing WORD-Y preparations.
+
 }

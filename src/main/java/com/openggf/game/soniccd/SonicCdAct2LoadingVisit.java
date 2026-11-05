@@ -81,6 +81,11 @@ final class SonicCdAct2LoadingVisit {
     private boolean logMosquiPort, drawingLogMosqui;
     private final CdAnton anton;
     private final CdPataBata pataBata;
+    private final CdSwing swing;
+    private final CdSwing.Assets swingAssets;
+    private final CdPlayerMath swingMath;
+    private transient SwingInvocation activeSwing;
+    private boolean swingPort, drawingSwing;
     private final CdMovingSpring movingSpring;
     private final CdMovingSpring.Assets movingSpringAssets;
     private transient MovingSpringInvocation activeMovingSpring;
@@ -255,6 +260,21 @@ final class SonicCdAct2LoadingVisit {
                     @Override public void completed(Object c){consumeCompletedMovingSpringReceipt(c);}
                 });
         movingSpringAssets=movingSpring.assets();
+        swingMath=new CdPlayerMath(player.player());
+        swing=CdSwing.fromAct2Assets(placement,objectAssets,swingMath,sharedSolid,new CdSwing.PlayerPort() {
+            @Override public CdSwing.PlayerCut read(CdSwing.PlayerReadCall c){return readSwingPlayer(c);}
+            @Override public void commitSolid(CdSwing.SolidCall c){commitSwingSolid(c);}
+            @Override public void commitY(CdSwing.PlayerYCall c){commitSwingY(c);}
+        },this::drawSwing,new CdSwing.DispatchObserver() {
+            @Override public void beforePublication(CdSwing.Publication c){beforeSwingPublication(c);}
+            @Override public void afterPublication(CdSwing.Publication c){afterSwingPublication(c);}
+            @Override public void beforeCall(Object c){beforeSwingCall(c);}
+            @Override public void afterCall(Object c){afterSwingCall(c);}
+        },new CdSwing.ReceiptGuard() {
+            @Override public void prepared(Object c){requirePreparedSwingReceipt(c);}
+            @Override public void completed(Object c){consumeCompletedSwingReceipt(c);}
+        });
+        swingAssets=swing.assets();
         collapsePlatform=CdCollapsePlatform.fromAct2Assets(placement,objectAssets,sharedSolid,this::commitCollapseSolid,this::drawCollapse,this::playCollapseFm,this::validateCollapsePublication);
         checkpoint=CdCheckpoint.fromAct2Assets(placement,objectAssets,new CdPlayerMath(player.player()),new CdCheckpoint.LivePort() {
             @Override public CdLevelGlobals readLevel(CdCheckpoint.LevelReadCall c){return readCheckpointLevel(c);}
@@ -2341,6 +2361,7 @@ final class SonicCdAct2LoadingVisit {
                 else if(id==CdMosqui.OBJECT_ID) { runMosqui(whole); call(MOSQUI_BODY); }
                 else if(id==CdAnton.OBJECT_ID) { runAnton(whole); call(ANTON_BODY); }
                 else if(id==CdPataBata.OBJECT_ID) { runPataBata(whole); call(PATA_BATA_BODY); }
+                else if(id==CdSwing.OBJECT_ID) { runSwing(whole); call(SWING_BODY); }
                 else if(id==CdMovingSpring.OBJECT_ID) { runMovingSpring(whole); call(MOVING_SPRING_BODY); }
                 else if(id==CdRobotGenerator.OBJECT_ID) { runRobotGenerator(whole); call(ROBOT_GENERATOR_BODY); }
                 else if(id==CdCollapsePlatform.OBJECT_ID) { runCollapse(whole); call(COLLAPSE_PLATFORM_BODY); }
@@ -2381,6 +2402,7 @@ final class SonicCdAct2LoadingVisit {
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ANTON.nativeAddress(),assets.objects().anton().mappings(),0,4));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA1.nativeAddress(),assets.objects().pataBataNormal().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_PATA_BATA2.nativeAddress(),assets.objects().pataBataDamaged().mappings(),0,3));
+        roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_SWING.nativeAddress(),assets.objects().swing().mappings(),0,3));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_MOVING_SPRING.nativeAddress(),assets.objects().movingSpring().mappings(),0,2));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_ROBOT_GENERATOR.nativeAddress(),assets.objects().robotGenerator().mappings(),0,8));
         roots.add(new CdObjectMappings.DeclaredTable(CdR12aProfile.Asset.MAP_SPR_TAMABBOH.nativeAddress(),assets.objects().tamabbohNormal().mappings(),0,3));
@@ -2408,6 +2430,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeFlower!=null) return readFlowerDrawSlot(ref);
                 if(activeChildEffect!=null) return readChildDrawSlot(ref);
                 if(activeTunnelDoorSplash!=null) return readSplashDrawSlot(ref);
+                if(activeSwing!=null) return readSwingDrawSlot(ref);
                 if(activeMovingSpring!=null) return readMovingSpringDrawSlot(ref);
                 if(activeRobotGenerator!=null) return readRobotDrawSlot(ref);
                 if(activeDoor!=null) return readDoorDrawSlot(ref);
@@ -2434,6 +2457,7 @@ final class SonicCdAct2LoadingVisit {
                 if(activeFlower!=null) { writeFlowerOnScreen(ref,value); return; }
                 if(activeChildEffect!=null) { writeChildOnScreen(ref,value); return; }
                 if(activeTunnelDoorSplash!=null) {writeSplashOnScreen(ref,value);return;}
+                if(activeSwing!=null) {writeSwingOnScreen(ref,value);return;}
                 if(activeMovingSpring!=null) {writeMovingSpringOnScreen(ref,value);return;}
                 if(activeRobotGenerator!=null) {writeRobotOnScreen(ref,value);return;}
                 if(activeDoor!=null) {writeDoorOnScreen(ref,value);return;}
@@ -9682,6 +9706,7 @@ final class SonicCdAct2LoadingVisit {
     // ObjMovingSpring: N Spring/Main.asm:7-96. One cached actual-source owner; effects are observations only.
     private enum MovingSpringStep { ENTRY, HEADER, TILE, CHILD, ALIGNED, FLOOR_Y, TURNED, MOVED, ANIMATION, DRAW, CAPACITY, DONE }
     private void requireMovingSpringIdle() {
+        requireSwingIdle();
         if(activeMovingSpring!=null || movingSpringPort || drawingMovingSpring)
             throw new IllegalStateException("Actual Moving Spring owns this source cut");
     }
@@ -9964,4 +9989,440 @@ final class SonicCdAct2LoadingVisit {
         try {verifyMovingSpring(i);i.pool.write(next);i.images=ready;i.cleared=true;verifyMovingSpring(i);}
         finally {queuePort=false;}
     }
+    // BEGIN ObjSwing: original same-owner selected TOP, raw reserved secondary and centre despawn receipts.
+    private enum SwingStep { ENTRY, HEADER, TILE, SIZE, SPAWN, DATA, ANGLES, Y, X, PLAYERS, DRAW, SAVED, DONE }
+    private enum SwingPlayerStep { FIRST_RADIUS, TOP_READ, TOP_CALL, FALLBACK_RADIUS, COLLISION_RADIUS, Y_READ, Y_BRANCH, FINAL_RADIUS, DONE, STOPPED }
+    private void requireSwingIdle() {
+        if(activeSwing!=null || swingPort || drawingSwing)throw new IllegalStateException("Actual Swing owns this source cut");
+    }
+    private void requireOtherSwingScopesIdle() {
+        requireOtherMovingSpringScopesIdle();
+        if(activeMovingSpring!=null || movingSpringPort || drawingMovingSpring)throw new IllegalStateException("Actual Moving Spring owns the Swing cut");
+    }
+    private final class SwingInvocation {
+        final int whole; final CdSwing body=swing; final CdSwing.Assets bodyAssets=swingAssets; final CdPlayerMath math=swingMath;
+        final CdPlayerFrameRuntime sourceFrame=frame; final Object stageSource=frame.stageSource(); final CdR12aTerrainAssets sourceAssets=assets;
+        final CdObjectPool pool=placement.pool(); final CdObjectDrawQueue queue=drawQueue; final CdObjectPlacementRuntime.Status status=placement.status();
+        final CdObjectState entry; CdPlayerBody.State state=frame.state(); CdPlayerBody.Environment environment=frame.environment();
+        CdPlayerFrameRuntime.ActorState actor=frame.captureActor(); CdPlayerFrameRuntime.SharedState shared=frame.captureShared();
+        final Optional<CdPlayerBody.DisplayPublication> display=frame.display(); final CdPlayerArtRuntime.State playerArt=frame.artState();
+        final CdPlayerFrameRuntime.VIntClock clock=frame.vIntClock(); final boolean paused=frame.paused();
+        final SonicCdPlayerPresentation.ScrollCapture scroll=presentation.captureAct2Scroll(); final Object world; final long generation;
+        Values ownerValues=values; List<SonicCdGameModule.PastSound> ledger=sounds; CdAssetBytes reserved=values.hudObjects();
+        final CdObjectDrawQueue.CameraWords camera; final CdSwing.Globals globals;
+        CdAssetBytes saved=placement.capture().savedFlags(),readySaved; List<CdAssetBytes> images=logMosquiImages(placement.capture().pool()),readyImages;
+        List<Object> receipts=List.of(),readyReceipts; List<CdSwing.Effect> effects=List.of(),readyEffects;
+        Object pendingPublication,pendingCall,completedOperation,callReceipt; long ordinal;
+        SwingStep step=SwingStep.ENTRY,readyStep; SwingPlayerStep playerStep; CdSolidObject.PlayerSlot slot;
+        int dataWords,remaining,nextPart,oldX,oldY,motionX,motionY,sine,cosine,distance,angleByte;
+        boolean childFramePending,drawn,cleared,queueFailed; CdObjectState child,tailSource;
+        CdSwing.PlayerCut readAnswer; CdObjectState readSource; CdAssetBytes readReserved;
+        SwingInvocation(int whole) {
+            this.whole=whole;entry=pool.state(whole);var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+            world=mode.getWorldSession();generation=mode.getLevelManager().getCompletedProductionLoadGeneration();
+            var fg=presentation.act2ForegroundImage();camera=new CdObjectDrawQueue.CameraWords(fg.cameraX(),fg.cameraYWord());
+            var gates=environment.movement().gates();globals=new CdSwing.Globals(camera.xWord(),gates.timeZone(),gates.timeWarpDirection());
+            if(entry.routine()==0)effects=List.of(new CdSwing.RoutineEntered(CdSwing.NativeRoutine.INIT));
+        }
+    }
+    private void runSwing(int whole) {
+        requireSwingIdle();requireOtherSwingScopesIdle();module.requireAct2LoadingVisit(this);
+        if(!runningObjects || servicing || queuePort || whole<32 || whole>=128 || values.phase()!=BEGIN_LEVEL
+                || drawQueue==null || drawQueue.phase()!=CdObjectDrawQueue.Phase.COLLECTING || placement.pool().state(whole).id()!=CdSwing.OBJECT_ID)
+            throw new IllegalStateException("No actual cached Swing physical dispatch");
+        var i=new SwingInvocation(whole);activeSwing=i;
+        try {var result=swing.run(whole,i.globals);verifySwing(i);verifySwingResult(i,result);}
+        catch(RuntimeException|Error original) {
+            try {verifySwingFailure(i);}catch(RuntimeException|Error fault){if(fault!=original)original.addSuppressed(fault);}throw original;
+        } finally {activeSwing=null;}
+    }
+    private void verifySwingOwners(SwingInvocation i) {
+        module.requireAct2LoadingVisit(this);requireOtherSwingScopesIdle();var mode=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if(i==null || activeSwing!=i || !runningObjects || servicing || i.body!=swing || i.bodyAssets!=swingAssets || i.math!=swingMath
+                || swing.assets()!=i.bodyAssets || i.bodyAssets.visual()!=assets.objects().swing()
+                || i.bodyAssets.objectTileIds()!=assets.objects().view(CdR12aProfile.Asset.OBJECT_TILE_IDS)
+                || i.bodyAssets.motion()!=assets.objects().view(CdR12aProfile.Asset.SWING_MOTION)
+                || i.sourceFrame!=frame || i.stageSource!=frame.stageSource() || i.sourceAssets!=assets || !frame.stageSource().ownsAct2(assets,player)
+                || i.pool!=placement.pool() || i.queue!=drawQueue || drawQueue==null
+                || !(drawQueue.phase()==CdObjectDrawQueue.Phase.COLLECTING || i.queueFailed && drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED)
+                || values.phase()!=BEGIN_LEVEL || i.world!=mode.getWorldSession() || i.generation!=mode.getLevelManager().getCompletedProductionLoadGeneration()
+                || frame.closed() || frame.state()!=i.state || frame.environment()!=i.environment || frame.display()!=i.display
+                || frame.artState()!=i.playerArt || frame.vIntClock()!=i.clock || frame.paused()!=i.paused
+                || !frame.captureActor().equals(i.actor) || !frame.captureShared().equals(i.shared) || values!=i.ownerValues || sounds!=i.ledger
+                || !sameBytes(values.hudObjects(),i.reserved) || !presentation.sameAct2Scroll(i.scroll))
+            throw new IllegalStateException("Swing changed complete Frame/source/art/display/clock/Values/reserved31/current/scroll/ledger/World/generation");
+    }
+    private boolean swingImagesEqual(SwingInvocation i,List<CdAssetBytes> images,CdAssetBytes saved) {
+        var cut=placement.capture();placement.validateRestore(cut);
+        if(images==null || saved==null || images.size()!=96 || !cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),saved))return false;
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),images.get(at).copy()))return false;
+        return true;
+    }
+    private void verifySwing(SwingInvocation i) {
+        verifySwingOwners(i);if(!swingImagesEqual(i,i.images,i.saved))throw new IllegalStateException("Swing changed unowned full96/source/status/saved bytes");
+    }
+    private SwingInvocation requireSwing() {
+        var i=activeSwing;if(i==null)throw new IllegalStateException("No actual Swing invocation");verifySwing(i);return i;
+    }
+    private void validateSwingCut(SwingInvocation i,CdObjectPlacementRuntime.Snapshot cut,CdObjectState source) {
+        placement.validateRestore(cut);
+        if(!cut.status().equals(i.status) || !sameBytes(cut.savedFlags(),i.saved) || !source.equals(i.pool.state(i.whole))
+                || !source.identity().equals(i.entry.identity()))throw new IllegalStateException("Foreign Swing source cut");
+        for(int at=0;at<96;at++)if(!Arrays.equals(cut.pool().slots().get(at).copyBytes(),i.images.get(at).copy()))
+            throw new IllegalStateException("Swing supplied full96 cut differs");
+    }
+    private boolean swingTailDeletes(SwingInvocation i,CdObjectState source) {
+        if(!i.drawn || !i.cleared)throw new IllegalStateException("Swing tail preceded actual returned Draw");
+        return source.signedByte(CdObjectState.ByteField.SPRITE_FLAGS)>=0
+                && (((source.word(CdObjectState.WordField.SWING_CENTRE_X)&0xFF80)-((i.globals.cameraXWord()-0x80)&0xFF80))&0xFFFF)>0x280
+                || (i.globals.timeZone()&0x80)!=0;
+    }
+    private static int swingSavedByteIndex(CdSwing.Globals globals,CdObjectState source) {
+        int period=globals.timeZone()&0x7F;
+        if((globals.timeZone()&0x80)!=0){int adjusted=(period-(byte)globals.timeWarpDirection())&0xFFFF;period=(short)adjusted<0?0:adjusted<3?adjusted:2;}
+        return 2+(short)((3*source.savedFlagsId()+period)&0xFFFF);
+    }
+    private void finishSwingAllocationAttempts(SwingInvocation i,List<CdSwing.Effect> effects) {
+        if(i.childFramePending)throw new IllegalStateException("Swing omitted its separate original platform frame1 store");
+        if(i.remaining!=0 && i.pool.findObjSlot().isPresent())throw new IllegalStateException("Swing omitted an available native allocation attempt");
+        while(i.remaining>0){effects.add(new CdSwing.AllocationAttempt(i.nextPart,-1));i.remaining--;i.nextPart=(i.nextPart-1)&255;}
+    }
+    private void beforeSwingPublication(CdSwing.Publication c) {
+        var i=requireSwing();
+        if(!swing.isCurrentCall(c) || swing.currentCallOrdinal(c)!=i.ordinal+1 || c.ordinal()!=i.ordinal+1
+                || swingPort || drawingSwing || queuePort || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null)
+            throw new IllegalStateException("Swing publication lacks exact original producer/site/ordinal");
+        validateSwingCut(i,c.actualPoolCut(),c.expectedSource());var source=c.expectedSource();var output=c.output();
+        var images=new ArrayList<>(i.images);var effects=new ArrayList<>(i.effects);CdAssetBytes saved=i.saved;SwingStep next;
+        switch(c.kind()) {
+            case SOURCE_STORE -> {
+                if(!source.equals(c.before()) || output==null || !output.identity().equals(source.identity()) || c.savedByteIndex()!=-1 || c.previousValue()!=-1 || c.value()!=-1)
+                    throw new IllegalStateException("Swing source publication changed its operands or physical identity");
+                CdObjectState expected;
+                if(i.entry.routine()==0 && i.step==SwingStep.ENTRY) {
+                    expected=source.addByte(CdObjectState.ByteField.ROUTINE,2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()|4)
+                            .moveByte(CdObjectState.ByteField.PRIORITY,3).moveLong(CdObjectState.LongField.MAPPINGS,i.bodyAssets.mappingAddressBits());next=SwingStep.HEADER;
+                } else if(i.entry.routine()==0 && i.step==SwingStep.HEADER) {
+                    int start=(short)i.bodyAssets.objectTileIds().unsignedWord(0x11*2),end=CdObjectTileIds.endOfBody(i.bodyAssets.objectTileIds(),0x11),at=start+source.subtype2()*2;
+                    if(end-start!=2 || at<start || at>end-2)throw new IllegalStateException("Swing tile publication crossed its finite selector11 body");
+                    expected=source.moveWord(CdObjectState.WordField.TILE,i.bodyAssets.objectTileIds().unsignedWord(at));next=SwingStep.TILE;
+                } else if(i.entry.routine()==0 && i.step==SwingStep.TILE) {
+                    expected=source.moveByte(CdObjectState.ByteField.WIDTH,24).moveByte(CdObjectState.ByteField.Y_RADIUS,8);next=SwingStep.SIZE;
+                } else if(i.entry.routine()==0 && i.step==SwingStep.SIZE && source.unsignedByte(CdObjectState.ByteField.SWING_PART)==0) {
+                    int count=source.subtype()&15;expected=source.moveWord(CdObjectState.WordField.SWING_CENTRE_X,source.centreX())
+                            .moveWord(CdObjectState.WordField.SWING_CENTRE_Y,source.centreY()).moveByte(CdObjectState.ByteField.SWING_COUNT,count);
+                    i.remaining=count==0?256:count;i.nextPart=count;next=SwingStep.SPAWN;
+                } else if(i.entry.routine()==0 && (i.step==SwingStep.SIZE && source.unsignedByte(CdObjectState.ByteField.SWING_PART)!=0
+                        || i.step==SwingStep.SPAWN || i.step==SwingStep.DATA && i.dataWords<4)) {
+                    if(i.step==SwingStep.SPAWN)finishSwingAllocationAttempts(i,effects);
+                    int at=((source.subtype()&0xF0)>>>1)+i.dataWords*2;
+                    if(at<0 || at>62 || at>i.bodyAssets.motion().length()-2)throw new IllegalStateException("Swing store preceded its reached finite motion WORD");
+                    var field=switch(i.dataWords){case 0->CdObjectState.WordField.SWING_PHASE;case 1->CdObjectState.WordField.SWING_STEP;
+                        case 2->CdObjectState.WordField.SWING_MAX;case 3->CdObjectState.WordField.SWING_MIN;default->throw new IllegalStateException("Repeated Swing motion data store");};
+                    int value=i.bodyAssets.motion().unsignedWord(at);expected=source.moveWord(field,value);effects.add(new CdSwing.MotionWordRead(at,value));i.dataWords++;next=SwingStep.DATA;
+                } else if(i.entry.routine()==2 && i.step==SwingStep.ENTRY || i.entry.routine()==0 && i.step==SwingStep.DATA && i.dataWords==4) {
+                    i.oldX=source.longBits(CdObjectState.LongField.X_POSITION);i.oldY=source.longBits(CdObjectState.LongField.Y_POSITION);
+                    int reverse=source.unsignedByte(CdObjectState.ByteField.SWING_REVERSING);
+                    int angle=(source.word(CdObjectState.WordField.SWING_ANGLE)+(reverse==0?source.word(CdObjectState.WordField.SWING_STEP):-source.word(CdObjectState.WordField.SWING_STEP)))&65535;
+                    int phase=(source.word(CdObjectState.WordField.SWING_PHASE)+angle)&65535;
+                    if(reverse==0)reverse=angle==source.word(CdObjectState.WordField.SWING_MAX)?255:0;else if(angle==source.word(CdObjectState.WordField.SWING_MIN))reverse=0;
+                    expected=source.moveWord(CdObjectState.WordField.SWING_ANGLE,angle).moveWord(CdObjectState.WordField.SWING_PHASE,phase).moveByte(CdObjectState.ByteField.SWING_REVERSING,reverse);
+                    effects.add(new CdSwing.RoutineEntered(CdSwing.NativeRoutine.MAIN));next=SwingStep.ANGLES;
+                } else if(i.step==SwingStep.ANGLES) {
+                    i.angleByte=source.word(CdObjectState.WordField.SWING_PHASE)>>>8;var trig=i.math.calcSine(i.angleByte);i.sine=trig.sine()&65535;i.cosine=trig.cosine()&65535;
+                    i.distance=((short)source.signedByte(CdObjectState.ByteField.SWING_PART)<<4)&65535;
+                    i.motionX=(source.word(CdObjectState.WordField.SWING_CENTRE_X)+swingScaledProduct(i.sine,i.distance))&65535;
+                    i.motionY=(source.word(CdObjectState.WordField.SWING_CENTRE_Y)+swingScaledProduct(i.cosine,i.distance))&65535;
+                    expected=source.moveWord(CdObjectState.WordField.Y,i.motionY);effects.add(new CdSwing.CallReturned(CdSwing.NativeCall.CALC_SINE));next=SwingStep.Y;
+                } else if(i.step==SwingStep.Y) {
+                    expected=source.moveWord(CdObjectState.WordField.X,i.motionX);effects.add(new CdSwing.MotionCalculated(i.angleByte,i.sine,i.cosine,i.distance,i.motionX,i.motionY));next=SwingStep.X;
+                } else if(i.step==SwingStep.X && source.unsignedByte(CdObjectState.ByteField.SWING_PART)==source.unsignedByte(CdObjectState.ByteField.SWING_COUNT)) {
+                    expected=source.moveWord(CdObjectState.WordField.X_VELOCITY,(source.longBits(CdObjectState.LongField.X_POSITION)-i.oldX)>>8)
+                            .moveWord(CdObjectState.WordField.Y_VELOCITY,(source.longBits(CdObjectState.LongField.Y_POSITION)-i.oldY)>>8);
+                    i.slot=CdSolidObject.PlayerSlot.PRIMARY;i.playerStep=SwingPlayerStep.FIRST_RADIUS;next=SwingStep.PLAYERS;
+                } else if(i.step==SwingStep.PLAYERS) {
+                    int radius;
+                    switch(i.playerStep) {
+                        case FIRST_RADIUS -> {radius=8;i.playerStep=SwingPlayerStep.TOP_READ;}
+                        case FALLBACK_RADIUS -> {radius=12;i.playerStep=SwingPlayerStep.TOP_READ;}
+                        case COLLISION_RADIUS -> {radius=8;i.playerStep=SwingPlayerStep.Y_READ;}
+                        case Y_BRANCH -> {
+                            if(i.readAnswer==null || source.centreY()>=(i.readAnswer.player().actor().motion().centreY16_16()>>>16))throw new IllegalStateException("Swing omitted its reached direct Y WORD");
+                            radius=8;advanceSwingPlayer(i);
+                        }
+                        case FINAL_RADIUS -> {radius=8;advanceSwingPlayer(i);}
+                        default -> throw new IllegalStateException("Swing radius store lacks actual TOP/Y return site");
+                    }
+                    expected=source.moveByte(CdObjectState.ByteField.Y_RADIUS,radius);next=SwingStep.PLAYERS;
+                } else throw new IllegalStateException("Unreached Swing source publication site");
+                if(!expected.equals(output))throw new IllegalStateException("Swing source publication changed another complete native byte");
+                i.pool.validateRestore(CdObjectPool.overlay(c.actualPoolCut().pool(),List.of(output)));images.set(i.whole-32,CdAssetBytes.copyOf(output.copyBytes()));
+            }
+            case CHILD_STORE -> {
+                if(i.entry.routine()!=0 || i.step!=SwingStep.SPAWN || output==null || c.before()==null || c.savedByteIndex()!=-1 || c.previousValue()!=-1 || c.value()!=-1)
+                    throw new IllegalStateException("Swing child lacks original Init allocation operands");
+                CdObjectState expected;
+                if(i.childFramePending) {
+                    if(i.child==null || !i.child.equals(c.before()))throw new IllegalStateException("Swing frame1 did not reload the original platform child");
+                    expected=c.before().moveByte(CdObjectState.ByteField.MAP_FRAME,1);i.childFramePending=false;
+                    effects.add(new CdSwing.ChildCreated(output.identity().wholeIndex(),i.nextPart,1));i.remaining--;i.nextPart=(i.nextPart-1)&255;
+                } else {
+                    if(i.remaining<=0)throw new IllegalStateException("Swing repeated a consumed allocation attempt");
+                    var first=c.actualPoolCut().pool().slots().stream().filter(v->v.id()==0).findFirst().orElseThrow();
+                    if(!first.equals(c.before()))throw new IllegalStateException("Swing child is not the actual first-free dirty ID-only slot");
+                    int count=source.unsignedByte(CdObjectState.ByteField.SWING_COUNT);
+                    expected=first.moveByte(CdObjectState.ByteField.ID,CdSwing.OBJECT_ID).moveWord(CdObjectState.WordField.SWING_CENTRE_X,source.word(CdObjectState.WordField.SWING_CENTRE_X))
+                            .moveWord(CdObjectState.WordField.SWING_CENTRE_Y,source.word(CdObjectState.WordField.SWING_CENTRE_Y)).moveByte(CdObjectState.ByteField.SUBTYPE,source.subtype())
+                            .moveByte(CdObjectState.ByteField.SWING_COUNT,count).moveByte(CdObjectState.ByteField.SWING_PART,i.nextPart).moveByte(CdObjectState.ByteField.MAP_FRAME,2);
+                    effects.add(new CdSwing.AllocationAttempt(i.nextPart,first.identity().wholeIndex()));
+                    if(i.nextPart==count)i.childFramePending=true;
+                    else {effects.add(new CdSwing.ChildCreated(first.identity().wholeIndex(),i.nextPart,2));i.remaining--;i.nextPart=(i.nextPart-1)&255;}
+                }
+                if(!expected.equals(output))throw new IllegalStateException("Swing child publication changed dirty nonwrites or actual consumed part");
+                i.pool.validateRestore(CdObjectPool.overlay(c.actualPoolCut().pool(),List.of(output)));images.set(output.identity().wholeIndex()-32,CdAssetBytes.copyOf(output.copyBytes()));i.child=output;next=SwingStep.SPAWN;
+            }
+            case SAVED_FLAG_CLEAR -> {
+                if(i.step!=SwingStep.DRAW || !source.equals(i.tailSource) || !swingTailDeletes(i,source) || source.savedFlagsId()==0 || c.before()!=null || output!=null)
+                    throw new IllegalStateException("Swing saved clear lacks actual Draw/centre/warp tail");
+                int index=swingSavedByteIndex(i.globals,source);
+                if(index<2 || index>=CdObjectPlacementRuntime.SAVED_BANK_BYTES || c.savedByteIndex()!=index || c.previousValue()!=i.saved.unsignedByte(index) || c.value()!=(c.previousValue()&127))
+                    throw new IllegalStateException("Swing saved clear changed raw address/warp clamp/LOADED bit");
+                byte[] raw=i.saved.copy();raw[index]=(byte)c.value();saved=CdAssetBytes.copyOf(raw);effects.add(new CdSwing.SavedFlagChanged(index,c.previousValue(),c.value()));next=SwingStep.SAVED;
+            }
+            case DELETE -> {
+                if((source.savedFlagsId()==0?i.step!=SwingStep.DRAW:i.step!=SwingStep.SAVED) || !source.equals(i.tailSource) || !swingTailDeletes(i,source)
+                        || !source.equals(c.before()) || output!=null || c.savedByteIndex()!=-1 || c.previousValue()!=-1 || c.value()!=-1)
+                    throw new IllegalStateException("Swing DeleteObject omitted actual saved clear/centre/warp source");
+                images.set(i.whole-32,zero(64));effects.add(new CdSwing.Deleted());next=SwingStep.DONE;
+            }
+            default -> throw new IllegalArgumentException("Unknown Swing store");
+        }
+        var receipts=new ArrayList<>(i.receipts);receipts.add(c);i.readyImages=List.copyOf(images);i.readySaved=saved;i.readyEffects=List.copyOf(effects);
+        i.readyReceipts=List.copyOf(receipts);i.readyStep=next;i.pendingPublication=c;
+    }
+    private static int swingScaledProduct(int trig,int distance) {
+        int product=(int)((long)(trig&65535)*(distance&65535));return (short)((short)(product>>4)>>4);
+    }
+    private void advanceSwingPlayer(SwingInvocation i) {
+        i.readAnswer=null;i.readSource=null;i.readReserved=null;
+        if(i.slot==CdSolidObject.PlayerSlot.PRIMARY){i.slot=CdSolidObject.PlayerSlot.SECONDARY;i.playerStep=SwingPlayerStep.FIRST_RADIUS;}
+        else i.playerStep=SwingPlayerStep.DONE;
+    }
+    private void afterSwingPublication(CdSwing.Publication c) {
+        var i=activeSwing;if(i==null || i.pendingPublication!=c || !swing.isCurrentCall(c) || i.completedOperation!=null)
+            throw new IllegalStateException("No exact Swing publication completion");
+        verifySwingOwners(i);if(!swingImagesEqual(i,i.readyImages,i.readySaved))throw new IllegalStateException("Swing differs from prebuilt full96/status/saved output");
+        i.images=i.readyImages;i.saved=i.readySaved;i.effects=i.readyEffects;i.receipts=i.readyReceipts;i.step=i.readyStep;i.ordinal++;
+        i.readyImages=null;i.readySaved=null;i.readyEffects=null;i.readyReceipts=null;i.pendingPublication=null;i.completedOperation=c;
+    }
+    private void beforeSwingCall(Object call) {
+        var i=requireSwing();
+        if(!swing.isCurrentCall(call) || swing.currentCallOrdinal(call)!=i.ordinal+1 || swingPort || drawingSwing || queuePort
+                || i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null)throw new IllegalStateException("No original Swing external source/site/ordinal");
+        CdObjectPlacementRuntime.Snapshot cut;CdObjectState source;var effects=new ArrayList<>(i.effects);
+        if(call instanceof CdSwing.PlayerReadCall c) {
+            cut=c.actualPoolCut();source=c.expectedSource();
+            if(i.step!=SwingStep.PLAYERS || i.playerStep!=SwingPlayerStep.TOP_READ && i.playerStep!=SwingPlayerStep.Y_READ || i.readAnswer!=null || c.slot()!=i.slot)
+                throw new IllegalStateException("Swing player read lacks reached radius/physical selection");
+        } else if(call instanceof CdSwing.SolidCall c) {
+            cut=c.actualPoolCut();source=c.expectedSource();
+            if(i.step!=SwingStep.PLAYERS || i.playerStep!=SwingPlayerStep.TOP_CALL)throw new IllegalStateException("Swing TOP lacks original selected read");
+            validateSwingPlayerCut(i,c.expectedPlayerCut(),source);var outcome=c.genuineSelectedOutcome().outcome();
+            if(outcome instanceof CdSolidObject.Completed done){var result=done.completedResult();
+                if(result.entry()!=CdSolidObject.Entry.TOP_SOLID_OBJECT)throw new IllegalStateException("Swing produced a different native Solid entry");
+                effects.add(new CdSwing.SolidReturned(i.slot,source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),result.d0().orElseThrow()));effects.add(new CdSwing.CallReturned(CdSwing.NativeCall.TOP_SOLID_OBJECT));
+            } else if(((CdSolidObject.NativeStopped)outcome).prefix().entry()!=CdSolidObject.Entry.TOP_SOLID_OBJECT)throw new IllegalStateException("Swing stopped at a different native Solid entry");
+        } else if(call instanceof CdSwing.PlayerYCall c) {
+            cut=c.actualPoolCut();source=c.expectedSource();
+            if(i.step!=SwingStep.PLAYERS || i.playerStep!=SwingPlayerStep.Y_BRANCH)throw new IllegalStateException("Swing direct Y lacks genuine successful TOP/radius/read");
+            validateSwingPlayerCut(i,c.expectedPlayerCut(),source);int y=c.expectedPlayerCut().player().actor().motion().centreY16_16()>>>16;
+            int value=(source.centreY()-(byte)source.unsignedByte(CdObjectState.ByteField.Y_RADIUS)-(byte)c.expectedPlayerCut().player().actor().motion().yRadius()+2)&65535;
+            if(source.unsignedByte(CdObjectState.ByteField.Y_RADIUS)!=8 || source.centreY()<y || c.expectedYWord()!=y || c.value()!=value)
+                throw new IllegalStateException("Swing direct Y changed native unsigned compare/WORD formula");
+            effects.add(new CdSwing.PlayerYStored(i.slot,y,value));
+        } else if(call instanceof CdSwing.DrawCall c) {
+            cut=c.actualPoolCut();source=c.expectedSource();
+            if(i.drawn || i.cleared || !(i.step==SwingStep.X && source.unsignedByte(CdObjectState.ByteField.SWING_PART)!=source.unsignedByte(CdObjectState.ByteField.SWING_COUNT)
+                    || i.step==SwingStep.PLAYERS && i.playerStep==SwingPlayerStep.DONE))throw new IllegalStateException("Swing Draw omitted actual Motion/both-player closure");
+            effects.add(new CdSwing.CallReturned(CdSwing.NativeCall.DRAW_OBJECT));
+        } else throw new IllegalStateException("Unknown Swing external producer");
+        validateSwingCut(i,cut,source);var receipts=new ArrayList<>(i.receipts);receipts.add(call);i.readyReceipts=List.copyOf(receipts);i.readyEffects=List.copyOf(effects);i.pendingCall=call;i.callReceipt=null;
+    }
+    private void afterSwingCall(Object call) {
+        var i=requireSwing();
+        if(!swing.isCurrentCall(call) || i.pendingCall!=call || i.callReceipt!=call || i.readyReceipts!=null || i.readyEffects==null)
+            throw new IllegalStateException("Swing external call returned without its private original completion receipt");
+        i.effects=i.readyEffects;i.readyEffects=null;i.ordinal++;i.pendingCall=null;i.callReceipt=null;i.completedOperation=call;
+    }
+    private void requirePreparedSwingReceipt(Object call) {
+        var i=requireSwing();
+        if(!swing.isCurrentCall(call) || i.completedOperation!=null
+                || !(i.pendingPublication==call && i.readyImages!=null && i.readySaved!=null && i.readyReceipts!=null && i.readyEffects!=null
+                    || i.pendingCall==call && i.readyReceipts!=null && i.readyEffects!=null))
+            throw new IllegalStateException("Swing observer returned without its private prepared receipt");
+    }
+    private void consumeCompletedSwingReceipt(Object call) {
+        var i=activeSwing;
+        if(i==null || !swing.isCurrentCall(call) || i.completedOperation!=call || i.pendingPublication!=null || i.pendingCall!=null)
+            throw new IllegalStateException("Swing observer returned without its private completed receipt");
+        verifySwing(i);i.completedOperation=null;
+    }
+    private SwingInvocation requireSwingPort(Object call) {
+        var i=requireSwing();
+        if(!swing.isCurrentCall(call) || i.pendingCall!=call || i.callReceipt!=null || swingPort || drawingSwing || queuePort)
+            throw new IllegalStateException("Public/cloned/repeated Swing callback lacks actual original source authority");
+        return i;
+    }
+    private CdSolidObject.Gates swingGates() {var e=frame.environment();return new CdSolidObject.Gates(e.globals().debugMode(),e.movement().gates().miniSonic());}
+    private CdSolidObject.Player swingPlayer(CdSolidObject.PlayerSlot slot) {return slot==CdSolidObject.PlayerSlot.PRIMARY?springPlayer():swingSecondaryPlayer(reservedImage(1));}
+    private CdSwing.PlayerCut readSwingPlayer(CdSwing.PlayerReadCall c) {
+        var i=requireSwingPort(c);validateSwingCut(i,c.actualPoolCut(),c.expectedSource());
+        if(i.step!=SwingStep.PLAYERS || i.playerStep!=SwingPlayerStep.TOP_READ && i.playerStep!=SwingPlayerStep.Y_READ || c.slot()!=i.slot || i.readAnswer!=null)
+            throw new IllegalStateException("Swing read callback lacks actual selected radius site");
+        var selected=swingPlayer(c.slot());int counterpart=c.slot()==CdSolidObject.PlayerSlot.PRIMARY?reservedImage(1).unsignedByte(0x22):frame.state().motion().flags();
+        var ready=new CdSwing.PlayerCut(selected,swingGates(),springGlobals(),new CdSolidObject.PlayerSelection(c.slot(),counterpart));
+        swingPort=true;
+        try {verifySwing(i);i.readAnswer=ready;i.readSource=c.expectedSource();i.readReserved=i.reserved;
+            i.playerStep=i.playerStep==SwingPlayerStep.TOP_READ?SwingPlayerStep.TOP_CALL:SwingPlayerStep.Y_BRANCH;
+            i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;verifySwing(i);return ready;
+        } finally {swingPort=false;}
+    }
+    private void validateSwingPlayerCut(SwingInvocation i,CdSwing.PlayerCut cut,CdObjectState source) {
+        int counterpart=i.slot==CdSolidObject.PlayerSlot.PRIMARY?reservedImage(1).unsignedByte(0x22):frame.state().motion().flags();
+        if(cut!=i.readAnswer || i.readSource==null || !i.readSource.equals(source) || !sameBytes(i.readReserved,i.reserved)
+                || cut.selection().selected()!=i.slot || cut.selection().counterpartFlags()!=counterpart
+                || !cut.player().equals(swingPlayer(i.slot)) || !cut.gates().equals(swingGates()) || !cut.globals().equals(springGlobals()))
+            throw new IllegalStateException("Swing selected cut is not its original fresh primary/reserved/global read");
+    }
+    private static void validateSwingSolidImage(CdObjectState before,CdObjectState after,boolean own,Set<CdObjectState.ByteField> writes) {
+        if(!before.identity().equals(after.identity()))throw new IllegalStateException("Swing TOP changed physical identity");
+        if(own && writes.stream().anyMatch(f->f!=CdObjectState.ByteField.FLAGS && f!=CdObjectState.ByteField.SOLID_TYPE))throw new IllegalStateException("Swing TOP declared an unowned object byte");
+        byte[] a=before.copyBytes(),b=after.copyBytes();
+        for(int at=0;at<64;at++){
+            int mask=at==0x22?(own?(writes.contains(CdObjectState.ByteField.FLAGS)?0x28:0):8):own && at==0x25 && writes.contains(CdObjectState.ByteField.SOLID_TYPE)?255:0;
+            if(((a[at]^b[at])&~mask&255)!=0)throw new IllegalStateException("Swing TOP changed unowned full-image byte "+at);
+        }
+        if(!own && after.flags()!=(before.flags()&~8))throw new IllegalStateException("Swing TOP other slot is not its native bit3 clear");
+        if(own && writes.contains(CdObjectState.ByteField.SOLID_TYPE) && after.unsignedByte(CdObjectState.ByteField.SOLID_TYPE)!=0 && after.unsignedByte(CdObjectState.ByteField.SOLID_TYPE)!=1)
+            throw new IllegalStateException("Swing TOP type differs from native top/return prefix");
+    }
+    private void commitSwingSolid(CdSwing.SolidCall c) {
+        var i=requireSwingPort(c);validateSwingCut(i,c.actualPoolCut(),c.expectedSource());validateSwingPlayerCut(i,c.expectedPlayerCut(),c.expectedSource());
+        if(i.step!=SwingStep.PLAYERS || i.playerStep!=SwingPlayerStep.TOP_CALL)throw new IllegalStateException("Swing Solid callback lacks genuine reached TOP");
+        CdObjectState source;CdSolidObject.Player playerAfter;List<CdObjectState> others;Set<CdObjectState.ByteField> objectWrites;Set<CdSolidObject.PlayerField> playerWrites;
+        List<CdPlayerTouchResponse.FmSound> fm;var outcome=c.genuineSelectedOutcome().outcome();SwingPlayerStep next;
+        if(outcome instanceof CdSolidObject.Completed done){var r=done.completedResult();source=r.object();playerAfter=r.player();others=r.otherSlots();objectWrites=r.objectWrites();playerWrites=r.playerWrites();fm=r.fmRequests();
+            int d0=r.d0().orElseThrow();next=d0==0?(c.expectedSource().unsignedByte(CdObjectState.ByteField.Y_RADIUS)==8?SwingPlayerStep.FALLBACK_RADIUS:SwingPlayerStep.FINAL_RADIUS):SwingPlayerStep.COLLISION_RADIUS;
+        } else {var p=((CdSolidObject.NativeStopped)outcome).prefix();source=p.object();playerAfter=p.player();others=p.otherSlots();objectWrites=p.objectWrites();playerWrites=p.playerWrites();fm=p.fmRequests();next=SwingPlayerStep.STOPPED;}
+        validateSwingSolidImage(c.expectedSource(),source,true,objectWrites);var images=new ArrayList<CdObjectState>();images.add(source);
+        for(var other:others){validateSwingSolidImage(c.actualPoolCut().pool().slots().get(other.identity().wholeIndex()-32),other,false,Set.of());images.add(other);}
+        var readyPool=CdObjectPool.overlay(c.actualPoolCut().pool(),images);i.pool.validateRestore(readyPool);var readyImages=logMosquiImages(readyPool);
+        var readyFrame=frame.prepareObjectSelectedSolid(i.state,i.environment,c.expectedPlayerCut().player(),c.expectedPlayerCut().selection(),c.genuineSelectedOutcome());
+        var readyActor=new CdPlayerFrameRuntime.ActorState(i.actor.owner(),readyFrame.finalState(),i.actor.display());
+        var readyShared=new CdPlayerFrameRuntime.SharedState(i.shared.owner(),readyFrame.finalEnvironment(),i.shared.artState(),i.shared.paused(),i.shared.vIntClock());
+        var secondary=i.reserved.slice(0,64);CdAssetBytes readySecondary;
+        if(i.slot==CdSolidObject.PlayerSlot.SECONDARY)readySecondary=swingSecondaryImage(secondary,c.expectedPlayerCut().player(),playerAfter,playerWrites);
+        else {var counterpart=c.genuineSelectedOutcome().counterpart();var raw=secondary.copy();if(counterpart.stored())raw[0x22]=(byte)counterpart.value();readySecondary=CdAssetBytes.copyOf(raw);}
+        var readyReserved=replaceSwingSecondary(i.reserved,readySecondary);var readyValues=reservedValues(i.ownerValues,readyReserved);
+        var ledger=new ArrayList<>(i.ledger);for(var sound:fm)ledger.add(new SonicCdGameModule.PastFrameSound(new CdPlayerFrameRuntime.ContactFmSound(sound)));var readySounds=List.copyOf(ledger);
+        swingPort=true;
+        try {
+            verifySwing(i);frame.validatePreparedObjectSolidPublication(readyFrame);validateSwingCut(i,c.actualPoolCut(),c.expectedSource());
+            i.pool.restore(readyPool);frame.applyPreparedObjectSolidPublication(readyFrame);values=readyValues;sounds=readySounds;
+            i.images=readyImages;i.state=readyFrame.finalState();i.environment=readyFrame.finalEnvironment();i.actor=readyActor;i.shared=readyShared;
+            i.ownerValues=readyValues;i.reserved=readyReserved;i.ledger=readySounds;i.playerStep=next;i.readAnswer=null;i.readSource=null;i.readReserved=null;
+            i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;verifySwing(i);
+        } finally {swingPort=false;}
+    }
+    private void commitSwingY(CdSwing.PlayerYCall c) {
+        var i=requireSwingPort(c);validateSwingCut(i,c.actualPoolCut(),c.expectedSource());validateSwingPlayerCut(i,c.expectedPlayerCut(),c.expectedSource());
+        if(i.step!=SwingStep.PLAYERS || i.playerStep!=SwingPlayerStep.Y_BRANCH)throw new IllegalStateException("Swing Y callback lacks original post-Solid branch");
+        CdPlayerFrameRuntime.ObjectSolidPublication readyFrame=null;var readyState=i.state;var readyEnvironment=i.environment;var readyValues=i.ownerValues;var readyReserved=i.reserved;
+        if(i.slot==CdSolidObject.PlayerSlot.PRIMARY){readyFrame=frame.prepareObjectSwingYWord(i.state,i.environment,c.expectedYWord(),c.value());readyState=readyFrame.finalState();readyEnvironment=readyFrame.finalEnvironment();}
+        else {byte[] raw=i.reserved.slice(0,64).copy();putSwingWord(raw,0x0C,c.value());readyReserved=replaceSwingSecondary(i.reserved,CdAssetBytes.copyOf(raw));readyValues=reservedValues(i.ownerValues,readyReserved);}
+        var readyActor=new CdPlayerFrameRuntime.ActorState(i.actor.owner(),readyState,i.actor.display());
+        var readyShared=new CdPlayerFrameRuntime.SharedState(i.shared.owner(),readyEnvironment,i.shared.artState(),i.shared.paused(),i.shared.vIntClock());
+        swingPort=true;
+        try {
+            verifySwing(i);if(readyFrame!=null)frame.validatePreparedObjectSolidPublication(readyFrame);
+            if(readyFrame!=null)frame.applyPreparedObjectSolidPublication(readyFrame);values=readyValues;
+            i.state=readyState;i.environment=readyEnvironment;i.actor=readyActor;i.shared=readyShared;i.ownerValues=readyValues;i.reserved=readyReserved;
+            i.playerStep=SwingPlayerStep.FINAL_RADIUS;i.readAnswer=null;i.readSource=null;i.readReserved=null;
+            i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;verifySwing(i);
+        } finally {swingPort=false;}
+    }
+    /** Actual raw reserved whole1 projection: all27 semantic inputs, never another Frame/player owner. */
+    private static CdSolidObject.Player swingSecondaryPlayer(CdAssetBytes raw) {
+        Objects.requireNonNull(raw);if(raw.length()!=64)throw new IllegalArgumentException("Swing secondary needs its exact64-byte image");
+        var m=new CdPlayerMotionState((int)raw.unsignedLong(8),(int)raw.unsignedLong(12),(short)raw.unsignedWord(16),(short)raw.unsignedWord(18),(short)raw.unsignedWord(20),
+                raw.unsignedByte(36),raw.unsignedByte(38),raw.unsignedByte(34),raw.unsignedByte(1),raw.unsignedByte(23),raw.unsignedByte(22),raw.unsignedByte(28),raw.unsignedByte(29),
+                raw.unsignedByte(60),raw.unsignedByte(42),(short)raw.unsignedWord(62),raw.unsignedByte(56),raw.unsignedByte(44),raw.unsignedByte(54),raw.unsignedByte(55));
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(m,raw.unsignedWord(2),raw.unsignedByte(24),raw.unsignedWord(48),raw.unsignedByte(57)),raw.unsignedByte(0),raw.unsignedByte(32),raw.unsignedByte(61));
+    }
+    /** Patch only the genuine22 store masks into the actual full64 preimage; all other bytes stay exact. */
+    private static CdAssetBytes swingSecondaryImage(CdAssetBytes raw,CdSolidObject.Player expected,CdSolidObject.Player after,Set<CdSolidObject.PlayerField> writes) {
+        Objects.requireNonNull(expected);Objects.requireNonNull(after);Objects.requireNonNull(writes);
+        if(!swingSecondaryPlayer(raw).equals(expected))throw new IllegalArgumentException("Stale Swing secondary projection");
+        var bytes=raw.copy();var a=after.actor();var m=a.motion();
+        for(var field:writes){int value=switch(field){
+            case TILE->a.tile();case CENTRE_X->m.centreX16_16()>>>16;case CENTRE_X_FRACTION->m.centreX16_16()&65535;
+            case CENTRE_Y->m.centreY16_16()>>>16;case CENTRE_Y_FRACTION->m.centreY16_16()&65535;case X_VELOCITY->m.xVelocity();case Y_VELOCITY->m.yVelocity();case GROUND_VELOCITY->m.groundVelocity();
+            case Y_RADIUS->m.yRadius();case X_RADIUS->m.xRadius();case PRIORITY->a.priority();case ANIMATION->m.animation();case PUSH_OBJECT->after.pushObject();case FLAGS->m.flags();
+            case ROUTINE->m.routine();case ANGLE->m.angle();case PLAYER_CONTROL->m.playerControl();case HURT->a.hurt();case STICK->m.stick();case ROTATION_DISTANCE->a.rotationDistance();case PLAYER_JUMP->m.playerJump();case STAND_OBJECT->after.standObject();};
+            switch(field){case TILE,CENTRE_X,CENTRE_X_FRACTION,CENTRE_Y,CENTRE_Y_FRACTION,X_VELOCITY,Y_VELOCITY,GROUND_VELOCITY,HURT->putSwingWord(bytes,field.byteOffset(),value);
+                default->bytes[field.byteOffset()]=(byte)value;}
+        }
+        var ready=CdAssetBytes.copyOf(bytes);
+        if(!swingSecondaryPlayer(ready).equals(after))throw new IllegalArgumentException("Undeclared Swing secondary semantic change");
+        return ready;
+    }
+    private static void putSwingWord(byte[] bytes,int at,int value){bytes[at]=(byte)(value>>>8);bytes[at+1]=(byte)value;}
+    private static CdAssetBytes replaceSwingSecondary(CdAssetBytes bank,CdAssetBytes image) {
+        Objects.requireNonNull(bank);Objects.requireNonNull(image);
+        if(bank.length()!=31*64 || image.length()!=64)throw new IllegalArgumentException("Swing secondary keeps the complete reserved31 bank");
+        byte[] ready=bank.copy();System.arraycopy(image.copy(),0,ready,0,64);return CdAssetBytes.copyOf(ready);
+    }
+    private void drawSwing(CdSwing.DrawCall c) {
+        var i=requireSwingPort(c);if(i.drawn || i.cleared)throw new IllegalStateException("Repeated Swing Draw");
+        validateSwingCut(i,c.actualPoolCut(),c.expectedSource());i.drawn=true;drawingSwing=true;
+        try {
+            var source=c.expectedSource();drawQueue.drawObject(new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(i.whole),source.spriteFlags(),source.centreX(),source.centreY(),
+                    source.unsignedByte(CdObjectState.ByteField.Y_RADIUS),source.unsignedByte(CdObjectState.ByteField.WIDTH),source.unsignedByte(CdObjectState.ByteField.PRIORITY)),i.camera);
+            verifySwing(i);if(!i.cleared)throw new IllegalStateException("Swing Draw omitted original BCLR7");
+            i.tailSource=i.pool.state(i.whole);i.step=SwingStep.DRAW;i.receipts=i.readyReceipts;i.readyReceipts=null;i.callReceipt=c;
+        } catch(RuntimeException|Error original){i.queueFailed=drawQueue.phase()==CdObjectDrawQueue.Phase.FAILED;throw original;}
+        finally {drawingSwing=false;}
+    }
+    private CdObjectDrawQueue.LiveDrawSlot readSwingDrawSlot(CdObjectDrawQueue.CdSlotRef ref) {
+        var i=requireSwing();
+        if(!drawingSwing || swingPort || queuePort || !(i.pendingCall instanceof CdSwing.DrawCall) || ref.wholeIndex()!=i.whole)throw new IllegalStateException("No actual Swing collecting queue read");
+        queuePort=true;
+        try {var s=i.pool.state(i.whole);var ready=new CdObjectDrawQueue.LiveDrawSlot(s.id(),s.spriteFlags(),s.centreX(),s.centreY(),s.word(CdObjectState.WordField.X_FRACTION),
+                s.longBits(CdObjectState.LongField.MAPPINGS),s.unsignedByte(CdObjectState.ByteField.MAP_FRAME),s.word(CdObjectState.WordField.TILE));verifySwing(i);return ready;}
+        finally {queuePort=false;}
+    }
+    private void writeSwingOnScreen(CdObjectDrawQueue.CdSlotRef ref,boolean value) {
+        var i=requireSwing();
+        if(!drawingSwing || swingPort || queuePort || !(i.pendingCall instanceof CdSwing.DrawCall) || value || i.cleared || ref.wholeIndex()!=i.whole)
+            throw new IllegalStateException("Only original Swing Draw clears its source bit7 exactly once");
+        var source=i.pool.state(i.whole);var next=source.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,source.spriteFlags()&127);
+        var pool=CdObjectPool.overlay(placement.capture().pool(),List.of(next));i.pool.validateRestore(pool);var ready=logMosquiImages(pool);queuePort=true;
+        try {verifySwing(i);i.pool.write(next);i.images=ready;i.cleared=true;verifySwing(i);}finally {queuePort=false;}
+    }
+    private void verifySwingResult(SwingInvocation i,CdSwing.Result result) {
+        boolean deleted=i.step==SwingStep.DONE;
+        if(i.pendingPublication!=null || i.pendingCall!=null || i.completedOperation!=null || i.callReceipt!=null || i.readyEffects!=null || !i.drawn || !i.cleared
+                || i.step!=SwingStep.DRAW && !deleted || i.tailSource==null || deleted!=swingTailDeletes(i,i.tailSource)
+                || !result.state().equals(i.pool.state(i.whole)) || result.deleted()!=deleted)
+            throw new IllegalStateException("Swing omitted exact original complete native receipts");
+        var effects=new ArrayList<>(i.effects);effects.add(new CdSwing.DespawnChecked(deleted));effects.add(new CdSwing.CallReturned(CdSwing.NativeCall.CHECK_OBJ_DESPAWN));
+        if(!result.effects().equals(effects))throw new IllegalStateException("Swing result differs from actual completed native observations");
+    }
+    private void verifySwingFailure(SwingInvocation i) {
+        verifySwingOwners(i);
+        if(!swingImagesEqual(i,i.images,i.saved) && !(i.pendingPublication!=null && swingImagesEqual(i,i.readyImages,i.readySaved)))
+            throw new IllegalStateException("Throwing Swing differs from both exact prebuilt publication cuts");
+    }
+    // END ObjSwing original selected-player World binding.
+
 }

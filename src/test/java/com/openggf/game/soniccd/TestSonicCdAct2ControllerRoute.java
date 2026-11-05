@@ -575,13 +575,118 @@ class TestSonicCdAct2ControllerRoute {
         assertEquals(252,frame.environment().movement().globals().primaryAngle());
         var closed13450=captureNative(h);var wheelEndFull=registry.capture();var wheelEndCourse=registry.captureCourse();
         registry.restore(wheelEndFull);assertNativeCapture(closed13450,h);registry.restoreCourse(wheelEndCourse);assertNativeCapture(closed13450,h);
-        System.out.println("Controller-only Act2 closed13450: genuine MovingSpring41 Init13423 allocates later ordinary Spring71, which runs in the same pass; Align through13442 then Main13443..13450 and WORD parent following retain exact full64 comparisons, original body receipts, completed Main CPU values and full/course replay. Endpoint Sonic6369/53, rings35, controls0, primary scratch252; wheel6694/903 and child6694/887 remain offscreen. Positive execution stops before separate failed13451 SwingingPlatform ID29/whole42. No wheel/child selected-current or pixel claim.");
+        System.out.println("Controller-only Act2 closed13450: genuine MovingSpring41 Init13423 allocates later ordinary Spring71, which runs in the same pass; Align through13442 then Main13443..13450 and WORD parent following retain exact full64 comparisons, original body receipts, completed Main CPU values and full/course replay. Endpoint Sonic6369/53, rings35, controls0, primary scratch252; wheel6694/903 and child6694/887 remain offscreen. This complete13450 checkpoint precedes the measured Swing segment below. No wheel/child selected-current or pixel claim.");
+        // BEGIN measured Swing promotion: source-only comparisons; Root facts4799c82e6634ff00dca32fbeceeab83b9fe59c5c8168bf93d5ece82b57d4f408.
+        // N1ecc5f3 Swing/Main.asm:83-135 allocates dirty ID29 children, which the increasing walk later dispatches.
+        // Main.asm:137-197 owns long-difference velocity, HIGH phase byte and native sine-X/cosine-Y WORD stores.
+        int[] swingCutCalls={13451,13452,13486};
+        int[] swingWatched={42,51,53,57,58,41,71,47};
+        var swingVisit=actualField(module,"act2Loading");
+        var swingPrior13450=module.act2LoadState();
+        byte[] expectedSwingPriorZero=java.util.HexFormat.of().parseHex("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+        for(int whole:new int[]{42,51,53,57,58})assertArrayEquals(expectedSwingPriorZero,
+                swingPrior13450.placement().pool().slots().get(whole-32).copyBytes(),
+                "Actual closed13450 full64 preimage; comparison only, never allocation-state ingress");
+        // Columns: Swing42/51/53/57/58, Wheel41, ordinary Spring71, Robot47, completed Main SHA, selected VInt CPU SHA.
+        String[][] expectedSwingImages={
+            {"290404180020ed601aa000000188000000000000000008000318000000000000000000000200000004000000000000040008018802001aa0fe00c00800000008","290404180020ed601a6000000188000060008800000008000318010000000000000000000200000004000000000000040008018802001aa0fe00c00804000008","290404180020ed601a7000000188000000000000000008000318020000000000000000000200000004000000000000040008018802001aa0fe00c00803000008","290404180020ed601a8000000188000000000000000008000318020000000000000000000200000004000000000000040008018802001aa0fe00c00802000008","290404180020ed601a9000000188000000000000000008000318020000000000000000000200000004000000000000040008018802001aa0fe00c00801000008","0f04033800209a961a2780000387000001800000000007000408000100000000000000000400000000000000000000000000038700001a1a0000000000000000","0a040520002099c81a270000037700000000000000000800041000000000000000000000020000000000000000000000f0000000da401a1a00f0000000000000","2d0404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000","d1f027d2e3fa30bb38238ad575fa10e8afae478a9388217d004a93628d3921ac","e93f638f76fa87505e09bcc608e67131c3cd4d717ceeb653a02e5615f0d33e92"}, // 13451
+            {"290404180020ed601aa000000188000000000000000008000318000000000000000000000200000004000000000000040010018802001aa0fe00c01800000008","290404180020ed601a6000000188000000000000000008000318010000000000000000000200000004000000000000040010018802001aa0fe00c01804000008","290404180020ed601a7000000188000000000000000008000318020000000000000000000200000004000000000000040010018802001aa0fe00c01803000008","290404180020ed601a8000000188000000000000000008000318020000000000000000000200000004000000000000040010018802001aa0fe00c01802000008","290404180020ed601a9000000188000000000000000008000318020000000000000000000200000004000000000000040010018802001aa0fe00c01801000008","0f04033800209a961a2900000387000001800000000007000408010200000800000000000400000000000000000000000000038700001a1a0000000000000000","0a040520002099c81a290000037700000000000000000800041000000000000000000000020000000000000000000000f0000000da401a1a00f0000000000000","2d0404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000","2006ff102a7975faaefe288110a94b53870ca46a3f3fe24c2692c2a49e9640f6","d1f027d2e3fa30bb38238ad575fa10e8afae478a9388217d004a93628d3921ac"}, // 13452
+            {"290404180020ed601aa000000188000000000000000008000318000000000000000000000200000004000000000000040120018802001aa0fe00d4d000000008","290404180020ed601a67000001a6000000000200000008000318010000000000000000000200000004000000000000040120018802001aa0fe00d4d004000008","290404180020ed601a750000019e000000000000000008000318020000000000000000000200000004000000000000040120018802001aa0fe00d4d003000008","290404180020ed601a8300000197000000000000000008000318020000000000000000000200000004000000000000040120018802001aa0fe00d4d002000008","290404180020ed601a910000018f000000000000000008000318020000000000000000000200000004000000000000040120018802001aa0fe00d4d001000008","0f04033800209a961a41000003810000fe800000000007000408000100000100000000000400000000000000000000000000038700001a1a0000000000000000","0a040520002099c81a410000037100000000000000000800041000000000000000000000020000000000000000000000f0000000da401a1a00f0000000000000","2d8404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000","b4c384a6b81965db0b60d9e9e57934ac8feabb6ba55cbbd8273c61c1779c4f81","2dbcf7c5d84da6a4f108d297e1b986f696c8a63a680a505e0f40bad2b4eb2acf"}, // 13486
+        };
+        // Columns: five Swing receipt indices, Wheel, Robot, Dynamic, Return, Main count, selected count, phase, angle, actorX/Y, scratch, VInt, levelFrames, cameraX/Y.
+        int[][] expectedSwingNumbers={
+            {32,41,44,48,49,31,37,66,74,33,38,49160,8,417791744,3673856,252,3030,3007,6278,0}, // 13451
+            {32,40,43,47,48,31,37,52,60,26,33,49176,16,418143744,3845888,252,3031,3008,6284,0}, // 13452
+            {32,41,44,48,49,31,37,55,63,48,39,54480,288,431394816,18224896,244,3065,3042,6486,145}, // 13486
+        };
+        String[] expectedSwingStatus={"Status[routine=2, previousChunkWord=6272, rightRecordIndex=340, leftRecordIndex=312, rightSavedId=189, leftSavedId=176, nullRightByteOffset=0, nullLeftByteOffset=0]","Status[routine=2, previousChunkWord=6272, rightRecordIndex=340, leftRecordIndex=312, rightSavedId=189, leftSavedId=176, nullRightByteOffset=0, nullLeftByteOffset=0]","Status[routine=2, previousChunkWord=6400, rightRecordIndex=343, leftRecordIndex=312, rightSavedId=190, leftSavedId=176, nullRightByteOffset=0, nullLeftByteOffset=0]"};
+        for(int call=13451;call<=13486;call++) {
+            var input=controller(call);
+            if(call==13451 || call==13452 || call==13486)replayNextRight(h,input);
+            step(h,input);assertLaterRouteOwners(h,frame,source,world,generation);
+            int row=java.util.Arrays.binarySearch(swingCutCalls,call);
+            if(row<0)continue;
+            var swingState=module.act2LoadState();var swingCalls=swingState.calls();var swingPool=swingState.placement().pool().slots();
+            for(int index=0;index<swingWatched.length;index++)assertArrayEquals(java.util.HexFormat.of().parseHex(expectedSwingImages[row][index]),
+                    swingPool.get(swingWatched[index]-32).copyBytes(),"Measured complete source whole"+swingWatched[index]+" at closed"+call);
+            var swingFamily=swingPool.stream().filter(image->image.id()==0x29).toList();
+            assertEquals(java.util.List.of(42,51,53,57,58),swingFamily.stream().map(image->image.identity().wholeIndex()).toList());
+            assertEquals(java.util.List.of(0,4,3,2,1),swingFamily.stream().map(image->image.copyBytes()[0x3C]&0xFF).toList());
+            for(int index=0;index<swingFamily.size();index++) {
+                var image=swingFamily.get(index);var raw=java.nio.ByteBuffer.wrap(image.copyBytes());
+                assertEquals(2,image.routine(),"Every later physical child already completed its own Init in the allocation walk");
+                assertEquals(4,image.subtype());assertEquals(0,image.subtype2());assertEquals(4,image.copyBytes()[0x2F]&0xFF);
+                assertEquals(6816,raw.getShort(0x36)&0xFFFF);assertEquals(392,raw.getShort(0x32)&0xFFFF);
+                assertEquals(expectedSwingNumbers[row][11],raw.getShort(0x3A)&0xFFFF);assertEquals(expectedSwingNumbers[row][12],raw.getShort(0x30)&0xFFFF);
+                assertEquals(8,raw.getShort(0x3E)&0xFFFF);assertEquals(0x200,raw.getShort(0x34)&0xFFFF);assertEquals(0xFE00,raw.getShort(0x38)&0xFFFF);
+                assertEquals(0,image.copyBytes()[0x3D]&0xFF);assertEquals(0,image.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.X_FRACTION));
+                assertEquals(0,image.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.Y_FRACTION));
+                assertEquals(0x418,image.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+                assertEquals(0x20ED60,image.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+                assertEquals(index==0?0:index==1?1:2,image.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.MAP_FRAME));
+                assertEquals(8,image.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.Y_RADIUS));
+                assertEquals(0x18,image.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.WIDTH));
+            }
+            var actualSwingReceiptIndices=java.util.stream.IntStream.range(0,swingCalls.size()).filter(index->swingCalls.get(index).name().equals("SWING_BODY")).boxed().toList();
+            assertEquals(java.util.Arrays.stream(expectedSwingNumbers[row],0,5).boxed().toList(),actualSwingReceiptIndices);
+            assertEquals(SonicCdGameModule.Act2LoadCall.PRIMARY_MAIN,swingCalls.get(8));
+            assertEquals(expectedSwingNumbers[row][5],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.MOVING_SPRING_BODY));
+            assertEquals(expectedSwingNumbers[row][6],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY));
+            assertEquals(expectedSwingNumbers[row][7],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.DYNAMIC_OBJECTS));
+            assertEquals(expectedSwingNumbers[row][8],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN));
+            assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN,swingCalls.getLast());
+            assertEquals(expectedSwingStatus[row],swingState.placement().status().toString());
+            assertEquals(expectedSwingNumbers[row][13],frame.state().motion().centreX16_16());assertEquals(expectedSwingNumbers[row][14],frame.state().motion().centreY16_16());
+            assertEquals(expectedSwingNumbers[row][15],frame.environment().movement().globals().primaryAngle());
+            assertEquals((long)expectedSwingNumbers[row][16],frame.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(expectedSwingNumbers[row][17],frame.environment().globals().levelFrames());
+            var swingCamera=((SonicCdPlayerPresentation)actualField(swingVisit,"presentation")).act2ForegroundImage();
+            assertEquals(expectedSwingNumbers[row][18],swingCamera.cameraX());assertEquals(expectedSwingNumbers[row][19],swingCamera.cameraYWord());
+            assertEquals(35,swingState.ring().rings());assertEquals(0,swingState.ring().timeStopTimer());
+            assertEquals(1,frame.environment().movement().gates().timeZone());assertEquals(1,frame.environment().movement().gates().zoneAct());
+            assertEquals(255,frame.environment().movement().gates().timeWarpDirection());
+            assertEquals(0,frame.state().motion().playerControl());assertEquals(0,frame.environment().controls().controlLocked());
+            assertEquals(8,frame.environment().controls().rawHeld());assertEquals(0,frame.environment().controls().rawTap());
+            assertEquals(8,frame.environment().controls().logicalHeld());assertEquals(0,frame.environment().controls().logicalTap());
+            var swingLoop=actualField(actualField(swingVisit,"values"),"loop");
+            var swingCpu=assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat.class,((java.util.Optional<?>)actualField(swingLoop,"completedDraw")).orElseThrow());
+            assertEquals(640,swingCpu.bytes().length);assertEquals(expectedSwingNumbers[row][9],swingCpu.spriteCount());
+            assertEquals(expectedSwingImages[row][8],java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(swingCpu.bytes())));
+            var swingSelected=module.act2SelectedDisplay();assertInstanceOf(SonicCdPastDisplay.Ready.class,swingSelected.projection());
+            var selectedSwingCpu=swingSelected.inputs().selectedCpu().orElseThrow();assertEquals(expectedSwingNumbers[row][10],selectedSwingCpu.spriteCount());
+            assertEquals(expectedSwingImages[row][9],java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(selectedSwingCpu.bytes())));
+            assertNotEquals(expectedSwingImages[row][8],expectedSwingImages[row][9],"Completed Main CPU is distinct from the preceding CPU selected at this VInt");
+            assertEquals(java.util.List.of(0),selectedSwingCpu.provenance().stream().filter(piece->piece.slotRef().wholeIndex()==0).map(piece->piece.mappingPieceOrdinal()).toList());
+            assertTrue(swingCpu.provenance().stream().noneMatch(piece->java.util.Arrays.stream(swingWatched,0,5).anyMatch(whole->whole==piece.slotRef().wholeIndex())));
+            assertTrue(selectedSwingCpu.provenance().stream().noneMatch(piece->java.util.Arrays.stream(swingWatched,0,5).anyMatch(whole->whole==piece.slotRef().wholeIndex())),
+                    "Actual Swing group has no Main or selected VInt pieces at these cuts; no family current/pixel claim");
+        }
+        assertEquals(209,frame.environment().globals().timeWarpTimer(),"Last closed13486 timer before the next primary save boundary");
+        var swingClosed13486=captureNative(h);var swingRegistry=h.mode().getRewindRegistry();var swingEndFull=swingRegistry.capture();var swingEndCourse=swingRegistry.captureCourse();
+        swingRegistry.restore(swingEndFull);assertNativeCapture(swingClosed13486,h);swingRegistry.restoreCourse(swingEndCourse);assertNativeCapture(swingClosed13486,h);
+        // A separate negative terminal attempt13487, never part of the closed positive13486 qualification.
+        var swingLastClosed=module.act2LoadState();
+        var timeWarpStop=assertThrows(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedTimeWarp.class,()->step(h,controller(13487)));
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerTimeWarp.UnsupportedBoundary.SCROLL_LOCK_WRITE,timeWarpStop.boundary());
+        assertEquals("SCROLL_LOCK_WRITE",timeWarpStop.getMessage());assertTrue(frame.closed());
+        // Raw placement and retained Values ledger are legal after failure. Do not call Module/Frame/registry capture.
+        var swingFailedPlacement=livePlacement.capture();
+        assertEquals(swingLastClosed.placement().status(),swingFailedPlacement.status());
+        assertArrayEquals(swingLastClosed.placement().savedFlags().copy(),swingFailedPlacement.savedFlags().copy());
+        for(var image:swingLastClosed.placement().pool().slots())assertEquals(image,swingFailedPlacement.pool().slots().get(image.identity().dynamicIndex()),"Failed primary13487 ran no dynamic source writes");
+        var swingFailedPoolBytes=java.nio.ByteBuffer.allocate(96*64);for(var image:swingFailedPlacement.pool().slots())swingFailedPoolBytes.put(image.copyBytes());
+        assertEquals("55a8daea087a6bbfa8077ad3289475e9768673097626c0ac18609e8c03c60214",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(swingFailedPoolBytes.array())));
+        var swingFailedCalls=(java.util.List<?>)actualField(actualField(swingVisit,"values"),"calls");
+        assertEquals(java.util.List.of("ORDINARY_PUBLICATION","UPDATE_ANIMATED_TILES","ORDINARY_DRAW_LEVEL","ORDINARY_SLOW_PLC","UPDATE_HUD","ORDINARY_SERVICE","LEVEL_FRAME_INCREMENT","SPAWN_OBJECTS"),swingFailedCalls.stream().map(Object::toString).toList());
+        System.out.println("Controller-only Act2 closed13486: real Swing13451 parent42 and later children51/53/57/58 all complete Init in one physical walk;13452 Main and13486 endpoint retain exact source64/native geometry/receipt order and separate completed-vs-selected CPU comparisons, with full/course before-forward replay. Separate13487 primary TimeWarp SCROLL_LOCK_WRITE retains the exact raw failed pool/status/saved and eight-receipt prefix ending SpawnObjects; no closed Frame capture or completed13487 claim.");
+        // END measured Swing promotion.
     }
 
     // BEGIN later-route EGL case: additive to the three pinned controller cases.
     @Test void actualLaterAct2ControllerCutsRenderSelectedSonicAndReplayTheirCompleteValuesAndPixels() throws Exception {
         byte[] imageForExport;
         byte[] splashImageForExport=null;
+        byte[] swingImageForExport=null;
         try (var egl = TestSonicCdPastResultsRoute.Egl.open()) {
             assertInstanceOf(NullAudioBackend.class, GameServices.audio().getBackend());
             var old = ready(); var h = old.harness(); var module = h.module();
@@ -842,10 +947,115 @@ class TestSonicCdAct2ControllerRoute {
             assertEquals(0x18E1B800,frame.state().motion().centreX16_16());assertEquals(0x0035A700,frame.state().motion().centreY16_16());
             assertEquals(6369,frame.state().motion().centreX16_16()>>>16);assertEquals(53,frame.state().motion().centreY16_16()>>>16);
             assertEquals(252,frame.environment().movement().globals().primaryAngle());
-            System.out.println("ENGINE controller-only Act2 EGL: all nineteen old selected-Sonic endpoints remain, plus13423 and13450, twenty-one total through the unchanged genuine Ready/selected-Sonic omission and full/course before/after value/pixel replay helper. Natural MovingSpring41/child71 full64, body receipts, field sequence and completed Main CPU hashes are comparison-only; both remain offscreen and no wheel/child selected-current or pixel claim is made. Old Shield/Splash contrasts and exports are unchanged. Positive execution stops at closed13450 before the separate failed13451 SwingingPlatform ID29/whole42 prefix. No native-image, regional or whole-act claim.");
+            System.out.println("ENGINE controller-only Act2 EGL: all nineteen old selected-Sonic endpoints remain, plus13423 and13450, twenty-one total through the unchanged genuine Ready/selected-Sonic omission and full/course before/after value/pixel replay helper. Natural MovingSpring41/child71 full64, body receipts, field sequence and completed Main CPU hashes are comparison-only; both remain offscreen and no wheel/child selected-current or pixel claim is made. Old Shield/Splash contrasts and exports are unchanged. This complete13450 checkpoint precedes the measured Swing segment below. No native-image, regional or whole-act claim.");
+            // BEGIN measured Swing promotion: source-only comparisons; Root facts4799c82e6634ff00dca32fbeceeab83b9fe59c5c8168bf93d5ece82b57d4f408.
+            // N1ecc5f3 Swing/Main.asm:83-135 allocates dirty ID29 children, which the increasing walk later dispatches.
+            // Main.asm:137-197 owns long-difference velocity, HIGH phase byte and native sine-X/cosine-Y WORD stores.
+            int[] swingCutCalls={13451,13452,13486};
+            int[] swingWatched={42,51,53,57,58,41,71,47};
+            var swingVisit=actualField(module,"act2Loading");
+            var swingPrior13450=module.act2LoadState();
+            byte[] expectedSwingPriorZero=java.util.HexFormat.of().parseHex("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+            for(int whole:new int[]{42,51,53,57,58})assertArrayEquals(expectedSwingPriorZero,
+                    swingPrior13450.placement().pool().slots().get(whole-32).copyBytes(),
+                    "Actual closed13450 full64 preimage; comparison only, never allocation-state ingress");
+            // Columns: Swing42/51/53/57/58, Wheel41, ordinary Spring71, Robot47, completed Main SHA, selected VInt CPU SHA.
+            String[][] expectedSwingImages={
+                {"290404180020ed601aa000000188000000000000000008000318000000000000000000000200000004000000000000040008018802001aa0fe00c00800000008","290404180020ed601a6000000188000060008800000008000318010000000000000000000200000004000000000000040008018802001aa0fe00c00804000008","290404180020ed601a7000000188000000000000000008000318020000000000000000000200000004000000000000040008018802001aa0fe00c00803000008","290404180020ed601a8000000188000000000000000008000318020000000000000000000200000004000000000000040008018802001aa0fe00c00802000008","290404180020ed601a9000000188000000000000000008000318020000000000000000000200000004000000000000040008018802001aa0fe00c00801000008","0f04033800209a961a2780000387000001800000000007000408000100000000000000000400000000000000000000000000038700001a1a0000000000000000","0a040520002099c81a270000037700000000000000000800041000000000000000000000020000000000000000000000f0000000da401a1a00f0000000000000","2d0404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000","d1f027d2e3fa30bb38238ad575fa10e8afae478a9388217d004a93628d3921ac","e93f638f76fa87505e09bcc608e67131c3cd4d717ceeb653a02e5615f0d33e92"}, // 13451
+                {"290404180020ed601aa000000188000000000000000008000318000000000000000000000200000004000000000000040010018802001aa0fe00c01800000008","290404180020ed601a6000000188000000000000000008000318010000000000000000000200000004000000000000040010018802001aa0fe00c01804000008","290404180020ed601a7000000188000000000000000008000318020000000000000000000200000004000000000000040010018802001aa0fe00c01803000008","290404180020ed601a8000000188000000000000000008000318020000000000000000000200000004000000000000040010018802001aa0fe00c01802000008","290404180020ed601a9000000188000000000000000008000318020000000000000000000200000004000000000000040010018802001aa0fe00c01801000008","0f04033800209a961a2900000387000001800000000007000408010200000800000000000400000000000000000000000000038700001a1a0000000000000000","0a040520002099c81a290000037700000000000000000800041000000000000000000000020000000000000000000000f0000000da401a1a00f0000000000000","2d0404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000","2006ff102a7975faaefe288110a94b53870ca46a3f3fe24c2692c2a49e9640f6","d1f027d2e3fa30bb38238ad575fa10e8afae478a9388217d004a93628d3921ac"}, // 13452
+                {"290404180020ed601aa000000188000000000000000008000318000000000000000000000200000004000000000000040120018802001aa0fe00d4d000000008","290404180020ed601a67000001a6000000000200000008000318010000000000000000000200000004000000000000040120018802001aa0fe00d4d004000008","290404180020ed601a750000019e000000000000000008000318020000000000000000000200000004000000000000040120018802001aa0fe00d4d003000008","290404180020ed601a8300000197000000000000000008000318020000000000000000000200000004000000000000040120018802001aa0fe00d4d002000008","290404180020ed601a910000018f000000000000000008000318020000000000000000000200000004000000000000040120018802001aa0fe00d4d001000008","0f04033800209a961a41000003810000fe800000000007000408000100000100000000000400000000000000000000000000038700001a1a0000000000000000","0a040520002099c81a410000037100000000000000000800041000000000000000000000020000000000000000000000f0000000da401a1a00f0000000000000","2d8404000020e4f619f000000160000000000000000020220422020000000000000000b902000000000000040020e73401600001000000000000000000000000","b4c384a6b81965db0b60d9e9e57934ac8feabb6ba55cbbd8273c61c1779c4f81","2dbcf7c5d84da6a4f108d297e1b986f696c8a63a680a505e0f40bad2b4eb2acf"}, // 13486
+            };
+            // Columns: five Swing receipt indices, Wheel, Robot, Dynamic, Return, Main count, selected count, phase, angle, actorX/Y, scratch, VInt, levelFrames, cameraX/Y.
+            int[][] expectedSwingNumbers={
+                {32,41,44,48,49,31,37,66,74,33,38,49160,8,417791744,3673856,252,3030,3007,6278,0}, // 13451
+                {32,40,43,47,48,31,37,52,60,26,33,49176,16,418143744,3845888,252,3031,3008,6284,0}, // 13452
+                {32,41,44,48,49,31,37,55,63,48,39,54480,288,431394816,18224896,244,3065,3042,6486,145}, // 13486
+            };
+            String[] expectedSwingStatus={"Status[routine=2, previousChunkWord=6272, rightRecordIndex=340, leftRecordIndex=312, rightSavedId=189, leftSavedId=176, nullRightByteOffset=0, nullLeftByteOffset=0]","Status[routine=2, previousChunkWord=6272, rightRecordIndex=340, leftRecordIndex=312, rightSavedId=189, leftSavedId=176, nullRightByteOffset=0, nullLeftByteOffset=0]","Status[routine=2, previousChunkWord=6400, rightRecordIndex=343, leftRecordIndex=312, rightSavedId=190, leftSavedId=176, nullRightByteOffset=0, nullLeftByteOffset=0]"};
+            for(int call=13451;call<=13486;call++) {
+                var input=controller(call);
+                if(call==13451 || call==13486) {
+                    var swingPixels=renderReplayNextRight(h,input,call);
+                    if(call==13486)swingImageForExport=swingPixels.clone();
+                }
+                else {if(call==13452)replayNextRight(h,input);step(h,input);}
+                assertLaterRouteOwners(h,frame,source,world,generation+1);
+                int row=java.util.Arrays.binarySearch(swingCutCalls,call);
+                if(row<0)continue;
+                var swingState=module.act2LoadState();var swingCalls=swingState.calls();var swingPool=swingState.placement().pool().slots();
+                for(int index=0;index<swingWatched.length;index++)assertArrayEquals(java.util.HexFormat.of().parseHex(expectedSwingImages[row][index]),
+                        swingPool.get(swingWatched[index]-32).copyBytes(),"Measured complete source whole"+swingWatched[index]+" at closed"+call);
+                var swingFamily=swingPool.stream().filter(image->image.id()==0x29).toList();
+                assertEquals(java.util.List.of(42,51,53,57,58),swingFamily.stream().map(image->image.identity().wholeIndex()).toList());
+                assertEquals(java.util.List.of(0,4,3,2,1),swingFamily.stream().map(image->image.copyBytes()[0x3C]&0xFF).toList());
+                for(int index=0;index<swingFamily.size();index++) {
+                    var image=swingFamily.get(index);var raw=java.nio.ByteBuffer.wrap(image.copyBytes());
+                    assertEquals(2,image.routine(),"Every later physical child already completed its own Init in the allocation walk");
+                    assertEquals(4,image.subtype());assertEquals(0,image.subtype2());assertEquals(4,image.copyBytes()[0x2F]&0xFF);
+                    assertEquals(6816,raw.getShort(0x36)&0xFFFF);assertEquals(392,raw.getShort(0x32)&0xFFFF);
+                    assertEquals(expectedSwingNumbers[row][11],raw.getShort(0x3A)&0xFFFF);assertEquals(expectedSwingNumbers[row][12],raw.getShort(0x30)&0xFFFF);
+                    assertEquals(8,raw.getShort(0x3E)&0xFFFF);assertEquals(0x200,raw.getShort(0x34)&0xFFFF);assertEquals(0xFE00,raw.getShort(0x38)&0xFFFF);
+                    assertEquals(0,image.copyBytes()[0x3D]&0xFF);assertEquals(0,image.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.X_FRACTION));
+                    assertEquals(0,image.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.Y_FRACTION));
+                    assertEquals(0x418,image.word(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE));
+                    assertEquals(0x20ED60,image.longBits(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS));
+                    assertEquals(index==0?0:index==1?1:2,image.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.MAP_FRAME));
+                    assertEquals(8,image.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.Y_RADIUS));
+                    assertEquals(0x18,image.unsignedByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.WIDTH));
+                }
+                var actualSwingReceiptIndices=java.util.stream.IntStream.range(0,swingCalls.size()).filter(index->swingCalls.get(index).name().equals("SWING_BODY")).boxed().toList();
+                assertEquals(java.util.Arrays.stream(expectedSwingNumbers[row],0,5).boxed().toList(),actualSwingReceiptIndices);
+                assertEquals(SonicCdGameModule.Act2LoadCall.PRIMARY_MAIN,swingCalls.get(8));
+                assertEquals(expectedSwingNumbers[row][5],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.MOVING_SPRING_BODY));
+                assertEquals(expectedSwingNumbers[row][6],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY));
+                assertEquals(expectedSwingNumbers[row][7],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.DYNAMIC_OBJECTS));
+                assertEquals(expectedSwingNumbers[row][8],swingCalls.indexOf(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN));
+                assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN,swingCalls.getLast());
+                assertEquals(expectedSwingStatus[row],swingState.placement().status().toString());
+                assertEquals(expectedSwingNumbers[row][13],frame.state().motion().centreX16_16());assertEquals(expectedSwingNumbers[row][14],frame.state().motion().centreY16_16());
+                assertEquals(expectedSwingNumbers[row][15],frame.environment().movement().globals().primaryAngle());
+                assertEquals((long)expectedSwingNumbers[row][16],frame.vIntClock().absoluteValue().orElseThrow());
+                assertEquals(expectedSwingNumbers[row][17],frame.environment().globals().levelFrames());
+                var swingCamera=((SonicCdPlayerPresentation)actualField(swingVisit,"presentation")).act2ForegroundImage();
+                assertEquals(expectedSwingNumbers[row][18],swingCamera.cameraX());assertEquals(expectedSwingNumbers[row][19],swingCamera.cameraYWord());
+                assertEquals(35,swingState.ring().rings());assertEquals(0,swingState.ring().timeStopTimer());
+                assertEquals(1,frame.environment().movement().gates().timeZone());assertEquals(1,frame.environment().movement().gates().zoneAct());
+                assertEquals(255,frame.environment().movement().gates().timeWarpDirection());
+                assertEquals(0,frame.state().motion().playerControl());assertEquals(0,frame.environment().controls().controlLocked());
+                assertEquals(8,frame.environment().controls().rawHeld());assertEquals(0,frame.environment().controls().rawTap());
+                assertEquals(8,frame.environment().controls().logicalHeld());assertEquals(0,frame.environment().controls().logicalTap());
+                var swingLoop=actualField(actualField(swingVisit,"values"),"loop");
+                var swingCpu=assertInstanceOf(com.openggf.game.soniccd.objects.CdObjectDrawQueue.CpuSat.class,((java.util.Optional<?>)actualField(swingLoop,"completedDraw")).orElseThrow());
+                assertEquals(640,swingCpu.bytes().length);assertEquals(expectedSwingNumbers[row][9],swingCpu.spriteCount());
+                assertEquals(expectedSwingImages[row][8],java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(swingCpu.bytes())));
+                var swingSelected=module.act2SelectedDisplay();assertInstanceOf(SonicCdPastDisplay.Ready.class,swingSelected.projection());
+                var selectedSwingCpu=swingSelected.inputs().selectedCpu().orElseThrow();assertEquals(expectedSwingNumbers[row][10],selectedSwingCpu.spriteCount());
+                assertEquals(expectedSwingImages[row][9],java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(selectedSwingCpu.bytes())));
+                assertNotEquals(expectedSwingImages[row][8],expectedSwingImages[row][9],"Completed Main CPU is distinct from the preceding CPU selected at this VInt");
+                assertEquals(java.util.List.of(0),selectedSwingCpu.provenance().stream().filter(piece->piece.slotRef().wholeIndex()==0).map(piece->piece.mappingPieceOrdinal()).toList());
+                assertTrue(swingCpu.provenance().stream().noneMatch(piece->java.util.Arrays.stream(swingWatched,0,5).anyMatch(whole->whole==piece.slotRef().wholeIndex())));
+                assertTrue(selectedSwingCpu.provenance().stream().noneMatch(piece->java.util.Arrays.stream(swingWatched,0,5).anyMatch(whole->whole==piece.slotRef().wholeIndex())),
+                        "Actual Swing group has no Main or selected VInt pieces at these cuts; no family current/pixel claim");
+            }
+            assertEquals(209,frame.environment().globals().timeWarpTimer(),"Last closed13486 timer before the next primary save boundary");
+            var swingClosed13486=captureNative(h);var swingRegistry=h.mode().getRewindRegistry();var swingEndFull=swingRegistry.capture();var swingEndCourse=swingRegistry.captureCourse();
+            swingRegistry.restore(swingEndFull);assertNativeCapture(swingClosed13486,h);swingRegistry.restoreCourse(swingEndCourse);assertNativeCapture(swingClosed13486,h);
+            System.out.println("ENGINE Act2 EGL: all21 previous Sonic endpoints and Shield/Splash contrasts/exports remain; new selected-Sonic13451 and13486 use the unchanged Ready/omission/full-course complete-value/pixel replay helper,23 endpoints total. Actual Swing42/51/53/57/58 full64 and CPU-vs-selected VInt comparisons remain offscreen family observations. Positive execution ends at closed13486; no native image/parity claim.");
+            // END measured Swing promotion.
         } finally { fixture.cleanup(); }
         writeOptionalLaterCapture(imageForExport);
         writeOptionalSplashCapture(splashImageForExport);
+        // Optional actual ENGINE selected13486 export occurs after module/session/graphics/boot cleanup.
+        String swingOutput=System.getenv("SONICCD_ACT2_SWING_OUTPUT");
+        if(swingOutput!=null && !swingOutput.isBlank()) {
+            assertNotNull(swingImageForExport);
+            Path directory=Path.of(swingOutput).toAbsolutePath().normalize();
+            Path owned=Path.of(System.getProperty("user.home"),"Downloads","Sonic-CD","captures","engine").toRealPath();
+            assertTrue(directory.startsWith(owned) && !directory.equals(owned),"ENGINE Swing-route capture needs its own directory under engine captures");
+            Files.createDirectories(directory);
+            assertEquals(directory,directory.toRealPath(),"Capture directory cannot traverse a symbolic link");
+            writeEngineCapturePng(swingImageForExport,directory.resolve("ENGINE-act2-controller-call-13486.png"));
+        }
     }
 
     /** Captures precede both pixel work and the one real forward call; each replay leaves the same endpoint. */

@@ -1,6 +1,6 @@
 ---
 name: java-declaration-census
-description: Inventory written Java source declarations or a bounded ordinary JUnit Test subset at an immutable Git commit, optionally checking an explicitly pinned FINAL file. Use for source handoff inventories and stale simple whole-class count checks, not compilation, ABI or JUnit discovery/execution claims.
+description: Inventory written Java source declarations or a bounded ordinary JUnit Test subset at an immutable Git commit, optionally checking an explicitly pinned FINAL file. Use for source handoff inventories and stale simple whole-class count and literal method selector checks, not compilation, ABI or JUnit discovery/execution claims.
 ---
 
 Use the repository's [census tool](../../../tools/soniccd/java_declaration_census.py) to count record components, written constructors/methods and overload signatures. This is read-only convenience evidence, with source lines and Git blob/SHA256 provenance. It establishes no owner, phase, authentication, compilation, test result or binary compatibility.
@@ -43,7 +43,8 @@ python3 -B tools/soniccd/java_declaration_census.py \
   --revision 59889292592609ca89f96d6c39c7c093ef2c11fb \
   --source src/test/java/com/openggf/game/soniccd/level/TestSonicCdPastLevelRetail.java \
   --test-inventory com.openggf.game.soniccd.level.TestSonicCdPastLevelRetail \
-  --expected-count 5
+  --expected-count 5 \
+  --require-ordinary-test independentMutableViewsCannotEditSourceOrAnotherView
 ```
 
 The expected count remains an explicit caller assertion; review names and source
@@ -54,6 +55,23 @@ names that side. It is invalid outside test-inventory mode. In this mode exit0
 means a complete bounded static proposal (matching the expected count if given),
 exit1 means a complete proposal disagrees with the explicit count, exit2 rejects
 input, and exit3 is incomplete. No declaration diff is computed in this mode.
+
+For literal method selector preflight, append `--require-ordinary-test METHOD`
+within this same exact-class inventory mode, repeating it for up to 50 distinct
+method identifiers (at most 4,096 characters each). The example requests one method;
+`--expected-count 5` still describes the whole ordinary inventory, never the
+selection size. Names must be direct ordinary `@Test` candidates already observed
+by the existing inventory. Helpers, inherited/parameterized/factory/dynamic forms
+and signatures such as `method()` do not become selectors.
+
+Only when requested, `ordinary_test_selection` adds `source`, `selected_class`,
+`requested_names`, `selected_ids` (literal `class#method` identities in request
+order), `missing_names` and `matches`. It checks FINAL when supplied, otherwise
+baseline, without union or fallback. A complete inventory with any missing name
+exits1; malformed, duplicate, over-50 or out-of-mode selectors exit2. An incomplete
+selected inventory has null IDs, missing names and match status; either side
+incomplete still exits3 before count or missing-name failures. No runner selection,
+JUnit discovery, invocation count, execution or expected-XML behavior is changed.
 
 Each side has `provenance` and `test_inventory`, with `selected_class`, ordered
 `candidate_methods` (`owner`, `name`, name-token `line`), `complete`,

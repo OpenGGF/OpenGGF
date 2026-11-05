@@ -58,7 +58,9 @@ public final class CdObjectState {
         // Level End/Main.asm:775,796,800,818,837: MOVE.B/SUBQ.B address oVar2A; not a WORD timer.
         LEVEL_END_TIMER(0x2A),
         // Results/Main.asm:8 defines oResultsTimer=oVar32; Level End/Main.asm:842 writes MOVE.B #16.
-        RESULTS_TIMER(0x32);
+        RESULTS_TIMER(0x32),
+        // ObjSwing (Swing/Main.asm:14-16): overlapping part/count/reversing BYTE storage only.
+        SWING_PART(0x3C), SWING_COUNT(0x2F), SWING_REVERSING(0x3D);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -111,7 +113,10 @@ public final class CdObjectState {
         RESULTS_SCREEN_Y_WORD(0x0A), RESULTS_DEST_X(0x2A), RESULTS_TIMER_WORD(0x32),
         // Title Card/Main.asm:42-44,61-64,82-89,103-110,132-139,163-170: overlapping WORD storage only.
         TITLE_CARD_SCREEN_Y_WORD(0x0A), TITLE_CARD_DEST_X(0x2A), TITLE_CARD_START_X(0x2C),
-        TITLE_CARD_DEST_Y(0x2E), TITLE_CARD_START_Y(0x30);
+        TITLE_CARD_DEST_Y(0x2E), TITLE_CARD_START_Y(0x30),
+        // ObjSwing (Swing/Main.asm:7-13): overlapping centres and motion WORD storage only.
+        SWING_CENTRE_X(0x36), SWING_CENTRE_Y(0x32), SWING_ANGLE(0x30), SWING_PHASE(0x3A),
+        SWING_STEP(0x3E), SWING_MAX(0x34), SWING_MIN(0x38);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

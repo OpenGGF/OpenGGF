@@ -774,6 +774,8 @@ def parser():
     p.add_argument('--final-bytes', type=int, help='Externally supplied byte pin; required with --final')
     p.add_argument('--test-inventory', metavar='CLASS', help='Static ordinary @Test subset for one exact qualified class')
     p.add_argument('--expected-count', type=int, help='Compare static proposal for FINAL if supplied, otherwise baseline')
+    p.add_argument('--require-ordinary-test', action='append', metavar='METHOD',
+                   help='Require a direct ordinary @Test name in the selected inventory (repeatable, at most 50)')
     for name,value in vars(Limits()).items():
         p.add_argument('--'+name.replace('_','-'),type=int,default=value,help=f'Lowerable bound, maximum {value}')
     return p
@@ -786,6 +788,12 @@ def run(args):
     require(args.expected_count is None or (args.test_inventory is not None and
             type(args.expected_count) is int and 0 <= args.expected_count <= limits.max_declarations),
             'Expected count requires test-inventory mode and a nonnegative count within the declaration bound', 2)
+    requested = getattr(args, 'require_ordinary_test', None)
+    if requested is not None:
+        require(args.test_inventory is not None and type(requested) is list and 1 <= len(requested) <= 50 and
+                all(isinstance(name, str) and len(name) <= 4096 and IDENT.fullmatch(name) and
+                    name not in RESERVED for name in requested) and len(set(requested)) == len(requested),
+                'Require test-inventory and 1..50 distinct ordinary method identifiers (maximum 4096 characters each)', 2)
     source = relative(args.source)
     git_dir = absolute(args.git_dir)
     root_id = directory_id(git_dir)
@@ -820,6 +828,17 @@ def run(args):
             proposal = result[side]['test_inventory']['proposed_count']
             result['expected_count'] = dict(value=args.expected_count,source=side,
                                            matches=None if proposal is None else proposal == args.expected_count)
+        if requested is not None:
+            side = 'final' if final is not None else 'baseline'
+            observed = result[side]['test_inventory']
+            names = {method['name'] for method in observed['candidate_methods']}
+            complete = observed['complete']
+            result['ordinary_test_selection'] = dict(
+                source=side, selected_class=observed['selected_class'], requested_names=requested,
+                selected_ids=[observed['selected_class'] + '#' + name for name in requested if name in names]
+                    if complete else None,
+                missing_names=[name for name in requested if name not in names] if complete else None,
+                matches=all(name in names for name in requested) if complete else None)
     else:
         baseline = dict(provenance=provenance,declarations=inventory(data,limits))
         result = dict(version=VERSION,status='complete',limits=vars(limits),limitations=LIMITATIONS,
@@ -851,7 +870,9 @@ def main(argv=None):
     try:
         result = run(parser().parse_args(argv))
         code = 3 if result['status'] == 'incomplete' else int(
-            result.get('expected_count',{}).get('matches') is False or result.get('diff',{}).get('has_changes',False))
+            result.get('expected_count',{}).get('matches') is False or
+            result.get('ordinary_test_selection',{}).get('matches') is False or
+            result.get('diff',{}).get('has_changes',False))
     except CensusError as error:
         code = error.code
         result = dict(version=VERSION,status='incomplete' if code == 3 else 'error',

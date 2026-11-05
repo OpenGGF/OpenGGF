@@ -35,7 +35,7 @@ class TestSonicCdAct2MovingSpringWorld {
         var s=scene();var b=wheel(s);var before=captureNative(s.h());
         assertSame(s.assets().objects().movingSpring(),b.assets().visual());assertEquals(0x209A96,b.assets().mappingsAddress());
         assertEquals(74,b.assets().objectTileIds().length());assertEquals(2,b.assets().visual().mappingFrames().size());
-        assertEquals(124,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(122,SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY.ordinal());
+        assertEquals(125,SonicCdGameModule.Act2LoadCall.values().length);assertEquals(122,SonicCdGameModule.Act2LoadCall.ROBOT_GENERATOR_BODY.ordinal());
         assertEquals(123,SonicCdGameModule.Act2LoadCall.MOVING_SPRING_BODY.ordinal());
         assertSame(s.placement(),actual(b,"placement"));assertNativeCapture(before,s.h());
     }
