@@ -8,6 +8,8 @@ import com.openggf.game.soniccd.level.CdObjectTileIds;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
@@ -141,6 +143,18 @@ public final class CdFloatBlock {
             Objects.requireNonNull(assets, "assets");
             return new Assets(assets.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(), assets.floatBlock(),
                     assets.view(CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS).range().nativeAddress());
+        }
+
+        /** Original-USA Act2 raw data only; no current patterns, body execution or World admission. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets owner) {
+            Objects.requireNonNull(owner, "owner");
+            var identity = Objects.requireNonNull(owner.identity(), "identity");
+            if (identity.variant() != CdReleaseVariant.USA || identity.file() != CdNativeFile.R12A
+                    || identity.domain() != CdMmdImage.Domain.ORIGINAL_WORD_RAM
+                    || !identity.stage().equals(CdStagePayload.R12A.stage()))
+                throw new IllegalArgumentException("FloatBlock Act2 assets require authenticated original USA R12A Word RAM");
+            return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.floatBlock(),
+                    owner.profile().range(CdR12aProfile.Asset.MAP_SPR_FLOAT_BLOCK).nativeAddress());
         }
 
         /** Actual original USA Past views, retaining all real padding and the genuine empty frame zero. */

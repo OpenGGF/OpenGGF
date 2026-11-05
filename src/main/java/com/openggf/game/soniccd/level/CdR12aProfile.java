@@ -109,7 +109,11 @@ public final class CdR12aProfile {
         PLATFORM_WIDTHS(0xC66A, 4), PLATFORM_RANGES(0xC66E, 4),
         // Anton/Pata-Bata Main.asm actual original R12A Init and animation operands, retaining literal include padding.
         ANI_ANTON(0xB1C6, 12), MAP_SPR_ANTON(0xB1D2, 112),
-        ANI_PATA_BATA(0xB344, 18), MAP_SPR_PATA_BATA1(0xB356, 34), MAP_SPR_PATA_BATA2(0xB378, 40);
+        ANI_PATA_BATA(0xB344, 18), MAP_SPR_PATA_BATA1(0xB356, 34), MAP_SPR_PATA_BATA2(0xB378, 40),
+        // Tamabboh/Floating Block actual original R12A Init/animation operands and complete source includes.
+        ANI_TAMABBOH_NORMAL(0xB76A, 12), ANI_TAMABBOH_DAMAGED(0xB776, 26), MAP_SPR_TAMABBOH(0xB790, 62),
+        ANI_TAMABBOH_MISSILE(0xB890, 8), MAP_SPR_TAMABBOH_MISSILE(0xB898, 42),
+        ANI_FLOAT_BLOCK(0xA204, 30), MAP_SPR_FLOAT_BLOCK(0xA222, 76);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

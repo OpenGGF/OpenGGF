@@ -177,7 +177,9 @@ Unreleased. The earlier development themes remain in
   existing art, math, terrain and Frame owners. Exact pending-call identities guard
   synchronous publications, including unchanged values and throwing wrappers; Pata
   retains reached animation-fault writes without duplicating successful transitions.
-  Tamabboh is the next measured unbound family; later Act2 traversal remains open.
+  Actual later-route EGL pictures now retain selected Sonic pixels and full/course
+  pixel replay through10866. Tamabboh/FloatBlock source views reuse existing art;
+  their World binding and later Act2 traversal remain open.
   Selected Goal Post now preserves native raw tile selection, conditional player
   reads, PLC requests and despawn behavior. The same Frame can prepare its exact
   goal-bound and warp clears. Live Signpost and Results bindings preserve native

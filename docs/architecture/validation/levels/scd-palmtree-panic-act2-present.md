@@ -15,7 +15,7 @@ user disc; pinned disassembly supplies algorithm research only.
 
 R12A MMD SHA256 is
 `6091e19b34358cf241e9b51f222b6ea2202230ff0b684b44f9ed050cf840b5e7`.
-The retained terrain/player pair,101 raw descriptors,35 finite art readers,
+The retained terrain/player pair,108 raw descriptors,35 finite art readers,
 19 PLC lists and five sections remain tied to that actual source. Native pin is
 `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
 
@@ -31,7 +31,7 @@ The retained terrain/player pair,101 raw descriptors,35 finite art readers,
 | BOSS | No Act2 boss route reached. | Unassessed. |
 | LIFE | Original MAINVARS score/lives/bank carry follows actual writers; normal load clears its own fields. | Initial handoff only. Death, checkpoint capture/respawn, repeated restart and persistence breadth remain open. |
 | REWIND | Complete registered loading/native/scroll captures compare before forward and after replay in both full and course scopes throughout healthy load/fade, Title slide-out/queued-art/release/movement, natural posts10718→10719, Boulder10763→10764, Anton10778→10779 and10865→10866. | Same World/source/Frame/epoch within the new scope. No old capture is restored after source retirement and no failed Frame is resumed. Later events and lifetime transitions remain open. |
-| DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
+| DISPLAY | Actual selected prior CPU SAT, NOW-serviced art, planes/palette/HScroll. Real EGL overlay pixels; primary-only omission changes the image, then complete image replay matches. Native signed Y words are preserved and projected through normal nine-bit sprite Y. | `TestSonicCdAct2ControllerRoute`; actual10778/10866 selected Sonic omission and full/course pixel replay pass on EGL. Matched emulator/native-image comparison unrun. No interlace, scanline or sprite-mask implementation. |
 | CLEANUP | Reject queued capture/restore/direct scroll/service/recursive overlay without closing the healthy producer. Rejected active-atlas close retains its ledger; cleanup retry retires all488 actually selected uploads and preserves another producer. | Actual EGL case.488 is selected uploads, not the1597-tile sparse current window or a whole-act completion metric. |
 | EXIT | No Act2 completion or outgoing programme reached. | Open. |
 
@@ -71,6 +71,24 @@ All literal identities/properties/XML hashes were inspected; owned reports consu
 No combined green134/25 follows. Current positive10866 and all four crossing scopes
 are qualified; first failed10867 Tamabboh remains a separate diagnostic. No later
 GPU capture or matched native screenshot is claimed here.
+
+The later source/display selection passes49 cases with0failures/errors/skips:
+Object26/Player12/Terrain10 and exact later-controller EGL1. Seven raw Tamabboh/
+Float spans append101→108 over unchanged35 readers/19 PLCs and shared algorithms.
+The fourth controller case preserves the earlier three, renders real selected
+prior-CPU/NOW input, compares all existing native/capture values before and after
+full/course10777→10778 and10865→10866, and proves selected primary omission changes
+the pixels. Renderer/atlas/World identities and installed entries remain stable.
+It does not assert a named enemy is visible or claim all intermediate frames draw.
+
+Source`f90ccc2c329f24c867fa1ea77bf920514e386f06dd3b3a4dad75ef6fbfc32178`,
+5November02:43:45.188777–02:43:55.066144Z,0s admission/1m34s precompile. All49 literal
+identities, properties and XML hashes were inspected;8 owned reports consumed.
+Actual320×224 ENGINE10866 PNG was exported only after complete cleanup and visually
+inspected externally;36 colours, SHA256
+`0da7976c20b1074977a97875616af044a72b293af7ff7c0d602e99a579150e99`.
+It is OpenGGF output, with no matched native reference or parity claim. Later
+Tamabboh/Float World admission is still separate unqualified work.
 
 ## Exact qualification
 

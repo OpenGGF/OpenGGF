@@ -1,5 +1,35 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — later-route pixels and Tamabboh/Float source
+
+Actual original-USA R12A source inventory now has108 descriptors, retaining its
+old101 prefix and all35 art-reader/19 PLC witnesses. Native operands authenticate
+Tamabboh normal/damaged animation and shared mapping roots, missile animation/map,
+and Float animation/map. Four cached visual products and existing source Assets
+factories reuse current art, math and decoder owners; no new bank/preload/World
+phase or component algorithm is introduced by the data packet.
+
+The additional actual-controller EGL case is additive on the corrected three-case
+route. It renders selected before/after pictures at10777→10778 and10865→10866,
+checks full/course complete captured values BEFORE pixels/forward work and after
+replay, and requires the same pixels. Renderer-only primary omission changes the
+endpoint pictures while native values, source/World/Frame/production generation,
+selected inputs, renderer/atlas and installed entry identities stay intact. It
+uses real configured EGL and NullAudioBackend; no gameplay state is seeded and
+no named family is asserted visible merely because its body ran.
+
+All49 cases pass0failures/errors/skips at source
+`f90ccc2c329f24c867fa1ea77bf920514e386f06dd3b3a4dad75ef6fbfc32178`,
+02:43:45.188777–02:43:55.066144Z,0s admission/1m34s precompile: data48 plus exact
+EGL1. Exact case inventories, properties and XML hashes checked,8 owned reports
+consumed under the build lock. Optional actual ENGINE10866 output was written
+only after module/session/graphics/context/boot cleanup and inspected externally:
+320×224/16405B/36colours, SHA256
+`0da7976c20b1074977a97875616af044a72b293af7ff7c0d602e99a579150e99`.
+No native screenshot comparison or complete-act/regional/audio parity follows.
+Quiet-hours delivery queues this image for07:00.
+The next actual stop remains10867 Tamabboh22; World binding work is separate.
+
 ## 5 November 2026 — live four-family Act2 binding and positive10866
 
 The same ordinary controller now reaches10866, with natural Boulder1B, Platform21,

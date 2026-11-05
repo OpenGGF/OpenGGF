@@ -118,7 +118,7 @@ public final class CdR12aObjectAssets {
     private List<CdR11aObjectAssets.TouchSize> dimensions;
     private List<CdR11aLoadPlan.SectionArt> sections;
     private List<CdLevelPaletteCycle.Script> paletteCycles;
-    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged;
+    private CdObjectVisualAssets rings, monitorTime, springVertical, springHorizontal, springDiagonal, titleCard, breakableWall, boulder, platform, anton, pataBataNormal, pataBataDamaged, tamabbohNormal, tamabbohDamaged, tamabbohMissile, floatBlock;
     private CdAssetBytes springMappings;
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
@@ -256,6 +256,28 @@ public final class CdR12aObjectAssets {
     public synchronized CdObjectVisualAssets pataBataDamaged() {
         if (pataBataDamaged == null) pataBataDamaged = CdObjectVisualAssets.decode(view(MAP_SPR_PATA_BATA2).copy(), 3, view(ANI_PATA_BATA).copy(), 2, 50);
         return pataBataDamaged;
+    }
+    /** Both body views retain the full62 include; normal frame0 has its actual twelve-byte nested-table tail. */
+    public synchronized CdObjectVisualAssets tamabbohNormal() {
+        if (tamabbohNormal == null) tamabbohNormal = CdObjectVisualAssets.decode(view(MAP_SPR_TAMABBOH).copy(), 3,
+                view(ANI_TAMABBOH_NORMAL).copy(), 2, 59, Map.of(0, 12));
+        return tamabbohNormal;
+    }
+    public synchronized CdObjectVisualAssets tamabbohDamaged() {
+        if (tamabbohDamaged == null) tamabbohDamaged = CdObjectVisualAssets.decodeIndexed(view(MAP_SPR_TAMABBOH).copy(), 22, 3,
+                28, 62, view(ANI_TAMABBOH_DAMAGED).copy(), 2, 59);
+        return tamabbohDamaged;
+    }
+    public synchronized CdObjectVisualAssets tamabbohMissile() {
+        if (tamabbohMissile == null) tamabbohMissile = CdObjectVisualAssets.decode(view(MAP_SPR_TAMABBOH_MISSILE).copy(), 4,
+                view(ANI_TAMABBOH_MISSILE).copy(), 1, 59);
+        return tamabbohMissile;
+    }
+    /** The native empty frame0 and all three FF/FC scripts remain complete original source values. */
+    public synchronized CdObjectVisualAssets floatBlock() {
+        if (floatBlock == null) floatBlock = CdObjectVisualAssets.decode(view(MAP_SPR_FLOAT_BLOCK).copy(), 6,
+                view(ANI_FLOAT_BLOCK).copy(), 3, 15);
+        return floatBlock;
     }
     public synchronized CdObjectVisualAssets monitorTime() {
         if (monitorTime == null) monitorTime = CdObjectVisualAssets.decode(view(MAP_SPR_MONITOR_TIME).copy(), 20, view(ANI_MONITOR).copy(), 10, 82);

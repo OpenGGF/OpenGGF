@@ -128,6 +128,13 @@ MAP_SPR_ANTON b1d2 112 898f3a56606b9c82c0c0a4c2197b0860353cbce320baf1026bd7f717b
 ANI_PATA_BATA b344 18 a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3
 MAP_SPR_PATA_BATA1 b356 34 9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b
 MAP_SPR_PATA_BATA2 b378 40 96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889
+ANI_TAMABBOH_NORMAL b76a 12 ad1878521436e3e2ad03488f523fb96cda2ce64229265514a4bb6972a7e50474
+ANI_TAMABBOH_DAMAGED b776 26 09a26ea9ee38de8e1799d02b191d160beac335155b9d6bae6c3d1ed678577f84
+MAP_SPR_TAMABBOH b790 62 e30906f183ff4995fb9bfb0661be6003d3cd0431caa10b9d784ecf64a5b36847
+ANI_TAMABBOH_MISSILE b890 8 764bc1e99533aeb906c6b6ecf4627f5fc11904307d477b1827a49776f41c57a5
+MAP_SPR_TAMABBOH_MISSILE b898 42 10cba8d961bb868885a64ddb360f0182e18b4b5256eebac3665363c984e992cb
+ANI_FLOAT_BLOCK a204 30 3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9
+MAP_SPR_FLOAT_BLOCK a222 76 98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -197,9 +204,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete101RowManifestPreservesTheOriginal96AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete108RowManifestPreservesTheOriginal101AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(101, CdR12aProfile.Asset.values().length); assertEquals(101, rows.size());
+        assertEquals(108, CdR12aProfile.Asset.values().length); assertEquals(108, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());
@@ -554,6 +561,100 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         var table=new com.openggf.game.soniccd.objects.CdObjectAnimation.AnimationTable(o.view(ANI_PATA_BATA),0,2);
         assertThrows(UnsupportedOperationException.class,()->com.openggf.game.soniccd.objects.CdObjectAnimation.step(
                 new com.openggf.game.soniccd.objects.CdObjectAnimation.State(2,2,0,0,0,4,0,2,0),table));
+    }
+
+    @Test void tamabbohAndFloatBlockDataUseTheActualDispatchInitAndAnimationOperands() throws Exception {
+        var o=retail().terrain().objects();var file=retail().original();var hex=java.util.HexFormat.of();
+        assertEquals(101,ANI_TAMABBOH_NORMAL.ordinal());assertEquals(107,MAP_SPR_FLOAT_BLOCK.ordinal());
+        assertEquals(0x20B58C,o.view(OBJECT_INDEX).unsignedLong((0x22-1)*4));
+        assertEquals(0x20A0AC,o.view(OBJECT_INDEX).unsignedLong((0x12-1)*4));
+        assertEquals("70044eb90020cc50",hex.formatHex(file.readFile(0xB5F4,8)));
+        assertEquals("70054eb90020cc50",hex.formatHex(file.readFile(0xA0FA,8)));
+        int[][] leAs={{0xB602,0xB790,0x43},{0xB606,0xB76A,0x45},{0xB612,0xB7A6,0x43},{0xB616,0xB776,0x45},{0xB886,0xB890,0x43}};
+        for(var row:leAs) {
+            var raw=CdAssetBytes.copyOf(file.readFile(row[0],4));assertEquals(row[2],raw.unsignedByte(0));assertEquals(0xFA,raw.unsignedByte(1));
+            assertEquals(row[1],row[0]+2+(short)raw.unsignedWord(2),"actual PC extension base + signed displacement");
+        }
+        assertEquals("217c0020b8980004",hex.formatHex(file.readFile(0xB808,8)));
+        assertEquals("217c0020a2220004",hex.formatHex(file.readFile(0xA0F2,8)));
+        for(int instruction:new int[]{0xA194,0xA1C2,0xA1D6})assertEquals("43f90020a204",hex.formatHex(file.readFile(instruction,6)));
+        assertEquals(0x20B790,o.profile().range(MAP_SPR_TAMABBOH).nativeAddress());
+        assertEquals(0x20A222,o.profile().range(MAP_SPR_FLOAT_BLOCK).nativeAddress());
+    }
+
+    @Test void tamabbohBodyViewsKeepTheWholeNestedIncludeSharedBodiesAndEveryNormalDamagedMissileScript() throws Exception {
+        var o=retail().terrain().objects();var normal=o.tamabbohNormal();var damaged=o.tamabbohDamaged();var missile=o.tamabbohMissile();
+        assertEquals(0,normal.mappingTableOffset());assertEquals(22,damaged.mappingTableOffset());
+        assertEquals(62,normal.mappings().length());assertEquals(62,damaged.mappings().length());
+        assertArrayEquals(o.view(MAP_SPR_TAMABBOH).copy(),normal.mappings().copy());assertArrayEquals(normal.mappings().copy(),damaged.mappings().copy());
+        assertEquals(List.of(6,34,50),normal.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(6,12,28),damaged.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(3,3,2),normal.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(List.of(1,3,2),damaged.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertEquals(16,normal.mappingFrames().getFirst().bytes().length());assertEquals(12,34-(6+16),"nested directory/body is a real unconsumed tail");
+        assertArrayEquals(normal.mappingFrames().get(1).bytes().copy(),damaged.mappingFrames().get(1).bytes().copy());
+        assertArrayEquals(normal.mappingFrames().get(2).bytes().copy(),damaged.mappingFrames().get(2).bytes().copy());
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_TAMABBOH).copy(),3,o.view(ANI_TAMABBOH_NORMAL).copy(),2,59));
+        assertEquals(List.of(29,59),normal.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(0,1),List.of(2)),normal.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF,CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC),normal.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+        assertEquals(List.of(5,11),damaged.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1),damaged.animations().getFirst().frameBytes());
+        assertEquals(List.of(2),damaged.animations().get(1).frameBytes());
+        assertTrue(damaged.animations().stream().allMatch(a->a.terminal()==CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC));
+        assertArrayEquals(o.view(ANI_TAMABBOH_NORMAL).copy(),normal.animationTable().copy());assertArrayEquals(o.view(ANI_TAMABBOH_DAMAGED).copy(),damaged.animationTable().copy());
+        assertEquals(42,missile.mappings().length());assertEquals(List.of(8,14,20,31),missile.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(1,1,2,2),missile.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertArrayEquals(o.view(MAP_SPR_TAMABBOH_MISSILE).copy(),missile.mappings().copy());assertArrayEquals(o.view(ANI_TAMABBOH_MISSILE).copy(),missile.animationTable().copy());
+        assertEquals(List.of(0,1,2,3),missile.animations().getFirst().frameBytes());assertEquals(2,missile.animations().getFirst().delay());
+        assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,missile.animations().getFirst().terminal());
+        assertEquals(59,damaged.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+        for(var visual:List.of(normal,damaged,missile))for(var frame:visual.mappingFrames())for(var piece:frame.pieces())assertTrue(piece.tileOffset()+piece.tileCount()<=59);
+    }
+
+    @Test void floatBlockPreservesItsEmptyNativeFramePaddingAndCompleteFfFcScripts() throws Exception {
+        var o=retail().terrain().objects();var visual=o.floatBlock();assertEquals(6,visual.mappingFrames().size());assertEquals(3,visual.animations().size());
+        assertEquals(List.of(12,14,30,46,58,70),visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(0,3,3,2,2,1),visual.mappingFrames().stream().map(f->f.pieces().size()).toList());
+        assertTrue(visual.mappingFrames().getFirst().pieces().isEmpty());assertEquals(1,visual.mappingFrames().getFirst().bytes().length());
+        assertArrayEquals(o.view(MAP_SPR_FLOAT_BLOCK).copy(),visual.mappings().copy());assertEquals(76,visual.mappings().length());
+        for(int padding:new int[]{13,57,69})assertEquals(0,visual.mappings().unsignedByte(padding));
+        assertEquals(List.of(6,10,20),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+        assertEquals(List.of(2,2,2),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(5),List.of(1,5,2,5,3,5,4,5),List.of(1,0,2,0,3,0,4,0)),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF,CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC),visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+        assertArrayEquals(o.view(ANI_FLOAT_BLOCK).copy(),visual.animationTable().copy());assertEquals(30,visual.animationTable().length());assertEquals(0,visual.animationTable().unsignedByte(9));
+        assertEquals(15,visual.mappingFrames().stream().flatMap(f->f.pieces().stream()).mapToInt(p->p.tileOffset()+p.tileCount()).max().orElseThrow());
+    }
+
+    @Test void tamabbohAndFloatFactoriesBorrowOnlyTheirCachedOriginalViewsAndPreserveSelectorNegatives() throws Exception {
+        var o=retail().terrain().objects();var readers=o.readerProfiles();var tam=com.openggf.game.soniccd.objects.CdTamabboh.Assets.fromAct2Assets(o);
+        var block=com.openggf.game.soniccd.objects.CdFloatBlock.Assets.fromAct2Assets(o);
+        assertSame(o.view(OBJECT_TILE_IDS),tam.objectTileIds());assertSame(tam.objectTileIds(),block.objectTileIds());assertEquals(74,tam.objectTileIds().length());
+        assertSame(o.tamabbohNormal(),tam.normal());assertSame(o.tamabbohDamaged(),tam.damaged());assertSame(o.tamabbohMissile(),tam.missile());assertSame(o.floatBlock(),block.visual());
+        assertEquals(0x20B790,tam.normalMappingsAddress());assertEquals(tam.normalMappingsAddress()+22,tam.damagedMappingsAddress());
+        assertEquals(0x20B898,tam.missileMappingsAddress());assertEquals(0x20B76A,tam.normalAnimationAddress());assertEquals(0x20B776,tam.damagedAnimationAddress());
+        assertEquals(0x20A222,block.mappingsAddress());assertEquals(0x242C,CdR11aObjectAssets.decodeTileWord(tam.objectTileIds().copy(),4,0));
+        assertEquals(0x435A,CdR11aObjectAssets.decodeTileWord(block.objectTileIds().copy(),5,0));
+        assertThrows(UnsupportedOperationException.class,()->CdR11aObjectAssets.decodeTileWord(tam.objectTileIds().copy(),4,1));
+        assertThrows(UnsupportedOperationException.class,()->CdR11aObjectAssets.decodeTileWord(block.objectTileIds().copy(),5,1));
+        assertSame(readers,o.readerProfiles());assertEquals(35,readers.size());assertEquals(59*32,o.readerProfile(ART_TAMABBOH).outputBytes());assertEquals(15*32,o.readerProfile(ART_FLOAT_BLOCK).outputBytes());
+        assertEquals(9,com.openggf.game.soniccd.objects.CdTamabboh.Assets.class.getRecordComponents().length);assertEquals(3,com.openggf.game.soniccd.objects.CdFloatBlock.Assets.class.getRecordComponents().length);
+        assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdTamabboh.Assets.fromAct2Assets(null));assertThrows(NullPointerException.class,()->com.openggf.game.soniccd.objects.CdFloatBlock.Assets.fromAct2Assets(null));
+    }
+
+    @Test void everyNewTamabbohFloatRawViewRejectsChangedOriginalSourceAndCannotBecomeANewArtReader() throws Exception {
+        var a=retail().terrain();var o=a.objects();var original=retail().original();
+        for(var raw:new CdR12aProfile.Asset[]{ANI_TAMABBOH_NORMAL,ANI_TAMABBOH_DAMAGED,MAP_SPR_TAMABBOH,ANI_TAMABBOH_MISSILE,MAP_SPR_TAMABBOH_MISSILE,ANI_FLOAT_BLOCK,MAP_SPR_FLOAT_BLOCK}) {
+            var bytes=o.view(raw);var before=bytes.copy();var changed=bytes.copy();changed[0]^=1;assertSame(bytes,o.view(raw));assertArrayEquals(before,o.view(raw).copy());
+            assertThrows(IllegalArgumentException.class,()->o.readerProfile(raw));byte[] corrupt=original.readFile(0,262144);corrupt[raw.fileOffset()]^=1;
+            assertThrows(IOException.class,()->a.profile().verifyProgram(CdNativeFile.R12A,a.profile().domain(),CdMmdImage.parse(corrupt)));
+        }
+        var normal=o.tamabbohNormal();var damaged=o.tamabbohDamaged();var before=damaged.mappings().copy();var changed=normal.mappings().copy();changed[22]^=1;
+        assertArrayEquals(before,damaged.mappings().copy());assertArrayEquals(before,o.view(MAP_SPR_TAMABBOH).copy());
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeIndexed(o.view(MAP_SPR_TAMABBOH).copy(),22,3,28,60,o.view(ANI_TAMABBOH_DAMAGED).copy(),2,59));
+        var scripts=o.view(ANI_FLOAT_BLOCK).copy();scripts[9]=1;
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(o.view(MAP_SPR_FLOAT_BLOCK).copy(),6,scripts,3,15));
     }
 
     private record Retail(CdR12aTerrainAssets terrain, CdMmdImage original, CdR12aPlayerAssets player) { }

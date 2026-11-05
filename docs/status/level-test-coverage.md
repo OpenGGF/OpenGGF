@@ -233,7 +233,9 @@ qualifies Monitor/TimePost14, controller3 and metadata39 with zero skips; full/c
 checks qualify Boulder/Platform22, Anton/Pata15 and Pata component36 without skips;
 positive10866 replays10763→10764,10778→10779 and10865→10866. The next measured10867
 stop is existing-but-unbound Tamabboh22. These are separately attributed scopes,
-not a single green134/25 or whole-act certificate. Broader object binding, sustained
+not a single green134/25 or whole-act certificate. A later49-case selection passes
+metadata48 and actual selected-Sonic EGL/pixel replay1 at10778/10866, without skips.
+Broader object binding, sustained
 Act2 traversal, later acts and JP/EU parity are unfinished.
 The first-act matrix remains partial as well.
 

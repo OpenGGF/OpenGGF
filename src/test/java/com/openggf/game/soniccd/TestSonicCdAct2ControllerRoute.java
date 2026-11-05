@@ -260,6 +260,141 @@ class TestSonicCdAct2ControllerRoute {
                 frame.state().motion().centreX16_16() >>> 16);
     }
 
+    // BEGIN later-route EGL case: additive to the three pinned controller cases.
+    @Test void actualLaterAct2ControllerCutsRenderSelectedSonicAndReplayTheirCompleteValuesAndPixels() throws Exception {
+        byte[] imageForExport;
+        try (var egl = TestSonicCdPastResultsRoute.Egl.open()) {
+            assertInstanceOf(NullAudioBackend.class, GameServices.audio().getBackend());
+            var old = ready(); var h = old.harness(); var module = h.module();
+            var world = h.mode().getWorldSession();
+            long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+            var right = controller(10419);
+            for (int call = old.returned() + 1; call <= 10777; call++)
+                step(h, call <= 10419 ? controller(call) : right);
+            var frame = module.requirePlayerFrame(); var source = frame.stageSource();
+            assertTrue(old.frame().closed()); assertFalse(frame.closed());
+            assertEquals(CdStageKey.parse("R12A"), source.stage());
+            assertEquals(0, frame.environment().controls().controlLocked(), "The actual Title path has released held Right");
+            assertEquals(0, module.act2LoadState().reservedObjects().unsignedByte(3 * 64));
+            assertLaterRouteOwners(h, frame, source, world, generation + 1);
+            renderReplayNextRight(h, right, 10778);
+            assertLaterRouteOwners(h, frame, source, world, generation + 1);
+            for (int call = 10779; call <= 10865; call++) {
+                step(h, right);
+                assertLaterRouteOwners(h, frame, source, world, generation + 1);
+            }
+            imageForExport = renderReplayNextRight(h, right, 10866).clone();
+            assertLaterRouteOwners(h, frame, source, world, generation + 1);
+            assertEquals(0, frame.environment().controls().controlLocked());
+            System.out.println("ENGINE controller-only Act2 EGL: selected display pixels/full-course replay at10778 and10866; selected Sonic omission changes both endpoint pictures; no forward call10867.");
+        } finally { fixture.cleanup(); }
+        writeOptionalLaterCapture(imageForExport);
+    }
+
+    /** Captures precede both pixel work and the one real forward call; each replay leaves the same endpoint. */
+    private static byte[] renderReplayNextRight(Harness h, LogicalInputSnapshot right, int completedCall) throws Exception {
+        var registry = h.mode().getRewindRegistry();
+        var full = registry.capture(); var course = registry.captureCourse(); var before = captureNative(h);
+        var frame = h.module().requirePlayerFrame(); var source = frame.stageSource(); var world = h.mode().getWorldSession();
+        long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+        var beforePixels = drawLaterSelectedCut(h, false, completedCall - 1); assertNativeCapture(before, h);
+        step(h, right); assertLaterRouteOwners(h, frame, source, world, generation);
+        var after = captureNative(h);
+        var afterPixels = drawLaterSelectedCut(h, true, completedCall); assertNativeCapture(after, h);
+        registry.restore(full); assertNativeCapture(before, h);
+        assertArrayEquals(beforePixels, drawLaterSelectedCut(h, false, completedCall - 1)); assertNativeCapture(before, h);
+        step(h, right); assertNativeCapture(after, h); assertLaterRouteOwners(h, frame, source, world, generation);
+        assertArrayEquals(afterPixels, drawLaterSelectedCut(h, true, completedCall)); assertNativeCapture(after, h);
+        registry.restoreCourse(course); assertNativeCapture(before, h);
+        assertArrayEquals(beforePixels, drawLaterSelectedCut(h, false, completedCall - 1)); assertNativeCapture(before, h);
+        step(h, right); assertNativeCapture(after, h); assertLaterRouteOwners(h, frame, source, world, generation);
+        assertArrayEquals(afterPixels, drawLaterSelectedCut(h, true, completedCall)); assertNativeCapture(after, h);
+        return afterPixels;
+    }
+
+    private static void assertLaterRouteOwners(Harness h, Object frame, Object source, Object world, long generation) {
+        var current = h.module().requirePlayerFrame();
+        assertSame(frame, current); assertSame(source, current.stageSource()); assertFalse(current.closed());
+        assertSame(world, h.mode().getWorldSession());
+        assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertEquals(SonicCdGameModule.Act2LoadCall.ORDINARY_MAIN_RETURN, h.module().act2LoadState().calls().getLast());
+    }
+
+    /** Draw the actual selected prior CPU/current display; omission changes renderer input only. */
+    private static byte[] drawLaterSelectedCut(Harness h, boolean provePrimary, int completedCall) throws Exception {
+        var module = h.module(); var before = captureNative(h); var selected = module.act2SelectedDisplay();
+        var cpu = selected.inputs().selectedCpu().orElseThrow();
+        var scene = assertInstanceOf(SonicCdPastDisplay.Ready.class, selected.projection(),
+                "Actual selected later Act2 display at call" + completedCall + ": " + selected.projection()).scene();
+        var foreground = selected.inputs().foreground(); var background = selected.inputs().background();
+        var current = selected.inputs().current(); var player = selected.inputs().player();
+        var frame = module.requirePlayerFrame(); var source = frame.stageSource(); var world = h.mode().getWorldSession();
+        var atlas = GameServices.graphics().getPatternAtlas();
+        var actual = draw(h); assertNativeCapture(before, h);
+        var presentation = assertInstanceOf(SonicCdPlayerPresentation.class, actualField(module, "playerPresentation"));
+        var binding = actualField(presentation, "act2RenderBinding");
+        var renderer = assertInstanceOf(RetainedPlaneSceneRenderer.class, actualField(binding, "renderer"));
+        var entries = new java.util.LinkedHashMap<Integer, Object>();
+        var samples = new java.util.LinkedHashMap<Integer, Object>();
+        assertFalse(scene.nativePatterns().isEmpty());
+        for (int id : scene.nativePatterns().keySet()) {
+            int logical = PatternAtlasRange.OBJECTS.base() + id;
+            var entry = atlas.getEntry(logical); assertNotNull(entry);
+            entries.put(logical, entry); samples.put(logical, SpritePresentation.patternSample(GameServices.graphics(), logical));
+        }
+        assertArrayEquals(actual, draw(h)); assertNativeCapture(before, h);
+        if (provePrimary) {
+            assertTrue(cpu.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0),
+                    "The actual selected prior CPU at call" + completedCall + " contains Sonic");
+            var omitted = TestSonicCdPastResultsRoute.omitWhole(scene, cpu, 0);
+            assertSame(scene.foreground(), omitted.foreground()); assertSame(scene.background(), omitted.background());
+            assertArrayEquals(scene.packedHscroll256(), omitted.packedHscroll256());
+            assertEquals(scene.vscrollLongBits(), omitted.vscrollLongBits());
+            assertArrayEquals(scene.selectedPalette128(), omitted.selectedPalette128());
+            assertEquals(scene.nativePatterns(), omitted.nativePatterns());
+            var camera = h.mode().getCamera(); clearPixels();
+            renderer.draw(omitted, camera.getX(), camera.getY(), module::validateAct2LoadingCut);
+            assertFalse(Arrays.equals(actual, pixels()), "Selected Sonic contributes engine pixels at actual controller call" + completedCall);
+            assertNativeCapture(before, h); assertArrayEquals(actual, draw(h)); assertNativeCapture(before, h);
+        }
+        assertSame(selected, module.act2SelectedDisplay());
+        assertSame(foreground, module.act2SelectedDisplay().inputs().foreground());
+        assertSame(background, module.act2SelectedDisplay().inputs().background());
+        assertSame(current, module.act2SelectedDisplay().inputs().current());
+        assertSame(player, module.act2SelectedDisplay().inputs().player());
+        assertSame(frame, module.requirePlayerFrame()); assertSame(source, frame.stageSource());
+        assertSame(world, h.mode().getWorldSession()); assertSame(atlas, GameServices.graphics().getPatternAtlas());
+        assertSame(binding, actualField(presentation, "act2RenderBinding")); assertSame(renderer, actualField(binding, "renderer"));
+        for (int logical : entries.keySet()) {
+            assertSame(entries.get(logical), atlas.getEntry(logical));
+            assertEquals(samples.get(logical), SpritePresentation.patternSample(GameServices.graphics(), logical));
+        }
+        assertNativeCapture(before, h); return actual;
+    }
+
+    /** Executed only after module/session/graphics/context/boot fixture cleanup; never a test input. */
+    private static void writeOptionalLaterCapture(byte[] rgba) throws Exception {
+        String output = System.getenv("SONICCD_ACT2_ROUTE_OUTPUT"); if (output == null || output.isBlank()) return;
+        var directory = Path.of(output).toAbsolutePath().normalize();
+        var owned = Path.of(System.getProperty("user.home"), "Downloads", "Sonic-CD", "captures", "engine").toAbsolutePath().normalize();
+        assertTrue(directory.startsWith(owned) && !directory.equals(owned), "Actual ENGINE route export needs its own directory under the engine capture root");
+        assertEquals(320 * 224 * 4, rgba.length); Files.createDirectories(directory);
+        var image = new java.awt.image.BufferedImage(320, 224, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < 224; y++) for (int x = 0; x < 320; x++) {
+            int at = ((223 - y) * 320 + x) * 4;
+            int argb = (rgba[at + 3] & 255) << 24 | (rgba[at] & 255) << 16 | (rgba[at + 1] & 255) << 8 | rgba[at + 2] & 255;
+            image.setRGB(x, y, argb);
+        }
+        if (!javax.imageio.ImageIO.write(image, "png", directory.resolve("ENGINE-act2-controller-call-10866.png").toFile()))
+            throw new java.io.IOException("PNG writer unavailable");
+        Files.writeString(directory.resolve("ENGINE-act2-controller-call-10866.txt"),
+                "ENGINE: OpenGGF original-USA controller-only route, actual completed call10866.\n"
+                + "320x224 RGBA from the actual selected prior CPU/current Act2 display on configured surfaceless EGL.\n"
+                + "Full/course complete-value and pixel replay; selected Sonic renderer-only omission contrast.\n"
+                + "Written after module/session/graphics/context/boot fixture cleanup. No native-image or parity claim.\n");
+    }
+    // END later-route EGL case.
+
     private static void replayNextRight(Harness h, LogicalInputSnapshot right) throws Exception {
         var registry = h.mode().getRewindRegistry(); var before = captureNative(h);
         var full = registry.capture(); var course = registry.captureCourse();
