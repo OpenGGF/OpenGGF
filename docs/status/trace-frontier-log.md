@@ -124184,7 +124184,7 @@ for trace_profile in trace-replay trace-replay-r7 trace-segments; do
     "-Dsonic2.rom.path=${OPENGGF_ROM_DIR}/s2.gen" \
     "-Dsonic2.rev00.rom.path=${OPENGGF_ROM_DIR}/s2-r0.gen" \
     "-Ds3k.rom.path=${OPENGGF_ROM_DIR}/s3k.gen" \
-    "-Dkis2.rom.path=${OPENGGF_ROM_DIR}/kis2.gen test"
+    "-Dkis2.rom.path=${OPENGGF_ROM_DIR}/kis2.gen" test
 done
 ```
 
