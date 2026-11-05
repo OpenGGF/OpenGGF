@@ -113,6 +113,55 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
+    void selectedPedestalCountdownDoesNotCallSolidForEitherParticipant() {
+        var state = new GameStateManager();
+        var progression = S3kEmeraldProgression.restore(
+                state, List.of(2, 2, 0, 0, 0, 0, 0), true);
+        var runtime = new S3kSanctuaryRuntimeState(progression, true);
+        var selected = pedestal(0, progression, runtime);
+        var neighbor = pedestal(1, progression, runtime);
+        var services = mock(ObjectServices.class);
+        var solid = mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
+        when(services.solidExecution()).thenReturn(solid);
+        when(services.objectManager()).thenReturn(mock(com.openggf.level.objects.ObjectManager.class));
+        when(solid.resolveSolidNowAll()).thenReturn(
+                new com.openggf.game.solid.SolidCheckpointBatch(null, java.util.Map.of()));
+        selected.setServices(services);
+        neighbor.setServices(services);
+        assertTrue(selected.beginSelection());
+
+        // loc_90926 skips the entire P1/P2 helper, including the underflow
+        // dispatch. Selection of one pedestal must not silence its neighbors.
+        for (int i = 0; i < 16; i++) selected.update(i, null);
+        verify(services).requestSpecialStageEntry(
+                new SpecialStageEntryRequest(0, EmeraldRewardKind.SUPER_EMERALD));
+        selected.update(16, null);
+        verify(solid, never()).resolveSolidNowAll();
+        neighbor.update(16, null);
+        verify(solid).resolveSolidNowAll();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {1, 2, 3})
+    void unselectedChaosGrayAndCompletedPedestalsStillCallTheirSolidHelper(int emeraldState) {
+        var state = new GameStateManager();
+        var progression = S3kEmeraldProgression.restore(
+                state, List.of(emeraldState, 0, 0, 0, 0, 0, 0), true);
+        var pedestal = pedestal(0, progression, new S3kSanctuaryRuntimeState(progression, true));
+        var services = mock(ObjectServices.class);
+        var solid = mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
+        when(services.solidExecution()).thenReturn(solid);
+        when(services.objectManager()).thenReturn(mock(com.openggf.level.objects.ObjectManager.class));
+        when(solid.resolveSolidNowAll()).thenReturn(
+                new com.openggf.game.solid.SolidCheckpointBatch(null, java.util.Map.of()));
+        pedestal.setServices(services);
+        pedestal.update(0, null);
+        pedestal.update(1, null);
+        verify(solid, times(2)).resolveSolidNowAll();
+        verify(services, never()).requestSpecialStageEntry(any());
+    }
+
+    @Test
     void controllerPublishesRomSpawnGraphAndReentrySpawnsAllPedestals() {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(

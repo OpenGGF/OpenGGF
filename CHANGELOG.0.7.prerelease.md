@@ -66,6 +66,10 @@ Unreleased. The earlier development themes remain in
 
 - S3K invisible solid and hurt blocks suppress edge balancing as their native status bit requires.
 
+- The Super Emerald shrine keeps both players' existing standing state while a
+  selected pedestal counts down to special-stage entry, as the shipped game
+  does, instead of running another collision check and detaching the player.
+
 - LRZ corkscrews retain the shipped two-player DPLC standing-bit quirk and hold the rider pose on skipped passes.
 
 - LRZ grinding boulders retain the native coarse-camera lifetime, preserving their contact with both players.

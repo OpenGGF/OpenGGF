@@ -106,11 +106,10 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code loc_908DE} calls {@code SolidObjectTop} inside the selectable routine and then tests
-     * {@code p1_standing_bit} (skdisasm 044fa46 sonic3k.asm:197914-197928), so the landing frame already selects
-     * and {@code object_control $81} lands with the player, as a native capture of the same landing
-     * shows. The solid is therefore resolved at that call point; every other live path resolves it
-     * after its own work, where the automatic mode used to.
+     * {@code loc_908DE} (sonic3k.asm:197812-197826) calls SolidObjectTop before
+     * testing p1_standing_bit, so the landing frame already selects and applies
+     * object_control $81. The solid is resolved at that call point. Once selected,
+     * loc_90926 only counts down and draws; it never calls the solid helper again.
      */
     @Override
     public SolidExecutionMode solidExecutionMode() {
@@ -124,14 +123,16 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        // loc_90926 (sonic3k.asm:197832-197848) only decrements the entry
+        // timer, publishes the stage request, and draws. Keep the shipped
+        // FixBugs=0 landing state: no solid call means no standing-bit or air
+        // write for either player during this countdown (no conditional here).
         if (requestPublished) {
-            resolveOwnSolid(player);
             return;
         }
         if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.SELECTING
                 && runtime.selectedStage() == subtype) {
             updateSelection();
-            resolveOwnSolid(player);
             return;
         }
         if (!isSelectable() || tryServices() == null || services().objectManager() == null) {
@@ -211,10 +212,10 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * {@code Obj_HPZSuperEmerald} jumps through {@code off_9079A} on the collected state:
-     * states 1 and 2 both reach {@code loc_907A8}, which sets {@code $38} bit 0, the
-     * selection gate {@code loc_908DE} tests (sonic3k.asm:197657-197689, 197820). Nothing
-     * clears that bit, so a Chaos Emerald pedestal placed in {@code $1601} is selectable too.
+     * {@code off_9079A} (sonic3k.asm:197670-197674) routes states 1 and 2 to the same routine.
+     * {@code loc_907A8} (sonic3k.asm:197681-197684) sets $38 bit 0.
+     * {@code loc_908DE} (sonic3k.asm:197812-197826) tests that selection gate.
+     * Nothing clears it, so a Chaos Emerald pedestal placed in $1601 is selectable too.
      */
     public static boolean isRomSelectableState(S3kEmeraldProgression.EmeraldState state) {
         return state == S3kEmeraldProgression.EmeraldState.CHAOS
