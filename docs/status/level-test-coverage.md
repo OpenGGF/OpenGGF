@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+MHZ sanctuary handoff blocker (2026-11-05): the
+[MHZ1 boundary record](../architecture/validation/levels/s3k-mhz-act1.md#run-segment-sanctuary-camera-blocker-2026-11-05)
+separates fresh `Get_LevelSizeStart` camera `$0320` from final native `$0326`
+and results-backdrop `$0240`. One bounded ROM observer confirms the fresh
+overwrite and preserved checkpoint/reentry/fraction controls; the corrected
+final-camera discriminator remains red. No runtime patch or replay improvement
+is delivered, and the other ten MHZ run fronts and inherited route/configuration
+obligations remain open.
+
 DDZ recorded entry (2026-11-04): the [DDZ matrix](../architecture/validation/levels/s3k-ddz.md)
 now records a green strict Sonic+Tails Zone0c replay from the native entry camera
 long. This closes that recorded oracle's bootstrap gap; seeded cold-route,
