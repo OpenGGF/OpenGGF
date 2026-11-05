@@ -382,3 +382,23 @@ Live retained timer stays0; planner timer1 is an unadopted failed-call prefix.
 Raw failed partial96 is comparison only. Actual reserved-star publication over
 existing HUD bytes is next; later Powerup/current art, natural Path acquisition,
 complete Act2, native comparison and regional coverage remain open.
+
+## Powerup data and raw reserved storage — 5 November
+
+Complete original-MMD Powerup animation296 and raw mapping274 append source132
+to134; old readers35/PLCs19 and every previous descriptor remain. The actual
+nine-script/star factory retains the native interior empty mapping alias without
+eager strict visual decoding. A raw-backed `CdReservedObjectBank` facade borrows
+the actual1984-byte owner, creates no cleared bank/mirror/capture partition, and
+delegates each complete prebuilt value CAS once with successful full readback.
+Public values and same-value acknowledgments supply no native invocation authority.
+
+Initial145 has144passes/one stale unregistered-map assertion/zero errors/skips.
+The test-only correction acknowledges registered21D528 while preserving the opaque
+Path factory. Corrected data78 + legacyStars67 + reservedBank47 then pass192 cases
+across five classes with zero failures/errors/skips. Source is
+`975b2ee5c84b82ec43d8fd46601b60dea51c6f4438fe6b98597237bb5bce766b`,
+08:10:22.927583–08:10:28.016063Z. Exact identities/properties/source/five XML hashes
+checked; ten owned reports consumed. Independent combined static review found no
+actionable P1/P2. Actual Act2 private backing, primary patches, same-pass star
+Init and active/current-art qualification remain next; first12885 is unchanged.

@@ -66,7 +66,7 @@ BG_CAMERA_SECTS 344a 16 2f5b9f478f4f44230ea76cb1574eca41017e2b09e378ea1be295aaef
 
     @Test void profilePreservesTheOriginal28DescriptorsAndPinsItsHistoricalElevenTailSpans() throws Exception {
         var a = retail().assets(); var all = CdR12aProfile.Asset.values(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(132, all.length); assertEquals(11, rows.size()); var prefix = new StringBuilder();
+        assertEquals(134, all.length); assertEquals(11, rows.size()); var prefix = new StringBuilder();
         for (int i = 0; i < 17; i++) prefix.append(all[i].name()).append(' ').append(Integer.toHexString(all[i].fileOffset()))
                 .append(' ').append(all[i].length()).append('\n');
         assertEquals("1e096a08addb1fb4dbfefbfe2467149e5f0b6f7fe3b215263554876e94eba102", hash(prefix));

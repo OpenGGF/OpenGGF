@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdAssetBytes;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +22,10 @@ import java.util.Objects;
  * Images and snapshots are immutable values associated with an opaque owner token, not extra
  * live stores. All mutation is for that single runtime owner; compound publication uses the
  * full-bank value guard below, with no revision or native-execution authority implied.
+ *
+ * <p>The optional raw-backed facade owns no live bytes or Image array. Its actual external owner
+ * remains responsible for initialization, private operation/lifetime admission and capture/restore.
+ * Facade snapshots are derived immutable values and must not be registered as a second capture partition.
  */
 public final class CdReservedObjectBank {
     public static final int FIRST_WHOLE_INDEX = 1;
@@ -164,10 +170,26 @@ public final class CdReservedObjectBank {
         public List<Image> slots() { return slots; }
     }
 
+    /**
+     * Borrow the actual immutable31*64-byte owner value and delegate a complete prebuilt value CAS.
+     * The backing owns native invocation/source/phase/exact-once admission. A boolean/equal value
+     * never supplies those receipts. Reads must return exactly1984 bytes; no default or live seed exists.
+     * A false CAS publishes none of the requested value; a thrown failure may retain the backing's
+     * genuinely reached prefix. This facade never retries, rolls back or wraps that original failure.
+     */
+    public interface RawBacking {
+        CdAssetBytes read();
+        boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next);
+    }
+
+    private static final int RAW_BYTE_SIZE = RESERVED_COUNT * BYTE_SIZE;
     private final Object owner = new Object();
-    private final Image[] slots = new Image[RESERVED_COUNT];
+    private final Image[] slots;
+    private final RawBacking backing;
 
     private CdReservedObjectBank() {
+        slots = new Image[RESERVED_COUNT];
+        backing = null;
         for (int whole = FIRST_WHOLE_INDEX; whole < END_WHOLE_INDEX; whole++) {
             slots[reservedIndex(whole)] = new Image(owner, new Identity(whole), new byte[BYTE_SIZE]);
         }
@@ -181,15 +203,41 @@ public final class CdReservedObjectBank {
      */
     static CdReservedObjectBank clearedAfterLevelStart() { return new CdReservedObjectBank(); }
 
-    public Image state(int wholeIndex) { return slots[reservedIndex(wholeIndex)]; }
+    private CdReservedObjectBank(RawBacking backing) {
+        this.backing = Objects.requireNonNull(backing, "actual reserved raw backing");
+        slots = null;
+    }
+
+    /** No factory-time read, clear, import, image mirror or additional capture owner. */
+    public static CdReservedObjectBank backedBy(RawBacking backing) { return new CdReservedObjectBank(backing); }
+
+    public Image state(int wholeIndex) {
+        int index = reservedIndex(wholeIndex);
+        if (backing != null) return rawImage(readRaw(), index);
+        return slots[index];
+    }
 
     /** Publish one same-bank immutable image to its unchanged physical identity. */
     public void write(Image image) {
         validateImage(image);
+        if (backing != null) {
+            var expected = readRaw();
+            byte[] bytes = expected.copy();
+            System.arraycopy(image.bytes, 0, bytes, reservedIndex(image.identity.wholeIndex()) * BYTE_SIZE, BYTE_SIZE);
+            var next = CdAssetBytes.copyOf(bytes);
+            if (!compareRaw(expected, next)) throw new IllegalStateException("Actual reserved raw owner rejected write CAS");
+            return;
+        }
         slots[reservedIndex(image.identity.wholeIndex())] = image;
     }
 
     public Snapshot capture() {
+        if (backing != null) {
+            var raw = readRaw();
+            var images = new ArrayList<Image>(RESERVED_COUNT);
+            for (int index = 0; index < RESERVED_COUNT; index++) images.add(rawImage(raw, index));
+            return new Snapshot(owner, images);
+        }
         var images = new ArrayList<Image>(RESERVED_COUNT);
         for (Image image : slots) images.add(image);
         return new Snapshot(owner, images);
@@ -215,6 +263,12 @@ public final class CdReservedObjectBank {
 
     public void restore(Snapshot snapshot) {
         validateRestore(snapshot);
+        if (backing != null) {
+            var expected = readRaw();
+            var next = snapshotBytes(snapshot);
+            if (!compareRaw(expected, next)) throw new IllegalStateException("Actual reserved raw owner rejected restore CAS");
+            return;
+        }
         for (int i = 0; i < RESERVED_COUNT; i++) slots[i] = snapshot.slots.get(i);
     }
 
@@ -235,10 +289,46 @@ public final class CdReservedObjectBank {
             if (seen[index]) throw new IllegalArgumentException("Duplicate CD reserved physical index");
             seen[index] = true;
         }
+        if (backing != null) {
+            var actual = readRaw();
+            if (!Arrays.equals(actual.copy(), snapshotBytes(expected).copy())) return false;
+            byte[] bytes = actual.copy();
+            for (Image image : replacements) {
+                System.arraycopy(image.bytes, 0, bytes, reservedIndex(image.identity.wholeIndex()) * BYTE_SIZE, BYTE_SIZE);
+            }
+            return compareRaw(actual, CdAssetBytes.copyOf(bytes));
+        }
         for (int i = 0; i < RESERVED_COUNT; i++) {
             if (!slots[i].equals(expected.slots.get(i))) return false;
         }
         for (Image image : replacements) slots[reservedIndex(image.identity.wholeIndex())] = image;
+        return true;
+    }
+
+    private CdAssetBytes readRaw() {
+        var raw = Objects.requireNonNull(backing.read(), "actual reserved raw value");
+        if (raw.length() != RAW_BYTE_SIZE) throw new IllegalArgumentException("Actual reserved raw value must contain exactly1984 bytes");
+        return raw;
+    }
+
+    private Image rawImage(CdAssetBytes raw, int index) {
+        return new Image(owner, new Identity(index + FIRST_WHOLE_INDEX), raw.slice(index * BYTE_SIZE, BYTE_SIZE).copy());
+    }
+
+    /** Caller has already validated every same-owner image before constructing the complete value. */
+    private static CdAssetBytes snapshotBytes(Snapshot snapshot) {
+        byte[] bytes = new byte[RAW_BYTE_SIZE];
+        for (int index = 0; index < RESERVED_COUNT; index++) {
+            System.arraycopy(snapshot.slots.get(index).bytes, 0, bytes, index * BYTE_SIZE, BYTE_SIZE);
+        }
+        return CdAssetBytes.copyOf(bytes);
+    }
+
+    /** Successful-return value verification only; same-value/no-op native receipts remain with the backing. */
+    private boolean compareRaw(CdAssetBytes expected, CdAssetBytes next) {
+        if (!backing.compareAndSet(expected, next)) return false;
+        if (!Arrays.equals(readRaw().copy(), next.copy()))
+            throw new IllegalStateException("Actual reserved raw owner did not adopt the complete requested value");
         return true;
     }
 

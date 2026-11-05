@@ -226,6 +226,10 @@ Unreleased. The earlier development themes remain in
   bridge without admitting a Powerup art owner. Native Init/Main, prepared player
   stores and ordered FM retain private invocation receipts and full-owner checks;
   controller traversal now reaches the next reserved time-warp-star dependency.
+  Authenticated Powerup scripts and overlapping raw mappings now support the
+  existing star kernel. A raw-backed reserved-slot facade borrows the existing
+  captured storage without clearing, mirroring or creating another state owner;
+  its live Act2 dispatch and later art service remain separate dependencies.
   Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower

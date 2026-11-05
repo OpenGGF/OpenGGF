@@ -1,5 +1,11 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdNativeFile;
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStagePayload;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 
@@ -34,6 +40,18 @@ public final class CdTimeStars {
             Objects.requireNonNull(animations, "animations");
             if (animations.tableOffset() != 0 || animations.scriptCount() != 9)
                 throw new IllegalArgumentException("Powerup requires its nine-entry animation directory at base zero");
+        }
+        /** Actual original USA R12A views only; no reserved-bank, art or World authority.
+         * Native Powerup Init62A4 stores21D528; Shield6324/ShowStars63C8 select21D400 (N1ecc5f3a).
+         * Raw mapping root0 lies inside frame1; this bridge never performs a disjoint visual decode. */
+        public static Assets fromAct2Assets(CdR12aObjectAssets objects) {
+            Objects.requireNonNull(objects, "authenticated object assets");
+            var identity=Objects.requireNonNull(objects.identity(), "identity");
+            if(identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12A
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !CdStagePayload.R12A.stage().equals(identity.stage()))
+                throw new IllegalArgumentException("TimeStars requires the authenticated original USA R12A source");
+            return new Assets(new CdObjectAnimation.AnimationTable(objects.view(CdR12aProfile.Asset.ANI_POWERUP),0,9),
+                    objects.profile().range(CdR12aProfile.Asset.MAP_SPR_POWERUP).nativeAddress());
         }
         public static Assets fromObjectAssets(CdR11aObjectAssets objects) {
             Objects.requireNonNull(objects, "authenticated object assets");

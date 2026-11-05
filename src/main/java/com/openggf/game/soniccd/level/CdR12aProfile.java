@@ -131,7 +131,9 @@ public final class CdR12aProfile {
         ANI_TUNNEL_DOOR(0x1D6B6, 14), MAP_SPR_TUNNEL_DOOR(0x1D6C4, 28),
         // Tunnel Path: actual R12A PC operands and raw four-byte Init immediate; no Powerup map/art owner.
         TUNNEL_PATH_GROUND_SPEEDS(0x8BB8, 8), TUNNEL_PATH_COORDINATES(0x8BC0, 284),
-        TUNNEL_PATH_MAPPING_ADDRESS(0x8994, 4);
+        TUNNEL_PATH_MAPPING_ADDRESS(0x8994, 4),
+        // ObjPowerup's actual R12A Init/Shield/ShowStars operands; raw roots overlap, so no eager visual decode.
+        ANI_POWERUP(0x1D400, 296), MAP_SPR_POWERUP(0x1D528, 274);
         private final int offset, length;
         Asset(int offset, int length) { this.offset = offset; this.length = length; }
         public int fileOffset() { return offset; }

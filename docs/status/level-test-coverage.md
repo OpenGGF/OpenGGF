@@ -287,6 +287,14 @@ is not adopted by the retained Frame(timer0). Existing raw HUD-slot ownership is
 the next bridge. No green diagnostic observer, native/regional or whole-act claim.
 The first-act matrix remains partial as well.
 
+Later Powerup data134 and raw-backed reserved storage qualify192 focused cases
+across five classes, zero failures/errors/skips. The original145 selection's one
+stale unregistered-map test is corrected explicitly; no production algorithm is
+tuned. The facade borrows existing31-slot bytes, never initializes a second bank
+or capture partition. Same-value/native receipt limits remain with the private
+World bridge. This prerequisite does not advance12884/first12885 or certify star
+pixels, current-art service, complete Act2 or regional parity.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

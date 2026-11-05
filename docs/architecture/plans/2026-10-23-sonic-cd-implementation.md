@@ -1,5 +1,45 @@
 # Implement Sonic CD with complete regional parity
 
+## 5 November 2026 — original Powerup data and reserved storage qualified
+
+Source134 appends only the complete original-MMD Powerup animation296 and raw
+mapping274 views. All previous132 descriptors,35 readers,19 PLC lists and selector
+contracts remain. `CdTimeStars.Assets.fromAct2Assets` borrows the actual nine-script
+table and raw21D528 pointer. The thirteen-root table retains its native interior
+empty-root alias; no strict disjoint visual decode or new art owner is introduced.
+
+`CdReservedObjectBank.backedBy(RawBacking)` adds a storage facade for the existing
+31×64-byte owner. Construction reads nothing, keeps no live Image array or byte
+mirror, and adds no capture registration. Snapshots/images are immutable derived
+values with the original token rules. Every mutation prepares the full1984-byte
+replacement and delegates one value CAS; successful readback checks all nonwrites.
+Same-value acknowledgment and ABA remain value-level limits, not native authority.
+The private Act2 bridge must still supply producer, lifetime and exact-once checks.
+The old owning-bank path, Image/Snapshot contracts and existing consumers remain.
+
+The initial145 selection had144passes/one obsolete test assertion/zero errors or
+skips: the old Path factory test assumed its mapping address was unregistered.
+Powerup metadata now registers that exact address. Root changes only the test
+name/assertion/comment, retaining the factory's opaque raw-LONG behavior and all
+production algorithms. All five new metadata cases and67 legacy-star cases passed
+in that original run; it is not relabelled green.
+
+The corrected data78, legacyStars67 and reservedBank47 selection passes192 cases
+in five classes, zero failures/errors/skips. Source-before/after is
+`975b2ee5c84b82ec43d8fd46601b60dea51c6f4438fe6b98597237bb5bce766b`,
+08:10:22.927583–08:10:28.016063Z, no admission wait, normal precompile101s.
+All192 unique identities, class counts, Java25/EGL/media/opt-in properties and
+five fresh XML hashes were checked; only ten owned reports were consumed.
+Independent seven-source static review found no actionable P1/P2, with all pins
+unchanged. This qualifies data and storage semantics, not actual12885, active
+star pixels, Powerup CPU/current service, save/restart or regional parity.
+
+Next: borrow the actual post-spawn reserved snapshot during the real primary
+call, fold its completed patches into existing Values, then visit stars12..15
+in the same physical pass. The retained Frame's failed-call atomicity remains
+explicit; no timer prefix is applied from an exception or successful helper replay.
+Main stays untouched; all source remains private and no remote operation occurs.
+
 ## 5 November 2026 — actual Tunnel Path and positive12884
 
 Cached Act2 ID07 now uses the authenticated source132 Assets and the existing

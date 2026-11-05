@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.level.CdAssetBytes;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -473,6 +475,379 @@ class TestCdReservedObjectBank {
         }
         assertEquals((Byte.toUnsignedInt(pattern(1)[10]) << 8) | Byte.toUnsignedInt(pattern(1)[11]),
                 bank.state(1).word(X_FRACTION));
+    }
+
+    // Raw-backed facade contracts. Constructed unit values below are not a live World seed.
+    @Test
+    void backedFactoryDoesNotReadOrClearAndRetainsNoLiveImageOrByteMirror() throws Exception {
+        var store = new RawStore(rawPattern());
+        var bank = CdReservedObjectBank.backedBy(store);
+        assertEquals(0, store.reads); assertEquals(0, store.attempts);
+        var slots = CdReservedObjectBank.class.getDeclaredField("slots"); slots.setAccessible(true);
+        assertNull(slots.get(bank), "Facade must not allocate a second live Image array");
+        for (var field : CdReservedObjectBank.class.getDeclaredFields()) {
+            assertNotEquals(CdAssetBytes.class, field.getType(), "No persistent raw-byte mirror");
+            assertNotEquals(CdReservedObjectBank.Snapshot.class, field.getType(), "No retained/captured shadow");
+        }
+        assertThrows(NullPointerException.class, () -> CdReservedObjectBank.backedBy(null));
+        assertEquals(0, store.reads); assertEquals(0, store.attempts);
+    }
+
+    @Test
+    void facadeReadsActualDirtyFullImagesInPhysicalOrderWithoutZeroDefaults() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store);
+        var cut = bank.capture(); assertEquals(1, store.reads); assertEquals(0, store.attempts);
+        for (int whole = 1; whole <= 31; whole++) {
+            var image = cut.slots().get(whole - 1);
+            assertEquals(whole, image.identity().wholeIndex());
+            assertEquals(0xFFD000 + whole * 64, image.identity().nativeAddress24());
+            assertArrayEquals(pattern(whole), image.copyBytes());
+            assertEquals(image, bank.state(whole));
+        }
+        byte[] changed = store.value.copy(); changed[(31 - 1) * 64 + 63] ^= 1;
+        store.value = CdAssetBytes.copyOf(changed);
+        assertEquals(Byte.toUnsignedInt(changed[1983]), bank.state(31).byteAt(63));
+        assertArrayEquals(pattern(31), cut.slots().getLast().copyBytes(), "Earlier derived cut stays immutable");
+    }
+
+    @Test
+    void facadeCaptureBorrowsExactlyOneRawValueForAllThirtyOneImages() {
+        var first = CdAssetBytes.copyOf(rawPattern()); var secondBytes = rawPattern(); Arrays.fill(secondBytes, (byte) 0xD7);
+        var second = CdAssetBytes.copyOf(secondBytes);
+        var store = new RawStore(rawPattern()) {
+            @Override public CdAssetBytes read() { reads++; return reads == 1 ? first : second; }
+        };
+        var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); assertEquals(1, store.reads);
+        for (int whole = 1; whole <= 31; whole++) assertArrayEquals(pattern(whole), cut.slots().get(whole - 1).copyBytes());
+        assertEquals(0xD7, bank.state(1).byteAt(0)); assertEquals(2, store.reads);
+    }
+
+    @Test
+    void facadeSingleWriteDelegatesOnePrebuiltFullValueAndPreservesEveryNonwrite() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store);
+        var image = bank.state(12).moveByte(ID, 3).moveByte(ANIMATION, 5); var original = store.value;
+        store.reads = 0; bank.write(image);
+        assertEquals(1, store.attempts); assertEquals(2, store.reads, "One current borrow then successful readback");
+        assertSame(original, store.expected); assertSame(store.next, store.value); assertEquals(1984, store.next.length());
+        byte[] expected = rawPattern(); expected[11 * 64] = 3; expected[11 * 64 + 0x1C] = 5;
+        assertArrayEquals(expected, store.value.copy()); assertArrayEquals(rawPattern(), original.copy());
+        assertEquals(image, bank.state(12));
+    }
+
+    @Test
+    void facadeSameValueWriteAndEmptyCasStillDelegateToActualOwner() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store);
+        var unchanged = bank.state(1); bank.write(unchanged);
+        assertEquals(1, store.attempts); assertArrayEquals(rawPattern(), store.value.copy());
+        var cut = bank.capture(); assertTrue(bank.compareAndSet(cut, List.of()));
+        assertEquals(2, store.attempts); assertArrayEquals(rawPattern(), store.value.copy());
+        assertTrue(bank.compareAndSet(cut, List.of(unchanged.withBytes(unchanged.copyBytes()))));
+        assertEquals(3, store.attempts);
+    }
+
+    @Test
+    void facadeCasAcceptsUnorderedUniqueImagesAsOneCompletePublication() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture();
+        var last = bank.state(31).moveWordAt(62, 0xBEEF); var first = bank.state(1).moveLongAt(0x3C, 0x89ABCDEF);
+        var middle = bank.state(15).moveByte(ANIMATION, 8); var supplied = new ArrayList<>(List.of(last, first, middle));
+        var raw = store.value; assertTrue(bank.compareAndSet(cut, supplied)); supplied.clear();
+        assertEquals(1, store.attempts); assertSame(raw, store.expected);
+        for (int whole = 1; whole <= 31; whole++) {
+            var expected = whole == 1 ? first : whole == 15 ? middle : whole == 31 ? last : cut.slots().get(whole - 1);
+            assertEquals(expected, bank.state(whole));
+        }
+        assertArrayEquals(rawPattern(), raw.copy());
+    }
+
+    @Test
+    void facadeCasChecksSelectedAndUnselectedBytesEvenForEmptyReplacements() {
+        for (int changedWhole : new int[]{1, 31}) {
+            var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture();
+            var selected = cut.slots().getFirst().moveByte(ID, 3); byte[] changed = store.value.copy(); changed[(changedWhole - 1) * 64 + 63] ^= 1;
+            store.value = CdAssetBytes.copyOf(changed); var actual = store.value;
+            assertFalse(bank.compareAndSet(cut, List.of(selected))); assertFalse(bank.compareAndSet(cut, List.of()));
+            assertSame(actual, store.value); assertEquals(0, store.attempts);
+        }
+    }
+
+    @Test
+    void facadeInvalidReplacementPreflightStillWinsBeforeAStaleCompareOrBackingRead() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture();
+        var image = bank.state(12).moveByte(ID, 3); var foreign = CdReservedObjectBank.backedBy(store).state(15);
+        byte[] changed = store.value.copy(); changed[1983] ^= 1; store.value = CdAssetBytes.copyOf(changed); store.reads = 0;
+        assertThrows(IllegalArgumentException.class, () -> bank.compareAndSet(cut, List.of(image, image)));
+        assertThrows(IllegalArgumentException.class, () -> bank.compareAndSet(cut, List.of(image, foreign)));
+        assertThrows(NullPointerException.class, () -> bank.compareAndSet(cut, Arrays.asList(image, null)));
+        assertThrows(NullPointerException.class, () -> bank.compareAndSet(cut, null));
+        assertEquals(0, store.reads); assertEquals(0, store.attempts); assertArrayEquals(changed, store.value.copy());
+    }
+
+    @Test
+    void facadeTokensRemainDistinctEvenForTheIdenticalActualBacking() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var other = CdReservedObjectBank.backedBy(store);
+        var cut = bank.capture(); var foreignCut = other.capture(); var foreign = other.state(1);
+        assertArrayEquals(bank.state(1).copyBytes(), foreign.copyBytes()); assertNotEquals(bank.state(1), foreign);
+        var owning = CdReservedObjectBank.clearedAfterLevelStart(); var owningImage = owning.state(1).withBytes(pattern(1));
+        store.reads = 0;
+        assertThrows(IllegalArgumentException.class, () -> bank.write(foreign));
+        assertThrows(IllegalArgumentException.class, () -> bank.write(owningImage));
+        assertThrows(IllegalArgumentException.class, () -> bank.validateRestore(foreignCut));
+        assertThrows(IllegalArgumentException.class, () -> bank.restore(foreignCut));
+        assertThrows(IllegalArgumentException.class, () -> bank.compareAndSet(foreignCut, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> owning.restore(cut));
+        assertEquals(0, store.reads); assertEquals(0, store.attempts);
+    }
+
+    @Test
+    void malformedFacadeSnapshotsRejectCountOrderDuplicatesAndLateForeignOwnerBeforeRead()
+            throws ReflectiveOperationException {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture();
+        var foreign = CdReservedObjectBank.backedBy(store); var foreignLast = foreign.state(31);
+        var shortList = new ArrayList<>(cut.slots()); shortList.removeLast();
+        var longList = new ArrayList<>(cut.slots()); longList.add(cut.slots().getLast());
+        var swapped = new ArrayList<>(cut.slots()); Collections.swap(swapped, 29, 30);
+        var duplicate = new ArrayList<>(cut.slots()); duplicate.set(30, cut.slots().get(29));
+        var mixed = new ArrayList<>(cut.slots()); mixed.set(30, foreignLast); store.reads = 0;
+        for (var list : List.of(shortList, longList, swapped, duplicate, mixed)) {
+            var malformed = malformedSnapshot(cut, list);
+            assertThrows(IllegalArgumentException.class, () -> bank.validateRestore(malformed));
+            assertThrows(IllegalArgumentException.class, () -> bank.restore(malformed));
+            assertThrows(IllegalArgumentException.class, () -> bank.compareAndSet(malformed, List.of()));
+        }
+        assertEquals(0, store.reads); assertEquals(0, store.attempts); assertArrayEquals(rawPattern(), store.value.copy());
+    }
+
+    @Test
+    void facadeNullArgumentsAndBoundedIdentitiesRejectBeforeBackingAccess() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store);
+        for (int whole : new int[]{Integer.MIN_VALUE, -1, 0, 32, 127, Integer.MAX_VALUE})
+            assertThrows(IndexOutOfBoundsException.class, () -> bank.state(whole));
+        assertThrows(NullPointerException.class, () -> bank.write(null));
+        assertThrows(NullPointerException.class, () -> bank.validateRestore(null));
+        assertThrows(NullPointerException.class, () -> bank.restore(null));
+        assertThrows(NullPointerException.class, () -> bank.compareAndSet(null, List.of()));
+        assertEquals(0, store.reads); assertEquals(0, store.attempts);
+        var image = bank.state(31); store.reads = 0;
+        assertThrows(IndexOutOfBoundsException.class, () -> bank.write(image.moveByteAt(64, 1)));
+        assertThrows(IndexOutOfBoundsException.class, () -> bank.write(image.moveWordAt(63, 1)));
+        assertThrows(IndexOutOfBoundsException.class, () -> bank.write(image.moveLongAt(61, 1)));
+        assertEquals(0, store.reads); assertEquals(0, store.attempts);
+    }
+
+    @Test
+    void facadeReadsRequireExactlyTheReachedRaw1984BytesWithoutFallbackOrCaching() {
+        for (int length : new int[]{0, 64, 1983, 1985, 2048}) {
+            var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store);
+            var cut = bank.capture(); var image = cut.slots().getFirst(); store.value = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class, () -> bank.state(1));
+            assertThrows(IllegalArgumentException.class, bank::capture);
+            assertThrows(IllegalArgumentException.class, () -> bank.write(image));
+            assertThrows(IllegalArgumentException.class, () -> bank.restore(cut));
+            assertThrows(IllegalArgumentException.class, () -> bank.compareAndSet(cut, List.of()));
+            assertEquals(0, store.attempts); assertEquals(length, store.value.length());
+        }
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); store.value = null;
+        assertThrows(NullPointerException.class, bank::capture); assertThrows(NullPointerException.class, () -> bank.state(1));
+        assertThrows(NullPointerException.class, () -> bank.write(cut.slots().getFirst()));
+        assertThrows(NullPointerException.class, () -> bank.restore(cut)); assertThrows(NullPointerException.class, () -> bank.compareAndSet(cut, List.of()));
+        assertEquals(0, store.attempts);
+    }
+
+    @Test
+    void facadeValidateRestoreRemainsPureAndAcceptsEarlierSameOwnerFullValues() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture();
+        byte[] changed = store.value.copy(); changed[0] ^= 1; store.value = CdAssetBytes.copyOf(changed); var actual = store.value; store.reads = 0;
+        bank.validateRestore(cut); assertEquals(0, store.reads); assertEquals(0, store.attempts); assertSame(actual, store.value);
+        store.value = CdAssetBytes.copyOf(rawPattern());
+        assertTrue(bank.compareAndSet(cut, List.of())); assertEquals(cut.slots(), bank.capture().slots());
+    }
+
+    @Test
+    void facadeRestoreDelegatesOneFullValueCasAgainstTheActualCurrentReference() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var saved = bank.capture();
+        byte[] changed = store.value.copy(); Arrays.fill(changed, (byte) 0x73); store.value = CdAssetBytes.copyOf(changed); var current = store.value;
+        store.reads = 0; bank.restore(saved);
+        assertEquals(1, store.attempts); assertEquals(2, store.reads); assertSame(current, store.expected);
+        assertArrayEquals(rawPattern(), store.next.copy()); assertSame(store.next, store.value); assertArrayEquals(changed, current.copy());
+        assertEquals(saved.slots(), bank.capture().slots());
+    }
+
+    @Test
+    void facadeBackingCanDeclineCasWithoutRetryAndVoidWritesRejectThatDecline() {
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); var image = cut.slots().getFirst().moveByte(ID, 3);
+        store.decline = true; var original = store.value;
+        assertFalse(bank.compareAndSet(cut, List.of(image))); assertEquals(1, store.attempts);
+        assertThrows(IllegalStateException.class, () -> bank.write(image)); assertEquals(2, store.attempts);
+        assertThrows(IllegalStateException.class, () -> bank.restore(cut)); assertEquals(3, store.attempts);
+        assertSame(original, store.value); assertArrayEquals(rawPattern(), store.value.copy());
+    }
+
+    @Test
+    void facadeCasRacePreservesTheActualOwnerChangeAndDoesNotRetryOrRollBack() {
+        var store = new RawStore(rawPattern()) {
+            @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) {
+                byte[] changed = value.copy(); changed[1983] ^= 1; value = CdAssetBytes.copyOf(changed);
+                return super.compareAndSet(expected, next);
+            }
+        };
+        var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); var image = cut.slots().getFirst().moveByte(ID, 3);
+        assertFalse(bank.compareAndSet(cut, List.of(image))); assertEquals(1, store.attempts);
+        byte[] actual = rawPattern(); actual[1983] ^= 1; assertArrayEquals(actual, store.value.copy());
+        assertArrayEquals(pattern(1), bank.state(1).copyBytes());
+    }
+
+    @Test
+    void facadeReadFaultPropagatesTheIdenticalExceptionWithoutPublishingOrUsingACachedCut() {
+        var sentinel = new IllegalStateException("raw-read-fault");
+        var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); var image = cut.slots().getFirst();
+        store.readFailure = sentinel;
+        assertSame(sentinel, assertThrows(IllegalStateException.class, bank::capture));
+        assertSame(sentinel, assertThrows(IllegalStateException.class, () -> bank.state(1)));
+        assertSame(sentinel, assertThrows(IllegalStateException.class, () -> bank.write(image)));
+        assertSame(sentinel, assertThrows(IllegalStateException.class, () -> bank.restore(cut)));
+        assertSame(sentinel, assertThrows(IllegalStateException.class, () -> bank.compareAndSet(cut, List.of())));
+        assertEquals(0, store.attempts); assertArrayEquals(rawPattern(), store.value.copy());
+    }
+
+    @Test
+    void facadeCasFaultBeforePublicationPropagatesIdenticalFailureAcrossAllMutationApis() {
+        for (int operation = 0; operation < 3; operation++) {
+            var sentinel = new IllegalStateException("before-raw-cas-" + operation);
+            var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var saved = bank.capture(); var image = saved.slots().getFirst().moveByte(ID, 3);
+            if (operation == 2) { byte[] changed = store.value.copy(); changed[1983] ^= 1; store.value = CdAssetBytes.copyOf(changed); }
+            var actual = store.value; store.beforeFailure = sentinel; int selected = operation;
+            assertSame(sentinel, assertThrows(IllegalStateException.class, () -> mutateRaw(bank, saved, image, selected)));
+            assertSame(actual, store.value); assertEquals(1, store.attempts); assertEquals(0, sentinel.getSuppressed().length);
+        }
+    }
+
+    @Test
+    void facadeCasFaultAfterRealPublicationKeepsExactPrefixAndOriginalExceptionAcrossAllMutationApis() {
+        for (int operation = 0; operation < 3; operation++) {
+            var sentinel = new IllegalStateException("after-raw-cas-" + operation);
+            var store = new RawStore(rawPattern()); var bank = CdReservedObjectBank.backedBy(store); var saved = bank.capture(); var image = saved.slots().getFirst().moveByte(ID, 3);
+            if (operation == 2) { byte[] changed = store.value.copy(); changed[1983] ^= 1; store.value = CdAssetBytes.copyOf(changed); }
+            store.afterFailure = sentinel; int selected = operation;
+            assertSame(sentinel, assertThrows(IllegalStateException.class, () -> mutateRaw(bank, saved, image, selected)));
+            assertSame(store.next, store.value); assertEquals(1, store.attempts); assertEquals(0, sentinel.getSuppressed().length);
+            byte[] expected = rawPattern(); if (operation != 2) expected[0] = 3;
+            assertArrayEquals(expected, store.value.copy());
+        }
+    }
+
+    @Test
+    void facadeReadbackFaultKeepsTheActualPublishedPrefixAndIdenticalReadException() {
+        var sentinel = new IllegalStateException("raw-after-cas-read-fault");
+        var store = new RawStore(rawPattern()) {
+            @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) {
+                boolean accepted = super.compareAndSet(expected, next); readFailure = sentinel; return accepted;
+            }
+        };
+        var bank = CdReservedObjectBank.backedBy(store); var image = bank.state(1).moveByte(ID, 3);
+        assertSame(sentinel, assertThrows(IllegalStateException.class, () -> bank.write(image)));
+        assertSame(store.next, store.value); assertEquals(3, store.value.unsignedByte(0)); assertEquals(1, store.attempts);
+    }
+
+    @Test
+    void facadeRejectsClaimedSuccessWithoutTheRequestedChangedOutput() {
+        var store = new RawStore(rawPattern()) {
+            @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) { attempts++; return true; }
+        };
+        var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); var image = cut.slots().getFirst().moveByte(ID, 3);
+        assertThrows(IllegalStateException.class, () -> bank.write(image));
+        assertThrows(IllegalStateException.class, () -> bank.compareAndSet(cut, List.of(image)));
+        assertEquals(2, store.attempts); assertArrayEquals(rawPattern(), store.value.copy());
+        byte[] changed = rawPattern(); changed[1983] ^= 1; store.value = CdAssetBytes.copyOf(changed);
+        assertThrows(IllegalStateException.class, () -> bank.restore(cut)); assertArrayEquals(changed, store.value.copy());
+    }
+
+    @Test
+    void facadeSuccessfulReadbackChecksUnselectedBytesAndNeverRollsBackWrongBackingOutput() {
+        var store = new RawStore(rawPattern()) {
+            @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) {
+                boolean accepted = super.compareAndSet(expected, next); byte[] wrong = value.copy(); wrong[1983] ^= 1; value = CdAssetBytes.copyOf(wrong); return accepted;
+            }
+        };
+        var bank = CdReservedObjectBank.backedBy(store); var image = bank.state(1).moveByte(ID, 3);
+        assertThrows(IllegalStateException.class, () -> bank.write(image)); assertEquals(1, store.attempts);
+        byte[] actual = rawPattern(); actual[0] = 3; actual[1983] ^= 1; assertArrayEquals(actual, store.value.copy());
+    }
+
+    @Test
+    void facadeEqualValueBackingAcknowledgmentRemainsValueCasAndConfersNoNativeReceipt() {
+        var store = new RawStore(rawPattern()) {
+            @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) { attempts++; return true; }
+        };
+        var bank = CdReservedObjectBank.backedBy(store); var cut = bank.capture(); var actual = store.value;
+        assertTrue(bank.compareAndSet(cut, List.of())); assertSame(actual, store.value); assertEquals(1, store.attempts);
+        // These equal raw bytes prove only this value predicate. Actual native exact-once receipts belong to World.
+        bank.write(cut.slots().getFirst()); assertSame(actual, store.value); assertEquals(2, store.attempts);
+    }
+
+    @Test
+    void facadeImagesPayloadsAndEarlierCapturesRemainImmutableAfterExternalOwnerChanges() {
+        var supplied = rawPattern(); var store = new RawStore(supplied); Arrays.fill(supplied, (byte) 0xFF);
+        var bank = CdReservedObjectBank.backedBy(store); var before = bank.capture(); var buffer = pattern(12);
+        var image = before.slots().get(11).withBytes(buffer); Arrays.fill(buffer, (byte) 0); bank.write(image);
+        byte[] copy = image.copyBytes(); Arrays.fill(copy, (byte) 0xFF);
+        byte[] payloadCopy = store.next.copy(); Arrays.fill(payloadCopy, (byte) 0xFF);
+        assertArrayEquals(pattern(12), bank.state(12).copyBytes()); assertArrayEquals(pattern(12), before.slots().get(11).copyBytes());
+        assertThrows(UnsupportedOperationException.class, () -> before.slots().clear());
+        byte[] changed = store.value.copy(); changed[11 * 64 + 63] ^= 1; store.value = CdAssetBytes.copyOf(changed);
+        assertArrayEquals(pattern(12), image.copyBytes()); assertArrayEquals(pattern(12), before.slots().get(11).copyBytes());
+    }
+
+    @Test
+    void facadeDoesNotWrapBackingErrorsBeforeOrAfterActualPublication() {
+        for (boolean after : new boolean[]{false, true}) {
+            var sentinel = new AssertionError("raw-cas-error-" + after);
+            var store = new RawStore(rawPattern()) {
+                @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) {
+                    if (after) super.compareAndSet(expected, next); else attempts++;
+                    throw sentinel;
+                }
+            };
+            var bank = CdReservedObjectBank.backedBy(store); var image = bank.state(1).moveByte(ID, 3);
+            assertSame(sentinel, assertThrows(AssertionError.class, () -> bank.write(image))); assertEquals(1, store.attempts);
+            byte[] expected = rawPattern(); if (after) expected[0] = 3;
+            assertArrayEquals(expected, store.value.copy()); assertEquals(0, sentinel.getSuppressed().length);
+        }
+    }
+
+    private static void mutateRaw(CdReservedObjectBank bank, CdReservedObjectBank.Snapshot saved,
+                                  CdReservedObjectBank.Image image, int operation) {
+        switch (operation) {
+            case 0 -> bank.write(image);
+            case 1 -> assertTrue(bank.compareAndSet(saved, List.of(image)));
+            case 2 -> bank.restore(saved);
+            default -> throw new AssertionError("Unknown unit mutation");
+        }
+    }
+
+    private static byte[] rawPattern() {
+        byte[] raw = new byte[31 * 64];
+        for (int whole = 1; whole <= 31; whole++) System.arraycopy(pattern(whole), 0, raw, (whole - 1) * 64, 64);
+        return raw;
+    }
+
+    /** Constructed unit storage only: this is the actual raw owner of these test values, never a World mirror. */
+    private static class RawStore implements CdReservedObjectBank.RawBacking {
+        CdAssetBytes value, expected, next;
+        int reads, attempts;
+        boolean decline;
+        RuntimeException readFailure, beforeFailure, afterFailure;
+        RawStore(byte[] bytes) { value = CdAssetBytes.copyOf(bytes); }
+        @Override public CdAssetBytes read() {
+            reads++; if (readFailure != null) throw readFailure; return value;
+        }
+        @Override public boolean compareAndSet(CdAssetBytes expected, CdAssetBytes next) {
+            attempts++; this.expected = expected; this.next = next;
+            if (beforeFailure != null) throw beforeFailure;
+            if (decline || !Arrays.equals(value.copy(), expected.copy())) return false;
+            value = next;
+            if (afterFailure != null) throw afterFailure;
+            return true;
+        }
     }
 
     private static CdReservedObjectBank patternedBank() {
