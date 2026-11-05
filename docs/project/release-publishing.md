@@ -12,7 +12,7 @@ commit being investigated when diagnosing a run.
 | Push to `master` | Publishes after required builds succeed, provided the version tag is new. |
 | Pull request (any base, non-draft) | Release workflow does not run. CI runs branch policy, the bounded smoke suite and guards, without native packaging. |
 | Manual Release dispatch | Public release preparation: full-suite validation/build run only; does not publish, even on `master`. |
-| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke only. |
+| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke and branch policy. |
 | Re-run a master push run | Can publish if the previous attempt did not create its version tag; inspect partial results first. |
 
 The publish condition requires a non-deletion `push` event on

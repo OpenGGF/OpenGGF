@@ -19,6 +19,15 @@ $script:PublishedReleaseTrailerBaseline = "37aeb6b84d6634457616c942187cdd40dd93c
 # Frozen next history imported by the shared-line merge; never a moving branch ref.
 # Current API pins are verified separately; resource history is not grandfathered.
 $script:SharedDevelopmentTrailerBaseline = "f514a5f13d353550f8421462c773f17f90a04100"
+# Reviewed published commits admitted by exact SHA to the trailer and Mod API
+# coupling replay only; resource audits and current pin checks still apply.
+# Both reached develop while CI did not validate integration pushes, and
+# history is not rewritten (approved 2026-11-05, docs/project/release-rollover.md):
+#   aafbb4ba7 (2026-11-02, SOZ2 entry path-trigger fix) has no documentation
+#     trailers; its changelog entry landed in 2c87d32a6.
+#   306b960af (2026-10-22, batched sprite presentation) changed the @ModApi
+#     surface without the candidate pin; the current pin covers that surface.
+$script:ReviewedTrailerExemptCommits = @("aafbb4ba77d87b91050a3ab982dbf2398038bf92", "306b960af2be7cea46dc8d1358d6c4507962fa40")
 $script:ReleaseRangeBase = ""
 $script:ResourcePolicyCutover = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0"
 $script:RomLikeDenylistExtensions = @(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")
@@ -1431,6 +1440,7 @@ function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
     }
     foreach ($commit in $commits) {
         if ($reviewedTrailerCommits.Contains($commit)) { continue }
+        if ($script:ReviewedTrailerExemptCommits -ccontains $commit) { continue }
         $parentLine = Invoke-GitText @("rev-list", "--parents", "-n", "1", $commit)
         $parentFields = @($parentLine -split '\s+')
         if ($parentFields.Count -gt 2) {
