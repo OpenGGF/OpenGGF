@@ -83,7 +83,10 @@ Unreleased. The earlier development themes remain in
   start-table segments use the post-spawn camera derivation (including the
   Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
   its native start history. The three S3K campaign chains also record their
-  movie endpoint. Fixtures without the field keep their previous setup.
+  movie endpoint. Standalone LRZ/DEZ continuation segments retain their separately
+  recorded Act3 counter bank until the destination screen event consumes it;
+  fresh, Saved and Saved2 entries remain distinct. Fixtures without the entry
+  observation keep their previous setup.
 
 - The Lava Reef boss act (`$1600`) starts with the native falling intro on a
   fresh entry, for every character.

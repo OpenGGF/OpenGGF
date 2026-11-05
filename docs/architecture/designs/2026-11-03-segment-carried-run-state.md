@@ -253,45 +253,65 @@ return. Policy B can establish the engine's return state before
 `importAtSegmentEntry` runs. The import then writes the same values the engine's
 return path would otherwise restore from its saved block.
 
-### Native continuation bank: not established by the current recording
+### Native continuation bank: observed separately from live counters
 
-`start_table` describes player placement, not whether the load carries a native
-continuation bank. The LRZ boss entry saves `Act3_flag`, `Act3_ring_count` and
-`Act3_timer` at loc_63C14 (sonic3k.asm:131250-131259). The fresh load still clears
-live rings and time at loc_63B4 (sonic3k.asm:7826-7833); the first screen event
-consumes the separate bank at loc_59B1C (sonic3k.asm:119410-119424).
-The final DEZ boss entry has the same distinction: loc_7F310
-(sonic3k.asm:169871-169879) saves the bank, and loc_5A49A
-(sonic3k.asm:120364-120378) consumes it. This is not a Saved/Saved2 restore.
+`start_table` describes player placement, not whether a load carries native
+continuation state. LRZ boss entry loc_63C14 (sonic3k.asm:131250-131259) and
+DEZ boss entry loc_7F310 (sonic3k.asm:169871-169879) set `Act3_flag` and copy
+live rings/time to a separate bank. The title loop tests the flag at loc_62B6
+(sonic3k.asm:7762-7767), clears it at loc_62FE (sonic3k.asm:7782-7783), and
+loc_63B4 (sonic3k.asm:7826-7833) clears live counters on a zero-star-post entry.
+The first screen event consumes nonzero bank values at loc_59B1C
+(sonic3k.asm:119410-119424) or loc_5A49A (sonic3k.asm:120364-120378).
+These operations have no `FixBugs` conditional; the shipped `FixBugs=0` path
+remains the model.
 
-The pinned TraceChaser `c17f4b269` field table
-(`bizhawk-headless/src/Recording/LevelEntryPlacementLatch.cs`, `S3kFields`)
-does not export that flag or bank. Its PreLevel `ring_count` and `timer` are the
-live counters that the fresh load subsequently clears. A matching live count
-does not establish the bank, and neither the destination zone nor a physics/aux
-row may supply it. Keep these entries unresolved. In particular, both `hpz22`
-recordings have a zero star-post byte and nonzero live rings (Sonic+Tails 233,
-Tails 127), but their predecessors already end on load-time rows with zero
-rings. Their first level rows then show the restored counts. Importing the
-predecessor's last row would also be wrong.
+The generic first-PreLevel `level_entry_ram` export now includes the native
+byte `act3_flag` at `$FFEE5E`, word `act3_ring_count` at `$FFEF5E`, and long
+`act3_timer` at `$FFEF60`. Encoded stores/reads in the pinned locked-on ROM
+verify the addresses and widths. This is the existing latch, before the flag
+clear and bank consumption, not a sample inferred from a later row. Schema v5
+still owns the contract; recorder provenance remains opaque.
 
-A recorder follow-up must observe the byte `Act3_flag` at `$FFEE5E`, word
-`Act3_ring_count` at `$FFEF5E`, and long `Act3_timer` at `$FFEF60` at the same
-first PreLevel boundary, before the load consumes them. The shipped ROM's
-encoded loc_63C14 and loc_59B1C stores/reads establish these addresses. Recapture
-both native continuations and ordinary fresh/checkpoint entries, including the
-same destination entered by each path. These are requirements for future
-observations, not fields accepted or synthesized by the current importer.
-Any later implementation must preserve the production presentation skip and
-one-shot screen-event consumption, including rewind before and after it.
+Both original Sonic+Tails and Tails complete-chain BK2s were re-recorded with
+the native BizHawk2.11 harness, without movie edits, state writes or bounds.
+Whole-file audits establish identical logical physics, aux, timing and manifest
+contents. Native metadata adds these three fields and the recording date;
+deterministic gzip normalization reproduces the old compressed payload bytes.
+The native observations are:
 
-`TestTraceSegmentCarriedStateResolution` checks that these two unestablished
-entries do not import live rings and that their later `hpz22_2` checkpoint
-returns still use the recorded Saved bank. `TestS3kLevelContinuationHeadless`
-and `TestLevelContinuationCarry` separately exercise the existing production
-bank, ordinary fresh negative case, one-shot consumption and rewind. This
-distinguishes missing standalone-entry evidence from a missing counter-restore
-implementation; it is not a trace parity claim.
+| Entry | Flag | Act3 rings | Act3 timer (raw long) |
+| --- | ---: | ---: | ---: |
+| Sonic+Tails `hpz22` | 255 | 233 | 202496 |
+| Tails `hpz22` | 255 | 127 | 199453 |
+| Sonic+Tails `dez23_8` | 255 | 163 | 335625 |
+| Tails `dez23_8` | 255 | 86 | 264719 |
+
+The later `hpz22_2` checkpoint entries observe zero flag/bank and continue to
+restore Saved rings335/68. Ordinary fresh MGZ observes zero flag/bank too;
+its nonzero preload live counters remain ineligible. Saved2 special-stage
+returns retain their independent saved bounds, water and emerald identity.
+No native same-destination fresh HPZ movie was manufactured: ROM-backed fresh
+entry and zero-flag resolver tests protect that boundary separately.
+
+`TraceSegmentCarriedState.nativeContinuation` resolves only a complete bank
+with an observed nonzero byte flag and valid widths/timer bytes. Missing or
+invalid observations remain unresolved; zero flag carries no bank. Neither
+live counters, predecessor physics rows nor destination identity can fill a
+gap. Timer conversion preserves the exact bank, without Saved's second
+decrement or forced frame59.
+
+The existing entry importer installs this bank once into
+`LevelContinuationCarry` at the already-loaded standalone entry. It submits no
+second load and does not write live counters. The ordinary destination screen
+event remains the sole one-shot consumer, and the existing transition snapshot
+captures pending and consumed states for rewind. This does not repair or certify
+earlier cold-load/title scheduling; continuous production transitions retain
+their existing request/load/title-bypass owner. No trace state is applied after
+entry. The protected bootstrap and seven fresh-computed player fields are
+unchanged. Focused tests cover complete/absent/invalid/zero banks, same-destination
+Saved returns, Saved2 water, one-shot consumption, rewind and the four S3K
+keepgreens. Trace comparisons remain bounded and the larger routes remain red.
 
 Player velocity, position fractions, animation and routine fields remain
 outside this bank. Level clears player object RAM at loc_60DE

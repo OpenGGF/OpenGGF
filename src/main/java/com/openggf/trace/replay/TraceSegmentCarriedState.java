@@ -44,6 +44,8 @@ import java.util.List;
  * @param collectedSpecialRingArray {@code Collected_special_ring_array} from
  *                             {@code level_entry_ram}; replaces the touch derivation
  * @param recordedSpecialStageCursor {@code Current_special_stage} from {@code level_entry_ram}
+ * @param nativeContinuation   complete recorded Act3 bank when its entry flag is nonzero;
+ *                             kept separate from live counters until ScreenEvents
  * @param disagreements        where a recorded value differs from the value derived
  *                             without it (one of the two is wrong)
  * @param unresolved           carried variables this recording cannot establish,
@@ -64,6 +66,7 @@ public record TraceSegmentCarriedState(
         Integer lifeCount,
         Integer collectedSpecialRingArray,
         Integer recordedSpecialStageCursor,
+        NativeContinuation nativeContinuation,
         List<String> disagreements,
         List<String> unresolved) {
 
@@ -79,8 +82,11 @@ public record TraceSegmentCarriedState(
     public static TraceSegmentCarriedState none(String reason) {
         return new TraceSegmentCarriedState(
                 null, null, null, null, null, List.of(), null, null, null, null,
-                null, null, null, null, List.of(), List.of(reason));
+                null, null, null, null, null, List.of(), List.of(reason));
     }
+
+    /** The separately recorded Act3 bank; the destination ScreenEvents consumes it. */
+    public record NativeContinuation(int ringCount, long timerFrames) { }
 
     /**
      * A giant-ring touch ({@code Obj_SSEntryRing} with its {@code Obj_SSEntryFlash})

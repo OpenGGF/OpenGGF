@@ -56,26 +56,66 @@ class TestTraceSegmentCarriedStateResolution {
     }
 
     @Test
-    void nativeContinuationWithoutRecordedBankDoesNotImportLiveRings() throws Exception {
-        // loc_63C14 saves Act3_ring_count, loc_63B4 clears the live count,
-        // and loc_59B1C consumes that separate bank at ScreenEvents
-        // (sonic3k.asm:131250-131259, 7826-7833, 119410-119424).
-        // The current recorder exports neither the bank nor Act3_flag. Its
-        // PreLevel live count cannot distinguish this from an ordinary fresh
-        // entry, so the importer must not infer a continuation from the zone.
+    void nativeContinuationUsesTheRecordedBankWithoutImportingLiveCounters() throws Exception {
+        // Re-recorded first PreLevel samples precede loc_62FE and the first
+        // ScreenEvents bank consumption. These literal observations are independent
+        // publication evidence, not expectations derived from this test's invocation.
         for (String run : List.of(SONIC_TAILS, TAILS)) {
             Path segment = TraceFixtureRoot.resolve(RUNS.resolve(run).resolve("hpz22"));
-            assumeTrue(Files.isDirectory(segment), "fixture not present: " + segment);
             TraceMetadata meta = TraceMetadata.load(segment.resolve("metadata.json"));
-            assertEquals(0, meta.lastStarPostHit());
-            assertEquals(0, meta.levelEntryRam().get("special_bonus_entry_flag"));
-            assertTrue(meta.levelEntryRam().get("ring_count") > 0, "live count discriminates");
+            int rings = run.equals(SONIC_TAILS) ? 233 : 127;
+            int timer = run.equals(SONIC_TAILS) ? 202496 : 199453;
+            long frames = run.equals(SONIC_TAILS) ? 12180 : 11489;
+            assertEquals(255, meta.levelEntryRam().get("act3_flag"));
+            assertEquals(rings, meta.levelEntryRam().get("act3_ring_count"));
+            assertEquals(timer, meta.levelEntryRam().get("act3_timer"));
             TraceSegmentCarriedState state = TraceSegmentCarriedStateImport.resolve(segment, meta);
-            assertNull(state.entryRestore(), run + ": no Saved/Saved2 restore branch");
-            assertNull(state.ringCount(), run + ": live Ring_count is not the missing Act3 bank");
+            assertNull(state.entryRestore(), run + ": no Saved/Saved2 branch");
+            assertNull(state.ringCount(), run + ": do not write live counters before ScreenEvents");
+            assertEquals(new TraceSegmentCarriedState.NativeContinuation(rings, frames),
+                    state.nativeContinuation());
+            assertNull(resolve(run, "hpz22_2").nativeContinuation(),
+                    "same-destination checkpoint uses Saved, not Act3");
         }
-        assertNull(resolve(SONIC_TAILS, "mgz").ringCount(),
-                "ordinary fresh entry also discards the previous zone's live rings");
+        assertNull(resolve(SONIC_TAILS, "mgz").ringCount());
+        assertNull(resolve(SONIC_TAILS, "mgz").nativeContinuation());
+        assertNull(resolve(SONIC_TAILS, "hcz_4").nativeContinuation(),
+                "Saved2 special-stage return keeps its own bank and camera/water restore");
+        assertEquals(new TraceSegmentCarriedState.NativeContinuation(163, 19869),
+                resolve(SONIC_TAILS, "dez23_8").nativeContinuation());
+        assertEquals(new TraceSegmentCarriedState.NativeContinuation(86, 15015),
+                resolve(TAILS, "dez23_8").nativeContinuation());
+    }
+
+    @Test
+    void continuationRequiresTheCompleteObservedBankAndNonzeroByteFlag() {
+        var unresolved = new java.util.ArrayList<String>();
+        assertNull(TraceSegmentCarriedStateImport.recordedNativeContinuation(null, unresolved));
+        assertFalse(unresolved.isEmpty());
+        var ram = new java.util.HashMap<String, Integer>();
+        ram.put("ring_count", 233); // live count cannot supply the bank
+        ram.put("act3_flag", 255);
+        ram.put("act3_ring_count", 37);
+        assertNull(TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved));
+        ram.put("act3_timer", 0x00032825); // exact bank: 3m40s37f, no Saved decrement
+        var bank = TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved);
+        assertEquals(37, bank.ringCount());
+        assertEquals((3 * 60 + 40) * 60 + 37, bank.timerFrames());
+        ram.put("act3_flag", 0);
+        assertNull(TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved),
+                "same destination with stale counters is still a fresh/Saved return");
+        ram.put("act3_flag", 256);
+        assertNull(TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved));
+        ram.put("act3_flag", 255);
+        ram.put("act3_ring_count", 65536);
+        assertNull(TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved));
+        ram.put("act3_ring_count", 0);
+        ram.put("act3_timer", 0x00003C00);
+        assertNull(TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved));
+        ram.put("act3_timer", 0);
+        assertEquals(new TraceSegmentCarriedState.NativeContinuation(0, 0),
+                TraceSegmentCarriedStateImport.recordedNativeContinuation(ram, unresolved),
+                "a complete observed zero bank remains distinct from absent input");
     }
 
     @Test

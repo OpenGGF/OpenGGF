@@ -36,6 +36,30 @@ class TestLevelEntryRamMetadata {
     }
 
     @Test
+    void continuationBankUsesV5ObservationRatherThanRecorderProvenance(@TempDir Path dir) throws Exception {
+        Path segment = Path.of("src/test/resources/traces/s3k/runs/"
+                + "s3k-sonic-tails-complete-emeralds/hpz22");
+        ObjectNode root = (ObjectNode) JSON.readTree(segment.resolve("metadata.json").toFile());
+        root.put("recorder", "opaque-alternate-producer");
+        root.put("recorder_version", "not-a-behavior-selector");
+        Path metadata = dir.resolve("metadata.json");
+        JSON.writeValue(metadata.toFile(), root);
+        var observed = com.openggf.trace.replay.TraceSegmentCarriedStateImport.resolve(
+                segment, TraceMetadata.load(metadata));
+        assertEquals(new com.openggf.trace.replay.TraceSegmentCarriedState.NativeContinuation(233, 12180),
+                observed.nativeContinuation());
+        ((ObjectNode) root.get("level_entry_ram"))
+                .remove(List.of("act3_flag", "act3_ring_count", "act3_timer"));
+        JSON.writeValue(metadata.toFile(), root);
+        var absent = com.openggf.trace.replay.TraceSegmentCarriedStateImport.resolve(
+                segment, TraceMetadata.load(metadata));
+        org.junit.jupiter.api.Assertions.assertNull(absent.nativeContinuation());
+        org.junit.jupiter.api.Assertions.assertNull(absent.ringCount(), "no fallback to live rings233");
+        org.junit.jupiter.api.Assertions.assertTrue(absent.unresolved().stream()
+                .anyMatch(note -> note.startsWith("Act3 continuation:")));
+    }
+
+    @Test
     void rejectsFractionsAndOutOfRangeIntegers(@TempDir Path dir) throws Exception {
         ObjectNode root = (ObjectNode) JSON.readTree(KIS2.toFile());
         for (Number value : List.of(1.5, -2147483649L, 0x100000000L, new java.math.BigInteger("18446744073709551616"))) {
