@@ -340,6 +340,12 @@ replay and Shield-only renderer omission13098. Existing18 Explosion remains boun
 is claimed. Earlier13062/first13063 fences above are historical; the Act2 matrix
 records exact tested sources, original preparation/fixture failures and corrections.
 
+Act2 Spikes26 metadata/factory preparation separately passes100 focused checks:
+complete authenticated24-byte mapping20C018, cached static view and actual-source
+prefix factory reuse existing Std art and common Solid/Hurt code. All prior135
+ranges/35readers/19PLCs remain; one new range and two count consumers are reconciled.
+This adds no live World26 dispatch, observed Spikes visit or route advancement.
+
 ### Historical26October pause checkpoint
 
 The [pause handover](../architecture/plans/2026-10-26-sonic-cd-handover.md)

@@ -4,6 +4,8 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
+import com.openggf.game.soniccd.level.CdR12aObjectAssets;
+import com.openggf.game.soniccd.level.CdR12aProfile;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse.Actor;
@@ -132,6 +134,16 @@ public final class CdSpikes {
             Objects.requireNonNull(objects, "objects");
             return new BodyAssets(objects.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes(), objects.spikes(),
                     objects.view(CdR11aObjectAssets.Table.SPIKES_MAPPINGS).range().nativeAddress());
+        }
+
+        /**
+         * Original-USA R12A retained source binding: the actual74-byte table, cached one-frame visual
+         * and metadata pointer selected by the Init STORE at$20BF58. No new art/reader or World authority.
+         */
+        public static BodyAssets fromAct2Assets(CdR12aObjectAssets objects) {
+            Objects.requireNonNull(objects, "objects");
+            return new BodyAssets(objects.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), objects.spikes(),
+                    objects.profile().range(CdR12aProfile.Asset.MAP_SPR_SPIKES).nativeAddress());
         }
     }
 
@@ -344,6 +356,21 @@ public final class CdSpikes {
         this.prefixSolidCommit = Objects.requireNonNull(solidCommit, "solidCommit");
         this.yRewindCommit = Objects.requireNonNull(yRewindCommit, "yRewindCommit"); this.hurtCommit = Objects.requireNonNull(hurtCommit, "hurtCommit");
         this.drawObject = Objects.requireNonNull(drawObject, "drawObject");
+    }
+
+    /**
+     * Retained original-USA R12A binding over the unchanged common Present-format body. Native
+     * ObjSpikes_Init (Spikes/Main.asm:19-31) selects table selector$0A; the actual R12A74 table reaches$0330.
+     * The existing prefix constructor publishes a genuine stopped plain-Solid prefix before rethrowing
+     * its identical original failure. No completed-only adapter or new Solid/Hurt algorithm is introduced.
+     * Public records and this pure factory grant no World invocation/origin/once-only authority: future
+     * World integration still requires real owner receipts and no-op protection in its private scope.
+     */
+    public static CdSpikes fromAct2AssetsWithPrefix(CdObjectPlacementRuntime placement, CdR12aObjectAssets owner,
+                                                    CdSolidObject sharedSolid, PrefixSolidCommit solidCommit,
+                                                    YRewindCommit yRewindCommit, HurtCommit hurtCommit, DrawObjectCall drawObject) {
+        return new CdSpikes(placement, presentAssets(BodyAssets.fromAct2Assets(owner)), sharedSolid,
+                solidCommit, yRewindCommit, hurtCommit, drawObject);
     }
 
     /** One physical RunObjects visit. Main ALWAYS reads primary Y, with no outer visibility admission. */

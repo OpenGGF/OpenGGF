@@ -123,6 +123,7 @@ public final class CdR12aObjectAssets {
     private CdAssetBytes blocksNativeReader;
     private CdLevelHud.Assets hud;
     private CdR12aPowerupArtSources powerupArtSources;
+    private CdObjectVisualAssets spikes;
 
     /** Only the actual authenticated terrain owner calls this; no public arbitrary-image ingress. */
     CdR12aObjectAssets(CdR12aTerrainAssets terrain, CdMmdImage image) {
@@ -343,6 +344,12 @@ public final class CdR12aObjectAssets {
         if (tunnelDoor == null) tunnelDoor = CdObjectVisualAssets.decode(view(MAP_SPR_TUNNEL_DOOR).copy(), 2,
                 view(ANI_TUNNEL_DOOR).copy(), 1, 12);
         return tunnelDoor;
+    }
+
+    /** One counted Spikes frame over the existing eight-tile Std source; no animation or art decode. */
+    public synchronized CdObjectVisualAssets spikes() {
+        if (spikes == null) spikes = CdObjectVisualAssets.decodeStatic(view(MAP_SPR_SPIKES).copy(), 1, 8);
+        return spikes;
     }
 
     public synchronized CdObjectVisualAssets monitorTime() {

@@ -162,6 +162,7 @@ TUNNEL_PATH_MAPPING_ADDRESS 8994 4 d8dbb822f69324f4e22b24211ac6e036ae11d483ad994
 ANI_POWERUP 1d400 296 ecd3e5667b53fd56bf9b9c7fa3e9e09cbb957efe90232419060f8197f0f50141
 MAP_SPR_POWERUP 1d528 274 d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc
 SHIELD_ART_INDEX 6452 20 e5f83ef559b1e3eaa1e15d9c73a6d771b41634426b2dce4ecabf6a6ebe222834
+MAP_SPR_SPIKES c018 24 db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607
             """;
     private static final String READERS = """
 ART_ANIMALS 640 446 446 445 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab 63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1
@@ -231,9 +232,9 @@ ART_TUNNEL_DOOR_SPLASH 2752 687 687 687 07f932856a04af0dd72285fc949e06a5e0269a13
         assertNotNull(objects.view(OBJECT_LAYOUTS)); assertNotNull(objects.rings());
     }
 
-    @Test void complete135RowManifestPreservesTheOriginal134AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
+    @Test void complete136RowManifestPreservesTheOriginal135AndPinsEveryAdditionalOriginalDomainSpan() throws Exception {
         var objects = retail().terrain().objects(); var rows = MANIFEST.lines().filter(s -> !s.isBlank()).toList();
-        assertEquals(135, CdR12aProfile.Asset.values().length); assertEquals(135, rows.size());
+        assertEquals(136, CdR12aProfile.Asset.values().length); assertEquals(136, rows.size());
         for (int i = 0; i < rows.size(); i++) {
             var c = rows.get(i).split(" "); var a = CdR12aProfile.Asset.values()[i]; var r = objects.profile().range(a);
             assertEquals(c[0], a.name()); assertEquals(Integer.parseInt(c[1], 16), r.fileOffset()); assertEquals(Integer.parseInt(c[2]), r.length());

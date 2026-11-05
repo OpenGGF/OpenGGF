@@ -560,3 +560,28 @@ eight installed pins, environment and fresh XML checked; two owned reports consu
 Preparation37.493s/admission0/userwait0; other overhead unmeasured. These refreshed
 methods overlap earlier qualification and add no unique-case total. They certify
 engine output, not emulator comparison, complete-act, regional, audio or timing parity.
+
+## Spikes26 retained-source preparation — 5 November
+
+Original-USA R12A Init's absolute STORE20BF58 selects the complete24-byte mapping
+at20C018, including its genuine final00. This appends range ordinal135/source136;
+all old135 descriptors,35readers,19PLCs and selector negatives remain exact. Cached
+spikes/0 decodes one counted frame/four pieces/eight tiles with no animation or art
+decode. Existing Std art86/87/eight tiles at6600 remains the same owner. Two total-
+count consumers alone migrate135→136, leaving their historical prefixes intact.
+Independent bounded static asset review found no actionableP1/P2.
+
+BodyAssets.fromAct2Assets/1 and fromAct2AssetsWithPrefix/7 add only typed retained
+source factories over existing presentAssets/private prefix constructor. Full
+legacy Spikes run, Past/Present APIs, Solid/Y/Hurt/Reset algorithms remain exact.
+No new observer, invocation, Frame, bank, capture, decoder or current-art owner.
+Genuine stopped Solid prefixes publish before their identical exception rethrows;
+new test cases call actual shared Solid, never forge d0/Outcome/Prefix results.
+These pure factories grant no future World origin/once-only/no-op authority.
+
+One100-case/five-class run passes without failures/errors/skips: old objects56,
+player12,terrain10,new actual-source assets12 and factory10. All100 identities,
+eight installed source pins, Java25/environment and fresh XML hashes/mtimes were
+checked; ten owned reports consumed. No live World26 dispatch, selected pixels,
+natural Spikes visit, native/regional parity or route advance is certified. The
+actual route still needs the native mechanism at the local cliff near16C0.

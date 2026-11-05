@@ -249,6 +249,9 @@ Unreleased. The earlier development themes remain in
   the next pass. Native Init, active animation, subsequent art service and signed
   Item retirement retain full/course replay and selected current-pixel checks.
   Further traversal needs a controller route past the local obstacle.
+  Authenticated Act2 Spikes mapping and a named retained-source prefix factory
+  reuse the existing common body and Std art owner; live Spikes dispatch remains
+  separate from the qualified route.
   Actual Explosion and Points
   children now reuse the existing physical pass and current art, preserving native
   allocation, deletion, score-before-child ordering and full/course replay. Flower
