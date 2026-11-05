@@ -563,3 +563,67 @@ The seven shared cases passed in the focused run; this does not qualify cold
 reachability, live rewind-floor recording, other configurations or complete routes.
 Those inherited obligations remain open. See the
 [shared ownership design](../../designs/2026-11-03-seamless-request-retargeting.md).
+
+## Run-segment sanctuary camera blocker (2026-11-05)
+
+Four recorded MHZ fronts enter the Super Emerald sanctuary (`$1701`) before
+reporting their first error. The reused complete wave8 baseline, whose runtime
+and fixture inputs match `038296e2`, records these grouped reports:
+
+| Replay class suffix | First error row | Grouped errors | Camera Y, ROM / engine |
+| --- | ---: | ---: | --- |
+| SonicTailsMhz | 1276 | 12 | `$0326 / $0240` |
+| SonicTailsMhz4 | 1021 | 12 | `$0326 / $0240` |
+| SonicTailsMhz7 | 2107 | 12 | `$0326 / $0240` |
+| TailsFullChainMhz | 1389 | 11 | `$0326 / $0240` |
+
+Names expand to `TestS3k<suffix>SegmentTraceReplay`; these are r7 tests. The
+Sonic+Tails duplicates in the segment profile were not rerun. Their archived
+zone/act observations already identify the destination as zone `$17`, act 1.
+This is not evidence of a common MHZ screen-event error across all fourteen
+MHZ subsegments. The other ten first diverge earlier in player/sidekick state,
+animation, or camera X/Y and remain independent investigation fronts. The long
+zone-slice ring-loss frontier was not investigated.
+
+The native boundaries are distinct. `Get_LevelSizeStart` installs the sanctuary
+maximum Y `$0320` and `loc_1BF9C (sonic3k.asm:38305-38312)` clamps the start
+body's `$03AC - $60` to it. The following fresh-load
+`DeformBgLayer (sonic3k.asm:38320-38362)` calls `MoveCameraX/MoveCameraY` before
+`LevelSetup`. Grounded movement adds six pixels; at
+`loc_1C202 (sonic3k.asm:38601-38613)` the initial wrap word `$FFFF + 1` becomes
+zero, so subtraction does not borrow and the result remains `$0326`. This is
+the shipped behavior. The separate special-stage results path
+`loc_2E16C (sonic3k.asm:63184-63225)` explicitly installs `$0240` and selects
+camera X from the completed stage.
+
+One ROM-backed boundary observer on unchanged production source executed
+`InitCamera` and observed native `$15A0/$0320` overwritten to
+`$15A0/$0240`, including the render copies. Its checkpoint-context bypass
+retained `$0320`. Results reentry stage 2 selected `$1600/$0240` with matching
+copies, and the carried X fraction `$A400` survived both branches. Calling the
+existing ordinary camera movement owner at the native start still produced
+`$0320`, with maximum `$0320`. The observer passed 1 test with no failures,
+errors or skips; it was removed after archiving its source and complete output.
+
+A separate final-camera discriminator kept the native expectation `$0326` and
+failed against `$0240` (1 test, 1 failure, no errors or skips). This must not be
+replaced with an expectation of `$0320`: that value certifies only the earlier
+`Get_LevelSizeStart` boundary. Both checks used the queued ordinary selection,
+Java 25, surfaceless EGL and explicit original S3&K ROM input.
+
+The proposed restriction of `Sonic3kLevelInitProfile.initCameraStep` to results
+reentry is **held**, not implemented. Its preservation of fresh `$0320` alone
+cannot close the final-camera gate. `prepareInitialLevelScroll` currently
+refreshes parallax without native initial camera movement, while
+`Camera.clampBottomBoundary` always hard-clamps the existing movement owner.
+There is no existing initial-load camera API for the exceptional first
+pre-`LevelSetup` dispatch. Repair requires a separately reviewed native camera
+lifecycle contract, retaining admission, locks, ordering, low words and
+once-only dispatch without a gameplay/object/timer tick. No fake bounds, fitted
+`$0326` write or shared camera change was retained.
+
+Runtime and permanent tests remain unchanged. No candidate replay improvement,
+newly reached suffix, raw-row comparison, keeper/rewind requalification or
+whole-route parity is claimed. The original grouped reports are not expanded
+into inferred raw mismatches. The remaining route, team, viewport and restore
+obligations above remain open.
