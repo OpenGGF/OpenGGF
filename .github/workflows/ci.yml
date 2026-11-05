@@ -7,6 +7,8 @@ name: CI
 #                         to show the code is broken or a release build is likely
 #                         to fail. When smoke passes, deploy-multiplayer
 #                         redeploys that branch's multiplayer testbed server.
+#                         Branch policy runs in push-policy.yml, outside this
+#                         workflow's cancelling concurrency group.
 #   non-draft PR         routine CI: branch policy, the bounded smoke suite and
 #                         the structural guards. Draft PRs run nothing until they
 #                         are marked ready for review.
@@ -41,8 +43,8 @@ concurrency:
 
 jobs:
   # Branch/trailer/changelog policy for the proposed range. The .githooks enforce
-  # the same policy at commit time, and release.yml's ci-push step covers master
-  # pushes.
+  # the same policy at commit time; push-policy.yml covers develop/next pushes and
+  # release.yml's ci-push step covers master pushes.
   policy:
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest

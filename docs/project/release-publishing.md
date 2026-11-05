@@ -12,7 +12,7 @@ commit being investigated when diagnosing a run.
 | Push to `master` | Publishes after required builds succeed, provided the version tag is new. |
 | Pull request (any base, non-draft) | Release workflow does not run. CI runs branch policy, the bounded smoke suite and guards, without native packaging. |
 | Manual Release dispatch | Public release preparation: full-suite validation/build run only; does not publish, even on `master`. |
-| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke only. |
+| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke and branch policy. |
 | Re-run a master push run | Can publish if the previous attempt did not create its version tag; inspect partial results first. |
 
 The publish condition requires a non-deletion `push` event on
@@ -39,6 +39,11 @@ preparing the release. See [release rollover](release-rollover.md).
    [release rollover](release-rollover.md). Read the version from that commit's
    `pom.xml`. [Rebuild, review and commit the project atlas](#refresh-the-project-atlas-for-a-release)
    before fixing the final candidate SHA and running its release qualification.
+   Regenerate the website hero reels from that candidate with
+   `python3 tools/media/hero_reels.py build --game all --out <task-dir>`
+   ([hero reels](../../tools/media/README.md#website-hero-reels)), review the
+   contact sheets, then copy the reels and posters to OpenGGF-WebZone
+   `public/media/` on a website branch.
    Run the full ordinary suite explicitly with
    `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
    separate guards and required ROM/trace checks. Full suites are reserved for
