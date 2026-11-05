@@ -104,6 +104,77 @@ class TestSidekickCpuControllerCatchUpFlight {
     }
 
     @Test
+    void nativeCatchUpClearsHurtBlinkBeforeNextRenderFlagRefresh() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        sonic.setCentreX((short) 0x1000);
+        sonic.setCentreY((short) 0x0400);
+        tails.setInvulnerableFrames(0x78);
+        tails.setRenderFlagOnScreen(false);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
+        controller.setController2Input(0, AbstractPlayableSprite.INPUT_JUMP);
+
+        controller.update(0);
+
+        // Shipped FixBugs=0 loc_13B78 clears invulnerability_timer
+        // (sonic3k.asm:26540-26571) before the later presentation pass.
+        assertEquals(0, tails.getInvulnerableFrames());
+        assertTrue(tails.shouldRefreshRenderFlagThisFrame(),
+                "The catch-up body must submit Draw_Sprite even on the inherited hurt blink's hidden phase");
+        assertFalse(tails.isRenderFlagOnScreen(),
+                "The CPU consumes the cached bit; only the subsequent render pass replaces it");
+        tails.setRenderFlagOnScreen(true);
+        controller.update(17);
+        assertEquals(0, controller.getDiagnosticRespawnCounter(),
+                "The next routine-4 dispatch resets the word from the newly cached visible bit");
+    }
+
+    @Test
+    void s1AndS2ApproachPreserveTheirExistingHurtBlink() {
+        for (GameRules rules : new GameRules[] {GameRules.SONIC_1, GameRules.SONIC_2,
+                com.openggf.game.sonic2.kis2.Kis2Rules.RULES}) {
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setGameRulesForTest(rules);
+            tails.setCpuControlled(true);
+            tails.setInvulnerableFrames(0x78);
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.setInitialState(SidekickCpuController.State.SPAWNING);
+            controller.setController2Input(0, AbstractPlayableSprite.INPUT_JUMP);
+
+            controller.update(0);
+
+            assertSame(SidekickCpuController.State.APPROACHING, controller.getState());
+            assertEquals(0x78, tails.getInvulnerableFrames(),
+                    "S2 TailsCPU_Respawn does not clear invulnerability_timer; S1 keeps that CPU policy");
+        }
+    }
+
+    @Test
+    void sharedRecoveryFallbackDoesNotApplyTheS3kClearToS2OrKis2() {
+        for (GameRules rules : new GameRules[] {GameRules.SONIC_2,
+                com.openggf.game.sonic2.kis2.Kis2Rules.RULES}) {
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setGameRulesForTest(rules);
+            tails.setCpuControlled(true);
+            tails.setInvulnerableFrames(0x78);
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            // The shared recovery timeout can enter this internal state even
+            // though ordinary S2/KiS2 respawns use APPROACHING.
+            controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
+            controller.setController2Input(0, AbstractPlayableSprite.INPUT_JUMP);
+
+            controller.update(0);
+
+            assertEquals(0x78, tails.getInvulnerableFrames());
+        }
+    }
+
+    @Test
     void dormantReleaseUsesConfiguredNonTailsRunInStrategy() {
         TestableSprite leader = new TestableSprite("tails");
         TestableSprite sonicSidekick = new TestableSprite("sonic_p2");
