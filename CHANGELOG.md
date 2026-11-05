@@ -3,176 +3,9 @@
 OpenGGF keeps one changelog file per release so that release notes remain
 readable and historical versions can be referenced directly.
 
-## Unreleased (`develop` and `next` / 0.7)
-
-- S3K bonus-stage entries and returns hold the destination players behind the title loop, as in the ROM.
-
-- Standalone S3K run segments enter with their carried rings, emerald progress, used giant rings, star-post progress, shield, checkpoint, camera bounds, water level, timer and lives, retain native water movement targets, and special stages pick their stage and layout set as the ROM does.
-
-- MGZ swinging platforms use native fractional chain arithmetic instead of fitted slot/angle carry tables; spring solid reactions precede native animation.
-
-- Trace segments read the recorder's `level_entry_placement_source`, so a
-  standalone boot takes the ROM's own fresh or return entry branch: S3K
-  start-table segments use the post-spawn camera derivation (including the
-  Tails-alone +4), saved-placement returns skip zone intros, and KiS2 EHZ1 keeps
-  its native start history. The three S3K campaign chains also record their
-  movie endpoint. Fixtures without the field keep their previous setup.
-
-- The Lava Reef boss act (`$1600`) starts with the native falling intro on a
-  fresh entry, for every character.
-
-- Fresh S3K trace segments derive the entry camera from the ROM start-location
-  entry, as `Get_LevelSizeStart` does, rather than from a body that load-time
-  objects (the DDZ fly-in, the shrine) have already moved.
-
-- Tails alone enters CNZ1, and MHZ1 with Sonic 3 locked on, with the native
-  fly-in: CPU-held flight to the right until landing.
-
-- S3K fresh level loads count the terrain wait's final VBlank in the live game loop, as in the ROM.
-
-- Doomsday queues its misc and boss Master Emerald art through the native module queue, and the S3K ending load queues its terrain art and waits for it before the ending scene starts.
-
-- The Doomsday Super transformation starts its animation and releases Sonic on the shipped frames.
-
-- S3K keeps one sub-pixel camera X position across level loads, shared by every scrolling sequence that uses it; the ending keeps its start camera until its art has loaded.
-
-- Sky Sanctuary Act 2 rewind reuses unchanged terrain instead of reinstalling the level on every restore.
-
-- HCZ2 capsule results publish native ending poses and submit results art on their owning dispatches; the HCZ slice replay is green.
-
-- HCZ2 boss blades start their floor-hit raw animation from the cleared timer, restoring native water-chute launch timing.
-
-- HCZ2 end-boss attack setup runs on the native wait-underflow pass; spray release performs its final interaction once.
-
-- HCZ2 end-boss swing resumes from the live rise velocity and retains the native fractional Y position.
-
-- HCZ2 end-boss spray preserves the native shared player-range cursor, preventing an extra Tails grab after Sonic is carried.
-
-- HCZ2 end-boss suction retains the native displacement across both players, including equal-X contacts.
-
-- HCZ2 end-boss startup preserves native callback/init dispatches and the water platform's cleared animation timer.
-
-- Iwamodoki self-destruction releases standing players as in the ROM, preventing shield-protected Sonic from retaining an air-running ride.
-
-- Correct FBZ2 boss pilot-light colors, shipped rotation expression and debug geometry; preserve S3K’s native Super/Hyper revert grace boundary.
-- Death sprites draw without hurt-timer blinking, and crushed players reject further hurt and object-owned ring-loss requests.
-
-- S3K level select uses native zone save-card previews, and data select uses the correct Flying Battery palette.
-
-- Knuckles glide speed halves above the native top boundary, including signed-word wrapping and arithmetic-shift behavior.
-- Big Arm submits its ROM art module during native initialization.
-S3K capsule and cutscene-button routines now share their common behavior; the
-object ownership audit also corrected explosion RNG/allocation drift and FBZ
-capsule sprite/plane priority, with rewind-safe opening control ownership.
-
-- Explicit native entries retain their start history and initial native-object
-  placement of Tails. Explicit spawn-order provenance enables native S3K camera
-  focus; unclassified positioned entries retain their existing camera behavior.
-  Intentional positioned entries re-anchor the whole team without refilling history;
-  traces lacking entry provenance retain their existing initialization.
-
-- LBZ2 submits native EggRobo-head art during head initialization.
-- Solo S2 title-card entry records leader history during its native object passes.
-
-- HCZ Act 1 miniboss retains both tracked native players through vortex cooldown and sets them airborne when the water effect is deleted.
-
-- S3K Special Stage automatic starts test the banner exit offset before advancing and publish the start flag after player movement.
-
-- Restore Sandopolis ceiling attachment by retiring stale placement path markers.
-- Knuckles restores the native animation after non-flat glide landings.
-- LBZ2 end-boss art waits for native camera admission and retains its queue owner through camera movement and rewind.
-
-- Editor Enter descends into tile composition without also cycling spawn mode through the default Start binding.
-
-- Restore the FBZ1 mini-boss eye overlay so its pre-attack palette warning is visible.
-
-- Fix FBZ1 indoor background strips after special-stage or checkpoint reloads by
-  filling the background tile ring at the restored camera height.
-
-- Clear the native sanctuary openings so stray terrain no longer appears above
-  the left Super Emerald pedestals during the results camera descent.
-
-Live rewind now has a configurable consumable budget with checkpoint, act and zone refills, separate stage toggles and an optional life-loss refill.
-
-Upright S3K Act 2 capsules now also use normal explosions and the break sound.
-- Restore upright S3K egg capsule sprite and tile priority so the MHZ2 ending ship passes behind the capsule.
-
-- S3K saves retain collected giant rings and Chaos Special Stage rotation after
-  reload, and resume stock zones at their native starting act.
-
-- AIZ2 ending drawbridge uses its native 12 logs, removing the extra cliff-overlapping
-  endpoints, and shows staggered explosion puffs when Knuckles breaks it.
-  Knuckles uses the ROM standing pose and run/jump/laugh animation cadence.
-
-- AIZ2 and ICZ2 restore level music after results for their outgoing cutscene
-  and snow corridor, including ICZ2’s run toward LBZ1.
-
-- Default Player 1 Start to Enter and Player 2 Start to Backspace; unify live Start with the visible pause,
-  preventing a second native pause when resuming. A mod scene that reads the Start key itself now owns
-  it, so one Enter press no longer also counts as Start; pads still send Start.
-
-S3K elemental shields keep animating after returning from Bonus/Special stages.
-Their frame publication, animation switches and invincibility/blank-player pauses
-follow the native scripts.
-
-Music transitions preserve boss/drowning ownership, native S2 request mailboxes,
-and S3K cutscene fades, miniboss request IDs and apparent-act restoration.
-
-- Correct MHZ1 miniboss four-colour damage flashing and the AIZ1/HCZ custom
-  boss flash phase, preserving the final normal palette row and hit countdown.
-
-MHZ mushroom parachutes release carried players after their feet reach terrain.
-
-Super/Hyper players can collect shields while transformed; shields stay hidden
-until reversion in S3K and S2.
-
-S3K act transitions start Act 2 music once at the title-card wait gate.
-MHZ2 now fades to Knuckles’ theme when his leaf-blower cutscene begins.
-
-Current fixes include the IceCap Act 1 miniboss charge flashes and falling-ice
-destruction/signpost handoff, the normal explosion effect and break sound for
-upside-down S3K capsules, crowded-scene sprite retention with sprite limits
-disabled, native tally culling and accidental-mask prevention, and Tails
-carrying Sonic into CNZ1 after the MGZ2 rescue. See the
-development changelog below.
-
-ICZ2 → LBZ1 now launches Sonic out of the snow after the zone handoff.
-
-MGZ2 rescue-Tails art refresh also preserves Super/Hyper palette cycling and
-boss-defeat detransformation.
-
-Both development branches currently share the same commit and release line.
-Current changes are recorded in
-[CHANGELOG.0.7.prerelease.md](CHANGELOG.0.7.prerelease.md), with earlier themes in
-[CHANGELOG.0.7.md](CHANGELOG.0.7.md). The [0.8 roadmap](docs/project/v0.8-roadmap.md)
-remains future scope; `next` has no separate 0.8 implementation line yet.
-
-Recent maintenance includes supported mod-consumption checks, protected movie and trace controls, codec-backed rewind
-snapshot equality and unchanged S3K terrain-cache reuse, session-owned
-render-registry cleanup, S3K's fresh-entry camera-focus calculation,
-declared-scope stock parity reporting, Sonic 2 object-slot and sidekick visibility
-timing, S3K fresh-level ring timing and touch-suppressed lightning attraction,
-S1 Marble flame retirement and visual trace handoff ownership, Carnival Night
-cylinder rider ownership, Lava Reef crusher timer dispatch, the original S3K
-final emerald-reveal countdown, Death Egg lift and staircase rider-release
-boundaries, gravity-puzzle landings and walk-offs, turbine floor responses and hurt
-control, ordered physical gameplay and native-menu short-tap admission, and live
-PAL50/NTSC60 simulation/audio scheduling independent of the window rendering limit,
-display-locked pacing on matching refresh rates with a drift-regulated speaker,
-opt-in render-only motion interpolation on higher refresh rates with an Auto rendering
-limit beside its Display setting,
-with region-cadence viewport recording, redraw-independent native object state,
-and row-owned trace-ghost animation whose
-seeks preserve observed historical context. The level editor menu now opens on a
-short front page with Exit to title. Creator tooling now includes task recipes,
-local build/test/run configuration for all seven starter purposes, read-only
-preflight and actionable SDK reports. Object-service failures now remain visible,
-with a source guard preventing new broad catch-and-fallback handlers.
-
 ## Release files
 
-- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.prerelease.md) — current native-game accuracy, campaign, visual editor authoring and native Stageplay directing work, with the linked earlier development themes.
-
+- [{{RELEASE_VERSION}}](CHANGELOG.0.7.md)
 - [0.6.20260917](CHANGELOG.0.6.md)
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)
@@ -183,12 +16,31 @@ with a source guard preventing new broad catch-and-fallback handlers.
 - [0.05](CHANGELOG.0.05.md)
 - [0.01](CHANGELOG.0.01.md)
 
-## 0.7 development documentation
+## 0.7 release documentation
 
-- [Release summary](docs/changelog/v0.7-release-summary.md) — current scope and limitations.
-- [Development ledger](docs/changelog/v0.7-prerelease-detailed.md) — integration and validation evidence.
-- [Trace scope](docs/status/trace-scope-release-7.md) — retained no-regression contract.
-- [0.7 roadmap](docs/project/v0.7-roadmap.md) — complete campaigns before feature/API publication.
+[CHANGELOG.0.7.md](CHANGELOG.0.7.md) is the frozen 0.7 changelog, organised by
+area. It folds together the earlier 0.7 development themes, the later
+prerelease entries and the unreleased notes previously kept in this file;
+`CHANGELOG.0.7.prerelease.md` now only points to it. Release builds use
+GitHub-hosted validation and platform runners; ROM-backed evidence collection is
+separate.
+
+- [Release summary](docs/changelog/v0.7-release-summary.md) — copy for the
+  website and GitHub release page, including validation status and the accepted
+  limitations moved to 0.8. `RELEASE_NOTES_v{{RELEASE_VERSION}}.md` is a pointer to it.
+- [Development ledger](docs/changelog/v0.7-prerelease-detailed.md) — integration
+  and validation evidence.
+- [Release-7 trace scope](docs/status/trace-scope-release-7.md) — the
+  no-regression contract the release was held to.
+- [0.7 roadmap](docs/project/v0.7-roadmap.md) — the campaign milestones, several
+  of which are recorded as unmet and carried to the [0.8 roadmap](docs/project/v0.8-roadmap.md).
+- [Trace frontier log](docs/status/trace-frontier-log.md) — current replay
+  evidence and remaining parity work.
+
+0.7 shipped re-scoped: the complete S3K character routes, the four full-run
+trace chains and whole-campaign qualification named by the roadmap were not met
+and are accepted limitations, listed in the release summary. The Mod API remains
+an unpublished candidate and publishes with 0.8.
 
 ## Published 0.6 documentation
 
@@ -201,4 +53,3 @@ with a source guard preventing new broad catch-and-fallback handlers.
 
 The published `v0.6.20260911` tag and `release/0.6.20260911` branch retain the
 release snapshot. Its recorded limitations remain historical release evidence.
-Current replay evidence continues in the [trace frontier log](docs/status/trace-frontier-log.md).
