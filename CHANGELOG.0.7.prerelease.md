@@ -1454,7 +1454,8 @@ Unreleased. The earlier development themes remain in
   bit-7 contact rejection preserved.
   Title retirement and departing EggRobo fly-bys submit the native enemy-art
   restoration requests, with physical publication and rewind ownership retained
-  after the producer disappears. Incidental art producers preserve blocked
+  after the producer disappears. Death Egg's title owner likewise submits the
+  native Spikebonker and Chainspike art batch in both acts. Incidental art producers preserve blocked
   title work and respect both FIFO limits. Scaled fly-by pixels remain incomplete.
   Teleporter beams retain the selected ROM art bank through recreation,
   including SSZ transport priority and whole-sky rewind publication.
@@ -1504,7 +1505,9 @@ Unreleased. The earlier development themes remain in
 - **S3K objects:** Death Egg bosses are admitted only by their stock runtime
   context, while Carnival Night and stateless custom-zone aliases retain their
   own factories. Boss initialization waits for its typed zone state before
-  publishing encounter side effects. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
+  publishing encounter side effects. Death Egg's miniboss eye finishes its last
+  tracking pass before becoming independent debris, preserving movement and
+  rewind after the boss retires. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
   job before the cards initialize or GAME saves lives/continues; ordinary level
   service and partial-work rewind retain the native queue ordering. Hydrocity 2
   cutscene Knuckles probes actual terrain, retaining penetration and facing on

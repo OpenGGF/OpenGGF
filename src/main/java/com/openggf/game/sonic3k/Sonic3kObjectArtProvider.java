@@ -1929,6 +1929,18 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             case Sonic3kZoneIds.ZONE_SSZ -> List.of(new EnemyKosEntry(
                     Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR,
                     Sonic3kConstants.ARTTILE_EGG_ROBO_BADNIK, true));
+            // LoadEnemyArt selects PLCKosM_DEZ for both acts. Standalone
+            // renderer decoding does not submit this native title-owned batch.
+            // Retain its physical publication through the existing admission
+            // lease, FIFO checks and rewind journal, just like PLCKosM_SSZ.
+            // LoadEnemyArt (sonic3k.asm:64321-64353),
+            // Offs_LoadEnemyArt (sonic3k.asm:64379-64380),
+            // PLCKosM_DEZ (sonic3k.asm:64473-64476).
+            case Sonic3kZoneIds.ZONE_DEZ -> List.of(
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_SPIKEBONKER_ADDR,
+                            Sonic3kConstants.ARTTILE_SPIKEBONKER, true),
+                    new EnemyKosEntry(Sonic3kConstants.ART_KOSM_CHAINSPIKE_ADDR,
+                            Sonic3kConstants.ARTTILE_CHAINSPIKE, true));
             default -> List.of();
         };
     }

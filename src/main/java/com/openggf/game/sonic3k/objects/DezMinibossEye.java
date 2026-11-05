@@ -66,6 +66,12 @@ final class DezMinibossEye extends DezMinibossSprite
             xVelocity=(short)romWord(0x852F4+0x14);
             yVelocity=(short)romWord(0x852F4+0x16);
             if(flipX) xVelocity=(short)-xVelocity;
+            // loc_849D8 (sonic3k.asm:178213-178219) replaces the eye's
+            // routine with Obj_FlickerMove (sonic3k.asm:179086-179102).
+            // Its remaining moves/draws/deferred delete never read parent3.
+            // Shipped FixBugs=0 has no alternative branch here: retain the
+            // independent debris, not an owning Java link to the retiring boss.
+            parent=null;
         }
         updateDynamicSpawn(getX(),getY());
     }

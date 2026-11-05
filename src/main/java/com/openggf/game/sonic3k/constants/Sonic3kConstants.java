@@ -2066,6 +2066,9 @@ public class Sonic3kConstants {
     public static final int LRZ_FIREWORM_ANIM_FLAME_ADDR = 0x08FA56;
 
     // ===== DEZ Badnik Art =====
+    // ArtTile_Spikebonker / ArtTile_Chainspike (sonic3k.constants.asm:1387-1388).
+    public static final int ARTTILE_SPIKEBONKER = 0x0500;
+    public static final int ARTTILE_CHAINSPIKE = 0x0542;
     public static final int ART_KOSM_SPIKEBONKER_ADDR = 0x18008C;
     public static final int MAP_SPIKEBONKER_ADDR = 0x184E5C;
     public static final int ART_KOSM_CHAINSPIKE_ADDR = 0x1803EE;

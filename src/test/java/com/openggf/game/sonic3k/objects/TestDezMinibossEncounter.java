@@ -161,6 +161,34 @@ class TestDezMinibossEncounter {
         assertSame(root,arms.get(1).parentForTest());
         assertEquals(expected,rows(f,180));
     }
+    @Test void fatalEyeConversionReplaysThroughTheActualParentSlotTransferWithStrictWorldCapture() {
+        var f=boot(); phaseTwo(f);
+        for(int i=0;i<7;i++)hit(f);
+        f.manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var before=registry.capture();
+        var originalParent=eye(f).parentForTest();
+        int parentSlot=originalParent.getSlotIndex();
+        List<String> expected=null;
+        for(int cycle=0;cycle<2;cycle++) {
+            registry.restore(before);
+            var restoredEye=eye(f);
+            var restoredParent=f.manager.activeObjectsOfType(DezMinibossInstance.class).getFirst();
+            assertNotSame(originalParent,restoredParent);
+            assertSame(restoredParent,restoredEye.parentForTest());
+            hit(f);
+            assertEquals(0x85668,restoredParent.codePointer);
+            assertNull(restoredEye.parentForTest());
+            assertFalse(restoredEye.isDestroyed(),"conversion retains the independent debris slot");
+            assertDoesNotThrow(registry::capture);
+            var actual=rows(f,64);
+            if(expected==null)expected=actual; else assertEquals(expected,actual);
+            assertTrue(restoredParent.isDestroyed());
+            assertInstanceOf(S3kBossDefeatSignpostFlow.class,
+                    NativeSstSlotAccess.currentOwner(f.manager,parentSlot));
+            assertDoesNotThrow(registry::capture,"actual parent retirement must leave a closed world graph");
+        }
+    }
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(ints = {-32, 0, 32})
     void connectedDefeatCarriesTheInvisibleTransportAcrossTheActualReload(int approachOffset) {

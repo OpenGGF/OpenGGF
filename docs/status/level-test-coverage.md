@@ -2668,3 +2668,12 @@ modes across independently surviving scatter emeralds. This closes the stale
 collector graph edge only; full routes, pickup parity, native presentation,
 donor/team/viewport breadth and the positioned replay suffix remain inherited
 gaps.
+
+DEZ miniboss eye retirement (2026-11-05): the
+[DEZ1 eye graph row](../architecture/validation/levels/s3k-dez-act1.md#miniboss-eye-retirement-2026-11-05)
+now covers the native eye-to-independent-debris conversion, actual parent
+sign-flow slot transfer, strict capture and forced recreation/forward replay,
+both velocity directions, decoy-slot independence and deferred cull/delete.
+The focused eye/encounter selection passes 22 cases with zero skips. Live invalid
+owner references remain strict failures. Native route parity and wider/team/donor
+breadth are inherited gaps; no route certification is added.
