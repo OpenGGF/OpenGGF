@@ -5,6 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Release files
 
+- [0.8 prerelease / current development snapshot](CHANGELOG.0.8.prerelease.md) — the 0.8 development line on `develop`.
 - [0.7.20261105](CHANGELOG.0.7.md)
 - [0.6.20260917](CHANGELOG.0.6.md)
 - [0.6.20260911](CHANGELOG.0.6.md)
@@ -15,6 +16,13 @@ readable and historical versions can be referenced directly.
 - [0.1.20260110](CHANGELOG.0.1.md)
 - [0.05](CHANGELOG.0.05.md)
 - [0.01](CHANGELOG.0.01.md)
+
+## 0.8 development documentation
+
+- [Development summary](docs/changelog/v0.8-release-summary.md)
+- [Development ledger](docs/changelog/v0.8-prerelease-detailed.md)
+- [Release-8 trace scope](docs/status/trace-scope-release-8.md)
+- [0.8 roadmap](docs/project/v0.8-roadmap.md)
 
 ## 0.7 release documentation
 

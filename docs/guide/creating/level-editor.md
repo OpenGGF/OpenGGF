@@ -5,7 +5,7 @@ using assets from your supplied ROMs or an imported level. It supports foregroun
 and background layouts, block/chunk composition, collision assignments,
 object/ring placement, launch properties, project saves, and playtesting.
 
-The project and export workflows below describe the **0.7.20261105 release**, including
+The project and export workflows below describe the **0.8.prerelease development line**, including
 the unpublished candidate Mod API. The editor is experimental; this guide does not
 describe the 0.6 editor's feature set.
 

@@ -20,7 +20,7 @@ with synchronized music and effects. The command-line equivalent is:
 
 ```sh
 java --enable-native-access=ALL-UNNAMED \
-  -cp target/OpenGGF-0.7.20261105-jar-with-dependencies.jar \
+  -cp target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar \
   com.openggf.tools.StageplayCaptureTool \
   --scene examples/stageplay-demo/src/main/resources/scenes/opening.stageplay \
   --game s2 --out /absolute/output/opening.mkv

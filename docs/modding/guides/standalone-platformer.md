@@ -44,7 +44,7 @@ stock games.
 Scaffold a project the same way any other mod starts:
 
 ```text
-ggfmod.ps1 OpenGGF-0.7.20261105-jar-with-dependencies.jar OpenGGF-0.7.20261105-openggf-mod-sdk.jar init sample-platformer --id sample-platformer --package example.platformer --kind standalone
+ggfmod.ps1 OpenGGF-0.8.prerelease-jar-with-dependencies.jar OpenGGF-0.8.prerelease-openggf-mod-sdk.jar init sample-platformer --id sample-platformer --package example.platformer --kind standalone
 ```
 
 (POSIX shells use `docs/modding/ggfmod` instead of `ggfmod.ps1`; every `ggfmod`

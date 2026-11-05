@@ -5,8 +5,8 @@ Genesis games *Sonic the Hedgehog*, *Sonic the Hedgehog 2* and *Sonic 3 & Knuckl
 It is written in Java. You bring your own copies of the games, and OpenGGF does the rest.
 
 > [!NOTE]
-> OpenGGF is still in development. The latest release is
-> [0.7.20261105](https://github.com/OpenGGF/OpenGGF/releases/tag/v0.7.20261105).
+> OpenGGF is still in development. This branch holds the next version, 0.8. The
+> latest release is [0.7.20261105](https://github.com/OpenGGF/OpenGGF/releases/tag/v0.7.20261105).
 > [Game status](docs/guide/playing/game-status.md) lists what works and what doesn't yet.
 
 > [!IMPORTANT]
@@ -117,7 +117,7 @@ You need JDK 25 and Maven.
 git clone --branch develop https://github.com/OpenGGF/OpenGGF.git
 cd OpenGGF
 mvn -Dmse=off -DskipTests package
-java -jar target/OpenGGF-0.7.20261105-jar-with-dependencies.jar
+java -jar target/OpenGGF-0.8.prerelease-jar-with-dependencies.jar
 ```
 
 On macOS, add `-XstartOnFirstThread` before `-jar`. If you plan to contribute, follow
@@ -261,6 +261,7 @@ goal is finishing and testing the three original games. See the
 
 | Release | Status | Main themes |
 |---|---|---|
+| 0.8 | In development | Graduating the features added in 0.7: publishing the Mod API, qualifying the native packages and network services, and finishing the Sonic 3 & Knuckles character routes and full-run trace chains that 0.7 shipped without. See the [0.8 changelog](CHANGELOG.0.8.prerelease.md) and [roadmap](docs/project/v0.8-roadmap.md). |
 | [0.7.20261105](docs/changelog/v0.7-release-summary.md) | Latest release | Most of Sonic 3 & Knuckles playable as Sonic, Tails and Knuckles through to the native endings, as a beta still being tested route by route. Knuckles in Sonic 2, a new start screen, widescreen, smoother frame pacing, the level editor for all three games, Stageplay, a rewind budget and Time Attack with online racing. Mods are included as a preview; the mod interface is published in 0.8. See the [0.7 changelog](CHANGELOG.0.7.md). |
 | [0.6.20260917](docs/changelog/v0.6-release-summary.md) | Released | Accurate play through Sonic 3 & Knuckles from Angel Island to Hydrocity, and most of Sonic 1 and 2. More accurate sound, a faster sound chip emulator, continue screens, rewind, and video capture. 0.6.20260917 is 0.6.20260911 with a fix for the native packages. See the [0.6 changelog](CHANGELOG.0.6.md). |
 | [0.5.20260411](CHANGELOG.0.5.md) | Released | A rebuilt engine design, more of Sonic 3 & Knuckles, the start of the editor, better graphics and sound, and more tests. |
