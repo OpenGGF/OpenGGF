@@ -8,7 +8,7 @@ replace this file for Claude Code. Edit skills only under `.agents/skills/`;
 
 ## Project and scope
 
-OpenGGF is an alpha Java 25 reimplementation of Sonic 1, 2 and 3&K for research and preservation. Runtime assets come from user-supplied ROMs; it has no Sega affiliation. The editor is experimental, and the unpublished Mod API on the development branches is outside the 0.6 release.
+OpenGGF is an alpha Java 25 reimplementation of Sonic 1, 2 and 3&K for research and preservation. Runtime assets come from user-supplied ROMs; it has no Sega affiliation. The editor is experimental, and the Mod API ships in 0.7 as an unpublished candidate.
 
 Accuracy means reproducing the shipped ROMs, never tuning to make a fixture pass. Explain differences with the disassembly. Prioritise S3K playable routes and keep AIZ → HCZ stable; pick later work by route blockers and trace frontiers. Cleanup must serve the task or remove an active risk.
 
@@ -113,7 +113,7 @@ Follow the user's integration flow. Never switch the main workspace's branch. Ne
 
 Install the hooks with `tools/testing/install-hooks.sh` (PowerShell: `tools/testing/install-hooks.ps1`) and never use `--no-verify`. Non-master, non-merge commits carry seven trailers, `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs` and `Skills`, each starting `updated` or `n/a` and matching the staged files. A source `feat`, `fix` or `perf` needs a changelog entry or an inline reason.
 
-Development prose goes in `CHANGELOG.0.7.prerelease.md`; the `Changelog: updated` trailer maps only to root `CHANGELOG.md`, the release index. Fold fixes to unreleased features into their existing entry. Use the [staging checklist](docs/agent-workflow/documentation-obligation-checklist.md) for frontier-log, artifact, version and branch obligations, and [release rollover](docs/project/release-rollover.md) for promotions. The README release section changes only when a merge adds or changes a version theme.
+Development prose goes in the `CHANGELOG.<version>.md` named by the branch's `pom.xml` version (develop: `CHANGELOG.0.8.prerelease.md`); the `Changelog: updated` trailer maps only to root `CHANGELOG.md`, the release index. Fold fixes to unreleased features into their existing entry. Use the [staging checklist](docs/agent-workflow/documentation-obligation-checklist.md) for frontier-log, artifact, version and branch obligations, and [release rollover](docs/project/release-rollover.md) for promotions. The README release section changes only when a merge adds or changes a version theme.
 
 Any non-deletion push to `master` publishes a release; PRs and manual dispatch do not. Never tag first or reuse a version. Use the `release-publishing` skill and [guide](docs/project/release-publishing.md), and confirm the release and downloads.
 

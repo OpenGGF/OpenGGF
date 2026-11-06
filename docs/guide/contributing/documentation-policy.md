@@ -86,13 +86,14 @@ A bare `Changelog: n/a` is rejected for `feat`, `fix`, and `perf` commits that t
 
 ## Release Note Destination
 
-`pom.xml` selects the engine release line. `develop` and `next` currently share
-`0.7.prerelease`, so new notes go in `CHANGELOG.0.7.prerelease.md`; earlier themes
-remain in `CHANGELOG.0.7.md`. The root `CHANGELOG.md` holds the release index and
-current-line pointer. For an engine change whose note is in the versioned file:
+`pom.xml` selects the engine release line, and new notes go in the
+`CHANGELOG.<version>.md` it names: `develop` (0.8.prerelease) writes
+`CHANGELOG.0.8.prerelease.md` and `next` (0.9.prerelease) writes
+`CHANGELOG.0.9.prerelease.md`. `CHANGELOG.0.7.md` is the frozen 0.7 release file.
+The root `CHANGELOG.md` holds the release index. For an engine change whose note is in the versioned file:
 
 ```text
-Changelog: n/a: release note recorded in CHANGELOG.0.7.prerelease.md
+Changelog: n/a: release note recorded in CHANGELOG.0.8.prerelease.md
 ```
 
 Fold fixes to an unreleased feature into its existing entry. Keep commit hashes,

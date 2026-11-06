@@ -12,7 +12,7 @@ commit being investigated when diagnosing a run.
 | Push to `master` | Publishes after required builds succeed, provided the version tag is new. |
 | Pull request (any base, non-draft) | Release workflow does not run. CI runs branch policy, the bounded smoke suite and guards, without native packaging. |
 | Manual Release dispatch | Public release preparation: full-suite validation/build run only; does not publish, even on `master`. |
-| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke only. |
+| Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke and branch policy. |
 | Re-run a master push run | Can publish if the previous attempt did not create its version tag; inspect partial results first. |
 
 The publish condition requires a non-deletion `push` event on
@@ -23,7 +23,10 @@ publish job from running. A manual dispatch is not a way to publish.
 
 Source and universal-JAR builds use JDK 25. Native packaging uses checksum-pinned GraalVM Community
 25.4.4.1.1+1.1 for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
-distribution. The Java 25 migration does not enable preview APIs or optional VM
+distribution. The macOS leg is tolerated: since 0.7 its code-mod image needs about 5 GiB of live
+compiler heap, more than the free 7 GiB `macos-15` runner keeps resident, so the build pages and
+stalls. Its compile step stops after 45 minutes, and the release then publishes without
+`OpenGGF-macos.zip`. Windows, Linux and the universal JAR remain required. The Java 25 migration does not enable preview APIs or optional VM
 tuning. A manual dispatch on a candidate branch with `validate_roms=false`
 checks hosted-platform packaging without publishing; it does not replace required
 ROM/trace validation.
@@ -39,6 +42,11 @@ preparing the release. See [release rollover](release-rollover.md).
    [release rollover](release-rollover.md). Read the version from that commit's
    `pom.xml`. [Rebuild, review and commit the project atlas](#refresh-the-project-atlas-for-a-release)
    before fixing the final candidate SHA and running its release qualification.
+   Regenerate the website hero reels from that candidate with
+   `python3 tools/media/hero_reels.py build --game all --out <task-dir>`
+   ([hero reels](../../tools/media/README.md#website-hero-reels)), review the
+   contact sheets, then copy the reels and posters to OpenGGF-WebZone
+   `public/media/` on a website branch.
    Run the full ordinary suite explicitly with
    `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
    separate guards and required ROM/trace checks. Full suites are reserved for
@@ -72,7 +80,7 @@ preparing the release. See [release rollover](release-rollover.md).
    ```
 
 5. Confirm the `release` job succeeded and the release exists at `v<version>`,
-   with Windows, macOS, Linux, and universal-JAR downloads:
+   with Windows, Linux, and universal-JAR downloads, plus macOS when its tolerated leg built:
 
    ```bash
    gh release view v<version> --json tagName,isDraft,isPrerelease,url,assets

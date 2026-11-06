@@ -1,0 +1,53 @@
+name: Push policy
+
+# Branch/trailer/changelog/resource policy for develop and next pushes. Pull
+# requests get the same check from ci.yml's policy job; master pushes get it from
+# release.yml. TestBuildToolingGuard pins this file.
+#
+# This lives outside ci.yml because ci.yml's concurrency group cancels a run when
+# the next push lands (that is how its smoke quiet period works), and a cancelled
+# check must not leave its commits unvalidated. Here a running check always
+# finishes, and GitHub still replaces a pending one with the newest push. So no
+# run validates only its own push: tools/git/policy_push_base.py picks the head
+# of the last successful run of this workflow on the branch, and every commit
+# since then is checked again, including those of superseded and failed runs.
+# With no successful run yet, it starts at the branch's merge base with master,
+# whose history release.yml has already validated.
+on:
+  push:
+    branches:
+      - develop
+      - next
+
+concurrency:
+  group: push-policy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  policy:
+    if: github.event.deleted == false
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify policy base selection
+        run: python3 -m unittest discover -s tools/git -p 'test_policy_push_base.py'
+
+      - name: Validate pushed branch policy since the last successful check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
+          REF_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(python3 tools/git/policy_push_base.py --repository "$GITHUB_REPOSITORY" \
+            --workflow push-policy.yml --branch "$REF_NAME" \
+            --head "$GITHUB_SHA" --before "$BEFORE_SHA" --floor-ref refs/remotes/origin/master)
+          bash .githooks/validate-policy.sh ci-push "$base" "$GITHUB_SHA" "$REF_NAME"

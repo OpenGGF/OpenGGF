@@ -16,9 +16,17 @@ on:
         default: false
 
 jobs:
+  # Validates from the head of the last master push whose policy job succeeded,
+  # not only this push's event base: otherwise a push after a failed release run
+  # would check its own commits and publish the failed run's unchecked ones.
+  # tools/git/policy_push_base.py falls back to the event base when no earlier
+  # run succeeded; push-policy.yml uses the same rule for develop and next.
   policy:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,7 +35,17 @@ jobs:
 
       - name: Validate branch policy (push)
         if: github.event_name == 'push' && github.event.deleted == false
-        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
+          REF_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(python3 tools/git/policy_push_base.py --repository "$GITHUB_REPOSITORY" \
+            --workflow release.yml --job policy --branch "$REF_NAME" \
+            --head "$GITHUB_SHA" --before "$BEFORE_SHA")
+          bash .githooks/validate-policy.sh ci-push "$base" "$GITHUB_SHA" "$REF_NAME"
 
   # Cloud builds must not depend on private ROM fixtures or a personal runner.
   test:
@@ -256,13 +274,16 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-          # Standard Apple Silicon runner; keep the native compiler within its 7 GiB budget.
+          # Standard Apple Silicon runner. The 0.7 code-mod image does not fit its 7 GiB:
+          # the builder pages and stalls (docs/project/release-publishing.md). The leg runs
+          # but cannot block publication; the release attaches its package only if it built.
           - os: macos-15
             platform: macos
           - os: ubuntu-latest
             platform: linux
 
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.platform == 'macos' }}
 
     steps:
       - name: Checkout code
@@ -286,6 +307,8 @@ jobs:
 
       - name: Build native image
         shell: bash
+        # A stalled macOS builder held publication for three hours per attempt.
+        timeout-minutes: ${{ matrix.platform == 'macos' && 45 || 120 }}
         run: python tools/native-image/build.py --stage compile
 
       - name: Audit retention and load bundled code through normal native boot
@@ -621,7 +644,9 @@ jobs:
 
   release:
     needs: [build, universal-jar]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.event.deleted == false
+    # !cancelled(): run even though the tolerated macOS leg failed. The Windows and Linux
+    # downloads below still fail the job, before publication, if their packages are missing.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && github.event.deleted == false && !cancelled() && needs.universal-jar.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -650,7 +675,10 @@ jobs:
           name: openggf-windows
           path: artifacts/openggf-windows
 
+      # The macOS leg cannot block publication (see the build matrix); attach it only if it built.
       - name: Download macOS distribution
+        id: macos
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: openggf-macos
@@ -671,6 +699,24 @@ jobs:
       - name: Display artifacts
         run: ls -R artifacts
 
+      - name: Select release files
+        id: files
+        shell: bash
+        run: |
+          macos=artifacts/openggf-macos/OpenGGF-macos.zip
+          if [[ "${{ steps.macos.outcome }}" != "success" ]]; then
+            echo "::warning ::No macOS native package built; publishing without OpenGGF-macos.zip."
+            macos=
+          fi
+          {
+            echo 'list<<EOF'
+            echo artifacts/openggf-windows/OpenGGF-windows.zip
+            [[ -n "$macos" ]] && echo "$macos"
+            echo artifacts/openggf-linux/OpenGGF-linux.tar.gz
+            echo artifacts/openggf-universal-jar/OpenGGF-universal.jar
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -680,11 +726,7 @@ jobs:
           draft: false
           generate_release_notes: true
           fail_on_unmatched_files: true
-          files: |
-            artifacts/openggf-windows/OpenGGF-windows.zip
-            artifacts/openggf-macos/OpenGGF-macos.zip
-            artifacts/openggf-linux/OpenGGF-linux.tar.gz
-            artifacts/openggf-universal-jar/OpenGGF-universal.jar
+          files: ${{ steps.files.outputs.list }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

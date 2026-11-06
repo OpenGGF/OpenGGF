@@ -51,21 +51,29 @@ class TestCnz2CutsceneButtonInstance {
                 .filter(SongFadeTransitionInstance.class::isInstance)
                 .map(SongFadeTransitionInstance.class::cast)
                 .findFirst().orElseThrow();
+        CutsceneKnucklesCnz2BInstance knuckles = objects.getActiveObjects().stream()
+                .filter(CutsceneKnucklesCnz2BInstance.class::isInstance)
+                .map(CutsceneKnucklesCnz2BInstance.class::cast)
+                .findFirst().orElseThrow();
         assertFalse(button.isPressedForTest(),
                 "the lower button SST slot runs before CutsceneKnux_CNZ2B publishes _unkFAA4");
-        assertFalse(booleanField(transition, "fadeStarted"),
-                "the music transition must wait for the following pass when the button can press");
+        // loc_62528 (sonic3k.asm:129330-129338) calls sub_65DD6 (sonic3k.asm:134148-134154),
+        // which allocates the helper with plain AllocateObject. After a fresh object load no
+        // lower slot is free, so the helper lands after Knuckles and Process_Sprites reaches
+        // Obj_Song_Fade_Transition (sonic3k.asm:180414-180418) in the same pass.
+        // TestCutsceneMusicSlotTiming owns the lower-hole case, where the first dispatch waits
+        // for the following pass.
+        assertTrue(transition.getSlotIndex() > knuckles.getSlotIndex(),
+                "AllocateObject takes the lowest free SST, which follows Knuckles after a fresh load");
+        assertTrue(booleanField(transition, "fadeStarted"),
+                "a helper allocated after Knuckles' slot issues cmd_FadeOut in its allocation pass");
 
         objects.update(0x46E0, fixture.sprite(), List.of(fixture.sprite()), 1);
 
         assertFalse(button.isPressedForTest(),
                 "the placed dx=$20 lies outside Check_InMyRange's -$18 + $30 width");
         assertTrue(booleanField(transition, "fadeStarted"),
-                "Obj_Song_Fade_Transition begins independently while Knuckles approaches the button");
-        CutsceneKnucklesCnz2BInstance knuckles = objects.getActiveObjects().stream()
-                .filter(CutsceneKnucklesCnz2BInstance.class::isInstance)
-                .map(CutsceneKnucklesCnz2BInstance.class::cast)
-                .findFirst().orElseThrow();
+                "Obj_Song_Fade_Transition runs independently while Knuckles approaches the button");
         setIntField(knuckles, "currentX", button.getX() + 0x17);
         setIntField(knuckles, "currentY", button.getY());
 
