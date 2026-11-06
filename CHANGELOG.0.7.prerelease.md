@@ -1979,8 +1979,13 @@ its original drawing priority.
   existing broad catch handlers across main Java sources, with explicit legacy
   inventory and adversarial scanner controls.
 
-- Standalone S3K run segments enter with the run state the ROM carried in:
-  rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
+- Standalone run segments enter with the run state the ROM carried in:
+  S2-family special-stage returns consume the manifest’s observed destination
+  ring count, preserving stock cleared rings and lock-on retained rings.
+  Special-stage replay honors the recorded team and built-in patch resolution.
+  Strict independent tests now cover the previously unreachable campaign
+  segments and missing standalone slices; canonical fixtures replace 30 copies.
+  S3K entry restores retain rings, Chaos and Super Emerald progress, used giant rings, star-post progress,
   Player 1's shield and path bits, and, from the recorded saved blocks, the
   star-post checkpoint, camera bounds, water level, timer and lives. One segment-entry import reads them from the run manifest and
   the segment's recorded entry row; nothing is written after entry. Standalone
