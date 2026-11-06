@@ -32,7 +32,10 @@ under the matching area heading; see the
   well as its zones: live rewind undoing a hit or a fall, sidekick chains (ten
   Sonics in Scrap Brain, a crowd at the Emerald Hill 2 boss), borrowed art and
   Super Sonic in Sonic 1 and Sonic 3&K, Knuckles in Sonic 2, a Casino Night
-  jackpot, custom-team Data Select saves, and every Sonic 3&K zone with its bonus
+  jackpot, custom-team Data Select saves, Sonic 2 saves in Sonic 3&K's donated
+  Data Select, and every Sonic 3&K zone with its bonus
   and special stages. `GameplayCaptureTool --rewind FRAME:LENGTH`
-  holds the live rewind key over a window and draws the rewind plate, and
-  `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds.
+  holds the live rewind key over a window and draws the rewind plate,
+  `--emeralds` also takes Sonic 1 and Sonic 2's six emeralds, and
+  `--title-screen` now accepts `--donor`, since boot activates the donor before
+  the title.
