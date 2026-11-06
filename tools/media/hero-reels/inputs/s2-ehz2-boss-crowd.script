@@ -1,0 +1,10 @@
+# Source for s2-ehz2-boss-crowd.txt (InputLogAuthorTool --script). Emerald Hill act 2,
+# positioned at x 10150 y 1000 with a chain of twelve Sonic sidekicks: walk into the
+# boss arena (camera lock at x 10480-10560), then pace between the arena middle and
+# the right wall so the chain spreads across the floor while the drill car drives
+# through it.
+20 -
+100 R
+160 -
+repeat 8 { 50 L; 30 -; 50 R; 30 - }
+100 -
