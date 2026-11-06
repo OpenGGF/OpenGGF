@@ -10,6 +10,8 @@ import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.level.CdR11bAssets;
 import com.openggf.game.soniccd.level.CdR12aObjectAssets;
 import com.openggf.game.soniccd.level.CdR12aProfile;
+import com.openggf.game.soniccd.level.CdR12bTerrainAssets;
+import com.openggf.game.soniccd.level.CdR12bObjectAssets;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
 import java.util.ArrayList;
@@ -155,6 +157,19 @@ public final class CdFloatBlock {
                 throw new IllegalArgumentException("FloatBlock Act2 assets require authenticated original USA R12A Word RAM");
             return new Assets(owner.view(CdR12aProfile.Asset.OBJECT_TILE_IDS), owner.floatBlock(),
                     owner.profile().range(CdR12aProfile.Asset.MAP_SPR_FLOAT_BLOCK).nativeAddress());
+        }
+
+        /** Actual original-USA R12B raw72 table and cached six-frame/three-script fifteen-tile source. */
+        public static Assets fromAct2PastAssets(CdR12bObjectAssets owner) {
+            Objects.requireNonNull(owner, "actual R12B object assets");var identity=Objects.requireNonNull(owner.identity(), "R12B identity");
+            if (identity.variant()!=CdReleaseVariant.USA || identity.file()!=CdNativeFile.R12B
+                    || identity.domain()!=CdMmdImage.Domain.ORIGINAL_WORD_RAM || !identity.stage().equals(CdStagePayload.R12B.stage()))
+                throw new IllegalArgumentException("FloatBlock requires actual original USA R12B metadata");
+            var tiles=owner.view(CdR12bObjectAssets.View.OBJECT_TILE_IDS);var visual=owner.floatBlock();
+            if (tiles.length()!=72)throw new IllegalArgumentException("R12B FloatBlock requires the actual72-byte tile directory");
+            for (var frame:visual.mappingFrames())for (var piece:frame.pieces())
+                if (piece.tileOffset()>15-piece.tileCount())throw new IllegalArgumentException("FloatBlock mapping exceeds its15-tile source");
+            return new Assets(tiles,visual,CdR12bObjectAssets.View.MAP_SPR_FLOAT_BLOCK.range().nativeAddress());
         }
 
         /** Actual original USA Past views, retaining all real padding and the genuine empty frame zero. */
@@ -322,6 +337,15 @@ public final class CdFloatBlock {
         Objects.requireNonNull(runtime,"actual placement"); Objects.requireNonNull(assets,"actual R12A source");
         if (!runtime.sameAct2Source(assets)) throw new IllegalArgumentException("FloatBlock requires the same retained R12A placement/source");
         return new CdFloatBlock(runtime, Assets.fromAct2Assets(assets), solid, null, commit, drawObject);
+    }
+
+    /** Same retained actual R12B source; use existing raw72 reads, genuine Top prefixes and ordinal receipts. */
+    public static CdFloatBlock fromAct2PastAssets(CdObjectPlacementRuntime runtime, CdR12bTerrainAssets owner,
+                                                 CdSolidObject solid, PrefixTopSolidCommit commit, DrawObjectCall drawObject) {
+        Objects.requireNonNull(runtime, "actual R12B placement");Objects.requireNonNull(owner, "actual R12B terrain");
+        if (!runtime.sameAct2PastSource(owner))
+            throw new IllegalArgumentException("FloatBlock requires the same retained R12B placement/source");
+        return new CdFloatBlock(runtime,Assets.fromAct2PastAssets(owner.objects()),solid,null,commit,drawObject);
     }
 
     /** One ObjFloatBlock dispatch for the whole-pool dynamic slot currently holding ID $12. */

@@ -287,12 +287,15 @@ Unreleased. The earlier development themes remain in
   R12B physical walk now runs actual Sonic Init, reserved HUD and live dynamic
   slots through camera, CPU SAT and the ordinary tail, with full/course replay
   in the constructed exit fixture. Genuine Main/touch publication now continues
-  the unchanged controller through thirty-one target services, with selected Sonic
-  provenance and rewind. The target Boulder and Breakable Wall now bind their
-  actual mappings and shared plain-Solid publication. Wall FM and signed velocity
-  publication retain native order; the next Floating Block admission remains an
-  explicit boundary. A separate real-World entry fixture verifies visible
-  Sonic pixels, renderer omission and full/course pixel replay. No full-act or
+  the unchanged controller through 208 target services, with selected Sonic
+  provenance and rewind. The target Boulder, Breakable Wall and Floating Block
+  bind their actual mappings and shared Solid publication. Wall FM and signed
+  velocity publication retain native order; Floating Block threads its two or
+  four original Top-Solid calls through the same Frame. The natural controller
+  now has sixteen selected-display pixel/replay cuts, eight with visible Sonic;
+  Wall visibility remains unmeasured. Restoring R12B projection rebuilds stored
+  output without consuming a pending scroll-initialisation dispatch. A separate
+  real-World entry fixture retains its own visible-Sonic checks. No full-act or
   native/regional parity is claimed.
   Authenticated Act2 Spikes mapping and a named retained-source prefix factory
   reuse the existing common body and Std art owner; live Spikes dispatch remains

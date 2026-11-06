@@ -683,7 +683,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         try {
             if (module.act2PastLoadingSelected()) {
                 module.validateAct2PastLoadingCut(); module.act2PastWorldHost().projectCamera(GameServices.camera());
-                GameServices.parallax().update(0,1,GameServices.camera(),GameServices.level().getFrameCounter());
+                // Restoring projection must not consume the generic handler's pending init cursor.
+                GameServices.level().recomputeParallaxAfterRewindRestore();
                 heldPhase = null; return;
             }
             if (module.act2LoadingSelected()) {

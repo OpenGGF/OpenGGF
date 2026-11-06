@@ -232,6 +232,39 @@ class TestSonicCdAct2PastObjectPass {
         assertThrows(IllegalStateException.class,()->pass.runWalk(1));assertEquals(2,pool.state(69).routine());
         assertEquals(-0x123,f.frame.state().motion().xVelocity());assertTrue(f.ports.cut.sounds().isEmpty());assertFalse(f.frame.closed());
     }
+    @Test void floatBlockInitUsesTheActualBRootAndTwoOriginalTopCallsBeforeDraw() throws Exception{
+        actual();var f=fixture(false);var pool=f.placement.pool();pool.write(pool.state(33).moveByte(ID,0x12).moveWord(X,0x740).moveWord(Y,0x420));
+        var pass=f.pass();var field=SonicCdAct2PastObjectPass.class.getDeclaredField("floatBlock");field.setAccessible(true);var body=(CdFloatBlock)field.get(pass);
+        var port=CdFloatBlock.class.getDeclaredField("prefixCommit");port.setAccessible(true);var original=(CdFloatBlock.PrefixTopSolidCommit)port.get(body);
+        var calls=new ArrayList<CdFloatBlock.PrefixTopSolidCall>();port.set(body,(CdFloatBlock.PrefixTopSolidCommit)c->{calls.add(c);original.commit(c);});
+        pass.runWalk(1);assertEquals(2,calls.size());assertEquals(((CdSolidObject.Completed)calls.getFirst().outcome()).completedResult().player(),calls.get(1).player());
+        var block=pool.state(33);assertEquals(2,block.routine());assertEquals(0x20A1B0,block.longBits(CdObjectState.LongField.MAPPINGS));
+        assertEquals(0x434C,block.word(TILE));assertEquals(5,block.unsignedByte(MAP_FRAME));assertEquals(-0x123,f.frame.state().motion().xVelocity());
+        assertTrue(pass.finishDraw(cameras()).provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==33));assertFalse(f.frame.closed());
+    }
+    @Test void floatBlockTopPairThreadsItsRealStandingPlayerIntoTheSameFrame(){
+        actual();var f=fixture(false,0x04015678);var pool=f.placement.pool();pool.write(pool.state(33).moveByte(ID,0x12).moveByte(SPRITE_FLAGS,0x84).moveWord(X,0x700).moveWord(Y,0x420));
+        var pass=f.pass();pass.runWalk(1);assertEquals(33,f.frame.state().objectLinks().standObject());
+        assertEquals(0,f.frame.state().motion().yVelocity());assertEquals(8,f.frame.state().motion().flags()&10);
+        assertTrue((pool.state(33).flags()&8)!=0);assertEquals(0,f.frame.state().history().index());pass.finishDraw(cameras());assertFalse(f.frame.closed());
+    }
+    @Test void floatBlockResetAndBelowCameraDeletionKeepTheSavedBankWithoutMintingDraw(){
+        actual();for(int routine:new int[]{12,4}){var f=fixture(false);var pool=f.placement.pool();var saved=f.placement.capture().savedFlags();
+            pool.write(pool.state(33).moveByte(ID,0x12).moveByte(ROUTINE,routine).moveByte(SAVED_FLAGS_ID,0xFF).moveByte(WIDTH,12).moveByte(Y_RADIUS,12).moveWord(X,0x740).moveWord(Y,0x470));
+            var pass=f.pass();pass.runWalk(1);
+            if(routine==12){assertEquals(2,pool.state(33).routine());assertEquals(0x12,pool.state(33).id());}
+            else assertArrayEquals(new byte[64],pool.state(33).copyBytes());
+            assertArrayEquals(saved.copy(),f.placement.capture().savedFlags().copy());assertTrue(pass.finishDraw(cameras()).provenance().isEmpty());assertFalse(f.frame.closed());
+        }
+    }
+    @Test void equalFloatBlockTopRecordHasNoActualCallbackIdentity() throws Exception{
+        actual();var f=fixture(false);var pool=f.placement.pool();pool.write(pool.state(33).moveByte(ID,0x12).moveWord(X,0x740).moveWord(Y,0x420));
+        var pass=f.pass();var field=SonicCdAct2PastObjectPass.class.getDeclaredField("floatBlock");field.setAccessible(true);var body=(CdFloatBlock)field.get(pass);
+        var port=CdFloatBlock.class.getDeclaredField("prefixCommit");port.setAccessible(true);var original=(CdFloatBlock.PrefixTopSolidCommit)port.get(body);
+        port.set(body,(CdFloatBlock.PrefixTopSolidCommit)c->original.commit(new CdFloatBlock.PrefixTopSolidCall(c.callCut(),c.player(),c.globals(),c.outcome())));
+        assertThrows(IllegalStateException.class,()->pass.runWalk(1));assertEquals(2,pool.state(33).routine());
+        assertEquals(0x434C,pool.state(33).word(TILE));assertEquals(-0x123,f.frame.state().motion().xVelocity());assertFalse(f.frame.closed());
+    }
     private static final class TestPorts implements Ports {
         Cut cut;boolean valid=true,omit,reentry;int rejections;SonicCdAct2PastObjectPass pass;
         Runnable beforeApply;final List<SonicCdAct2PastObjectPass.Adoption> receipts=new ArrayList<>();

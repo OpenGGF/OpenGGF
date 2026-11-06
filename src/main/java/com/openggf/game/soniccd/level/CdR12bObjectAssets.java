@@ -12,8 +12,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Detached original-USA R12B metadata for fourteen kinds: Ring, Spring, HUD, TimeIcon,
- * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder, BreakableWall.
+ * Detached original-USA R12B metadata for fifteen kinds: Ring, Spring, HUD, TimeIcon,
+ * Monitor/TimePost, CollapsePlatform, Tamabboh, Animal, Swing, RobotGenerator, Anton, Platform, Boulder, BreakableWall, FloatBlock.
  * N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: actual Act2Past includes and Init/Animate
  * operands are pinned in the companion report/tests. Authored by OpenAI Codex GPT-6.1 Sol.
  * Every byte is read from the authenticated terrain owner's retained original image.
@@ -66,7 +66,9 @@ public final class CdR12bObjectAssets {
         MAP_SPR_BREAKABLE_WALL(0xEE64,312,312,"c561a76556cc21a46155e135205ab7c39cc8b007b9730c66e0a34a707d671226","c561a76556cc21a46155e135205ab7c39cc8b007b9730c66e0a34a707d671226"),
         BREAKABLE_WALL_PIECE_FRAMES(0xEF9C,64,64,"9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f","9ea247159cb7c1830c8392d11b18cd1ce1de576fa33e4451179201fbe800ac7f"),
         BREAKABLE_WALL_PIECE_DELTAS(0xEFDC,24,24,"86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94","86444e752d8300afadd9aa1b5e2fa7a3252febf156c023d05f7bcf152f706e94"),
-        BREAKABLE_WALL_PIECE_SPEEDS(0xEFF4,48,48,"7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31","7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31");
+        BREAKABLE_WALL_PIECE_SPEEDS(0xEFF4,48,48,"7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31","7a1571aadadf44de0c59b260de3ec3464b1b3676a4ea2cef273b069284032b31"),
+        MAP_SPR_FLOAT_BLOCK(0xA1B0,76,76,"98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e","98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e"),
+        ANI_FLOAT_BLOCK(0xA192,30,30,"3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9","3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9");
         private final int offset,canonicalLength,length;
         private final String canonicalSha,sha;
         View(int offset,int canonicalLength,int length,String canonicalSha,String sha) {
@@ -102,7 +104,8 @@ public final class CdR12bObjectAssets {
         ANTON(View.MAP_SPR_ANTON,4,View.ANI_ANTON,2,22,0,0,0,SourceId.ART_ANTON),
         PLATFORM(View.MAP_SPR_PLATFORM,3,null,0,57,0,0,0,SourceId.ART_PLATFORM),
         BOULDER(View.MAP_SPR_BOULDER,1,null,0,19,0,0,0,SourceId.ART_BOULDER),
-        BREAKABLEWALL(View.MAP_SPR_BREAKABLE_WALL,14,null,0,57,0,0,0,SourceId.ART_PLATFORM);
+        BREAKABLEWALL(View.MAP_SPR_BREAKABLE_WALL,14,null,0,57,0,0,0,SourceId.ART_PLATFORM),
+        FLOATBLOCK(View.MAP_SPR_FLOAT_BLOCK,6,View.ANI_FLOAT_BLOCK,3,15,0,0,0,SourceId.ART_BLOCK);
         final View map,script;final int frames,scripts,bound,root,start,end;final SourceId art;
         Key(View map,int frames,View script,int scripts,int bound,int root,int start,int end,SourceId art){
             this.map=map;this.frames=frames;this.script=script;this.scripts=scripts;this.bound=bound;this.root=root;this.start=start;this.end=end;this.art=art;
@@ -162,6 +165,7 @@ public final class CdR12bObjectAssets {
     /** Native Boulder/Main:26-59; one counted frame, actual parent EVEN, existing19-tile source. */
     public CdObjectVisualAssets boulder() { return visual(Key.BOULDER); }
     public CdObjectVisualAssets breakableWall() { return visual(Key.BREAKABLEWALL); }
+    public CdObjectVisualAssets floatBlock() { return visual(Key.FLOATBLOCK); }
 
     private synchronized CdObjectVisualAssets visual(Key key){
         var cached=visuals[key.ordinal()];if(cached!=null)return cached;

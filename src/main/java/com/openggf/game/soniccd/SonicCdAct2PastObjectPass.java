@@ -72,7 +72,7 @@ final class SonicCdAct2PastObjectPass {
         }
     }
     private enum Phase { READY,WALKING,WALKED,DRAINING,DONE,FAILED,DISCARDED }
-    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,NULL }
+    private enum Kind { PRIMARY,RESERVED,RING,SPRING,MONITOR,TIME_POST,COLLAPSE,PLATFORM,TAM,ANIMAL,SWING,ROBOT,ANTON,BOULDER,WALL,FLOAT_BLOCK,NULL }
     private final Ports ports;private final CdR12bTerrainAssets terrain;private final CdR12bPlayerAssets player;
     private final CdPlayerFrameRuntime frame;private final CdObjectPlacementRuntime placement;
     private final CdAssetBytes objectIndex;private final CdObjectMappings mappings;
@@ -83,6 +83,7 @@ final class SonicCdAct2PastObjectPass {
     private CdPlatform platform;private CdTamabboh tam;private CdAnimal animal;private CdBoulder boulder;
     private CdSwing swing;private CdRobotGenerator robot;private CdAnton anton;
     private CdBreakableWall wall;
+    private CdFloatBlock floatBlock;
     private Phase phase=Phase.READY;private CdObjectDrawQueue queue;private Dispatch dispatch;
     private boolean port,queuePort;private Adoption pending;
     private static final class Dispatch {
@@ -93,6 +94,7 @@ final class SonicCdAct2PastObjectPass {
         CdPlayerFrameRuntime.ActorState actor;CdPlayerFrameRuntime.SharedState shared;
         List<byte[]> expectedImages;byte[] expectedSaved;CdSwing.PlayerCut playerCut;
         int wallBranch,wallSolids,wallFms,wallHalves,wallDraws;
+        int floatOrdinal;boolean floatStopped;CdObjectPlacementRuntime.Status floatStatus;CdAssetBytes floatBank;
         Dispatch(Kind kind,int whole){this.kind=kind;this.whole=whole;}
     }
     SonicCdAct2PastObjectPass(Ports ports,CdR12bTerrainAssets terrain,CdR12bPlayerAssets player,
@@ -153,6 +155,14 @@ final class SonicCdAct2PastObjectPass {
             }
             public void failed(Throwable original){requireKind(Kind.WALL);wall.validateCurrentCall(original);}
         });
+        floatBlock=CdFloatBlock.fromAct2PastAssets(placement,terrain,solid,c->{requireKind(Kind.FLOAT_BLOCK);floatNonwrites();
+            var d=dispatch;if(d.floatStopped)throw new IllegalStateException("FloatBlock callback after native stop");
+            claim(c,()->floatBlock.isCurrentPrefixTopSolidCall(c,d.floatOrdinal));poolCut(c.callCut());
+            commitSolid(c.callCut(),c.player(),c.globals(),c.outcome());
+            if(c.outcome() instanceof CdSolidObject.NativeStopped)d.floatStopped=true;else d.floatOrdinal++;
+        },(p,id)->{requireKind(Kind.FLOAT_BLOCK);floatNonwrites();
+            if(dispatch.floatStopped)throw new IllegalStateException("FloatBlock Draw after native stop");
+            drawDynamic(Kind.FLOAT_BLOCK,p,id,()->floatBlock.isCurrentDrawCall(p,id));});
         monitor=CdMonitor.fromAct2PastAssets(placement,terrain,solid,probes,new CdMonitor.PrefixSolidOwner(){
             public CdMonitor.LiveSolid preflight(CdMonitor.PrefixSolidCut c){requireKind(Kind.MONITOR);requireIdentity(c.objectIdentity());poolCut(c.callCut());
                 if(!c.expectedPlayer().equals(primary())||!c.expectedGates().equals(gates())||!c.expectedGlobals().equals(solidGlobals()))throw new IllegalArgumentException("Stale Monitor readback");
@@ -272,6 +282,14 @@ final class SonicCdAct2PastObjectPass {
             case WALL->{var entry=placement.pool().state(whole);dispatch.wallBranch=entry.routine()==4?4:entry.unsignedByte(COLLISION_STATUS)==0?2:3;
                 var result=wall.run(whole,new CdBreakableWall.Globals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdBreakableWall.Inputs(primary(),gates(),solidGlobals()));
                 requireKind(Kind.WALL);if(!dispatch.completed||dispatch.operation!=result)throw new IllegalStateException("Not actual completed Wall dispatch");}
+            case FLOAT_BLOCK->{var before=placement.capture();dispatch.floatStatus=before.status();dispatch.floatBank=before.savedFlags();
+                try{var result=floatBlock.run(whole,new CdFloatBlock.Globals(g.timeZone(),cut.cameraXWord(),cut.cameraYWord()),new CdFloatBlock.SolidInputs(primary(),gates(),solidGlobals()));
+                    requireKind(Kind.FLOAT_BLOCK);floatNonwrites();
+                    if(dispatch.floatStopped||!result.state().equals(placement.pool().state(whole))
+                            ||result.effects().stream().filter(CdFloatBlock.TopSolid.class::isInstance).count()!=dispatch.floatOrdinal
+                            ||result.effects().stream().filter(effect->effect instanceof CdFloatBlock.CallReturned call&&call.call()==CdFloatBlock.NativeCall.DRAW_OBJECT).count()!=(dispatch.drawn?1:0))
+                        throw new IllegalStateException("FloatBlock completed metadata lacks actual publications");
+                }catch(RuntimeException|Error original){try{floatNonwrites();}catch(RuntimeException|Error check){if(check!=original)original.addSuppressed(check);}throw original;}}
             case MONITOR->monitor.runPast(whole,monitorGlobals(),new CdMonitor.SolidInputs(primary(),gates(),solidGlobals()));
             case TIME_POST->post.runPast(whole,postGlobals());
             case COLLAPSE->collapse.run(whole,new CdCollapsePlatform.DespawnGlobals(g.timeZone(),g.timeWarpDirection(),cut.cameraXWord()),new CdCollapsePlatform.Inputs(primary(),gates(),solidGlobals()));
@@ -323,7 +341,7 @@ final class SonicCdAct2PastObjectPass {
         if(whole==0){if(id==1||id==2)return Kind.PRIMARY;throw stop(Boundary.PLAYER_SLOT,whole,id);}
         if(whole<32){if((whole==2||whole==3||whole==5)&&id==0x1C||whole==31&&id==0x19)return Kind.RESERVED;
             throw stop(Boundary.PLAYER_SLOT,whole,id);}
-        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
+        return switch(id){case 0x0A->Kind.SPRING;case 0x10->Kind.RING;case 0x12->Kind.FLOAT_BLOCK;case 0x1B->Kind.BOULDER;case 0x36->Kind.WALL;case 0x19->placement.pool().state(whole).subtype()<8?Kind.MONITOR:Kind.TIME_POST;
             case 0x20->Kind.COLLAPSE;case 0x21->Kind.PLATFORM;case 0x22->Kind.TAM;case 0x24->Kind.ANIMAL;case 0x29->Kind.SWING;case 0x2D->Kind.ROBOT;case 0x3F->Kind.ANTON;
             default->throw stop(Boundary.OBJECT_KIND,whole,id);};
     }
@@ -354,6 +372,9 @@ final class SonicCdAct2PastObjectPass {
     private void wallCall(Object call,CdBreakableWall.SourceCut cut){requireKind(Kind.WALL);wall.validateCurrentCall(call);
         claim(call,()->wall.matchesPendingOperation(call));placementCut(cut.placement());source(cut.source());}
     private void wallAck(Object call){dispatch.operation=call;wall.acknowledgeCurrentCall(call);}
+    private void floatNonwrites(){var actual=placement.capture();
+        if(dispatch.floatStatus==null||!dispatch.floatStatus.equals(actual.status())||!same(dispatch.floatBank,actual.savedFlags()))
+            throw new IllegalStateException("FloatBlock changed placement status or saved bank");}
     private void publish(Cut expected,Cut next,CdObjectPool.Snapshot pool,Runnable preflight,Runnable write){
         if(port||pending!=null)throw new IllegalStateException("Recursive R12B adoption");var a=new Adoption(expected,next,pool,preflight,write);pending=a;port=true;
         try{requireCut(expected);ports.adopt(a);if(!a.applied)throw new IllegalStateException("Root omitted actual adoption receipt");requireCut(next);requireFrame(a.afterActor,a.afterShared);requirePlacement(a.afterPlacement);if(dispatch!=null)checkpoint();}

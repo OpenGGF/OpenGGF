@@ -2495,3 +2495,21 @@ case identities pass across93+2runs; initial route-frontier and overwritten-stor
 fixture failures remain attributed. Static review found no concrete new P1/P2.
 Natural object pixels/contact, full-act/native/regional/audio and broad smoke
 remain separate open obligations.
+
+
+### 6 November — R12B Floating Block and natural Sonic pixels
+
+The [Act2 Past matrix](../architecture/validation/levels/scd-palmtree-panic-act2-past.md)
+now qualifies208 natural target services through14143 with actual FloatBlock33
+and full/course replay. The endpoint is pushing object49; further traversal is
+not inferred from frame count. A separate controller-only EGL run checks sixteen
+Ready cuts13951..13966, fifteen forward edges, complete captured state and pixels;
+Sonic0 is visibly selected at eight cuts. Wall69 is absent from selected CPU in
+that window and has no new visible-pixel claim. The real ENGINE13955 capture stays
+in external task custody. Actual two/four Top-Solid calls use private original
+receipts and the existing complete Frame/pool owner. R12B restore now reconstructs
+stored scroll output without consuming native init; only the COW management epoch
+has a separate comparison contract.125distinct positive identities across
+separate source-bound runs include repaired native-digest fixtures, all14parallax
+regressions and the final one-case natural EGL pass. No single125-green fleet,
+full-act/native/regional/audio or broader-smoke result is implied.

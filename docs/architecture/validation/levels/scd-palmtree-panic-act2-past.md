@@ -211,12 +211,56 @@ pins and source identities match;16latest owned reports are consumed. Static
 review finds no concrete new P1/P2. No natural Wall pixel/contact, new screenshot,
 full-act/native/audio/regional or broad-smoke claim follows.
 
+## Floating Block and natural selected Sonic — 6 November
+
+Native ID12 now uses map20A1B0/read76, six counted frames (including empty0),
+three animation scripts at20A192/read30 and the existing fifteen Block tiles.
+There are46 finite views,23 counted roots and309 frames; static icons remain8.
+The additive retained-source factory preserves legacy74-byte constructors and
+all native algorithms, while its prefix path reads the actual72-byte directory.
+Private original-call/ordinal checks publish the genuine Top-Solid pair through
+one complete Frame/pool cut (four calls on Main-to-Fall); native stop, no-Draw
+reset and plain deletion retain their reached prefixes and saved-bank nonwrites.
+
+The permanent unchanged controller qualifies208 target services through14143,
+with full/course replay at1/4/12/15/16/17/31/32/33/64/128/208. Float33 has the
+actual ID12/routine2/map20A1B0/tile434C header at13967. The endpoint is pushing
+object49 with zero horizontal velocity; healthy frame count is not proof of
+further traversal. Its identity and next normal controller action remain to be
+observed. There is no new failed-call boundary after14143 yet.
+
+A separate cold controller-only EGL run qualifies16 Ready cuts13951..13966 and
+15 forward edges, complete native/full/course values and actual pixel replay.
+Selected Sonic0 is visible by renderer-only omission at13955..13958 and
+13963..13966. Wall69 is never selected in this window, so the original combined
+Sonic/Wall oracle's coverage-gap failure is retained, not claimed as Wall pixels.
+The exported320x224 ENGINE image is call13955; it uses no constructed pose/art
+and is written only after module/session/graphics/EGL cleanup.
+
+The deeper full-value check exposed R12B post-restore consuming the generic
+parallax init cursor. Its exact Host now implements output-only reconstruction;
+post-restore uses that existing path, while ordinary native updates keep their
+act gate. The logical engine act index never selects native gameplay. Rewind's
+LevelSnapshot COW epoch is compared separately as monotone metadata; every other
+level component is compared, and drawing must preserve the live epoch exactly.
+
+125 distinct positive test identities are established across separate source-bound
+runs: initial110 had108P/two incorrect semantic-digest literals, repaired from
+independent native-table expansion; later17/18 passed all old route/World/parallax
+checks with only the unselected-Wall expectation failing; the promoted Sonic-only
+EGL case passes separately1/0F/0E/0S. Earlier snapshot-comparator failures and the
+intermediate logical/native-act projection error remain attributed externally.
+No single125-green fleet, broad-smoke completion, visible Wall/contact, emulator
+image, audio, regional or full-act parity is claimed. Both bounded static reviews
+found no concrete P1/P2. Eleven final Java pins match;18 owned latest reports
+were consumed under the build lock, retaining source-bound evidence externally.
+
 ## Remaining act obligations
 
 | ID | Required next evidence | Current gap |
 | --- | --- | --- |
-| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main and selected Sonic provenance qualify through13966; later traversal/lifecycle remain open |
-| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; natural first thirty-one complete target walks qualify; later kinds/contact outcomes remain open |
+| ENTRY | IPX/WARP/load dispatch, real saved pose, terrain/camera/control and post-entry player body | Actual private FULL/load/custody and saved/scroll publication qualify; natural Init/Main qualifies through14143 and sixteen selected-display pixel cuts; later traversal/lifecycle remain open |
+| OBJECT | Actual stage mapping/placement/body bindings, contacts, children, despawn/re-entry | Actual-source body factories, mapping catalogue and placement qualify as components; 208 natural target walks qualify, including FloatBlock; later kinds/contact outcomes remain open |
 | EVENT | Native stage gates, water/palette/background/terrain changes | Unimplemented target programme owners |
 | CAMERA | Correct stage scroll/parallax/culling and width-sensitive behavior | Live loading scroll/plane publication qualifies; ordinary camera/culling/width-sensitive traversal remains pending |
 | BOSS | Source inventory and route-specific applicability | Unassessed, not marked not-applicable |

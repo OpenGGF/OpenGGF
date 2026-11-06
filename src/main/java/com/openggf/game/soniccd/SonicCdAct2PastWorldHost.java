@@ -554,9 +554,17 @@ final class SonicCdAct2PastWorldHost implements SonicCdAct2PastLoadingVisit.Host
         camera.setMinX((short)b.left());camera.setMaxX((short)b.right());camera.setMinY((short)terrain.loadPlan().bounds().top());camera.setMaxY((short)b.bottom());
         camera.setVerticalWrapEnabled(false);camera.setX((short)f.cameraX());camera.setY((short)f.cameraYWord());camera.setShakeOffsets(0,0);
     }
-    private final class Projection implements ZoneScrollHandler {
+    private final class Projection implements ZoneScrollHandler,com.openggf.level.scroll.ScrollOutputRebuilder {
+        @Override public void rebuildOutput(int[] output,int cameraX,int cameraY,int frameCounter,int actId) {
+            // Generic logical act indices do not select the native stage. This exact Host already
+            // owns R12B; project its restored HScroll without a native init/update dispatch.
+            projectOutput(output);
+        }
         @Override public void update(int[] output,int cameraX,int cameraY,int frameCounter,int actId) {
-            current();if(actId!=1)throw new IllegalArgumentException("R12B act1 required");Objects.requireNonNull(output);
+            if(actId!=1)throw new IllegalArgumentException("R12B act1 required");projectOutput(output);
+        }
+        private void projectOutput(int[] output) {
+            current();Objects.requireNonNull(output);
             if(output.length>256)throw new IllegalArgumentException("Complete HScroll is256 LONGs");
             var h=image.scroll().background().hscrollRam();for(int i=0;i<output.length;i++)output[i]=(int)h.unsignedLong(i*4);
         }
