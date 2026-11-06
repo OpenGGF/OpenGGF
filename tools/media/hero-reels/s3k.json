@@ -26,7 +26,7 @@
     {"id": "cnz1-bumpers", "label": "Carnival Night Act 1: bumpers and slopes", "source": "trace",
      "trace": "cnz_completerun", "team": "sonic+tails", "start": 540, "frames": 240},
     {"id": "bonus-gumball", "label": "Gumball Machine bonus stage", "source": "trace",
-     "trace": "bonus_gumball", "team": "knuckles", "start": 120, "frames": 240,
+     "trace": "runs/s3-knux-multibonus-ss/gumball", "team": "knuckles", "start": 120, "frames": 240,
      "note": "Substitutes the 0.6 reel's Blue Spheres shot: TraceCaptureTool rejects special-stage fixtures; a GameplayCaptureTool giant-ring entry from a committed route has not been tried yet."},
     {"id": "icz1-snowboard", "label": "IceCap Act 1: snowboard", "source": "trace",
      "trace": "icz_completerun", "team": "sonic+tails", "start": 540, "frames": 240},
