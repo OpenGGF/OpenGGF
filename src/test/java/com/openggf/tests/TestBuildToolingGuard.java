@@ -2438,6 +2438,35 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void onlyTheMacosNativeLegMayFailWithoutBlockingPublication() throws Exception {
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
+        Map<String, String> jobs = yamlJobBlocks(workflow);
+        String build = jobs.get("build");
+        String release = jobs.get("release");
+        assertNotNull(build);
+        assertNotNull(release);
+        assertTrue(build.contains("    continue-on-error: ${{ matrix.platform == 'macos' }}\n"),
+                "only the macOS leg, which exceeds the free runner's memory, may fail without blocking");
+        assertEquals(1, build.split("continue-on-error", -1).length - 1,
+                "no other build leg or step may tolerate failure");
+        assertTrue(build.contains("timeout-minutes: ${{ matrix.platform == 'macos' && 45 || 120 }}"),
+                "a stalled macOS image compiler must not hold publication for hours");
+        assertTrue(release.contains("!cancelled() && needs.universal-jar.result == 'success'"),
+                "publication runs after a tolerated macOS failure but never without the universal jar");
+        assertTrue(release.contains("fail_on_unmatched_files: true"),
+                "every selected release file must exist");
+        assertTrue(release.contains("files: ${{ steps.files.outputs.list }}"),
+                "the release publishes the selected file list");
+        String macos = release.substring(release.indexOf("- name: Download macOS distribution"),
+                release.indexOf("- name: Download Linux distribution"));
+        assertTrue(macos.contains("continue-on-error: true"), "a missing macOS package must not stop publication");
+        assertEquals(1, release.split("continue-on-error", -1).length - 1,
+                "Windows, Linux and universal-jar downloads must fail the release when missing");
+        assertTrue(release.contains("if [[ \"${{ steps.macos.outcome }}\" != \"success\" ]]; then"),
+                "attach the macOS package only when it was downloaded");
+    }
+
+    @Test
     void nativeImageCompilationMustFollowMavenPreparation() throws Exception {
         String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         String build = yamlJobBlocks(workflow).get("build");

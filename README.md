@@ -204,8 +204,9 @@ And modern Java is fast enough to run all three games at full speed.
 ### What platforms does it run on?
 
 Windows, macOS and Linux. OpenGGF uses OpenGL 4.1, the newest version macOS supports.
-Native packages are available for Windows, Linux and Apple Silicon Macs, and they
-load mods that contain code. Intel Macs use the Java version, which needs Java 25.
+Native packages are available for Windows and Linux, and they load mods that
+contain code. The 0.7 Apple Silicon package follows later; until then, and on Intel
+Macs, use the Java version, which needs Java 25.
 
 Each release is a snapshot. Security updates for the libraries OpenGGF uses go into
 the next version, not into releases already published.

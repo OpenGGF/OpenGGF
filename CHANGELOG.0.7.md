@@ -2781,7 +2781,9 @@ and trace evidence in [docs/status/trace-frontier-log.md](docs/status/trace-fron
   native build recipe. macOS keeps size optimization and a 5 GiB compiler heap
   on the standard runner; Linux and Windows use default optimization and 8 GiB.
   Maven preparation and image compilation run separately in CI to reduce build memory. Runtime loading remains an
-  experimental VM facility.
+  experimental VM facility. The free macOS runner cannot hold the code-mod image's compiler
+  working set, so its build is tolerated rather than required: 0.7.20261105 publishes without
+  `OpenGGF-macos.zip`, and Macs use the universal JAR until the macOS package is built.
 
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,
