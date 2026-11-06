@@ -39,7 +39,7 @@ public final class GameSupportNotices {
     }
 
     /** Stock games that are playable but not yet ready, keyed by game ID. */
-    public static final Map<String, Stage> DEFAULT_STAGES = Map.of("s3k", Stage.ALPHA);
+    public static final Map<String, Stage> DEFAULT_STAGES = Map.of("s3k", Stage.BETA);
 
     private final SonicConfigurationService config;
     private final Map<String, Stage> stages;

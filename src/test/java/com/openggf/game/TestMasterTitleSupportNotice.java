@@ -53,9 +53,9 @@ class TestMasterTitleSupportNotice {
         var screen = screen(config());
         selectS3k(screen);
         press(screen, GLFW_KEY_ENTER);
-        assertNotNull(screen.supportNoticeForTest(), "the alpha notice opens instead of starting the game");
+        assertNotNull(screen.supportNoticeForTest(), "the beta notice opens instead of starting the game");
         assertFalse(screen.isGameSelected());
-        assertEquals(GameSupportNotices.Stage.ALPHA, screen.supportNoticeForTest().stage());
+        assertEquals(GameSupportNotices.Stage.BETA, screen.supportNoticeForTest().stage());
 
         press(screen, GLFW_KEY_ESCAPE);
         assertNull(screen.supportNoticeForTest(), "Back closes the notice");
@@ -94,7 +94,7 @@ class TestMasterTitleSupportNotice {
         press(screen, GLFW_KEY_RIGHT);
         press(screen, GLFW_KEY_ENTER);
         assertTrue(screen.isGameSelected());
-        assertEquals("s3k:alpha", config.getString(SonicConfiguration.HUB_DISMISSED_NOTICES));
+        assertEquals("s3k:beta", config.getString(SonicConfiguration.HUB_DISMISSED_NOTICES));
 
         var later = screen(config);
         selectS3k(later);
@@ -201,9 +201,9 @@ class TestMasterTitleSupportNotice {
     }
 
     @Test void theNoticeNamesTheGameAndStageInEveryParagraph() {
-        var dialog = new GameSupportNoticeDialog("Sonic 3 & Knuckles", GameSupportNotices.Stage.ALPHA);
+        var dialog = new GameSupportNoticeDialog("Sonic 3 & Knuckles", GameSupportNotices.Stage.BETA);
         String body = dialog.bodyText();
-        assertTrue(body.contains("Sonic 3 & Knuckles support is currently in alpha."), body);
+        assertTrue(body.contains("Sonic 3 & Knuckles support is currently in beta."), body);
         assertTrue(body.contains("Discord") && body.contains("GitHub"), body);
         var layout = dialog.layout();
         assertTrue(layout.y() >= 0 && layout.y() + layout.h() <= MenuChrome.FOOTER_Y, "the panel clears the footer");
@@ -228,11 +228,11 @@ class TestMasterTitleSupportNotice {
 
     @Test void everyLanguageKeepsTheWholeNoticeOnScreenAtNativeWidth() {
         assertTrue(UiMessages.languages().size() > 10, "every bundled catalog is checked");
-        for (UiLanguage language : UiMessages.languages()) {
+        for (UiLanguage language : UiMessages.languages()) for (GameSupportNotices.Stage stage : GameSupportNotices.Stage.values()) {
             UiMessages.selectLanguage(language.tag());
-            var dialog = new GameSupportNoticeDialog("Sonic 3 & Knuckles", GameSupportNotices.Stage.ALPHA);
+            var dialog = new GameSupportNoticeDialog("Sonic 3 & Knuckles", stage);
             var layout = dialog.layout();
-            String where = language.tag();
+            String where = language.tag() + " " + stage.code();
             assertTrue(layout.y() >= 0 && layout.y() + layout.h() <= MenuChrome.FOOTER_Y, where + ": panel clears the footer");
             int lines = 0;
             for (int page = 0; page < layout.pages(); page++) lines += layout.page(page).size();

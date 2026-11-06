@@ -6,6 +6,10 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **S3K support notice says beta:** starting Sonic 3 & Knuckles from the hub
+  now shows the beta notice, matching the 0.7 release notes. 0.7 shipped with
+  the alpha notice. Players who hid the alpha notice see the beta one once.
+
 - **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
   selects ordinary enemy contact, and accepted enemy attacks retire through the
   shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
