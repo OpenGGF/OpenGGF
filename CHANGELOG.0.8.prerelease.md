@@ -6,6 +6,12 @@ under the matching area heading; see the
 
 ## Gameplay and presentation
 
+- **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
+  selects ordinary enemy contact, and accepted enemy attacks retire through the
+  shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
+  route errors and the special-stage return timing differences remain open.
+
+
 ## Modding and tools
 
 ## Maintenance and release preparation
@@ -25,7 +31,3 @@ under the matching area heading; see the
   replace 30 duplicate fixture directories. New red frontiers remain visible.
   Special-stage entry honors the recorded team and production lock-on module;
   the single entry-state import consumes S2-family manifest destination rings.
-- **S2 Crawl:** paused proximity includes its zero countdown pass, Super Sonic
-  selects ordinary enemy contact, and accepted enemy attacks retire through the
-  shared touch owner. The Sonic+Tails chain advances from CNZ2 to HTZ2; later
-  route errors and the special-stage return timing differences remain open.
